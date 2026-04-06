@@ -257,59 +257,133 @@ function calcExpiration(datePremierCours, ville) {
 // ================================================================
 var DEMO_DATA = {
   cartes: [
-    {id:'E001',nom:'Marie Dupont',   niveau:'Débutant',      email:'marie@ex.com',  statutEleve:'Actif',      utilises:7, restants:3, datePremierCours:'2026-01-09',expiration:'',statut:'Active',  source:'inscription',ville:'paris',    datesCours:['2026-01-09','2026-01-16','2026-01-23','2026-02-06','2026-02-13','2026-02-20','2026-02-27'],partenaire:'Jean Dupont',   emailPartenaire:'jean@ex.com'},
-    {id:'E002',nom:'Thomas Bernard', niveau:'Intermédiaire', email:'thomas@ex.com', statutEleve:'Actif',      utilises:10,restants:0, datePremierCours:'2025-10-02',expiration:'2026-01-22',statut:'Expirée',source:'inscription',ville:'vincennes',datesCours:['2025-10-02','2025-10-09','2025-10-16','2025-10-23','2025-11-06','2025-11-13','2025-11-20','2025-11-27','2025-12-04','2025-12-11'],partenaire:'',emailPartenaire:''},
-    {id:'E003',nom:'Sophie Martin',  niveau:'Débutant',      email:'sophie@ex.com', statutEleve:'En attente', utilises:0, restants:0, datePremierCours:'',expiration:'',statut:'',source:'essai',      ville:'paris',    datesCours:[],partenaire:'Lucas Martin', emailPartenaire:'lucas@ex.com'},
-    {id:'E004',nom:'Luc Petit',      niveau:'Intermédiaire', email:'luc@ex.com',    statutEleve:'Actif',      utilises:3, restants:7, datePremierCours:'2026-03-02',expiration:'',statut:'Active',  source:'inscription',ville:'vincennes',datesCours:['2026-03-02','2026-03-09','2026-03-16'],partenaire:'',emailPartenaire:''},
-    {id:'E005',nom:'Clara Leroy',    niveau:'Débutant',      email:'clara@ex.com',  statutEleve:'Actif',      utilises:9, restants:1, datePremierCours:'2026-02-05',expiration:'',statut:'Bientôt', source:'inscription',ville:'paris',    datesCours:['2026-02-05','2026-02-12','2026-02-19','2026-02-26','2026-03-05','2026-03-12','2026-03-19','2026-03-26','2026-04-02'],partenaire:'Pierre Leroy', emailPartenaire:'pierre@ex.com'}
+    // Couple 1 — Dupont (Paris, Débutant, carte active)
+    {id:'E001',nom:'Marie Dupont',     niveau:'Débutant',      email:'marie@ex.com',     statutEleve:'Actif',      utilises:7, restants:3, datePremierCours:'2026-01-09',expiration:'2026-07-01',statut:'Active',   source:'inscription',ville:'paris',     datesCours:['2026-01-09','2026-01-16','2026-01-23','2026-02-06','2026-02-13','2026-02-20','2026-02-27'],partenaire:'Jean Dupont',       emailPartenaire:'jean@ex.com'},
+    {id:'E002',nom:'Jean Dupont',      niveau:'Débutant',      email:'jean@ex.com',      statutEleve:'Actif',      utilises:7, restants:3, datePremierCours:'2026-01-09',expiration:'2026-07-01',statut:'Active',   source:'inscription',ville:'paris',     datesCours:['2026-01-09','2026-01-16','2026-01-23','2026-02-06','2026-02-13','2026-02-20','2026-02-27'],partenaire:'Marie Dupont',      emailPartenaire:'marie@ex.com'},
+    // Couple 2 — García (Vincennes, Intermédiaire, carte expirée)
+    {id:'E003',nom:'Ana García',       niveau:'Intermédiaire', email:'ana@ex.com',       statutEleve:'Actif',      utilises:10,restants:0, datePremierCours:'2025-10-06',expiration:'2026-01-30',statut:'Expirée',  source:'inscription',ville:'vincennes',datesCours:['2025-10-06','2025-10-13','2025-10-20','2025-10-27','2025-11-03','2025-11-10','2025-11-17','2025-11-24','2025-12-01','2025-12-08'],partenaire:'Carlos García',     emailPartenaire:'carlos@ex.com'},
+    {id:'E004',nom:'Carlos García',    niveau:'Intermédiaire', email:'carlos@ex.com',    statutEleve:'Actif',      utilises:10,restants:0, datePremierCours:'2025-10-06',expiration:'2026-01-30',statut:'Expirée',  source:'inscription',ville:'vincennes',datesCours:['2025-10-06','2025-10-13','2025-10-20','2025-10-27','2025-11-03','2025-11-10','2025-11-17','2025-11-24','2025-12-01','2025-12-08'],partenaire:'Ana García',        emailPartenaire:'ana@ex.com'},
+    // Couple 3 — Leroy (Paris, Débutant, bientôt épuisée)
+    {id:'E005',nom:'Clara Leroy',      niveau:'Débutant',      email:'clara@ex.com',     statutEleve:'Actif',      utilises:9, restants:1, datePremierCours:'2026-02-05',expiration:'2026-07-15',statut:'Bientôt',  source:'inscription',ville:'paris',     datesCours:['2026-02-05','2026-02-12','2026-02-19','2026-02-26','2026-03-05','2026-03-12','2026-03-19','2026-03-26','2026-04-02'],partenaire:'Pierre Leroy',      emailPartenaire:'pierre@ex.com'},
+    {id:'E006',nom:'Pierre Leroy',     niveau:'Débutant',      email:'pierre@ex.com',    statutEleve:'Actif',      utilises:9, restants:1, datePremierCours:'2026-02-05',expiration:'2026-07-15',statut:'Bientôt',  source:'inscription',ville:'paris',     datesCours:['2026-02-05','2026-02-12','2026-02-19','2026-02-26','2026-03-05','2026-03-12','2026-03-19','2026-03-26','2026-04-02'],partenaire:'Clara Leroy',       emailPartenaire:'clara@ex.com'},
+    // Couple 4 — Simon/Renard (Vincennes, Intermédiaire, active)
+    {id:'E007',nom:'Laure Simon',      niveau:'Intermédiaire', email:'laure@ex.com',     statutEleve:'Actif',      utilises:5, restants:5, datePremierCours:'2026-02-23',expiration:'2026-08-01',statut:'Active',   source:'inscription',ville:'vincennes',datesCours:['2026-02-23','2026-03-02','2026-03-09','2026-03-16','2026-03-23'],partenaire:'Paul Renard',       emailPartenaire:'paul@ex.com'},
+    {id:'E008',nom:'Paul Renard',      niveau:'Intermédiaire', email:'paul@ex.com',      statutEleve:'Actif',      utilises:5, restants:5, datePremierCours:'2026-02-23',expiration:'2026-08-01',statut:'Active',   source:'inscription',ville:'vincennes',datesCours:['2026-02-23','2026-03-02','2026-03-09','2026-03-16','2026-03-23'],partenaire:'Laure Simon',       emailPartenaire:'laure@ex.com'},
+    // Couple 5 — Moreau (Paris, Débutant, démarrage récent)
+    {id:'E009',nom:'Élise Moreau',     niveau:'Débutant',      email:'elise@ex.com',     statutEleve:'Actif',      utilises:3, restants:7, datePremierCours:'2026-03-12',expiration:'2026-08-15',statut:'Active',   source:'essai',      ville:'paris',     datesCours:['2026-03-12','2026-03-19','2026-03-26'],partenaire:'Antoine Moreau',    emailPartenaire:'antoine@ex.com'},
+    {id:'E010',nom:'Antoine Moreau',   niveau:'Débutant',      email:'antoine@ex.com',   statutEleve:'Actif',      utilises:3, restants:7, datePremierCours:'2026-03-12',expiration:'2026-08-15',statut:'Active',   source:'essai',      ville:'paris',     datesCours:['2026-03-12','2026-03-19','2026-03-26'],partenaire:'Élise Moreau',      emailPartenaire:'elise@ex.com'},
+    // Solos guideurs
+    {id:'E011',nom:'Thomas Bernard',   niveau:'Intermédiaire', email:'thomas@ex.com',    statutEleve:'Actif',      utilises:10,restants:0, datePremierCours:'2025-10-02',expiration:'2026-01-22',statut:'Expirée',  source:'inscription',ville:'vincennes',datesCours:['2025-10-02','2025-10-09','2025-10-16','2025-10-23','2025-11-06','2025-11-13','2025-11-20','2025-11-27','2025-12-04','2025-12-11'],partenaire:'',emailPartenaire:''},
+    {id:'E012',nom:'Luc Petit',        niveau:'Intermédiaire', email:'luc@ex.com',       statutEleve:'Actif',      utilises:3, restants:7, datePremierCours:'2026-03-02',expiration:'2026-08-20',statut:'Active',   source:'inscription',ville:'vincennes',datesCours:['2026-03-02','2026-03-09','2026-03-16'],partenaire:'',emailPartenaire:''},
+    {id:'E013',nom:'David Lecomte',    niveau:'Intermédiaire', email:'david@ex.com',     statutEleve:'Actif',      utilises:2, restants:8, datePremierCours:'2026-03-19',expiration:'2026-08-30',statut:'Active',   source:'essai',      ville:'paris',     datesCours:['2026-03-19','2026-03-26'],partenaire:'',emailPartenaire:''},
+    // Solos guidées
+    {id:'E014',nom:'Camille Roux',     niveau:'Débutant',      email:'camille@ex.com',   statutEleve:'Actif',      utilises:6, restants:4, datePremierCours:'2026-01-22',expiration:'2026-07-10',statut:'Active',   source:'inscription',ville:'paris',     datesCours:['2026-01-22','2026-01-29','2026-02-05','2026-02-12','2026-02-19','2026-02-26'],partenaire:'',emailPartenaire:''},
+    {id:'E015',nom:'Inès Blanc',       niveau:'Intermédiaire', email:'ines@ex.com',      statutEleve:'Actif',      utilises:2, restants:8, datePremierCours:'2026-03-19',expiration:'2026-08-30',statut:'Active',   source:'essai',      ville:'paris',     datesCours:['2026-03-19','2026-03-26'],partenaire:'',emailPartenaire:''},
+    // En attente (essai récent)
+    {id:'E016',nom:'Sophie Martin',    niveau:'Débutant',      email:'sophie@ex.com',    statutEleve:'En attente', utilises:0, restants:0, datePremierCours:'',expiration:'',statut:'',             source:'essai',      ville:'paris',     datesCours:[],partenaire:'Lucas Martin',       emailPartenaire:'lucas@ex.com'}
   ],
   essai: [
-    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Ana',  nom:'Garcia', email:'ana@ex.com',  role:'guidee',  statut:'confirme',present:null,partenaire:'Carlos Garcia',   emailPartenaire:'carlos@ex.com'},
-    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Carlos',nom:'Garcia',email:'carlos@ex.com',role:'guideur',statut:'confirme',present:null,partenaire:'Ana Garcia',       emailPartenaire:'ana@ex.com'},
-    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Julie',nom:'Morin',  email:'julie@ex.com', role:'guidee',  statut:'attente', present:null,partenaire:'',                 emailPartenaire:''},
-    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Marc', nom:'Lefort', email:'marc@ex.com',  role:'guideur', statut:'confirme',present:null,partenaire:'',                 emailPartenaire:''},
-    {date:'2026-04-09',ville:'paris',    niveau:'intermediaire',prenom:'Inès', nom:'Blanc',  email:'ines@ex.com',  role:'guidee',  statut:'attente', present:null,partenaire:'',                 emailPartenaire:''},
-    {date:'2026-04-13',ville:'vincennes',niveau:'intermediaire',prenom:'Paul', nom:'Renard', email:'paul@ex.com',  role:'guideur', statut:'confirme',present:null,partenaire:'Laure Simon',      emailPartenaire:'laure@ex.com'},
-    {date:'2026-04-13',ville:'vincennes',niveau:'intermediaire',prenom:'Laure',nom:'Simon',  email:'laure@ex.com', role:'guidee',  statut:'attente', present:null,partenaire:'Paul Renard',      emailPartenaire:'paul@ex.com'}
+    // Paris Jeudi 9 Avril — Débutant
+    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Lucie',    nom:'Fabre',      email:'lucie@ex.com',    role:'guidee',  statut:'confirme',present:null,partenaire:'Maxime Fabre',     emailPartenaire:'maxime@ex.com'},
+    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Maxime',   nom:'Fabre',      email:'maxime@ex.com',   role:'guideur', statut:'confirme',present:null,partenaire:'Lucie Fabre',      emailPartenaire:'lucie@ex.com'},
+    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Julie',    nom:'Morin',      email:'julie@ex.com',    role:'guidee',  statut:'attente', present:null,partenaire:'',                 emailPartenaire:''},
+    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Marc',     nom:'Lefort',     email:'marc@ex.com',     role:'guideur', statut:'confirme',present:null,partenaire:'',                 emailPartenaire:''},
+    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Nathalie', nom:'Perrin',     email:'nathalie@ex.com', role:'guidee',  statut:'confirme',present:null,partenaire:'',                 emailPartenaire:''},
+    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Romain',   nom:'Gautier',    email:'romain@ex.com',   role:'guideur', statut:'attente', present:null,partenaire:'',                 emailPartenaire:''},
+    // Paris Jeudi 9 Avril — Intermédiaire
+    {date:'2026-04-09',ville:'paris',    niveau:'intermediaire',prenom:'Inès',     nom:'Blanc',      email:'ines@ex.com',     role:'guidee',  statut:'confirme',present:null,partenaire:'',                 emailPartenaire:''},
+    {date:'2026-04-09',ville:'paris',    niveau:'intermediaire',prenom:'David',    nom:'Lecomte',    email:'david@ex.com',    role:'guideur', statut:'confirme',present:null,partenaire:'',                 emailPartenaire:''},
+    {date:'2026-04-09',ville:'paris',    niveau:'intermediaire',prenom:'Sarah',    nom:'Lefebvre',   email:'sarah@ex.com',    role:'guidee',  statut:'attente', present:null,partenaire:'',                 emailPartenaire:''},
+    // Vincennes Lundi 13 Avril — Intermédiaire
+    {date:'2026-04-13',ville:'vincennes',niveau:'intermediaire',prenom:'Fatou',    nom:'Diallo',     email:'fatou@ex.com',    role:'guidee',  statut:'confirme',present:null,partenaire:'Sébastien Vidal',  emailPartenaire:'seb@ex.com'},
+    {date:'2026-04-13',ville:'vincennes',niveau:'intermediaire',prenom:'Sébastien',nom:'Vidal',      email:'seb@ex.com',      role:'guideur', statut:'confirme',present:null,partenaire:'Fatou Diallo',      emailPartenaire:'fatou@ex.com'},
+    {date:'2026-04-13',ville:'vincennes',niveau:'debutant',     prenom:'Hélène',   nom:'Rousseau',   email:'helene@ex.com',   role:'guidee',  statut:'attente', present:null,partenaire:'',                 emailPartenaire:''},
+    {date:'2026-04-13',ville:'vincennes',niveau:'debutant',     prenom:'Karim',    nom:'Mansour',    email:'karim@ex.com',    role:'guideur', statut:'attente', present:null,partenaire:'',                 emailPartenaire:''},
+    {date:'2026-04-13',ville:'vincennes',niveau:'debutant',     prenom:'Adèle',    nom:'Charpentier',email:'adele@ex.com',    role:'guidee',  statut:'confirme',present:null,partenaire:'',                 emailPartenaire:''}
   ],
-  // Nouveau modèle unifié pour l'onglet Cours Tango
-  // statut: 'demande' | 'valide' | 'attente_paiement' | 'inscrit'
   coursTango: [
-    {id:'CT001',prenom:'Emma', nom:'Blanc', email:'emma@ex.com', tel:'06 11 22 33 44',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'demande',          partenaire:'Hugo Blanc', emailPartenaire:'hugo@ex.com',  type:'',paiement:'',montant:0,  dateInscription:'2026-03-28'},
-    {id:'CT002',prenom:'Hugo', nom:'Blanc', email:'hugo@ex.com',  tel:'06 55 66 77 88',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'demande',          partenaire:'Emma Blanc', emailPartenaire:'emma@ex.com',  type:'',paiement:'',montant:0,  dateInscription:'2026-03-28'},
-    {id:'CT003',prenom:'Paul', nom:'Renard',email:'paul@ex.com',  tel:'06 00 11 22 33',role:'guideur',niveau:'intermediaire',cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'valide',            partenaire:'Laure Simon',emailPartenaire:'laure@ex.com', type:'',paiement:'',montant:0,  dateInscription:'2026-03-29'},
-    {id:'CT004',prenom:'Laure',nom:'Simon', email:'laure@ex.com', tel:'06 99 88 77 66',role:'guidee', niveau:'intermediaire',cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'valide',            partenaire:'Paul Renard',emailPartenaire:'paul@ex.com',  type:'',paiement:'',montant:0,  dateInscription:'2026-03-29'},
-    {id:'CT005',prenom:'Marie',nom:'Dupont',email:'marie@ex.com', tel:'06 12 34 56 78',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement', partenaire:'Jean Dupont',emailPartenaire:'jean@ex.com',  type:'carte10',paiement:'',montant:170,dateInscription:'2026-03-30'},
-    {id:'CT006',prenom:'Jean', nom:'Dupont',email:'jean@ex.com',  tel:'06 98 76 54 32',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement', partenaire:'Marie Dupont',emailPartenaire:'marie@ex.com', type:'carte10',paiement:'',montant:170,dateInscription:'2026-03-30'},
-    {id:'CT007',prenom:'Luc',  nom:'Petit', email:'luc@ex.com',   tel:'06 45 67 89 01',role:'guideur',niveau:'intermediaire',cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'inscrit',           partenaire:'',           emailPartenaire:'',             type:'carte10',paiement:'especes',montant:170,dateInscription:'2026-03-15'},
-    {id:'CT008',prenom:'Thomas',nom:'Bernard',email:'thomas@ex.com',tel:'06 23 45 67 89',role:'guideur',niveau:'intermediaire',cours:'Vincennes — Lundi — Intermédiaire',ville:'vincennes',statut:'inscrit',           partenaire:'',           emailPartenaire:'',             type:'forfait',paiement:'cb3x',montant:435,dateInscription:'2026-03-10'}
+    // ── DEMANDES (solos uniquement — couples = auto-validés) ──
+    {id:'CT001',prenom:'Hélène', nom:'Rousseau', email:'helene@ex.com',  tel:'06 22 11 44 33',role:'guidee', niveau:'debutant',     cours:'Vincennes — Lundi — Débutant',      ville:'vincennes',statut:'demande',          partenaire:'',               emailPartenaire:'',              type:'',       paiement:'',      montant:0,  dateInscription:'2026-03-31'},
+    {id:'CT002',prenom:'Romain', nom:'Gautier',  email:'romain@ex.com',  tel:'06 33 44 55 66',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'demande',          partenaire:'',               emailPartenaire:'',              type:'',       paiement:'',      montant:0,  dateInscription:'2026-04-01'},
+    {id:'CT003',prenom:'Sarah',  nom:'Lefebvre', email:'sarah@ex.com',   tel:'06 44 55 66 77',role:'guidee', niveau:'intermediaire', cours:'Paris — Jeudi — Intermédiaire',     ville:'paris',    statut:'demande',          partenaire:'',               emailPartenaire:'',              type:'',       paiement:'',      montant:0,  dateInscription:'2026-04-02'},
+    // ── VALIDÉES (couples auto-validés + quelques solos) ──
+    {id:'CT004',prenom:'Lucie',  nom:'Fabre',    email:'lucie@ex.com',   tel:'06 88 77 66 55',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'valide',           partenaire:'Maxime Fabre',   emailPartenaire:'maxime@ex.com', type:'',       paiement:'',      montant:0,  dateInscription:'2026-03-29'},
+    {id:'CT005',prenom:'Maxime', nom:'Fabre',    email:'maxime@ex.com',  tel:'06 44 55 66 77',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'valide',           partenaire:'Lucie Fabre',    emailPartenaire:'lucie@ex.com',  type:'',       paiement:'',      montant:0,  dateInscription:'2026-03-29'},
+    {id:'CT006',prenom:'Fatou',  nom:'Diallo',   email:'fatou@ex.com',   tel:'06 12 98 76 54',role:'guidee', niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'valide',           partenaire:'Sébastien Vidal',emailPartenaire:'seb@ex.com',    type:'',       paiement:'',      montant:0,  dateInscription:'2026-03-20'},
+    {id:'CT007',prenom:'Sébastien',nom:'Vidal',  email:'seb@ex.com',     tel:'06 33 44 55 66',role:'guideur',niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'valide',           partenaire:'Fatou Diallo',   emailPartenaire:'fatou@ex.com',  type:'',       paiement:'',      montant:0,  dateInscription:'2026-03-20'},
+    {id:'CT008',prenom:'Nathalie',nom:'Perrin',  email:'nathalie@ex.com',tel:'06 77 88 99 00',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'valide',           partenaire:'',               emailPartenaire:'',              type:'',       paiement:'',      montant:0,  dateInscription:'2026-03-25'},
+    // ── ATTENTE PAIEMENT ──
+    {id:'CT009',prenom:'Marie',  nom:'Dupont',   email:'marie@ex.com',   tel:'06 12 34 56 78',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement', partenaire:'Jean Dupont',    emailPartenaire:'jean@ex.com',   type:'carte10',paiement:'',      montant:170,dateInscription:'2026-03-30'},
+    {id:'CT010',prenom:'Jean',   nom:'Dupont',   email:'jean@ex.com',    tel:'06 98 76 54 32',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement', partenaire:'Marie Dupont',   emailPartenaire:'marie@ex.com',  type:'carte10',paiement:'',      montant:170,dateInscription:'2026-03-30'},
+    {id:'CT011',prenom:'Élise',  nom:'Moreau',   email:'elise@ex.com',   tel:'06 23 45 67 89',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement', partenaire:'Antoine Moreau', emailPartenaire:'antoine@ex.com',type:'carte10',paiement:'',      montant:170,dateInscription:'2026-04-01'},
+    {id:'CT012',prenom:'Antoine',nom:'Moreau',   email:'antoine@ex.com', tel:'06 87 65 43 21',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement', partenaire:'Élise Moreau',   emailPartenaire:'elise@ex.com',  type:'carte10',paiement:'',      montant:170,dateInscription:'2026-04-01'},
+    {id:'CT013',prenom:'Camille',nom:'Roux',     email:'camille@ex.com', tel:'06 54 32 10 98',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement', partenaire:'',               emailPartenaire:'',              type:'carte10',paiement:'',      montant:170,dateInscription:'2026-04-02'},
+    // ── INSCRITS ──
+    {id:'CT014',prenom:'Ana',    nom:'García',   email:'ana@ex.com',     tel:'06 34 56 78 90',role:'guidee', niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'inscrit',           partenaire:'Carlos García',  emailPartenaire:'carlos@ex.com', type:'carte10',paiement:'cb1x',   montant:170,dateInscription:'2026-09-09'},
+    {id:'CT015',prenom:'Carlos', nom:'García',   email:'carlos@ex.com',  tel:'06 56 78 90 12',role:'guideur',niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'inscrit',           partenaire:'Ana García',     emailPartenaire:'ana@ex.com',    type:'carte10',paiement:'cb1x',   montant:170,dateInscription:'2026-09-09'},
+    {id:'CT016',prenom:'Clara',  nom:'Leroy',    email:'clara@ex.com',   tel:'06 89 01 23 45',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'inscrit',           partenaire:'Pierre Leroy',   emailPartenaire:'pierre@ex.com', type:'carte10',paiement:'especes',montant:170,dateInscription:'2026-09-05'},
+    {id:'CT017',prenom:'Pierre', nom:'Leroy',    email:'pierre@ex.com',  tel:'06 90 12 34 56',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'inscrit',           partenaire:'Clara Leroy',    emailPartenaire:'clara@ex.com',  type:'carte10',paiement:'especes',montant:170,dateInscription:'2026-09-05'},
+    {id:'CT018',prenom:'Laure',  nom:'Simon',    email:'laure@ex.com',   tel:'06 99 88 77 66',role:'guidee', niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'inscrit',           partenaire:'Paul Renard',    emailPartenaire:'paul@ex.com',   type:'forfait',paiement:'cb3x',   montant:435,dateInscription:'2026-09-12'},
+    {id:'CT019',prenom:'Paul',   nom:'Renard',   email:'paul@ex.com',    tel:'06 00 11 22 33',role:'guideur',niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'inscrit',           partenaire:'Laure Simon',    emailPartenaire:'laure@ex.com',  type:'forfait',paiement:'cb3x',   montant:435,dateInscription:'2026-09-12'},
+    {id:'CT020',prenom:'Thomas', nom:'Bernard',  email:'thomas@ex.com',  tel:'06 23 45 67 89',role:'guideur',niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'inscrit',           partenaire:'',               emailPartenaire:'',              type:'forfait',paiement:'cb3x',   montant:435,dateInscription:'2026-09-10'},
+    {id:'CT021',prenom:'Luc',    nom:'Petit',    email:'luc@ex.com',     tel:'06 45 67 89 01',role:'guideur',niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'inscrit',           partenaire:'',               emailPartenaire:'',              type:'carte10',paiement:'especes',montant:170,dateInscription:'2026-09-10'},
+    {id:'CT022',prenom:'Inès',   nom:'Blanc',    email:'ines@ex.com',    tel:'06 67 89 01 23',role:'guidee', niveau:'intermediaire', cours:'Paris — Jeudi — Intermédiaire',     ville:'paris',    statut:'inscrit',           partenaire:'',               emailPartenaire:'',              type:'carte10',paiement:'cb3x',   montant:170,dateInscription:'2026-09-05'},
+    {id:'CT023',prenom:'David',  nom:'Lecomte',  email:'david@ex.com',   tel:'06 78 90 12 34',role:'guideur',niveau:'intermediaire', cours:'Paris — Jeudi — Intermédiaire',     ville:'paris',    statut:'inscrit',           partenaire:'',               emailPartenaire:'',              type:'forfait',paiement:'cb1x',   montant:435,dateInscription:'2026-09-05'},
+    {id:'CT024',prenom:'Marc',   nom:'Lefort',   email:'marc@ex.com',    tel:'06 01 23 45 67',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'inscrit',           partenaire:'',               emailPartenaire:'',              type:'carte10',paiement:'cb1x',   montant:170,dateInscription:'2026-09-07'}
   ],
   demandesInscription: [
-    {id:'DI001',date:'2026-03-28',prenom:'Emma',nom:'Blanc',email:'emma@ex.com',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',     statut:'en_attente',ville:'paris',    partenaire:'Hugo Blanc',emailPartenaire:'hugo@ex.com'},
-    {id:'DI002',date:'2026-03-28',prenom:'Hugo',nom:'Blanc',email:'hugo@ex.com',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',     statut:'en_attente',ville:'paris',    partenaire:'Emma Blanc',emailPartenaire:'emma@ex.com'},
-    {id:'DI003',date:'2026-03-29',prenom:'Paul',nom:'Noir', email:'paul2@ex.com',role:'guideur',niveau:'intermediaire',cours:'Paris — Jeudi — Intermédiaire',statut:'valide',    ville:'paris',    partenaire:'',emailPartenaire:''},
-    {id:'DI004',date:'2026-03-30',prenom:'Léa', nom:'Vert', email:'lea@ex.com', role:'guidee', niveau:'debutant',     cours:'Vincennes — Lundi — Débutant', statut:'en_attente',ville:'vincennes',partenaire:'',emailPartenaire:''}
+    {id:'DI001',date:'2026-03-29',prenom:'Lucie',    nom:'Fabre',      email:'lucie@ex.com',    role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          statut:'en_attente',ville:'paris',    partenaire:'Maxime Fabre',   emailPartenaire:'maxime@ex.com'},
+    {id:'DI002',date:'2026-03-29',prenom:'Maxime',   nom:'Fabre',      email:'maxime@ex.com',   role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          statut:'en_attente',ville:'paris',    partenaire:'Lucie Fabre',    emailPartenaire:'lucie@ex.com'},
+    {id:'DI003',date:'2026-03-31',prenom:'Hélène',   nom:'Rousseau',   email:'helene@ex.com',   role:'guidee', niveau:'debutant',     cours:'Vincennes — Lundi — Débutant',      statut:'en_attente',ville:'vincennes',partenaire:'',               emailPartenaire:''},
+    {id:'DI004',date:'2026-04-01',prenom:'Romain',   nom:'Gautier',    email:'romain@ex.com',   role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          statut:'valide',    ville:'paris',    partenaire:'',               emailPartenaire:''},
+    {id:'DI005',date:'2026-04-02',prenom:'Sarah',    nom:'Lefebvre',   email:'sarah@ex.com',    role:'guidee', niveau:'intermediaire', cours:'Paris — Jeudi — Intermédiaire',    statut:'en_attente',ville:'paris',    partenaire:'',               emailPartenaire:''},
+    {id:'DI006',date:'2026-04-02',prenom:'Karim',    nom:'Mansour',    email:'karim@ex.com',    role:'guideur',niveau:'debutant',     cours:'Vincennes — Lundi — Débutant',      statut:'valide',    ville:'vincennes',partenaire:'',               emailPartenaire:''}
   ],
   inscriptionsCours: [
-    {id:'IC001',nom:'Marie Dupont',  email:'marie@ex.com', cours:'Paris — Jeudi — Débutant',          type:'carte10',paiement:'cb1x',   montant:170,date:'2026-09-05',ville:'paris'},
-    {id:'IC002',nom:'Thomas Bernard',email:'thomas@ex.com',cours:'Vincennes — Lundi — Intermédiaire',type:'forfait',paiement:'cb3x',   montant:435,date:'2026-09-06',ville:'vincennes'},
-    {id:'IC003',nom:'Luc Petit',     email:'luc@ex.com',   cours:'Vincennes — Lundi — Intermédiaire',type:'carte10',paiement:'especes',montant:170,date:'2026-09-10',ville:'vincennes'}
+    {id:'IC001',nom:'Marie Dupont',    email:'marie@ex.com',   cours:'Paris — Jeudi — Débutant',          type:'carte10', paiement:'cb1x',   montant:170,date:'2026-09-05',ville:'paris'},
+    {id:'IC002',nom:'Jean Dupont',     email:'jean@ex.com',    cours:'Paris — Jeudi — Débutant',          type:'carte10', paiement:'cb1x',   montant:170,date:'2026-09-05',ville:'paris'},
+    {id:'IC003',nom:'Ana García',      email:'ana@ex.com',     cours:'Vincennes — Lundi — Intermédiaire', type:'carte10', paiement:'cb1x',   montant:170,date:'2026-09-09',ville:'vincennes'},
+    {id:'IC004',nom:'Carlos García',   email:'carlos@ex.com',  cours:'Vincennes — Lundi — Intermédiaire', type:'carte10', paiement:'cb1x',   montant:170,date:'2026-09-09',ville:'vincennes'},
+    {id:'IC005',nom:'Clara Leroy',     email:'clara@ex.com',   cours:'Paris — Jeudi — Débutant',          type:'carte10', paiement:'especes',montant:170,date:'2026-09-12',ville:'paris'},
+    {id:'IC006',nom:'Pierre Leroy',    email:'pierre@ex.com',  cours:'Paris — Jeudi — Débutant',          type:'carte10', paiement:'especes',montant:170,date:'2026-09-12',ville:'paris'},
+    {id:'IC007',nom:'Laure Simon',     email:'laure@ex.com',   cours:'Vincennes — Lundi — Intermédiaire', type:'forfait', paiement:'cb3x',   montant:435,date:'2026-09-12',ville:'vincennes'},
+    {id:'IC008',nom:'Paul Renard',     email:'paul@ex.com',    cours:'Vincennes — Lundi — Intermédiaire', type:'forfait', paiement:'cb3x',   montant:435,date:'2026-09-12',ville:'vincennes'},
+    {id:'IC009',nom:'Thomas Bernard',  email:'thomas@ex.com',  cours:'Vincennes — Lundi — Intermédiaire', type:'forfait', paiement:'cb3x',   montant:435,date:'2026-09-10',ville:'vincennes'},
+    {id:'IC010',nom:'Inès Blanc',      email:'ines@ex.com',    cours:'Paris — Jeudi — Intermédiaire',     type:'carte10', paiement:'cb3x',   montant:170,date:'2026-09-05',ville:'paris'}
   ],
   stages: {
-    '2026-04-11': {label:'Samedi 11 Avril 2026', inscrits:[
-      {prenom:'Marie', nom:'Dupont',  role:'guidee', slots:['technique','stage1'],       present:null,montant:45,attente:false,partenaire:'Jean Dupont',  emailPartenaire:'jean@ex.com'},
-      {prenom:'Jean',  nom:'Dupont',  role:'guideur',slots:['technique','stage1'],       present:null,montant:45,attente:false,partenaire:'Marie Dupont', emailPartenaire:'marie@ex.com'},
-      {prenom:'Thomas',nom:'Bernard', role:'guideur',slots:['stage1','stage2'],          present:null,montant:50,attente:false,partenaire:'',             emailPartenaire:''},
-      {prenom:'Ana',   nom:'Garcia',  role:'guidee', slots:['technique'],                present:null,montant:20,attente:true, partenaire:'Carlos Garcia',emailPartenaire:'carlos@ex.com'}
+    '2026-04-24': {label:'Vendredi 24 Avril 2026', inscrits:[
+      {prenom:'Marie',      nom:'Dupont',      role:'guidee', slots:['technique','stage1'],        present:null,montant:45, attente:false,partenaire:'Jean Dupont',       emailPartenaire:'jean@ex.com',    email:'marie@ex.com'},
+      {prenom:'Jean',       nom:'Dupont',      role:'guideur',slots:['technique','stage1'],        present:null,montant:45, attente:false,partenaire:'Marie Dupont',      emailPartenaire:'marie@ex.com',   email:'jean@ex.com'},
+      {prenom:'Thomas',     nom:'Bernard',     role:'guideur',slots:['stage1','stage2'],           present:null,montant:50, attente:false,partenaire:'',                  emailPartenaire:'',               email:'thomas@ex.com'},
+      {prenom:'Laure',      nom:'Simon',       role:'guidee', slots:['technique','stage1','stage2'],present:null,montant:60,attente:false,partenaire:'Paul Renard',       emailPartenaire:'paul@ex.com',    email:'laure@ex.com'},
+      {prenom:'Paul',       nom:'Renard',      role:'guideur',slots:['technique','stage1','stage2'],present:null,montant:60,attente:false,partenaire:'Laure Simon',       emailPartenaire:'laure@ex.com',   email:'paul@ex.com'},
+      {prenom:'Camille',    nom:'Roux',        role:'guidee', slots:['technique'],                 present:null,montant:20, attente:false,partenaire:'',                  emailPartenaire:'',               email:'camille@ex.com'},
+      {prenom:'Luc',        nom:'Petit',       role:'guideur',slots:['stage1'],                    present:null,montant:25, attente:false,partenaire:'',                  emailPartenaire:'',               email:'luc@ex.com'},
+      {prenom:'Inès',       nom:'Blanc',       role:'guidee', slots:['stage1','stage2'],           present:null,montant:50, attente:false,partenaire:'',                  emailPartenaire:'',               email:'ines@ex.com'},
+      {prenom:'David',      nom:'Lecomte',     role:'guideur',slots:['stage1'],                    present:null,montant:25, attente:false,partenaire:'',                  emailPartenaire:'',               email:'david@ex.com'},
+      {prenom:'Ana',        nom:'García',      role:'guidee', slots:['technique'],                 present:null,montant:20, attente:true, partenaire:'Carlos García',      emailPartenaire:'carlos@ex.com',  email:'ana@ex.com'},
+      {prenom:'Carlos',     nom:'García',      role:'guideur',slots:['technique'],                 present:null,montant:20, attente:false,partenaire:'Ana García',         emailPartenaire:'ana@ex.com',     email:'carlos@ex.com'}
     ]},
-    '2026-05-30': {label:'Samedi 30 Mai 2026', inscrits:[
-      {prenom:'Luc',  nom:'Petit',role:'guideur',slots:['technique','stage1','stage2'],present:null,montant:60,attente:false,partenaire:'',emailPartenaire:''},
-      {prenom:'Clara',nom:'Leroy',role:'guidee', slots:['stage2'],                      present:null,montant:25,attente:false,partenaire:'Pierre Leroy',emailPartenaire:'pierre@ex.com'}
+    '2026-05-22': {label:'Vendredi 22 Mai 2026', inscrits:[
+      {prenom:'Clara',      nom:'Leroy',       role:'guidee', slots:['stage2'],                    present:null,montant:25, attente:false,partenaire:'Pierre Leroy',      emailPartenaire:'pierre@ex.com',  email:'clara@ex.com'},
+      {prenom:'Pierre',     nom:'Leroy',       role:'guideur',slots:['stage2'],                    present:null,montant:25, attente:false,partenaire:'Clara Leroy',       emailPartenaire:'clara@ex.com',   email:'pierre@ex.com'},
+      {prenom:'Fatou',      nom:'Diallo',      role:'guidee', slots:['technique','stage1'],         present:null,montant:45, attente:false,partenaire:'Sébastien Vidal',   emailPartenaire:'seb@ex.com',     email:'fatou@ex.com'},
+      {prenom:'Sébastien',  nom:'Vidal',       role:'guideur',slots:['technique','stage1'],         present:null,montant:45, attente:false,partenaire:'Fatou Diallo',       emailPartenaire:'fatou@ex.com',   email:'seb@ex.com'},
+      {prenom:'Luc',        nom:'Petit',       role:'guideur',slots:['technique','stage1','stage2'],present:null,montant:60, attente:false,partenaire:'',                  emailPartenaire:'',               email:'luc@ex.com'},
+      {prenom:'Nathalie',   nom:'Perrin',      role:'guidee', slots:['stage1','stage2'],            present:null,montant:50, attente:false,partenaire:'',                  emailPartenaire:'',               email:'nathalie@ex.com'},
+      {prenom:'Marc',       nom:'Lefort',      role:'guideur',slots:['stage1'],                    present:null,montant:25, attente:false,partenaire:'',                  emailPartenaire:'',               email:'marc@ex.com'},
+      {prenom:'Élise',      nom:'Moreau',      role:'guidee', slots:['technique'],                 present:null,montant:20, attente:true, partenaire:'Antoine Moreau',     emailPartenaire:'antoine@ex.com', email:'elise@ex.com'},
+      {prenom:'Antoine',    nom:'Moreau',      role:'guideur',slots:['technique'],                 present:null,montant:20, attente:false,partenaire:'Élise Moreau',       emailPartenaire:'elise@ex.com',   email:'antoine@ex.com'}
     ]}
   },
   sorano: [
-    {id:'E002',nom:'Thomas Bernard',email:'thomas@ex.com',statutEleve:'Actif',paiementSorano:true},
-    {id:'E004',nom:'Luc Petit',     email:'luc@ex.com',   statutEleve:'Actif',paiementSorano:false}
+    {id:'E003',nom:'Ana García',      email:'ana@ex.com',     statutEleve:'Actif',paiementSorano:true},
+    {id:'E004',nom:'Carlos García',   email:'carlos@ex.com',  statutEleve:'Actif',paiementSorano:true},
+    {id:'E007',nom:'Laure Simon',     email:'laure@ex.com',   statutEleve:'Actif',paiementSorano:false},
+    {id:'E008',nom:'Paul Renard',     email:'paul@ex.com',    statutEleve:'Actif',paiementSorano:false},
+    {id:'E011',nom:'Thomas Bernard',  email:'thomas@ex.com',  statutEleve:'Actif',paiementSorano:true},
+    {id:'E012',nom:'Luc Petit',       email:'luc@ex.com',     statutEleve:'Actif',paiementSorano:false}
   ],
   publications: []
 };
@@ -619,6 +693,17 @@ function handleAction(action, btn) {
     case 'relance-sorano':
       relanceSorano(btn.dataset.email, btn.dataset.nom, btn);
       break;
+    case 'inscrire-stage-admin':
+      soumettreInscriptionStageAdmin();
+      break;
+    case 'annuler-stage-inscrit':
+      ouvrirModalConfirm('Annuler cette inscription ?', function(){
+        annulerStageInscrit(btn.dataset.date, parseInt(btn.dataset.idx), btn);
+      });
+      break;
+    case 'soumettre-demande-admin':
+      soumettreDemande();
+      break;
     case 'agenda-prev':
       agendaMois--; if(agendaMois<0){agendaMois=11;agendaAnnee--;} renderTab(); break;
     case 'agenda-next':
@@ -794,7 +879,7 @@ function renderEssai() {
     });
     return h||'<div class="empty-state">Aucun cours d\'essai.</div>';
   }
-  // Grouper par date + niveau
+  // Grouper par date + niveau — vue compacte (point-row)
   var grpDateNiv = {};
   liste.forEach(function(e){
     var key=e.date+'|'+(e.niveau||'debutant');
@@ -808,33 +893,29 @@ function renderEssai() {
     var gui=ins.filter(function(e){return e.role==='guideur';}).length;
     var gde=ins.filter(function(e){return e.role==='guidee';}).length;
     var att=ins.filter(function(e){return e.statut==='attente';}).length;
-    var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire & Avancé';
-    h += '<div class="card'+(att?' hl-warn':'')+'"><div class="card-top"><div>'
-      +'<div class="card-nom">'+fmtDate(grp.date)+'</div>'
-      +'<div class="card-sub">'+nivLbl+' · 👨 '+gui+' guideurs · 👩 '+gde+' guidées'+(att?' · ⏳ '+att+' attente':'')+'</div>'
-      +'</div>'+(att?'<span class="pill pill-warn">'+att+' attente</span>':'')+'</div>';
+    var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
+    h += '<div class="section-hdr">'
+      +fmtDate(grp.date)+' — '+nivLbl
+      +'<span style="font-weight:400;color:var(--dim);margin-left:8px;">👨 '+gui+' · 👩 '+gde
+      +(att?' · <span style="color:var(--warn-text)">⏳ '+att+' att.</span>':'')+'</span></div>';
     ins.forEach(function(e){
-      var pc=e.statut==='confirme'?'pill-ok':'pill-warn';
       var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-      h += '<div class="inline-row"><div style="flex:1;">'
-        +'<div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">'+e.prenom+' '+e.nom
-        +' <span class="pill '+rcls+'" style="font-size:8px;">'+e.role+'</span></div>'
-        +'<div class="card-sub">'+e.email+'</div>'
-        +(e.partenaire?partenaireTag(e.partenaire,e.role):'')
-        +'</div><div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
-        +'<span class="pill '+pc+'">'+(e.statut==='confirme'?'✓':'Attente')+'</span>'
+      var pc  =e.statut==='confirme'?'pill-ok':'pill-warn';
+      h += '<div class="point-row">'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
+        +e.prenom+' '+e.nom
+        +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
+        +'</div>'
+        +'<div class="point-sub">'+e.email+(e.partenaire?' · avec '+e.partenaire:'')+'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+        +'<span class="pill '+pc+'" style="font-size:8px;">'+(e.statut==='confirme'?'✓':'Att.')+'</span>'
         +(e.role==='guidee'&&e.statut==='attente'
           ?'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓</button>':'')
+        +btnEmail(e.email,e.prenom+' '+e.nom)
         +'</div></div>';
-      if(e.partenaire&&e.emailPartenaire){
-        h += '<div style="background:var(--s2);border-radius:8px;padding:8px 10px;margin:2px 0 2px 16px;border-left:2px solid var(--border);">'
-          +'<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">↳ Partenaire</div>'
-          +'<div style="font-size:12px;font-weight:600;">'+e.partenaire+'</div>'
-          +'<div class="card-sub">'+e.emailPartenaire+'</div>'
-          +btnEmail(e.emailPartenaire,e.partenaire)+'</div>';
-      }
     });
-    h += '</div>';
   });
   return h;
 }
@@ -1051,10 +1132,11 @@ function renderStages() {
 
   // Sous-onglets créneaux
   var slots=[
-    {id:'technique',lbl:'14h — Technique',color:'var(--gold)'},
-    {id:'stage1',   lbl:'15h — Stage 1', color:'var(--info-text)'},
-    {id:'stage2',   lbl:'16h30 — Stage 2',color:'var(--guidee-text)'},
-    {id:'pointage', lbl:'✓ Pointage',    color:'var(--ok-text)'}
+    {id:'technique',lbl:'14h — Technique', color:'var(--gold)'},
+    {id:'stage1',   lbl:'15h — Stage 1',   color:'var(--info-text)'},
+    {id:'stage2',   lbl:'16h30 — Stage 2', color:'var(--guidee-text)'},
+    {id:'pointage', lbl:'✓ Pointage',      color:'var(--ok-text)'},
+    {id:'inscrire', lbl:'✏️ Inscrire',     color:'var(--dim)'}
   ];
   h+='<div class="sub-tabs">';
   slots.forEach(function(sl){
@@ -1106,11 +1188,15 @@ function renderStages() {
     return h;
   }
 
-  // Vue par créneau (technique / stage1 / stage2)
+  if(filtreStageSlot==='inscrire'){
+    return h + renderFormulaireStageAdmin();
+  }
+
+  // Vue par créneau (technique / stage1 / stage2) — une ligne par personne
   var slotId = filtreStageSlot;
   var insSlot = ins.filter(function(i){ return !i.attente && i.slots && i.slots.indexOf(slotId)>=0; });
   var attSlot = ins.filter(function(i){ return i.attente && i.slots && i.slots.indexOf(slotId)>=0; });
-  var slotInfo = {technique:{lbl:'Technique Leader & Follower',heure:'14h – 15h'},stage1:{lbl:'Stage 1',heure:'15h – 16h30'},stage2:{lbl:'Stage 2',heure:'16h30 – 18h'}};
+  var slotInfo = {technique:{lbl:'Technique Leader &amp; Follower',heure:'14h – 15h'},stage1:{lbl:'Stage 1',heure:'15h – 16h30'},stage2:{lbl:'Stage 2',heure:'16h30 – 18h'}};
   var info = slotInfo[slotId]||{lbl:slotId,heure:''};
   h+='<div class="card" style="margin-bottom:12px;"><div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">'+info.heure+'</div>'
     +'<div style="font-size:16px;font-weight:600;color:var(--text);">'+info.lbl+'</div>'
@@ -1119,39 +1205,132 @@ function renderStages() {
   if(attSlot.length){
     h+='<div class="section-hdr">En attente de confirmation</div>';
     attSlot.forEach(function(i){
+      var origIdx = ins.indexOf(i);
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-      h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+i.prenom+' '+i.nom
-        +'</div><div class="card-sub">Inscrit(e) à : '+(i.slots||[]).join(', ')+'</div>'
-        +partenaireTag(i.partenaire,'guidee')+'</div>'
-        +'<span class="pill '+rcls+'">'+i.role+'</span></div>'
-        +'<div class="btn-row"><button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Confirmer</button></div></div>';
-      if(i.partenaire&&i.emailPartenaire){
-        h+='<div style="background:var(--s2);border-radius:8px;padding:6px 10px;margin:2px 0 2px 12px;border-left:2px solid var(--border);">'
-          +'<div style="font-size:9px;color:var(--dim);margin-bottom:2px;">↳ Partenaire</div>'
-          +'<div style="font-size:12px;font-weight:600;">'+i.partenaire+'</div>'
-          +btnEmail(i.emailPartenaire,i.partenaire)+'</div>';
-      }
+      h+='<div class="point-row">'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+i.prenom+' '+i.nom
+        +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
+        +'<div class="point-sub">'+(i.slots||[]).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+        +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓</button>'
+        +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✕</button>'
+        +'</div></div>';
     });
   }
 
   if(!insSlot.length) return h+'<div class="empty-state">Aucun inscrit à ce créneau.</div>';
   h+='<div class="section-hdr">Inscrits ('+insSlot.length+')</div>';
   insSlot.forEach(function(i){
+    var origIdx = ins.indexOf(i);
     var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-    h+='<div class="card"><div class="card-top"><div>'
-      +'<div class="card-nom">'+i.prenom+' '+i.nom+'</div>'
-      +'<div class="card-sub">Inscrit(e) à : '+(i.slots||[]).join(', ')+' · '+(i.montant||0)+'€</div>'
-      +partenaireTag(i.partenaire,i.role)
-      +'</div><span class="pill '+rcls+'">'+i.role+'</span></div>'
-      +'<div class="btn-row">'+btnEmail(i.emailPartenaire||'',i.partenaire||'')+'</div></div>';
-    if(i.partenaire&&i.emailPartenaire){
-      h+='<div style="background:var(--s2);border-radius:8px;padding:6px 10px;margin:2px 0 9px 12px;border-left:2px solid var(--border);">'
-        +'<div style="font-size:9px;color:var(--dim);margin-bottom:2px;">↳ Partenaire</div>'
-        +'<div style="font-size:12px;font-weight:600;">'+i.partenaire+'</div>'
-        +btnEmail(i.emailPartenaire,i.partenaire)+'</div>';
-    }
+    h+='<div class="point-row">'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+i.prenom+' '+i.nom
+      +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
+      +'<div class="point-sub">'+(i.slots||[]).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+      +(i.email?btnEmail(i.email,i.prenom+' '+i.nom):'')
+      +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✕</button>'
+      +'</div></div>';
   });
   return h;
+}
+
+function annulerStageInscrit(date, idx, btn) {
+  btn.disabled=true;
+  if(IS_DEMO){
+    var st=adminData.stages&&adminData.stages[date];
+    if(st&&st.inscrits)st.inscrits.splice(idx,1);
+    renderTab(); return;
+  }
+  postAS({action:'annulerStageInscrit',date:date,idx:idx}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+}
+
+function renderFormulaireStageAdmin() {
+  var dates=Object.keys(adminData.stages||{}).sort();
+  var h='<div class="card">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Inscrire manuellement à un stage</div>'
+    +'<div class="field"><label>Stage</label><select id="si-stage">';
+  dates.forEach(function(d){
+    var st=adminData.stages[d];
+    h+='<option value="'+d+'"'+(d===filtreStage?' selected':'')+'>'+((st&&st.label)||fmtDate(d))+'</option>';
+  });
+  h+='</select></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div class="field"><label>Prénom *</label><input type="text" id="si-prenom"/></div>'
+    +'<div class="field"><label>Nom *</label><input type="text" id="si-nom"/></div>'
+    +'</div>'
+    +'<div class="field"><label>Email *</label><input type="email" id="si-email" autocapitalize="none"/></div>'
+    +'<div class="field"><label>Téléphone</label><input type="tel" id="si-tel" placeholder="06 XX XX XX XX"/></div>'
+    +'<div class="field"><label>Rôle</label>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
+    +'<input type="radio" name="si-role" value="guidee" checked> Guidée</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
+    +'<input type="radio" name="si-role" value="guideur"> Guideur</label>'
+    +'</div></div>'
+    +'<div class="field"><label>Créneaux</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">'
+    +'<input type="checkbox" id="si-tech"> Technique Leader &amp; Follower — 14h – 15h &nbsp;<strong>20€</strong></label>'
+    +'<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">'
+    +'<input type="checkbox" id="si-s1"> Stage 1 — 15h – 16h30 &nbsp;<strong>25€</strong></label>'
+    +'<label style="display:flex;align-items:center;gap:8px;padding:7px 0;">'
+    +'<input type="checkbox" id="si-s2"> Stage 2 — 16h30 – 18h &nbsp;<strong>25€</strong></label>'
+    +'</div>'
+    +'<div class="section-hdr" style="margin-top:12px;">Partenaire (optionnel)</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div class="field"><label>Prénom Nom</label><input type="text" id="si-part-nom" placeholder="Prénom Nom"/></div>'
+    +'<div class="field"><label>Email</label><input type="email" id="si-part-email" autocapitalize="none"/></div>'
+    +'</div>'
+    +'<div class="box-info" style="font-size:11px;">ℹ️ Avec partenaire = les deux sont inscrits. La guidée sans partenaire est mise en attente.</div>'
+    +'<div class="box-err" id="si-err"></div>'
+    +'<div class="box-ok" id="si-ok">✓ Inscrit(e) au stage.</div>'
+    +'<div class="btn-row"><button class="btn btn-gold" data-action="inscrire-stage-admin">✓ Inscrire</button></div>'
+    +'</div>';
+  return h;
+}
+
+function soumettreInscriptionStageAdmin() {
+  var date=(gel('si-stage')||{}).value||filtreStage;
+  var prenom=((gel('si-prenom')||{}).value||'').trim();
+  var nom   =((gel('si-nom')||{}).value||'').trim();
+  var email =((gel('si-email')||{}).value||'').trim().toLowerCase();
+  var tel   =((gel('si-tel')||{}).value||'').trim();
+  var roleEl=document.querySelector('input[name="si-role"]:checked');
+  var role  =roleEl?roleEl.value:'guidee';
+  var slots=[];
+  if(gel('si-tech')&&gel('si-tech').checked)slots.push('technique');
+  if(gel('si-s1')&&gel('si-s1').checked)slots.push('stage1');
+  if(gel('si-s2')&&gel('si-s2').checked)slots.push('stage2');
+  var partNom  =((gel('si-part-nom')||{}).value||'').trim();
+  var partEmail=((gel('si-part-email')||{}).value||'').trim().toLowerCase();
+  var err=gel('si-err'), ok=gel('si-ok');
+  if(err)err.style.display='none'; if(ok)ok.style.display='none';
+  if(!prenom||!nom||!email){if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';}return;}
+  if(!slots.length){if(err){err.textContent='Sélectionnez au moins un créneau.';err.style.display='block';}return;}
+  var montant=0;
+  if(slots.indexOf('technique')>=0)montant+=20;
+  if(slots.indexOf('stage1')>=0)montant+=25;
+  if(slots.indexOf('stage2')>=0)montant+=25;
+  var avecPartenaire=partNom&&partEmail;
+  var attente=role==='guidee'&&!avecPartenaire;
+  var inscrit={prenom:prenom,nom:nom,email:email,tel:tel,role:role,slots:slots,present:null,montant:montant,attente:attente,partenaire:partNom,emailPartenaire:partEmail};
+  if(IS_DEMO){
+    if(!adminData.stages[date])adminData.stages[date]={label:fmtDate(date),inscrits:[]};
+    adminData.stages[date].inscrits.push(inscrit);
+    if(avecPartenaire){
+      var roleP=role==='guidee'?'guideur':'guidee';
+      var parts=partNom.split(' ');
+      adminData.stages[date].inscrits.push({prenom:parts[0]||partNom,nom:parts.slice(1).join(' ')||'',email:partEmail,tel:'',role:roleP,slots:slots,present:null,montant:montant,attente:false,partenaire:prenom+' '+nom,emailPartenaire:email});
+    }
+    if(ok)ok.style.display='block';
+    setTimeout(function(){filtreStage=date;filtreStageSlot='technique';renderTab();},1500);
+    return;
+  }
+  postAS({action:'inscriptionStage',date:date,prenom:prenom,nom:nom,email:email,tel:tel,role:role,slots:slots,montant:montant,partNom:partNom,partEmail:partEmail}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
 }
 
 function valAttStage(date, nom, btn) {
@@ -1444,6 +1623,7 @@ function ficheEleve(e) {
   }
   if(e.statut==='valide'){
     h += '<button class="btn btn-gold" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="attente_paiement">→ Attente paiement</button>';
+    h += '<a href="'+URL_ASSOCONNECT_COURS+'" target="_blank" class="btn btn-ok" style="text-decoration:none;">💳 AssoConnect</a>';
     h += '<button class="btn btn-ghost" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="demande">← Revenir</button>';
   }
   if(e.statut==='attente_paiement'){
@@ -1459,7 +1639,15 @@ function changerStatutCoursTango(id, statut, btn) {
   btn.disabled=true;
   if(IS_DEMO){
     var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
-    if(e)e.statut=statut; renderTab(); return;
+    if(e){
+      e.statut=statut;
+      // Règle : validation d'une demande avec partenaire → valider aussi le partenaire
+      if(statut==='valide'&&e.emailPartenaire){
+        var pt=(adminData.coursTango||[]).find(function(x){return x.email===e.emailPartenaire;});
+        if(pt&&pt.statut==='demande')pt.statut='valide';
+      }
+    }
+    renderTab(); return;
   }
   postAS({action:'changerStatutCoursTango',id:id,statut:statut}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
 }
@@ -1548,8 +1736,71 @@ function soumettreValiderPaiement() {
 }
 
 function renderFormulaireDemandeAdmin() {
-  // Même formulaire que les élèves — simplifié ici, à compléter avec inscription-cours.html
-  return '<div class="box-info">Pour saisir une nouvelle demande d&#39;inscription, utilisez le formulaire complet disponible dans <strong>inscription-cours.html</strong> ou directement sur le site Wix.<br/><br/>Il permet de choisir la ville, le niveau, le rôle, le partenaire éventuel, et génère automatiquement l&#39;email de confirmation.</div>';
+  return '<div class="card">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Nouvelle demande d&#39;inscription</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div class="field"><label>Prénom *</label><input type="text" id="fd-prenom"/></div>'
+    +'<div class="field"><label>Nom *</label><input type="text" id="fd-nom"/></div>'
+    +'</div>'
+    +'<div class="field"><label>Email *</label><input type="email" id="fd-email" autocapitalize="none"/></div>'
+    +'<div class="field"><label>Téléphone</label><input type="tel" id="fd-tel" placeholder="06 XX XX XX XX"/></div>'
+    +'<div class="field"><label>Rôle</label>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
+    +'<input type="radio" name="fd-role" value="guidee" checked> Guidée</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
+    +'<input type="radio" name="fd-role" value="guideur"> Guideur</label>'
+    +'</div></div>'
+    +'<div class="field"><label>Cours</label><select id="fd-cours">'
+    +'<option value="Paris — Jeudi — Débutant">Paris — Jeudi — Débutant</option>'
+    +'<option value="Paris — Jeudi — Intermédiaire">Paris — Jeudi — Intermédiaire</option>'
+    +'<option value="Vincennes — Lundi — Débutant">Vincennes — Lundi — Débutant</option>'
+    +'<option value="Vincennes — Lundi — Intermédiaire">Vincennes — Lundi — Intermédiaire</option>'
+    +'</select></div>'
+    +'<div class="section-hdr" style="margin-top:4px;">Partenaire (optionnel)</div>'
+    +'<div class="box-info" style="font-size:11px;margin-bottom:10px;">ℹ️ Inscription avec partenaire = validation automatique des deux.</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div class="field"><label>Prénom Nom</label><input type="text" id="fd-part-nom" placeholder="Prénom Nom"/></div>'
+    +'<div class="field"><label>Email</label><input type="email" id="fd-part-email" autocapitalize="none"/></div>'
+    +'</div>'
+    +'<div class="box-err" id="fd-err"></div>'
+    +'<div class="box-ok" id="fd-ok">✓ Demande enregistrée.</div>'
+    +'<div class="btn-row"><button class="btn btn-gold" data-action="soumettre-demande-admin">✓ Enregistrer</button></div>'
+    +'</div>';
+}
+
+function soumettreDemande() {
+  var prenom  =((gel('fd-prenom')||{}).value||'').trim();
+  var nom     =((gel('fd-nom')||{}).value||'').trim();
+  var email   =((gel('fd-email')||{}).value||'').trim().toLowerCase();
+  var tel     =((gel('fd-tel')||{}).value||'').trim();
+  var roleEl  =document.querySelector('input[name="fd-role"]:checked');
+  var role    =roleEl?roleEl.value:'guidee';
+  var cours   =(gel('fd-cours')||{}).value||'Paris — Jeudi — Débutant';
+  var partNom  =((gel('fd-part-nom')||{}).value||'').trim();
+  var partEmail=((gel('fd-part-email')||{}).value||'').trim().toLowerCase();
+  var err=gel('fd-err'), ok=gel('fd-ok');
+  if(err)err.style.display='none'; if(ok)ok.style.display='none';
+  if(!prenom||!nom||!email){if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';}return;}
+  var ville  =cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
+  var niveau =cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
+  var avecPartenaire=partNom&&partEmail;
+  // Règle : avec partenaire = auto-validé ; guideur seul = auto-validé aussi
+  var statut=(!avecPartenaire&&role==='guidee')?'demande':'valide';
+  var id='CT'+Date.now();
+  if(IS_DEMO){
+    if(!adminData.coursTango)adminData.coursTango=[];
+    adminData.coursTango.push({id:id,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:partNom,emailPartenaire:partEmail,type:'',paiement:'',montant:0,dateInscription:today()});
+    if(avecPartenaire){
+      var roleP=role==='guidee'?'guideur':'guidee';
+      var parts=partNom.split(' ');
+      adminData.coursTango.push({id:'CT'+(Date.now()+1),prenom:parts[0]||partNom,nom:parts.slice(1).join(' ')||'',email:partEmail,tel:'',role:roleP,niveau:niveau,cours:cours,ville:ville,statut:'valide',partenaire:prenom+' '+nom,emailPartenaire:email,type:'',paiement:'',montant:0,dateInscription:today()});
+    }
+    if(ok)ok.style.display='block';
+    setTimeout(function(){sousOngletCoursTango=statut;renderTab();},1500);
+    return;
+  }
+  postAS({action:'creerDemandeAdmin',prenom:prenom,nom:nom,email:email,tel:tel,role:role,cours:cours,partNom:partNom,partEmail:partEmail}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
 }
 
 // ================================================================
