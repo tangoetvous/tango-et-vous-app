@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Tango &amp; Vous — Admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600;700&display=swap"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --gold:#D4AF37;--gold-dim:#8a6800;--gold-pale:#1a1500;--gold-border:#3a2d00;
+  --bg:#0a0a0a;--s1:#111;--s2:#181818;--s3:#1f1f1f;
+  --border:#2a2a2a;--text:#f0f0f0;--dim:#888;--faint:#3a3a3a;
+  --ok:#2e7d32;--ok-bg:#0a1200;--ok-text:#81c784;
+  --warn:#e65100;--warn-bg:#1a0d00;--warn-text:#ffb74d;
+  --err:#c62828;--err-bg:#140000;--err-text:#ef9a9a;
+  --info:#1565C0;--info-bg:#060d1a;--info-text:#7aaaff;
+  --guideur:#1565C0;--guideur-bg:#060d1a;--guideur-text:#7aaaff;
+  --guidee:#880e4f;--guidee-bg:#120008;--guidee-text:#f48fb1;
+  --font-d:'Cormorant Garamond',Georgia,serif;
+  --font-b:'Montserrat',sans-serif;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:14px;-webkit-font-smoothing:antialiased;}
+button{cursor:pointer;font-family:var(--font-b);}
+a{color:var(--gold);text-decoration:none;}
+input,select,textarea{font-family:var(--font-b);color:var(--text);}
+.hdr{background:var(--s1);border-bottom:2px solid var(--gold);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:30;}
+.hdr-logo{font-family:var(--font-d);font-size:17px;font-weight:300;letter-spacing:4px;color:var(--gold);}
+.hdr-badge{background:var(--gold);color:#000;font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;}
+.btn-logout{background:transparent;border:1px solid var(--border);color:var(--dim);padding:5px 10px;border-radius:6px;font-size:11px;}
+.main-tabs{display:flex;overflow-x:auto;background:var(--s1);border-bottom:1px solid var(--border);padding:0 6px;gap:1px;scrollbar-width:none;position:sticky;top:49px;z-index:29;}
+.main-tabs::-webkit-scrollbar{display:none;}
+.tab-btn{flex-shrink:0;padding:10px 11px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--dim);font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s;}
+.tab-btn.active{border-bottom-color:var(--gold);color:var(--gold);}
+.content{padding:12px;max-width:660px;margin:0 auto;padding-bottom:80px;}
+.section-hdr{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--dim);padding:12px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.empty-state{text-align:center;padding:32px 20px;font-size:13px;color:var(--dim);font-style:italic;}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:30px auto;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:9px;}
+.card.hl-warn{border-left:3px solid var(--warn);}
+.card.hl-ok{border-left:3px solid var(--ok);}
+.card-nom{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.card-sub{font-size:11px;color:var(--dim);line-height:1.7;}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;}
+.pill{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;padding:2px 8px;border-radius:20px;border:1px solid;white-space:nowrap;flex-shrink:0;}
+.pill-ok{background:var(--ok-bg);color:var(--ok-text);border-color:var(--ok);}
+.pill-warn{background:var(--warn-bg);color:var(--warn-text);border-color:var(--warn);}
+.pill-err{background:var(--err-bg);color:var(--err-text);border-color:var(--err);}
+.pill-info{background:var(--info-bg);color:var(--info-text);border-color:var(--info);}
+.pill-gold{background:var(--gold-pale);color:var(--gold);border-color:var(--gold-border);}
+.pill-guideur{background:var(--guideur-bg);color:var(--guideur-text);border-color:var(--guideur);}
+.pill-guidee{background:var(--guidee-bg);color:var(--guidee-text);border-color:var(--guidee);}
+.btn{border:none;padding:7px 12px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;transition:opacity .2s;font-family:var(--font-b);display:inline-flex;align-items:center;gap:4px;}
+.btn:hover{opacity:.85;}
+.btn:disabled{opacity:.5;cursor:default;}
+.btn-gold{background:var(--gold);color:#000;}
+.btn-ok{background:var(--ok-bg);color:var(--ok-text);border:1px solid var(--ok);}
+.btn-err{background:var(--err-bg);color:var(--err-text);border:1px solid var(--err);}
+.btn-warn{background:var(--warn-bg);color:var(--warn-text);border:1px solid var(--warn);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--dim);}
+.btn-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;align-items:center;}
+.stats-row{display:grid;gap:6px;margin-bottom:14px;}
+.stats-4{grid-template-columns:repeat(4,1fr);}
+.stats-3{grid-template-columns:repeat(3,1fr);}
+.stat{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 6px;text-align:center;}
+.stat-n{font-size:20px;font-weight:700;color:var(--text);line-height:1.1;}
+.stat-l{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-top:3px;}
+.n-gold{color:var(--gold);}
+.n-ok{color:var(--ok-text);}
+.n-warn{color:var(--warn-text);}
+.field{margin-bottom:11px;}
+.field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:9px 11px;background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:13px;}
+.field select option{background:var(--s2);}
+.box-err{font-size:12px;color:var(--err-text);background:var(--err-bg);border:1px solid var(--err);border-radius:6px;padding:8px;margin-bottom:10px;display:none;}
+.box-ok{font-size:12px;color:var(--ok-text);background:var(--ok-bg);border:1px solid var(--ok);border-radius:6px;padding:8px;margin-bottom:10px;display:none;}
+.box-info{font-size:12px;color:var(--info-text);background:var(--info-bg);border:1px solid var(--info);border-radius:6px;padding:10px;margin-bottom:10px;}
+.sub-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;}
+.sub-tab{padding:4px 11px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;}
+.sub-tab.active{background:var(--gold-pale);border-color:var(--gold);color:var(--gold);}
+.point-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);}
+.point-row:last-child{border-bottom:none;}
+.point-nom{font-size:13px;font-weight:600;color:var(--text);}
+.point-sub{font-size:11px;color:var(--dim);}
+.btn-point{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid;cursor:pointer;font-family:var(--font-b);transition:all .2s;background:transparent;}
+.btn-pres{border-color:var(--ok);color:var(--ok-text);}
+.btn-pres.on{background:var(--ok-bg);}
+.btn-abs{border-color:var(--err);color:var(--err-text);}
+.btn-abs.on{background:var(--err-bg);}
+.inline-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
+.inline-row:last-child{border-bottom:none;}
+.partenaire-tag{display:inline-flex;align-items:center;gap:5px;background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--dim);margin-top:5px;}
+.partenaire-tag .pip{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.dots-carte{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0;}
+.dot-cours{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.dot-circle{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;}
+.dot-circle.pris{background:var(--gold);border-color:var(--gold);color:#000;}
+.dot-circle.expire{background:var(--err-bg);border-color:var(--err);color:var(--err-text);}
+.dot-circle.vide{background:transparent;color:var(--faint);}
+.dot-date{font-size:8px;color:var(--dim);text-align:center;max-width:30px;line-height:1.3;}
+.agenda-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 0;margin-bottom:10px;}
+.agenda-mois-lbl{font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--text);letter-spacing:2px;}
+.agenda-btn{background:var(--s2);border:1px solid var(--border);color:var(--dim);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+.cat-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.cat-pill-ag{padding:3px 10px;border-radius:20px;border:1px solid;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;}
+.agenda-day-hdr{display:flex;gap:10px;align-items:baseline;padding:10px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.agenda-day-num{font-size:22px;font-weight:700;color:var(--text);line-height:1;}
+.agenda-day-lbl{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;}
+.agenda-event{display:flex;gap:10px;margin-bottom:6px;padding:8px 10px;border-radius:8px;border-left:3px solid;}
+.ae-cours{background:var(--guideur-bg);border-color:var(--guideur);}
+.ae-stage{background:var(--gold-pale);border-color:var(--gold);}
+.ae-milonga{background:var(--guidee-bg);border-color:var(--guidee);}
+.ae-titre{font-size:12px;font-weight:600;color:var(--text);}
+.ae-sub{font-size:10px;color:var(--dim);}
+/* Modals (remplacent prompt/confirm) */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end;justify-content:center;}
+.modal-overlay.vis{display:flex;}
+.modal-box{background:var(--s1);border:1px solid var(--gold-border);border-radius:16px 16px 0 0;padding:24px 20px;width:100%;max-width:480px;}
+.modal-titre{font-size:12px;font-weight:700;color:var(--gold);margin-bottom:14px;text-transform:uppercase;letter-spacing:2px;}
+.modal-msg{font-size:14px;color:var(--text);margin-bottom:16px;line-height:1.6;}
+.modal-input{width:100%;padding:13px;background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:16px;margin-bottom:14px;}
+.modal-btns{display:flex;gap:10px;}
+.modal-btns button{flex:1;padding:13px;border-radius:8px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:var(--font-b);}
+.modal-cancel{background:var(--s2);color:var(--dim);}
+.modal-ok{background:var(--gold);color:#000;}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.login-box{background:var(--s1);border:1px solid var(--gold-border);border-radius:14px;padding:28px 22px;width:100%;max-width:360px;text-align:center;}
+.login-logo{font-family:var(--font-d);font-size:26px;font-weight:300;letter-spacing:6px;color:var(--gold);margin-bottom:4px;}
+.login-sub{font-size:10px;letter-spacing:3px;color:var(--dim);margin-bottom:24px;text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+<!-- Modal date (remplace prompt) -->
+<div class="modal-overlay" id="modal-date">
+  <div class="modal-box">
+    <div class="modal-titre">📅 Date du cours</div>
+    <input type="date" id="modal-date-input" class="modal-input"/>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="modal-date-cancel">Annuler</button>
+      <button class="modal-ok" id="modal-date-ok">✓ Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmation (remplace confirm) -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal-box">
+    <div class="modal-titre">Confirmation</div>
+    <div class="modal-msg" id="modal-confirm-msg"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="modal-confirm-cancel">Annuler</button>
+      <button class="modal-ok" id="modal-confirm-ok">✓ Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">TANGO &amp; VOUS</div>
+    <div class="login-sub">Espace Administrateur</div>
+    <div id="ls1">
+      <div class="field">
+        <label>Email administrateur</label>
+        <input type="email" id="login-email" placeholder="votre@email.com" autocapitalize="none"/>
+      </div>
+      <button class="btn btn-gold" id="btn-login" style="width:100%;padding:12px;font-size:13px;">
+        Recevoir le lien de connexion
+      </button>
+      <div class="box-err" id="login-err" style="margin-top:10px;"></div>
+    </div>
+    <div id="ls2" style="display:none;">
+      <div class="box-ok" style="display:block;margin-bottom:14px;">
+        ✓ En mode démo, connexion directe. En production, copiez le lien reçu par email et ouvrez-le dans votre navigateur.
+      </div>
+      <button class="btn btn-ghost" id="btn-login-back" style="width:100%;">← Retour</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+  <div class="hdr">
+    <div class="hdr-logo">TANGO &amp; VOUS</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span class="hdr-badge">ADMIN</span>
+      <button class="btn-logout" id="btn-logout">Déco.</button>
+    </div>
+  </div>
+  <div class="main-tabs" id="main-tabs">
+    <button class="tab-btn active" data-tab="cours-tango">🎓 Cours Tango</button>
+    <button class="tab-btn" data-tab="essai">🎯 Essai</button>
+    <button class="tab-btn" data-tab="cartes">🎴 Cartes 10</button>
+    <button class="tab-btn" data-tab="stages">💃 Stages</button>
+    <button class="tab-btn" data-tab="sorano">🏛 Sorano</button>
+    <button class="tab-btn" data-tab="agenda">📅 Agenda</button>
+    <button class="tab-btn" data-tab="publications">📝 Publis</button>
+  </div>
+  <div class="content" id="tab-content"><div class="spinner"></div></div>
+</div>
+
+<script>
+// ================================================================
+// CONFIG
+// ================================================================
+var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
+var ADMIN_EMAILS    = ['tangoetvous@gmail.com','florencia@tangoetvous.com','jeremy@tangoetvous.com'];
+var URL_PWA         = 'https://USERNAME.github.io/tango-et-vous-app';
+var URL_SORANO      = 'LIEN_ASSOCONNECT_SORANO';
+var CLOUDINARY_NAME = 'VOTRE_CLOUD_NAME';
+var IS_DEMO         = APPS_SCRIPT_URL.indexOf('VOTRE_DEPLOYMENT') >= 0;
+
+// ================================================================
+// DONNÉES AGENDA
+// ================================================================
+var COURS_PARIS = ['2026-04-02','2026-04-09','2026-04-16','2026-04-23','2026-05-07','2026-05-21','2026-05-28','2026-06-04','2026-06-11','2026-06-18','2026-06-25','2026-09-03','2026-09-10','2026-09-17','2026-09-24','2026-10-01','2026-10-08','2026-10-15','2026-10-22','2026-11-05','2026-11-12','2026-11-19','2026-11-26','2026-12-03','2026-12-10','2026-12-17','2027-01-07','2027-01-14','2027-01-21','2027-01-28','2027-02-04','2027-02-18','2027-02-25','2027-03-04','2027-03-11','2027-03-18','2027-03-25','2027-04-01','2027-04-15','2027-04-22','2027-04-29','2027-05-13','2027-05-20','2027-05-27','2027-06-03','2027-06-10','2027-06-17','2027-06-24'];
+var COURS_VINCENNES = ['2026-04-13','2026-05-04','2026-05-11','2026-05-18','2026-06-01','2026-06-08','2026-06-15','2026-06-29','2026-09-07','2026-09-14','2026-09-21','2026-09-28','2026-10-05','2026-10-12','2026-11-02','2026-11-09','2026-11-16','2026-11-23','2026-11-30','2026-12-07','2026-12-14','2027-01-04','2027-01-11','2027-01-18','2027-01-25','2027-02-01','2027-02-22','2027-03-01','2027-03-08','2027-03-15','2027-03-22','2027-04-19','2027-04-26','2027-05-03','2027-05-10','2027-05-24','2027-05-31','2027-06-07','2027-06-14','2027-06-21'];
+var STAGES = [
+  {date:'2026-04-11',label:'Sam. 11 Avr 2026',s1:'Milonga',s2:'Lapiz & Enrosque'},
+  {date:'2026-05-30',label:'Sam. 30 Mai 2026',s1:'',s2:''},
+  {date:'2026-06-20',label:'Sam. 20 Juin 2026',s1:'',s2:''},
+  {date:'2026-09-19',label:'Sam. 19 Sep 2026',s1:'À venir',s2:'À venir'},
+  {date:'2026-10-03',label:'Sam. 3 Oct 2026',s1:'À venir',s2:'À venir'},
+  {date:'2026-11-07',label:'Sam. 7 Nov 2026',s1:'À venir',s2:'À venir'},
+  {date:'2026-12-05',label:'Sam. 5 Déc 2026',s1:'À venir',s2:'À venir'},
+  {date:'2027-01-30',label:'Sam. 30 Jan 2027',s1:'À venir',s2:'À venir'},
+  {date:'2027-02-27',label:'Sam. 27 Fév 2027',s1:'À venir',s2:'À venir'},
+  {date:'2027-03-13',label:'Sam. 13 Mar 2027',s1:'À venir',s2:'À venir'},
+  {date:'2027-04-24',label:'Sam. 24 Avr 2027',s1:'À venir',s2:'À venir'},
+  {date:'2027-05-22',label:'Sam. 22 Mai 2027',s1:'À venir',s2:'À venir'},
+  {date:'2027-06-19',label:'Sam. 19 Juin 2027',s1:'À venir',s2:'À venir'}
+];
+var MILONGAS = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
+var SANS_COURS_PARIS = ['2026-04-30','2026-05-14','2026-07-02','2026-07-09','2026-07-16','2026-07-23','2026-07-30','2026-08-06','2026-08-13','2026-08-20','2026-08-27','2026-10-29','2026-12-24','2026-12-31','2027-02-11','2027-04-08','2027-05-06'];
+var SANS_COURS_VINCENNES = ['2026-04-06','2026-04-20','2026-04-27','2026-05-25','2026-06-22','2026-07-06','2026-07-13','2026-07-20','2026-07-27','2026-08-03','2026-08-10','2026-08-17','2026-08-24','2026-08-31','2026-10-19','2026-10-26','2026-12-21','2026-12-28','2027-02-08','2027-02-15','2027-03-29','2027-04-05','2027-04-12','2027-05-17'];
+
+function calcExpiration(datePremierCours, ville) {
+  if (!datePremierCours) return '';
+  var debut = new Date(datePremierCours + 'T00:00:00');
+  var fin   = new Date(debut.getTime());
+  fin.setMonth(fin.getMonth() + 3);
+  var sansCours = ville === 'vincennes' ? SANS_COURS_VINCENNES : SANS_COURS_PARIS;
+  var bonus = 0;
+  sansCours.forEach(function(ds) {
+    var d = new Date(ds + 'T00:00:00');
+    if (d >= debut && d <= fin) bonus++;
+  });
+  fin.setDate(fin.getDate() + bonus * 7);
+  return fin.toISOString().slice(0, 10);
+}
+
+// ================================================================
+// DONNÉES DÉMO
+// ================================================================
+var DEMO_DATA = {
+  cartes: [
+    {id:'E001',nom:'Marie Dupont',   niveau:'Débutant',      email:'marie@ex.com',  statutEleve:'Actif',      utilises:7, restants:3, datePremierCours:'2026-01-09',expiration:'',statut:'Active',  source:'inscription',ville:'paris',    datesCours:['2026-01-09','2026-01-16','2026-01-23','2026-02-06','2026-02-13','2026-02-20','2026-02-27'],partenaire:'Jean Dupont',   emailPartenaire:'jean@ex.com'},
+    {id:'E002',nom:'Thomas Bernard', niveau:'Intermédiaire', email:'thomas@ex.com', statutEleve:'Actif',      utilises:10,restants:0, datePremierCours:'2025-10-02',expiration:'2026-01-22',statut:'Expirée',source:'inscription',ville:'vincennes',datesCours:['2025-10-02','2025-10-09','2025-10-16','2025-10-23','2025-11-06','2025-11-13','2025-11-20','2025-11-27','2025-12-04','2025-12-11'],partenaire:'',emailPartenaire:''},
+    {id:'E003',nom:'Sophie Martin',  niveau:'Débutant',      email:'sophie@ex.com', statutEleve:'En attente', utilises:0, restants:0, datePremierCours:'',expiration:'',statut:'',source:'essai',      ville:'paris',    datesCours:[],partenaire:'Lucas Martin', emailPartenaire:'lucas@ex.com'},
+    {id:'E004',nom:'Luc Petit',      niveau:'Intermédiaire', email:'luc@ex.com',    statutEleve:'Actif',      utilises:3, restants:7, datePremierCours:'2026-03-02',expiration:'',statut:'Active',  source:'inscription',ville:'vincennes',datesCours:['2026-03-02','2026-03-09','2026-03-16'],partenaire:'',emailPartenaire:''},
+    {id:'E005',nom:'Clara Leroy',    niveau:'Débutant',      email:'clara@ex.com',  statutEleve:'Actif',      utilises:9, restants:1, datePremierCours:'2026-02-05',expiration:'',statut:'Bientôt', source:'inscription',ville:'paris',    datesCours:['2026-02-05','2026-02-12','2026-02-19','2026-02-26','2026-03-05','2026-03-12','2026-03-19','2026-03-26','2026-04-02'],partenaire:'Pierre Leroy', emailPartenaire:'pierre@ex.com'}
+  ],
+  essai: [
+    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Ana',  nom:'Garcia', email:'ana@ex.com',  role:'guidee',  statut:'confirme',present:null,partenaire:'Carlos Garcia',   emailPartenaire:'carlos@ex.com'},
+    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Carlos',nom:'Garcia',email:'carlos@ex.com',role:'guideur',statut:'confirme',present:null,partenaire:'Ana Garcia',       emailPartenaire:'ana@ex.com'},
+    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Julie',nom:'Morin',  email:'julie@ex.com', role:'guidee',  statut:'attente', present:null,partenaire:'',                 emailPartenaire:''},
+    {date:'2026-04-09',ville:'paris',    niveau:'debutant',     prenom:'Marc', nom:'Lefort', email:'marc@ex.com',  role:'guideur', statut:'confirme',present:null,partenaire:'',                 emailPartenaire:''},
+    {date:'2026-04-09',ville:'paris',    niveau:'intermediaire',prenom:'Inès', nom:'Blanc',  email:'ines@ex.com',  role:'guidee',  statut:'attente', present:null,partenaire:'',                 emailPartenaire:''},
+    {date:'2026-04-13',ville:'vincennes',niveau:'intermediaire',prenom:'Paul', nom:'Renard', email:'paul@ex.com',  role:'guideur', statut:'confirme',present:null,partenaire:'Laure Simon',      emailPartenaire:'laure@ex.com'},
+    {date:'2026-04-13',ville:'vincennes',niveau:'intermediaire',prenom:'Laure',nom:'Simon',  email:'laure@ex.com', role:'guidee',  statut:'attente', present:null,partenaire:'Paul Renard',      emailPartenaire:'paul@ex.com'}
+  ],
+  // Nouveau modèle unifié pour l'onglet Cours Tango
+  // statut: 'demande' | 'valide' | 'attente_paiement' | 'inscrit'
+  coursTango: [
+    {id:'CT001',prenom:'Emma', nom:'Blanc', email:'emma@ex.com', tel:'06 11 22 33 44',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'demande',          partenaire:'Hugo Blanc', emailPartenaire:'hugo@ex.com',  type:'',paiement:'',montant:0,  dateInscription:'2026-03-28'},
+    {id:'CT002',prenom:'Hugo', nom:'Blanc', email:'hugo@ex.com',  tel:'06 55 66 77 88',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'demande',          partenaire:'Emma Blanc', emailPartenaire:'emma@ex.com',  type:'',paiement:'',montant:0,  dateInscription:'2026-03-28'},
+    {id:'CT003',prenom:'Paul', nom:'Renard',email:'paul@ex.com',  tel:'06 00 11 22 33',role:'guideur',niveau:'intermediaire',cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'valide',            partenaire:'Laure Simon',emailPartenaire:'laure@ex.com', type:'',paiement:'',montant:0,  dateInscription:'2026-03-29'},
+    {id:'CT004',prenom:'Laure',nom:'Simon', email:'laure@ex.com', tel:'06 99 88 77 66',role:'guidee', niveau:'intermediaire',cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'valide',            partenaire:'Paul Renard',emailPartenaire:'paul@ex.com',  type:'',paiement:'',montant:0,  dateInscription:'2026-03-29'},
+    {id:'CT005',prenom:'Marie',nom:'Dupont',email:'marie@ex.com', tel:'06 12 34 56 78',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement', partenaire:'Jean Dupont',emailPartenaire:'jean@ex.com',  type:'carte10',paiement:'',montant:170,dateInscription:'2026-03-30'},
+    {id:'CT006',prenom:'Jean', nom:'Dupont',email:'jean@ex.com',  tel:'06 98 76 54 32',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement', partenaire:'Marie Dupont',emailPartenaire:'marie@ex.com', type:'carte10',paiement:'',montant:170,dateInscription:'2026-03-30'},
+    {id:'CT007',prenom:'Luc',  nom:'Petit', email:'luc@ex.com',   tel:'06 45 67 89 01',role:'guideur',niveau:'intermediaire',cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'inscrit',           partenaire:'',           emailPartenaire:'',             type:'carte10',paiement:'especes',montant:170,dateInscription:'2026-03-15'},
+    {id:'CT008',prenom:'Thomas',nom:'Bernard',email:'thomas@ex.com',tel:'06 23 45 67 89',role:'guideur',niveau:'intermediaire',cours:'Vincennes — Lundi — Intermédiaire',ville:'vincennes',statut:'inscrit',           partenaire:'',           emailPartenaire:'',             type:'forfait',paiement:'cb3x',montant:435,dateInscription:'2026-03-10'}
+  ],
+  demandesInscription: [
+    {id:'DI001',date:'2026-03-28',prenom:'Emma',nom:'Blanc',email:'emma@ex.com',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',     statut:'en_attente',ville:'paris',    partenaire:'Hugo Blanc',emailPartenaire:'hugo@ex.com'},
+    {id:'DI002',date:'2026-03-28',prenom:'Hugo',nom:'Blanc',email:'hugo@ex.com',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',     statut:'en_attente',ville:'paris',    partenaire:'Emma Blanc',emailPartenaire:'emma@ex.com'},
+    {id:'DI003',date:'2026-03-29',prenom:'Paul',nom:'Noir', email:'paul2@ex.com',role:'guideur',niveau:'intermediaire',cours:'Paris — Jeudi — Intermédiaire',statut:'valide',    ville:'paris',    partenaire:'',emailPartenaire:''},
+    {id:'DI004',date:'2026-03-30',prenom:'Léa', nom:'Vert', email:'lea@ex.com', role:'guidee', niveau:'debutant',     cours:'Vincennes — Lundi — Débutant', statut:'en_attente',ville:'vincennes',partenaire:'',emailPartenaire:''}
+  ],
+  inscriptionsCours: [
+    {id:'IC001',nom:'Marie Dupont',  email:'marie@ex.com', cours:'Paris — Jeudi — Débutant',          type:'carte10',paiement:'cb1x',   montant:170,date:'2026-09-05',ville:'paris'},
+    {id:'IC002',nom:'Thomas Bernard',email:'thomas@ex.com',cours:'Vincennes — Lundi — Intermédiaire',type:'forfait',paiement:'cb3x',   montant:435,date:'2026-09-06',ville:'vincennes'},
+    {id:'IC003',nom:'Luc Petit',     email:'luc@ex.com',   cours:'Vincennes — Lundi — Intermédiaire',type:'carte10',paiement:'especes',montant:170,date:'2026-09-10',ville:'vincennes'}
+  ],
+  stages: {
+    '2026-04-11': {label:'Samedi 11 Avril 2026', inscrits:[
+      {prenom:'Marie', nom:'Dupont',  role:'guidee', slots:['technique','stage1'],       present:null,montant:45,attente:false,partenaire:'Jean Dupont',  emailPartenaire:'jean@ex.com'},
+      {prenom:'Jean',  nom:'Dupont',  role:'guideur',slots:['technique','stage1'],       present:null,montant:45,attente:false,partenaire:'Marie Dupont', emailPartenaire:'marie@ex.com'},
+      {prenom:'Thomas',nom:'Bernard', role:'guideur',slots:['stage1','stage2'],          present:null,montant:50,attente:false,partenaire:'',             emailPartenaire:''},
+      {prenom:'Ana',   nom:'Garcia',  role:'guidee', slots:['technique'],                present:null,montant:20,attente:true, partenaire:'Carlos Garcia',emailPartenaire:'carlos@ex.com'}
+    ]},
+    '2026-05-30': {label:'Samedi 30 Mai 2026', inscrits:[
+      {prenom:'Luc',  nom:'Petit',role:'guideur',slots:['technique','stage1','stage2'],present:null,montant:60,attente:false,partenaire:'',emailPartenaire:''},
+      {prenom:'Clara',nom:'Leroy',role:'guidee', slots:['stage2'],                      present:null,montant:25,attente:false,partenaire:'Pierre Leroy',emailPartenaire:'pierre@ex.com'}
+    ]}
+  },
+  sorano: [
+    {id:'E002',nom:'Thomas Bernard',email:'thomas@ex.com',statutEleve:'Actif',paiementSorano:true},
+    {id:'E004',nom:'Luc Petit',     email:'luc@ex.com',   statutEleve:'Actif',paiementSorano:false}
+  ],
+  publications: []
+};
+
+// ================================================================
+// ÉTAT
+// ================================================================
+var currentTab        = 'cours-tango';
+var adminData         = {};
+var filtreEleve       = 'attente';
+var filtreEssai       = 'dates';
+var filtreStage       = '';
+var filtreStageSlot   = 'technique';  // sous-onglet stage : technique|stage1|stage2|pointage
+var sousOngletCours   = 'demandes';
+var sousOngletCoursTango = 'demande'; // demande|valide|attente_paiement|inscrit|inscrire|valider_paiement
+var agendaMois      = new Date().getMonth();
+var agendaAnnee     = new Date().getFullYear();
+var agendaCats      = {cours:true, stage:true, milonga:true};
+var _dateModalCb    = null;
+var _confirmModalCb = null;
+
+// ================================================================
+// UTILS
+// ================================================================
+var MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+var DOW_LONG = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+var PAI_LBL  = {cb1x:'CB 1×',cb3x:'CB 3×',especes:'Espèces',cheque:'Chèque',virement1x:'Virement 1×',virement3x:'Virement 3×'};
+var TARIFS   = {carte10:170,carte10_reduit:120,forfait_paris:490,forfait_paris_reduit:380,forfait_vincennes:435,forfait_vincennes_reduit:340,forfait_2cours:790,forfait_2cours_reduit:640,forfait_pv_di:740,forfait_pv_id:740};
+
+function gel(id) { return document.getElementById(id); }
+function today()  { return new Date().toISOString().slice(0,10); }
+function fmtDate(str) {
+  if (!str) return '—';
+  var d = new Date(str + 'T00:00:00');
+  return DOW_LONG[d.getDay()].slice(0,3)+' '+d.getDate()+' '+MOIS_FR[d.getMonth()].slice(0,3)+' '+d.getFullYear();
+}
+function fmtDateCourt(str) {
+  if (!str) return '';
+  var d = new Date(str+'T00:00:00');
+  return d.getDate()+'/'+(d.getMonth()+1);
+}
+function toISO(d) {
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function grouperParDate(liste) {
+  var g = {};
+  liste.forEach(function(e) { if (!g[e.date]) g[e.date]=[]; g[e.date].push(e); });
+  return g;
+}
+function recalcStats() {
+  adminData.enAttente = (adminData.cartes||[]).filter(function(c){return c.statutEleve==='En attente';});
+  adminData.actifs    = (adminData.cartes||[]).filter(function(c){return c.statutEleve==='Actif';});
+  adminData.inactifs  = (adminData.cartes||[]).filter(function(c){return c.statutEleve==='Inactif';});
+  adminData.stats     = {total:(adminData.cartes||[]).length,actifs:adminData.actifs.length,enAttente:adminData.enAttente.length,inactifs:adminData.inactifs.length};
+}
+function postAS(body) {
+  return fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify(body)}).then(function(r){return r.json();});
+}
+function mailtoGmail(email, sujet) {
+  return 'https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(email)+'&su='+encodeURIComponent(sujet||'Tango & Vous');
+}
+function btnEmail(email, nom) {
+  if (!email) return '';
+  return '<a href="'+mailtoGmail(email, 'Tango & Vous')+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;">✉️ Email</a>';
+}
+function partenaireTag(partenaire, role) {
+  if (!partenaire) return '';
+  var rp = role==='guideur'?'guidee':'guideur';
+  var color = rp==='guideur'?'var(--guideur-text)':'var(--guidee-text)';
+  return '<div class="partenaire-tag"><span class="pip" style="background:'+color+'"></span>Avec : <strong>'+partenaire+'</strong></div>';
+}
+
+// ================================================================
+// MODALS (remplace prompt/confirm)
+// ================================================================
+function ouvrirModalDate(callback) {
+  gel('modal-date-input').value = today();
+  gel('modal-date').classList.add('vis');
+  _dateModalCb = callback;
+}
+function fermerModalDate() {
+  gel('modal-date').classList.remove('vis');
+  _dateModalCb = null;
+}
+function confirmerModalDate() {
+  var date = gel('modal-date-input').value;
+  fermerModalDate();
+  if (date && _dateModalCb) _dateModalCb(date);
+}
+function ouvrirModalConfirm(msg, callback) {
+  gel('modal-confirm-msg').textContent = msg;
+  gel('modal-confirm').classList.add('vis');
+  _confirmModalCb = callback;
+}
+function fermerModalConfirm() {
+  gel('modal-confirm').classList.remove('vis');
+  _confirmModalCb = null;
+}
+function confirmerModalConfirm() {
+  fermerModalConfirm();
+  if (_confirmModalCb) _confirmModalCb();
+}
+
+// Attacher les boutons des modals une seule fois
+gel('modal-date-cancel').addEventListener('click', fermerModalDate);
+gel('modal-date-ok').addEventListener('click', confirmerModalDate);
+gel('modal-confirm-cancel').addEventListener('click', fermerModalConfirm);
+gel('modal-confirm-ok').addEventListener('click', confirmerModalConfirm);
+
+// ================================================================
+// AUTH
+// ================================================================
+function envoyerLien() {
+  var email = gel('login-email').value.trim().toLowerCase();
+  var errEl = gel('login-err');
+  errEl.style.display = 'none';
+  if (!email) { errEl.textContent='Email requis.'; errEl.style.display='block'; return; }
+  if (ADMIN_EMAILS.indexOf(email) < 0) { errEl.textContent='Email non autorisé.'; errEl.style.display='block'; return; }
+  if (IS_DEMO) { demarrerApp(email); return; }
+  gel('ls1').style.display='none';
+  gel('ls2').style.display='block';
+}
+function demarrerApp(email) {
+  adminData = JSON.parse(JSON.stringify(DEMO_DATA));
+  recalcStats();
+  filtreStage = Object.keys(adminData.stages)[0]||'';
+  gel('login-screen').style.display='none';
+  gel('app').style.display='block';
+  renderTab();
+}
+function logout() {
+  gel('app').style.display='none';
+  gel('login-screen').style.display='flex';
+  adminData={};
+}
+async function chargerDonnees() {
+  try {
+    var r = await fetch(APPS_SCRIPT_URL+'?action=getAdminData&email='+encodeURIComponent(adminData._email||''));
+    var d = await r.json();
+    if (d.error) throw new Error(d.error);
+    adminData = d;
+    if (!filtreStage && adminData.stages) filtreStage=Object.keys(adminData.stages)[0]||'';
+    renderTab();
+  } catch(e) { console.error('Erreur:', e.message); }
+}
+
+// ================================================================
+// NAVIGATION
+// ================================================================
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  renderTab();
+}
+function renderTab() {
+  var el = gel('tab-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  setTimeout(function() {
+    var html = '';
+    if      (currentTab==='cours-tango')  html=renderCoursTango();
+    else if (currentTab==='essai')        html=renderEssai();
+    else if (currentTab==='cartes')       html=renderCartes();
+    else if (currentTab==='stages')       html=renderStages();
+    else if (currentTab==='sorano')       html=renderSorano();
+    else if (currentTab==='agenda')       html=renderAgenda();
+    else if (currentTab==='publications') html=renderPublications();
+    el.innerHTML = html;
+    bindTabEvents(el);
+  }, 40);
+}
+
+// ================================================================
+// BIND EVENTS — attaché après chaque render, AUCUN onclick inline
+// ================================================================
+function bindTabEvents(el) {
+  // Délégation principale sur le conteneur
+  el.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    handleAction(btn.dataset.action, btn);
+  });
+  // Sous-onglets
+  el.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-filt-e]');
+    if (b) { filtreEleve=b.dataset.filtE; renderTab(); }
+  });
+  el.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-filt-essai]');
+    if (b) { filtreEssai=b.dataset.filtEssai; renderTab(); }
+  });
+  el.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-sous-c]');
+    if (b) { sousOngletCours=b.dataset.sousC; renderTab(); }
+  });
+  el.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-filt-stage]');
+    if (b) { filtreStage=b.dataset.filtStage; renderTab(); }
+  });
+  el.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-slot]');
+    if (b && b.dataset.action==='filt-stage-slot') { filtreStageSlot=b.dataset.slot; renderTab(); }
+  });
+  el.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-sous-ct]');
+    if (b) { sousOngletCoursTango=b.dataset.sousCt; renderTab(); }
+  });
+  el.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-cat-ag]');
+    if (b) { agendaCats[b.dataset.catAg]=!agendaCats[b.dataset.catAg]; renderTab(); }
+  });
+  // Select change
+  var selType = el.querySelector('[data-change-type]');
+  if (selType) selType.addEventListener('change', function() {
+    var t = selType.value;
+    var m = el.querySelector('#ic-montant');
+    if (m) m.value = TARIFS[t]||'';
+    var info = el.querySelector('#ic-info-carte10');
+    if (info) info.style.display = t.indexOf('carte')>=0?'block':'none';
+  });
+  // Upload
+  var pubFile = el.querySelector('#pub-file');
+  if (pubFile) pubFile.addEventListener('change', function() { uploadMedia(pubFile); });
+}
+
+function handleAction(action, btn) {
+  var id = btn.dataset.id||'';
+  switch(action) {
+    case 'open-form-eleve':
+      ouvrirFormEleve();
+      break;
+    case 'soumettre-eleve':
+      soumettreEleve();
+      break;
+    case 'annuler-form-eleve':
+      gel('fne').innerHTML='';
+      break;
+    case 'activer-eleve':
+      activerEleve(id, btn.dataset.email||'', btn);
+      break;
+    case 'desactiver-eleve':
+      ouvrirModalConfirm('Désactiver cet élève ?', function(){
+        desactiverEleve(id, btn.dataset.email||'', btn);
+      });
+      break;
+    case 'val-guidee-essai':
+      valGuideeEssai(btn.dataset.email||'', btn.dataset.date||'', btn);
+      break;
+    case 'pointer-essai-pres':
+      pointerEssai(btn.dataset.date, btn.dataset.email, true);
+      break;
+    case 'pointer-essai-abs':
+      pointerEssai(btn.dataset.date, btn.dataset.email, false);
+      break;
+    case 'env-j1':
+      envJ1(btn.dataset.date, btn);
+      break;
+    case 'inscrire-cours':
+      inscrireCours();
+      break;
+    case 'val-demande':
+      valDemande(id, btn);
+      break;
+    case 'pointer-cours':
+      ouvrirModalDate(function(date){ pointerCoursAction(id, date, btn); });
+      break;
+    case 'renouveler-carte':
+      ouvrirModalConfirm('Créer une nouvelle carte de 10 cours pour cet élève ?', function(){
+        renouvelerCarteAction(id, btn);
+      });
+      break;
+    case 'filt-stage-slot':
+      filtreStageSlot=btn.dataset.slot; renderTab(); break;
+    case 'val-att-stage':
+      valAttStage(btn.dataset.date, btn.dataset.nom, btn);
+      break;
+    case 'pointer-stage-pres':
+      pointerStage(btn.dataset.date, parseInt(btn.dataset.idx), true);
+      break;
+    case 'pointer-stage-abs':
+      pointerStage(btn.dataset.date, parseInt(btn.dataset.idx), false);
+      break;
+    case 'cours-tango-statut':
+      changerStatutCoursTango(btn.dataset.id, btn.dataset.statut, btn);
+      break;
+    case 'ouvrir-valider-paiement':
+      ouvrirValiderPaiement(btn.dataset.id);
+      break;
+    case 'soumettre-paiement':
+      soumettreValiderPaiement();
+      break;
+    case 'annuler-valider-paiement':
+      var fp=gel('form-valider-paiement'); if(fp)fp.innerHTML=''; break;
+    case 'sorano-paye':
+      soranoAction(id, true, btn);
+      break;
+    case 'sorano-nonpaye':
+      soranoAction(id, false, btn);
+      break;
+    case 'relance-sorano':
+      relanceSorano(btn.dataset.email, btn.dataset.nom, btn);
+      break;
+    case 'agenda-prev':
+      agendaMois--; if(agendaMois<0){agendaMois=11;agendaAnnee--;} renderTab(); break;
+    case 'agenda-next':
+      agendaMois++; if(agendaMois>11){agendaMois=0;agendaAnnee++;} renderTab(); break;
+    case 'nouvelle-pub':
+      ouvrirPub(null);
+      break;
+    case 'editer-pub':
+      ouvrirPub((adminData.publications||[])[parseInt(btn.dataset.idx)]);
+      break;
+    case 'dupliquer-pub':
+      dupliquerPub(parseInt(btn.dataset.idx));
+      break;
+    case 'save-pub':
+      savePub(btn.dataset.id||'');
+      break;
+    case 'publier-pub':
+      publierPub(id, btn);
+      break;
+    case 'supprimer-pub':
+      ouvrirModalConfirm('Supprimer cette publication ?', function(){ supprimerPub(id, btn); });
+      break;
+    case 'annuler-pub':
+      gel('pub-ed').innerHTML='';
+      break;
+    case 'ajouter-date-prog':
+      ajouterDateProg();
+      break;
+    case 'remove-date-prog':
+      var wrapper = btn.closest('.date-prog-row');
+      if (wrapper) wrapper.remove();
+      break;
+    case 'upload-click':
+      var f = document.getElementById('pub-file');
+      if (f) f.click();
+      break;
+  }
+}
+
+// ================================================================
+// TAB ÉLÈVES
+// ================================================================
+function renderEleves() {
+  var cartes = adminData.cartes||[];
+  var stats  = adminData.stats||{};
+  var h = '<div class="stats-row stats-4">'
+    +'<div class="stat"><div class="stat-n n-gold">'+( stats.total||0)+'</div><div class="stat-l">Total</div></div>'
+    +'<div class="stat"><div class="stat-n n-ok">'+  ( stats.actifs||0)+'</div><div class="stat-l">Actifs</div></div>'
+    +'<div class="stat"><div class="stat-n n-warn">'+(stats.enAttente||0)+'</div><div class="stat-l">Attente</div></div>'
+    +'<div class="stat"><div class="stat-n">'+       (stats.inactifs||0)+'</div><div class="stat-l">Inactifs</div></div>'
+    +'</div>';
+  var tabs = [['attente','⏳ Attente'],['actif','✓ Actifs'],['inactif','○ Inactifs'],['tous','Tous']];
+  h += '<div class="sub-tabs">';
+  tabs.forEach(function(t) {
+    h += '<button class="sub-tab'+(filtreEleve===t[0]?' active':'')+'" data-filt-e="'+t[0]+'">'+t[1]+'</button>';
+  });
+  h += '</div><div id="fne"></div><button class="btn btn-gold" data-action="open-form-eleve" style="width:100%;margin-bottom:12px;">+ Nouvel élève</button>';
+  var liste = filtreEleve==='tous'?cartes:filtreEleve==='attente'?(adminData.enAttente||[]):filtreEleve==='actif'?(adminData.actifs||[]):(adminData.inactifs||[]);
+  if (!liste.length) return h+'<div class="empty-state">Aucun élève ici.</div>';
+  liste.forEach(function(c) {
+    var st = c.statutEleve||'En attente';
+    var pc = st==='Actif'?'pill-ok':st==='En attente'?'pill-warn':'';
+    h += '<div class="card'+(st==='En attente'?' hl-warn':'')+'"><div class="card-top"><div>'
+      +'<div class="card-nom">'+c.nom+'</div>'
+      +'<div class="card-sub">'+(c.id)+' · '+(c.niveau||'—')+' · '+(c.ville||'—')+'</div>'
+      +(c.email?'<div class="card-sub">'+c.email+'</div>':'')
+      +partenaireTag(c.partenaire, c.role||'guidee')
+      +'</div><span class="pill '+pc+'">'+st+'</span></div>'
+      +'<div class="btn-row">'
+      +(st!=='Actif'?'<button class="btn btn-ok" data-action="activer-eleve" data-id="'+c.id+'" data-email="'+(c.email||'')+'">✓ Activer</button>':'')
+      +(st==='Actif'?'<button class="btn btn-ghost" data-action="desactiver-eleve" data-id="'+c.id+'" data-email="'+(c.email||'')+'">Désactiver</button>':'')
+      +btnEmail(c.email, c.nom)
+      +'</div></div>';
+  });
+  return h;
+}
+function ouvrirFormEleve() {
+  gel('fne').innerHTML = '<div class="card" style="margin-bottom:12px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:12px;">Créer un profil</div>'
+    +'<div class="field"><label>Prénom et Nom *</label><input type="text" id="ne-nom"/></div>'
+    +'<div class="field"><label>Email *</label><input type="email" id="ne-email" autocapitalize="none"/></div>'
+    +'<div class="field"><label>Niveau</label><select id="ne-niv"><option value="">—</option><option>Débutant</option><option>Intermédiaire</option></select></div>'
+    +'<div class="field"><label>Ville</label><select id="ne-ville"><option value="paris">Paris</option><option value="vincennes">Vincennes</option></select></div>'
+    +'<div class="field"><label>Activer maintenant ?</label><select id="ne-act"><option value="non">Non — En attente</option><option value="oui">Oui — Activer + email bienvenue</option></select></div>'
+    +'<div class="box-err" id="ne-err"></div>'
+    +'<div class="btn-row"><button class="btn btn-gold" data-action="soumettre-eleve">✓ Créer</button><button class="btn btn-ghost" data-action="annuler-form-eleve">Annuler</button></div>'
+    +'</div>';
+}
+function soumettreEleve() {
+  var nom   = (gel('ne-nom')||{}).value||'';
+  var email = (gel('ne-email')||{}).value||'';
+  var niv   = (gel('ne-niv')||{}).value||'';
+  var act   = ((gel('ne-act')||{}).value||'') === 'oui';
+  var ville = (gel('ne-ville')||{}).value||'paris';
+  var err   = gel('ne-err');
+  nom = nom.trim(); email = email.trim().toLowerCase();
+  if (!nom||!email) { err.textContent='Nom et email requis.'; err.style.display='block'; return; }
+  err.style.display='none';
+  if (IS_DEMO) {
+    adminData.cartes.unshift({id:'E'+Date.now(),nom:nom,email:email,niveau:niv,statutEleve:act?'Actif':'En attente',utilises:0,restants:0,statut:'',source:'manuel',ville:ville,datesCours:[],partenaire:''});
+    recalcStats(); gel('fne').innerHTML=''; renderTab(); return;
+  }
+  postAS({action:'creerEleve',nom:nom,email:email,niveau:niv,source:'manuel',ville:ville}).then(function() {
+    if (act) return postAS({action:'activerEleve',email:email});
+  }).then(function() { chargerDonnees(); }).catch(function(e) { err.textContent=e.message; err.style.display='block'; });
+}
+function activerEleve(id, email, btn) {
+  btn.disabled=true; btn.textContent='⏳';
+  if (IS_DEMO) { var c=adminData.cartes.find(function(x){return x.id===id;}); if(c)c.statutEleve='Actif'; recalcStats(); renderTab(); return; }
+  postAS({action:'activerEleve',id:id,email:email}).then(function(r){ if(r.error)throw new Error(r.error); chargerDonnees(); }).catch(function(e){ btn.disabled=false; btn.textContent='✓ Activer'; console.error(e.message); });
+}
+function desactiverEleve(id, email, btn) {
+  if (IS_DEMO) { var c=adminData.cartes.find(function(x){return x.id===id;}); if(c)c.statutEleve='Inactif'; recalcStats(); renderTab(); return; }
+  postAS({action:'desactiverEleve',id:id,email:email}).then(function(){chargerDonnees();}).catch(function(e){console.error(e.message);});
+}
+
+// ================================================================
+// TAB ESSAI
+// ================================================================
+function renderEssai() {
+  var liste = adminData.essai||[];
+  var h = '<div class="sub-tabs">'
+    +'<button class="sub-tab'+(filtreEssai==='dates'?' active':'')+'" data-filt-essai="dates">Par date</button>'
+    +'<button class="sub-tab'+(filtreEssai==='attente'?' active':'')+'" data-filt-essai="attente">Guidées en attente</button>'
+    +'<button class="sub-tab'+(filtreEssai==='pointage'?' active':'')+'" data-filt-essai="pointage">Pointage</button>'
+    +'</div>';
+  // Trier : date ASC, puis niveau (debutant avant intermediaire), puis rôle
+  liste.sort(function(a,b){
+    if(a.date!==b.date)return a.date.localeCompare(b.date);
+    if(a.niveau!==b.niveau)return a.niveau.localeCompare(b.niveau);
+    return a.role.localeCompare(b.role);
+  });
+
+  if (filtreEssai==='attente') {
+    var g = liste.filter(function(e){return e.role==='guidee'&&e.statut==='attente';});
+    if (!g.length) return h+'<div class="empty-state">Aucune guidée en attente.</div>';
+    g.forEach(function(e) {
+      h += '<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+e.prenom+' '+e.nom+'</div>'
+        +'<div class="card-sub">'+e.email+' · '+e.ville+' · '+(e.niveau==='debutant'?'Débutant':'Intermédiaire')+'<br/>📅 '+fmtDate(e.date)+'</div>'
+        +partenaireTag(e.partenaire,'guidee')+'</div><span class="pill pill-warn">Attente</span></div>'
+        +'<div class="btn-row"><button class="btn btn-ok" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+e.date+'">✓ Confirmer</button>'
+        +btnEmail(e.email,e.prenom+' '+e.nom)+'</div></div>';
+      // Fiche partenaire si existe
+      if(e.partenaire&&e.emailPartenaire){
+        h += '<div class="card" style="margin-left:16px;border-left:3px solid var(--border);margin-bottom:9px;"><div class="card-sub" style="font-size:10px;color:var(--dim);margin-bottom:4px;">↳ Partenaire</div><div class="card-nom">'+e.partenaire+'</div><div class="card-sub">'+e.emailPartenaire+'</div>'+btnEmail(e.emailPartenaire,e.partenaire)+'</div>';
+      }
+    });
+    return h;
+  }
+  if (filtreEssai==='pointage') {
+    var grp = grouperParDate(liste);
+    Object.keys(grp).sort().forEach(function(date) {
+      var ins = grp[date];
+      var pres=ins.filter(function(e){return e.present===true;}).length;
+      var abs =ins.filter(function(e){return e.present===false;}).length;
+      var rest=ins.length-pres-abs;
+      var toutPointe = rest===0;
+      h += '<div class="section-hdr">'+fmtDate(date)+' — ✓'+pres+' ✗'+abs+' ?'+rest+'</div>';
+      ins.forEach(function(e) {
+        var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
+        h += '<div class="point-row"><div><div class="point-nom">'+e.prenom+' '+e.nom+'</div>'
+          +'<div class="point-sub">'+e.ville+(e.partenaire?' · avec '+e.partenaire:'')+'</div></div>'
+          +'<div style="display:flex;gap:6px;align-items:center;">'
+          +'<span class="pill '+rcls+'">'+e.role+'</span>'
+          +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
+          +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
+          +'</div></div>';
+      });
+      h += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
+        +(toutPointe?'<button class="btn btn-ok" data-action="env-j1" data-date="'+date+'">✉️ Emails J+1</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d\'abord.</span>')
+        +'<span id="j1s-'+date+'" style="font-size:11px;margin-left:8px;"></span>'
+        +'</div>';
+    });
+    return h||'<div class="empty-state">Aucun cours d\'essai.</div>';
+  }
+  // Grouper par date + niveau
+  var grpDateNiv = {};
+  liste.forEach(function(e){
+    var key=e.date+'|'+(e.niveau||'debutant');
+    if(!grpDateNiv[key])grpDateNiv[key]={date:e.date,niveau:e.niveau||'debutant',ins:[]};
+    grpDateNiv[key].ins.push(e);
+  });
+  var keys=Object.keys(grpDateNiv).sort();
+  if(!keys.length) return h+'<div class="empty-state">Aucun cours d\'essai.</div>';
+  keys.forEach(function(key){
+    var grp=grpDateNiv[key], ins=grp.ins;
+    var gui=ins.filter(function(e){return e.role==='guideur';}).length;
+    var gde=ins.filter(function(e){return e.role==='guidee';}).length;
+    var att=ins.filter(function(e){return e.statut==='attente';}).length;
+    var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire & Avancé';
+    h += '<div class="card'+(att?' hl-warn':'')+'"><div class="card-top"><div>'
+      +'<div class="card-nom">'+fmtDate(grp.date)+'</div>'
+      +'<div class="card-sub">'+nivLbl+' · 👨 '+gui+' guideurs · 👩 '+gde+' guidées'+(att?' · ⏳ '+att+' attente':'')+'</div>'
+      +'</div>'+(att?'<span class="pill pill-warn">'+att+' attente</span>':'')+'</div>';
+    ins.forEach(function(e){
+      var pc=e.statut==='confirme'?'pill-ok':'pill-warn';
+      var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
+      h += '<div class="inline-row"><div style="flex:1;">'
+        +'<div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">'+e.prenom+' '+e.nom
+        +' <span class="pill '+rcls+'" style="font-size:8px;">'+e.role+'</span></div>'
+        +'<div class="card-sub">'+e.email+'</div>'
+        +(e.partenaire?partenaireTag(e.partenaire,e.role):'')
+        +'</div><div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
+        +'<span class="pill '+pc+'">'+(e.statut==='confirme'?'✓':'Attente')+'</span>'
+        +(e.role==='guidee'&&e.statut==='attente'
+          ?'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓</button>':'')
+        +'</div></div>';
+      if(e.partenaire&&e.emailPartenaire){
+        h += '<div style="background:var(--s2);border-radius:8px;padding:8px 10px;margin:2px 0 2px 16px;border-left:2px solid var(--border);">'
+          +'<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">↳ Partenaire</div>'
+          +'<div style="font-size:12px;font-weight:600;">'+e.partenaire+'</div>'
+          +'<div class="card-sub">'+e.emailPartenaire+'</div>'
+          +btnEmail(e.emailPartenaire,e.partenaire)+'</div>';
+      }
+    });
+    h += '</div>';
+  });
+  return h;
+}
+function valGuideeEssai(email, date, btn) {
+  btn.disabled=true; btn.textContent='⏳';
+  if (IS_DEMO) { var e=adminData.essai.find(function(x){return x.email===email&&x.date===date;}); if(e)e.statut='confirme'; renderTab(); return; }
+  postAS({action:'validerGuideeEssai',email:email,date:date}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓';});
+}
+function pointerEssai(date, email, present) {
+  var e = adminData.essai.find(function(x){return x.email===email&&x.date===date;});
+  if (e) e.present = present;
+  if (!IS_DEMO) postAS({action:'pointerEssai',email:email,date:date,present:present}).catch(function(){});
+  renderTab();
+}
+function envJ1(date, btn) {
+  btn.disabled=true;
+  var ins = (adminData.essai||[]).filter(function(e){return e.date===date;});
+  var pres=ins.filter(function(e){return e.present===true;}).map(function(e){return {prenom:e.prenom,nom:e.nom,email:e.email};});
+  var abs =ins.filter(function(e){return e.present===false;}).map(function(e){return {prenom:e.prenom,nom:e.nom,email:e.email};});
+  var el  = gel('j1s-'+date);
+  if (el) { el.style.color='var(--gold)'; el.textContent='⏳'; }
+  if (IS_DEMO) { setTimeout(function(){ if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+pres.length+'+'+abs.length+' (démo)';}btn.disabled=false;},800); return; }
+  postAS({action:'envoyerEmailsEssaiJ1',date:date,presents:pres,absents:abs}).then(function(r){if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+r.presentsSent+'+'+r.absentsSent;}}).catch(function(){if(el){el.style.color='var(--err-text)';el.textContent='Erreur';}btn.disabled=false;});
+}
+
+// ================================================================
+// TAB COURS
+// ================================================================
+function renderCours() {
+  var demandes = adminData.demandesInscription||[];
+  var h = '<div class="sub-tabs">'
+    +'<button class="sub-tab'+(sousOngletCours==='demandes'?' active':'')+'" data-sous-c="demandes">Demandes</button>'
+    +'<button class="sub-tab'+(sousOngletCours==='attente'?' active':'')+'" data-sous-c="attente">Guidées attente</button>'
+    +'<button class="sub-tab'+(sousOngletCours==='inscrire'?' active':'')+'" data-sous-c="inscrire">✏️ Inscrire</button>'
+    +'<button class="sub-tab'+(sousOngletCours==='liste'?' active':'')+'" data-sous-c="liste">Liste</button>'
+    +'</div>';
+  if (sousOngletCours==='attente') {
+    var g=demandes.filter(function(d){return d.role==='guidee'&&d.statut==='en_attente';});
+    if(!g.length)return h+'<div class="empty-state">Aucune guidée en attente.</div>';
+    g.forEach(function(d){h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+d.prenom+' '+d.nom+'</div><div class="card-sub">'+d.email+'<br/>'+d.cours+'</div>'+partenaireTag(d.partenaire,'guidee')+'</div><span class="pill pill-warn">Attente</span></div><div class="btn-row"><button class="btn btn-ok" data-action="val-demande" data-id="'+d.id+'">✓ Valider</button>'+btnEmail(d.email,d.prenom+' '+d.nom)+'</div></div>';});
+    return h;
+  }
+  if (sousOngletCours==='inscrire') {
+    return h+'<div class="card">'
+      +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Inscrire un élève</div>'
+      +'<div class="field"><label>Email *</label><input type="email" id="ic-email" autocapitalize="none"/></div>'
+      +'<div class="field"><label>Cours</label><select id="ic-cours">'
+      +'<option>Paris — Jeudi — Débutant</option>'
+      +'<option>Paris — Jeudi — Intermédiaire</option>'
+      +'<option>Vincennes — Lundi — Débutant</option>'
+      +'<option>Vincennes — Lundi — Intermédiaire</option>'
+      +'<option>Paris Débutant + Vincennes Intermédiaire</option>'
+      +'<option>Paris Intermédiaire + Vincennes Débutant</option>'
+      +'</select></div>'
+      +'<div class="field"><label>Type</label><select id="ic-type" data-change-type="1">'
+      +'<option value="carte10">Carte 10 cours — 170€</option>'
+      +'<option value="carte10_reduit">Carte 10 cours réduit — 120€</option>'
+      +'<option value="forfait_paris">Forfait Paris — 490€</option>'
+      +'<option value="forfait_paris_reduit">Forfait Paris réduit — 380€</option>'
+      +'<option value="forfait_vincennes">Forfait Vincennes — 435€</option>'
+      +'<option value="forfait_vincennes_reduit">Forfait Vincennes réduit — 340€</option>'
+      +'<option value="forfait_2cours">Forfait 2 cours — 790€</option>'
+      +'<option value="forfait_2cours_reduit">Forfait 2 cours réduit — 640€</option>'
+      +'<option value="forfait_pv_di">Paris Déb + Vincennes Int — 740€</option>'
+      +'<option value="forfait_pv_id">Paris Int + Vincennes Déb — 740€</option>'
+      +'</select></div>'
+      +'<div class="box-info" id="ic-info-carte10">ℹ️ Carte 10 : la validité débute au 1er cours pointé.</div>'
+      +'<div class="field"><label>Paiement</label><select id="ic-paie"><option value="cb1x">CB 1×</option><option value="cb3x">CB 3×</option><option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="virement1x">Virement 1×</option><option value="virement3x">Virement 3×</option></select></div>'
+      +'<div class="field"><label>Montant (€)</label><input type="number" id="ic-montant" value="170"/></div>'
+      +'<div class="field"><label>Date paiement</label><input type="date" id="ic-date" value="'+today()+'"/></div>'
+      +'<div class="box-err" id="ic-err"></div>'
+      +'<div class="box-ok" id="ic-ok">✓ Enregistré. Email envoyé.</div>'
+      +'<div class="btn-row"><button class="btn btn-gold" data-action="inscrire-cours">✓ Enregistrer</button></div>'
+      +'</div>';
+  }
+  if (sousOngletCours==='liste') {
+    var ins=adminData.inscriptionsCours||[];
+    if(!ins.length)return h+'<div class="empty-state">Aucune inscription.</div>';
+    ins.forEach(function(i){var est=i.type&&i.type.indexOf('carte')>=0;h+='<div class="card hl-ok"><div class="card-top"><div><div class="card-nom">'+i.nom+'</div><div class="card-sub">'+i.cours+'<br/>'+(PAI_LBL[i.paiement]||i.paiement)+' · '+i.montant+'€ · '+fmtDate(i.date)+'</div></div><span class="pill '+(est?'pill-info':'pill-gold')+'">'+(est?'Carte 10':'Forfait')+'</span></div></div>';});
+    return h;
+  }
+  var grp={};
+  demandes.forEach(function(d){if(!grp[d.cours])grp[d.cours]=[];grp[d.cours].push(d);});
+  if(!Object.keys(grp).length)return h+'<div class="empty-state">Aucune demande.</div>';
+  Object.keys(grp).forEach(function(cours){
+    var list=grp[cours], att=list.filter(function(d){return d.statut==='en_attente';}).length;
+    h+='<div class="card'+(att?' hl-warn':'')+'"><div class="card-top"><div class="card-nom">'+cours+'</div>'+(att?'<span class="pill pill-warn">'+att+' attente</span>':'')+'</div>';
+    list.slice().sort(function(a,b){return a.role.localeCompare(b.role);}).forEach(function(d){
+      var rcls=d.role==='guideur'?'pill-guideur':'pill-guidee';
+      h+='<div class="inline-row"><div style="flex:1;"><div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">'+d.prenom+' '+d.nom+' <span class="pill '+rcls+'" style="font-size:8px;">'+d.role+'</span></div><div class="card-sub">'+d.email+'</div>'+(d.partenaire?partenaireTag(d.partenaire,d.role):'')+'</div><div style="display:flex;gap:5px;align-items:center;flex-shrink:0;"><span class="pill '+(d.statut==='valide'?'pill-ok':'pill-warn')+'">'+(d.statut==='valide'?'✓ Validé':'Attente')+'</span>'+(d.statut==='en_attente'&&d.role==='guidee'?'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-demande" data-id="'+d.id+'">✓</button>':'')+'</div></div>';
+    });
+    h+='</div>';
+  });
+  return h;
+}
+function inscrireCours() {
+  var email=(gel('ic-email')||{}).value||''; var cours=(gel('ic-cours')||{}).value||''; var type=(gel('ic-type')||{}).value||''; var paie=(gel('ic-paie')||{}).value||''; var montant=(gel('ic-montant')||{}).value||''; var date=(gel('ic-date')||{}).value||today();
+  var err=gel('ic-err'), ok=gel('ic-ok');
+  if(ok)ok.style.display='none'; if(err)err.style.display='none';
+  email=email.trim().toLowerCase();
+  if(!email){if(err){err.textContent='Email requis.';err.style.display='block';}return;}
+  var ville = cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
+  if(IS_DEMO){
+    (adminData.inscriptionsCours=adminData.inscriptionsCours||[]).push({id:'IC'+Date.now(),nom:email,email:email,cours:cours,type:type,paiement:paie,montant:Number(montant),date:date,ville:ville});
+    if(type.indexOf('carte')>=0){var c=adminData.cartes.find(function(x){return x.email===email;});if(c){c.restants=10;c.utilises=0;c.datePremierCours='';c.expiration='';c.datesCours=[];c.ville=ville;}}
+    if(ok)ok.style.display='block'; return;
+  }
+  postAS({action:'inscrireCours',email:email,cours:cours,type:type,paiement:paie,montant:Number(montant),date:date,ville:ville}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';chargerDonnees();}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+}
+function valDemande(id, btn) {
+  btn.disabled=true; btn.textContent='⏳';
+  if(IS_DEMO){var d=adminData.demandesInscription.find(function(x){return x.id===id;});if(d)d.statut='valide';renderTab();return;}
+  postAS({action:'validerDemandeInscription',id:id}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓';});
+}
+
+// ================================================================
+// TAB CARTES 10
+// ================================================================
+function renderCartes() {
+  // Inclure les élèves avec carte10 validée même sans cours pointé encore
+  var cartesEleves = (adminData.cartes||[]).filter(function(c){
+    return c.utilises>0||c.restants>0||c.datePremierCours;
+  });
+  // Ajouter aussi les inscriptions avec carte10 validées (restants=10, pas encore pointés)
+  var emailsCartes = {};
+  cartesEleves.forEach(function(c){ emailsCartes[c.email]=true; });
+  (adminData.coursTango||[]).filter(function(ct){
+    return ct.statut==='inscrit' && ct.type && ct.type.indexOf('carte')>=0 && !emailsCartes[ct.email];
+  }).forEach(function(ct){
+    cartesEleves.push({
+      id: ct.id, nom: ct.prenom+' '+ct.nom, niveau: ct.niveau,
+      email: ct.email, statutEleve:'Actif', utilises:0, restants:10,
+      datePremierCours:'', expiration:'', statut:'Nouvelle carte',
+      source:'inscription', ville: ct.ville, datesCours:[], partenaire:ct.partenaire||''
+    });
+  });
+  var cartes = cartesEleves;
+  if(!cartes.length)return'<div class="empty-state">Aucune carte de 10 cours.<br>Inscrivez un élève avec "Carte de 10 cours" dans l\'onglet Cours.</div>';
+  var now=new Date(); now.setHours(0,0,0,0);
+  cartes.sort(function(a,b){
+    var da=a.expiration?new Date(a.expiration+'T00:00:00'):new Date('2099-01-01');
+    var db=b.expiration?new Date(b.expiration+'T00:00:00'):new Date('2099-01-01');
+    return da-db;
+  });
+  var h='';
+  cartes.forEach(function(c){
+    var nbUtil=c.utilises||0, datesCours=c.datesCours||[];
+    var expAff=c.expiration;
+    if(!expAff&&c.datePremierCours)expAff=calcExpiration(c.datePremierCours,c.ville||'paris');
+    var exp=expAff?new Date(expAff+'T00:00:00'):null;
+    var days=exp?Math.ceil((exp-now)/86400000):null;
+    var fini=nbUtil>=10||(days!==null&&days<0);
+    var bient=!fini&&days!==null&&days<14;
+    var sLbl=fini?'À renouveler':bient?'Expire dans '+days+'j':'Active';
+    var sCls=fini?'pill-err':bient?'pill-warn':'pill-ok';
+    var dots='<div class="dots-carte">';
+    for(var i=0;i<10;i++){
+      var ds=datesCours[i]||null;
+      var dcls=i<nbUtil?(fini?'expire':'pris'):'vide';
+      dots+='<div class="dot-cours"><div class="dot-circle '+dcls+'">'+(i+1)+'</div><div class="dot-date">'+(ds?fmtDateCourt(ds):'')+'</div></div>';
+    }
+    dots+='</div>';
+    var expTxt=expAff?'Expire : '+fmtDate(expAff):c.datePremierCours?'1er cours : '+fmtDate(c.datePremierCours):'Aucun cours pointé';
+    h+='<div class="card'+(fini||bient?' hl-warn':'')+'"><div class="card-top"><div>'
+      +'<div class="card-nom">'+c.nom+'</div>'
+      +'<div class="card-sub">'+c.id+' · '+(c.niveau||'—')+' · '+(c.ville==='vincennes'?'Vincennes':'Paris')+'</div>'
+      +(c.email?'<div class="card-sub">'+c.email+'</div>':'')
+      +'</div><span class="pill '+sCls+'">'+sLbl+'</span></div>'
+      +dots
+      +'<div class="card-sub" style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>'+nbUtil+'/10 cours · '+(c.restants||0)+' restants</span><span>'+expTxt+'</span></div>'
+      +'<div class="btn-row">'
+      +'<button class="btn btn-gold" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer un cours</button>'
+      +'<button class="btn btn-ok" data-action="renouveler-carte" data-id="'+c.id+'">↻ Renouveler</button>'
+      +btnEmail(c.email,c.nom)
+      +'</div></div>';
+  });
+  return h;
+}
+function pointerCoursAction(id, date, btn) {
+  if(IS_DEMO){
+    var c=adminData.cartes.find(function(x){return x.id===id;});
+    if(c){if(!c.datesCours)c.datesCours=[];c.utilises=Math.min(10,(c.utilises||0)+1);c.restants=Math.max(0,10-c.utilises);c.datesCours.push(date);if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}if(c.restants===0){var msg=gel('modal-confirm-msg');if(msg)msg.textContent='';}}
+    renderTab(); return;
+  }
+  if(btn)btn.disabled=true;
+  var c=adminData.cartes.find(function(x){return x.id===id;});
+  postAS({action:'pointageManuel',eleveId:id,date:date,niveau:c?c.niveau:'',note:'Pointage admin'}).then(function(){chargerDonnees();}).catch(function(e){if(btn)btn.disabled=false;});
+}
+function renouvelerCarteAction(id, btn) {
+  if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=10;c.datePremierCours='';c.expiration='';c.datesCours=[];}renderTab();return;}
+  if(btn){btn.disabled=true;btn.textContent='⏳';}
+  postAS({action:'renouvelerCarte',eleveId:id}).then(function(){chargerDonnees();}).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
+}
+
+// ================================================================
+// TAB STAGES
+// ================================================================
+function renderStages() {
+  var stages=adminData.stages||{};
+  var dates=Object.keys(stages).sort();
+  if(!dates.length)return'<div class="empty-state">Aucun stage.</div>';
+  if(!filtreStage||!stages[filtreStage])filtreStage=dates[0];
+
+  // Onglets dates
+  var h='<div class="sub-tabs" style="margin-bottom:8px;">';
+  dates.forEach(function(d){
+    var dd=new Date(d+'T00:00:00');
+    h+='<button class="sub-tab'+(filtreStage===d?' active':'')+'" data-filt-stage="'+d+'">'+dd.getDate()+'/'+(dd.getMonth()+1)+'</button>';
+  });
+  h+='</div>';
+
+  var st=stages[filtreStage], ins=st.inscrits||[];
+  h+='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:10px;">'+(st.label||fmtDate(filtreStage))+'</div>';
+
+  // Sous-onglets créneaux
+  var slots=[
+    {id:'technique',lbl:'14h — Technique',color:'var(--gold)'},
+    {id:'stage1',   lbl:'15h — Stage 1', color:'var(--info-text)'},
+    {id:'stage2',   lbl:'16h30 — Stage 2',color:'var(--guidee-text)'},
+    {id:'pointage', lbl:'✓ Pointage',    color:'var(--ok-text)'}
+  ];
+  h+='<div class="sub-tabs">';
+  slots.forEach(function(sl){
+    var active=filtreStageSlot===sl.id;
+    h+='<button class="sub-tab'+(active?' active':'')+'" data-action="filt-stage-slot" data-slot="'+sl.id+'">'+sl.lbl+'</button>';
+  });
+  h+='</div>';
+
+  if(filtreStageSlot==='pointage'){
+    // Vue pointage existante avec stats recette
+    var conf=ins.filter(function(i){return !i.attente;});
+    var att=ins.filter(function(i){return i.attente;});
+    var pres=conf.filter(function(i){return i.present===true;});
+    var rec=pres.reduce(function(s,i){return s+(i.montant||0);},0);
+    var recTot=conf.reduce(function(s,i){return s+(i.montant||0);},0);
+    h+='<div class="stats-row stats-4"><div class="stat"><div class="stat-n n-gold">'+conf.length+'</div><div class="stat-l">Confirmés</div></div>'
+      +'<div class="stat"><div class="stat-n">'+ins.filter(function(i){return i.role==='guideur'&&!i.attente;}).length+'</div><div class="stat-l">Guideurs</div></div>'
+      +'<div class="stat"><div class="stat-n">'+ins.filter(function(i){return i.role==='guidee'&&!i.attente;}).length+'</div><div class="stat-l">Guidées</div></div>'
+      +'<div class="stat"><div class="stat-n n-warn">'+att.length+'</div><div class="stat-l">Attente</div></div></div>';
+    h+='<div class="card hl-ok" style="margin-bottom:12px;"><div style="font-size:10px;color:var(--ok-text);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Recette</div>'
+      +'<div style="font-size:22px;font-weight:700;color:var(--ok-text);">'+(pres.length?rec:recTot)+' €</div>'
+      +'<div class="card-sub">'+(pres.length?pres.length+' présents pointés':conf.length+' confirmés')+'</div></div>';
+    if(att.filter(function(i){return i.role==='guidee';}).length){
+      h+='<div class="section-hdr">Guidées en attente</div>';
+      att.filter(function(i){return i.role==='guidee';}).forEach(function(i){
+        h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+i.prenom+' '+i.nom+'</div>'
+          +'<div class="card-sub">'+(i.slots||[]).join(', ')+'</div>'+partenaireTag(i.partenaire,'guidee')+'</div>'
+          +'<span class="pill pill-warn">Attente</span></div>'
+          +'<div class="btn-row"><button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Confirmer</button></div></div>';
+      });
+    }
+    h+='<div class="section-hdr">Pointage présences</div>';
+    conf.forEach(function(i,idx){
+      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+      h+='<div class="point-row"><div style="flex:1;"><div class="point-nom" style="display:flex;align-items:center;gap:6px;">'+i.prenom+' '+i.nom
+        +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span></div>'
+        +'<div class="point-sub">'+(i.slots||[]).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
+        +'<div style="display:flex;gap:6px;">'
+        +'<button class="btn-point btn-pres'+(i.present===true?' on':'')+'" data-action="pointer-stage-pres" data-date="'+filtreStage+'" data-idx="'+idx+'">✓</button>'
+        +'<button class="btn-point btn-abs'+(i.present===false?' on':'')+'" data-action="pointer-stage-abs" data-date="'+filtreStage+'" data-idx="'+idx+'">✗</button>'
+        +'</div></div>';
+      if(i.partenaire&&i.emailPartenaire){
+        h+='<div style="background:var(--s2);border-radius:8px;padding:6px 10px;margin:2px 0 2px 12px;border-left:2px solid var(--border);">'
+          +'<div style="font-size:9px;color:var(--dim);margin-bottom:2px;">↳ Partenaire</div>'
+          +'<div style="font-size:12px;font-weight:600;">'+i.partenaire+'</div>'
+          +btnEmail(i.emailPartenaire,i.partenaire)+'</div>';
+      }
+    });
+    return h;
+  }
+
+  // Vue par créneau (technique / stage1 / stage2)
+  var slotId = filtreStageSlot;
+  var insSlot = ins.filter(function(i){ return !i.attente && i.slots && i.slots.indexOf(slotId)>=0; });
+  var attSlot = ins.filter(function(i){ return i.attente && i.slots && i.slots.indexOf(slotId)>=0; });
+  var slotInfo = {technique:{lbl:'Technique Leader & Follower',heure:'14h – 15h'},stage1:{lbl:'Stage 1',heure:'15h – 16h30'},stage2:{lbl:'Stage 2',heure:'16h30 – 18h'}};
+  var info = slotInfo[slotId]||{lbl:slotId,heure:''};
+  h+='<div class="card" style="margin-bottom:12px;"><div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">'+info.heure+'</div>'
+    +'<div style="font-size:16px;font-weight:600;color:var(--text);">'+info.lbl+'</div>'
+    +'<div class="card-sub">'+insSlot.length+' inscrits'+(attSlot.length?' · '+attSlot.length+' en attente':'')+'</div></div>';
+
+  if(attSlot.length){
+    h+='<div class="section-hdr">En attente de confirmation</div>';
+    attSlot.forEach(function(i){
+      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+      h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+i.prenom+' '+i.nom
+        +'</div><div class="card-sub">Inscrit(e) à : '+(i.slots||[]).join(', ')+'</div>'
+        +partenaireTag(i.partenaire,'guidee')+'</div>'
+        +'<span class="pill '+rcls+'">'+i.role+'</span></div>'
+        +'<div class="btn-row"><button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Confirmer</button></div></div>';
+      if(i.partenaire&&i.emailPartenaire){
+        h+='<div style="background:var(--s2);border-radius:8px;padding:6px 10px;margin:2px 0 2px 12px;border-left:2px solid var(--border);">'
+          +'<div style="font-size:9px;color:var(--dim);margin-bottom:2px;">↳ Partenaire</div>'
+          +'<div style="font-size:12px;font-weight:600;">'+i.partenaire+'</div>'
+          +btnEmail(i.emailPartenaire,i.partenaire)+'</div>';
+      }
+    });
+  }
+
+  if(!insSlot.length) return h+'<div class="empty-state">Aucun inscrit à ce créneau.</div>';
+  h+='<div class="section-hdr">Inscrits ('+insSlot.length+')</div>';
+  insSlot.forEach(function(i){
+    var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+    h+='<div class="card"><div class="card-top"><div>'
+      +'<div class="card-nom">'+i.prenom+' '+i.nom+'</div>'
+      +'<div class="card-sub">Inscrit(e) à : '+(i.slots||[]).join(', ')+' · '+(i.montant||0)+'€</div>'
+      +partenaireTag(i.partenaire,i.role)
+      +'</div><span class="pill '+rcls+'">'+i.role+'</span></div>'
+      +'<div class="btn-row">'+btnEmail(i.emailPartenaire||'',i.partenaire||'')+'</div></div>';
+    if(i.partenaire&&i.emailPartenaire){
+      h+='<div style="background:var(--s2);border-radius:8px;padding:6px 10px;margin:2px 0 9px 12px;border-left:2px solid var(--border);">'
+        +'<div style="font-size:9px;color:var(--dim);margin-bottom:2px;">↳ Partenaire</div>'
+        +'<div style="font-size:12px;font-weight:600;">'+i.partenaire+'</div>'
+        +btnEmail(i.emailPartenaire,i.partenaire)+'</div>';
+    }
+  });
+  return h;
+}
+
+function valAttStage(date, nom, btn) {
+  btn.disabled=true;btn.textContent='⏳';
+  if(IS_DEMO){var st=adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits.find(function(x){return(x.prenom+' '+x.nom)===nom;});if(st)st.attente=false;renderTab();return;}
+  postAS({action:'validerAttente',date:date}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓';});
+}
+function pointerStage(date, idx, present) {
+  var i=adminData.stages&&adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits[idx];
+  if(i)i.present=present; renderTab();
+}
+
+// ================================================================
+// TAB SORANO
+// ================================================================
+function renderSorano() {
+  var liste=(adminData.sorano||[]).slice().sort(function(a,b){
+    var na=a.niveau||'', nb=b.niveau||'';
+    if(na!==nb)return na.localeCompare(nb);
+    return (a.nom||'').localeCompare(b.nom||'');
+  });
+  var payes=liste.filter(function(s){return s.paiementSorano;}), nonPayes=liste.filter(function(s){return !s.paiementSorano;});
+  var h='<div class="stats-row stats-3"><div class="stat"><div class="stat-n n-gold">'+liste.length+'</div><div class="stat-l">Total</div></div><div class="stat"><div class="stat-n n-ok">'+payes.length+'</div><div class="stat-l">Réglé</div></div><div class="stat"><div class="stat-n n-warn">'+nonPayes.length+'</div><div class="stat-l">En attente</div></div></div>';
+  if(!liste.length)return h+'<div class="empty-state">Aucun élève Vincennes.</div>';
+  if(nonPayes.length){h+='<div class="section-hdr">Non réglé ('+nonPayes.length+')</div>';nonPayes.forEach(function(s){h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+s.nom+'" data-id="'+s.id+'">✉️ Relance</button></div></div>';});}
+  if(payes.length){h+='<div class="section-hdr">Réglé ('+payes.length+')</div>';payes.forEach(function(s){h+='<div class="card hl-ok"><div class="card-top"><div><div class="card-nom">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button></div></div>';});}
+  return h;
+}
+function soranoAction(id, paye, btn) {
+  btn.disabled=true;
+  if(IS_DEMO){var s=adminData.sorano.find(function(x){return x.id===id;});if(s)s.paiementSorano=paye;renderTab();return;}
+  postAS({action:'updateSorano',id:id,paiement:paye}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;});
+}
+function relanceSorano(email, nom, btn) {
+  btn.disabled=true; btn.textContent='⏳';
+  if(IS_DEMO){setTimeout(function(){btn.disabled=false;btn.textContent='✓ Envoyé (démo)';},800);return;}
+  postAS({action:'relanceSorano',email:email,nom:nom,lienPaiement:URL_SORANO}).then(function(){btn.textContent='✓ Envoyé';}).catch(function(e){btn.disabled=false;btn.textContent='✉️ Relance';});
+}
+
+// ================================================================
+// TAB AGENDA
+// ================================================================
+function getEventsForDate(dateStr) {
+  var evts=[];
+  if(agendaCats.cours){if(COURS_PARIS.indexOf(dateStr)>=0){evts.push({cat:'cours',titre:'Débutant — Paris',heure:'20h30'});evts.push({cat:'cours',titre:'Intermédiaire — Paris',heure:'21h45'});}if(COURS_VINCENNES.indexOf(dateStr)>=0){evts.push({cat:'cours',titre:'Débutant — Vincennes',heure:'19h30'});evts.push({cat:'cours',titre:'Intermédiaire — Vincennes',heure:'21h00'});}}
+  if(agendaCats.stage){var st=STAGES.find(function(s){return s.date===dateStr;});if(st){evts.push({cat:'stage',titre:'Technique Leader & Follower',heure:'14h00'});if(st.s1)evts.push({cat:'stage',titre:st.s1,heure:'15h00'});if(st.s2)evts.push({cat:'stage',titre:st.s2,heure:'16h30'});}}
+  if(agendaCats.milonga&&MILONGAS.indexOf(dateStr)>=0)evts.push({cat:'milonga',titre:'Milonga La Dolce Vita',heure:'—'});
+  return evts;
+}
+function renderAgenda() {
+  var h='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:12px;">Agenda — 12 prochains mois</div>'
+    +'<div class="cat-pills">'
+    +'<button class="cat-pill-ag" style="background:'+(agendaCats.cours?'var(--guideur-bg)':'transparent')+';border-color:'+(agendaCats.cours?'var(--guideur)':'var(--border)')+';color:'+(agendaCats.cours?'var(--guideur-text)':'var(--dim)')+';" data-cat-ag="cours">🎓 Cours</button>'
+    +'<button class="cat-pill-ag" style="background:'+(agendaCats.stage?'var(--gold-pale)':'transparent')+';border-color:'+(agendaCats.stage?'var(--gold)':'var(--border)')+';color:'+(agendaCats.stage?'var(--gold)':'var(--dim)')+';" data-cat-ag="stage">💃 Stages</button>'
+    +'<button class="cat-pill-ag" style="background:'+(agendaCats.milonga?'var(--guidee-bg)':'transparent')+';border-color:'+(agendaCats.milonga?'var(--guidee)':'var(--border)')+';color:'+(agendaCats.milonga?'var(--guidee-text)':'var(--dim)')+';" data-cat-ag="milonga">🎶 Milongas</button>'
+    +'</div>';
+  // Vue liste 12 mois glissants à partir d'aujourd'hui
+  var todayStr=today();
+  var debut=new Date(todayStr+'T00:00:00');
+  var finDate=new Date(debut); finDate.setMonth(finDate.getMonth()+12);
+  var d=new Date(debut), hasEvents=false, currentMoisAff=-1;
+  while(d<=finDate){
+    var ds=toISO(d), evts=getEventsForDate(ds);
+    if(evts.length){
+      hasEvents=true;
+      // En-tête de mois
+      if(d.getMonth()!==currentMoisAff){
+        currentMoisAff=d.getMonth();
+        h+='<div style="font-family:var(--font-d);font-size:18px;font-weight:300;color:var(--dim);letter-spacing:3px;padding:16px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px;">'+MOIS_FR[d.getMonth()]+' '+d.getFullYear()+'</div>';
+      }
+      h+='<div class="agenda-day-hdr"><div class="agenda-day-num" style="'+(ds===todayStr?'color:var(--gold)':'')+'">'+d.getDate()+'</div><div class="agenda-day-lbl">'+DOW_LONG[d.getDay()]+'</div>'+(ds===todayStr?'<span class="pill pill-gold" style="font-size:8px;">Aujourd\'hui</span>':'')+'</div>';
+      evts.forEach(function(e){h+='<div class="agenda-event ae-'+e.cat+'"><div><div class="ae-titre">'+(e.heure!=='—'?e.heure+' — ':'')+e.titre+'</div><div class="ae-sub">'+({cours:'Espace Danse Studio / Espace Sorano',stage:'Centre Kim Kan, Paris 20e',milonga:'Paris'}[e.cat]||'')+'</div></div></div>';});
+    }
+    d.setDate(d.getDate()+1);
+  }
+  if(!hasEvents)h+='<div class="empty-state">Aucun événement sur les 12 prochains mois.</div>';
+  return h;
+}
+
+// ================================================================
+// TAB PUBLICATIONS
+// ================================================================
+function renderPublications() {
+  var pubs=adminData.publications||[];
+  var h='<button class="btn btn-gold" data-action="nouvelle-pub" style="width:100%;margin-bottom:14px;">✏️ Nouvelle publication</button><div id="pub-ed"></div>';
+  if(!pubs.length)return h+'<div class="empty-state">Aucune publication.</div>';
+  pubs.forEach(function(p,i){
+    var publiee=p.publiee, prog=!publiee&&p.dateProgrammee&&new Date(p.dateProgrammee)>new Date();
+    var est=publiee?'pill-ok':prog?'pill-warn':'', lbl=publiee?'Publiée':prog?'Programmée':'Brouillon';
+    h+='<div class="card"><div class="card-top"><div><div class="card-nom">'+p.titre+'</div><div class="card-sub">'+p.cat+(p.dateProgrammee?' · '+fmtDate(p.dateProgrammee.slice(0,10)):'')+'</div></div><span class="pill '+est+'">'+lbl+'</span></div>'
+      +(p.image?'<img src="'+p.image+'" style="width:100%;height:80px;object-fit:cover;border-radius:6px;margin:8px 0;" loading="lazy"/>':'')
+      +(p.extrait?'<div class="card-sub" style="margin-bottom:8px;">'+p.extrait+'</div>':'')
+      +(publiee?'<div class="box-ok" style="display:block;margin-bottom:8px;">✓ Publiée — visible par les élèves dans l\'application</div>':'')
+      +'<div class="btn-row">'
+      +'<button class="btn btn-ghost" data-action="editer-pub" data-idx="'+i+'">✏️ Modifier</button>'
+      +'<button class="btn btn-ghost" data-action="dupliquer-pub" data-idx="'+i+'">⧉ Dupliquer</button>'
+      +(!publiee?'<button class="btn btn-ok" data-action="publier-pub" data-id="'+p.id+'">🚀 Publier</button>':'')
+      +'<button class="btn btn-err" data-action="supprimer-pub" data-id="'+p.id+'">🗑</button>'
+      +'</div></div>';
+  });
+  return h;
+}
+function ouvrirPub(pub) {
+  var p=pub||{cat:'actu',titre:'',extrait:'',contenu:'',image:'',video:'',dateProgrammee:''};
+  gel('pub-ed').innerHTML='<div class="card" style="margin-bottom:14px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:12px;">'+(pub?'Modifier':'Nouvelle publication')+'</div>'
+    +'<div class="field"><label>Catégorie</label><select id="ed-cat"><option value="actu"'+(p.cat==='actu'?' selected':'')+'>Actualité</option><option value="article"'+(p.cat==='article'?' selected':'')+'>Article</option><option value="event"'+(p.cat==='event'?' selected':'')+'>Événement</option><option value="media"'+(p.cat==='media'?' selected':'')+'>Média</option></select></div>'
+    +'<div class="field"><label>Titre *</label><input type="text" id="ed-titre" value="'+(p.titre||'')+'"/></div>'
+    +'<div class="field"><label>Résumé</label><textarea id="ed-extrait" rows="2" style="width:100%;padding:9px;background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:13px;">'+(p.extrait||'')+'</textarea></div>'
+    +'<div class="field"><label>Contenu</label><textarea id="ed-contenu" rows="7" style="width:100%;padding:9px;background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:13px;resize:vertical;">'+(p.contenu||'')+'</textarea></div>'
+    +'<div class="field"><label>Image</label>'
+    +'<div id="upload-zone" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;" data-action="upload-click">'+(p.image?'<img src="'+p.image+'" style="max-height:80px;border-radius:4px;display:block;margin:0 auto 8px;"/>':'')+'<div style="font-size:12px;color:var(--dim);">📸 Cliquez pour uploader</div></div>'
+    +'<input type="file" id="pub-file" accept="image/*,video/*" style="display:none"/>'
+    +'<div id="ul-prog" style="display:none;font-size:12px;color:var(--gold);margin-top:6px;text-align:center;">⏳ Upload…</div>'
+    +'<input type="text" id="ed-image" value="'+(p.image||'')+'" placeholder="…ou URL image" style="margin-top:8px;width:100%;padding:9px;background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:12px;"/>'
+    +'</div>'
+    +'<div class="field"><label>Vidéo YouTube embed</label><input type="text" id="ed-video" value="'+(p.video||'')+'" placeholder="https://www.youtube.com/embed/…"/></div>'
+    +'<div class="field"><label>Date(s) de publication</label><div id="dates-prog-list"><div class="date-prog-row" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;"><input type="datetime-local" class="date-prog-input" value="'+(p.dateProgrammee?p.dateProgrammee.slice(0,16):'')+'" style="flex:1;padding:9px;background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:13px;"/></div></div>'
+    +'<button class="btn btn-ghost" data-action="ajouter-date-prog" style="font-size:11px;margin-top:4px;">+ Ajouter une date</button>'
+    +'<div style="font-size:11px;color:var(--dim);margin-top:4px;">Laisser vide = publier immédiatement</div>'
+    +'</div>'
+    +'<div class="box-err" id="ed-err"></div>'
+    +'<div class="btn-row"><button class="btn btn-gold" data-action="save-pub" data-id="'+(pub?pub.id||'':'')+'" style="flex:2;">💾 '+(pub?'Enregistrer':'Créer')+'</button><button class="btn btn-ghost" data-action="annuler-pub">Annuler</button></div>'
+    +'</div>';
+  // Rebind events pour le nouveau contenu du pub-ed
+  var el = gel('pub-ed');
+  el.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-action]');
+    if (btn) handleAction(btn.dataset.action, btn);
+  });
+  var pubFile = el.querySelector('#pub-file');
+  if (pubFile) pubFile.addEventListener('change', function() { uploadMedia(pubFile); });
+}
+function dupliquerPub(i) {
+  var original=(adminData.publications||[])[i];
+  if(!original)return;
+  var copie=JSON.parse(JSON.stringify(original));
+  copie.id=''; copie.publiee=false; copie.titre='Copie — '+copie.titre; copie.dateProgrammee='';
+  ouvrirPub(copie);
+}
+function ajouterDateProg() {
+  var list=gel('dates-prog-list');
+  if(!list)return;
+  var row=document.createElement('div');
+  row.className='date-prog-row';
+  row.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:6px;';
+  row.innerHTML='<input type="datetime-local" class="date-prog-input" style="flex:1;padding:9px;background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:13px;"/><button class="btn btn-err" data-action="remove-date-prog" style="padding:5px 8px;">✕</button>';
+  row.querySelector('[data-action]').addEventListener('click', function(){ row.remove(); });
+  list.appendChild(row);
+}
+function uploadMedia(input) {
+  var file=input.files[0]; if(!file)return;
+  var prog=gel('ul-prog'); if(prog)prog.style.display='block';
+  if(!CLOUDINARY_NAME||CLOUDINARY_NAME==='VOTRE_CLOUD_NAME'){if(prog)prog.style.display='none';return;}
+  var fd=new FormData(); fd.append('file',file); fd.append('upload_preset','tango_uploads');
+  fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_NAME+'/auto/upload',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){if(d.secure_url){var img=gel('ed-image');if(img)img.value=d.secure_url;}}).catch(function(e){console.error('Upload:',e);}).finally(function(){if(prog)prog.style.display='none';});
+}
+function savePub(existingId) {
+  var titre=(gel('ed-titre')||{}).value||''; var cat=(gel('ed-cat')||{}).value||'actu';
+  var extrait=(gel('ed-extrait')||{}).value||''; var contenu=(gel('ed-contenu')||{}).value||'';
+  var image=(gel('ed-image')||{}).value||''; var video=(gel('ed-video')||{}).value||'';
+  var inputs=document.querySelectorAll('.date-prog-input');
+  var dates=[]; inputs.forEach(function(i){if(i.value)dates.push(i.value);});
+  var err=gel('ed-err');
+  if(!titre.trim()){if(err){err.textContent='Titre requis.';err.style.display='block';}return;}
+  if(err)err.style.display='none';
+  var publiee=dates.length===0||(dates.length===1&&new Date(dates[0])<=new Date());
+  var payload={action:'sauvegarderPublication',id:existingId,cat:cat,titre:titre.trim(),extrait:extrait,contenu:contenu,image:image,video:video,dateProgrammee:dates[0]||new Date().toISOString(),datesProgrammees:dates,publiee:publiee};
+  if(IS_DEMO){
+    if(!adminData.publications)adminData.publications=[];
+    if(existingId){var idx=adminData.publications.findIndex(function(p){return p.id===existingId;});if(idx>=0)adminData.publications[idx]=Object.assign({},payload,{id:existingId});}
+    else adminData.publications.unshift(Object.assign({},payload,{id:'p'+Date.now()}));
+    gel('pub-ed').innerHTML=''; renderTab(); return;
+  }
+  postAS(payload).then(function(r){if(r.error)throw new Error(r.error);gel('pub-ed').innerHTML='';chargerDonnees();}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+}
+function publierPub(id, btn) {
+  btn.disabled=true;
+  if(IS_DEMO){var p=adminData.publications&&adminData.publications.find(function(x){return x.id===id;});if(p)p.publiee=true;renderTab();return;}
+  postAS({action:'publierPublication',id:id}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;});
+}
+function supprimerPub(id, btn) {
+  btn.disabled=true;
+  if(IS_DEMO){adminData.publications=(adminData.publications||[]).filter(function(p){return p.id!==id;});renderTab();return;}
+  postAS({action:'supprimerPublication',id:id}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;});
+}
+
+// ================================================================
+// TAB — COURS TANGO (fusion Élèves + Cours)
+// Statuts : demande | valide | attente_paiement | inscrit
+// ================================================================
+var STATUT_LBL = {
+  demande:           {lbl:'Demande',          pill:'pill-info',  border:'hl-warn'},
+  valide:            {lbl:'Demande validée',  pill:'pill-warn',  border:'hl-warn'},
+  attente_paiement:  {lbl:'Attente paiement', pill:'pill-gold',  border:'hl-gold'},
+  inscrit:           {lbl:'Inscrit',          pill:'pill-ok',    border:'hl-ok'}
+};
+
+function renderCoursTango() {
+  var tous = (adminData.coursTango||[]);
+  var stats = {
+    demande:          tous.filter(function(e){return e.statut==='demande';}).length,
+    valide:           tous.filter(function(e){return e.statut==='valide';}).length,
+    attente_paiement: tous.filter(function(e){return e.statut==='attente_paiement';}).length,
+    inscrit:          tous.filter(function(e){return e.statut==='inscrit';}).length
+  };
+
+  var sousOnglets = [
+    {id:'demande',          lbl:'Demandes ('         +stats.demande+')'},
+    {id:'valide',           lbl:'Validées ('         +stats.valide+')'},
+    {id:'attente_paiement', lbl:'Attente paiement ('+stats.attente_paiement+')'},
+    {id:'inscrit',          lbl:'Inscrits ('         +stats.inscrit+')'},
+    {id:'inscrire',         lbl:'✏️ Nouvelle demande'},
+    {id:'valider_paiement', lbl:'💳 Valider paiement'}
+  ];
+
+  var h = '<div class="stats-row stats-4">'
+    +'<div class="stat"><div class="stat-n n-warn">'+stats.demande+'</div><div class="stat-l">Demandes</div></div>'
+    +'<div class="stat"><div class="stat-n n-gold">'+stats.valide+'</div><div class="stat-l">Validées</div></div>'
+    +'<div class="stat"><div class="stat-n" style="color:var(--gold)">'+stats.attente_paiement+'</div><div class="stat-l">Att. paiement</div></div>'
+    +'<div class="stat"><div class="stat-n n-ok">'+stats.inscrit+'</div><div class="stat-l">Inscrits</div></div>'
+    +'</div>';
+
+  h += '<div class="sub-tabs" style="flex-wrap:wrap;">';
+  sousOnglets.forEach(function(s){
+    h += '<button class="sub-tab'+(sousOngletCoursTango===s.id?' active':'')+'" data-sous-ct="'+s.id+'">'+s.lbl+'</button>';
+  });
+  h += '</div>';
+
+  if(sousOngletCoursTango==='inscrire'){
+    return h + renderFormulaireDemandeAdmin();
+  }
+  if(sousOngletCoursTango==='valider_paiement'){
+    return h + renderValiderPaiement();
+  }
+
+  var liste = tous.filter(function(e){ return e.statut===sousOngletCoursTango; });
+  if(!liste.length) return h+'<div class="empty-state">Aucun élève dans cette catégorie.</div>';
+
+  // Trier : ville, niveau, nom
+  liste = liste.slice().sort(function(a,b){
+    if(a.cours!==b.cours)return(a.cours||'').localeCompare(b.cours||'');
+    return(a.nom||'').localeCompare(b.nom||'');
+  });
+
+  // Regrouper par cours
+  var grp = {};
+  liste.forEach(function(e){var k=e.cours||'—';if(!grp[k])grp[k]=[];grp[k].push(e);});
+
+  Object.keys(grp).sort().forEach(function(cours){
+    var items = grp[cours];
+    h += '<div class="section-hdr">'+cours+' ('+items.length+')</div>';
+    items.forEach(function(e){
+      h += ficheEleve(e);
+      // Fiche partenaire séparée si existe
+      if(e.partenaire && e.emailPartenaire){
+        var ptFiche = items.find(function(x){return x.email===e.emailPartenaire;});
+        // Afficher fiche partenaire inline si pas dans la liste (partenaire non encore inscrit)
+        if(!ptFiche){
+          h += '<div style="background:var(--s2);border-radius:8px;padding:8px 12px;margin:-6px 0 9px 16px;border-left:2px solid var(--border);">'
+            +'<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">↳ Partenaire</div>'
+            +'<div style="font-size:13px;font-weight:600;">'+e.partenaire+'</div>'
+            +'<div class="card-sub">'+e.emailPartenaire+'</div>'
+            +btnEmail(e.emailPartenaire,e.partenaire)+'</div>';
+        }
+      }
+    });
+  });
+  return h;
+}
+
+function ficheEleve(e) {
+  var s = STATUT_LBL[e.statut]||{lbl:e.statut,pill:'',border:''};
+  var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
+  var h = '<div class="card '+(s.border||'')+'">'
+    +'<div class="card-top"><div>'
+    +'<div class="card-nom">'+e.prenom+' '+e.nom+'</div>'
+    +'<div class="card-sub">'+(e.email||'')+(e.tel?' · '+e.tel:'')+'</div>'
+    +'<div class="card-sub">'+(e.niveau||'—')+(e.ville?' · '+(e.ville==='vincennes'?'Vincennes':'Paris'):'')+'</div>'
+    +partenaireTag(e.partenaire,e.role)
+    +'</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+    +'<span class="pill '+rcls+'">'+e.role+'</span>'
+    +'<span class="pill '+s.pill+'">'+s.lbl+'</span>'
+    +'</div></div>';
+
+  // Boutons d'action selon statut
+  h += '<div class="btn-row">';
+  if(e.statut==='demande'){
+    h += '<button class="btn btn-ok" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="valide">✓ Valider</button>';
+  }
+  if(e.statut==='valide'){
+    h += '<button class="btn btn-gold" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="attente_paiement">→ Attente paiement</button>';
+    h += '<button class="btn btn-ghost" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="demande">← Revenir</button>';
+  }
+  if(e.statut==='attente_paiement'){
+    h += '<button class="btn btn-ok" data-action="ouvrir-valider-paiement" data-id="'+e.id+'">💳 Valider paiement</button>';
+    h += '<button class="btn btn-ghost" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="valide">← Revenir</button>';
+  }
+  h += btnEmail(e.email, e.prenom+' '+e.nom);
+  h += '</div></div>';
+  return h;
+}
+
+function changerStatutCoursTango(id, statut, btn) {
+  btn.disabled=true;
+  if(IS_DEMO){
+    var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
+    if(e)e.statut=statut; renderTab(); return;
+  }
+  postAS({action:'changerStatutCoursTango',id:id,statut:statut}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+}
+
+function ouvrirValiderPaiement(id) {
+  sousOngletCoursTango='valider_paiement';
+  renderTab();
+  // Scroll vers la fiche
+  setTimeout(function(){
+    var fp=gel('form-valider-paiement');
+    if(fp)fp.scrollIntoView({behavior:'smooth'});
+    // Présélectionner l'élève
+    var sel=gel('vp-eleve-select');
+    if(sel)sel.value=id;
+  },100);
+}
+
+function renderValiderPaiement() {
+  var enAttente = (adminData.coursTango||[]).filter(function(e){return e.statut==='attente_paiement';});
+  var h = '<div id="form-valider-paiement" class="card">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Valider le paiement et inscrire</div>'
+    +'<div class="field"><label>Élève (en attente de paiement)</label><select id="vp-eleve-select">'
+    +'<option value="">— Sélectionner —</option>';
+  enAttente.forEach(function(e){
+    h += '<option value="'+e.id+'">'+e.prenom+' '+e.nom+' · '+e.cours+'</option>';
+  });
+  h += '</select></div>'
+    +'<div class="field"><label>Téléphone (si manquant)</label><input type="tel" id="vp-tel" placeholder="06 XX XX XX XX"/></div>'
+    +'<div class="field"><label>Email (si manquant)</label><input type="email" id="vp-email" autocapitalize="none"/></div>'
+    +'<div class="field"><label>Type</label><select id="vp-type">'
+    +'<option value="carte10">Carte 10 cours — 170€</option>'
+    +'<option value="carte10_reduit">Carte 10 cours réduit — 120€</option>'
+    +'<option value="forfait_paris">Forfait Paris — 490€</option>'
+    +'<option value="forfait_paris_reduit">Forfait Paris réduit — 380€</option>'
+    +'<option value="forfait_vincennes">Forfait Vincennes — 435€</option>'
+    +'<option value="forfait_vincennes_reduit">Forfait Vincennes réduit — 340€</option>'
+    +'<option value="forfait_2cours">Forfait 2 cours — 790€</option>'
+    +'<option value="forfait_2cours_reduit">Forfait 2 cours réduit — 640€</option>'
+    +'</select></div>'
+    +'<div class="field"><label>Mode de paiement</label><select id="vp-paie">'
+    +'<option value="cb1x">CB 1×</option><option value="cb3x">CB 3×</option>'
+    +'<option value="especes">Espèces</option><option value="cheque">Chèque</option>'
+    +'<option value="virement1x">Virement 1×</option><option value="virement3x">Virement 3×</option>'
+    +'</select></div>'
+    +'<div class="field"><label>Montant réglé (€)</label><input type="number" id="vp-montant" value="170"/></div>'
+    +'<div class="field"><label>Date paiement</label><input type="date" id="vp-date" value="'+today()+'"/></div>'
+    +'<div class="box-err" id="vp-err"></div>'
+    +'<div class="box-ok" id="vp-ok">✓ Paiement validé ! L&#39;élève est maintenant inscrit.</div>'
+    +'<div class="btn-row"><button class="btn btn-gold" data-action="soumettre-paiement" style="flex:2;">✓ Valider le paiement → Inscrire</button>'
+    +'<button class="btn btn-ghost" data-action="annuler-valider-paiement">Annuler</button></div>'
+    +'</div>';
+  return h;
+}
+
+function soumettreValiderPaiement() {
+  var id=(gel('vp-eleve-select')||{}).value||'';
+  var type=(gel('vp-type')||{}).value||'';
+  var paie=(gel('vp-paie')||{}).value||'';
+  var montant=(gel('vp-montant')||{}).value||'';
+  var date=(gel('vp-date')||{}).value||today();
+  var tel=(gel('vp-tel')||{}).value||'';
+  var email=(gel('vp-email')||{}).value||'';
+  var err=gel('vp-err'), ok=gel('vp-ok');
+  if(err)err.style.display='none'; if(ok)ok.style.display='none';
+  if(!id){if(err){err.textContent='Sélectionnez un élève.';err.style.display='block';}return;}
+  if(IS_DEMO){
+    var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
+    if(e){
+      e.statut='inscrit';
+      e.type=type; e.paiement=paie; e.montant=Number(montant);
+      if(tel)e.tel=tel; if(email)e.email=email;
+      // Ajouter à inscriptionsCours
+      if(!adminData.inscriptionsCours)adminData.inscriptionsCours=[];
+      adminData.inscriptionsCours.push({id:'IC'+Date.now(),nom:e.prenom+' '+e.nom,email:e.email,cours:e.cours,type:type,paiement:paie,montant:Number(montant),date:date,ville:e.ville||'paris'});
+      // Si carte10, créer entrée dans cartes
+      if(type.indexOf('carte')>=0&&!adminData.cartes.find(function(c){return c.email===e.email;})){
+        adminData.cartes.push({id:e.id,nom:e.prenom+' '+e.nom,niveau:e.niveau,email:e.email,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Active',source:'inscription',ville:e.ville||'paris',datesCours:[],partenaire:e.partenaire||''});
+        recalcStats();
+      }
+    }
+    if(ok)ok.style.display='block';
+    setTimeout(function(){sousOngletCoursTango='inscrit';renderTab();},1500);
+    return;
+  }
+  postAS({action:'validerPaiementCoursTango',id:id,type:type,paiement:paie,montant:Number(montant),date:date,tel:tel,email:email}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+}
+
+function renderFormulaireDemandeAdmin() {
+  // Même formulaire que les élèves — simplifié ici, à compléter avec inscription-cours.html
+  return '<div class="box-info">Pour saisir une nouvelle demande d&#39;inscription, utilisez le formulaire complet disponible dans <strong>inscription-cours.html</strong> ou directement sur le site Wix.<br/><br/>Il permet de choisir la ville, le niveau, le rôle, le partenaire éventuel, et génère automatiquement l&#39;email de confirmation.</div>';
+}
+
+// ================================================================
+// INIT — attacher les listeners statiques
+// ================================================================
+gel('btn-login').addEventListener('click', envoyerLien);
+gel('btn-login-back').addEventListener('click', function() {
+  gel('ls1').style.display='block';
+  gel('ls2').style.display='none';
+});
+gel('btn-logout').addEventListener('click', logout);
+document.querySelectorAll('.tab-btn[data-tab]').forEach(function(btn) {
+  btn.addEventListener('click', function() { switchTab(btn.dataset.tab); });
+});
+// Préremplir l'email en mode démo
+if (IS_DEMO) gel('login-email').value = 'tangoetvous@gmail.com';
+</script>
+</body>
+</html>

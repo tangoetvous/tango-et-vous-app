@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apercu emails Tango et Vous</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #e8e0d5; font-family: 'Jost', Arial, sans-serif; padding: 30px 16px; }
+h2 { font-family: 'Cormorant Garamond', serif; font-size: 22px; color: #4a3010; margin: 50px 0 6px; text-align: center; letter-spacing: 2px; }
+h2:first-child { margin-top: 0; }
+.label { text-align: center; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #888; margin-bottom: 8px; }
+.objet { text-align: center; font-size: 12px; color: #6b1a1a; font-style: italic; margin: 0 auto 20px; background: #fff9ee; border: 1px solid #D4AF37; border-radius: 4px; padding: 8px 16px; max-width: 600px; }
+.objet strong { color: #4a3010; font-style: normal; }
+.email-wrapper { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 4px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.18); }
+.email-header { background: #111; padding: 32px 40px 24px; text-align: center; border-bottom: 3px solid #D4AF37; }
+.email-logo { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #D4AF37; margin-bottom: 10px; }
+.email-header h1 { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: #ffffff; letter-spacing: 2px; line-height: 1.3; }
+.email-header h1 em { font-style: italic; color: #D4AF37; }
+.email-header .sous-titre { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #888; margin-top: 6px; }
+.statut-bar { padding: 15px 40px; text-align: center; font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
+.statut-bar .icone { font-size: 18px; margin-right: 8px; vertical-align: middle; }
+.statut-confirme { background: #1a3a1a; color: #7adf7a; }
+.statut-attente  { background: #2a2000; color: #D4AF37; }
+.statut-tardif   { background: #0d2137; color: #7aaaff; }
+.email-body { padding: 32px 40px; background: #ffffff; color: #333; }
+.salutation { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: #1a1a1a; margin-bottom: 14px; }
+.salutation strong { color: #6b1a1a; }
+.message-intro { font-size: 14px; color: #444; line-height: 1.8; margin-bottom: 24px; }
+.message-intro strong { color: #6b1a1a; }
+.recap-date { background: #6b1a1a; border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+.recap-date-header { background: #4a1010; padding: 14px 20px; border-bottom: 1px solid rgba(212,175,55,0.3); }
+.recap-date-header .date-label { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: #D4AF37; font-weight: 600; }
+.recap-date-header .date-lieu { font-size: 12px; color: #c8a870; margin-top: 4px; }
+.recap-date-header .date-lieu a { color: #c8a870; text-decoration: underline; }
+.recap-date-body { padding: 16px 20px; }
+.recap-personne { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid rgba(212,175,55,0.2); }
+.recap-personne:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.recap-personne-titre { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #D4AF37; font-weight: 600; margin-bottom: 8px; }
+.recap-stage-ligne { font-size: 13px; color: #f5ece0; padding: 5px 0; display: flex; align-items: flex-start; gap: 8px; }
+.recap-stage-horaire { font-size: 11px; color: #D4AF37; font-weight: 600; white-space: nowrap; min-width: 85px; }
+.recap-stage-theme { flex: 1; color: #f5ece0; }
+.recap-stage-type { font-size: 10px; padding: 2px 7px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
+.type-technique { background: #2a2000; color: #D4AF37; border: 1px solid #5a4000; }
+.type-stage1    { background: #0a1a00; color: #7adf7a; border: 1px solid #2a5000; }
+.type-stage2    { background: #0a0a20; color: #7aaaff; border: 1px solid #1a2a50; }
+.recap-total-ligne { margin-top: 10px; padding-top: 9px; border-top: 1px solid rgba(212,175,55,0.4); display: flex; justify-content: space-between; font-size: 13px; color: #D4AF37; font-weight: 600; }
+.recap-grand-total { margin-top: 14px; padding-top: 12px; border-top: 2px solid #D4AF37; display: flex; justify-content: space-between; font-size: 15px; color: #D4AF37; font-weight: 700; }
+.infos-box { background: #faf7f2; border: 1px solid #e0d5c0; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; }
+.info-ligne { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 4px; font-size: 13px; color: #555; line-height: 1.6; }
+.info-ligne:last-child { margin-bottom: 0; }
+.info-icone { flex-shrink: 0; width: 22px; }
+.parite-box { background: #1f1a00; border-left: 3px solid #D4AF37; border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 24px; font-size: 13px; color: #c8a870; line-height: 1.7; font-style: italic; }
+.phrase-confirmation { background: #faf7f2; border: 1px solid #D4AF37; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; font-size: 13px; color: #4a3010; line-height: 1.7; text-align: center; }
+.phrase-confirmation strong { color: #6b1a1a; }
+.boutons-section { margin-bottom: 10px; }
+.boutons-titre { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #888; margin-bottom: 14px; text-align: center; }
+.btn-group { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn-confirmer { flex: 1; background: #6b1a1a; color: #ffffff; padding: 14px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; text-align: center; display: block; cursor: pointer; }
+.btn-modifier  { flex: 1; background: transparent; color: #6b1a1a; border: 2px solid #6b1a1a; padding: 12px 20px; border-radius: 6px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; text-align: center; display: block; cursor: pointer; }
+.email-footer { background: #0a0800; padding: 24px 40px; text-align: center; border-top: 1px solid #2a2000; }
+.footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 16px; color: #D4AF37; margin-bottom: 8px; letter-spacing: 2px; }
+.footer-ligne-or { width: 40px; height: 1px; background: #D4AF37; margin: 12px auto; }
+.footer-contact { font-size: 12px; color: #888; line-height: 2; }
+.footer-nom { color: #c8a870; font-size: 13px; font-weight: 600; }
+.footer-asso { color: #666; font-style: italic; font-size: 11px; }
+.separateur { max-width: 600px; margin: 50px auto; display: flex; align-items: center; gap: 16px; }
+.separateur::before, .separateur::after { content:''; flex:1; height:1px; background:#c0b090; }
+.separateur span { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #9a8060; white-space: nowrap; }
+</style>
+</head>
+<body>
+<h2>Email de confirmation</h2>
+<p class="label">Guideur·se · Guidé·e avec partenaire</p>
+<div class="objet"><strong>Objet :</strong> Confirmation Stage Tango Samedi 19 Septembre 2026 14h–18h</div>
+
+<div class="email-wrapper">
+  <div class="email-header">
+    <div class="email-logo">Florencia et Jérémy — Tango &amp; Vous</div>
+    <h1>Votre inscription est <em>confirmée</em></h1>
+    <div class="sous-titre">Florencia Garcia &amp; Jérémy Braitbart</div>
+  </div>
+  <div class="statut-bar statut-confirme"><span class="icone">✅</span> Inscription confirmée</div>
+  <div class="email-body">
+    <p class="salutation">Bonjour <strong>Marie</strong>,</p>
+    <p class="message-intro">
+      Votre inscription au stage de tango du <strong>Samedi 19 Septembre 2026</strong> est confirmée. Nous sommes ravis de vous retrouver sur la piste !
+    </p>
+    <div class="recap-date">
+      <div class="recap-date-header">
+        <div class="date-label">📅 Samedi 19 Septembre 2026 — 14h–18h</div>
+        <div class="date-lieu">📍 <a href="https://maps.google.com/?q=Centre+Kim+Kan+64+rue+Orfila+75020+Paris">Centre Kim Kan — 64 rue Orfila, Paris 20e</a> — M° Gambetta (ligne 3)</div>
+      </div>
+      <div class="recap-date-body">
+        <div class="recap-personne">
+          <div class="recap-personne-titre">Marie Dupont &nbsp;·&nbsp; <span style="color:#ff80cc">Guidée</span></div>
+          <div class="recap-stage-ligne"><span class="recap-stage-horaire">14h – 15h</span><span class="recap-stage-theme">Technique Leader &amp; Follower</span><span class="recap-stage-type type-technique">Technique</span></div>
+          <div class="recap-stage-ligne"><span class="recap-stage-horaire">15h – 16h30</span><span class="recap-stage-theme">Les Ochos Caminados</span><span class="recap-stage-type type-stage1">Stage 1</span></div>
+          <div class="recap-stage-ligne"><span class="recap-stage-horaire">16h30 – 18h</span><span class="recap-stage-theme">Sacadas en Déplacement</span><span class="recap-stage-type type-stage2">Stage 2</span></div>
+          <div class="recap-total-ligne"><span>Montant</span><span>60 €</span></div>
+        </div>
+        <div class="recap-personne">
+          <div class="recap-personne-titre">Pierre Martin &nbsp;·&nbsp; <span style="color:#7aaaff">Guideur</span></div>
+          <div class="recap-stage-ligne"><span class="recap-stage-horaire">15h – 16h30</span><span class="recap-stage-theme">Les Ochos Caminados</span><span class="recap-stage-type type-stage1">Stage 1</span></div>
+          <div class="recap-total-ligne"><span>Montant</span><span>25 €</span></div>
+        </div>
+        <div class="recap-grand-total"><span>Total à régler sur place</span><span>85 €</span></div>
+      </div>
+    </div>
+    <div class="infos-box">
+      <div class="info-ligne"><span class="info-icone">💵</span><span>Paiement sur place le jour du stage</span></div>
+    </div>
+    <div class="phrase-confirmation">
+      <strong>Merci de confirmer la bonne réception de cet email</strong><br>
+      Si vous devez annuler votre venue, merci de nous prévenir même au dernier moment — nous faisons en sorte d'avoir la parité guideurs / guidés.
+    </div>
+    <div class="boutons-section">
+      <div class="boutons-titre">Votre réponse</div>
+      <div class="btn-group">
+        <span class="btn-confirmer">✓ &nbsp;Je confirme ma présence</span>
+        <span class="btn-modifier">✎ &nbsp;Modifier ou annuler</span>
+      </div>
+      <p style="font-size:13px;color:#777;text-align:center;margin-top:12px;font-style:italic;line-height:1.5;">Si vous cliquez sur "Modifier ou annuler" vous annulez votre réservation pour cette date et êtes redirigé·e vers le formulaire d'inscription pour éventuellement la modifier.</p>
+    </div>
+  </div>
+  <div class="email-footer">
+    <div class="footer-logo">Florencia et Jérémy — Tango &amp; Vous</div>
+    <div class="footer-ligne-or"></div>
+    <div class="footer-contact">
+      tangoetvous@gmail.com<br>
+      07 73 27 59 06 &nbsp;·&nbsp; 06 61 72 79 98<br>
+      www.tangoetvous.com<br>
+      <span class="footer-asso">Association Le Regard Se Pose</span>
+    </div>
+  </div>
+</div>
+<div class="separateur"><span>Second email</span></div>
+<h2>Email liste d'attente</h2>
+<p class="label">Guidé·e sans partenaire</p>
+<div class="objet"><strong>Objet :</strong> En Attente Stage Tango Samedi 19 Septembre 2026 14h–16h30</div>
+
+<div class="email-wrapper">
+  <div class="email-header">
+    <div class="email-logo">Florencia et Jérémy — Tango &amp; Vous</div>
+    <h1>Votre demande a été <em>enregistrée</em></h1>
+    <div class="sous-titre">Florencia Garcia &amp; Jérémy Braitbart</div>
+  </div>
+  <div class="statut-bar statut-attente"><span class="icone">⏳</span> En attente de confirmation</div>
+  <div class="email-body">
+    <p class="salutation">Bonjour <strong>Sophie</strong>,</p>
+    <p class="message-intro">
+      Nous avons bien reçu votre demande d'inscription au stage du <strong>Samedi 19 Septembre 2026</strong>. Merci de votre intérêt !
+    </p>
+    <div class="parite-box">
+      Nous veillons à la parité guideurs·ses / guidé·e·s dans nos stages. Votre place sera confirmée ou mise en attente selon l'équilibre des inscriptions. Nous vous recontacterons très rapidement.
+    </div>
+    <div class="recap-date">
+      <div class="recap-date-header">
+        <div class="date-label">📅 Samedi 19 Septembre 2026 — 14h–16h30</div>
+        <div class="date-lieu">📍 <a href="https://maps.google.com/?q=Centre+Kim+Kan+64+rue+Orfila+75020+Paris">Centre Kim Kan — 64 rue Orfila, Paris 20e</a> — M° Gambetta (ligne 3)</div>
+      </div>
+      <div class="recap-date-body">
+        <div class="recap-personne">
+          <div class="recap-personne-titre">Sophie Bernard &nbsp;·&nbsp; <span style="color:#ff80cc">Guidée</span></div>
+          <div class="recap-stage-ligne"><span class="recap-stage-horaire">14h – 15h</span><span class="recap-stage-theme">Technique Leader &amp; Follower</span><span class="recap-stage-type type-technique">Technique</span></div>
+          <div class="recap-stage-ligne"><span class="recap-stage-horaire">15h – 16h30</span><span class="recap-stage-theme">Les Ochos Caminados</span><span class="recap-stage-type type-stage1">Stage 1</span></div>
+          <div class="recap-total-ligne"><span>Montant si confirmé</span><span>45 €</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="infos-box">
+      <div class="info-ligne"><span class="info-icone">💵</span><span>Paiement sur place, uniquement si inscription confirmée</span></div>
+    </div>
+    <div class="infos-box" style="margin-top:-12px;background:#f0f4f8;border-color:#c0ccd8;">
+      <div class="info-ligne"><span class="info-icone">📬</span><span style="color:#3a5a7a;">Vous recevrez un email de confirmation dès que possible</span></div>
+    </div>
+  </div>
+  <div class="email-footer">
+    <div class="footer-logo">Florencia et Jérémy — Tango &amp; Vous</div>
+    <div class="footer-ligne-or"></div>
+    <div class="footer-contact">
+      tangoetvous@gmail.com<br>
+      07 73 27 59 06 &nbsp;·&nbsp; 06 61 72 79 98<br>
+      www.tangoetvous.com<br>
+      <span class="footer-asso">Association Le Regard Se Pose</span>
+    </div>
+  </div>
+</div>
+<div class="separateur"><span>Troisième email</span></div>
+<h2>Email de confirmation tardive</h2>
+<p class="label">Guidé·e sans partenaire — finalement confirmé·e</p>
+<div class="objet"><strong>Objet :</strong> Finalement Confirmé Stage Tango Samedi 19 Septembre 2026 14h–16h30</div>
+
+<div class="email-wrapper">
+  <div class="email-header">
+    <div class="email-logo">Florencia et Jérémy — Tango &amp; Vous</div>
+    <h1>Bonne nouvelle, <em>vous êtes confirmé·e !</em></h1>
+    <div class="sous-titre">Florencia Garcia &amp; Jérémy Braitbart</div>
+  </div>
+  <div class="statut-bar statut-tardif"><span class="icone">🎉</span> Place confirmée !</div>
+  <div class="email-body">
+    <p class="salutation">Bonjour <strong>Sophie</strong>,</p>
+    <p class="message-intro">
+      Bonne nouvelle ! Nous avons atteint la parité guideurs·ses / guidé·e·s et pouvons finalement vous confirmer votre place au stage du <strong>Samedi 19 Septembre 2026</strong>. Merci de votre patience !
+    </p>
+    <div class="recap-date">
+      <div class="recap-date-header">
+        <div class="date-label">📅 Samedi 19 Septembre 2026 — 14h–16h30</div>
+        <div class="date-lieu">📍 <a href="https://maps.google.com/?q=Centre+Kim+Kan+64+rue+Orfila+75020+Paris">Centre Kim Kan — 64 rue Orfila, Paris 20e</a> — M° Gambetta (ligne 3)</div>
+      </div>
+      <div class="recap-date-body">
+        <div class="recap-personne">
+          <div class="recap-personne-titre">Sophie Bernard &nbsp;·&nbsp; <span style="color:#ff80cc">Guidée</span></div>
+          <div class="recap-stage-ligne"><span class="recap-stage-horaire">14h – 15h</span><span class="recap-stage-theme">Technique Leader &amp; Follower</span><span class="recap-stage-type type-technique">Technique</span></div>
+          <div class="recap-stage-ligne"><span class="recap-stage-horaire">15h – 16h30</span><span class="recap-stage-theme">Les Ochos Caminados</span><span class="recap-stage-type type-stage1">Stage 1</span></div>
+          <div class="recap-total-ligne"><span>Total à régler sur place</span><span>45 €</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="infos-box">
+      <div class="info-ligne"><span class="info-icone">💵</span><span>Paiement sur place le jour du stage</span></div>
+    </div>
+    <div class="phrase-confirmation">
+      <strong>Merci de confirmer la bonne réception de cet email</strong><br>
+      Si vous devez annuler votre venue, merci de nous prévenir même au dernier moment — nous faisons en sorte d'avoir la parité guideurs / guidés.
+    </div>
+    <div class="boutons-section">
+      <div class="boutons-titre">Votre réponse</div>
+      <div class="btn-group">
+        <span class="btn-confirmer">✓ &nbsp;Je confirme ma présence</span>
+        <span class="btn-modifier">✎ &nbsp;Modifier ou annuler</span>
+      </div>
+      <p style="font-size:13px;color:#777;text-align:center;margin-top:12px;font-style:italic;line-height:1.5;">Si vous cliquez sur "Modifier ou annuler" vous annulez votre réservation pour cette date et êtes redirigé·e vers le formulaire d'inscription pour éventuellement la modifier.</p>
+    </div>
+  </div>
+  <div class="email-footer">
+    <div class="footer-logo">Florencia et Jérémy — Tango &amp; Vous</div>
+    <div class="footer-ligne-or"></div>
+    <div class="footer-contact">
+      tangoetvous@gmail.com<br>
+      07 73 27 59 06 &nbsp;·&nbsp; 06 61 72 79 98<br>
+      www.tangoetvous.com<br>
+      <span class="footer-asso">Association Le Regard Se Pose</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

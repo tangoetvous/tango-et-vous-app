@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Tango &amp; Vous — Inscription aux cours</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600;700&display=swap"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#D4AF37;--gold-dim:#8a6800;--gold-pale:#1f1a00;--gold-border:#3a2d00;
+  --bg:#0f0f0f;--s1:#141414;--s2:#1a1a1a;--s3:#222;
+  --border:#2a2a2a;--text:#f0f0f0;--dim:#888;--faint:#444;
+  --danger:#c62828;
+  --font-d:'Cormorant Garamond',Georgia,serif;
+  --font-b:'Montserrat',sans-serif;
+}
+html{background:transparent;}
+body{font-family:var(--font-b);font-size:14px;color:var(--text);background:var(--bg);min-height:100vh;}
+.wrap{max-width:580px;margin:0 auto;}
+
+/* ── Header ── */
+.hdr{background:#000;border-bottom:2px solid var(--gold);padding:18px 24px 14px;text-align:center;}
+.hdr-logo{font-family:var(--font-d);font-size:22px;font-weight:300;letter-spacing:5px;color:var(--gold);}
+.hdr-sub{font-size:10px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin-top:4px;}
+
+/* ── Barre de progression ── */
+.prog-bar{background:#000;padding:14px 24px 0;border-bottom:1px solid var(--border);}
+.steps{display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
+.step{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.step-dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--faint);background:var(--s1);transition:all .3s;flex-shrink:0;cursor:default;}
+.step.done .step-dot{background:var(--gold);border-color:var(--gold);color:#000;cursor:pointer;}
+.step.active .step-dot{background:#000;border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 3px rgba(212,175,55,.18);}
+.step-lbl{font-size:9px;color:var(--faint);text-align:center;letter-spacing:.5px;white-space:nowrap;}
+.step.done .step-lbl,.step.active .step-lbl{color:var(--gold);}
+.step-line{flex:1;height:1px;background:var(--border);margin-top:-14px;min-width:6px;}
+.step-line.done{background:var(--gold);}
+.prog-fill-bar{height:2px;background:var(--border);margin:0 -24px;}
+.prog-fill{height:100%;background:var(--gold);transition:width .4s ease;}
+
+/* ── Corps ── */
+.body{padding:20px 24px;}
+.etape-lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;}
+.etape-sous{font-size:12px;color:var(--gold);margin-bottom:16px;font-style:italic;line-height:1.6;}
+
+/* ── Cadres ── */
+.cadre{border:2px solid var(--gold-border);border-radius:12px;padding:16px;margin-bottom:14px;background:#0c0900;}
+.cadre-titre{font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--gold-border);}
+
+/* ── Champs ── */
+.field{margin-bottom:12px;}
+label{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+input,select,textarea{width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:14px;font-family:var(--font-b);transition:border-color .2s;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);background:var(--gold-pale);}
+input::placeholder,textarea::placeholder{color:var(--faint);}
+select option{background:var(--s2);}
+.cadre input,.cadre select,.cadre textarea{background:#100d00;border-color:var(--gold-border);color:#e8c84a;}
+.cadre input:focus,.cadre select:focus,.cadre textarea:focus{border-color:var(--gold);background:var(--gold-pale);}
+.cadre input::placeholder,.cadre textarea::placeholder{color:#3a2d10;}
+.cadre select option{background:#100d00;color:#e8c84a;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:420px){.row2{grid-template-columns:1fr;}}
+
+/* ── Boutons choix ── */
+.btn-grp{display:flex;gap:9px;flex-wrap:wrap;margin-top:4px;}
+.btn-choix{
+  flex:1;min-width:80px;background:#100d00;border:2px solid var(--gold-border);
+  color:#8a6820;padding:14px 8px;border-radius:10px;cursor:pointer;
+  text-align:center;font-size:12px;font-weight:700;font-family:var(--font-b);
+  transition:all .22s;display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.btn-choix:hover,.btn-choix.sel{border-color:var(--gold);background:#261d00;color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.2);}
+.btn-choix svg{width:28px;height:28px;}
+
+/* ── Récap ── */
+.recap{background:#080700;border:2px solid var(--gold-border);border-radius:12px;padding:14px;margin-bottom:14px;}
+.recap-sec{font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;padding:6px 0 4px;border-bottom:1px solid var(--gold-border);margin-bottom:4px;}
+.recap-row{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid #1a1400;font-size:13px;gap:10px;}
+.recap-row:last-child{border-bottom:none;}
+.rk{color:#6a5520;flex-shrink:0;}
+.rv{color:#e8c84a;font-weight:600;text-align:right;line-height:1.5;}
+
+/* ── Tarif bloc ── */
+.tarif-bloc{background:#080700;border:2px solid var(--gold);border-radius:12px;padding:14px;margin-bottom:12px;}
+.tarif-titre{font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;}
+.tarif-ligne{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #1a1400;font-size:13px;color:#e8c84a;gap:8px;}
+.tarif-ligne:last-child{border-bottom:none;font-weight:700;font-size:15px;color:var(--gold);padding-top:8px;}
+.tarif-total-global{background:#080700;border:2px solid #e8c84a;border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;font-size:17px;font-weight:700;color:var(--gold);margin-bottom:12px;}
+
+/* ── Notes ── */
+.info-note{background:#100d00;border-left:3px solid var(--gold-dim);padding:9px 12px;border-radius:0 7px 7px 0;font-size:12px;color:var(--gold);margin-bottom:12px;line-height:1.6;}
+.warn-note{background:#0a0800;border-left:3px solid #ff8800;padding:9px 12px;border-radius:0 7px 7px 0;font-size:12px;color:#ffaa44;margin-bottom:12px;line-height:1.6;}
+.role-auto{background:#0a0900;border:1px solid var(--gold-border);color:var(--gold);padding:9px 12px;border-radius:6px;font-size:14px;font-style:italic;}
+
+/* ── PWA badge ── */
+.pwa-badge{display:none;background:#0a1200;border:1px solid #2e5c00;border-radius:20px;padding:5px 12px;font-size:11px;color:#8bc34a;letter-spacing:1px;text-align:center;margin-bottom:14px;}
+
+/* ── Navigation ── */
+.nav{display:flex;gap:10px;margin-top:16px;}
+.btn-back{flex:1;background:var(--s2);color:var(--gold);border:1px solid var(--gold);padding:12px;border-radius:7px;font-size:13px;font-weight:700;font-family:var(--font-b);cursor:pointer;transition:opacity .2s;}
+.btn-back:hover{opacity:.8;}
+.btn-next{flex:2;background:var(--gold);color:#000;border:none;padding:13px;border-radius:7px;font-size:14px;font-weight:700;font-family:var(--font-b);letter-spacing:1px;cursor:pointer;transition:opacity .2s;}
+.btn-next:hover{opacity:.88;}
+
+/* ── Succès ── */
+.success{display:none;padding:28px 24px 36px;text-align:center;}
+.s-icon{font-size:50px;display:block;margin-bottom:14px;}
+.s-title{font-family:var(--font-d);font-size:24px;font-weight:300;color:var(--gold);letter-spacing:3px;margin-bottom:8px;}
+.s-card{background:#080700;border:2px solid var(--gold-border);border-radius:12px;padding:16px;margin-bottom:18px;text-align:left;}
+.s-line{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #1a1400;font-size:13px;color:#e8c84a;line-height:1.6;}
+.s-line:last-child{border-bottom:none;}
+.s-ico{font-size:18px;flex-shrink:0;margin-top:1px;}
+.asso-btn{display:block;width:100%;padding:15px;background:var(--gold);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:2px;text-transform:uppercase;margin:16px 0 6px;font-family:var(--font-b);transition:opacity .2s;}
+.asso-btn:hover{opacity:.88;}
+.asso-note{font-size:12px;color:#ff6b6b;text-align:center;line-height:1.8;margin-bottom:14px;}
+.s-sig{margin-top:16px;font-family:var(--font-d);font-size:16px;color:var(--gold);letter-spacing:2px;font-weight:300;}
+.btn-nouveau{display:inline-block;margin-top:14px;background:transparent;color:var(--gold);border:1px solid var(--gold);padding:10px 22px;border-radius:7px;font-size:13px;font-weight:700;font-family:var(--font-b);cursor:pointer;letter-spacing:1px;transition:all .2s;}
+.btn-nouveau:hover{background:var(--gold);color:#000;}
+
+/* ── Erreur ── */
+.errmsg{display:none;background:#140000;border-left:3px solid var(--danger);padding:9px 12px;border-radius:0 7px 7px 0;font-size:12px;color:#ff6b6b;margin-top:8px;}
+
+/* ── Footer ── */
+.footer{font-size:11px;color:var(--faint);text-align:center;padding:14px 24px 18px;border-top:1px solid var(--border);line-height:1.7;}
+.footer a{color:var(--gold);}
+
+/* ── SVG boutons ── */
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hdr">
+  <div class="hdr-logo">TANGO &amp; VOUS</div>
+  <div class="hdr-sub">Demande d'inscription aux cours</div>
+</div>
+
+<div class="prog-bar" id="prog-zone">
+  <div class="steps" id="steps-bar"></div>
+  <div class="prog-fill-bar"><div class="prog-fill" id="pfill" style="width:0%"></div></div>
+</div>
+
+<div class="body" id="form-zone">
+  <div class="pwa-badge" id="pwa-badge">✓ Vos coordonnées ont été préremplies</div>
+  <div id="app"></div>
+  <div class="errmsg" id="errmsg"></div>
+</div>
+
+<!-- Succès — liste d'attente -->
+<div class="success" id="success-wait">
+  <span class="s-icon">⏳</span>
+  <div class="s-title">DEMANDE ENREGISTRÉE</div>
+  <div class="s-card">
+    <div class="s-line"><span class="s-ico">⚖️</span><span>Nous maintenons la parité guideurs / guidé·e·s. Votre inscription sera validée dès que possible et vous en serez informé·e par email.</span></div>
+    <div class="s-line"><span class="s-ico">💃</span><span>En attendant, n'hésitez pas à vous inscrire à un cours d'essai !</span></div>
+  </div>
+  <div id="recap-wait"></div>
+  <div class="s-sig">À très bientôt sur la piste !<br/><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
+  <button class="btn-nouveau" onclick="restart()">← Nouvelle demande</button>
+</div>
+
+<!-- Succès — AssoConnect -->
+<div class="success" id="success-asso">
+  <span class="s-icon">✅</span>
+  <div class="s-title">DEMANDE ENREGISTRÉE !</div>
+  <div class="s-card">
+    <div class="s-line"><span class="s-ico">📧</span><span>Vous allez recevoir un email de confirmation.</span></div>
+    <div class="s-line"><span class="s-ico">💳</span><span>Finalisez votre inscription et réglez en ligne sur AssoConnect, ou en espèces lors du prochain cours.</span></div>
+  </div>
+  <button class="asso-btn" id="asso-link">FINALISER SUR ASSOCONNECT</button>
+  <p class="asso-note">Paiement CB en 1 ou 3 fois, ou espèces (l'inscription sur AssoConnect reste obligatoire).<br/>AssoConnect vous demandera un pourboire — celui-ci ne nous revient pas.</p>
+  <div id="recap-asso"></div>
+  <div class="s-sig">À très bientôt sur la piste !<br/><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
+  <button class="btn-nouveau" onclick="restart()">← Nouvelle demande</button>
+</div>
+
+<div class="footer">
+  Un problème ? <a href="mailto:tangoetvous@gmail.com">tangoetvous@gmail.com</a>
+</div>
+</div>
+
+<script>
+// ================================================================
+// ⚙️  CONFIG
+// ================================================================
+const ASSO_CONNECT_URL = 'https://le-regard-se-pose.assoconnect.com';
+const IS_DEMO = true; // Passer à false après déploiement Apps Script
+
+// ================================================================
+// DONNÉES
+// ================================================================
+const SAISON_DEFAUT = '2026-2027';
+const SKIP_SAISON   = new Date() > new Date('2026-06-30');
+
+const CI = {
+  paris:     { debutant:     { jour:'Jeudi soir',  h:'20h30', lieu:'Espace Danse Studio',  adr:'24 villa Riberolle, Paris 20e' },
+               intermediaire:{ jour:'Jeudi soir',  h:'21h45', lieu:'Espace Danse Studio',  adr:'24 villa Riberolle, Paris 20e' } },
+  vincennes: { debutant:     { jour:'Lundi soir',  h:'19h30', lieu:'Espace Sorano',         adr:'16 rue Charles Pathé, Vincennes' },
+               intermediaire:{ jour:'Lundi soir',  h:'21h00', lieu:'Espace Sorano',         adr:'16 rue Charles Pathé, Vincennes' } },
+};
+const NIV_LBL = { debutant:'Débutant', intermediaire:'Intermédiaire & Avancé' };
+const ROLE_LBL = { 'guideur':'Guideur·se', 'guidee':'Guidé·e', 'double':'Double rôle' };
+
+// SVGs
+const SVG = {
+  guideur:`<svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="9" r="5" stroke="currentColor" stroke-width="1.8"/><path d="M8 30c0-5.5 4.5-10 10-10s10 4.5 10 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M24 16l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  guidee: `<svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="9" r="5" stroke="currentColor" stroke-width="1.8"/><path d="M8 30c0-5.5 4.5-10 10-10s10 4.5 10 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 16l-4 4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  double: `<svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="9" r="5" stroke="currentColor" stroke-width="1.8"/><path d="M8 30c0-5.5 4.5-10 10-10s10 4.5 10 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M24 15l4 4-4 4M12 15l-4 4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  homme:  `<svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="10" r="5.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 32c0-6.1 4-11 9-11s9 4.9 9 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="25" y1="12" x2="29" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><polyline points="26,8 29,8 29,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  femme:  `<svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="10" r="5.5" stroke="currentColor" stroke-width="1.8"/><path d="M9 32c0-6.1 4-11 9-11s9 4.9 9 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="26" cy="10" r="3" stroke="currentColor" stroke-width="1.4"/><line x1="26" y1="13" x2="26" y2="16" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="24" y1="14.5" x2="28" y2="14.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  couple: `<svg viewBox="0 0 36 36" fill="none"><circle cx="12" cy="9" r="4.5" stroke="currentColor" stroke-width="1.8"/><circle cx="24" cy="9" r="4.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 30c0-5 3.8-9 9-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M33 30c0-5-3.8-9-9-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15 22c.8-1 1.8-1.5 3-1.5s2.2.5 3 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+};
+
+// ================================================================
+// ÉTAT
+// ================================================================
+function fresh() {
+  return {
+    step: 1,
+    pwaMode: false, eleveId: '',
+    saison: SKIP_SAISON ? SAISON_DEFAUT : null,
+    nbCours: null,
+    // Cours 1
+    c1: { ville: null, niveau: null },
+    venue: null, role: null,
+    prenom:'', nom:'', email:'', tel:'', niveauEleve:'', remarque:'',
+    pPrenom:'', pNom:'', pEmail:'', pTel:'', pRole:'',
+    // Cours 2
+    c2: { ville: null, niveau: null },
+    venue2: null, role2: null,
+    samePartner: null,
+    p2Prenom:'', p2Nom:'', p2Email:'', p2Tel:'',
+    // Tarif
+    wantTarif: false, tarifData: null,
+    reduit:'non', formule:null, mixteFormule:'forfait2',
+    vincennois:null, ageVinc:null, dejaSorano:null,
+    pReduit:'non', pFormule:null, pVincennois:null, pAgeVinc:null, pDejaSorano:null,
+    p2Reduit:'non', p2Formule:null,
+  };
+}
+let S = fresh();
+
+// Préremplissage PWA
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('pwa')) {
+    S.pwaMode  = true;
+    S.eleveId  = p.get('id')     || '';
+    S.prenom   = p.get('prenom') || '';
+    S.nom      = p.get('nom')    || '';
+    S.email    = p.get('email')  || '';
+    S.tel      = p.get('tel')    || '';
+    document.getElementById('pwa-badge').style.display = 'block';
+  }
+})();
+
+// ================================================================
+// STEPS
+// ================================================================
+function getSteps() {
+  const a = [];
+  if (!SKIP_SAISON) a.push({ id:'saison', lbl:'Saison' });
+  a.push({ id:'nbcours', lbl:'Nb cours' });
+  a.push({ id:'cours1',  lbl: S.nbCours===2 ? 'Cours 1' : 'Cours' });
+  a.push({ id:'infos1',  lbl: S.nbCours===2 ? 'Infos 1' : 'Infos' });
+  if (S.nbCours===2) {
+    a.push({ id:'cours2', lbl:'Cours 2' });
+    a.push({ id:'infos2', lbl:'Infos 2' });
+  }
+  if (S.wantTarif) a.push({ id:'tarif', lbl:'Tarif' });
+  return a;
+}
+
+// ================================================================
+// HELPERS
+// ================================================================
+const $ = id => document.getElementById(id);
+function showErr(m){ const e=$('errmsg'); e.textContent=m; e.style.display='block'; }
+function hideErr(){ $('errmsg').style.display='none'; }
+function v(id){ const el=document.getElementById(id); return el?el.value.trim():''; }
+function cap(s){ return s ? s[0].toUpperCase()+s.slice(1) : ''; }
+function getRoleAuto(r){ return r==='guideur'?'guidee':r==='guidee'?'guideur':r==='double'?'double':null; }
+function getRoleAutoLbl(r){ const a=getRoleAuto(r); return a?ROLE_LBL[a]:'—'; }
+
+function hasDiffPartners() {
+  if(S.nbCours!==2||S.venue2!=='avec-part') return false;
+  if(S.venue!=='avec-part') return true;
+  return (S.pPrenom.trim().toLowerCase()!==S.p2Prenom.trim().toLowerCase())
+      || (S.pNom.trim().toLowerCase()!==S.p2Nom.trim().toLowerCase());
+}
+
+function isWaitlist() {
+  // Guidée sans partenaire dans TOUS ses cours
+  const g1 = S.role==='guidee' && S.venue!=='avec-part';
+  if(S.nbCours===1) return g1;
+  const g2 = S.role2==='guidee' && S.venue2!=='avec-part';
+  return g1 && g2;
+}
+
+function soranoCot(vinc, age) {
+  if(!vinc||!age) return null;
+  return vinc==='oui' ? (age==='m16'?26:36) : (age==='m16'?35:45);
+}
+
+// ================================================================
+// RENDER
+// ================================================================
+function render() {
+  const arr = getSteps(), tot = arr.length, e = S.step;
+  let bar = '';
+  arr.forEach((s,i) => {
+    const n=i+1, cls=n<e?'done':n===e?'active':'';
+    const click = n<e ? ` onclick="jumpTo(${n})"` : '';
+    bar += `<div class="step ${cls}"><div class="step-dot"${click}>${n}</div><div class="step-lbl">${s.lbl}</div></div>`;
+    if(i<tot-1) bar += `<div class="step-line${n<e?' done':''}"></div>`;
+  });
+  $('steps-bar').innerHTML = bar;
+  $('pfill').style.width = (tot>1?(e-1)/(tot-1)*100:0)+'%';
+  const cur = arr[e-1];
+  if(cur) $('app').innerHTML = buildScreen(cur.id);
+  hideErr();
+  window.scrollTo(0,0);
+}
+
+function jumpTo(n){ if(n<S.step){ saveStep(); S.step=n; render(); } }
+function buildScreen(id){
+  if(id==='saison')  return sSaison();
+  if(id==='nbcours') return sNbCours();
+  if(id==='cours1')  return sCours(1);
+  if(id==='cours2')  return sCours(2);
+  if(id==='infos1')  return sInfos(1);
+  if(id==='infos2')  return sInfos(2);
+  if(id==='tarif')   return sTarif();
+  return '';
+}
+
+// ================================================================
+// ÉTAPE SAISON
+// ================================================================
+function sSaison() {
+  const btn = (v,l) => `<div class="btn-choix${S.saison===v?' sel':''}" onclick="pickSaison('${v}')">
+    <span style="font-size:20px;">📅</span><span>${l}</span></div>`;
+  return `<div class="etape-lbl">Pour quelle saison ?</div>
+    <div class="btn-grp">${btn('2025-2026','2025–2026')}${btn('2026-2027','2026–2027')}</div>
+    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>`;
+}
+function pickSaison(v){ S.saison=v; next(); }
+
+// ================================================================
+// ÉTAPE NB COURS
+// ================================================================
+function sNbCours() {
+  const btn = (n,ico,l,s) => `<div class="btn-choix${S.nbCours===n?' sel':''}" onclick="pickNbCours(${n})">
+    <span style="font-size:22px;">${ico}</span><strong>${l}</strong><span style="font-size:11px;font-weight:300;">${s}</span></div>`;
+  return `<div class="etape-lbl">Combien de cours par semaine ?</div>
+    <div class="btn-grp">
+      ${btn(1,'1️⃣','1 cours','Un cours hebdomadaire')}
+      ${btn(2,'2️⃣','2 cours','Deux cours hebdomadaires')}
+    </div>
+    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>`;
+}
+function pickNbCours(n){ S.nbCours=n; next(); }
+
+// ================================================================
+// ÉTAPE COURS (ville + niveau)
+// ================================================================
+function sCours(num) {
+  const c = num===1 ? S.c1 : S.c2;
+  const is2 = num===2;
+
+  function nOk(niv){ return !is2 || !(c.ville===S.c1.ville && niv===S.c1.niveau); }
+
+  const villeBtns = ['paris','vincennes'].map(vl => {
+    const ico = vl==='paris'?'🗼':'🏰';
+    const nom = vl==='paris'?'Paris':'Vincennes';
+    const jour= vl==='paris'?'Jeudi soir':'Lundi soir';
+    return `<div class="btn-choix${c.ville===vl?' sel':''}" onclick="pickVille(${num},'${vl}')" style="align-items:flex-start;padding:14px;">
+      <span style="font-size:22px;">${ico}</span>
+      <div style="text-align:left;">
+        <strong>${nom}</strong>
+        <div style="font-size:11px;font-weight:300;margin-top:2px;">${CI[vl].debutant.lieu}</div>
+        <div style="font-size:10px;color:var(--gold);margin-top:2px;font-weight:700;">${jour}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  let nH = '';
+  if(c.ville) {
+    const nBtns = ['debutant','intermediaire'].map(niv => {
+      const ok = nOk(niv);
+      const info = CI[c.ville][niv];
+      return `<div class="btn-choix${c.niveau===niv?' sel':''}${ok?'':' disabled-opt'}" ${ok?`onclick="pickNiveau(${num},'${niv}')"`:''}  style="opacity:${ok?1:.35};${ok?'':'cursor:not-allowed;pointer-events:none;'}">
+        <span style="font-size:20px;">${niv==='debutant'?'🌱':'💃'}</span>
+        <strong style="font-size:13px;">${NIV_LBL[niv]}</strong>
+        <span style="font-size:11px;font-weight:300;">${info.h}</span>
+      </div>`;
+    }).join('');
+    nH = `<div class="cadre" style="margin-top:14px;"><div class="cadre-titre">Niveau</div><div class="btn-grp">${nBtns}</div></div>`;
+  }
+
+  const sous = is2
+    ? `<div class="etape-sous">2ᵉ cours — une seule restriction : même ville + même niveau déjà sélectionnés.</div>`
+    : (S.nbCours===2 ? `<div class="etape-sous">Premier cours — vous choisirez le 2ᵉ à l'étape suivante.</div>` : '');
+
+  return `<div class="etape-lbl">${is2?'2ᵉ cours — ':''}Ville &amp; niveau</div>
+    ${sous}
+    <div class="cadre"><div class="cadre-titre">Ville</div><div class="btn-grp">${villeBtns}</div></div>
+    ${nH}
+    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>`;
+}
+function pickVille(n,v){ if(n===1){S.c1.ville=v;S.c1.niveau=null;}else{S.c2.ville=v;S.c2.niveau=null;} render(); }
+function pickNiveau(n,v){ if(n===1)S.c1.niveau=v;else S.c2.niveau=v; setTimeout(next,280); }
+
+// ================================================================
+// ÉTAPE INFOS (venue + rôle + coordonnées + partenaire)
+// ================================================================
+function sInfos(num) {
+  const is2   = num===2;
+  const venue = is2 ? S.venue2 : S.venue;
+  const role  = is2 ? S.role2  : S.role;
+  const avecP = venue==='avec-part';
+
+  // Boutons venue
+  const venueBtns = [
+    { id:'homme-seul', svg:SVG.homme, lbl:'Homme<br/>sans partenaire' },
+    { id:'femme-seule', svg:SVG.femme, lbl:'Femme<br/>sans partenaire' },
+    { id:'avec-part',   svg:SVG.couple, lbl:'Avec un·e<br/>partenaire' },
+  ].map(b=>`<button type="button" class="btn-choix${venue===b.id?' sel':''}" onclick="setVenue(${num},'${b.id}')">
+    ${b.svg}<span style="font-size:11px;line-height:1.4;">${b.lbl}</span></button>`).join('');
+
+  // Boutons rôle
+  const roles = avecP
+    ? ['guideur','guidee','double']
+    : venue==='homme-seul' ? ['guideur','double'] : ['guidee','double'];
+  const roleBtns = roles.map(r=>`<button type="button" class="btn-choix${role===r?' sel':''}" onclick="setRole(${num},'${r}')">
+    ${SVG[r]}<span>${ROLE_LBL[r]}</span></button>`).join('');
+
+  // Préremplissage : étape 1 on utilise S.prenom etc.
+  const pre = is2 ? S.prenom : S.prenom;
+  const nom = is2 ? S.nom    : S.nom;
+  const eml = is2 ? S.email  : S.email;
+  const tel = is2 ? S.tel    : S.tel;
+
+  // Bloc partenaire cours 2 — option "même partenaire"
+  const hasPart1 = S.venue==='avec-part' && (S.pPrenom||S.pNom);
+  const sameBtn = (is2 && avecP && hasPart1)
+    ? `<div class="btn-grp" style="margin-bottom:12px;">
+        <div class="btn-choix${S.samePartner===true?' sel':''}" onclick="setSamePartner(true)">
+          <span style="font-size:20px;">🤝</span><span>Même partenaire<br/><span style="font-size:10px;font-weight:300;">que le cours 1</span></span>
+        </div>
+        <div class="btn-choix${S.samePartner===false?' sel':''}" onclick="setSamePartner(false)">
+          <span style="font-size:20px;">👤</span><span>Partenaire différent·e<br/><span style="font-size:10px;font-weight:300;">saisir les infos</span></span>
+        </div>
+      </div>` : '';
+
+  const partDisabled = is2 && S.samePartner===true;
+  const pPre = is2 ? (S.samePartner===true?S.pPrenom:S.p2Prenom) : S.pPrenom;
+  const pNom = is2 ? (S.samePartner===true?S.pNom:S.p2Nom)       : S.pNom;
+  const pEml = is2 ? (S.samePartner===true?S.pEmail:S.p2Email)    : S.pEmail;
+  const pTel = is2 ? (S.samePartner===true?S.pTel:S.p2Tel)        : S.pTel;
+
+  const c1i = CI[S.c1.ville]?.[S.c1.niveau];
+  const c2i = S.c2.ville&&S.c2.niveau ? CI[S.c2.ville][S.c2.niveau] : null;
+
+  return `
+    <div class="etape-lbl">${is2?'Infos — 2ᵉ cours':'Vos informations'}</div>
+    ${is2?'<div class="etape-sous">Vos coordonnées sont préremplies et modifiables.</div>':''}
+
+    <div class="cadre"><div class="cadre-titre">Vous venez…</div>
+      <div class="btn-grp">${venueBtns}</div>
+    </div>
+
+    ${venue?`<div class="cadre"><div class="cadre-titre">Votre rôle</div>
+      <div class="btn-grp">${roleBtns}</div>
+    </div>`:''}
+
+    ${role?`
+    <div class="cadre"><div class="cadre-titre">Vos coordonnées</div>
+      <div class="row2">
+        <div class="field"><label>Prénom *</label><input id="i-pre" type="text" value="${pre}" placeholder="Prénom"/></div>
+        <div class="field"><label>Nom *</label><input id="i-nom" type="text" value="${nom}" placeholder="Nom"/></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Email *</label><input id="i-eml" type="email" value="${eml}" placeholder="email@exemple.com" autocapitalize="none"/></div>
+        <div class="field"><label>Téléphone *</label><input id="i-tel" type="tel" value="${tel}" placeholder="06 XX XX XX XX"/></div>
+      </div>
+      <div class="field"><label>Expérience du tango</label>
+        <select id="i-niv">
+          <option value="">— Sélectionner —</option>
+          ${[['premier','1ᵉʳ cours'],['quelques','Quelques cours'],['1an','1 an — bases acquises'],['2ans','2 ans de cours'],['plus','Plus de 2 ans'],['milonga','Je sors en milonga']].map(x=>`<option value="${x[0]}"${S.niveauEleve===x[0]?' selected':''}>${x[1]}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Remarque</label><textarea id="i-rem" rows="2" placeholder="Un message pour nous ?">${S.remarque}</textarea></div>
+    </div>
+
+    ${avecP?`<div class="cadre"><div class="cadre-titre">Votre partenaire</div>
+      <p style="font-size:12px;color:var(--gold);font-style:italic;margin-bottom:10px;line-height:1.5;">Le rôle de votre partenaire est automatiquement complémentaire.</p>
+      ${sameBtn}
+      <div id="part-fields" style="${partDisabled?'opacity:.55;pointer-events:none;':''}">
+        <div class="row2">
+          <div class="field"><label>Prénom</label><input id="p-pre" type="text" value="${pPre}" placeholder="Prénom"/></div>
+          <div class="field"><label>Nom</label><input id="p-nom" type="text" value="${pNom}" placeholder="Nom"/></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Email <span style="font-weight:300;text-transform:none">(facultatif)</span></label><input id="p-eml" type="email" value="${pEml}" placeholder="email"/></div>
+          <div class="field"><label>Tél. <span style="font-weight:300;text-transform:none">(facultatif)</span></label><input id="p-tel" type="tel" value="${pTel}" placeholder="06…"/></div>
+        </div>
+      </div>
+      <div class="field"><label>Rôle</label><div class="role-auto">${getRoleAutoLbl(role)}</div></div>
+    </div>`:''}
+
+    <div class="recap">${buildRecapCours(is2)}</div>
+    `:''}
+
+    ${!is2 && S.nbCours===2 && role
+      ? `<button class="btn-next" style="width:100%;" onclick="goCours2()">Passer au 2ᵉ cours →</button>`
+      : (role ? `
+        <button class="btn-next" style="width:100%;margin-bottom:8px;" onclick="goTarif()">💶 Évaluer mon tarif</button>
+        <button class="btn-next" style="width:100%;background:transparent;color:var(--gold);border:2px solid var(--gold);" onclick="soumettre()">ENVOYER MA DEMANDE</button>
+      ` : '')}
+
+    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>`;
+}
+
+// ================================================================
+// RÉCAP COURS
+// ================================================================
+function buildRecapCours(incl2) {
+  const c1i = CI[S.c1.ville]?.[S.c1.niveau];
+  const c2i = incl2 && S.c2.ville && S.c2.niveau ? CI[S.c2.ville][S.c2.niveau] : null;
+  let h = `<div class="recap-sec">Récapitulatif ${incl2?'cours 1 & 2':'cours'}</div>`;
+  h += `<div class="recap-row"><span class="rk">📅 Saison</span><span class="rv">${S.saison||'—'}</span></div>`;
+  if(S.prenom&&S.nom) h+=`<div class="recap-row"><span class="rk">👤 ${S.prenom} ${S.nom}</span><span class="rv">${ROLE_LBL[S.role]||'—'}</span></div>`;
+  if(c1i) h+=`<div class="recap-row"><span class="rk">🏫 Cours 1</span><span class="rv">${cap(S.c1.ville)} — ${NIV_LBL[S.c1.niveau]}<br/><span style="font-size:11px;color:var(--dim);">${c1i.jour} ${c1i.h}</span></span></div>`;
+  if(c2i) h+=`<div class="recap-row"><span class="rk">🏫 Cours 2</span><span class="rv">${cap(S.c2.ville)} — ${NIV_LBL[S.c2.niveau]}<br/><span style="font-size:11px;color:var(--dim);">${c2i.jour} ${c2i.h}</span></span></div>`;
+  const pNomAff = S.venue==='avec-part' ? (S.pPrenom+' '+S.pNom).trim() : S.venue2==='avec-part' ? (S.p2Prenom+' '+S.p2Nom).trim() : '';
+  if(pNomAff) h+=`<div class="recap-row"><span class="rk">🤝 Partenaire</span><span class="rv">${pNomAff}</span></div>`;
+  return h;
+}
+
+// ================================================================
+// ÉTAPE TARIF
+// ================================================================
+function sTarif() {
+  const nb=S.nbCours||1;
+  const P1=S.c1.ville==='paris', V1=S.c1.ville==='vincennes';
+  const P2=nb===2&&S.c2.ville==='paris', V2=nb===2&&S.c2.ville==='vincennes';
+  const hasParis=P1||P2, hasVinc=V1||V2;
+  const bothParis=P1&&P2&&!V1&&!V2;
+  const avecP = S.venue==='avec-part';
+
+  const redSel = (idSel, cur, lbl, onchg) =>
+    `<div class="field"><label>${lbl}</label><select id="${idSel}" onchange="${onchg}">
+      <option value="non"${cur==='non'?' selected':''}>Non</option>
+      ${hasParis?`<option value="etudiant"${cur==='etudiant'?' selected':''}>Étudiant·e</option>
+      <option value="demandeur"${cur==='demandeur'?' selected':''}>Demandeur·euse d'emploi</option>`:''}
+      ${hasVinc?`<option value="moins25"${cur==='moins25'?' selected':''}>Moins de 25 ans (Vincennes)</option>`:''}
+    </select></div>`;
+
+  const formuleSel = (idSel, cur, onchg) =>
+    `<div class="field"><label>Formule</label><select id="${idSel}" onchange="${onchg}">
+      <option value="">— Choisir —</option>
+      ${hasParis?`<option value="forfait"${cur==='forfait'?' selected':''}>Forfait annuel</option>
+      <option value="carte"${cur==='carte'?' selected':''}>Carte de 10 cours</option>`:''}
+      ${!hasParis&&hasVinc?`<option value="forfait"${cur==='forfait'?' selected':''}>Forfait annuel</option>`:''}
+    </select></div>`;
+
+  const vincBloc = (vId,aId,sId,vV,aV,sV,ov,oa,os) =>
+    `<div class="field"><label>Vincennois·e ?</label><select id="${vId}" onchange="${ov}">
+      <option value="">—</option><option value="oui"${vV==='oui'?' selected':''}>Oui</option><option value="non"${vV==='non'?' selected':''}>Non</option>
+    </select></div>
+    <div class="field"><label>Âge</label><select id="${aId}" onchange="${oa}">
+      <option value="">—</option><option value="m16"${aV==='m16'?' selected':''}>Moins de 16 ans</option><option value="p16"${aV==='p16'?' selected':''}>16 ans et plus</option>
+    </select></div>
+    <div class="field"><label>Déjà adhérent·e Sorano ?</label><select id="${sId}" onchange="${os}">
+      <option value="">—</option><option value="non"${sV==='non'?' selected':''}>Non</option><option value="oui"${sV==='oui'?' selected':''}>Oui, déjà réglée</option>
+    </select></div>
+    <div class="warn-note">⚠️ L'adhésion Sorano est à régler directement auprès de Sorano.</div>`;
+
+  let h = `<div class="etape-lbl">Évaluer mon tarif</div>
+    <div class="etape-sous">Répondez aux questions pour obtenir une estimation.</div>
+    <div class="cadre"><div class="cadre-titre">Votre profil</div>
+      ${redSel('t-red',S.reduit,'Tarif réduit','S.reduit=this.value;calcTarif()')}
+      ${(hasParis&&hasVinc)
+        ? `<div class="field"><label>Formule</label><select id="t-mixte" onchange="S.mixteFormule=this.value;calcTarif()">
+            <option value="forfait2"${S.mixteFormule==='forfait2'?' selected':''}>Forfait annuel 2 cours</option>
+            <option value="vincarte"${S.mixteFormule==='vincarte'?' selected':''}>Forfait Vincennes + Carte Paris</option>
+          </select></div>`
+        : formuleSel('t-formule',S.formule,'S.formule=this.value;calcTarif()')}
+      ${hasVinc?vincBloc('t-vinc','t-age','t-sorano',S.vincennois,S.ageVinc,S.dejaSorano,
+        'S.vincennois=this.value;calcTarif()','S.ageVinc=this.value;calcTarif()','S.dejaSorano=this.value;calcTarif()'):''}
+    </div>`;
+
+  if(avecP) {
+    h += `<div class="cadre"><div class="cadre-titre">Profil de ${S.pPrenom||'votre partenaire'}</div>
+      ${redSel('t-pred',S.pReduit,'Tarif réduit','S.pReduit=this.value;calcTarif()')}
+      ${formuleSel('t-pformule',S.pFormule,'S.pFormule=this.value;calcTarif()')}
+      ${hasVinc?vincBloc('t-pvinc','t-page','t-psorano',S.pVincennois,S.pAgeVinc,S.pDejaSorano,
+        'S.pVincennois=this.value;calcTarif()','S.pAgeVinc=this.value;calcTarif()','S.pDejaSorano=this.value;calcTarif()'):''}
+    </div>`;
+  }
+
+  h += `<div id="t-result"></div>
+    <button class="btn-next" style="width:100%;margin-top:14px;" onclick="soumettre()">ENVOYER MA DEMANDE</button>
+    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>`;
+  return h;
+}
+
+// ================================================================
+// CALCUL TARIF
+// ================================================================
+function calcTarif() {
+  const nb=S.nbCours||1;
+  const P1=S.c1.ville==='paris',V1=S.c1.ville==='vincennes';
+  const P2=nb===2&&S.c2.ville==='paris',V2=nb===2&&S.c2.ville==='vincennes';
+  const hasParis=P1||P2,hasVinc=V1||V2;
+  const bothParis=P1&&P2&&!V1&&!V2,bothVinc=V1&&V2&&!P1&&!P2;
+  const avecP=S.venue==='avec-part';
+  const isRed=v=>v==='etudiant'||v==='demandeur'||v==='moins25';
+
+  function calcPersonne(red,formule,villes,vinc,age,sorano) {
+    const r=isRed(red); const lines=[]; let total=0;
+    const add=(k,v)=>{lines.push({k,v});total+=v;};
+    const addFree=(k,v)=>{lines.push({k,v,free:true});};
+    const hasP=villes.includes('paris'),hasV=villes.includes('vincennes');
+    const nb2=villes.length,both2P=nb2===2&&hasP&&!hasV,both2V=nb2===2&&hasV&&!hasP,mix=hasP&&hasV;
+
+    if(both2P){ add(formule==='carte'?'Carte 10 cours (couvre 2 cours) — Paris':'Forfait annuel 2 cours — Paris', formule==='carte'?(r?150:170):(r?660:760)); }
+    else if(both2V){ add('Forfait annuel 2 cours — Vincennes',r?660:760); }
+    else if(mix){
+      const fm=formule==='vincarte'?'vincarte':'forfait2';
+      if(fm==='vincarte'){ add('Carte 10 cours — Paris',r?150:170); add('Forfait annuel — Vincennes',r?365:435); }
+      else add('Forfait annuel 2 cours — Paris + Vincennes',r?660:760);
+    }
+    else if(hasP){ add(formule==='carte'?'Carte 10 cours — Paris':'Forfait annuel — Paris', formule==='carte'?(r?150:170):(r?430:490)); }
+    else if(hasV){ add('Forfait annuel — Vincennes',r?365:435); }
+
+    add('Adhésion Le Regard Se Pose',10);
+    if(hasV){ const s=soranoCot(vinc,age); if(s!==null){ sorano==='oui'?addFree('Adhésion Sorano','Déjà réglée ✓'):add('Adhésion Sorano (à régler à Sorano)',s); }}
+    return {lines,total};
+  }
+
+  const villes = nb===1?[S.c1.ville]:[S.c1.ville,S.c2.ville];
+  const moiF = (S.c1.ville&&S.c2&&S.c2.ville&&S.c1.ville!==S.c2.ville)?(S.mixteFormule||'forfait2'):(S.formule||'forfait');
+  const moi  = calcPersonne(S.reduit,moiF,villes,S.vincennois,S.ageVinc,S.dejaSorano);
+  let part=null;
+  if(avecP){ const pF=(hasParis&&hasVinc)?(S.pFormule||S.mixteFormule||'forfait2'):(S.pFormule||'forfait');
+    part=calcPersonne(S.pReduit,pF,villes,S.pVincennois,S.pAgeVinc,S.pDejaSorano); }
+  S.tarifData={moi,part};
+
+  const el=$('t-result'); if(!el)return;
+  const bloc=(data,nom)=>`<div class="tarif-bloc"><div class="tarif-titre">💶 Estimation — ${nom}</div>
+    ${data.lines.map(l=>`<div class="tarif-ligne"><span>${l.k}</span><span>${l.free?l.v:l.v+' €'}</span></div>`).join('')}
+    <div class="tarif-ligne"><span>TOTAL ESTIMÉ</span><span>${data.total} €</span></div></div>`;
+
+  let h=bloc(moi,S.prenom||'vous');
+  let gt=moi.total;
+  if(part){h+=bloc(part,S.pPrenom||'partenaire');gt+=part.total;}
+  if(part) h+=`<div class="tarif-total-global"><span>Total ensemble</span><span>${gt} €</span></div>`;
+  h+=`<div class="info-note">Estimation indicative — montant définitif confirmé sur AssoConnect.</div>`;
+  el.innerHTML=h;
+}
+
+// ================================================================
+// HANDLERS
+// ================================================================
+function setVenue(num,v){ if(num===1){S.venue=v;S.role=null;}else{S.venue2=v;S.role2=null;S.samePartner=null;} render(); }
+function setRole(num,r){ if(num===1){S.role=r;S.pRole=getRoleAuto(r);}else{S.role2=r;} render(); }
+function setSamePartner(val){ S.samePartner=val; if(val===true){S.p2Prenom=S.pPrenom;S.p2Nom=S.pNom;S.p2Email=S.pEmail;S.p2Tel=S.pTel;}else{S.p2Prenom='';S.p2Nom='';S.p2Email='';S.p2Tel='';} render(); }
+
+function saveStep() {
+  const id = getSteps()[S.step-1]?.id;
+  if(id==='infos1'||id==='infos2'){
+    S.prenom=v('i-pre')||S.prenom; S.nom=v('i-nom')||S.nom;
+    S.email=v('i-eml')||S.email;  S.tel=v('i-tel')||S.tel;
+    S.niveauEleve=v('i-niv')||S.niveauEleve; S.remarque=v('i-rem')||S.remarque;
+    if(document.getElementById('p-pre')&&S.samePartner!==true){
+      if(id==='infos1'){S.pPrenom=v('p-pre');S.pNom=v('p-nom');S.pEmail=v('p-eml');S.pTel=v('p-tel');}
+      else{S.p2Prenom=v('p-pre');S.p2Nom=v('p-nom');S.p2Email=v('p-eml');S.p2Tel=v('p-tel');}
+    }
+  }
+}
+
+function validateInfos(){
+  if(!S.venue){showErr('Merci de préciser si vous venez seul·e ou avec un·e partenaire.');return false;}
+  if(!S.role){showErr('Merci de choisir votre rôle.');return false;}
+  const p=document.getElementById('i-pre'),n=document.getElementById('i-nom'),
+        e=document.getElementById('i-eml'),t=document.getElementById('i-tel');
+  if(!p?.value.trim()||!n?.value.trim()||!e?.value.trim()||!t?.value.trim()){showErr('Merci de remplir tous les champs obligatoires.');return false;}
+  return true;
+}
+
+function goCours2(){ saveStep(); if(!validateInfos())return; next(); }
+function goTarif(){ saveStep(); if(!validateInfos())return; S.wantTarif=true; next(); }
+function next(){ S.step++; render(); }
+function prev(){ saveStep(); if(S.step>1){S.step--;render();} }
+
+// ================================================================
+// SOUMISSION
+// ================================================================
+function soumettre() {
+  saveStep();
+  if(!validateInfos()) return;
+  finalize();
+}
+
+function finalize() {
+  $('form-zone').style.display='none';
+  $('prog-zone').style.display='none';
+
+  // Guidée sans partenaire dans tous ses cours → attente
+  const wait = isWaitlist();
+  const id = wait ? 'success-wait' : 'success-asso';
+  const rid = wait ? 'recap-wait'  : 'recap-asso';
+
+  const incl2 = S.nbCours===2 && S.c2.ville && S.c2.niveau;
+  const recapHtml = buildRecapFinal(!!incl2);
+  $(rid).innerHTML = recapHtml;
+
+  if(!wait) {
+    $('asso-link').onclick = () => window.open(ASSO_CONNECT_URL, '_blank');
+  }
+
+  $(id).style.display='block';
+  window.scrollTo(0,0);
+}
+
+function buildRecapFinal(incl2) {
+  let h = `<div class="recap">${buildRecapCours(incl2)}</div>`;
+  if(S.tarifData){
+    const bloc=(data,nom)=>`<div class="tarif-bloc"><div class="tarif-titre">💶 Tarif estimé — ${nom}</div>
+      ${data.lines.map(l=>`<div class="tarif-ligne"><span>${l.k}</span><span>${l.free?l.v:l.v+' €'}</span></div>`).join('')}
+      <div class="tarif-ligne"><span>TOTAL</span><span>${data.total} €</span></div></div>`;
+    h+=bloc(S.tarifData.moi,S.prenom||'vous');
+    if(S.tarifData.part){
+      h+=bloc(S.tarifData.part,S.pPrenom||'partenaire');
+      h+=`<div class="tarif-total-global"><span>Total ensemble</span><span>${S.tarifData.moi.total+S.tarifData.part.total} €</span></div>`;
+    }
+    h+=`<div class="info-note">Estimation indicative — montant définitif confirmé sur AssoConnect.</div>`;
+  }
+  return h;
+}
+
+// ================================================================
+// RESTART
+// ================================================================
+function restart(){
+  S=fresh();
+  ['success-wait','success-asso'].forEach(id=>{$(id).style.display='none';});
+  $('form-zone').style.display='block';
+  $('prog-zone').style.display='block';
+  render();
+}
+
+// ================================================================
+// INIT
+// ================================================================
+render();
+
+// Auto-resize Wix
+function notifyHeight(){ window.parent.postMessage({type:'tv-resize',height:document.body.scrollHeight},'*'); }
+new MutationObserver(notifyHeight).observe(document.body,{childList:true,subtree:true});
+notifyHeight();
+</script>
+</body>
+</html>
+le formulaire des cours particuliers:

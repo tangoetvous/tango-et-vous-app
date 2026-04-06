@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Tango &amp; Vous — Réserver un cours particulier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600;700&display=swap"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+
+/* ── Variables ── */
+:root{
+  --gold:#D4AF37;--gold-dim:#8a6800;--gold-pale:#1f1a00;--gold-border:#3a2d00;
+  --bg:#0f0f0f;--s1:#141414;--s2:#1a1a1a;--s3:#222;
+  --border:#2a2a2a;--text:#f0f0f0;--dim:#888;--faint:#444;
+  --danger:#c62828;--r:10px;
+  --font-d:'Cormorant Garamond',Georgia,serif;
+  --font-b:'Montserrat',sans-serif;
+}
+
+/* ── Wix iframe reset : fond transparent si intégré ── */
+html{background:transparent;}
+body{
+  font-family:var(--font-b);font-size:14px;color:var(--text);
+  background:var(--bg);min-height:100vh;
+  /* En mode iframe Wix, on peut forcer transparent : */
+}
+
+/* ── Wrapper ── */
+.wrap{max-width:560px;margin:0 auto;padding:0;}
+
+/* ── Header ── */
+.hdr{
+  background:#000;border-bottom:2px solid var(--gold);
+  padding:18px 24px 14px;text-align:center;
+}
+.hdr-logo{font-family:var(--font-d);font-size:22px;font-weight:300;letter-spacing:5px;color:var(--gold);}
+.hdr-sub{font-size:10px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin-top:4px;}
+
+/* ── Barre de progression ── */
+.prog-bar{background:#000;padding:14px 24px 0;border-bottom:1px solid var(--border);}
+.steps{display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
+.step{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.step-dot{
+  width:24px;height:24px;border-radius:50%;border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;color:var(--faint);background:var(--s1);
+  transition:all .3s;flex-shrink:0;cursor:default;
+}
+.step.done .step-dot{background:var(--gold);border-color:var(--gold);color:#000;cursor:pointer;}
+.step.active .step-dot{background:#000;border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 3px rgba(212,175,55,.18);}
+.step-lbl{font-size:9px;color:var(--faint);text-align:center;letter-spacing:.5px;white-space:nowrap;}
+.step.done .step-lbl,.step.active .step-lbl{color:var(--gold);}
+.step-line{flex:1;height:1px;background:var(--border);margin-top:-14px;min-width:6px;}
+.step-line.done{background:var(--gold);}
+.prog-fill-bar{height:2px;background:var(--border);margin:0 -24px;}
+.prog-fill{height:100%;background:var(--gold);transition:width .4s ease;}
+
+/* ── Corps ── */
+.body{padding:22px 24px;}
+.etape-lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;}
+.etape-sous{font-size:12px;color:var(--gold);margin-bottom:18px;font-style:italic;line-height:1.6;}
+
+/* ── Cadre doré ── */
+.cadre{border:2px solid var(--gold-border);border-radius:12px;padding:18px;margin-bottom:16px;background:#0c0900;}
+.cadre-titre{font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:14px;padding-bottom:9px;border-bottom:1px solid var(--gold-border);}
+
+/* ── Champs ── */
+.field{margin-bottom:13px;}
+label{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+input,select,textarea{
+  width:100%;padding:10px 12px;background:var(--s2);
+  border:1px solid var(--border);color:var(--text);border-radius:7px;
+  font-size:14px;font-family:var(--font-b);transition:border-color .2s,background .2s;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);background:var(--gold-pale);}
+input::placeholder,textarea::placeholder{color:var(--faint);}
+select option{background:var(--s2);color:var(--text);}
+.cadre input,.cadre select,.cadre textarea{background:#100d00;border-color:var(--gold-border);color:#e8c84a;}
+.cadre input:focus,.cadre select:focus,.cadre textarea:focus{outline:none;border-color:var(--gold);background:var(--gold-pale);color:var(--gold);}
+.cadre input::placeholder,.cadre textarea::placeholder{color:#3a2d10;}
+.cadre select option{background:#100d00;color:#e8c84a;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:460px){.row2{grid-template-columns:1fr;}}
+
+/* ── Boutons choix ── */
+.btn-choix-grp{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px;}
+.btn-choix{
+  flex:1;min-width:80px;
+  background:#12100000;border:2px solid var(--gold-border);color:#8a6820;
+  padding:12px 8px;border-radius:10px;cursor:pointer;
+  text-align:center;font-size:12px;font-weight:700;font-family:var(--font-b);
+  letter-spacing:.5px;transition:all .22s;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  background:#100d00;
+}
+.btn-choix:hover{border-color:var(--gold);color:var(--gold);background:#1e1800;}
+.btn-choix.sel{border-color:var(--gold);background:#261d00;color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.25);}
+.btn-choix svg{width:26px;height:26px;transition:all .22s;}
+.btn-choix.sel svg{filter:drop-shadow(0 0 4px rgba(212,175,55,.5));}
+
+/* ── Grille objectifs ── */
+.obj-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+@media(max-width:420px){.obj-grid{grid-template-columns:1fr;}}
+.obj-btn{
+  background:#100d00;border:2px solid var(--gold-border);color:#8a6820;
+  padding:12px 10px;border-radius:10px;cursor:pointer;
+  text-align:left;font-size:12px;font-family:var(--font-b);
+  transition:all .22s;line-height:1.5;
+}
+.obj-btn:hover{border-color:var(--gold);color:var(--gold);background:#1e1800;}
+.obj-btn.sel{border-color:var(--gold);background:#261d00;color:var(--gold);}
+.obj-icn{font-size:16px;display:block;margin-bottom:4px;}
+
+/* ── Récap ── */
+.recap{background:#080700;border:2px solid var(--gold-border);border-radius:12px;padding:14px;margin-bottom:14px;}
+.recap-row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid #1e1800;font-size:13px;gap:10px;}
+.recap-row:last-child{border-bottom:none;}
+.rk{color:#6a5520;flex-shrink:0;}
+.rv{color:#e8c84a;font-weight:600;text-align:right;line-height:1.5;}
+.recap-sec{font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;padding:7px 0 4px;border-bottom:1px solid var(--gold-border);margin-bottom:3px;margin-top:2px;}
+
+/* ── Navigation ── */
+.nav{display:flex;gap:10px;margin-top:16px;}
+.btn-back{
+  flex:1;background:var(--s2);color:var(--gold);
+  border:1px solid var(--gold);padding:12px;border-radius:7px;
+  font-size:13px;font-weight:700;font-family:var(--font-b);
+  cursor:pointer;transition:opacity .2s;
+}
+.btn-back:hover{opacity:.8;}
+.btn-next{
+  flex:2;background:var(--gold);color:#000;border:none;
+  padding:13px;border-radius:7px;font-size:14px;font-weight:700;
+  font-family:var(--font-b);letter-spacing:1px;cursor:pointer;transition:opacity .2s;
+}
+.btn-next:hover{opacity:.88;}
+.btn-next:disabled{opacity:.4;cursor:default;}
+.btn-submit{
+  width:100%;background:var(--gold);color:#000;border:none;
+  padding:14px;border-radius:7px;font-size:15px;font-weight:700;
+  font-family:var(--font-b);letter-spacing:1.5px;text-transform:uppercase;
+  cursor:pointer;transition:opacity .2s;margin-top:6px;
+  position:relative;
+}
+.btn-submit:hover{opacity:.88;}
+.btn-submit:disabled{opacity:.4;cursor:default;}
+.btn-submit.loading::after{
+  content:'';position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── Erreur / Info ── */
+.errmsg{display:none;background:#140000;border-left:3px solid var(--danger);padding:9px 12px;border-radius:0 7px 7px 0;font-size:12px;color:#ff6b6b;margin-top:8px;}
+.info-note{background:#100d00;border-left:3px solid var(--gold-dim);padding:9px 12px;border-radius:0 7px 7px 0;font-size:12px;color:var(--gold);margin-bottom:12px;line-height:1.6;}
+
+/* ── Succès ── */
+.success{display:none;padding:28px 24px 36px;text-align:center;}
+.s-icon{font-size:50px;display:block;margin-bottom:14px;}
+.s-title{font-family:var(--font-d);font-size:24px;font-weight:300;color:var(--gold);letter-spacing:3px;margin-bottom:14px;}
+.s-card{background:#080700;border:2px solid var(--gold-border);border-radius:12px;padding:18px;margin-bottom:18px;text-align:left;}
+.s-line{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #1e1800;font-size:13px;color:#e8c84a;line-height:1.6;}
+.s-line:last-child{border-bottom:none;}
+.s-ico{font-size:18px;flex-shrink:0;margin-top:1px;}
+.s-sig{margin-top:18px;font-family:var(--font-d);font-size:16px;color:var(--gold);letter-spacing:1.5px;font-weight:300;}
+.btn-nouveau{
+  display:inline-block;margin-top:16px;background:transparent;
+  color:var(--gold);border:1px solid var(--gold);padding:11px 24px;
+  border-radius:7px;font-size:13px;font-weight:700;font-family:var(--font-b);
+  cursor:pointer;letter-spacing:1px;transition:all .2s;
+}
+.btn-nouveau:hover{background:var(--gold);color:#000;}
+
+/* ── Footer ── */
+.footer{font-size:11px;color:var(--faint);text-align:center;padding:14px 24px 18px;border-top:1px solid var(--border);line-height:1.7;}
+.footer a{color:var(--gold);}
+
+/* ── Badge "PWA prérempli" ── */
+.pwa-badge{
+  display:none;
+  background:#0a1200;border:1px solid #2e5c00;border-radius:20px;
+  padding:5px 12px;font-size:11px;color:#8bc34a;letter-spacing:1px;
+  text-align:center;margin-bottom:14px;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-logo">TANGO &amp; VOUS</div>
+    <div class="hdr-sub">Réserver un cours particulier</div>
+  </div>
+
+  <!-- Barre de progression -->
+  <div class="prog-bar" id="prog-zone">
+    <div class="steps" id="steps-bar"></div>
+    <div class="prog-fill-bar"><div class="prog-fill" id="pfill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Formulaire -->
+  <div class="body" id="form-zone">
+
+    <!-- Badge PWA (affiché uniquement si prérempli depuis la PWA) -->
+    <div class="pwa-badge" id="pwa-badge">✓ Vos coordonnées ont été préremplies</div>
+
+    <div id="app"></div>
+
+    <div class="errmsg" id="errmsg"></div>
+  </div>
+
+  <!-- Succès -->
+  <div class="success" id="success">
+    <span class="s-icon">✅</span>
+    <div class="s-title">DEMANDE ENVOYÉE !</div>
+    <div class="s-card" id="success-recap"></div>
+    <div class="s-sig">À très bientôt sur la piste !<br/><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
+    <button class="btn-nouveau" onclick="restart()">← Nouvelle demande</button>
+  </div>
+
+  <div class="footer">
+    Un problème avec ce formulaire ? <a href="mailto:tangoetvous@gmail.com">tangoetvous@gmail.com</a> · <a href="tel:+33661727998">06 61 72 79 98</a>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// ⚙️  CONFIGURATION
+// ================================================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
+const IS_DEMO    = SCRIPT_URL.includes('VOTRE_DEPLOYMENT');
+
+// ================================================================
+// DONNÉES DE RÉFÉRENCE
+// ================================================================
+const PROFESSEURS = [
+  { id:'florencia', nom:'Florencia Garcia'   },
+  { id:'jeremy',    nom:'Jérémy Braitbart'   },
+  { id:'les-deux',  nom:'Florencia & Jérémy' },
+];
+
+const DUREES = ['1 heure','1h30','2 heures'];
+
+const LIEUX = [
+  { id:'nation',     label:'Nation — Paris',                 cp: false },
+  { id:'gambetta',   label:'Gambetta — Paris',               cp: false },
+  { id:'vincennes',  label:'Vincennes / Montreuil / Fontenay', cp: false },
+  { id:'domicile',   label:'À domicile',                     cp: true  },
+  { id:'vos-locaux', label:'Dans vos locaux',                cp: true  },
+];
+
+const OBJECTIFS = [
+  { id:'decouverte',    ico:'🌱', label:'Découverte du tango',      detail:'1ère initiation, seul(e) ou en couple' },
+  { id:'passer-cap',   ico:'🎯', label:'Passer un cap',             detail:'Déblocage, éclaircissements' },
+  { id:'accordage',    ico:'💑', label:'Accordage de couple',        detail:'Abrazo, musicalité commune' },
+  { id:'sequence',     ico:'🔄', label:'Travail sur une séquence',  detail:'Technique spécifique' },
+  { id:'scene',        ico:'🎭', label:'Tango de scène',            detail:'Portés, sauts, vocabulaire scénico' },
+  { id:'choregraphie', ico:'💍', label:'Chorégraphie',              detail:'Mariage, spectacle, démo…' },
+  { id:'autre',        ico:'✨', label:'Autre objectif',            detail:'Décrivez dans vos remarques' },
+];
+
+// SVG professeurs
+const SVG = {
+  florencia: `<svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="10" r="6" stroke="currentColor" stroke-width="1.8"/><path d="M7 32c0-6.1 4.9-11 11-11s11 4.9 11 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="27" cy="10" r="3" stroke="currentColor" stroke-width="1.3"/><line x1="27" y1="13" x2="27" y2="16" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="25" y1="14.5" x2="29" y2="14.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+  jeremy:    `<svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="10" r="6" stroke="currentColor" stroke-width="1.8"/><path d="M7 32c0-6.1 4.9-11 11-11s11 4.9 11 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="26" y1="10" x2="30" y2="6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="27,6 30,6 30,9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  'les-deux':`<svg viewBox="0 0 40 36" fill="none"><circle cx="13" cy="10" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M3 32c0-5 3.8-9 10-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="27" cy="10" r="5" stroke="currentColor" stroke-width="1.7"/><path d="M37 32c0-5-3.8-9-10-9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M17 23c.8-1 2-1.5 3-1.5s2.2.5 3 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+};
+
+// ================================================================
+// ÉTAT
+// ================================================================
+function freshState() {
+  return {
+    step: 1,
+    // Pré-rempli depuis PWA (optionnel)
+    pwaMode: false, eleveId: '',
+    // Étape 1 — Qui
+    prenom: '', nom: '', email: '', tel: '',
+    // Étape 2 — Le cours
+    prof: null, duree: '', lieu: null, lieuDetail: '',
+    // Étape 3 — L'objectif
+    objectifs: [], // tableau d'IDs
+    niveauEleve: '', remarque: '',
+    // Étape 4 — Disponibilités
+    dispoTexte: '', urgence: '',
+  };
+}
+let S = freshState();
+
+// ================================================================
+// INITIALISATION DEPUIS PWA (paramètres URL)
+// ================================================================
+(function initFromUrl() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('pwa')) {
+    S.pwaMode    = true;
+    S.eleveId    = p.get('id')     || '';
+    S.prenom     = p.get('prenom') || '';
+    S.nom        = p.get('nom')    || '';
+    S.email      = p.get('email')  || '';
+    S.tel        = p.get('tel')    || '';
+    document.getElementById('pwa-badge').style.display = 'block';
+  }
+})();
+
+// ================================================================
+// STEPS CONFIG
+// ================================================================
+const STEPS = [
+  { id:'qui',   lbl:'Qui' },
+  { id:'cours', lbl:'Le cours' },
+  { id:'obj',   lbl:'Objectif' },
+  { id:'dispos',lbl:'Disponibilités' },
+];
+
+// ================================================================
+// HELPERS
+// ================================================================
+const $ = id => document.getElementById(id);
+function showErr(m) { const e=$('errmsg'); e.textContent=m; e.style.display='block'; }
+function hideErr()  { const e=$('errmsg'); e.style.display='none'; }
+function v(id)      { const el=document.getElementById(id); return el ? el.value.trim() : ''; }
+function profNom(id){ const p=PROFESSEURS.find(x=>x.id===id); return p?p.nom:''; }
+function lieuLabel(id){
+  const l = LIEUX.find(x=>x.id===id);
+  if (!l) return '';
+  return l.cp && S.lieuDetail ? `${l.label} (${S.lieuDetail})` : l.label;
+}
+
+// ================================================================
+// RENDER
+// ================================================================
+function render() {
+  const tot = STEPS.length, cur = S.step;
+  // Steps bar
+  let bar = '';
+  STEPS.forEach((s,i) => {
+    const n = i+1, cls = n<cur ? 'done' : n===cur ? 'active' : '';
+    const click = n < cur ? ` onclick="jumpTo(${n})"` : '';
+    bar += `<div class="step ${cls}"><div class="step-dot"${click}>${n}</div><div class="step-lbl">${s.lbl}</div></div>`;
+    if (i < tot-1) bar += `<div class="step-line${n<cur?' done':''}"></div>`;
+  });
+  $('steps-bar').innerHTML = bar;
+  $('pfill').style.width = (tot > 1 ? (cur-1)/(tot-1)*100 : 0) + '%';
+  // Screen
+  $('app').innerHTML = buildStep(STEPS[cur-1].id);
+  hideErr();
+  window.scrollTo(0,0);
+}
+
+function jumpTo(n) { if (n < S.step) { S.step = n; render(); } }
+
+function buildStep(id) {
+  if (id === 'qui')    return sQui();
+  if (id === 'cours')  return sCours();
+  if (id === 'obj')    return sObjectif();
+  if (id === 'dispos') return sDispos();
+  return '';
+}
+
+// ================================================================
+// ÉTAPE 1 — QUI ÊTES-VOUS ?
+// ================================================================
+function sQui() {
+  return `
+    <div class="etape-lbl">Étape 1 — Vos coordonnées</div>
+    <div class="etape-sous">Nous vous recontacterons pour fixer un rendez-vous.</div>
+    <div class="cadre">
+      <div class="cadre-titre">Vos informations</div>
+      <div class="row2">
+        <div class="field"><label>Prénom *</label><input type="text" id="i-pre" value="${S.prenom}" placeholder="Prénom"/></div>
+        <div class="field"><label>Nom *</label><input type="text" id="i-nom" value="${S.nom}" placeholder="Nom"/></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Email *</label><input type="email" id="i-eml" value="${S.email}" placeholder="votre@email.com" autocapitalize="none"/></div>
+        <div class="field"><label>Téléphone *</label><input type="tel" id="i-tel" value="${S.tel}" placeholder="06 XX XX XX XX"/></div>
+      </div>
+      <div class="field">
+        <label>Votre expérience du tango</label>
+        <select id="i-niv">
+          <option value="">— Sélectionner —</option>
+          <option value="debutant" ${S.niveauEleve==='debutant'?'selected':''}>Débutant(e) — jamais dansé</option>
+          <option value="quelques" ${S.niveauEleve==='quelques'?'selected':''}>Quelques cours</option>
+          <option value="1an"      ${S.niveauEleve==='1an'?'selected':''}>1 an — bases acquises</option>
+          <option value="2ans"     ${S.niveauEleve==='2ans'?'selected':''}>2 ans de cours</option>
+          <option value="plus"     ${S.niveauEleve==='plus'?'selected':''}>Plus de 2 ans</option>
+          <option value="milonga"  ${S.niveauEleve==='milonga'?'selected':''}>Je sors régulièrement en milonga</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-next" onclick="nextQui()">Continuer →</button>`;
+}
+
+function nextQui() {
+  S.prenom = v('i-pre'); S.nom = v('i-nom');
+  S.email  = v('i-eml'); S.tel = v('i-tel');
+  S.niveauEleve = v('i-niv');
+  if (!S.prenom||!S.nom||!S.email||!S.tel) { showErr('Merci de remplir tous les champs obligatoires (*).'); return; }
+  S.step++; render();
+}
+
+// ================================================================
+// ÉTAPE 2 — LE COURS
+// ================================================================
+function sCours() {
+  // Boutons professeurs
+  const profBtns = PROFESSEURS.map(p => `
+    <button type="button" class="btn-choix${S.prof===p.id?' sel':''}" onclick="setProf('${p.id}')">
+      ${SVG[p.id]}<span>${p.nom}</span>
+    </button>`).join('');
+
+  // Boutons durée
+  const dureeBtns = DUREES.map(d => `
+    <button type="button" class="btn-choix${S.duree===d?' sel':''}" onclick="setDuree('${d}')">
+      <span style="font-size:18px;">⏱</span><span>${d}</span>
+    </button>`).join('');
+
+  // Boutons lieu
+  const lieuBtns = LIEUX.map(l => `
+    <button type="button" class="btn-choix${S.lieu===l.id?' sel':''}" onclick="setLieu('${l.id}')">
+      <span style="font-size:18px;">${l.id==='domicile'?'🏠':l.id==='vos-locaux'?'🏢':'📍'}</span>
+      <span>${l.label}</span>
+    </button>`).join('');
+
+  const lieuSelectionne = LIEUX.find(l => l.id === S.lieu);
+  const showCP = lieuSelectionne && lieuSelectionne.cp;
+
+  return `
+    <div class="etape-lbl">Étape 2 — Le cours</div>
+    <div class="etape-sous">Définissez les modalités de votre cours particulier.</div>
+
+    <div class="cadre">
+      <div class="cadre-titre">Avec qui ?</div>
+      <div class="btn-choix-grp">${profBtns}</div>
+    </div>
+
+    <div class="cadre">
+      <div class="cadre-titre">Durée souhaitée</div>
+      <div class="btn-choix-grp">${dureeBtns}</div>
+    </div>
+
+    <div class="cadre">
+      <div class="cadre-titre">Lieu</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">${lieuBtns}</div>
+      ${showCP ? `
+      <div class="field" style="margin-top:12px;margin-bottom:0;">
+        <label>Code postal</label>
+        <input type="text" id="i-lieu-detail" value="${S.lieuDetail}" placeholder="Ex : 75020" inputmode="numeric" maxlength="5"/>
+      </div>` : ''}
+    </div>
+
+    <div class="nav">
+      <button class="btn-back" onclick="prev()">← Retour</button>
+      <button class="btn-next" onclick="nextCours()">Continuer →</button>
+    </div>`;
+}
+
+function setProf(id)  { S.prof  = id; render(); }
+function setDuree(d)  { S.duree = d;  render(); }
+function setLieu(id)  { S.lieu  = id; S.lieuDetail = ''; render(); }
+
+function nextCours() {
+  const lieuSel = LIEUX.find(l => l.id === S.lieu);
+  if (lieuSel && lieuSel.cp) S.lieuDetail = v('i-lieu-detail');
+  if (!S.prof)  { showErr('Merci de choisir un(e) professeur(e).'); return; }
+  if (!S.duree) { showErr('Merci de choisir une durée.'); return; }
+  if (!S.lieu)  { showErr('Merci de choisir un lieu.'); return; }
+  S.step++; render();
+}
+
+// ================================================================
+// ÉTAPE 3 — OBJECTIF
+// ================================================================
+function sObjectif() {
+  const objBtns = OBJECTIFS.map(o => `
+    <button type="button" class="obj-btn${S.objectifs.includes(o.id)?' sel':''}" onclick="toggleObj('${o.id}')">
+      <span class="obj-icn">${o.ico}</span>
+      <strong>${o.label}</strong><br/>
+      <span style="font-size:11px;color:inherit;opacity:.7;">${o.detail}</span>
+    </button>`).join('');
+
+  return `
+    <div class="etape-lbl">Étape 3 — Votre objectif</div>
+    <div class="etape-sous">Sélectionnez un ou plusieurs objectifs pour ce cours.</div>
+    <div class="cadre">
+      <div class="cadre-titre">Qu'est-ce qui vous amène ? (choix multiple)</div>
+      <div class="obj-grid">${objBtns}</div>
+    </div>
+    <div class="cadre">
+      <div class="cadre-titre">Informations complémentaires</div>
+      <div class="field">
+        <label>Décrivez votre projet ou vos attentes</label>
+        <textarea id="i-rem" rows="4" placeholder="Plus vous nous en dites, mieux nous pourrons préparer votre cours…">${S.remarque}</textarea>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="btn-back" onclick="prev()">← Retour</button>
+      <button class="btn-next" onclick="nextObj()">Continuer →</button>
+    </div>`;
+}
+
+function toggleObj(id) {
+  const idx = S.objectifs.indexOf(id);
+  if (idx === -1) S.objectifs.push(id);
+  else S.objectifs.splice(idx,1);
+  render();
+}
+
+function nextObj() {
+  S.remarque = v('i-rem');
+  if (S.objectifs.length === 0) { showErr('Merci de sélectionner au moins un objectif.'); return; }
+  S.step++; render();
+}
+
+// ================================================================
+// ÉTAPE 4 — DISPONIBILITÉS
+// ================================================================
+function sDispos() {
+  const recap = buildRecap();
+  return `
+    <div class="etape-lbl">Étape 4 — Vos disponibilités</div>
+    <div class="etape-sous">Indiquez-nous quand vous êtes disponible — nous trouverons un créneau ensemble.</div>
+
+    <div class="cadre">
+      <div class="cadre-titre">Créneaux préférés</div>
+      <div class="field">
+        <label>Jours et horaires qui vous conviennent</label>
+        <textarea id="i-dispo" rows="3" placeholder="Ex: lundi ou mardi en journée, mercredi après 18h…">${S.dispoTexte}</textarea>
+      </div>
+      <div class="field">
+        <label>Délai souhaité</label>
+        <select id="i-urgence">
+          <option value="">— Sélectionner —</option>
+          <option value="urgent"   ${S.urgence==='urgent'?'selected':''}>Urgent — dans les 2 semaines</option>
+          <option value="1mois"    ${S.urgence==='1mois'?'selected':''}>Dans le mois</option>
+          <option value="flexible" ${S.urgence==='flexible'?'selected':''}>Flexible — on s'adapte</option>
+          <option value="mariage"  ${S.urgence==='mariage'?'selected':''}>Date fixe (mariage, spectacle…)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="recap">${recap}</div>
+
+    <button class="btn-submit" id="btn-sub" onclick="soumettre()">ENVOYER MA DEMANDE</button>
+
+    <div class="nav" style="margin-top:10px;">
+      <button class="btn-back" onclick="prev()">← Retour</button>
+    </div>
+    <p style="font-size:11px;color:var(--faint);text-align:center;margin-top:14px;line-height:1.7;">Vos données sont utilisées uniquement pour la gestion de votre demande.</p>`;
+}
+
+// ================================================================
+// RÉCAPITULATIF
+// ================================================================
+function buildRecap() {
+  const objLabels = S.objectifs.map(id => {
+    const o = OBJECTIFS.find(x=>x.id===id); return o ? o.label : id;
+  }).join(', ');
+
+  const lieuFull = lieuLabel(S.lieu) + (S.lieuDetail ? ` — ${S.lieuDetail}` : '');
+
+  return `
+    <div class="recap-sec">Récapitulatif de votre demande</div>
+    <div class="recap-row"><span class="rk">👤 Nom</span><span class="rv">${S.prenom} ${S.nom}</span></div>
+    <div class="recap-row"><span class="rk">📧 Email</span><span class="rv">${S.email}</span></div>
+    <div class="recap-row"><span class="rk">📞 Téléphone</span><span class="rv">${S.tel}</span></div>
+    <div class="recap-row"><span class="rk">🎓 Professeur(e)</span><span class="rv">${profNom(S.prof)}</span></div>
+    <div class="recap-row"><span class="rk">⏱ Durée</span><span class="rv">${S.duree}</span></div>
+    <div class="recap-row"><span class="rk">📍 Lieu</span><span class="rv">${lieuFull}</span></div>
+    <div class="recap-row"><span class="rk">🎯 Objectif(s)</span><span class="rv">${objLabels}</span></div>
+    ${S.remarque ? `<div class="recap-row"><span class="rk">💬 Remarque</span><span class="rv" style="font-size:12px;">${S.remarque}</span></div>` : ''}`;
+}
+
+// ================================================================
+// SOUMISSION
+// ================================================================
+async function soumettre() {
+  S.dispoTexte = v('i-dispo');
+  S.urgence    = v('i-urgence');
+
+  if (!S.dispoTexte) { showErr('Merci d\'indiquer vos disponibilités.'); return; }
+
+  const btn = $('btn-sub');
+  btn.disabled = true; btn.classList.add('loading');
+
+  const payload = {
+    action: 'reservationCP',
+    eleveId:    S.eleveId,
+    prenom:     S.prenom,
+    nom:        S.nom,
+    email:      S.email,
+    tel:        S.tel,
+    niveauEleve:S.niveauEleve,
+    prof:       S.prof,
+    duree:      S.duree,
+    lieu:       lieuLabel(S.lieu),
+    lieuDetail: S.lieuDetail,
+    objectifs:  S.objectifs.join(', '),
+    remarque:   S.remarque,
+    dispoTexte: S.dispoTexte,
+    urgence:    S.urgence,
+    source:     S.pwaMode ? 'pwa' : 'wix',
+  };
+
+  if (IS_DEMO) {
+    // Mode démo — on simule un succès
+    await new Promise(r => setTimeout(r, 900));
+    afficherSucces();
+    return;
+  }
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body:   JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    afficherSucces();
+  } catch(e) {
+    btn.disabled = false; btn.classList.remove('loading');
+    showErr('Erreur lors de l\'envoi. Réessayez ou contactez-nous par email.');
+  }
+}
+
+function afficherSucces() {
+  $('form-zone').style.display = 'none';
+  $('prog-zone').style.display = 'none';
+
+  const objLabels = S.objectifs.map(id => {
+    const o = OBJECTIFS.find(x=>x.id===id); return o ? o.ico+' '+o.label : id;
+  }).join(' · ');
+
+  $('success-recap').innerHTML = `
+    <div class="s-line"><span class="s-ico">🎓</span><span>Cours avec <strong>${profNom(S.prof)}</strong>, ${S.duree}, ${lieuLabel(S.lieu)}</span></div>
+    <div class="s-line"><span class="s-ico">🎯</span><span>${objLabels}</span></div>
+    <div class="s-line"><span class="s-ico">📞</span><span>Florencia &amp; Jérémy vous recontacteront à l'adresse <strong>${S.email}</strong> ou au <strong>${S.tel}</strong> pour fixer un créneau.</span></div>
+    <div class="s-line"><span class="s-ico">💬</span><span>Vous pouvez aussi nous joindre directement sur <a href="tel:+33661727998" style="color:var(--gold);">06 61 72 79 98</a> ou <a href="mailto:tangoetvous@gmail.com" style="color:var(--gold);">tangoetvous@gmail.com</a></span></div>`;
+
+  $('success').style.display = 'block';
+  window.scrollTo(0,0);
+}
+
+// ================================================================
+// NAV
+// ================================================================
+function prev() { if (S.step > 1) { S.step--; render(); } }
+
+function restart() {
+  S = freshState();
+  $('form-zone').style.display = 'block';
+  $('prog-zone').style.display = 'block';
+  $('success').style.display = 'none';
+  render();
+}
+
+// ================================================================
+// LANCEMENT
+// ================================================================
+render();
+</script>
+</body>
+</html>
