@@ -207,8 +207,9 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 // ================================================================
 var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
 var ADMIN_EMAILS    = ['tangoetvous@gmail.com','florencia@tangoetvous.com','jeremy@tangoetvous.com'];
-var URL_PWA         = 'https://USERNAME.github.io/tango-et-vous-app';
-var URL_SORANO      = 'LIEN_ASSOCONNECT_SORANO';
+var URL_PWA              = 'https://tangoetvous.github.io/tango-et-vous-app';
+var URL_SORANO           = 'LIEN_ASSOCONNECT_SORANO';
+var URL_ASSOCONNECT_COURS = 'https://le-regard-se-pose.assoconnect.com/collect/description/695654-a-inscription-aux-cours-de-tango-argentin-avec-florencia-garcia-jeremy-braitbart-septembre-2026-juin-2027';
 var CLOUDINARY_NAME = 'VOTRE_CLOUD_NAME';
 var IS_DEMO         = APPS_SCRIPT_URL.indexOf('VOTRE_DEPLOYMENT') >= 0;
 
@@ -466,7 +467,13 @@ function switchTab(tab) {
   renderTab();
 }
 function renderTab() {
-  var el = gel('tab-content');
+  // Remplacer l'élément pour éviter l'accumulation de listeners event
+  var old = gel('tab-content');
+  var fresh = document.createElement('div');
+  fresh.id = 'tab-content';
+  fresh.className = old.className;
+  old.parentNode.replaceChild(fresh, old);
+  var el = fresh;
   el.innerHTML = '<div class="spinner"></div>';
   setTimeout(function() {
     var html = '';
