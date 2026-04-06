@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<meta name="theme-color" content="#0a0a0a"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Tango & Vous"/>
+<title>Tango &amp; Vous</title>
+<link rel="manifest" href="manifest.json"/>
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+  // ================================================================
+  // ⚙️  CONFIGURATION — À remplacer avec tes valeurs Firebase
+  // ================================================================
+  const FIREBASE_CONFIG = {
+    apiKey: "VOTRE_API_KEY",
+    authDomain: "VOTRE_PROJECT.firebaseapp.com",
+    projectId: "VOTRE_PROJECT_ID",
+    storageBucket: "VOTRE_PROJECT.appspot.com",
+    messagingSenderId: "VOTRE_SENDER_ID",
+    appId: "VOTRE_APP_ID"
+  };
+
+  // ⚙️  URL de ton Apps Script déployé (Web App)
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
+
+  // ================================================================
+  // DEMO MODE — active si les configs sont vides
+  // ================================================================
+  const IS_DEMO = FIREBASE_CONFIG.apiKey === 'VOTRE_API_KEY' || APPS_SCRIPT_URL.includes('VOTRE_DEPLOYMENT');
+
+  const DEMO_DATA = {
+    eleve: { id: 'E001', nom: 'Marie Dupont', niveau: 'Débutant', email: 'marie@exemple.com' },
+    carte: { coursUtilises: 7, coursRestants: 3, dateAchat: '2026-01-15', dateExpiration: '2026-05-01', statut: '🟢 Active' },
+    presences: [
+      { date: '2026-03-24', niveau: 'Débutant', note: '' },
+      { date: '2026-03-17', niveau: 'Débutant', note: '' },
+      { date: '2026-03-10', niveau: 'Débutant', note: '' },
+      { date: '2026-03-03', niveau: 'Débutant', note: '' },
+      { date: '2026-02-24', niveau: 'Débutant', note: '' },
+      { date: '2026-02-17', niveau: 'Débutant', note: '' },
+      { date: '2026-02-03', niveau: 'Débutant', note: '' },
+    ]
+  };
+
+  // ================================================================
+  // INIT FIREBASE
+  // ================================================================
+  let auth = null;
+  if (!IS_DEMO) {
+    const app = initializeApp(FIREBASE_CONFIG);
+    auth = getAuth(app);
+  }
+
+  // ================================================================
+  // STATE
+  // ================================================================
+  let currentUser = null;
+  let eleveData = null;
+
+  // ================================================================
+  // HELPERS UI
+  // ================================================================
+  const $ = id => document.getElementById(id);
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = $(id);
+    if (el) { el.classList.add('active'); window.scrollTo(0,0); }
+  }
+  function showMsg(id, msg, type='error') {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'msg ' + type;
+    el.style.display = 'block';
+    if (type === 'success') setTimeout(() => el.style.display='none', 4000);
+  }
+  function setLoading(btnId, loading) {
+    const btn = $(btnId);
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.classList.toggle('loading', loading);
+  }
+
+  // ================================================================
+  // FORMATAGE
+  // ================================================================
+  function formatDate(str) {
+    if (!str) return '—';
+    const d = new Date(str);
+    return d.toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+  }
+  function daysUntil(str) {
+    if (!str) return null;
+    const d = new Date(str);
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    return Math.ceil((d - now) / 86400000);
+  }
+
+  // ================================================================
+  // AUTH — ENVOI LIEN MAGIQUE
+  // ================================================================
+  window.sendMagicLink = async function() {
+    const email = $('auth-email').value.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      showMsg('auth-msg', 'Merci de saisir une adresse email valide.'); return;
+    }
+
+    if (IS_DEMO) {
+      // Mode démo : on simule directement
+      $('auth-email-sent').textContent = email;
+      showScreen('screen-sent');
+      return;
+    }
+
+    setLoading('btn-magic', true);
+    try {
+      const actionCodeSettings = {
+        url: window.location.href,
+        handleCodeInApp: true,
+      };
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      window.localStorage.setItem('emailForSignIn', email);
+      $('auth-email-sent').textContent = email;
+      showScreen('screen-sent');
+    } catch(e) {
+      showMsg('auth-msg', 'Erreur : ' + (e.message || 'impossible d\'envoyer le lien.'));
+    } finally {
+      setLoading('btn-magic', false);
+    }
+  };
+
+  // ================================================================
+  // AUTH — VÉRIFICATION LIEN AU RETOUR EMAIL
+  // ================================================================
+  async function checkEmailLink() {
+    if (IS_DEMO) return;
+    if (!isSignInWithEmailLink(auth, window.location.href)) return;
+    let email = window.localStorage.getItem('emailForSignIn');
+    if (!email) {
+      email = window.prompt('Confirmez votre adresse email pour finaliser la connexion :');
+    }
+    if (!email) return;
+    try {
+      await signInWithEmailLink(auth, email, window.location.href);
+      window.localStorage.removeItem('emailForSignIn');
+      // Nettoyer l'URL
+      history.replaceState(null, '', window.location.pathname);
+    } catch(e) {
+      showScreen('screen-auth');
+      showMsg('auth-msg', 'Lien expiré ou invalide. Merci de réessayer.');
+    }
+  }
+
+  // ================================================================
+  // AUTH — OBSERVER
+  // ================================================================
+  function initAuth() {
+    if (IS_DEMO) {
+      // Mode démo : bouton démo sur l'écran auth
+      $('demo-btn-wrap').style.display = 'block';
+      return;
+    }
+    onAuthStateChanged(auth, async user => {
+      if (user) {
+        currentUser = user;
+        await loadEleveData(user.email);
+      } else {
+        showScreen('screen-auth');
+      }
+    });
+    checkEmailLink();
+  }
+
+  // ================================================================
+  // CONNEXION DÉMO
+  // ================================================================
+  window.demoLogin = function() {
+    eleveData = DEMO_DATA;
+    renderDashboard();
+    showScreen('screen-dashboard');
+  };
+
+  // ================================================================
+  // DÉCONNEXION
+  // ================================================================
+  window.logout = async function() {
+    if (IS_DEMO) {
+      eleveData = null;
+      showScreen('screen-auth');
+      return;
+    }
+    try { await signOut(auth); } catch(e) {}
+    currentUser = null;
+    eleveData = null;
+    showScreen('screen-auth');
+  };
+
+  // ================================================================
+  // CHARGEMENT DONNÉES ÉLÈVE
+  // ================================================================
+  async function loadEleveData(email) {
+    showScreen('screen-loading');
+    try {
+      const url = `${APPS_SCRIPT_URL}?action=getEleve&email=${encodeURIComponent(email)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      eleveData = data;
+      renderDashboard();
+      showScreen('screen-dashboard');
+    } catch(e) {
+      showScreen('screen-notfound');
+      $('notfound-email').textContent = email || '';
+    }
+  }
+
+  // ================================================================
+  // RENDER DASHBOARD
+  // ================================================================
+  function renderDashboard() {
+    if (!eleveData) return;
+    const { eleve, carte, presences } = eleveData;
+
+    // Header
+    $('dash-prenom').textContent = eleve.nom.split(' ')[0];
+    $('dash-id').textContent = eleve.id;
+    $('dash-niveau').textContent = eleve.niveau;
+
+    // Carte — jauge circulaire
+    const used = carte.coursUtilises;
+    const remaining = carte.coursRestants;
+    const pct = Math.min(100, (used / 10) * 100);
+    const circumference = 2 * Math.PI * 54; // r=54
+    const dashoffset = circumference * (1 - pct / 100);
+    $('gauge-circle').style.strokeDasharray = circumference;
+    $('gauge-circle').style.strokeDashoffset = dashoffset;
+    $('gauge-used').textContent = used;
+    $('gauge-remaining').textContent = remaining;
+
+    // Couleur selon statut
+    const statusColor = carte.statut.includes('🔴') || carte.statut.includes('⚫') ? '#c62828'
+      : carte.statut.includes('🟡') ? '#ff8800' : '#D4AF37';
+    $('gauge-circle').style.stroke = statusColor;
+
+    // Dates
+    $('carte-achat').textContent = formatDate(carte.dateAchat);
+    $('carte-expiration').textContent = formatDate(carte.dateExpiration);
+
+    // Badge expiration
+    const days = daysUntil(carte.dateExpiration);
+    const badge = $('expiration-badge');
+    if (days === null) {
+      badge.style.display = 'none';
+    } else if (days < 0) {
+      badge.textContent = 'Expirée';
+      badge.className = 'exp-badge expired';
+    } else if (days <= 14) {
+      badge.textContent = `Expire dans ${days} j`;
+      badge.className = 'exp-badge warning';
+    } else {
+      badge.textContent = `${days} jours restants`;
+      badge.className = 'exp-badge ok';
+    }
+
+    // Statut
+    $('carte-statut').textContent = carte.statut;
+    $('carte-statut').className = 'statut-pill ' + (
+      carte.statut.includes('🟢') ? 'active' :
+      carte.statut.includes('🟡') ? 'soon' :
+      carte.statut.includes('🔴') ? 'empty' : 'expired'
+    );
+
+    // Barre de progression linéaire
+    $('progress-bar-fill').style.width = pct + '%';
+    $('progress-bar-fill').style.background = statusColor;
+    $('progress-label').textContent = `${used} cours utilisés sur 10`;
+
+    // Historique présences
+    const container = $('presences-list');
+    if (!presences || presences.length === 0) {
+      container.innerHTML = '<p class="no-presences">Aucune présence enregistrée pour le moment.</p>';
+    } else {
+      container.innerHTML = presences.map((p, i) => `
+        <div class="presence-item" style="animation-delay:${i*60}ms">
+          <div class="presence-dot"></div>
+          <div class="presence-info">
+            <span class="presence-date">${formatDate(p.date)}</span>
+            <span class="presence-niveau">${p.niveau}</span>
+          </div>
+          <div class="presence-num">#${used - i}</div>
+        </div>
+      `).join('');
+    }
+
+    // Message d'alerte si proche de la fin
+    const alertEl = $('dash-alert');
+    if (remaining <= 2 && remaining > 0 && !carte.statut.includes('⚫')) {
+      alertEl.style.display = 'block';
+      $('alert-text').textContent = remaining === 1
+        ? 'Il vous reste 1 cours — pensez à renouveler votre carte !'
+        : `Il vous reste ${remaining} cours — pensez à renouveler votre carte !`;
+    } else if (carte.statut.includes('🔴')) {
+      alertEl.style.display = 'block';
+      $('alert-text').textContent = 'Votre carte est épuisée. Contactez-nous pour en acquérir une nouvelle.';
+    } else if (carte.statut.includes('⚫')) {
+      alertEl.style.display = 'block';
+      $('alert-text').textContent = 'Votre carte a expiré. Contactez-nous pour en acquérir une nouvelle.';
+    } else {
+      alertEl.style.display = 'none';
+    }
+  }
+
+  // ================================================================
+  // RETOUR AUTH
+  // ================================================================
+  window.goBackAuth = function() { showScreen('screen-auth'); };
+
+  // ================================================================
+  // INIT AU CHARGEMENT
+  // ================================================================
+  document.addEventListener('DOMContentLoaded', () => {
+    showScreen('screen-loading');
+    setTimeout(initAuth, 400);
+  });
+</script>
+
+<style>
+/* ================================================================
+   RESET & BASE
+   ================================================================ */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --gold:#D4AF37;
+  --gold-dim:#8a6800;
+  --gold-pale:#2a1f00;
+  --bg:#0a0a0a;
+  --surface:#111;
+  --surface2:#181818;
+  --surface3:#1f1f1f;
+  --border:#2a2a2a;
+  --text:#fff;
+  --text-dim:#888;
+  --text-faint:#444;
+  --danger:#c62828;
+  --warning:#ff8800;
+  --success:#2e7d32;
+  --radius:14px;
+  --font-display:'Cormorant Garamond',Georgia,serif;
+  --font-body:'Montserrat',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+a{color:var(--gold);text-decoration:none;}
+
+/* ================================================================
+   FONTS
+   ================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600;700&display=swap');
+
+/* ================================================================
+   SCREENS
+   ================================================================ */
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;}
+
+/* ================================================================
+   SCREEN LOADING
+   ================================================================ */
+#screen-loading{align-items:center;justify-content:center;background:var(--bg);}
+.loading-inner{text-align:center;}
+.loading-logo{font-family:var(--font-display);font-size:28px;font-weight:300;letter-spacing:6px;color:var(--gold);margin-bottom:6px;}
+.loading-sub{font-size:11px;letter-spacing:3px;color:var(--text-dim);margin-bottom:32px;}
+.spinner{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .9s linear infinite;margin:0 auto;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ================================================================
+   SCREEN AUTH
+   ================================================================ */
+#screen-auth{background:var(--bg);}
+.auth-bg{
+  position:relative;
+  background:var(--bg);
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:24px;
+  overflow:hidden;
+}
+.auth-bg::before{
+  content:'';
+  position:absolute;
+  top:-200px;left:50%;transform:translateX(-50%);
+  width:600px;height:600px;
+  background:radial-gradient(ellipse, rgba(212,175,55,0.06) 0%, transparent 70%);
+  pointer-events:none;
+}
+.auth-card{
+  width:100%;max-width:380px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:36px 28px;
+  position:relative;
+  z-index:1;
+}
+.auth-logo{
+  text-align:center;
+  margin-bottom:28px;
+}
+.auth-logo-title{
+  font-family:var(--font-display);
+  font-size:30px;font-weight:300;
+  letter-spacing:6px;color:var(--gold);
+  display:block;margin-bottom:4px;
+}
+.auth-logo-sep{width:40px;height:1px;background:var(--gold-dim);margin:10px auto;}
+.auth-logo-sub{font-size:10px;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase;}
+.auth-title{font-size:17px;font-weight:600;color:var(--text);margin-bottom:6px;}
+.auth-desc{font-size:13px;color:var(--text-dim);margin-bottom:22px;line-height:1.6;}
+.field label{display:block;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.field input{
+  width:100%;padding:13px 14px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  color:var(--text);border-radius:10px;
+  font-size:15px;font-family:var(--font-body);
+  transition:border-color .2s,background .2s;
+}
+.field input:focus{outline:none;border-color:var(--gold);background:var(--gold-pale);}
+.field input::placeholder{color:var(--text-faint);}
+.btn-primary{
+  width:100%;margin-top:14px;
+  background:var(--gold);color:#000;
+  border:none;padding:14px;
+  border-radius:10px;font-size:14px;
+  font-weight:700;font-family:var(--font-body);
+  letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;transition:opacity .2s;
+  position:relative;
+}
+.btn-primary:hover{opacity:.88;}
+.btn-primary:disabled{opacity:.5;cursor:default;}
+.btn-primary.loading::after{
+  content:'';
+  position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;
+  border:2px solid rgba(0,0,0,.3);
+  border-top-color:#000;
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+.msg{display:none;margin-top:12px;padding:10px 13px;border-radius:8px;font-size:13px;}
+.msg.error{background:#1a0000;border-left:3px solid var(--danger);color:#ff6b6b;}
+.msg.success{background:#001a00;border-left:3px solid #4caf50;color:#81c784;}
+.auth-mention{font-size:11px;color:var(--text-faint);text-align:center;margin-top:18px;line-height:1.7;}
+#demo-btn-wrap{display:none;margin-top:16px;text-align:center;}
+.btn-demo{
+  background:transparent;color:var(--gold);
+  border:1px solid var(--gold-dim);
+  padding:10px 20px;border-radius:8px;
+  font-size:12px;letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;font-family:var(--font-body);font-weight:600;
+  transition:all .2s;
+}
+.btn-demo:hover{background:var(--gold-pale);}
+
+/* ================================================================
+   SCREEN SENT (email envoyé)
+   ================================================================ */
+#screen-sent{align-items:center;justify-content:center;padding:24px;background:var(--bg);}
+.sent-card{
+  width:100%;max-width:380px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:36px 28px;text-align:center;
+}
+.sent-icon{font-size:52px;display:block;margin-bottom:16px;}
+.sent-title{font-family:var(--font-display);font-size:24px;font-weight:300;color:var(--gold);letter-spacing:2px;margin-bottom:10px;}
+.sent-desc{font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:6px;}
+.sent-email{font-size:14px;color:var(--gold);font-weight:600;margin:6px 0 16px;}
+.sent-note{font-size:12px;color:var(--text-faint);line-height:1.7;}
+.btn-back{
+  display:inline-block;margin-top:20px;
+  background:transparent;color:var(--text-dim);
+  border:1px solid var(--border);
+  padding:10px 20px;border-radius:8px;
+  font-size:12px;letter-spacing:1px;
+  cursor:pointer;font-family:var(--font-body);
+  transition:all .2s;
+}
+.btn-back:hover{border-color:var(--gold);color:var(--gold);}
+
+/* ================================================================
+   SCREEN NOT FOUND
+   ================================================================ */
+#screen-notfound{align-items:center;justify-content:center;padding:24px;background:var(--bg);}
+.notfound-card{
+  width:100%;max-width:380px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:36px 28px;text-align:center;
+}
+.notfound-icon{font-size:48px;display:block;margin-bottom:14px;}
+.notfound-title{font-family:var(--font-display);font-size:22px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;}
+.notfound-desc{font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:4px;}
+.notfound-email{font-size:13px;color:#ff6b6b;font-weight:600;margin:6px 0 12px;}
+.notfound-contact{font-size:12px;color:var(--text-faint);line-height:1.7;}
+
+/* ================================================================
+   SCREEN DASHBOARD
+   ================================================================ */
+#screen-dashboard{background:var(--bg);}
+.dash-wrap{max-width:480px;margin:0 auto;padding:0 0 80px;}
+
+/* Header */
+.dash-header{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:16px 20px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:10;
+  backdrop-filter:blur(12px);
+}
+.dash-logo{font-family:var(--font-display);font-size:18px;font-weight:300;letter-spacing:4px;color:var(--gold);}
+.dash-header-right{display:flex;align-items:center;gap:12px;}
+.dash-id-pill{font-size:10px;color:var(--text-dim);letter-spacing:1px;background:var(--surface3);padding:4px 9px;border-radius:20px;}
+.btn-logout{
+  background:transparent;border:1px solid var(--border);
+  color:var(--text-dim);padding:6px 12px;
+  border-radius:8px;font-size:11px;
+  letter-spacing:1px;cursor:pointer;
+  font-family:var(--font-body);transition:all .2s;
+}
+.btn-logout:hover{border-color:var(--danger);color:var(--danger);}
+
+/* Hero greeting */
+.dash-hero{
+  padding:28px 20px 0;
+  text-align:center;
+}
+.dash-greeting{
+  font-family:var(--font-display);
+  font-size:13px;color:var(--text-dim);
+  letter-spacing:3px;text-transform:uppercase;
+  margin-bottom:4px;
+}
+.dash-name{
+  font-family:var(--font-display);
+  font-size:34px;font-weight:300;
+  color:var(--text);letter-spacing:2px;
+}
+.dash-niveau-badge{
+  display:inline-block;margin-top:8px;
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--gold);background:var(--gold-pale);
+  padding:4px 12px;border-radius:20px;
+  border:1px solid var(--gold-dim);
+}
+
+/* Alert */
+.dash-alert{
+  display:none;
+  margin:16px 20px 0;
+  background:#1a0d00;border-left:3px solid var(--warning);
+  border-radius:0 10px 10px 0;
+  padding:10px 14px;font-size:13px;color:#ffaa44;
+  line-height:1.5;
+}
+
+/* Carte gauche circulaire */
+.section{margin-top:20px;padding:0 20px;}
+.section-title{
+  font-size:10px;letter-spacing:3px;
+  text-transform:uppercase;color:var(--text-dim);
+  margin-bottom:12px;padding-bottom:8px;
+  border-bottom:1px solid var(--border);
+}
+
+.carte-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:22px;
+  position:relative;
+  overflow:hidden;
+}
+.carte-card::before{
+  content:'';
+  position:absolute;top:-60px;right:-60px;
+  width:180px;height:180px;
+  background:radial-gradient(circle, rgba(212,175,55,0.05) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+/* Jauge circulaire SVG */
+.gauge-wrap{display:flex;align-items:center;gap:24px;}
+.gauge-svg-wrap{flex-shrink:0;position:relative;}
+.gauge-svg{width:130px;height:130px;transform:rotate(-90deg);}
+.gauge-bg{fill:none;stroke:var(--surface3);stroke-width:8;}
+#gauge-circle{
+  fill:none;stroke:var(--gold);stroke-width:8;
+  stroke-linecap:round;
+  transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1), stroke .5s;
+}
+.gauge-center{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  text-align:center;pointer-events:none;
+}
+.gauge-num{font-family:var(--font-display);font-size:32px;font-weight:600;color:var(--gold);line-height:1;}
+.gauge-label{font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:2px;}
+
+.gauge-info{flex:1;}
+.gauge-remaining{font-family:var(--font-display);font-size:42px;font-weight:300;color:var(--text);line-height:1;}
+.gauge-remaining-label{font-size:11px;color:var(--text-dim);letter-spacing:1px;margin-bottom:14px;}
+
+/* Barre progress linéaire */
+.progress-bar-wrap{margin-top:16px;}
+.progress-bar-track{
+  height:4px;background:var(--surface3);border-radius:2px;
+  overflow:hidden;margin-bottom:6px;
+}
+#progress-bar-fill{height:100%;border-radius:2px;transition:width .8s ease;}
+#progress-label{font-size:11px;color:var(--text-dim);}
+
+/* Statut & dates */
+.carte-meta{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
+.meta-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
+.meta-key{color:var(--text-dim);}
+.meta-val{color:var(--text);font-weight:600;}
+
+.statut-pill{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:600;}
+.statut-pill.active{background:#0a1a0a;color:#81c784;border:1px solid #2e7d32;}
+.statut-pill.soon{background:#1a1000;color:#ffb74d;border:1px solid #e65100;}
+.statut-pill.empty{background:#1a0000;color:#ef9a9a;border:1px solid #c62828;}
+.statut-pill.expired{background:#111;color:var(--text-dim);border:1px solid var(--border);}
+
+.exp-badge{font-size:11px;padding:2px 8px;border-radius:12px;}
+.exp-badge.ok{background:#0a1500;color:#aed581;border:1px solid #558b2f;}
+.exp-badge.warning{background:#1a0d00;color:#ffb74d;border:1px solid var(--warning);}
+.exp-badge.expired{background:#1a0000;color:#ef9a9a;border:1px solid var(--danger);}
+
+/* Présences */
+.presences-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+}
+.presence-item{
+  display:flex;align-items:center;gap:14px;
+  padding:13px 18px;
+  border-bottom:1px solid var(--border);
+  animation:fadeIn .4s ease both;
+}
+.presence-item:last-child{border-bottom:none;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+.presence-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--gold);flex-shrink:0;
+  box-shadow:0 0 6px rgba(212,175,55,.4);
+}
+.presence-info{flex:1;}
+.presence-date{display:block;font-size:13px;color:var(--text);}
+.presence-niveau{display:block;font-size:11px;color:var(--text-dim);margin-top:1px;}
+.presence-num{font-family:var(--font-display);font-size:18px;color:var(--text-faint);}
+.no-presences{padding:20px;font-size:13px;color:var(--text-dim);text-align:center;}
+
+/* Contact bas */
+.dash-contact{
+  margin:28px 20px 0;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:18px;text-align:center;
+}
+.dash-contact p{font-size:13px;color:var(--text-dim);margin-bottom:10px;line-height:1.6;}
+.btn-contact{
+  display:inline-block;
+  background:transparent;color:var(--gold);
+  border:1px solid var(--gold-dim);
+  padding:9px 20px;border-radius:8px;
+  font-size:12px;letter-spacing:2px;text-transform:uppercase;
+  font-family:var(--font-body);font-weight:600;
+  cursor:pointer;transition:all .2s;
+}
+.btn-contact:hover{background:var(--gold-pale);}
+
+.dash-sig{
+  text-align:center;padding:28px 20px 8px;
+  font-family:var(--font-display);
+  font-size:15px;color:var(--text-faint);
+  letter-spacing:2px;font-weight:300;
+}
+
+/* ================================================================
+   SAFE AREA (iPhone notch)
+   ================================================================ */
+@supports(padding-top: env(safe-area-inset-top)){
+  .dash-header{padding-top:max(16px, env(safe-area-inset-top));}
+  .dash-wrap{padding-bottom:max(80px, env(safe-area-inset-bottom));}
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     LOADING
+     ================================================================ -->
+<div class="screen active" id="screen-loading">
+  <div class="loading-inner">
+    <div class="loading-logo">TANGO &amp; VOUS</div>
+    <div class="loading-sub">Espace élèves</div>
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     AUTH
+     ================================================================ -->
+<div class="screen" id="screen-auth">
+  <div class="auth-bg">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="auth-logo-title">TANGO &amp; VOUS</span>
+        <div class="auth-logo-sep"></div>
+        <span class="auth-logo-sub">Espace élèves</span>
+      </div>
+      <div class="auth-title">Connexion</div>
+      <div class="auth-desc">Entrez votre adresse email — vous recevrez un lien de connexion valable 1 heure. Aucun mot de passe à retenir.</div>
+      <div class="field">
+        <label>Adresse email</label>
+        <input type="email" id="auth-email" placeholder="votre@email.com" autocomplete="email" autocapitalize="none"
+          onkeydown="if(event.key==='Enter') sendMagicLink()"/>
+      </div>
+      <button class="btn-primary" id="btn-magic" onclick="sendMagicLink()">Recevoir mon lien de connexion</button>
+      <div class="msg" id="auth-msg"></div>
+      <div id="demo-btn-wrap">
+        <p style="font-size:11px;color:#444;margin-bottom:8px;letter-spacing:1px;">— MODE DÉMONSTRATION —</p>
+        <button class="btn-demo" onclick="demoLogin()">Voir le dashboard démo</button>
+      </div>
+      <p class="auth-mention">Vos données sont utilisées uniquement pour la gestion de votre inscription.<br/>© Tango &amp; Vous — Le Regard Se Pose</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     EMAIL ENVOYÉ
+     ================================================================ -->
+<div class="screen" id="screen-sent">
+  <div class="sent-card">
+    <span class="sent-icon">✉️</span>
+    <div class="sent-title">Lien envoyé !</div>
+    <div class="sent-desc">Un lien de connexion a été envoyé à</div>
+    <div class="sent-email" id="auth-email-sent"></div>
+    <div class="sent-note">Vérifiez votre boîte de réception (et vos spams si besoin).<br/>Le lien est valable <strong style="color:var(--text)">1 heure</strong>.<br/>Appuyez dessus depuis votre téléphone pour vous connecter.</div>
+    <button class="btn-back" onclick="goBackAuth()">← Changer d'adresse email</button>
+  </div>
+</div>
+
+<!-- ================================================================
+     NON TROUVÉ
+     ================================================================ -->
+<div class="screen" id="screen-notfound">
+  <div class="notfound-card">
+    <span class="notfound-icon">🔍</span>
+    <div class="notfound-title">Compte introuvable</div>
+    <div class="notfound-desc">Aucun élève enregistré avec l'adresse</div>
+    <div class="notfound-email" id="notfound-email"></div>
+    <div class="notfound-contact">Vérifiez que vous utilisez la même adresse email que lors de votre inscription.<br/><br/>Un problème ? Contactez-nous :<br/><a href="mailto:tangoetvous@gmail.com">tangoetvous@gmail.com</a></div>
+    <button class="btn-back" onclick="goBackAuth()" style="margin-top:18px;">← Réessayer</button>
+  </div>
+</div>
+
+<!-- ================================================================
+     DASHBOARD
+     ================================================================ -->
+<div class="screen" id="screen-dashboard">
+
+  <!-- Header fixe -->
+  <div class="dash-header">
+    <div class="dash-logo">T&amp;V</div>
+    <div class="dash-header-right">
+      <div class="dash-id-pill" id="dash-id"></div>
+      <button class="btn-logout" onclick="logout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <div class="dash-wrap">
+
+    <!-- Hero -->
+    <div class="dash-hero">
+      <div class="dash-greeting">Bonjour,</div>
+      <div class="dash-name" id="dash-prenom"></div>
+      <div class="dash-niveau-badge" id="dash-niveau"></div>
+    </div>
+
+    <!-- Alerte -->
+    <div class="dash-alert" id="dash-alert">
+      <span id="alert-text"></span>
+    </div>
+
+    <!-- Carte de 10 cours -->
+    <div class="section">
+      <div class="section-title">Ma carte de 10 cours</div>
+      <div class="carte-card">
+
+        <!-- Jauge circulaire + chiffres -->
+        <div class="gauge-wrap">
+          <div class="gauge-svg-wrap">
+            <svg class="gauge-svg" viewBox="0 0 130 130">
+              <circle class="gauge-bg" cx="65" cy="65" r="54"/>
+              <circle id="gauge-circle" cx="65" cy="65" r="54"/>
+            </svg>
+            <div class="gauge-center">
+              <div class="gauge-num" id="gauge-used">—</div>
+              <div class="gauge-label">utilisés</div>
+            </div>
+          </div>
+          <div class="gauge-info">
+            <div class="gauge-remaining" id="gauge-remaining">—</div>
+            <div class="gauge-remaining-label">cours restants</div>
+            <span class="statut-pill active" id="carte-statut">—</span>
+          </div>
+        </div>
+
+        <!-- Barre linéaire -->
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-track">
+            <div id="progress-bar-fill" style="width:0%"></div>
+          </div>
+          <div id="progress-label"></div>
+        </div>
+
+        <!-- Méta dates -->
+        <div class="carte-meta">
+          <div class="meta-row">
+            <span class="meta-key">Date d'achat</span>
+            <span class="meta-val" id="carte-achat">—</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-key">Expiration</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="meta-val" id="carte-expiration">—</span>
+              <span class="exp-badge ok" id="expiration-badge" style="display:none"></span>
+            </div>
+          </div>
+          <div class="meta-row" style="margin-top:4px;">
+            <span class="meta-key" style="font-size:11px;color:var(--text-faint)">Validité : 3 mois + vacances scolaires</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Historique présences -->
+    <div class="section" style="margin-top:20px;">
+      <div class="section-title">Historique de mes présences</div>
+      <div class="presences-card" id="presences-list">
+        <div class="no-presences">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="dash-contact">
+      <p>Une question sur votre carte, un oubli de pointage ?</p>
+      <a class="btn-contact" href="mailto:tangoetvous@gmail.com">Contacter Florencia &amp; Jérémy</a>
+    </div>
+
+    <div class="dash-sig">Florencia &amp; Jérémy</div>
+
+  </div><!-- /dash-wrap -->
+</div><!-- /screen-dashboard -->
+
+<!-- Service Worker registration -->
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
