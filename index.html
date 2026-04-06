@@ -509,14 +509,33 @@
       return;
     }
 
+    // Store pubs globally so openPub can find them
+    window._pubs = pubs;
+
     container.innerHTML = pubs.map(p => `
-      <div class="pub-card">
+      <div class="pub-card" onclick="openPub('${p.id}')">
         ${p.cat ? `<div class="pub-cat">${p.cat}</div>` : ''}
         <div class="pub-titre">${p.titre}</div>
         ${p.extrait ? `<div class="pub-extrait">${p.extrait}</div>` : ''}
         <div class="pub-date">${formatDate(p.dateProgrammee || p.date || '')}</div>
       </div>`).join('');
   }
+
+  window.openPub = function(id) {
+    const p = (window._pubs || []).find(x => x.id === id);
+    if (!p) return;
+    $('pub-modal-cat').textContent  = p.cat || '';
+    $('pub-modal-titre').textContent = p.titre || '';
+    $('pub-modal-date').textContent  = formatDate(p.dateProgrammee || p.date || '');
+    $('pub-modal-body').textContent  = p.contenu || p.extrait || '';
+    $('pub-modal').classList.add('open');
+    $('pub-modal-backdrop').classList.add('open');
+  };
+
+  window.closePubModal = function() {
+    $('pub-modal').classList.remove('open');
+    $('pub-modal-backdrop').classList.remove('open');
+  };
 
   // ================================================================
   // INIT AU CHARGEMENT
@@ -913,17 +932,50 @@ a{color:var(--gold);text-decoration:none;}
   border-top:1px solid var(--border);
   display:flex;z-index:200;
   padding-bottom:env(safe-area-inset-bottom);
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
 }
+.bottom-nav::-webkit-scrollbar{display:none;}
 .nav-btn{
-  flex:1;display:flex;flex-direction:column;
+  flex:0 0 68px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:3px;
   background:none;border:none;color:var(--text-faint);
   cursor:pointer;font-size:9px;letter-spacing:.5px;
   text-transform:uppercase;font-family:var(--font-body);
-  transition:color .2s;padding:0;
+  transition:color .2s;padding:0;text-decoration:none;
+  white-space:nowrap;
 }
 .nav-btn.active{color:var(--gold);}
 .nav-btn svg{width:20px;height:20px;}
+.nav-link{color:var(--text-faint);}
+.nav-link:hover{color:var(--gold);}
+/* publication modal */
+.pub-modal-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;
+}
+.pub-modal-backdrop.open{display:block;}
+.pub-modal{
+  display:none;position:fixed;left:16px;right:16px;
+  top:50%;transform:translateY(-50%);
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:24px 20px 20px;
+  z-index:301;max-height:80vh;overflow-y:auto;
+}
+.pub-modal.open{display:block;}
+.pub-modal-close{
+  position:absolute;top:12px;right:14px;
+  background:none;border:none;color:var(--text-faint);
+  font-size:18px;cursor:pointer;line-height:1;
+}
+.pub-modal-cat{
+  font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--gold);font-weight:700;margin-bottom:8px;
+}
+.pub-modal-titre{font-size:17px;font-weight:700;color:var(--text);line-height:1.35;margin-bottom:6px;}
+.pub-modal-date{font-size:11px;color:var(--text-faint);margin-bottom:16px;}
+.pub-modal-body{font-size:14px;color:var(--text-dim);line-height:1.7;}
+.pub-card{cursor:pointer;transition:border-color .2s;}
+.pub-card:hover{border-color:var(--gold);}
 
 /* ================================================================
    TAB PANES
@@ -1286,35 +1338,6 @@ a{color:var(--gold);text-decoration:none;}
       </div>
     </a>
 
-    <div class="tab-section-title" style="margin-top:8px;">Services</div>
-
-    <a class="service-card" href="cours-particuliers.html">
-      <div class="service-card-icon">🎓</div>
-      <div class="service-card-info">
-        <div class="service-card-label">Cours particulier</div>
-        <div class="service-card-sub">Réserver un cours individuel ou en duo</div>
-      </div>
-      <div class="service-card-arrow">›</div>
-    </a>
-
-    <a class="service-card" href="inscription-cours.html">
-      <div class="service-card-icon">📝</div>
-      <div class="service-card-info">
-        <div class="service-card-label">Pré-inscription saison prochaine</div>
-        <div class="service-card-sub">Demande d'inscription aux cours réguliers</div>
-      </div>
-      <div class="service-card-arrow">›</div>
-    </a>
-
-    <a class="service-card" href="cours-essai.html">
-      <div class="service-card-icon">🌱</div>
-      <div class="service-card-info">
-        <div class="service-card-label">Inviter quelqu'un à un cours d'essai</div>
-        <div class="service-card-sub">Partager le formulaire d'inscription</div>
-      </div>
-      <div class="service-card-arrow">›</div>
-    </a>
-
     <div class="dash-sig" style="padding-top:24px;">Florencia &amp; Jérémy</div>
   </div>
 
@@ -1340,7 +1363,29 @@ a{color:var(--gold);text-decoration:none;}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Contact
     </button>
+    <a class="nav-btn nav-link" href="cours-particuliers.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      Cours part.
+    </a>
+    <a class="nav-btn nav-link" href="inscription-cours.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      S&#39;inscrire
+    </a>
+    <a class="nav-btn nav-link" href="cours-essai.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 22V12"/><path d="M12 12C12 12 8 8 8 5a4 4 0 0 1 8 0c0 3-4 7-4 7z"/><path d="M5 20c0-3 3-5 7-5s7 2 7 5"/></svg>
+      Essai
+    </a>
   </nav>
+
+  <!-- ── PUBLICATION MODAL ──────────────────────────────────── -->
+  <div id="pub-modal-backdrop" class="pub-modal-backdrop" onclick="closePubModal()"></div>
+  <div id="pub-modal" class="pub-modal" role="dialog" aria-modal="true">
+    <button class="pub-modal-close" onclick="closePubModal()">✕</button>
+    <div class="pub-modal-cat" id="pub-modal-cat"></div>
+    <div class="pub-modal-titre" id="pub-modal-titre"></div>
+    <div class="pub-modal-date" id="pub-modal-date"></div>
+    <div class="pub-modal-body" id="pub-modal-body"></div>
+  </div>
 
 </div><!-- /screen-dashboard -->
 
