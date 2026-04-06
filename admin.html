@@ -61,6 +61,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--dim);}
 .btn-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;align-items:center;}
 .stats-row{display:grid;gap:6px;margin-bottom:14px;}
+.stats-5{grid-template-columns:repeat(5,1fr);}
 .stats-4{grid-template-columns:repeat(4,1fr);}
 .stats-3{grid-template-columns:repeat(3,1fr);}
 .stat{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 6px;text-align:center;}
@@ -83,7 +84,11 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .point-row:last-child{border-bottom:none;}
 .point-nom{font-size:13px;font-weight:600;color:var(--text);}
 .point-sub{font-size:11px;color:var(--dim);}
-.btn-point{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid;cursor:pointer;font-family:var(--font-b);transition:all .2s;background:transparent;}
+.btn-point{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--border);cursor:pointer;font-family:var(--font-b);transition:all .2s;background:transparent;color:var(--dim);}
+.btn-point.btn-ok{background:var(--ok-bg);color:var(--ok-text);border-color:var(--ok);}
+.btn-point.btn-gold{background:var(--gold-pale);color:var(--gold);border-color:var(--gold);}
+.btn-point.btn-warn{background:var(--warn-bg);color:var(--warn-text);border-color:var(--warn);}
+.btn-point.btn-ghost{background:transparent;color:var(--dim);border-color:var(--border);}
 .btn-pres{border-color:var(--ok);color:var(--ok-text);}
 .btn-pres.on{background:var(--ok-bg);}
 .btn-abs{border-color:var(--err);color:var(--err-text);}
@@ -398,7 +403,7 @@ var filtreEssai       = 'dates';
 var filtreStage       = '';
 var filtreStageSlot   = 'technique';  // sous-onglet stage : technique|stage1|stage2|pointage
 var sousOngletCours   = 'demandes';
-var sousOngletCoursTango = 'demande'; // demande|valide|attente_paiement|inscrit|inscrire|valider_paiement
+var sousOngletCoursTango = 'tous'; // tous|attente_validation|valide|attente_paiement|inscrit|inscrire|valider_paiement
 var agendaMois      = new Date().getMonth();
 var agendaAnnee     = new Date().getFullYear();
 var agendaCats      = {cours:true, stage:true, milonga:true};
@@ -611,6 +616,11 @@ function bindTabEvents(el) {
     var info = el.querySelector('#ic-info-carte10');
     if (info) info.style.display = t.indexOf('carte')>=0?'block':'none';
   });
+  // Préremplissage élève dans valider paiement
+  el.addEventListener('change', function(ev) {
+    var sel = ev.target.closest('[data-change-vp]');
+    if (sel && sel.id==='vp-eleve-select') prefillVP(sel.value);
+  });
   // Upload
   var pubFile = el.querySelector('#pub-file');
   if (pubFile) pubFile.addEventListener('change', function() { uploadMedia(pubFile); });
@@ -683,7 +693,7 @@ function handleAction(action, btn) {
       soumettreValiderPaiement();
       break;
     case 'annuler-valider-paiement':
-      var fp=gel('form-valider-paiement'); if(fp)fp.innerHTML=''; break;
+      sousOngletCoursTango='tous'; renderTab(); break;
     case 'sorano-paye':
       soranoAction(id, true, btn);
       break;
@@ -1531,27 +1541,27 @@ var STATUT_LBL = {
 
 function renderCoursTango() {
   var tous = (adminData.coursTango||[]);
-  var stats = {
-    demande:          tous.filter(function(e){return e.statut==='demande';}).length,
-    valide:           tous.filter(function(e){return e.statut==='valide';}).length,
-    attente_paiement: tous.filter(function(e){return e.statut==='attente_paiement';}).length,
-    inscrit:          tous.filter(function(e){return e.statut==='inscrit';}).length
-  };
+  var nbAV  = tous.filter(function(e){return e.statut==='demande';}).length;
+  var nbVal = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement'||e.statut==='inscrit';}).length;
+  var nbAP  = tous.filter(function(e){return e.statut==='attente_paiement';}).length;
+  var nbIns = tous.filter(function(e){return e.statut==='inscrit';}).length;
 
   var sousOnglets = [
-    {id:'demande',          lbl:'Demandes ('         +stats.demande+')'},
-    {id:'valide',           lbl:'Validées ('         +stats.valide+')'},
-    {id:'attente_paiement', lbl:'Attente paiement ('+stats.attente_paiement+')'},
-    {id:'inscrit',          lbl:'Inscrits ('         +stats.inscrit+')'},
-    {id:'inscrire',         lbl:'✏️ Nouvelle demande'},
-    {id:'valider_paiement', lbl:'💳 Valider paiement'}
+    {id:'tous',               lbl:'Demandes ('+tous.length+')'},
+    {id:'attente_validation', lbl:'Att. validation ('+nbAV+')'},
+    {id:'valide',             lbl:'Validé.e.s ('+nbVal+')'},
+    {id:'attente_paiement',   lbl:'Att. paiement ('+nbAP+')'},
+    {id:'inscrit',            lbl:'Inscrits ('+nbIns+')'},
+    {id:'inscrire',           lbl:'✏️ Nouvelle demande'},
+    {id:'valider_paiement',   lbl:'💳 Valider paiement'}
   ];
 
-  var h = '<div class="stats-row stats-4">'
-    +'<div class="stat"><div class="stat-n n-warn">'+stats.demande+'</div><div class="stat-l">Demandes</div></div>'
-    +'<div class="stat"><div class="stat-n n-gold">'+stats.valide+'</div><div class="stat-l">Validées</div></div>'
-    +'<div class="stat"><div class="stat-n" style="color:var(--gold)">'+stats.attente_paiement+'</div><div class="stat-l">Att. paiement</div></div>'
-    +'<div class="stat"><div class="stat-n n-ok">'+stats.inscrit+'</div><div class="stat-l">Inscrits</div></div>'
+  var h = '<div class="stats-row stats-5">'
+    +'<div class="stat"><div class="stat-n">'+tous.length+'</div><div class="stat-l">Total</div></div>'
+    +'<div class="stat"><div class="stat-n n-warn">'+nbAV+'</div><div class="stat-l">Att. valid.</div></div>'
+    +'<div class="stat"><div class="stat-n n-gold">'+nbVal+'</div><div class="stat-l">Validé.e.s</div></div>'
+    +'<div class="stat"><div class="stat-n" style="color:var(--gold)">'+nbAP+'</div><div class="stat-l">Att. paiement</div></div>'
+    +'<div class="stat"><div class="stat-n n-ok">'+nbIns+'</div><div class="stat-l">Inscrits</div></div>'
     +'</div>';
 
   h += '<div class="sub-tabs" style="flex-wrap:wrap;">';
@@ -1567,70 +1577,73 @@ function renderCoursTango() {
     return h + renderValiderPaiement();
   }
 
-  var liste = tous.filter(function(e){ return e.statut===sousOngletCoursTango; });
+  var liste;
+  if(sousOngletCoursTango==='tous') {
+    liste = tous.slice();
+  } else if(sousOngletCoursTango==='attente_validation') {
+    liste = tous.filter(function(e){return e.statut==='demande';});
+  } else if(sousOngletCoursTango==='valide') {
+    liste = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement'||e.statut==='inscrit';});
+  } else {
+    liste = tous.filter(function(e){return e.statut===sousOngletCoursTango;});
+  }
+
   if(!liste.length) return h+'<div class="empty-state">Aucun élève dans cette catégorie.</div>';
 
-  // Trier : ville, niveau, nom
   liste = liste.slice().sort(function(a,b){
     if(a.cours!==b.cours)return(a.cours||'').localeCompare(b.cours||'');
     return(a.nom||'').localeCompare(b.nom||'');
   });
 
-  // Regrouper par cours
   var grp = {};
   liste.forEach(function(e){var k=e.cours||'—';if(!grp[k])grp[k]=[];grp[k].push(e);});
 
   Object.keys(grp).sort().forEach(function(cours){
     var items = grp[cours];
-    h += '<div class="section-hdr">'+cours+' ('+items.length+')</div>';
-    items.forEach(function(e){
-      h += ficheEleve(e);
-      // Fiche partenaire séparée si existe
-      if(e.partenaire && e.emailPartenaire){
-        var ptFiche = items.find(function(x){return x.email===e.emailPartenaire;});
-        // Afficher fiche partenaire inline si pas dans la liste (partenaire non encore inscrit)
-        if(!ptFiche){
-          h += '<div style="background:var(--s2);border-radius:8px;padding:8px 12px;margin:-6px 0 9px 16px;border-left:2px solid var(--border);">'
-            +'<div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">↳ Partenaire</div>'
-            +'<div style="font-size:13px;font-weight:600;">'+e.partenaire+'</div>'
-            +'<div class="card-sub">'+e.emailPartenaire+'</div>'
-            +btnEmail(e.emailPartenaire,e.partenaire)+'</div>';
-        }
-      }
-    });
+    h += '<div class="section-hdr">'+cours+' ('+items.length+')</div>'
+      +'<div style="padding:0 16px;">';
+    items.forEach(function(e){ h += ficheEleve(e); });
+    h += '</div>';
   });
   return h;
 }
 
 function ficheEleve(e) {
-  var s = STATUT_LBL[e.statut]||{lbl:e.statut,pill:'',border:''};
+  var isValide = e.statut==='valide'||e.statut==='attente_paiement'||e.statut==='inscrit';
   var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
-  var h = '<div class="card '+(s.border||'')+'">'
-    +'<div class="card-top"><div>'
-    +'<div class="card-nom">'+e.prenom+' '+e.nom+'</div>'
-    +'<div class="card-sub">'+(e.email||'')+(e.tel?' · '+e.tel:'')+'</div>'
-    +'<div class="card-sub">'+(e.niveau||'—')+(e.ville?' · '+(e.ville==='vincennes'?'Vincennes':'Paris'):'')+'</div>'
-    +partenaireTag(e.partenaire,e.role)
-    +'</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
-    +'<span class="pill '+rcls+'">'+e.role+'</span>'
-    +'<span class="pill '+s.pill+'">'+s.lbl+'</span>'
-    +'</div></div>';
+  var roleLbl = e.role==='guideur'?'Guideur':'Guidée';
 
-  // Boutons d'action selon statut
-  h += '<div class="btn-row">';
+  var h = '<div class="point-row" style="flex-wrap:wrap;align-items:flex-start;gap:6px;padding:9px 0;">'
+    +'<div style="flex:1;min-width:160px;">'
+    +'<div class="point-nom">'+e.prenom+' '+e.nom+'</div>'
+    +'<div class="point-sub">'+(e.email||'')+(e.partenaire?' · ♥ '+e.partenaire:'')+'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
+    +'<span class="pill '+rcls+'">'+roleLbl+'</span>';
+
+  // Pill validation
+  if(isValide){
+    h += '<span class="pill pill-ok">validé.e</span>';
+  } else {
+    h += '<span class="pill pill-warn">non validé.e</span>';
+  }
+  // Pill inscription (uniquement si validé)
+  if(e.statut==='valide'||e.statut==='attente_paiement'){
+    h += '<span class="pill pill-gold">att. paiement</span>';
+  } else if(e.statut==='inscrit'){
+    h += '<span class="pill pill-ok">inscrit.e</span>';
+  }
+
+  // Boutons d'action
   if(e.statut==='demande'){
-    h += '<button class="btn btn-ok" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="valide">✓ Valider</button>';
+    h += '<button class="btn-point btn-ok" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="valide">✓ Valider</button>';
   }
-  if(e.statut==='valide'){
-    h += '<button class="btn btn-gold" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="attente_paiement">→ Attente paiement</button>';
-    h += '<a href="'+URL_ASSOCONNECT_COURS+'" target="_blank" class="btn btn-ok" style="text-decoration:none;">💳 AssoConnect</a>';
-    h += '<button class="btn btn-ghost" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="demande">← Revenir</button>';
+  if(e.statut==='valide'||e.statut==='attente_paiement'){
+    h += '<button class="btn-point btn-gold" data-action="ouvrir-valider-paiement" data-id="'+e.id+'">💳 A payé</button>';
   }
-  if(e.statut==='attente_paiement'){
-    h += '<button class="btn btn-ok" data-action="ouvrir-valider-paiement" data-id="'+e.id+'">💳 Valider paiement</button>';
-    h += '<button class="btn btn-ghost" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="valide">← Revenir</button>';
+  if(e.email){
+    h += '<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;" title="Envoyer un email">✉️</a>';
   }
-  h += btnEmail(e.email, e.prenom+' '+e.nom);
   h += '</div></div>';
   return h;
 }
@@ -1652,48 +1665,51 @@ function changerStatutCoursTango(id, statut, btn) {
   postAS({action:'changerStatutCoursTango',id:id,statut:statut}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
 }
 
+function prefillVP(id) {
+  var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
+  if(!e)return;
+  var telEl=gel('vp-tel'), emailEl=gel('vp-email');
+  if(telEl)telEl.value=e.tel||'';
+  if(emailEl)emailEl.value=e.email||'';
+}
+
 function ouvrirValiderPaiement(id) {
   sousOngletCoursTango='valider_paiement';
   renderTab();
-  // Scroll vers la fiche
   setTimeout(function(){
     var fp=gel('form-valider-paiement');
     if(fp)fp.scrollIntoView({behavior:'smooth'});
-    // Présélectionner l'élève
     var sel=gel('vp-eleve-select');
-    if(sel)sel.value=id;
+    if(sel){ sel.value=id; prefillVP(id); }
   },100);
 }
 
 function renderValiderPaiement() {
-  var enAttente = (adminData.coursTango||[]).filter(function(e){return e.statut==='attente_paiement';});
+  var enAttente = (adminData.coursTango||[]).filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';});
   var h = '<div id="form-valider-paiement" class="card">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Valider le paiement et inscrire</div>'
-    +'<div class="field"><label>Élève (en attente de paiement)</label><select id="vp-eleve-select">'
+    +'<div class="field"><label>Élève</label><select id="vp-eleve-select" data-change-vp="eleve">'
     +'<option value="">— Sélectionner —</option>';
   enAttente.forEach(function(e){
     h += '<option value="'+e.id+'">'+e.prenom+' '+e.nom+' · '+e.cours+'</option>';
   });
   h += '</select></div>'
-    +'<div class="field"><label>Téléphone (si manquant)</label><input type="tel" id="vp-tel" placeholder="06 XX XX XX XX"/></div>'
-    +'<div class="field"><label>Email (si manquant)</label><input type="email" id="vp-email" autocapitalize="none"/></div>'
-    +'<div class="field"><label>Type</label><select id="vp-type">'
-    +'<option value="carte10">Carte 10 cours — 170€</option>'
-    +'<option value="carte10_reduit">Carte 10 cours réduit — 120€</option>'
-    +'<option value="forfait_paris">Forfait Paris — 490€</option>'
-    +'<option value="forfait_paris_reduit">Forfait Paris réduit — 380€</option>'
-    +'<option value="forfait_vincennes">Forfait Vincennes — 435€</option>'
-    +'<option value="forfait_vincennes_reduit">Forfait Vincennes réduit — 340€</option>'
-    +'<option value="forfait_2cours">Forfait 2 cours — 790€</option>'
-    +'<option value="forfait_2cours_reduit">Forfait 2 cours réduit — 640€</option>'
-    +'</select></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div class="field"><label>Téléphone</label><input type="tel" id="vp-tel" placeholder="06 XX XX XX XX"/></div>'
+    +'<div class="field"><label>Email</label><input type="email" id="vp-email" autocapitalize="none"/></div>'
+    +'</div>'
+    +'<div class="field"><label>Carte de 10 cours</label>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
+    +'<input type="radio" name="vp-carte10" value="non" checked> Non</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
+    +'<input type="radio" name="vp-carte10" value="oui"> Oui</label>'
+    +'</div></div>'
     +'<div class="field"><label>Mode de paiement</label><select id="vp-paie">'
     +'<option value="cb1x">CB 1×</option><option value="cb3x">CB 3×</option>'
     +'<option value="especes">Espèces</option><option value="cheque">Chèque</option>'
     +'<option value="virement1x">Virement 1×</option><option value="virement3x">Virement 3×</option>'
     +'</select></div>'
-    +'<div class="field"><label>Montant réglé (€)</label><input type="number" id="vp-montant" value="170"/></div>'
-    +'<div class="field"><label>Date paiement</label><input type="date" id="vp-date" value="'+today()+'"/></div>'
     +'<div class="box-err" id="vp-err"></div>'
     +'<div class="box-ok" id="vp-ok">✓ Paiement validé ! L&#39;élève est maintenant inscrit.</div>'
     +'<div class="btn-row"><button class="btn btn-gold" data-action="soumettre-paiement" style="flex:2;">✓ Valider le paiement → Inscrire</button>'
@@ -1704,10 +1720,9 @@ function renderValiderPaiement() {
 
 function soumettreValiderPaiement() {
   var id=(gel('vp-eleve-select')||{}).value||'';
-  var type=(gel('vp-type')||{}).value||'';
+  var carte10El=document.querySelector('input[name="vp-carte10"]:checked');
+  var carte10=carte10El?carte10El.value:'non';
   var paie=(gel('vp-paie')||{}).value||'';
-  var montant=(gel('vp-montant')||{}).value||'';
-  var date=(gel('vp-date')||{}).value||today();
   var tel=(gel('vp-tel')||{}).value||'';
   var email=(gel('vp-email')||{}).value||'';
   var err=gel('vp-err'), ok=gel('vp-ok');
@@ -1717,13 +1732,11 @@ function soumettreValiderPaiement() {
     var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
     if(e){
       e.statut='inscrit';
-      e.type=type; e.paiement=paie; e.montant=Number(montant);
+      e.paiement=paie;
       if(tel)e.tel=tel; if(email)e.email=email;
-      // Ajouter à inscriptionsCours
       if(!adminData.inscriptionsCours)adminData.inscriptionsCours=[];
-      adminData.inscriptionsCours.push({id:'IC'+Date.now(),nom:e.prenom+' '+e.nom,email:e.email,cours:e.cours,type:type,paiement:paie,montant:Number(montant),date:date,ville:e.ville||'paris'});
-      // Si carte10, créer entrée dans cartes
-      if(type.indexOf('carte')>=0&&!adminData.cartes.find(function(c){return c.email===e.email;})){
+      adminData.inscriptionsCours.push({id:'IC'+Date.now(),nom:e.prenom+' '+e.nom,email:e.email,cours:e.cours,type:carte10==='oui'?'carte10':'forfait',paiement:paie,montant:0,date:today(),ville:e.ville||'paris'});
+      if(carte10==='oui'&&!adminData.cartes.find(function(c){return c.email===e.email;})){
         adminData.cartes.push({id:e.id,nom:e.prenom+' '+e.nom,niveau:e.niveau,email:e.email,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Active',source:'inscription',ville:e.ville||'paris',datesCours:[],partenaire:e.partenaire||''});
         recalcStats();
       }
@@ -1732,12 +1745,19 @@ function soumettreValiderPaiement() {
     setTimeout(function(){sousOngletCoursTango='inscrit';renderTab();},1500);
     return;
   }
-  postAS({action:'validerPaiementCoursTango',id:id,type:type,paiement:paie,montant:Number(montant),date:date,tel:tel,email:email}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+  postAS({action:'validerPaiementCoursTango',id:id,carte10:carte10,paiement:paie,tel:tel,email:email}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
 }
 
 function renderFormulaireDemandeAdmin() {
+  var postMai2026 = new Date() >= new Date('2026-05-01');
+  var saisonHtml = postMai2026 ? ''
+    : '<div class="field"><label>Saison</label><select id="fd-saison">'
+    +'<option value="2025-2026">2025-2026 (saison en cours)</option>'
+    +'<option value="2026-2027">2026-2027 (prochaine saison)</option>'
+    +'</select></div>';
   return '<div class="card">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Nouvelle demande d&#39;inscription</div>'
+    +saisonHtml
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     +'<div class="field"><label>Prénom *</label><input type="text" id="fd-prenom"/></div>'
     +'<div class="field"><label>Nom *</label><input type="text" id="fd-nom"/></div>'
@@ -1746,10 +1766,12 @@ function renderFormulaireDemandeAdmin() {
     +'<div class="field"><label>Téléphone</label><input type="tel" id="fd-tel" placeholder="06 XX XX XX XX"/></div>'
     +'<div class="field"><label>Rôle</label>'
     +'<div style="display:flex;gap:8px;">'
-    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
-    +'<input type="radio" name="fd-role" value="guidee" checked> Guidée</label>'
-    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
-    +'<input type="radio" name="fd-role" value="guideur"> Guideur</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
+    +'<input type="radio" name="fd-role" value="guidee" checked style="flex-shrink:0;">'
+    +'<span style="font-size:20px;">💃</span><span style="font-size:13px;font-weight:600;">Guidée</span></label>'
+    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
+    +'<input type="radio" name="fd-role" value="guideur" style="flex-shrink:0;">'
+    +'<span style="font-size:20px;">🕺</span><span style="font-size:13px;font-weight:600;">Guideur</span></label>'
     +'</div></div>'
     +'<div class="field"><label>Cours</label><select id="fd-cours">'
     +'<option value="Paris — Jeudi — Débutant">Paris — Jeudi — Débutant</option>'
@@ -1797,7 +1819,7 @@ function soumettreDemande() {
       adminData.coursTango.push({id:'CT'+(Date.now()+1),prenom:parts[0]||partNom,nom:parts.slice(1).join(' ')||'',email:partEmail,tel:'',role:roleP,niveau:niveau,cours:cours,ville:ville,statut:'valide',partenaire:prenom+' '+nom,emailPartenaire:email,type:'',paiement:'',montant:0,dateInscription:today()});
     }
     if(ok)ok.style.display='block';
-    setTimeout(function(){sousOngletCoursTango=statut;renderTab();},1500);
+    setTimeout(function(){sousOngletCoursTango=(statut==='demande'?'attente_validation':statut);renderTab();},1500);
     return;
   }
   postAS({action:'creerDemandeAdmin',prenom:prenom,nom:nom,email:email,tel:tel,role:role,cours:cours,partNom:partNom,partEmail:partEmail}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
