@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inscription aux Stages de Tango — Tango & Vous</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size: 15px; line-height: 1.6; }
+.wrapper { max-width: 700px; margin: 0 auto; }
+
+/* HEADER */
+.header { background: #000; text-align: center; padding: 24px 24px 18px; border-bottom: 3px solid #D4AF37; }
+.header h1 { color: #D4AF37; font-size: 20px; font-weight: 300; letter-spacing: 3px; margin-bottom: 4px; }
+.header h1 em { font-style: italic; }
+.header .sous-titre { color: #ccc; font-size: 12px; letter-spacing: 2.5px; font-weight: 300; text-transform: uppercase; margin-top: 4px; }
+
+/* TARIFS */
+.tarifs-bloc { background: #0a0800; border-bottom: 1px solid #2a2000; padding: 20px 24px; }
+.tarifs-titre { font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: #D4AF37; font-weight: bold; margin-bottom: 14px; }
+.tarifs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
+@media (max-width: 480px) { .tarifs-grid { grid-template-columns: 1fr; } }
+.tarif-ligne { display: flex; justify-content: space-between; font-size: 13px; color: #a08050; border-bottom: 1px dashed #2a2000; padding-bottom: 5px; }
+.tarif-ligne .prix { font-weight: bold; color: #D4AF37; }
+.paiement-note { margin-top: 14px; font-size: 15px; color: #D4AF37; font-weight: bold; padding-top: 10px; border-top: 1px solid #2a2000; }
+
+/* ÉTAPES */
+.etape { display: none; padding: 16px 24px 40px; }
+.etape.active { display: block; }
+
+/* INDICATEUR D'ÉTAPE */
+.etape-indicator { display: flex; align-items: center; gap: 0; margin: 20px 24px 0; }
+.etape-step {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: #555; flex: 1;
+}
+.etape-step.active { color: #D4AF37; }
+.etape-step.done { color: #7a6030; }
+.etape-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid #333; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: bold; flex-shrink: 0;
+  background: #1a1a1a;
+}
+.etape-step.active .etape-num { border-color: #D4AF37; color: #D4AF37; background: #1f1a00; }
+.etape-step.done .etape-num { border-color: #5a4000; background: #2a2000; color: #D4AF37; }
+.etape-sep { flex: 1; height: 1px; background: #333; max-width: 40px; }
+
+/* SECTION LABEL */
+.section-label { display: flex; align-items: center; gap: 10px; margin: 28px 0 14px; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; font-weight: bold; color: #D4AF37; }
+.section-label::after { content: ''; flex: 1; height: 1px; background: #2a2000; }
+
+/* CHAMPS */
+.champs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 500px) { .champs-grid { grid-template-columns: 1fr; } }
+.champ { display: flex; flex-direction: column; gap: 5px; }
+.champ.full { grid-column: 1 / -1; }
+.champ label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: bold; color: #888; }
+.champ input, .champ textarea { background: #1a1a1a; border: 2px solid #333; color: #fff; font-family: Arial, sans-serif; font-size: 15px; font-weight: 300; padding: 11px 13px; outline: none; transition: border-color .2s; width: 100%; border-radius: 4px; }
+.champ input:focus, .champ textarea:focus { border-color: #D4AF37; background: #1f1a00; color: #e8c84a; }
+.champ input::placeholder, .champ textarea::placeholder { color: #444; }
+.champ input.invalid { border-color: #c62828 !important; }
+.champ textarea { resize: vertical; min-height: 72px; }
+
+/* RADIO */
+.radio-group { display: flex; flex-direction: column; gap: 8px; }
+.radio-group.horizontal { flex-direction: row; }
+.radio-item { display: flex; align-items: center; gap: 14px; padding: 13px 16px; background: #1a1a1a; border: 2px solid #333; cursor: pointer; font-size: 15px; color: #ccc; transition: border-color .15s, background .15s; user-select: none; border-radius: 6px; flex: 1; }
+.radio-item:hover { border-color: #D4AF37; background: #1f1a00; color: #D4AF37; }
+.radio-item.selected { border-color: #D4AF37; background: #1f1a00; color: #D4AF37; }
+.radio-dot { width: 20px; height: 20px; border: 2px solid #444; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: border-color .15s; }
+.radio-item.selected .radio-dot { border-color: #D4AF37; }
+.radio-dot::after { content: ''; width: 9px; height: 9px; border-radius: 50%; background: #D4AF37; display: none; }
+.radio-item.selected .radio-dot::after { display: block; }
+
+
+/* BOUTONS ILLUSTRÉS */
+.illu-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.illu-item {
+  flex: 1; min-width: 90px;
+  display: flex; flex-direction: column; align-items: center;
+  background: #1a1a1a; border: 2px solid #333; border-radius: 14px;
+  padding: 10px 8px 12px; cursor: pointer; user-select: none;
+  transition: border-color .2s, background .2s, transform .15s;
+  text-align: center;
+}
+.illu-item:hover { border-color: #D4AF37; background: #1f1a00; transform: translateY(-2px); }
+.illu-item.selected { border-color: #D4AF37; background: #1f1a00; transform: translateY(-2px); }
+.illu-item > * { pointer-events: none; }
+.illu-item svg { width: 62px; height: 62px; margin-bottom: 7px; display: block; }
+.illu-label { font-size: 11px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: #777; line-height: 1.3; }
+.illu-item:hover .illu-label, .illu-item.selected .illu-label { color: #D4AF37; }
+.illu-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #444; margin-top: 7px; display: flex; align-items: center; justify-content: center; background: transparent; }
+.illu-item.selected .illu-check { background: #D4AF37; border-color: #D4AF37; }
+.illu-check::after { content: '✓'; font-size: 12px; color: #000; display: none; font-weight: bold; }
+.illu-item.selected .illu-check::after { display: block; }
+
+/* NOTES */
+.note-info { background: #1a1500; border-left: 3px solid #D4AF37; padding: 12px 16px; font-size: 15px; color: #D4AF37; font-style: italic; margin-top: 10px; line-height: 1.5; display: none; border-radius: 0 6px 6px 0; }
+.note-info.visible { display: block; }
+.note-bleu { background: #0a1020; border-left: 3px solid #1565C0; padding: 12px 16px; font-size: 15px; color: #7aaaff; margin-top: 10px; display: none; border-radius: 0 6px 6px 0; line-height: 1.5; }
+.note-bleu.visible { display: block; }
+
+#bloc-partenaire { display: none; }
+#bloc-partenaire.visible { display: block; }
+
+/* ERREURS */
+.err-msg { font-size: 12px; color: #ff6b6b; margin-top: 5px; display: none; }
+.err-msg.visible { display: block; }
+.err-global { background: #1a0000; border-left: 3px solid #c62828; padding: 12px 16px; font-size: 14px; color: #ff6b6b; margin-top: 12px; display: none; border-radius: 0 6px 6px 0; }
+.err-global.visible { display: block; }
+
+/* BOUTONS */
+.btn-continuer { width: 100%; background: #D4AF37; color: #000; border: none; font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase; padding: 17px; cursor: pointer; transition: opacity .2s; border-radius: 4px; margin-top: 24px; }
+.btn-continuer:hover { opacity: .88; }
+.btn-retour { background: transparent; color: #D4AF37; border: 2px solid #D4AF37; font-family: Arial, sans-serif; font-size: 12px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; padding: 10px 20px; cursor: pointer; border-radius: 4px; transition: all .2s; }
+.btn-retour:hover { background: #D4AF37; color: #000; }
+.btn-submit { width: 100%; background: #D4AF37; color: #000; border: none; font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase; padding: 17px; cursor: pointer; transition: opacity .2s; border-radius: 4px; }
+.btn-submit:hover { opacity: .88; }
+.btn-submit:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ACCORDÉON */
+.accordion { display: flex; flex-direction: column; gap: 6px; }
+.accordion-item { border: 2px solid #333; border-radius: 8px; overflow: hidden; transition: border-color .2s; }
+.accordion-item.has-selection { border-color: #D4AF37; }
+.accordion-header { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; background: #1a1a1a; cursor: pointer; user-select: none; transition: background .15s; }
+.accordion-header:hover { background: #1f1a00; }
+.accordion-item.has-selection .accordion-header { background: #1f1a00; }
+.accordion-header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.accordion-date { font-size: 15px; font-weight: bold; color: #D4AF37; }
+.accordion-badge { background: #D4AF37; color: #000; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 20px; display: none; }
+.accordion-item.has-selection .accordion-badge { display: inline-block; }
+.accordion-arrow { font-size: 13px; color: #7a6030; transition: transform .25s; flex-shrink: 0; }
+.accordion-item.open .accordion-arrow { transform: rotate(180deg); }
+.accordion-body { max-height: 0; overflow: hidden; transition: max-height .3s ease; background: #141414; }
+.accordion-item.open .accordion-body { max-height: 400px; }
+.accordion-stages { display: flex; flex-direction: column; }
+
+/* Stage row */
+.stage-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; user-select: none; border-top: 1px solid #222; transition: background .15s; }
+.stage-row:hover { background: #1f1a00; }
+.stage-row.selected { background: #1f1a00; }
+.stage-checkmark { width: 20px; height: 20px; flex-shrink: 0; border: 2px solid #444; border-radius: 3px; background: #111; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+.stage-row.selected .stage-checkmark { background: #D4AF37; border-color: #D4AF37; }
+.stage-checkmark-tick { display: none; color: #000; font-size: 12px; font-weight: bold; }
+.stage-row.selected .stage-checkmark-tick { display: block; }
+.stage-row-info { flex: 1; }
+.stage-row-horaire { font-size: 11px; color: #D4AF37; font-weight: bold; letter-spacing: .08em; text-transform: uppercase; }
+.stage-row-theme { font-size: 14px; color: #e8c84a; margin-top: 1px; }
+.stage-row-type { display: inline-block; font-size: 10px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; padding: 1px 7px; border-radius: 3px; margin-top: 3px; }
+.type-technique { background: #2a2000; color: #D4AF37; border: 1px solid #5a4000; }
+.type-stage1    { background: #0a1a00; color: #7adf7a; border: 1px solid #2a5000; }
+.type-stage2    { background: #0a0a20; color: #7aaaff; border: 1px solid #1a2a50; }
+
+/* NOTE ACCORDÉON */
+.note-stages { font-size: 15px; color: #c8a84a; margin-bottom: 14px; line-height: 1.5; }
+
+/* RÉCAPITULATIFS */
+.recaps-container { display: flex; flex-direction: column; gap: 20px; margin-top: 28px; }
+
+.recap-jour {
+  background: #0f0d00;
+  border: 2px solid #D4AF37;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.recap-jour-header {
+  background: #2a2000;
+  padding: 14px 18px;
+  border-bottom: 1px solid #3a3000;
+}
+.recap-jour-date { font-size: 16px; font-weight: bold; color: #D4AF37; letter-spacing: 1px; }
+.recap-jour-horaire { font-size: 13px; color: #a08050; margin-top: 2px; }
+
+.recap-jour-body { padding: 16px 18px; }
+
+.recap-personne { margin-bottom: 14px; }
+.recap-personne-titre {
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: #D4AF37; font-weight: bold; margin-bottom: 8px;
+  padding-bottom: 5px; border-bottom: 1px solid #3a3000;
+}
+.recap-ligne { font-size: 14px; color: #e8c84a; padding: 5px 0; border-bottom: 1px dashed #2a2000; }
+.recap-sous-prix {
+  display: flex; justify-content: space-between;
+  font-size: 13px; color: #a08050;
+  margin-top: 6px; padding-top: 6px;
+  border-top: 1px dashed #3a3000;
+}
+
+.recap-total-jour {
+  background: #1f1a00;
+  border-top: 2px solid #D4AF37;
+  padding: 14px 18px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.recap-total-label { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #a08050; }
+.recap-total-date { font-size: 13px; color: #D4AF37; font-style: italic; margin-top: 2px; }
+.recap-total-prix { font-size: 28px; font-weight: bold; color: #D4AF37; }
+
+/* TAGS RÔLE */
+.role-tag { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: bold; color: #fff; border-radius: 3px; margin-left: 6px; }
+.tag-guideur { background: #1565C0; }
+.tag-guidee  { background: #E91E8C; }
+
+/* NAVIGATION ÉTAPE 2 */
+.etape2-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+
+/* SUBMIT */
+.submit-area { margin-top: 28px; }
+
+/* CONFIRMATION */
+#bloc-confirmation { display: none; padding: 36px 24px 40px; background: #faf7f2; margin: 0; }
+#bloc-confirmation.visible { display: block; }
+.conf-icone { font-size: 52px; display: block; margin-bottom: 14px; text-align: center; color: #2c1a00; }
+.conf-titre { font-size: 22px; font-weight: 300; letter-spacing: 3px; color: #6b1a1a; margin-bottom: 18px; text-align: center; }
+.conf-intro { font-size: 14px; color: #4a3010; margin-bottom: 20px; text-align: center; line-height: 1.7; }
+.conf-date-bloc { background: #6b1a1a; border: 2px solid #D4AF37; border-radius: 10px; padding: 18px; margin-bottom: 14px; font-size: 14px; color: #f5ece0; line-height: 1.8; }
+.conf-date-bloc strong { color: #D4AF37; }
+.conf-date-bloc .conf-total { margin-top: 10px; padding-top: 10px; border-top: 1px solid #D4AF37; color: #D4AF37; font-weight: bold; font-size: 15px; }
+.conf-footer { background: #fff9ee; border: 2px solid #D4AF37; border-radius: 10px; padding: 20px 24px; font-size: 14px; color: #4a3010; line-height: 1.9; margin-bottom: 20px; text-align: center; }
+.conf-footer strong { color: #6b1a1a; }
+.conf-autre { margin-top: 20px; text-align: center; padding-bottom: 20px; }
+.btn-autre { background: transparent; color: #8b6010; border: 2px solid #D4AF37; padding: 13px 24px; border-radius: 6px; font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all .2s; }
+.btn-autre:hover { background: #D4AF37; color: #000; }
+
+.required { color: #D4AF37; }
+.form-footer { font-size: 13px; color: #555; text-align: center; line-height: 1.8; padding: 16px 24px 22px; border-top: 1px solid #222; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<!-- HEADER -->
+<div class="header">
+  <h1>Inscription aux <em>Stages de Tango</em></h1>
+  <div class="sous-titre">Florencia Garcia &amp; Jérémy Braitbart</div>
+</div>
+
+<!-- TARIFS -->
+<div class="tarifs-bloc">
+  <div class="tarifs-titre">Tarifs par personne</div>
+  <div class="tarifs-grid">
+    <div class="tarif-ligne"><span>Technique 1h</span><span class="prix">20 €</span></div>
+    <div class="tarif-ligne"><span>1 Stage</span><span class="prix">25 €</span></div>
+    <div class="tarif-ligne"><span>Technique + 1 Stage</span><span class="prix">45 €</span></div>
+    <div class="tarif-ligne"><span>2 Stages</span><span class="prix">45 €</span></div>
+    <div class="tarif-ligne"><span>Technique + 2 Stages</span><span class="prix">60 €</span></div>
+  </div>
+  <div class="paiement-note">💵 Le paiement s'effectue sur place le jour du stage.</div>
+</div>
+
+<!-- INDICATEUR -->
+<div class="etape-indicator">
+  <div class="etape-step active" id="ind-1">
+    <div class="etape-num">1</div>
+    <span>Vos informations</span>
+  </div>
+  <div class="etape-sep"></div>
+  <div class="etape-step" id="ind-2">
+    <div class="etape-num">2</div>
+    <span>Choix des stages</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     ÉTAPE 1 — INFORMATIONS PERSONNELLES
+════════════════════════════════════════════ -->
+<div class="etape active" id="etape1">
+
+  <!-- Coordonnées -->
+  <div class="section-label">Vos coordonnées</div>
+  <div class="champs-grid">
+    <div class="champ">
+      <label>Prénom <span class="required">*</span></label>
+      <input type="text" id="prenom" placeholder="Votre prénom">
+      <span class="err-msg" id="err-prenom">Champ requis.</span>
+    </div>
+    <div class="champ">
+      <label>Nom <span class="required">*</span></label>
+      <input type="text" id="nom" placeholder="Votre nom">
+      <span class="err-msg" id="err-nom">Champ requis.</span>
+    </div>
+    <div class="champ">
+      <label>Email <span class="required">*</span></label>
+      <input type="email" id="email" placeholder="votre@email.fr">
+      <span class="err-msg" id="err-email">Email invalide.</span>
+    </div>
+    <div class="champ">
+      <label>Téléphone</label>
+      <input type="tel" id="telephone" placeholder="06 00 00 00 00">
+    </div>
+  </div>
+
+  <!-- Rôle -->
+  <div class="section-label">Votre rôle <span class="required">*</span></div>
+  <div class="illu-group" id="roleGroup">
+    <div class="illu-item" data-value="Guideur(se)">
+      <svg viewBox="0 0 62 62" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond cercle bleu -->
+  <circle cx="31" cy="31" r="30" fill="#1565C0"/>
+  <!-- Tête neutre ronde -->
+  <circle cx="31" cy="13" r="7" fill="#fff" opacity="0.95"/>
+  <!-- Yeux expressifs -->
+  <circle cx="28.5" cy="12" r="1.3" fill="#1565C0"/>
+  <circle cx="33.5" cy="12" r="1.3" fill="#1565C0"/>
+  <!-- Sourire confiant -->
+  <path d="M28 15 Q31 18 34 15" stroke="#1565C0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- Corps arrondi neutre -->
+  <ellipse cx="31" cy="29" rx="7" ry="9" fill="#fff" opacity="0.9"/>
+  <!-- Bras gauche tendu (invitation/conduite) -->
+  <line x1="24" y1="26" x2="8" y2="21" stroke="#fff" stroke-width="4.5" stroke-linecap="round" opacity="0.9"/>
+  <!-- Main ouverte -->
+  <circle cx="7" cy="20" r="3.5" fill="#fff" opacity="0.9"/>
+  <!-- Bras droit replié -->
+  <line x1="38" y1="26" x2="50" y2="31" stroke="#fff" stroke-width="4.5" stroke-linecap="round" opacity="0.9"/>
+  <!-- Jambes en pas décidé -->
+  <line x1="27" y1="38" x2="22" y2="56" stroke="#fff" stroke-width="5.5" stroke-linecap="round" opacity="0.9"/>
+  <line x1="35" y1="38" x2="41" y2="55" stroke="#fff" stroke-width="5.5" stroke-linecap="round" opacity="0.9"/>
+  <!-- Pieds -->
+  <ellipse cx="20" cy="57" rx="5" ry="3" fill="#D4AF37"/>
+  <ellipse cx="43" cy="56" rx="5" ry="3" fill="#D4AF37"/>
+  <!-- Étoile / flèche direction -->
+  <polygon points="51,19 54,24 49,24" fill="#D4AF37" opacity="0.9"/>
+</svg>
+      <div class="illu-label">Guideur·se</div>
+      <div class="illu-check"></div>
+    </div>
+    <div class="illu-item" data-value="Guidé(e)">
+      <svg viewBox="0 0 62 62" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond cercle rose -->
+  <circle cx="31" cy="31" r="30" fill="#E91E8C"/>
+  <!-- Tête neutre ronde -->
+  <circle cx="31" cy="13" r="7" fill="#fff" opacity="0.95"/>
+  <!-- Yeux expressifs -->
+  <circle cx="28.5" cy="12" r="1.3" fill="#E91E8C"/>
+  <circle cx="33.5" cy="12" r="1.3" fill="#E91E8C"/>
+  <!-- Sourire joyeux -->
+  <path d="M27.5 15 Q31 18.5 34.5 15" stroke="#E91E8C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- Joues roses -->
+  <circle cx="26" cy="15" r="2.5" fill="#ff80cc" opacity="0.5"/>
+  <circle cx="36" cy="15" r="2.5" fill="#ff80cc" opacity="0.5"/>
+  <!-- Corps arrondi neutre -->
+  <ellipse cx="31" cy="29" rx="7" ry="9" fill="#fff" opacity="0.9"/>
+  <!-- Bras gauche levé gracieusement (posture fluide) -->
+  <line x1="24" y1="24" x2="11" y2="14" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="10" cy="13" r="3.5" fill="#fff" opacity="0.9"/>
+  <!-- Bras droit vers partenaire -->
+  <line x1="38" y1="26" x2="50" y2="22" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  <!-- Jambe avant pointée (légèreté) -->
+  <line x1="27" y1="38" x2="19" y2="55" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+  <line x1="35" y1="38" x2="43" y2="54" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+  <!-- Pieds dorés -->
+  <ellipse cx="17" cy="56" rx="5" ry="3" fill="#D4AF37" transform="rotate(-15 17 56)"/>
+  <ellipse cx="45" cy="55" rx="5" ry="3" fill="#D4AF37" transform="rotate(10 45 55)"/>
+  <!-- Petite note de musique -->
+  <text x="47" y="14" font-size="10" fill="#D4AF37" opacity="0.9">♪</text>
+</svg>
+      <div class="illu-label">Guidé·e</div>
+      <div class="illu-check"></div>
+    </div>
+  </div>
+  <div class="err-msg" id="err-role">Veuillez choisir un rôle.</div>
+
+  <!-- Niveau -->
+  <div class="section-label">Votre niveau <span class="required">*</span></div>
+  <div class="radio-group horizontal" id="niveauGroup">
+    <div class="radio-item" data-value="Débutant"><div class="radio-dot"></div>Débutant</div>
+    <div class="radio-item" data-value="Intermédiaire"><div class="radio-dot"></div>Intermédiaire</div>
+    <div class="radio-item" data-value="Avancé"><div class="radio-dot"></div>Avancé</div>
+  </div>
+  <div class="err-msg" id="err-niveau">Veuillez choisir un niveau.</div>
+
+  <!-- Situation -->
+  <div class="section-label">Situation <span class="required">*</span></div>
+  <div class="illu-group" id="situationGroup">
+    <div class="illu-item" data-value="femme-seule">
+      <svg viewBox="0 0 62 62" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="31" cy="31" r="30" fill="#7b1fa2"/>
+  <!-- Tête avec chignon fleuri -->
+  <circle cx="31" cy="12" r="6.5" fill="#fff" opacity="0.95"/>
+  <ellipse cx="37" cy="8.5" rx="4" ry="3" fill="#fff" opacity="0.9" transform="rotate(-20 37 8.5)"/>
+  <circle cx="38.5" cy="7.5" r="2.5" fill="#ff6ab0"/>
+  <circle cx="38.5" cy="7.5" r="1.2" fill="#D4AF37"/>
+  <circle cx="29" cy="11" r="1.2" fill="#7b1fa2"/>
+  <circle cx="33" cy="11" r="1.2" fill="#7b1fa2"/>
+  <path d="M28.5 14 Q31 17 33.5 14" stroke="#7b1fa2" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- Corps -->
+  <ellipse cx="31" cy="27" rx="6" ry="8" fill="#fff" opacity="0.9"/>
+  <!-- Bras gauche levé haut (danse) -->
+  <line x1="25" y1="23" x2="12" y2="10" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.95"/>
+  <circle cx="11" cy="9" r="3.5" fill="#fff" opacity="0.95"/>
+  <!-- Petite étoile au bout du bras -->
+  <text x="5" y="7" font-size="8" fill="#D4AF37">✦</text>
+  <!-- Bras droit levé (symétrie de danse) -->
+  <line x1="37" y1="23" x2="50" y2="11" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.95"/>
+  <circle cx="51" cy="10" r="3.5" fill="#fff" opacity="0.95"/>
+  <text x="50" y="7" font-size="8" fill="#D4AF37">✦</text>
+  <!-- Jupe évasée tournante -->
+  <path d="M24 35 Q10 48 9 60 Q20 55 31 53 Q42 55 53 60 Q52 48 38 35 Z" fill="#fff" opacity="0.85"/>
+  <!-- Volant de jupe -->
+  <path d="M14 52 Q31 56 48 52" stroke="#ce93d8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Jambes -->
+  <line x1="26" y1="53" x2="20" y2="60" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  <ellipse cx="18" cy="61" rx="5" ry="2.5" fill="#D4AF37" transform="rotate(-20 18 61)"/>
+  <!-- Note de musique -->
+  <text x="44" y="28" font-size="11" fill="#D4AF37" opacity="0.9">♫</text>
+</svg>
+      <div class="illu-label">Femme seule</div>
+      <div class="illu-check"></div>
+    </div>
+    <div class="illu-item" data-value="homme-seul">
+      <svg viewBox="0 0 62 62" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="31" cy="31" r="30" fill="#2e7d32"/>
+  <!-- Tête -->
+  <circle cx="31" cy="13" r="7" fill="#fff" opacity="0.95"/>
+  <!-- Joues joyeuses -->
+  <circle cx="26.5" cy="15" r="2.5" fill="#a5d6a7" opacity="0.6"/>
+  <circle cx="35.5" cy="15" r="2.5" fill="#a5d6a7" opacity="0.6"/>
+  <circle cx="29" cy="12" r="1.3" fill="#2e7d32"/>
+  <circle cx="33" cy="12" r="1.3" fill="#2e7d32"/>
+  <path d="M27.5 15 Q31 19 34.5 15" stroke="#2e7d32" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Corps large -->
+  <ellipse cx="31" cy="29" rx="8" ry="9" fill="#fff" opacity="0.9"/>
+  <!-- Pochette dorée -->
+  <rect x="35" y="23" width="4" height="3" rx="1" fill="#D4AF37"/>
+  <!-- Bras grands ouverts (accueil) -->
+  <line x1="23" y1="26" x2="7" y2="21" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="6" cy="20" r="4" fill="#fff" opacity="0.9"/>
+  <line x1="39" y1="26" x2="55" y2="21" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="56" cy="20" r="4" fill="#fff" opacity="0.9"/>
+  <!-- Jambes -->
+  <line x1="27" y1="38" x2="22" y2="57" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <line x1="35" y1="38" x2="41" y2="57" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <ellipse cx="20" cy="58" rx="6" ry="3" fill="#D4AF37"/>
+  <ellipse cx="43" cy="58" rx="6" ry="3" fill="#D4AF37"/>
+</svg>
+      <div class="illu-label">Homme seul</div>
+      <div class="illu-check"></div>
+    </div>
+    <div class="illu-item" data-value="avec-partenaire">
+      <svg viewBox="0 0 62 62" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="31" cy="31" r="30" fill="#F57F17"/>
+  <!-- Homme gauche -->
+  <circle cx="20" cy="12" r="5.5" fill="#fff" opacity="0.95"/>
+  <circle cx="18.5" cy="11" r="1" fill="#F57F17"/>
+  <circle cx="21.5" cy="11" r="1" fill="#F57F17"/>
+  <path d="M18 13 Q20 15.5 22 13" stroke="#F57F17" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="20" cy="26" rx="5.5" ry="7" fill="#fff" opacity="0.9"/>
+  <!-- Bras homme vers femme -->
+  <line x1="25" y1="23" x2="36" y2="20" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity="0.9"/>
+  <!-- Jambes homme -->
+  <line x1="17" y1="33" x2="13" y2="50" stroke="#fff" stroke-width="4.5" stroke-linecap="round" opacity="0.9"/>
+  <line x1="23" y1="33" x2="27" y2="49" stroke="#fff" stroke-width="4.5" stroke-linecap="round" opacity="0.9"/>
+  <ellipse cx="11" cy="51" rx="4.5" ry="2.5" fill="#D4AF37"/>
+  <!-- Femme droite -->
+  <circle cx="42" cy="11" r="5.5" fill="#fff" opacity="0.95"/>
+  <!-- Petit chignon discret -->
+  <ellipse cx="47" cy="8.5" rx="3.5" ry="2.5" fill="#fff" opacity="0.9" transform="rotate(-20 47 8.5)"/>
+  <circle cx="48" cy="8" r="1.5" fill="#D4AF37"/>
+  <circle cx="40.5" cy="10" r="1" fill="#F57F17"/>
+  <circle cx="43.5" cy="10" r="1" fill="#F57F17"/>
+  <path d="M40 12 Q42 14.5 44 12" stroke="#F57F17" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <!-- Bras femme vers homme -->
+  <line x1="37" y1="20" x2="26" y2="23" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+  <!-- Corps femme -->
+  <ellipse cx="42" cy="25" rx="5.5" ry="7" fill="#fff" opacity="0.9"/>
+  <!-- Jupe -->
+  <path d="M37 32 Q30 44 28 55 Q36 51 42 49 Q48 51 54 55 Q53 44 47 32 Z" fill="#fff" opacity="0.85"/>
+  <!-- Jambe avant femme -->
+  <line x1="37" y1="49" x2="32" y2="58" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity="0.9"/>
+  <ellipse cx="30" cy="59" rx="4.5" ry="2.5" fill="#D4AF37" transform="rotate(-15 30 59)"/>
+  <!-- Cœur entre eux -->
+  <path d="M28 19 Q31 15 34 19 Q37 15 40 19 Q40 24 34 28 Q28 24 28 19Z" fill="#ff1744" opacity="0.9"/>
+  <path d="M28 19 Q31 15 34 19 Q37 15 40 19 Q40 24 34 28 Q28 24 28 19Z" fill="none" stroke="#fff" stroke-width="0.5" opacity="0.5"/>
+</svg>
+      <div class="illu-label">Avec partenaire</div>
+      <div class="illu-check"></div>
+    </div>
+  </div>
+  <div class="err-msg" id="err-situation">Veuillez choisir une option.</div>
+  <div class="note-info" id="note-parite">
+    Vous pouvez vous inscrire seul·e. Nous veillons à la parité guideurs·ses / guidé·e·s et vous confirmerons votre inscription en fonction de l'équilibre des inscriptions. Nous vous tiendrons informé·e rapidement.
+  </div>
+
+  <!-- Partenaire -->
+  <div id="bloc-partenaire">
+    <div class="section-label" style="margin-top:20px">Votre partenaire</div>
+    <div class="note-bleu visible" id="note-role-part" style="margin-bottom:14px;">
+      Le rôle de votre partenaire sera automatiquement complémentaire au vôtre.
+    </div>
+    <div class="champs-grid">
+      <div class="champ">
+        <label>Prénom <span class="required">*</span></label>
+        <input type="text" id="partenaire-prenom" placeholder="Prénom">
+        <span class="err-msg" id="err-partenaire-prenom">Champ requis.</span>
+      </div>
+      <div class="champ">
+        <label>Nom <span class="required">*</span></label>
+        <input type="text" id="partenaire-nom" placeholder="Nom">
+        <span class="err-msg" id="err-partenaire-nom">Champ requis.</span>
+      </div>
+      <div class="champ">
+        <label>Email <span style="font-size:10px;color:#555;font-weight:normal;text-transform:none;letter-spacing:0">(facultatif)</span></label>
+        <input type="email" id="partenaire-email" placeholder="email@partenaire.fr">
+      </div>
+      <div class="champ">
+        <label>Téléphone <span style="font-size:10px;color:#555;font-weight:normal;text-transform:none;letter-spacing:0">(facultatif)</span></label>
+        <input type="tel" id="partenaire-tel" placeholder="06 00 00 00 00">
+      </div>
+    </div>
+  </div>
+
+  <!-- Remarques -->
+  <div class="section-label">Remarques</div>
+  <div class="champ">
+    <textarea id="remarques" placeholder="Informations complémentaires..."></textarea>
+  </div>
+
+  <div class="err-global" id="err-global-1">Veuillez corriger les erreurs indiquées avant de continuer.</div>
+  <button type="button" class="btn-continuer" id="btnContinuer">Continuer →</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     ÉTAPE 2 — CHOIX DES STAGES
+════════════════════════════════════════════ -->
+<div class="etape" id="etape2">
+
+  <div class="etape2-nav">
+    <button type="button" class="btn-retour" id="btnRetour">← Retour</button>
+    <span style="font-size:13px;color:#7a6030;" id="recap-identite"></span>
+  </div>
+
+  <!-- Stages inscrit -->
+  <div class="section-label" id="label-stages-inscrit">Vos stages <span class="required">*</span></div>
+  <p class="note-stages">Cliquez sur une date pour voir les stages proposés. Vous pouvez sélectionner des stages sur plusieurs dates.</p>
+  <div class="accordion" id="accordionInscrit"></div>
+  <div class="err-msg" id="err-stages">Veuillez sélectionner au moins un stage.</div>
+
+  <!-- Stages partenaire -->
+  <div id="bloc-stages-partenaire" style="display:none">
+    <div class="section-label" style="margin-top:32px" id="label-stages-partenaire">Stages de votre partenaire <span class="required">*</span></div>
+    <p class="note-stages">Votre partenaire peut s'inscrire aux mêmes stages ou à des stages différents.</p>
+    <div class="accordion" id="accordionPartenaire"></div>
+    <div class="err-msg" id="err-stages-part">Veuillez sélectionner au moins un stage pour votre partenaire.</div>
+  </div>
+
+  <!-- RÉCAPITULATIFS PAR JOUR -->
+  <div id="recaps-container" class="recaps-container"></div>
+
+  <div class="err-global" id="err-global-2">Veuillez sélectionner au moins un stage avant de valider.</div>
+  <div class="submit-area">
+    <button type="button" class="btn-submit" id="btnSubmit">Je m'inscris</button>
+  </div>
+</div>
+
+<!-- CONFIRMATION -->
+<div id="bloc-confirmation">
+  <span class="conf-icone" id="conf-icone"></span>
+  <div class="conf-titre" id="conf-titre"></div>
+  <div class="conf-intro" id="conf-intro"></div>
+  <div class="conf-footer" id="conf-footer"></div>
+  <div id="conf-dates"></div>
+  <div class="conf-autre">
+    <button class="btn-autre" onclick="recommencer()">Nouvelle inscription</button>
+  </div>
+</div>
+
+</div><!-- /wrapper -->
+
+<div class="form-footer">
+  Pour toute question : <a href="/cdn-cgi/l/email-protection#1d697c737a7278696b72686e5d7a707c7471337e7270" style="color:#D4AF37;"><span class="__cf_email__" data-cfemail="d4a0b5bab3bbb1a0a2bba1a794b3b9b5bdb8fab7bbb9">[email&#160;protected]</span></a>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+const APPS_SCRIPT_URL = 'REMPLACER_PAR_TON_URL_APPS_SCRIPT';
+
+// ── Données ─────────────────────────────────────────────────────
+const DATES_STAGES = [
+  { date:'2025-09-19', label:'Vendredi 19 Septembre 2025', stages:[
+    { id:'2025-09-19-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2025-09-19-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
+    { id:'2025-09-19-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  ]},
+  { date:'2025-10-03', label:'Vendredi 3 Octobre 2025', stages:[
+    { id:'2025-10-03-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2025-10-03-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
+    { id:'2025-10-03-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  ]},
+  { date:'2025-11-07', label:'Vendredi 7 Novembre 2025', stages:[
+    { id:'2025-11-07-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2025-11-07-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
+    { id:'2025-11-07-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  ]},
+  { date:'2025-12-05', label:'Vendredi 5 Décembre 2025', stages:[
+    { id:'2025-12-05-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2025-12-05-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
+    { id:'2025-12-05-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  ]},
+  { date:'2026-01-30', label:'Vendredi 30 Janvier 2026', stages:[
+    { id:'2026-01-30-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2026-01-30-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
+    { id:'2026-01-30-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  ]},
+  { date:'2026-02-27', label:'Vendredi 27 Février 2026', stages:[
+    { id:'2026-02-27-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2026-02-27-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
+    { id:'2026-02-27-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  ]},
+  { date:'2026-03-13', label:'Vendredi 13 Mars 2026', stages:[
+    { id:'2026-03-13-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2026-03-13-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
+    { id:'2026-03-13-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  ]},
+  { date:'2026-04-24', label:'Vendredi 24 Avril 2026', stages:[
+    { id:'2026-04-24-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2026-04-24-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
+    { id:'2026-04-24-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  ]},
+  { date:'2026-05-22', label:'Vendredi 22 Mai 2026', stages:[
+    { id:'2026-05-22-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2026-05-22-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
+    { id:'2026-05-22-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  ]},
+  { date:'2026-06-19', label:'Vendredi 19 Juin 2026', stages:[
+    { id:'2026-06-19-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2026-06-19-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
+    { id:'2026-06-19-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  ]}
+];
+
+const TYPE_LABEL = { technique:'Technique', stage1:'Stage 1 — Tous niveaux', stage2:'Stage 2 — Intermédiaire+' };
+const TYPE_CLASS  = { technique:'type-technique', stage1:'type-stage1', stage2:'type-stage2' };
+
+// ── État ─────────────────────────────────────────────────────────
+const state = {
+  stagesInscrit:    new Map(),
+  stagesPartenaire: new Map(),
+  role:null, situation:null, niveau:null
+};
+
+// ── Helpers ──────────────────────────────────────────────────────
+function getLabelDate(date) {
+  var d = DATES_STAGES.find(function(x){ return x.date===date; });
+  return d ? d.label : date;
+}
+function getDatesSelectionnees(map) {
+  var dates = new Set();
+  map.forEach(function(v){ dates.add(v.date); });
+  return Array.from(dates).sort();
+}
+function getStagesParDate(map, date) {
+  var r=[];
+  map.forEach(function(v){ if(v.date===date) r.push(v); });
+  r.sort(function(a,b){ return a.horaire.localeCompare(b.horaire); });
+  return r;
+}
+function calculerPrixParDate(map, date) {
+  var t=false,s1=false,s2=false;
+  map.forEach(function(v){
+    if(v.date!==date) return;
+    if(v.type==='technique') t=true;
+    if(v.type==='stage1')    s1=true;
+    if(v.type==='stage2')    s2=true;
+  });
+  if(t&&s1&&s2) return 60;
+  if(t&&s1) return 45;
+  if(t&&s2) return 45;
+  if(s1&&s2) return 45;
+  if(t) return 20;
+  if(s1||s2) return 25;
+  return 0;
+}
+function getHoraireParDate(map, date) {
+  var t=false,s1=false,s2=false;
+  map.forEach(function(v){
+    if(v.date!==date) return;
+    if(v.type==='technique') t=true;
+    if(v.type==='stage1')    s1=true;
+    if(v.type==='stage2')    s2=true;
+  });
+  if(!t&&!s1&&!s2) return '';
+  var debut = t?'14h':(s1?'15h':'16h30');
+  var fin   = s2?'18h':(s1?'16h30':'15h');
+  return debut+'–'+fin;
+}
+function tagRole(role) {
+  if(role==='Guideur(se)') return '<span class="role-tag tag-guideur">Guideur(se)</span>';
+  if(role==='Guidé(e)')    return '<span class="role-tag tag-guidee">Guidé(e)</span>';
+  return role||'—';
+}
+function roleInverse(role) {
+  if(role==='Guideur(se)') return 'Guidé(e)';
+  if(role==='Guidé(e)')    return 'Guideur(se)';
+  return '';
+}
+
+// ── Accordéon ────────────────────────────────────────────────────
+function construireAccordeon(containerId, groupe) {
+  var container = document.getElementById(containerId);
+  container.innerHTML = '';
+  DATES_STAGES.forEach(function(dateInfo) {
+    var item = document.createElement('div');
+    item.className = 'accordion-item';
+    item.dataset.date = dateInfo.date;
+
+    var header = document.createElement('div');
+    header.className = 'accordion-header';
+    header.innerHTML =
+      '<div class="accordion-header-left">'+
+        '<span class="accordion-date">'+dateInfo.label+'</span>'+
+        '<span class="accordion-badge" id="badge-'+groupe+'-'+dateInfo.date+'">0 sélectionné</span>'+
+      '</div>'+
+      '<span class="accordion-arrow">▼</span>';
+    header.addEventListener('click', function(){ item.classList.toggle('open'); });
+
+    var body = document.createElement('div');
+    body.className = 'accordion-body';
+    var stagesDiv = document.createElement('div');
+    stagesDiv.className = 'accordion-stages';
+
+    dateInfo.stages.forEach(function(s) {
+      var row = document.createElement('div');
+      row.className = 'stage-row';
+      row.innerHTML =
+        '<div class="stage-checkmark"><span class="stage-checkmark-tick">✓</span></div>'+
+        '<div class="stage-row-info">'+
+          '<div class="stage-row-horaire">'+s.horaire+'</div>'+
+          '<div class="stage-row-theme">'+s.theme+'</div>'+
+          '<span class="stage-row-type '+TYPE_CLASS[s.type]+'">'+TYPE_LABEL[s.type]+'</span>'+
+        '</div>';
+
+      row.addEventListener('click', function(){
+        var map = groupe==='inscrit' ? state.stagesInscrit : state.stagesPartenaire;
+        if(map.has(s.id)){
+          map.delete(s.id); row.classList.remove('selected');
+        } else {
+          map.set(s.id, Object.assign({}, s, {dateLabel:dateInfo.label, date:dateInfo.date}));
+          row.classList.add('selected');
+        }
+        majBadge(groupe, dateInfo.date);
+        var count=0; map.forEach(function(v){ if(v.date===dateInfo.date) count++; });
+        item.classList.toggle('has-selection', count>0);
+        majRecaps();
+      });
+      stagesDiv.appendChild(row);
+    });
+
+    body.appendChild(stagesDiv);
+    item.appendChild(header);
+    item.appendChild(body);
+    container.appendChild(item);
+  });
+}
+
+function majBadge(groupe, date) {
+  var map = groupe==='inscrit' ? state.stagesInscrit : state.stagesPartenaire;
+  var count=0; map.forEach(function(v){ if(v.date===date) count++; });
+  var badge = document.getElementById('badge-'+groupe+'-'+date);
+  if(badge) badge.textContent = count+' sélectionné'+(count>1?'s':'');
+}
+
+// ── Récapitulatifs par jour ──────────────────────────────────────
+function majRecaps() {
+  var container = document.getElementById('recaps-container');
+  var prenom  = document.getElementById('prenom').value.trim();
+  var nom     = document.getElementById('nom').value.trim();
+  var pNom    = (document.getElementById('partenaire-prenom').value.trim()+' '+document.getElementById('partenaire-nom').value.trim()).trim();
+  var avecPart = state.situation==='avec-partenaire';
+
+  var datesI = getDatesSelectionnees(state.stagesInscrit);
+  var datesP = avecPart ? getDatesSelectionnees(state.stagesPartenaire) : [];
+  var toutesLesDates = Array.from(new Set([...datesI, ...datesP])).sort();
+
+  if(toutesLesDates.length===0){ container.innerHTML=''; return; }
+
+  var html = '';
+  toutesLesDates.forEach(function(date){
+    var label  = getLabelDate(date);
+    var stagesI = getStagesParDate(state.stagesInscrit, date);
+    var stagesP = avecPart ? getStagesParDate(state.stagesPartenaire, date) : [];
+    var prixI   = calculerPrixParDate(state.stagesInscrit, date);
+    var prixP   = avecPart ? calculerPrixParDate(state.stagesPartenaire, date) : 0;
+    var horaireI = getHoraireParDate(state.stagesInscrit, date);
+    var totalJour = prixI + prixP;
+
+    html += '<div class="recap-jour">';
+
+    // Header du recap
+    html += '<div class="recap-jour-header">';
+    html += '<div class="recap-jour-date">📅 '+label+'</div>';
+    if(horaireI) html += '<div class="recap-jour-horaire">⏱ '+horaireI+'</div>';
+    html += '</div>';
+
+    html += '<div class="recap-jour-body">';
+
+    // Section inscrit(e)
+    if(stagesI.length>0){
+      html += '<div class="recap-personne">';
+      html += '<div class="recap-personne-titre">'+(prenom||'Vous')+' '+(nom?nom:'')+'  '+tagRole(state.role)+'</div>';
+      stagesI.forEach(function(s){
+        html += '<div class="recap-ligne">'+s.horaire+' — '+s.theme+
+          ' <span style="font-size:10px;color:#7a6030">('+TYPE_LABEL[s.type]+')</span></div>';
+      });
+      html += '<div class="recap-sous-prix"><span>Montant</span><span>'+prixI+' €</span></div>';
+      html += '</div>';
+    }
+
+    // Section partenaire
+    if(avecPart && stagesP.length>0){
+      html += '<div class="recap-personne" style="margin-top:12px">';
+      html += '<div class="recap-personne-titre">'+(pNom||'Partenaire')+'  '+tagRole(roleInverse(state.role))+'</div>';
+      stagesP.forEach(function(s){
+        html += '<div class="recap-ligne">'+s.horaire+' — '+s.theme+
+          ' <span style="font-size:10px;color:#7a6030">('+TYPE_LABEL[s.type]+')</span></div>';
+      });
+      html += '<div class="recap-sous-prix"><span>Montant</span><span>'+prixP+' €</span></div>';
+      html += '</div>';
+    }
+
+    html += '</div>';
+
+    // Total du jour
+    html += '<div class="recap-total-jour">';
+    html += '<div>';
+    html += '<div class="recap-total-label">Total à régler sur place</div>';
+    html += '<div class="recap-total-date">le '+label+'</div>';
+    html += '</div>';
+    html += '<div class="recap-total-prix">'+totalJour+' €</div>';
+    html += '</div>';
+
+    html += '</div>'; // .recap-jour
+  });
+
+  container.innerHTML = html;
+}
+
+// ── Note parité ──────────────────────────────────────────────────
+function majNoteParite(){
+  var show = state.role==='Guidé(e)' && state.situation!==null && state.situation!=='avec-partenaire';
+  document.getElementById('note-parite').classList.toggle('visible', show);
+}
+
+// ── Validation étape 1 ───────────────────────────────────────────
+function affErr(id, show){ var el=document.getElementById(id); if(el) el.classList.toggle('visible', show); }
+
+function validerChamp(id, testFn){
+  var el=document.getElementById(id);
+  if(!el) return true;
+  var valid=testFn(el.value);
+  el.classList.toggle('invalid', !valid);
+  affErr('err-'+id, !valid);
+  return valid;
+}
+
+function validerEtape1(){
+  var ok=true;
+  if(!validerChamp('prenom', function(v){ return v.trim()!==''; })) ok=false;
+  if(!validerChamp('nom',    function(v){ return v.trim()!==''; })) ok=false;
+  if(!validerChamp('email',  function(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); })) ok=false;
+  affErr('err-role',      !state.role);      if(!state.role) ok=false;
+  affErr('err-niveau',    !state.niveau);    if(!state.niveau) ok=false;
+  affErr('err-situation', !state.situation); if(!state.situation) ok=false;
+  if(state.situation==='avec-partenaire'){
+    if(!validerChamp('partenaire-prenom', function(v){ return v.trim()!==''; })) ok=false;
+    if(!validerChamp('partenaire-nom',    function(v){ return v.trim()!==''; })) ok=false;
+  }
+  document.getElementById('err-global-1').classList.toggle('visible', !ok);
+  return ok;
+}
+
+function validerEtape2(){
+  var ok=true;
+  if(state.stagesInscrit.size===0){ affErr('err-stages', true); ok=false; } else { affErr('err-stages', false); }
+  if(state.situation==='avec-partenaire'){
+    if(state.stagesPartenaire.size===0){ affErr('err-stages-part', true); ok=false; } else { affErr('err-stages-part', false); }
+  }
+  document.getElementById('err-global-2').classList.toggle('visible', !ok);
+  return ok;
+}
+
+// ── Navigation entre étapes ──────────────────────────────────────
+function allerEtape2(){
+  if(!validerEtape1()) return;
+
+  // Mettre à jour l'identité affichée en haut de l'étape 2
+  var prenom = document.getElementById('prenom').value.trim();
+  var nom    = document.getElementById('nom').value.trim();
+  document.getElementById('recap-identite').textContent = prenom+' '+nom+' — '+state.role+' — '+state.niveau;
+
+  // Afficher ou masquer l'accordéon partenaire
+  var blocPart = document.getElementById('bloc-stages-partenaire');
+  blocPart.style.display = state.situation==='avec-partenaire' ? 'block' : 'none';
+
+  // Mettre à jour les libellés
+  var pPrenom = document.getElementById('partenaire-prenom').value.trim();
+  var pNom    = document.getElementById('partenaire-nom').value.trim();
+  if(state.situation==='avec-partenaire' && pPrenom){
+    document.getElementById('label-stages-partenaire').innerHTML =
+      'Stages de <strong style="color:#D4AF37">'+pPrenom+' '+pNom+'</strong> <span class="required">*</span>';
+  }
+
+  // Indicateurs
+  document.getElementById('ind-1').classList.remove('active'); document.getElementById('ind-1').classList.add('done');
+  document.getElementById('ind-2').classList.add('active');
+
+  document.getElementById('etape1').classList.remove('active');
+  document.getElementById('etape2').classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function allerEtape1(){
+  document.getElementById('ind-2').classList.remove('active');
+  document.getElementById('ind-1').classList.remove('done'); document.getElementById('ind-1').classList.add('active');
+  document.getElementById('etape2').classList.remove('active');
+  document.getElementById('etape1').classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── Soumission ───────────────────────────────────────────────────
+async function soumettre(){
+  if(!validerEtape2()) return;
+  var btn = document.getElementById('btnSubmit');
+  btn.disabled=true; btn.textContent='Envoi en cours…';
+
+  var prenom  = document.getElementById('prenom').value.trim();
+  var nom     = document.getElementById('nom').value.trim();
+  var pPrenom = document.getElementById('partenaire-prenom').value.trim();
+  var pNom    = document.getElementById('partenaire-nom').value.trim();
+  var partNom = pPrenom+' '+pNom;
+  var memePersonne = partNom.trim().toLowerCase()===(prenom+' '+nom).toLowerCase();
+  var estAttente = state.role==='Guidé(e)' && state.situation!=='avec-partenaire';
+
+  var datesInscrit = getDatesSelectionnees(state.stagesInscrit);
+  var inscriptionsParDate = datesInscrit.map(function(date){
+    var stagesI = getStagesParDate(state.stagesInscrit, date);
+    var stagesP = state.situation==='avec-partenaire' ? getStagesParDate(state.stagesPartenaire, date) : [];
+    return {
+      date: date, dateLabel: getLabelDate(date),
+      horaire:           getHoraireParDate(state.stagesInscrit, date),
+      horairePartenaire: getHoraireParDate(state.stagesPartenaire, date),
+      stages:       stagesI.map(function(s){ return s.id; }).join(' | '),
+      stagesDetail: stagesI,
+      stagesPartenaire:  stagesP.map(function(s){ return s.id; }).join(' | '),
+      stagesPartDetail:  stagesP,
+      prixInscrit:    calculerPrixParDate(state.stagesInscrit, date),
+      prixPartenaire: !memePersonne ? calculerPrixParDate(state.stagesPartenaire, date) : 0
+    };
+  });
+
+  var totalInscrit=0, totalPartenaire=0;
+  inscriptionsParDate.forEach(function(d){ totalInscrit+=d.prixInscrit; totalPartenaire+=d.prixPartenaire; });
+
+  var data = {
+    prenom:prenom, nom:nom,
+    email: document.getElementById('email').value.trim(),
+    telephone: document.getElementById('telephone').value.trim(),
+    situation: state.situation, role: state.role, niveau: state.niveau,
+    partenaire: partNom.trim(),
+    partenairePrenom: pPrenom, partenaireNom: pNom,
+    rolePartenaire: roleInverse(state.role),
+    partenaireEmail: (document.getElementById('partenaire-email')||{value:''}).value.trim(),
+    partenaireTel:   (document.getElementById('partenaire-tel')||{value:''}).value.trim(),
+    memePersonne: memePersonne,
+    inscriptionsParDate: inscriptionsParDate,
+    typeConfirmation: estAttente ? 'attente' : 'confirme',
+    totalInscrit: totalInscrit, totalPartenaire: totalPartenaire,
+    totalGlobal: totalInscrit+totalPartenaire,
+    remarques: document.getElementById('remarques').value.trim(),
+    timestamp: new Date().toLocaleString('fr-FR')
+  };
+
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    afficherConfirmation(data);
+  } catch(err){
+    btn.disabled=false; btn.textContent="Je m'inscris";
+    document.getElementById('err-global-2').textContent='Une erreur est survenue. Veuillez réessayer ou nous contacter à tangoetvous@gmail.com';
+    document.getElementById('err-global-2').classList.add('visible');
+  }
+}
+
+// ── Confirmation ─────────────────────────────────────────────────
+function afficherConfirmation(data){
+  document.getElementById('etape2').classList.remove('active');
+  document.getElementById('bloc-confirmation').classList.add('visible');
+
+  var avecPart = data.situation==='avec-partenaire' && data.partenaire && !data.memePersonne;
+
+  if(data.typeConfirmation==='attente'){
+    document.getElementById('conf-icone').textContent='⏳';
+    document.getElementById('conf-titre').textContent='Demande bien reçue !';
+    document.getElementById('conf-intro').innerHTML=
+      'Merci <strong style="color:#6b1a1a">'+data.prenom+'</strong> ! Votre demande a bien été enregistrée.<br>'+
+      'Nous veillons à la parité guideurs·ses / guidé·e·s. Vos places seront confirmées selon l\'équilibre des inscriptions.<br>'+
+      'Nous vous recontacterons rapidement.';
+  } else {
+    document.getElementById('conf-icone').textContent='✅';
+    document.getElementById('conf-titre').textContent='Inscription confirmée !';
+    document.getElementById('conf-intro').innerHTML=
+      'Merci <strong style="color:#6b1a1a">'+data.prenom+'</strong> ! Vos inscriptions sont confirmées.';
+  }
+
+  // Un bloc par date
+  var datesHtml='';
+  data.inscriptionsParDate.forEach(function(d){
+    datesHtml+='<div class="conf-date-bloc">';
+    datesHtml+='<strong>📅 '+d.dateLabel+'</strong><br>';
+
+    // Section inscrit
+    datesHtml+='<div style="margin-top:8px;padding:8px 0;border-top:1px solid rgba(212,175,55,0.3);">';
+    datesHtml+='<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#D4AF37;font-weight:bold;margin-bottom:5px;">'+data.prenom+' '+data.nom+' — '+data.role+'</div>';
+    d.stagesDetail.forEach(function(s){
+      datesHtml+='• '+s.horaire+' — '+s.theme+' <span style="font-size:11px;color:#888">('+TYPE_LABEL[s.type]+')</span><br>';
+    });
+    datesHtml+='<div style="font-size:13px;color:#D4AF37;font-weight:bold;margin-top:6px;">'+d.prixInscrit+' €</div>';
+    datesHtml+='</div>';
+
+    // Section partenaire
+    if(avecPart && d.stagesPartDetail && d.stagesPartDetail.length>0){
+      datesHtml+='<div style="margin-top:8px;padding:8px 0;border-top:1px solid rgba(212,175,55,0.3);">';
+      datesHtml+='<div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#D4AF37;font-weight:bold;margin-bottom:5px;">'+data.partenaire+' — '+data.rolePartenaire+'</div>';
+      d.stagesPartDetail.forEach(function(s){
+        datesHtml+='• '+s.horaire+' — '+s.theme+' <span style="font-size:11px;color:#888">('+TYPE_LABEL[s.type]+')</span><br>';
+      });
+      datesHtml+='<div style="font-size:13px;color:#D4AF37;font-weight:bold;margin-top:6px;">'+d.prixPartenaire+' €</div>';
+      datesHtml+='</div>';
+    }
+
+    // Total du jour
+    datesHtml+='<div class="conf-total">Total à régler sur place le '+d.dateLabel+' : '+(d.prixInscrit+(avecPart && d.prixPartenaire ? d.prixPartenaire : 0))+' €</div>';
+    datesHtml+='</div>';
+  });
+  // Footer EN PREMIER : lieu + email, centré
+  document.getElementById('conf-footer').innerHTML=
+    '📍 <strong>Centre Kim Kan</strong> — 64 rue Orfila, M° Gambetta, Paris 20e<br>'+
+    '💵 Paiement sur place le jour du stage<br><br>'+
+    '<em>Un email de confirmation par date vous a été envoyé à <strong>'+data.email+'</strong>. Merci d\'en confirmer la bonne réception.</em>';
+
+  document.getElementById('conf-dates').innerHTML=datesHtml;
+
+  window.scrollTo(0,0);
+}
+
+// ── Recommencer ──────────────────────────────────────────────────
+function recommencer(){
+  document.getElementById('bloc-confirmation').classList.remove('visible');
+  document.getElementById('form') && (document.getElementById('form').reset());
+  state.stagesInscrit.clear(); state.stagesPartenaire.clear();
+  state.role=null; state.situation=null; state.niveau=null;
+  document.querySelectorAll('.radio-item.selected, .illu-item.selected').forEach(function(el){ el.classList.remove('selected'); });
+  document.querySelectorAll('.stage-row.selected').forEach(function(el){ el.classList.remove('selected'); });
+  document.querySelectorAll('.accordion-item').forEach(function(el){ el.classList.remove('has-selection','open'); });
+  document.querySelectorAll('.accordion-badge').forEach(function(el){ el.textContent='0 sélectionné'; });
+  document.querySelectorAll('.err-msg.visible,.err-global.visible,.note-info.visible').forEach(function(el){ el.classList.remove('visible'); });
+  document.getElementById('recaps-container').innerHTML='';
+  document.getElementById('bloc-partenaire').classList.remove('visible');
+  document.getElementById('bloc-stages-partenaire').style.display='none';
+  document.getElementById('btnSubmit').disabled=false;
+  document.getElementById('btnSubmit').textContent="Je m'inscris";
+  document.querySelectorAll('input,textarea').forEach(function(el){ el.value=''; el.classList.remove('invalid'); });
+  // Retour à l'étape 1
+  document.getElementById('etape2').classList.remove('active');
+  document.getElementById('etape1').classList.add('active');
+  document.getElementById('ind-1').classList.add('active'); document.getElementById('ind-1').classList.remove('done');
+  document.getElementById('ind-2').classList.remove('active');
+  window.scrollTo(0,0);
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function(){
+  construireAccordeon('accordionInscrit','inscrit');
+  construireAccordeon('accordionPartenaire','partenaire');
+
+  document.getElementById('btnContinuer').addEventListener('click', allerEtape2);
+  document.getElementById('btnRetour').addEventListener('click', allerEtape1);
+  document.getElementById('btnSubmit').addEventListener('click', soumettre);
+
+  // Rôle (boutons illustrés)
+  document.querySelectorAll('#roleGroup .illu-item').forEach(function(el){
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      var val = this.dataset.value;
+      document.querySelectorAll('#roleGroup .illu-item').forEach(function(r){ r.classList.remove('selected'); });
+      this.classList.add('selected');
+      state.role = val;
+      majNoteParite();
+    });
+  });
+
+  // Niveau
+  document.querySelectorAll('#niveauGroup .radio-item').forEach(function(el){
+    el.addEventListener('click', function(){
+      document.querySelectorAll('#niveauGroup .radio-item').forEach(function(r){ r.classList.remove('selected'); });
+      el.classList.add('selected');
+      state.niveau = el.dataset.value;
+    });
+  });
+
+  // Situation (boutons illustrés)
+  document.querySelectorAll('#situationGroup .illu-item').forEach(function(el){
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      var val = this.dataset.value;
+      document.querySelectorAll('#situationGroup .illu-item').forEach(function(r){ r.classList.remove('selected'); });
+      this.classList.add('selected');
+      state.situation = val;
+      document.getElementById('bloc-partenaire').classList.toggle('visible', state.situation==='avec-partenaire');
+      majNoteParite();
+    });
+  });
+});
+</script>
+</body>
+</html>
