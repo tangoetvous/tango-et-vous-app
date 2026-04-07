@@ -1506,7 +1506,7 @@ a{color:var(--gold);text-decoration:none;}
    PLAN DES LIEUX
    ================================================================ */
 #plan-map{
-  height:300px;margin:0 20px 0;border-radius:var(--radius);
+  height:440px;margin:0 20px 0;border-radius:var(--radius);
   overflow:hidden;border:1px solid var(--border);
   background:var(--surface2);
 }
@@ -1523,7 +1523,7 @@ a{color:var(--gold);text-decoration:none;}
 .plan-btn:hover{filter:brightness(1.15);}
 .plan-btn-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:3px;}
 .plan-btn-name{font-size:12px;color:var(--text);font-weight:600;margin-bottom:1px;}
-.plan-btn-addr{font-size:10px;color:var(--text-faint);}
+.plan-btn-addr{font-size:10px;color:var(--gold);}
 .plan-offline{
   display:flex;align-items:center;justify-content:center;
   height:100%;font-size:12px;color:var(--text-faint);
@@ -1887,7 +1887,7 @@ if('serviceWorker' in navigator){
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 (function() {
-  // Lieux affichés sur le plan
+  // Lieux avec coordonnées venue + sortie de métro
   var LIEUX = [
     {
       id: 'paris',
@@ -1896,6 +1896,7 @@ if('serviceWorker' in navigator){
       addr: '24 villa Riberolle, Paris 20e',
       sub: 'Jeudi soir · M\u00b0 Alexandre Dumas (L2)',
       lat: 48.8621, lng: 2.4015,
+      metro: { lat: 48.8607, lng: 2.3963, name: 'M\u00b0 Alexandre Dumas (L2)' },
       color: '#60b0ff',
       mapsUrl: 'https://maps.google.com/?q=24+villa+Riberolle+75020+Paris'
     },
@@ -1906,6 +1907,7 @@ if('serviceWorker' in navigator){
       addr: '16 rue Charles Path\u00e9, Vincennes',
       sub: 'Lundi soir · M\u00b0 Ch\u00e2teau de Vincennes (L1)',
       lat: 48.8476, lng: 2.4392,
+      metro: { lat: 48.8449, lng: 2.4369, name: 'M\u00b0 Ch\u00e2teau de Vincennes (L1)' },
       color: '#40d8c0',
       mapsUrl: 'https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes'
     },
@@ -1914,8 +1916,9 @@ if('serviceWorker' in navigator){
       label: 'Stages',
       name: 'Centre Kim Kan',
       addr: '64 rue Orfila, Paris 20e',
-      sub: 'Samedi · M\u00b0 Gambetta',
+      sub: 'Samedi · M\u00b0 Gambetta (L3)',
       lat: 48.8659, lng: 2.3972,
+      metro: { lat: 48.8652, lng: 2.3981, name: 'M\u00b0 Gambetta (L3)' },
       color: '#D4AF37',
       mapsUrl: 'https://maps.google.com/?q=64+rue+Orfila+75020+Paris'
     },
@@ -1926,6 +1929,7 @@ if('serviceWorker' in navigator){
       addr: '16A bd de Reuilly, Paris 12e',
       sub: '17h30\u201323h30 · M\u00b0 Dugommier (L6)',
       lat: 48.8468, lng: 2.3858,
+      metro: { lat: 48.8449, lng: 2.3879, name: 'M\u00b0 Dugommier (L6)' },
       color: '#e040a0',
       mapsUrl: 'https://maps.google.com/?q=16+boulevard+de+Reuilly+75012+Paris'
     }
@@ -1933,19 +1937,75 @@ if('serviceWorker' in navigator){
 
   var _map = null;
   var _markers = {};
+  var _metroMarkers = {};
+  var _routeLayer = null;
 
   function makePinIcon(color) {
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 40" width="28" height="40">'
       + '<path d="M14 0C6.3 0 0 6.3 0 14c0 9.3 14 26 14 26S28 23.3 28 14C28 6.3 21.7 0 14 0z" fill="' + color + '" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/>'
       + '<circle cx="14" cy="14" r="6" fill="white" opacity=".92"/>'
       + '</svg>';
-    return L.divIcon({
-      html: svg,
-      className: '',
-      iconSize: [28, 40],
-      iconAnchor: [14, 40],
-      popupAnchor: [0, -38]
-    });
+    return L.divIcon({ html: svg, className: '', iconSize: [28,40], iconAnchor: [14,40], popupAnchor: [0,-38] });
+  }
+
+  function makeMetroIcon(color) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26" width="26" height="26">'
+      + '<circle cx="13" cy="13" r="12" fill="' + color + '" stroke="rgba(0,0,0,.4)" stroke-width="1.5" opacity=".85"/>'
+      + '<text x="13" y="18" text-anchor="middle" font-size="13" font-weight="bold" fill="white" font-family="Arial">M</text>'
+      + '</svg>';
+    return L.divIcon({ html: svg, className: '', iconSize: [26,26], iconAnchor: [13,13], popupAnchor: [0,-14] });
+  }
+
+  function afficherItineraire(lieu) {
+    // Effacer l'itinéraire précédent
+    if (_routeLayer) { _map.removeLayer(_routeLayer); _routeLayer = null; }
+    // Masquer les anciens marqueurs métro
+    Object.values(_metroMarkers).forEach(function(m){ _map.removeLayer(m); });
+    _metroMarkers = {};
+
+    var m = lieu.metro;
+    // Marqueur métro
+    var mMarker = L.marker([m.lat, m.lng], { icon: makeMetroIcon(lieu.color) })
+      .addTo(_map)
+      .bindTooltip(m.name, { permanent: false, direction: 'top' });
+    _metroMarkers[lieu.id] = mMarker;
+
+    // Appel OSRM (foot routing, gratuit)
+    var url = 'https://router.project-osrm.org/route/v1/foot/'
+      + m.lng + ',' + m.lat + ';'
+      + lieu.lng + ',' + lieu.lat
+      + '?overview=full&geometries=geojson';
+
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (!data.routes || !data.routes[0]) return;
+        var route = data.routes[0];
+        var geojson = route.geometry;
+        var secs = Math.round(route.duration);
+        var mins = Math.ceil(secs / 60);
+
+        _routeLayer = L.geoJSON(geojson, {
+          style: { color: lieu.color, weight: 4, opacity: 0.85, dashArray: '8 5' }
+        }).addTo(_map);
+
+        // Mettre à jour le popup du lieu avec le temps de marche
+        var popup = _markers[lieu.id].getPopup();
+        popup.setContent(
+          '<div style="font-family:sans-serif;min-width:150px;">'
+          + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:' + lieu.color + ';font-weight:700;margin-bottom:3px;">' + lieu.label + '</div>'
+          + '<div style="font-size:13px;font-weight:600;margin-bottom:2px;">' + lieu.name + '</div>'
+          + '<div style="font-size:11px;color:#666;margin-bottom:6px;">' + lieu.addr + '<br/>' + lieu.sub + '</div>'
+          + '<div style="font-size:12px;color:' + lieu.color + ';margin-bottom:6px;">🚶 ' + mins + ' min à pied depuis ' + m.name + '</div>'
+          + '<a href="' + lieu.mapsUrl + '" target="_blank" style="font-size:11px;color:' + lieu.color + ';">📍 Ouvrir dans Maps</a>'
+          + '</div>'
+        );
+        _markers[lieu.id].openPopup();
+      })
+      .catch(function() {
+        // En cas d'erreur réseau : ouvrir le popup sans le temps
+        _markers[lieu.id].openPopup();
+      });
   }
 
   function initPlan() {
@@ -1953,21 +2013,15 @@ if('serviceWorker' in navigator){
     var mapEl = document.getElementById('plan-map');
     if (!mapEl) return;
 
-    // Centre sur le milieu de tous les lieux
-    _map = L.map('plan-map', {zoomControl: true, attributionControl: false}).setView([48.857, 2.408], 13);
+    _map = L.map('plan-map', { zoomControl: true, attributionControl: false }).setView([48.857, 2.408], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(_map);
+    L.control.attribution({ prefix: '\u00a9 <a href="https://openstreetmap.org">OSM</a>' }).addTo(_map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '\u00a9 OpenStreetMap'
-    }).addTo(_map);
-
-    // Discret attributionControl en bas à droite
-    L.control.attribution({prefix: '\u00a9 <a href="https://openstreetmap.org">OSM</a>'}).addTo(_map);
-
+    // Marqueurs venues
     LIEUX.forEach(function(lieu) {
-      var marker = L.marker([lieu.lat, lieu.lng], {icon: makePinIcon(lieu.color)}).addTo(_map);
+      var marker = L.marker([lieu.lat, lieu.lng], { icon: makePinIcon(lieu.color) }).addTo(_map);
       marker.bindPopup(
-        '<div style="font-family:sans-serif;min-width:140px;">'
+        '<div style="font-family:sans-serif;min-width:150px;">'
         + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:' + lieu.color + ';font-weight:700;margin-bottom:3px;">' + lieu.label + '</div>'
         + '<div style="font-size:13px;font-weight:600;margin-bottom:2px;">' + lieu.name + '</div>'
         + '<div style="font-size:11px;color:#666;margin-bottom:6px;">' + lieu.addr + '<br/>' + lieu.sub + '</div>'
@@ -1989,20 +2043,18 @@ if('serviceWorker' in navigator){
           + '<span class="plan-btn-name">' + lieu.name + '</span>'
           + '<span class="plan-btn-addr">' + lieu.addr + '</span>';
         btn.addEventListener('click', function() {
-          _map.flyTo([lieu.lat, lieu.lng], 16, {duration: 1});
-          _markers[lieu.id].openPopup();
+          _map.flyTo([lieu.lat, lieu.lng], 16, { duration: 1 });
+          afficherItineraire(lieu);
         });
         btnsEl.appendChild(btn);
       });
     }
   }
 
-  // Initialiser quand l'onglet Plan devient visible
   document.addEventListener('DOMContentLoaded', function() {
     var navBtn = document.getElementById('nav-carte-lieux');
     if (navBtn) {
       navBtn.addEventListener('click', function() {
-        // Léger délai pour que le pane soit visible avant init Leaflet
         setTimeout(initPlan, 60);
       });
     }
