@@ -654,6 +654,46 @@ gel('modal-qr-close').addEventListener('click', fermerModalQR);
 gel('modal-qr-pointer').addEventListener('click', confirmerModalQRPointer);
 gel('modal-qr').addEventListener('click', function(e){if(e.target===this)fermerModalQR();});
 
+// Réception des inscriptions depuis l'iframe stages-pwa.html
+window.addEventListener('message', function(ev) {
+  if (!ev.data || ev.data.type !== 'stageInscription') return;
+  var d = ev.data.data;
+  if (!d || !d.inscriptionsParDate) return;
+
+  function normRole(r) { return (r||'').toLowerCase().indexOf('guideur') >= 0 ? 'guideur' : 'guidee'; }
+
+  d.inscriptionsParDate.forEach(function(di) {
+    var date  = di.date;
+    var slots = (di.stagesDetail   ||[]).map(function(s){ return s.type; });
+    var slotsP= (di.stagesPartDetail||[]).map(function(s){ return s.type; });
+
+    if (!adminData.stages[date]) adminData.stages[date] = {label: di.dateLabel, inscrits:[]};
+
+    adminData.stages[date].inscrits.push({
+      prenom:d.prenom, nom:d.nom, email:d.email, tel:d.telephone||'',
+      role:normRole(d.role), slots:slots, present:null,
+      montant:di.prixInscrit, attente:d.typeConfirmation==='attente',
+      partenaire:d.partenaire||'', emailPartenaire:d.partenaireEmail||''
+    });
+
+    if (d.situation==='avec-partenaire' && !d.memePersonne && d.partenaireEmail && slotsP.length) {
+      adminData.stages[date].inscrits.push({
+        prenom:d.partenairePrenom||'', nom:d.partenaireNom||'',
+        email:d.partenaireEmail, tel:d.partenaireTel||'',
+        role:normRole(d.rolePartenaire), slots:slotsP, present:null,
+        montant:di.prixPartenaire, attente:false,
+        partenaire:d.prenom+' '+d.nom, emailPartenaire:d.email
+      });
+    }
+  });
+
+  if (d.inscriptionsParDate.length) {
+    filtreStage     = d.inscriptionsParDate[0].date;
+    filtreStageSlot = 'technique';
+  }
+  renderTab();
+});
+
 // ================================================================
 // AUTH
 // ================================================================
