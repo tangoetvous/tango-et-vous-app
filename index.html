@@ -556,14 +556,15 @@
       }
       const color = getEventColor(e.subtype);
       const lbl   = getEventLabel(e.subtype);
-      html += `<div class="event-item">
+      const isStage = e.subtype === 'stage';
+      html += `<div class="event-item${isStage ? ' event-stage' : ''}"${isStage ? ` onclick="gotoStageInscription('${e.date}')" title="Cliquer pour s'inscrire"` : ''}>
         <div class="event-date-col">
           <div class="event-day">${d.getDate()}</div>
           <div class="event-month-lbl">${MOIS_COURT[d.getMonth()]}</div>
         </div>
         <div class="event-type-bar" style="background:${color}"></div>
         <div class="event-info">
-          <div class="event-type-lbl" style="color:${color}">${lbl}</div>
+          <div class="event-type-lbl" style="color:${color}">${lbl}${isStage ? ' <span style="font-size:9px;opacity:.7;">→ S\'inscrire</span>' : ''}</div>
           <div class="event-title">${e.titre}</div>
           <div class="event-sub">${e.heure}${e.lieu ? ' \u00b7 ' + e.lieu : ''}</div>
         </div>
@@ -766,6 +767,19 @@
   window.closePubModal = function() {
     $('pub-modal').classList.remove('open');
     $('pub-modal-backdrop').classList.remove('open');
+  };
+
+  // Clic sur un stage dans l'agenda → aller directement à l'inscription
+  window.gotoStageInscription = function(date) {
+    switchTab('stages');
+    setTimeout(() => {
+      const acc = document.querySelector(`#stages-list .acc-item[data-date="${date}"]`);
+      if (acc) {
+        document.querySelectorAll('#stages-list .acc-item.acc-open').forEach(i => i.classList.remove('acc-open'));
+        acc.classList.add('acc-open');
+        acc.scrollIntoView({behavior:'smooth', block:'start'});
+      }
+    }, 80);
   };
 
   // ================================================================
@@ -1256,7 +1270,7 @@ a{color:var(--gold);text-decoration:none;}
 /* Statut & dates */
 .carte-meta{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
 .meta-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
-.meta-key{color:var(--text-dim);}
+.meta-key{color:var(--text);}
 .meta-val{color:var(--text);font-weight:600;}
 
 .statut-pill{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:600;}
@@ -1411,8 +1425,8 @@ a{color:var(--gold);text-decoration:none;}
 }
 .agenda-filters::-webkit-scrollbar{display:none;}
 .agenda-filter-btn{
-  background:var(--surface2);border:1px solid var(--border);
-  color:var(--text-dim);padding:6px 14px;border-radius:20px;
+  background:#fff;border:1px solid #bbb;
+  color:#111;padding:6px 14px;border-radius:20px;
   font-size:12px;cursor:pointer;white-space:nowrap;
   font-family:var(--font-body);transition:all .2s;flex-shrink:0;
 }
@@ -1434,7 +1448,9 @@ a{color:var(--gold);text-decoration:none;}
 .event-info{flex:1;min-width:0;}
 .event-type-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:2px;}
 .event-title{font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.event-sub{font-size:11px;color:var(--gold);margin-top:1px;}
+.event-sub{font-size:13px;color:var(--gold);margin-top:2px;font-weight:500;}
+.event-item.event-stage{cursor:pointer;}
+.event-item.event-stage:hover{background:rgba(212,175,55,.06);}
 
 /* ================================================================
    STAGES
@@ -1482,7 +1498,7 @@ a{color:var(--gold);text-decoration:none;}
   border-radius:6px;padding:8px 10px;
 }
 .acc-slot-name{flex:1;font-size:13px;color:var(--text);}
-.acc-slot-heure{font-size:11px;color:var(--text-dim);}
+.acc-slot-heure{font-size:13px;color:var(--text);font-weight:600;}
 .acc-slot-tarif{
   font-size:12px;font-weight:700;color:var(--gold);
   background:#1f1a00;padding:2px 7px;border-radius:4px;
@@ -1504,16 +1520,17 @@ a{color:var(--gold);text-decoration:none;}
    PUBLICATIONS
    ================================================================ */
 .pub-card{
-  margin:12px 20px;background:var(--surface);
-  border:1px solid var(--border);border-radius:var(--radius);padding:16px;
+  margin:12px 20px;background:#ffffff;
+  border:1px solid #ddd;border-radius:var(--radius);padding:18px;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);
 }
 .pub-cat{
   font-size:9px;letter-spacing:2px;text-transform:uppercase;
-  color:var(--gold);font-weight:700;margin-bottom:6px;
+  color:#6b1a1a;font-weight:700;margin-bottom:6px;
 }
-.pub-titre{font-size:15px;color:var(--text);margin-bottom:7px;line-height:1.4;font-weight:600;}
-.pub-extrait{font-size:13px;color:var(--text-dim);line-height:1.6;}
-.pub-date{font-size:11px;color:var(--text-faint);margin-top:10px;}
+.pub-titre{font-size:17px;color:#111;margin-bottom:8px;line-height:1.4;font-weight:700;}
+.pub-extrait{font-size:14px;color:#444;line-height:1.7;}
+.pub-date{font-size:12px;color:#888;margin-top:10px;}
 
 /* ================================================================
    CONTACT
@@ -1532,9 +1549,9 @@ a{color:var(--gold);text-decoration:none;}
   font-size:20px;flex-shrink:0;
 }
 .contact-info{flex:1;}
-.contact-label{font-size:11px;letter-spacing:1px;color:var(--text-faint);text-transform:uppercase;margin-bottom:3px;}
-.contact-val{font-size:14px;color:var(--gold);}
-.contact-sub{font-size:11px;color:var(--text-faint);margin-top:2px;}
+.contact-label{font-size:12px;letter-spacing:1px;color:var(--text);text-transform:uppercase;margin-bottom:3px;}
+.contact-val{font-size:15px;color:var(--gold);font-weight:600;}
+.contact-sub{font-size:12px;color:var(--text);margin-top:2px;}
 .service-card{
   margin:12px 20px;background:var(--surface);
   border:1px solid var(--border);border-radius:var(--radius);
@@ -1677,7 +1694,7 @@ a{color:var(--gold);text-decoration:none;}
 .plan-btn:hover{filter:brightness(1.15);}
 .plan-btn-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:3px;}
 .plan-btn-name{font-size:12px;color:var(--text);font-weight:600;margin-bottom:1px;}
-.plan-btn-addr{font-size:10px;color:var(--gold);}
+.plan-btn-addr{font-size:12px;color:var(--gold);line-height:1.4;}
 .transport-tooltip{
   background:#1a1a2e!important;color:#fff!important;
   border:1px solid rgba(255,255,255,.25)!important;
