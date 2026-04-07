@@ -494,7 +494,7 @@ var _confirmModalCb = null;
 var MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 var DOW_LONG = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 var PAI_LBL  = {cb1x:'CB 1×',cb3x:'CB 3×',especes:'Espèces',cheque:'Chèque',virement1x:'Virement 1×',virement3x:'Virement 3×'};
-var TARIFS_DEFAUT = {carte10:170,carte10_reduit:150,unitaire_paris:20,unitaire_paris_reduit:17,forfait_paris:495,forfait_paris_reduit:425,forfait_vincennes:435,forfait_vincennes_reduit:340,forfait_2cours:790,forfait_2cours_reduit:640,forfait_pv_di:740,forfait_pv_id:740,adhesion_lrp:10};
+var TARIFS_DEFAUT = {carte10:170,carte10_reduit:150,unitaire_paris:20,unitaire_paris_reduit:17,forfait_paris:495,forfait_paris_reduit:425,forfait_vincennes:435,forfait_vincennes_reduit:340,forfait_2cours:790,forfait_2cours_reduit:640,forfait_pv_di:740,forfait_pv_id:740,adhesion_lrp:10,sorano_vinc:36,sorano_vinc_m16:26,sorano_ext:45,sorano_ext_m16:35};
 var TARIFS = Object.assign({}, TARIFS_DEFAUT);
 
 function gel(id) { return document.getElementById(id); }
@@ -845,7 +845,7 @@ function sauverTarifs(btn) {
   if (!saison || !dateEffet) { if(err){err.textContent='Saison et date d\'effet requis.';err.style.display='block';} return; }
   if(err) err.style.display='none';
   var tarifs = {};
-  var CHAMPS = ['carte10','carte10_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours','forfait_2cours_reduit','forfait_pv_di','forfait_pv_id','adhesion_lrp'];
+  var CHAMPS = ['carte10','carte10_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours','forfait_2cours_reduit','forfait_pv_di','forfait_pv_id','adhesion_lrp','sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16'];
   var ok = true;
   CHAMPS.forEach(function(k) {
     var inp = gel('tr-'+k);
@@ -935,13 +935,19 @@ function renderTarifs() {
     +row('Forfait 2 cours Paris','forfait_2cours','forfait_2cours_reduit')
     +row('Paris Déb + Vincennes Int','forfait_pv_di',null)
     +row('Paris Int + Vincennes Déb','forfait_pv_id',null)
-    +section('Adhésion')
+    +section('Adhésions')
     +row('Adhésion Le Regard Se Pose','adhesion_lrp',null)
+    +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Adhésion Sorano <span style="font-style:italic;">(à régler directement à Sorano — cours Vincennes uniquement)</span></td></tr>'
+    +row('Vincennois — 16 ans et +','sorano_vinc',null)
+    +row('Vincennois — moins de 16 ans','sorano_vinc_m16',null)
+    +row('Extérieur — 16 ans et +','sorano_ext',null)
+    +row('Extérieur — moins de 16 ans','sorano_ext_m16',null)
     +'</tbody></table></div>'
     +'<div style="margin-top:20px;padding:12px;background:var(--s3);border-radius:8px;font-size:12px;color:var(--dim);">'
     +'<b style="color:var(--text);">Tarif réduit</b> — Applicable aux personnes de moins de 26 ans, étudiants, demandeurs d\'emploi (sur justificatif).'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Le Regard Se Pose</b> — Requise pour toutes les formules sauf cours à l\'unité.'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Cours à l\'unité</b> — Paris uniquement. Sans adhésion LRP.'
+    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Sorano</b> — Cours Vincennes uniquement. Tarifée selon âge et statut vincennois. Réglée directement à Sorano.'
     +'</div>'
     +'</div>';
   return h;
