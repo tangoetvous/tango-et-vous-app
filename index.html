@@ -405,105 +405,18 @@
         </div>`;
       return;
     }
-    const nom   = eleveData.eleve.nom;
-    const email = eleveData.eleve.email;
-    const preinscSuccess = $('preinsc-success');
-    if (preinscSuccess && preinscSuccess.classList.contains('show')) return; // already submitted
-    pane.innerHTML = `<div class="tab-section-title">Pr\u00e9-inscription 2026\u20132027</div>
-      <div class="preinscription-info">\uD83D\uDCC5 La p\u00e9riode de pr\u00e9-inscription est ouverte jusqu\u2019au 31 ao\u00fbt.<br/>Remplissez ce formulaire pour r\u00e9server votre place.</div>
-      <div style="margin:12px 20px;">
-        <div id="preinsc-success" class="form-success"></div>
-        <div id="preinsc-form">
-          <div class="form-field">
-            <label>Pr\u00e9nom &amp; Nom</label>
-            <input type="text" id="pi-nom" value="${nom}" placeholder="Pr\u00e9nom Nom"/>
-          </div>
-          <div class="form-field">
-            <label>Email</label>
-            <input type="email" id="pi-email" value="${email}" placeholder="votre@email.com"/>
-          </div>
-          <div class="form-field">
-            <label>Ville souhait\u00e9e</label>
-            <select id="pi-ville">
-              <option value="">— Choisir —</option>
-              <option>Paris</option>
-              <option>Vincennes</option>
-              <option>Les deux</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label>Niveau</label>
-            <select id="pi-niveau">
-              <option value="">— Choisir —</option>
-              <option>D\u00e9butant(e)</option>
-              <option>Interm\u00e9diaire</option>
-              <option>Avanc\u00e9(e)</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label>R\u00f4le</label>
-            <div class="radio-group" id="pi-role-group">
-              <div class="radio-opt" data-val="guidee">\uD83D\uDC83 Guid\u00e9e</div>
-              <div class="radio-opt" data-val="guideur">\uD83D\uDD7A Guideur</div>
-            </div>
-          </div>
-          <div class="form-field">
-            <label>Situation</label>
-            <div class="radio-group" id="pi-sit-group">
-              <div class="radio-opt" data-val="seul">Seul(e)</div>
-              <div class="radio-opt" data-val="partenaire">Avec partenaire</div>
-            </div>
-          </div>
-          <div class="partner-section" id="pi-partner-section">
-            <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;">Partenaire</div>
-            <div class="form-field">
-              <label>Pr\u00e9nom &amp; Nom du partenaire</label>
-              <input type="text" id="pi-partner-nom" placeholder="Pr\u00e9nom Nom"/>
-            </div>
-            <div class="form-field">
-              <label>Email du partenaire</label>
-              <input type="email" id="pi-partner-email" placeholder="partenaire@email.com"/>
-            </div>
-          </div>
-          <div class="form-field">
-            <label>Message (facultatif)</label>
-            <textarea id="pi-msg" rows="3" placeholder="Questions, pr\u00e9cisions..."></textarea>
-          </div>
-          <button class="btn-submit-stage" id="pi-submit">Envoyer ma pr\u00e9-inscription</button>
-        </div>
-      </div>`;
-
-    // Wire up radio groups
-    ['pi-role-group','pi-sit-group'].forEach(groupId => {
-      document.querySelectorAll(`#${groupId} .radio-opt`).forEach(opt => {
-        opt.addEventListener('click', () => {
-          document.querySelectorAll(`#${groupId} .radio-opt`).forEach(o => o.classList.remove('selected'));
-          opt.classList.add('selected');
-          if (groupId === 'pi-sit-group') {
-            $('pi-partner-section').classList.toggle('show', opt.dataset.val === 'partenaire');
-          }
-        });
-      });
+    const eleve = eleveData.eleve || {};
+    const params = new URLSearchParams({
+      pwa: '1',
+      prenom: eleve.prenom || '',
+      nom: eleve.nom || '',
+      email: eleve.email || '',
+      tel: eleve.tel || ''
     });
-
-    $('pi-submit').addEventListener('click', () => {
-      const role = document.querySelector('#pi-role-group .radio-opt.selected');
-      const sit  = document.querySelector('#pi-sit-group .radio-opt.selected');
-      if (!role || !sit) { alert('Merci de s\u00e9lectionner votre r\u00f4le et votre situation.'); return; }
-      const isGuidee   = role.dataset.val === 'guidee';
-      const hasPartner = sit.dataset.val === 'partenaire';
-      let msg = '';
-      if (isGuidee && !hasPartner) {
-        msg = '\u2713 Votre demande est enregistr\u00e9e. Vous \u00eates en liste d\u2019attente \u2014 nous vous contacterons d\u00e8s qu\u2019une place est disponible.';
-      } else {
-        msg = '\u2713 Votre demande est confirm\u00e9e. Vous recevrez un email avec le lien AssoConnect pour finaliser votre inscription.';
-      }
-      if (!IS_DEMO) { /* submit to APPS_SCRIPT_URL */ }
-      const succ = $('preinsc-success');
-      succ.textContent = msg;
-      succ.classList.add('show');
-      $('preinsc-form').style.display = 'none';
-    });
+    const iframeSrc = 'inscription-cours.html?' + params.toString();
+    pane.innerHTML = `<div style="margin:-14px;">
+      <iframe src="${iframeSrc}" style="border:none;width:100%;height:900px;border-radius:8px;" title="Formulaire pr\u00e9-inscription cours"></iframe>
+    </div>`;
   }
 
   // ================================================================
@@ -1652,11 +1565,6 @@ a{color:var(--gold);text-decoration:none;}
 /* ================================================================
    PRE-INSCRIPTION TAB
    ================================================================ */
-.preinscription-info{
-  margin:12px 20px;padding:14px;background:#060d1a;
-  border:1px solid #1565C0;border-radius:8px;
-  font-size:13px;color:#7aaaff;line-height:1.6;
-}
 .preinscription-hidden-notice{
   margin:12px 20px;padding:14px;background:var(--surface2);
   border:1px solid var(--border);border-radius:8px;
