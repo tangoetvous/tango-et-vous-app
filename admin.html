@@ -473,6 +473,12 @@ var sousOngletCoursTango = 'tous'; // tous|attente_validation|valide|attente_pai
 var agendaMois      = new Date().getMonth();
 var agendaAnnee     = new Date().getFullYear();
 var agendaCats      = {paris:true, vincennes:true, stage:true, milonga:true};
+var sousOngletAgenda = 'calendrier'; // 'calendrier' | 'modif'
+// Modifications d'occurrences : annulations, reports, changements horaire/lieu, notes
+var agendaModifs = [
+  {id:'AM001', date:'2026-05-07', type:'paris', action:'annule', note:'Cours annulé — Marc indisponible', newDate:'', newHeure:'', newLieu:''},
+  {id:'AM002', date:'2026-06-07', type:'milonga', action:'modif', note:'Lieu changé ce soir', newDate:'', newHeure:'21h30', newLieu:'Salle des fêtes, 12 rue Gambetta, Paris 20e'}
+];
 var _dateModalCb    = null;
 var _confirmModalCb = null;
 
@@ -732,6 +738,10 @@ function bindTabEvents(el) {
     var b = e.target.closest('[data-cat-ag]');
     if (b) { agendaCats[b.dataset.catAg]=!agendaCats[b.dataset.catAg]; renderTab(); }
   });
+  el.addEventListener('click', function(e) {
+    var bag = e.target.closest('[data-sous-ag]');
+    if (bag) { sousOngletAgenda = bag.dataset.sousAg; renderTab(); return; }
+  });
   // Select change
   var selType = el.querySelector('[data-change-type]');
   if (selType) selType.addEventListener('change', function() {
@@ -890,6 +900,12 @@ function handleAction(action, btn) {
     case 'upload-click':
       var f = document.getElementById('pub-file');
       if (f) f.click();
+      break;
+    case 'sauver-modif-agenda':
+      sauverModifAgenda();
+      break;
+    case 'suppr-modif-agenda':
+      supprimerModifAgenda(btn.dataset.id||'');
       break;
   }
 }
@@ -1762,6 +1778,15 @@ function getEventsForDate(dateStr) {
   return evts;
 }
 function renderAgenda() {
+  var h = '<div class="sub-tabs">'
+    +'<button class="sub-tab'+(sousOngletAgenda==='calendrier'?' active':'')+'" data-sous-ag="calendrier">📅 Calendrier</button>'
+    +'<button class="sub-tab'+(sousOngletAgenda==='modif'?' active':'')+'" data-sous-ag="modif">✏️ Modifier / Annuler</button>'
+    +'</div>';
+  if (sousOngletAgenda === 'modif') return h + renderAgendaModif();
+  return h + renderAgendaCalendrier();
+}
+
+function renderAgendaCalendrier() {
   var h='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:12px;">Agenda — 12 prochains mois</div>'
     +'<div class="cat-pills">'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.paris?'#122840':'transparent')+';border-color:'+(agendaCats.paris?'#60b0ff':'var(--border)')+';color:'+(agendaCats.paris?'#60b0ff':'var(--dim)')+';" data-cat-ag="paris">🎓 Paris</button>'
@@ -1776,7 +1801,8 @@ function renderAgenda() {
   var d=new Date(debut), hasEvents=false, currentMoisAff=-1;
   while(d<=finDate){
     var ds=toISO(d), evts=getEventsForDate(ds);
-    if(evts.length){
+    var modifsDuJour = agendaModifs.filter(function(m){ return m.date===ds; });
+    if(evts.length || modifsDuJour.length){
       hasEvents=true;
       // En-tête de mois
       if(d.getMonth()!==currentMoisAff){
@@ -1786,11 +1812,89 @@ function renderAgenda() {
       h+='<div class="agenda-day-hdr"><div class="agenda-day-num" style="'+(ds===todayStr?'color:var(--gold)':'')+'">'+d.getDate()+'</div><div class="agenda-day-lbl">'+DOW_LONG[d.getDay()]+'</div>'+(ds===todayStr?'<span class="pill pill-gold" style="font-size:8px;">Aujourd\'hui</span>':'')+'</div>';
       var EVT_SUB={'cours-paris':'Espace Danse Studio','cours-vinc':'Espace Sorano, Vincennes',stage:'Centre Kim Kan, Paris 20e',milonga:'Paris'};
       evts.forEach(function(e){h+='<div class="agenda-event ae-'+e.cat+'"><div><div class="ae-titre">'+(e.heure!=='—'?e.heure+' — ':'')+e.titre+'</div><div class="ae-sub">'+(EVT_SUB[e.cat]||'')+'</div></div></div>';});
+      modifsDuJour.forEach(function(m){
+        var label = {annule:'🚫 Annulé', reporte:'📅 Reporté', modif:'✏️ Modifié', note:'📌 Note'}[m.action]||m.action;
+        h += '<div style="font-size:11px;padding:4px 10px;margin:2px 0;border-radius:4px;background:var(--warn-bg);border:1px solid var(--warn);color:var(--warn-text);">'
+          +label+(m.note?' — '+m.note:'')
+          +(m.newDate?' → '+fmtDate(m.newDate):'')
+          +(m.newHeure?' ⏰ '+m.newHeure:'')
+          +'</div>';
+      });
     }
     d.setDate(d.getDate()+1);
   }
   if(!hasEvents)h+='<div class="empty-state">Aucun événement sur les 12 prochains mois.</div>';
   return h;
+}
+
+function renderAgendaModif() {
+  var h = '<div class="card" style="margin-bottom:12px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Ajouter une modification</div>'
+    +'<div class="field"><label>Date de l\'occurrence</label><input type="date" id="am-date" value="'+today()+'"/></div>'
+    +'<div class="field"><label>Type de cours/événement</label><select id="am-type">'
+    +'<option value="paris">Cours Paris (jeudi)</option>'
+    +'<option value="vincennes">Cours Vincennes (lundi)</option>'
+    +'<option value="stage">Stage</option>'
+    +'<option value="milonga">Milonga</option>'
+    +'</select></div>'
+    +'<div class="field"><label>Action</label><select id="am-action">'
+    +'<option value="annule">Annuler cette occurrence</option>'
+    +'<option value="reporte">Reporter à une autre date</option>'
+    +'<option value="modif">Modifier horaire ou lieu</option>'
+    +'<option value="note">Ajouter une note</option>'
+    +'</select></div>'
+    +'<div class="field"><label>Message / note (affiché dans l\'agenda)</label><textarea id="am-note" rows="2" placeholder="Ex: Cours annulé — Marc indisponible. Prochain cours le 14 mai."></textarea></div>'
+    +'<div class="field"><label>Nouvelle date (si report)</label><input type="date" id="am-newdate"/></div>'
+    +'<div class="field"><label>Nouvel horaire (si modification)</label><input type="text" id="am-newheure" placeholder="Ex: 21h00"/></div>'
+    +'<div class="field"><label>Nouveau lieu (si modification)</label><input type="text" id="am-newlieu" placeholder="Ex: Salle des fêtes, 12 rue Gambetta"/></div>'
+    +'<div class="box-ok" id="am-ok" style="display:none;">✓ Modification enregistrée. Email envoyé aux élèves concernés (simulation).</div>'
+    +'<div class="btn-row"><button class="btn btn-gold" data-action="sauver-modif-agenda" style="flex:2;">✓ Appliquer</button></div>'
+    +'</div>';
+
+  if (agendaModifs.length) {
+    h += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--dim);margin:16px 0 8px;">Modifications enregistrées ('+agendaModifs.length+')</div>';
+    agendaModifs.slice().reverse().forEach(function(m) {
+      var typeLabel = {paris:'Cours Paris', vincennes:'Cours Vincennes', stage:'Stage', milonga:'Milonga'}[m.type]||m.type;
+      var actionLabel = {annule:'🚫 Annulé', reporte:'📅 Reporté', modif:'✏️ Modifié', note:'📌 Note'}[m.action]||m.action;
+      var pill = m.action==='annule'?'pill-err':m.action==='reporte'?'pill-warn':m.action==='note'?'pill-info':'pill-ok';
+      h += '<div class="card" style="padding:10px 12px;margin-bottom:6px;">'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">'
+        +'<span style="font-size:12px;font-weight:600;">'+fmtDate(m.date)+'</span>'
+        +'<span class="pill" style="font-size:8px;background:var(--s2);border-color:var(--border);color:var(--dim);">'+typeLabel+'</span>'
+        +'<span class="pill '+pill+'" style="font-size:8px;">'+actionLabel+'</span>'
+        +'<button class="btn btn-ghost" style="padding:2px 8px;font-size:10px;margin-left:auto;" data-action="suppr-modif-agenda" data-id="'+m.id+'">✕ Supprimer</button>'
+        +'</div>'
+        +(m.note?'<div style="font-size:12px;color:var(--dim);">'+m.note+'</div>':'')
+        +(m.newDate?'<div style="font-size:11px;color:var(--gold);">→ Reporté au '+fmtDate(m.newDate)+'</div>':'')
+        +(m.newHeure?'<div style="font-size:11px;color:var(--ok-text);">⏰ '+m.newHeure+'</div>':'')
+        +(m.newLieu?'<div style="font-size:11px;color:var(--info-text);">📍 '+m.newLieu+'</div>':'')
+        +'</div>';
+    });
+  } else {
+    h += '<div class="empty-state">Aucune modification enregistrée.</div>';
+  }
+  return h;
+}
+
+function sauverModifAgenda() {
+  var date = (gel('am-date')||{}).value||'';
+  var type = (gel('am-type')||{}).value||'paris';
+  var action = (gel('am-action')||{}).value||'note';
+  var note = ((gel('am-note')||{}).value||'').trim();
+  var newDate = (gel('am-newdate')||{}).value||'';
+  var newHeure = ((gel('am-newheure')||{}).value||'').trim();
+  var newLieu = ((gel('am-newlieu')||{}).value||'').trim();
+  if (!date) return;
+  agendaModifs.push({id:'AM'+Date.now(), date:date, type:type, action:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu});
+  var ok = gel('am-ok');
+  if (ok) { ok.style.display='block'; setTimeout(function(){ok.style.display='none';},3000); }
+  if (!IS_DEMO) postAS({action:'sauverModifAgenda', date:date, type:type, actionType:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu}).catch(function(){});
+  renderTab();
+}
+
+function supprimerModifAgenda(id) {
+  agendaModifs = agendaModifs.filter(function(m){ return m.id !== id; });
+  renderTab();
 }
 
 // ================================================================
