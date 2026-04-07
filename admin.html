@@ -875,7 +875,7 @@ function renderEssai() {
   var liste = adminData.essai||[];
   var h = '<div class="sub-tabs">'
     +'<button class="sub-tab'+(filtreEssai==='dates'?' active':'')+'" data-filt-essai="dates">Par date</button>'
-    +'<button class="sub-tab'+(filtreEssai==='attente'?' active':'')+'" data-filt-essai="attente">Guidées en attente</button>'
+    +'<button class="sub-tab'+(filtreEssai==='attente'?' active':'')+'" data-filt-essai="attente">Liste d&#39;attente</button>'
     +'<button class="sub-tab'+(filtreEssai==='pointage'?' active':'')+'" data-filt-essai="pointage">Pointage</button>'
     +'</div>';
   // Trier : date ASC, puis niveau (debutant avant intermediaire), puis rôle
@@ -886,15 +886,19 @@ function renderEssai() {
   });
 
   if (filtreEssai==='attente') {
-    var g = liste.filter(function(e){return e.role==='guidee'&&e.statut==='attente';});
-    if (!g.length) return h+'<div class="empty-state">Aucune guidée en attente.</div>';
+    // Liste d'attente : tous rôles avec statut===attente
+    var g = liste.filter(function(e){return e.statut==='attente';});
+    if (!g.length) return h+'<div class="empty-state">Aucune personne en attente.</div>';
     g.forEach(function(e) {
-      h += '<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+e.prenom+' '+e.nom+'</div>'
+      var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
+      h += '<div class="card hl-warn"><div class="card-top"><div>'
+        +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
+        +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
+        +e.prenom+' '+e.nom+'</div>'
         +'<div class="card-sub">'+e.email+' · '+e.ville+' · '+(e.niveau==='debutant'?'Débutant':'Intermédiaire')+'<br/>📅 '+fmtDate(e.date)+'</div>'
-        +partenaireTag(e.partenaire,'guidee')+'</div><span class="pill pill-warn">Attente</span></div>'
+        +partenaireTag(e.partenaire,e.role)+'</div><span class="pill pill-warn">Attente</span></div>'
         +'<div class="btn-row"><button class="btn btn-ok" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+e.date+'">✓ Confirmer</button>'
         +btnEmail(e.email,e.prenom+' '+e.nom)+'</div></div>';
-      // Fiche partenaire si existe
       if(e.partenaire&&e.emailPartenaire){
         h += '<div class="card" style="margin-left:16px;border-left:3px solid var(--border);margin-bottom:9px;"><div class="card-sub" style="font-size:10px;color:var(--dim);margin-bottom:4px;">↳ Partenaire</div><div class="card-nom">'+e.partenaire+'</div><div class="card-sub">'+e.emailPartenaire+'</div>'+btnEmail(e.emailPartenaire,e.partenaire)+'</div>';
       }
@@ -905,29 +909,48 @@ function renderEssai() {
     var grp = grouperParDate(liste);
     Object.keys(grp).sort().forEach(function(date) {
       var ins = grp[date];
-      var pres=ins.filter(function(e){return e.present===true;}).length;
-      var abs =ins.filter(function(e){return e.present===false;}).length;
-      var rest=ins.length-pres-abs;
+      // Interleave guideurs/guidées
+      var pGui=ins.filter(function(e){return e.role==='guideur';});
+      var pGde=ins.filter(function(e){return e.role==='guidee';});
+      var pAlt=[]; var pml=Math.max(pGui.length,pGde.length);
+      for(var pi=0;pi<pml;pi++){if(pi<pGui.length)pAlt.push(pGui[pi]);if(pi<pGde.length)pAlt.push(pGde[pi]);}
+      // Ajouter inscrits cours réguliers si disponibles
+      var coursTangoDate=(adminData.coursTango||[]).filter(function(c){return c.statut==='inscrit'&&c.date===date;});
+      var presCount=ins.filter(function(e){return e.present===true;}).length+(coursTangoDate.filter(function(c){return c.present===true;}).length);
+      var absCount=ins.filter(function(e){return e.present===false;}).length+(coursTangoDate.filter(function(c){return c.present===false;}).length);
+      var totalCount=ins.length+coursTangoDate.length;
+      var rest=totalCount-presCount-absCount;
       var toutPointe = rest===0;
-      h += '<div class="section-hdr">'+fmtDate(date)+' — ✓'+pres+' ✗'+abs+' ?'+rest+'</div>';
-      ins.forEach(function(e) {
+      h += '<div class="section-hdr">'+fmtDate(date)+' — ✓'+presCount+' ✗'+absCount+' ?'+rest+'</div>';
+      pAlt.forEach(function(e) {
         var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
-        h += '<div class="point-row"><div><div class="point-nom">'+e.prenom+' '+e.nom+'</div>'
+        h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+e.prenom+' '+e.nom+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · avec '+e.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:6px;align-items:center;">'
-          +'<span class="pill '+rcls+'">'+e.role+'</span>'
+          +(e.email1Ok===true?'<span class="pill pill-ok" style="font-size:8px;">✉️</span>':'')
+          +(e.presenceConfirmee===true?'<span class="pill pill-ok" style="font-size:8px;">✓Conf.</span>':'')
+          +'<span class="pill '+rcls+'" style="font-size:8px;">'+e.role+'</span>'
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
           +'</div></div>';
       });
+      coursTangoDate.forEach(function(c) {
+        h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+c.prenom+' '+c.nom+'</div>'
+          +'<div class="point-sub">'+(c.ville||'')+'</div></div>'
+          +'<div style="display:flex;gap:6px;align-items:center;">'
+          +'<span class="pill pill-ok" style="font-size:8px;">Inscrit cours</span>'
+          +'<button class="btn-point btn-pres'+(c.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+date+'" data-email="'+c.email+'">✓</button>'
+          +'<button class="btn-point btn-abs'+(c.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+date+'" data-email="'+c.email+'">✗</button>'
+          +'</div></div>';
+      });
       h += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
-        +(toutPointe?'<button class="btn btn-ok" data-action="env-j1" data-date="'+date+'">✉️ Emails J+1</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d\'abord.</span>')
+        +(toutPointe?'<button class="btn btn-ok" data-action="env-j1" data-date="'+date+'">✉️ Emails J+1</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d&#39;abord.</span>')
         +'<span id="j1s-'+date+'" style="font-size:11px;margin-left:8px;"></span>'
         +'</div>';
     });
-    return h||'<div class="empty-state">Aucun cours d\'essai.</div>';
+    return h||'<div class="empty-state">Aucun cours d&#39;essai.</div>';
   }
-  // Grouper par date + niveau — vue compacte (point-row)
+  // Grouper par date + niveau — vue compacte (point-row) avec interleave
   var grpDateNiv = {};
   liste.forEach(function(e){
     var key=e.date+'|'+(e.niveau||'debutant');
@@ -935,20 +958,32 @@ function renderEssai() {
     grpDateNiv[key].ins.push(e);
   });
   var keys=Object.keys(grpDateNiv).sort();
-  if(!keys.length) return h+'<div class="empty-state">Aucun cours d\'essai.</div>';
+  if(!keys.length) return h+'<div class="empty-state">Aucun cours d&#39;essai.</div>';
   keys.forEach(function(key){
     var grp=grpDateNiv[key], ins=grp.ins;
-    var gui=ins.filter(function(e){return e.role==='guideur';}).length;
+    var guiConf=ins.filter(function(e){return e.role==='guideur'&&e.statut==='confirme';});
+    var guiAll=ins.filter(function(e){return e.role==='guideur';});
     var gde=ins.filter(function(e){return e.role==='guidee';}).length;
     var att=ins.filter(function(e){return e.statut==='attente';}).length;
     var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
+    var limiteGuideurs=guiConf.length>=22;
     h += '<div class="section-hdr">'
       +fmtDate(grp.date)+' — '+nivLbl
-      +'<span style="font-weight:400;color:var(--dim);margin-left:8px;">👨 '+gui+' · 👩 '+gde
-      +(att?' · <span style="color:var(--warn-text)">⏳ '+att+' att.</span>':'')+'</span></div>';
-    ins.forEach(function(e){
+      +'<span style="font-weight:400;color:var(--dim);margin-left:8px;">👨 '+guiAll.length+' · 👩 '+gde
+      +(att?' · <span style="color:var(--warn-text)">⏳ '+att+' att.</span>':'')+'</span>'
+      +(limiteGuideurs?' <span style="color:var(--warn-text);font-size:10px;">(limite 22 guideurs atteinte)</span>':'')
+      +'</div>';
+    // Interleave guideurs/guidées pour parité
+    var iGui=ins.filter(function(e){return e.role==='guideur';});
+    var iGde=ins.filter(function(e){return e.role==='guidee';});
+    var iAlt=[]; var ial=Math.max(iGui.length,iGde.length);
+    for(var ia=0;ia<ial;ia++){if(ia<iGui.length)iAlt.push(iGui[ia]);if(ia<iGde.length)iAlt.push(iGde[ia]);}
+    iAlt.forEach(function(e){
       var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-      var pc  =e.statut==='confirme'?'pill-ok':'pill-warn';
+      // Pour guideurs : si confirmedGuideurs<=22, afficher comme confirmé même si attente
+      var displayStatut=e.statut;
+      if(e.role==='guideur'&&e.statut==='attente'&&guiConf.length<22)displayStatut='confirme';
+      var pc=displayStatut==='confirme'?'pill-ok':'pill-warn';
       h += '<div class="point-row">'
         +'<div style="flex:1;min-width:0;">'
         +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
@@ -958,9 +993,9 @@ function renderEssai() {
         +'<div class="point-sub">'+e.email+(e.partenaire?' · avec '+e.partenaire:'')+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-        +'<span class="pill '+pc+'" style="font-size:8px;">'+(e.statut==='confirme'?'✓':'Att.')+'</span>'
-        +(e.role==='guidee'&&e.statut==='attente'
-          ?'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓</button>':'')
+        +'<span class="pill '+pc+'" style="font-size:8px;">'+(displayStatut==='confirme'?'✓':'Att.')+'</span>'
+        +(e.statut==='attente'
+          ?'<button class="btn-point btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓</button>':'')
         +btnEmail(e.email,e.prenom+' '+e.nom)
         +'</div></div>';
     });
@@ -1184,6 +1219,9 @@ function renderStages() {
     {id:'stage1',   lbl:'15h — Stage 1',   color:'var(--info-text)'},
     {id:'stage2',   lbl:'16h30 — Stage 2', color:'var(--guidee-text)'},
     {id:'pointage', lbl:'✓ Pointage',      color:'var(--ok-text)'},
+    {id:'demandes', lbl:'Demandes',         color:'var(--warn-text)'},
+    {id:'valides',  lbl:'Validés',          color:'var(--ok-text)'},
+    {id:'attente',  lbl:'Attente',          color:'var(--gold)'},
     {id:'inscrire', lbl:'✏️ Inscrire',     color:'var(--dim)'}
   ];
   h+='<div class="sub-tabs">';
@@ -1240,6 +1278,69 @@ function renderStages() {
     return h + renderFormulaireStageAdmin();
   }
 
+  if(filtreStageSlot==='demandes'){
+    // Vue demandes : tous les inscrits (attente et non-attente)
+    if(!ins.length) return h+'<div class="empty-state">Aucune demande.</div>';
+    ins.forEach(function(i){
+      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+      h+='<div class="card'+(i.attente?' hl-warn':'')+'"><div class="card-top"><div>'
+        +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
+        +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'
+        +i.prenom+' '+i.nom+'</div>'
+        +'<div class="card-sub">'+(i.slots||[]).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'<div class="card-sub">'+(i.montant||0)+'€</div>'
+        +'</div>'
+        +(i.attente?'<span class="pill pill-warn">attente</span>':'')
+        +'</div>'
+        +(i.attente?'<div class="btn-row"><button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button></div>':'')
+        +'</div>';
+    });
+    return h;
+  }
+
+  if(filtreStageSlot==='valides'){
+    // Vue validés : seulement non-attente
+    var valides=ins.filter(function(i){return !i.attente;});
+    if(!valides.length) return h+'<div class="empty-state">Aucun inscrit validé.</div>';
+    valides.forEach(function(i){
+      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+      h+='<div class="card"><div class="card-top"><div>'
+        +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
+        +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'
+        +i.prenom+' '+i.nom+'</div>'
+        +'<div class="card-sub">'+(i.slots||[]).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'<div class="card-sub">'+(i.montant||0)+'€</div>'
+        +'</div></div></div>';
+    });
+    return h;
+  }
+
+  if(filtreStageSlot==='attente'){
+    // Vue attente : seulement attente===true, groupé par créneau
+    var attenteIns=ins.filter(function(i){return i.attente===true;});
+    if(!attenteIns.length) return h+'<div class="empty-state">Aucun inscrit en attente.</div>';
+    var attSlotIds=['technique','stage1','stage2'];
+    var attSlotLbls={technique:'Technique',stage1:'Stage 1',stage2:'Stage 2'};
+    attSlotIds.forEach(function(sid){
+      var forSlot=attenteIns.filter(function(i){return i.slots&&i.slots.indexOf(sid)>=0;});
+      if(!forSlot.length) return;
+      h+='<div class="section-hdr">'+attSlotLbls[sid]+'</div>';
+      forSlot.forEach(function(i){
+        var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+        h+='<div class="card hl-warn"><div class="card-top"><div>'
+          +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
+          +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'
+          +i.prenom+' '+i.nom+'</div>'
+          +'<div class="card-sub">'+(i.slots||[]).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+          +'<div class="card-sub">'+(i.montant||0)+'€</div>'
+          +'</div><span class="pill pill-warn">attente</span></div>'
+          +'<div class="btn-row"><button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button></div>'
+          +'</div>';
+      });
+    });
+    return h;
+  }
+
   // Vue par créneau (technique / stage1 / stage2) — une ligne par personne
   var slotId = filtreStageSlot;
   var insSlot = ins.filter(function(i){ return !i.attente && i.slots && i.slots.indexOf(slotId)>=0; });
@@ -1263,38 +1364,91 @@ function renderStages() {
         +'</div>'
         +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
         +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓</button>'
-        +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✕</button>'
+        +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="'+slotId+'">✕</button>'
         +'</div></div>';
     });
   }
 
   if(!insSlot.length) return h+'<div class="empty-state">Aucun inscrit à ce créneau.</div>';
   h+='<div class="section-hdr">Inscrits ('+insSlot.length+')</div>';
-  insSlot.forEach(function(i){
-    var origIdx = ins.indexOf(i);
-    var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-    h+='<div class="point-row">'
-      +'<div style="flex:1;min-width:0;">'
-      +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+i.prenom+' '+i.nom
-      +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
-      +'<div class="point-sub">'+(i.slots||[]).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
-      +'</div>'
-      +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-      +(i.email?btnEmail(i.email,i.prenom+' '+i.nom):'')
-      +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✕</button>'
-      +'</div></div>';
-  });
+
+  // Pour stage1 et stage2 : interleave guideurs/guidées + boutons up/down
+  if(slotId==='stage1'||slotId==='stage2'){
+    var insGui=insSlot.filter(function(i){return i.role==='guideur';});
+    var insGde=insSlot.filter(function(i){return i.role==='guidee';});
+    var insAlt=[]; var ail=Math.max(insGui.length,insGde.length);
+    for(var ai=0;ai<ail;ai++){if(ai<insGui.length)insAlt.push(insGui[ai]);if(ai<insGde.length)insAlt.push(insGde[ai]);}
+    insAlt.forEach(function(i){
+      var origIdx=ins.indexOf(i);
+      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+      h+='<div class="point-row">'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+i.prenom+' '+i.nom
+        +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
+        +'<div class="point-sub">'+(i.slots||[]).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
+        +'<button class="btn-point" style="font-size:10px;padding:2px 5px;" data-action="stage-move-up" data-date="'+filtreStage+'" data-idx="'+origIdx+'">▲</button>'
+        +'<button class="btn-point" style="font-size:10px;padding:2px 5px;" data-action="stage-move-down" data-date="'+filtreStage+'" data-idx="'+origIdx+'">▼</button>'
+        +(i.email?btnEmail(i.email,i.prenom+' '+i.nom):'')
+        +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="'+slotId+'">✕</button>'
+        +'</div></div>';
+    });
+  } else {
+    insSlot.forEach(function(i){
+      var origIdx = ins.indexOf(i);
+      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+      h+='<div class="point-row">'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+i.prenom+' '+i.nom
+        +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
+        +'<div class="point-sub">'+(i.slots||[]).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+        +(i.email?btnEmail(i.email,i.prenom+' '+i.nom):'')
+        +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="'+slotId+'">✕</button>'
+        +'</div></div>';
+    });
+  }
   return h;
 }
 
-function annulerStageInscrit(date, idx, btn) {
+function annulerStageInscrit(date, idx, slot, btn) {
   btn.disabled=true;
   if(IS_DEMO){
     var st=adminData.stages&&adminData.stages[date];
-    if(st&&st.inscrits)st.inscrits.splice(idx,1);
+    if(!st||!st.inscrits){renderTab();return;}
+    var person=st.inscrits[idx];
+    if(!person){renderTab();return;}
+    var personSlots=person.slots||[];
+    if(!slot||personSlots.length<=1){
+      // Supprimer la personne entièrement
+      st.inscrits.splice(idx,1);
+    } else {
+      // Retirer seulement ce créneau
+      var si=personSlots.indexOf(slot);
+      if(si>=0)personSlots.splice(si,1);
+      person.slots=personSlots;
+      // Recalculer le montant
+      var mont=0;
+      personSlots.forEach(function(s){
+        if(s==='technique')mont+=20;
+        else if(s==='stage1'||s==='stage2')mont+=25;
+      });
+      person.montant=mont;
+    }
     renderTab(); return;
   }
-  postAS({action:'annulerStageInscrit',date:date,idx:idx}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+  postAS({action:'annulerStageInscrit',date:date,idx:idx,slot:slot}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+}
+
+function stageMoveInsrit(date, idx, dir) {
+  var ins = adminData.stages && adminData.stages[date] && adminData.stages[date].inscrits;
+  if(!ins) return;
+  var newIdx = idx + dir;
+  if(newIdx<0 || newIdx>=ins.length) return;
+  var tmp = ins[idx]; ins[idx]=ins[newIdx]; ins[newIdx]=tmp;
+  renderTab();
 }
 
 function renderFormulaireStageAdmin() {
