@@ -187,6 +187,15 @@ select option{background:var(--s2);}
 const ASSO_CONNECT_URL = 'https://le-regard-se-pose.assoconnect.com';
 const IS_DEMO = true; // Passer à false après déploiement Apps Script
 
+// Tarifs — lus depuis localStorage si l'admin les a mis à jour, sinon valeurs par défaut
+const TARIFS_BASE = {carte10:170,carte10_reduit:150,unitaire_paris:20,unitaire_paris_reduit:17,forfait_paris:495,forfait_paris_reduit:425,forfait_vincennes:435,forfait_vincennes_reduit:340,forfait_2cours:790,forfait_2cours_reduit:640,forfait_pv_di:740,forfait_pv_id:740,adhesion_lrp:10};
+const T = (function() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('tev_tarifs_actifs')||'null');
+    return stored ? Object.assign({}, TARIFS_BASE, stored) : Object.assign({}, TARIFS_BASE);
+  } catch(e) { return Object.assign({}, TARIFS_BASE); }
+})();
+
 // ================================================================
 // DONNÉES
 // ================================================================
@@ -628,24 +637,24 @@ function calcTarif() {
     const nb2=villes.length,both2P=nb2===2&&hasP&&!hasV,both2V=nb2===2&&hasV&&!hasP,mix=hasP&&hasV;
 
     if(both2P){
-      if(formule==='carte') add('Carte 10 cours (couvre 2 cours) — Paris',r?150:170);
-      else if(formule==='unitaire'){ add('Cours à l\'unité Paris (×2)',r?34:40); }
-      else add('Forfait annuel 2 cours — Paris',r?660:760);
+      if(formule==='carte') add('Carte 10 cours (couvre 2 cours) — Paris',r?T.carte10_reduit:T.carte10);
+      else if(formule==='unitaire'){ add('Cours à l\'unité Paris (×2)',r?T.unitaire_paris_reduit*2:T.unitaire_paris*2); }
+      else add('Forfait annuel 2 cours — Paris',r?T.forfait_2cours_reduit:T.forfait_2cours);
     }
-    else if(both2V){ add('Forfait annuel 2 cours — Vincennes',r?660:760); }
+    else if(both2V){ add('Forfait annuel 2 cours — Vincennes',r?T.forfait_2cours_reduit:T.forfait_2cours); }
     else if(mix){
       const fm=formule==='vincarte'?'vincarte':'forfait2';
-      if(fm==='vincarte'){ add('Carte 10 cours — Paris',r?150:170); add('Forfait annuel — Vincennes',r?365:435); }
-      else add('Forfait annuel 2 cours — Paris + Vincennes',r?660:760);
+      if(fm==='vincarte'){ add('Carte 10 cours — Paris',r?T.carte10_reduit:T.carte10); add('Forfait annuel — Vincennes',r?T.forfait_vincennes_reduit:T.forfait_vincennes); }
+      else add('Forfait annuel 2 cours — Paris + Vincennes',r?T.forfait_2cours_reduit:T.forfait_2cours);
     }
     else if(hasP){
-      if(formule==='carte') add('Carte 10 cours — Paris',r?150:170);
-      else if(formule==='unitaire') add('Cours à l\'unité — Paris',r?17:20);
-      else add('Forfait annuel — Paris',r?425:495);
+      if(formule==='carte') add('Carte 10 cours — Paris',r?T.carte10_reduit:T.carte10);
+      else if(formule==='unitaire') add('Cours à l\'unité — Paris',r?T.unitaire_paris_reduit:T.unitaire_paris);
+      else add('Forfait annuel — Paris',r?T.forfait_paris_reduit:T.forfait_paris);
     }
-    else if(hasV){ add('Forfait annuel — Vincennes',r?365:435); }
+    else if(hasV){ add('Forfait annuel — Vincennes',r?T.forfait_vincennes_reduit:T.forfait_vincennes); }
 
-    if(formule!=='unitaire') add('Adhésion Le Regard Se Pose',10);
+    if(formule!=='unitaire') add('Adhésion Le Regard Se Pose',T.adhesion_lrp);
     if(hasV){ const s=soranoCot(vinc,age); if(s!==null){ sorano==='oui'?addFree('Adhésion Sorano','Déjà réglée ✓'):add('Adhésion Sorano (à régler à Sorano)',s); }}
     return {lines,total};
   }

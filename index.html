@@ -878,6 +878,11 @@
       _showNotifDot('carte', '\uD83D\uDD14 Votre carte : ' + (d.utilises||0) + '/10 cours utilisés, ' + (d.restants||0) + ' restants');
       if (currentTab === 'carte') renderDashboard();
     }
+
+    if (msg.type === 'tarifsUpdate') {
+      // Mettre à jour tev_tarifs_actifs pour que inscription-cours.html en bénéficie
+      try { localStorage.setItem('tev_tarifs_actifs', JSON.stringify(msg.data)); } catch(e) {}
+    }
   }
 
   function _initAdminSync() {

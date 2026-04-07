@@ -262,6 +262,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <button class="tab-btn" data-tab="sorano">🏛 Sorano</button>
     <button class="tab-btn" data-tab="agenda">📅 Agenda</button>
     <button class="tab-btn" data-tab="publications">📝 Publis</button>
+    <button class="tab-btn" data-tab="tarifs">💶 Tarifs</button>
   </div>
   <div class="content" id="tab-content"><div class="spinner"></div></div>
 </div>
@@ -493,7 +494,8 @@ var _confirmModalCb = null;
 var MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 var DOW_LONG = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 var PAI_LBL  = {cb1x:'CB 1×',cb3x:'CB 3×',especes:'Espèces',cheque:'Chèque',virement1x:'Virement 1×',virement3x:'Virement 3×'};
-var TARIFS   = {carte10:170,carte10_reduit:150,unitaire_paris:20,unitaire_paris_reduit:17,forfait_paris:495,forfait_paris_reduit:425,forfait_vincennes:435,forfait_vincennes_reduit:340,forfait_2cours:790,forfait_2cours_reduit:640,forfait_pv_di:740,forfait_pv_id:740};
+var TARIFS_DEFAUT = {carte10:170,carte10_reduit:150,unitaire_paris:20,unitaire_paris_reduit:17,forfait_paris:495,forfait_paris_reduit:425,forfait_vincennes:435,forfait_vincennes_reduit:340,forfait_2cours:790,forfait_2cours_reduit:640,forfait_pv_di:740,forfait_pv_id:740,adhesion_lrp:10};
+var TARIFS = Object.assign({}, TARIFS_DEFAUT);
 
 function gel(id) { return document.getElementById(id); }
 function today()  { return new Date().toISOString().slice(0,10); }
@@ -819,6 +821,132 @@ window.addEventListener('message', function(ev) {
   bc.onmessage = function(ev) { traiterMsgInscription(ev.data, true); };
 })();
 
+// ================================================================
+// GESTION DES TARIFS
+// ================================================================
+function chargerTarifs() {
+  try {
+    var stored = JSON.parse(localStorage.getItem('tev_tarifs')||'null');
+    if (!stored || !stored.tarifs) return;
+    var dateEffet = stored.dateEffet||'';
+    if (!dateEffet || today() >= dateEffet) {
+      // Tarifs actifs : appliquer
+      Object.assign(TARIFS, stored.tarifs);
+      // Diffuser aussi vers inscription-cours.html
+      try { localStorage.setItem('tev_tarifs_actifs', JSON.stringify(stored.tarifs)); } catch(e){}
+    }
+    // Si dateEffet dans le futur : ne pas appliquer, juste conserver en attente
+  } catch(e) {}
+}
+function sauverTarifs(btn) {
+  var saison    = (gel('tr-saison')||{}).value||'';
+  var dateEffet = (gel('tr-date-effet')||{}).value||'';
+  var err = gel('tr-err');
+  if (!saison || !dateEffet) { if(err){err.textContent='Saison et date d\'effet requis.';err.style.display='block';} return; }
+  if(err) err.style.display='none';
+  var tarifs = {};
+  var CHAMPS = ['carte10','carte10_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours','forfait_2cours_reduit','forfait_pv_di','forfait_pv_id','adhesion_lrp'];
+  var ok = true;
+  CHAMPS.forEach(function(k) {
+    var inp = gel('tr-'+k);
+    var v = inp ? parseFloat(inp.value) : NaN;
+    if (isNaN(v)||v<0) { ok=false; if(inp) inp.style.borderColor='red'; }
+    else { tarifs[k]=v; if(inp) inp.style.borderColor=''; }
+  });
+  if (!ok) { if(err){err.textContent='Veuillez corriger les valeurs en rouge.';err.style.display='block';} return; }
+  var payload = {saison:saison, dateEffet:dateEffet, tarifs:tarifs, modifie:today()};
+  try { localStorage.setItem('tev_tarifs', JSON.stringify(payload)); } catch(e) {}
+  // Si dateEffet <= aujourd'hui : appliquer immédiatement
+  if (today() >= dateEffet) {
+    Object.assign(TARIFS, tarifs);
+    try { localStorage.setItem('tev_tarifs_actifs', JSON.stringify(tarifs)); } catch(e) {}
+    try {
+      if (window.BroadcastChannel) {
+        var bc = new BroadcastChannel('tev_admin_sync');
+        bc.postMessage({type:'tarifsUpdate', data:tarifs, ts:Date.now()});
+        bc.close();
+      }
+    } catch(e) {}
+  }
+  if (!IS_DEMO) { postAS({action:'sauverTarifs', payload:JSON.stringify(payload)}).catch(function(){}); }
+  if(btn) { btn.textContent='✓ Enregistré'; btn.disabled=true; setTimeout(function(){btn.textContent='💾 Enregistrer';btn.disabled=false;renderTab();},1800); }
+}
+function resetTarifs() {
+  try { localStorage.removeItem('tev_tarifs'); localStorage.removeItem('tev_tarifs_actifs'); } catch(e){}
+  Object.assign(TARIFS, TARIFS_DEFAUT);
+  renderTab();
+  afficherToast('Tarifs réinitialisés.');
+}
+function renderTarifs() {
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('tev_tarifs')||'null'); } catch(e){}
+  var t = stored&&stored.tarifs ? Object.assign({},TARIFS_DEFAUT,stored.tarifs) : Object.assign({},TARIFS);
+  var saison    = stored&&stored.saison    ? stored.saison    : '2025-2026';
+  var dateEffet = stored&&stored.dateEffet ? stored.dateEffet : '';
+  var modifie   = stored&&stored.modifie   ? stored.modifie   : '';
+  // Badge statut
+  var badge = '';
+  if (stored && stored.dateEffet) {
+    if (today() >= stored.dateEffet) {
+      badge = '<span class="pill pill-ok" style="font-size:12px;">✓ Actifs depuis le '+fmtDate(stored.dateEffet)+'</span>';
+    } else {
+      badge = '<span class="pill pill-warn" style="font-size:12px;">⏳ Programmés au '+fmtDate(stored.dateEffet)+'</span>';
+    }
+  } else {
+    badge = '<span class="pill" style="font-size:12px;background:var(--s3);color:var(--dim);">Tarifs par défaut</span>';
+  }
+  function row(label, keyNorm, keyRed) {
+    return '<tr>'
+      +'<td style="padding:8px 10px;color:var(--text);">'+label+'</td>'
+      +'<td style="padding:6px 8px;"><div style="display:flex;align-items:center;gap:4px;"><input type="number" id="tr-'+keyNorm+'" value="'+t[keyNorm]+'" min="0" style="width:75px;text-align:right;"> <span style="color:var(--dim);font-size:12px;">€</span></div></td>'
+      +(keyRed?'<td style="padding:6px 8px;"><div style="display:flex;align-items:center;gap:4px;"><input type="number" id="tr-'+keyRed+'" value="'+t[keyRed]+'" min="0" style="width:75px;text-align:right;"> <span style="color:var(--dim);font-size:12px;">€</span></div></td>':'<td style="padding:6px 8px;color:var(--dim);font-size:12px;">— (même tarif)</td>')
+      +'</tr>';
+  }
+  function section(title) {
+    return '<tr><td colspan="3" style="padding:14px 10px 6px;font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);">'+title+'</td></tr>';
+  }
+  var h = '<div class="ae-hd" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">'
+    +'<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:15px;font-weight:600;">Tarifs</span>'+badge+'</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button class="btn btn-ghost" data-action="reset-tarifs" style="font-size:12px;">↺ Réinitialiser</button>'
+    +'<button class="btn btn-gold" data-action="sauver-tarifs">💾 Enregistrer</button>'
+    +'</div></div>'
+    +'<div class="ae-body">'
+    +'<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">'
+    +'<div class="field" style="flex:1;min-width:130px;"><label>Saison</label><input type="text" id="tr-saison" value="'+saison+'" placeholder="ex: 2026-2027"></div>'
+    +'<div class="field" style="flex:1;min-width:150px;"><label>Date d\'application</label><input type="date" id="tr-date-effet" value="'+dateEffet+'"></div>'
+    +(modifie?'<div style="font-size:11px;color:var(--dim);align-self:flex-end;padding-bottom:6px;">Modifié le '+fmtDate(modifie)+'</div>':'')
+    +'</div>'
+    +'<div class="box-info" style="margin-bottom:14px;">ℹ️ Les tarifs s\'activent automatiquement à la date d\'application. Enregistrez avant le 1ᵉʳ mai pour chaque saison.</div>'
+    +'<div class="box-err" id="tr-err"></div>'
+    +'<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">'
+    +'<thead><tr>'
+    +'<th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Formule</th>'
+    +'<th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Tarif normal</th>'
+    +'<th style="padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Tarif réduit <span style="font-style:italic;font-size:10px;">(−26 ans, situations spéciales)</span></th>'
+    +'</tr></thead><tbody>'
+    +section('Paris')
+    +row('Forfait annuel','forfait_paris','forfait_paris_reduit')
+    +row('Carte 10 cours','carte10','carte10_reduit')
+    +row('Cours à l\'unité','unitaire_paris','unitaire_paris_reduit')
+    +section('Vincennes')
+    +row('Forfait annuel','forfait_vincennes','forfait_vincennes_reduit')
+    +section('Multi-cours')
+    +row('Forfait 2 cours Paris','forfait_2cours','forfait_2cours_reduit')
+    +row('Paris Déb + Vincennes Int','forfait_pv_di',null)
+    +row('Paris Int + Vincennes Déb','forfait_pv_id',null)
+    +section('Adhésion')
+    +row('Adhésion Le Regard Se Pose','adhesion_lrp',null)
+    +'</tbody></table></div>'
+    +'<div style="margin-top:20px;padding:12px;background:var(--s3);border-radius:8px;font-size:12px;color:var(--dim);">'
+    +'<b style="color:var(--text);">Tarif réduit</b> — Applicable aux personnes de moins de 26 ans, étudiants, demandeurs d\'emploi (sur justificatif).'
+    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Le Regard Se Pose</b> — Requise pour toutes les formules sauf cours à l\'unité.'
+    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Cours à l\'unité</b> — Paris uniquement. Sans adhésion LRP.'
+    +'</div>'
+    +'</div>';
+  return h;
+}
+
 // Polling Apps Script pour nouveaux essais Wix (toutes les 60s, hors démo)
 var _essaiPollTimer = null;
 function demarrerPollEssais() {
@@ -908,6 +1036,7 @@ function demarrerApp(email) {
   adminData = JSON.parse(JSON.stringify(DEMO_DATA));
   recalcStats();
   filtreStage = Object.keys(adminData.stages)[0]||'';
+  chargerTarifs();
   gel('login-screen').style.display='none';
   gel('app').style.display='block';
   traiterInscriptionsEnAttente();
@@ -958,6 +1087,7 @@ function renderTab() {
     else if (currentTab==='sorano')       html=renderSorano();
     else if (currentTab==='agenda')       html=renderAgenda();
     else if (currentTab==='publications') html=renderPublications();
+    else if (currentTab==='tarifs')       html=renderTarifs();
     el.innerHTML = html;
     bindTabEvents(el);
   }, 40);
@@ -1199,6 +1329,12 @@ function handleAction(action, btn) {
       break;
     case 'ajouter-dates-lot':
       ajouterDatesLot();
+      break;
+    case 'sauver-tarifs':
+      sauverTarifs(btn);
+      break;
+    case 'reset-tarifs':
+      ouvrirModalConfirm('Réinitialiser avec les tarifs par défaut ?', function(){ resetTarifs(); });
       break;
   }
 }
