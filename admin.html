@@ -113,7 +113,8 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .agenda-day-num{font-size:22px;font-weight:700;color:var(--text);line-height:1;}
 .agenda-day-lbl{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;}
 .agenda-event{display:flex;gap:10px;margin-bottom:6px;padding:8px 10px;border-radius:8px;border-left:3px solid;}
-.ae-cours{background:var(--guideur-bg);border-color:var(--guideur);}
+.ae-cours-paris{background:#0a1a2a;border-color:#4a9eff;}
+.ae-cours-vinc{background:#0a1a1a;border-color:#2dd4bf;}
 .ae-stage{background:var(--gold-pale);border-color:var(--gold);}
 .ae-milonga{background:var(--guidee-bg);border-color:var(--guidee);}
 .ae-titre{font-size:12px;font-weight:600;color:var(--text);}
@@ -157,6 +158,29 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <div class="modal-btns">
       <button class="modal-cancel" id="modal-confirm-cancel">Annuler</button>
       <button class="modal-ok" id="modal-confirm-ok">✓ Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal renouvellement carte -->
+<div class="modal-overlay" id="modal-renouveler">
+  <div class="modal-box">
+    <div class="modal-titre">↻ Renouveler la carte</div>
+    <div class="modal-msg" id="modal-ren-nom"></div>
+    <div style="margin:12px 0;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:8px;">Paiement</div>
+      <div style="display:flex;gap:8px;">
+        <label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">
+          <input type="radio" name="ren-paye" value="non" checked style="width:auto;padding:0;"> Non payé
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">
+          <input type="radio" name="ren-paye" value="oui" style="width:auto;padding:0;"> Payé
+        </label>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="modal-ren-cancel">Annuler</button>
+      <button class="modal-ok" id="modal-ren-ok">↻ Renouveler</button>
     </div>
   </div>
 </div>
@@ -376,12 +400,12 @@ var DEMO_DATA = {
     '2026-04-24': {label:'Vendredi 24 Avril 2026', inscrits:[
       {prenom:'Marie',      nom:'Dupont',      role:'guidee', slots:['technique','stage1'],        present:null,montant:45, attente:false,partenaire:'Jean Dupont',       emailPartenaire:'jean@ex.com',    email:'marie@ex.com'},
       {prenom:'Jean',       nom:'Dupont',      role:'guideur',slots:['technique','stage1'],        present:null,montant:45, attente:false,partenaire:'Marie Dupont',      emailPartenaire:'marie@ex.com',   email:'jean@ex.com'},
-      {prenom:'Thomas',     nom:'Bernard',     role:'guideur',slots:['stage1','stage2'],           present:null,montant:50, attente:false,partenaire:'',                  emailPartenaire:'',               email:'thomas@ex.com'},
+      {prenom:'Thomas',     nom:'Bernard',     role:'guideur',slots:['stage1','stage2'],           present:null,montant:45, attente:false,partenaire:'',                  emailPartenaire:'',               email:'thomas@ex.com'},
       {prenom:'Laure',      nom:'Simon',       role:'guidee', slots:['technique','stage1','stage2'],present:null,montant:60,attente:false,partenaire:'Paul Renard',       emailPartenaire:'paul@ex.com',    email:'laure@ex.com'},
       {prenom:'Paul',       nom:'Renard',      role:'guideur',slots:['technique','stage1','stage2'],present:null,montant:60,attente:false,partenaire:'Laure Simon',       emailPartenaire:'laure@ex.com',   email:'paul@ex.com'},
       {prenom:'Camille',    nom:'Roux',        role:'guidee', slots:['technique'],                 present:null,montant:20, attente:false,partenaire:'',                  emailPartenaire:'',               email:'camille@ex.com'},
       {prenom:'Luc',        nom:'Petit',       role:'guideur',slots:['stage1'],                    present:null,montant:25, attente:false,partenaire:'',                  emailPartenaire:'',               email:'luc@ex.com'},
-      {prenom:'Inès',       nom:'Blanc',       role:'guidee', slots:['stage1','stage2'],           present:null,montant:50, attente:false,partenaire:'',                  emailPartenaire:'',               email:'ines@ex.com'},
+      {prenom:'Inès',       nom:'Blanc',       role:'guidee', slots:['stage1','stage2'],           present:null,montant:45, attente:false,partenaire:'',                  emailPartenaire:'',               email:'ines@ex.com'},
       {prenom:'David',      nom:'Lecomte',     role:'guideur',slots:['stage1'],                    present:null,montant:25, attente:false,partenaire:'',                  emailPartenaire:'',               email:'david@ex.com'},
       {prenom:'Ana',        nom:'García',      role:'guidee', slots:['technique'],                 present:null,montant:20, attente:true, partenaire:'Carlos García',      emailPartenaire:'carlos@ex.com',  email:'ana@ex.com'},
       {prenom:'Carlos',     nom:'García',      role:'guideur',slots:['technique'],                 present:null,montant:20, attente:false,partenaire:'Ana García',         emailPartenaire:'ana@ex.com',     email:'carlos@ex.com'}
@@ -392,7 +416,7 @@ var DEMO_DATA = {
       {prenom:'Fatou',      nom:'Diallo',      role:'guidee', slots:['technique','stage1'],         present:null,montant:45, attente:false,partenaire:'Sébastien Vidal',   emailPartenaire:'seb@ex.com',     email:'fatou@ex.com'},
       {prenom:'Sébastien',  nom:'Vidal',       role:'guideur',slots:['technique','stage1'],         present:null,montant:45, attente:false,partenaire:'Fatou Diallo',       emailPartenaire:'fatou@ex.com',   email:'seb@ex.com'},
       {prenom:'Luc',        nom:'Petit',       role:'guideur',slots:['technique','stage1','stage2'],present:null,montant:60, attente:false,partenaire:'',                  emailPartenaire:'',               email:'luc@ex.com'},
-      {prenom:'Nathalie',   nom:'Perrin',      role:'guidee', slots:['stage1','stage2'],            present:null,montant:50, attente:false,partenaire:'',                  emailPartenaire:'',               email:'nathalie@ex.com'},
+      {prenom:'Nathalie',   nom:'Perrin',      role:'guidee', slots:['stage1','stage2'],            present:null,montant:45, attente:false,partenaire:'',                  emailPartenaire:'',               email:'nathalie@ex.com'},
       {prenom:'Marc',       nom:'Lefort',      role:'guideur',slots:['stage1'],                    present:null,montant:25, attente:false,partenaire:'',                  emailPartenaire:'',               email:'marc@ex.com'},
       {prenom:'Élise',      nom:'Moreau',      role:'guidee', slots:['technique'],                 present:null,montant:20, attente:true, partenaire:'Antoine Moreau',     emailPartenaire:'antoine@ex.com', email:'elise@ex.com'},
       {prenom:'Antoine',    nom:'Moreau',      role:'guideur',slots:['technique'],                 present:null,montant:20, attente:false,partenaire:'Élise Moreau',       emailPartenaire:'elise@ex.com',   email:'antoine@ex.com'}
@@ -521,11 +545,34 @@ function confirmerModalConfirm() {
   if (cb) cb();
 }
 
+var _renewModalCb = null;
+var _renewModalId = null;
+function ouvrirModalRenouveler(id, nom) {
+  gel('modal-ren-nom').textContent = nom || '';
+  var radios = document.querySelectorAll('input[name="ren-paye"]');
+  radios.forEach(function(r){ r.checked = r.value==='non'; });
+  gel('modal-renouveler').classList.add('vis');
+  _renewModalId = id;
+}
+function fermerModalRenouveler() {
+  gel('modal-renouveler').classList.remove('vis');
+  _renewModalId = null;
+}
+function confirmerModalRenouveler() {
+  var id = _renewModalId;
+  var el = document.querySelector('input[name="ren-paye"]:checked');
+  var paye = el ? el.value==='oui' : false;
+  fermerModalRenouveler();
+  if (id) renouvelerCarteAction(id, null, paye);
+}
+
 // Attacher les boutons des modals une seule fois
 gel('modal-date-cancel').addEventListener('click', fermerModalDate);
 gel('modal-date-ok').addEventListener('click', confirmerModalDate);
 gel('modal-confirm-cancel').addEventListener('click', fermerModalConfirm);
 gel('modal-confirm-ok').addEventListener('click', confirmerModalConfirm);
+gel('modal-ren-cancel').addEventListener('click', fermerModalRenouveler);
+gel('modal-ren-ok').addEventListener('click', confirmerModalRenouveler);
 gel('pub-view-close').addEventListener('click', fermerPubView);
 gel('pub-view-modal').addEventListener('click', function(e){ if(e.target===this)fermerPubView(); });
 
@@ -647,10 +694,15 @@ function bindTabEvents(el) {
     var info = el.querySelector('#ic-info-carte10');
     if (info) info.style.display = t.indexOf('carte')>=0?'block':'none';
   });
-  // Préremplissage élève dans valider paiement
+  // Préremplissage élève dans valider paiement + toggle partenaire stage
   el.addEventListener('change', function(ev) {
     var sel = ev.target.closest('[data-change-vp]');
     if (sel && sel.id==='vp-eleve-select') prefillVP(sel.value);
+    // Toggle bloc partenaire dans formulaire stage
+    if (ev.target.name==='si-sit') {
+      var bloc = el.querySelector('#si-part-bloc');
+      if (bloc) bloc.style.display = ev.target.value==='avec'?'block':'none';
+    }
   });
   // Upload
   var pubFile = el.querySelector('#pub-file');
@@ -699,9 +751,10 @@ function handleAction(action, btn) {
       ouvrirModalDate(function(date){ pointerCoursAction(id, date, btn); });
       break;
     case 'renouveler-carte':
-      ouvrirModalConfirm('Créer une nouvelle carte de 10 cours pour cet élève ?', function(){
-        renouvelerCarteAction(id, btn);
-      });
+      ouvrirModalRenouveler(id, btn.dataset.nom||'');
+      break;
+    case 'toggle-carte-paye':
+      toggleCartePaye(id);
       break;
     case 'filt-stage-slot':
       filtreStageSlot=btn.dataset.slot; renderTab(); break;
@@ -885,105 +938,138 @@ function renderEssai() {
     return a.role.localeCompare(b.role);
   });
 
-  if (filtreEssai==='attente') {
-    // Liste d'attente : tous rôles avec statut===attente
-    var g = liste.filter(function(e){return e.statut==='attente';});
-    if (!g.length) return h+'<div class="empty-state">Aucune personne en attente.</div>';
-    g.forEach(function(e) {
-      var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-      h += '<div class="card hl-warn"><div class="card-top"><div>'
-        +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
-        +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
-        +e.prenom+' '+e.nom+'</div>'
-        +'<div class="card-sub">'+e.email+' · '+e.ville+' · '+(e.niveau==='debutant'?'Débutant':'Intermédiaire')+'<br/>📅 '+fmtDate(e.date)+'</div>'
-        +partenaireTag(e.partenaire,e.role)+'</div><span class="pill pill-warn">Attente</span></div>'
-        +'<div class="btn-row"><button class="btn btn-ok" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+e.date+'">✓ Confirmer</button>'
-        +btnEmail(e.email,e.prenom+' '+e.nom)+'</div></div>';
-      if(e.partenaire&&e.emailPartenaire){
-        h += '<div class="card" style="margin-left:16px;border-left:3px solid var(--border);margin-bottom:9px;"><div class="card-sub" style="font-size:10px;color:var(--dim);margin-bottom:4px;">↳ Partenaire</div><div class="card-nom">'+e.partenaire+'</div><div class="card-sub">'+e.emailPartenaire+'</div>'+btnEmail(e.emailPartenaire,e.partenaire)+'</div>';
-      }
+  // Helper : construit groupes date+niveau avec guiConf count
+  function buildGroupes(src) {
+    var g={};
+    src.forEach(function(e){
+      var k=e.date+'|'+(e.niveau||'debutant');
+      if(!g[k])g[k]={date:e.date,niveau:e.niveau||'debutant',ins:[]};
+      g[k].ins.push(e);
     });
+    return g;
+  }
+  // Helper : true si guideur est vraiment en attente (>=22 guideurs confirmés dans son groupe)
+  function guideurVraimentAttente(e, grpIns) {
+    var guiConf=grpIns.filter(function(x){return x.role==='guideur'&&x.statut==='confirme';}).length;
+    return guiConf>=22;
+  }
+  // Helper : true si la personne est vraiment en attente (doit attendre confirmation)
+  function estVraimentAttente(e, grpIns) {
+    if(e.statut!=='attente') return false;
+    if(e.role==='guidee') return true;
+    return guideurVraimentAttente(e, grpIns);
+  }
+
+  if (filtreEssai==='attente') {
+    // Liste d'attente : guidées avec statut===attente + guideurs avec statut===attente ET >=22 guideurs confirmés
+    var grpAtt = buildGroupes(liste);
+    var hasAtt = false;
+    Object.keys(grpAtt).sort().forEach(function(key){
+      var grp=grpAtt[key];
+      var attenteGrp=grp.ins.filter(function(e){return estVraimentAttente(e,grp.ins);});
+      if(!attenteGrp.length) return;
+      hasAtt=true;
+      var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
+      h+='<div class="section-hdr">'+fmtDate(grp.date)+' — '+nivLbl+'</div>';
+      attenteGrp.forEach(function(e){
+        var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
+        h += '<div class="point-row">'
+          +'<div style="flex:1;min-width:0;">'
+          +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
+          +e.prenom+' '+e.nom
+          +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
+          +'</div>'
+          +'<div class="point-sub">'+e.email+(e.partenaire?' · avec '+e.partenaire:'')+'</div>'
+          +'</div>'
+          +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+          +'<button class="btn btn-ok" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓ Confirmer</button>'
+          +btnEmail(e.email,e.prenom+' '+e.nom)
+          +'</div></div>';
+      });
+    });
+    if(!hasAtt) return h+'<div class="empty-state">Aucune personne en attente.</div>';
     return h;
   }
+
   if (filtreEssai==='pointage') {
-    var grp = grouperParDate(liste);
-    Object.keys(grp).sort().forEach(function(date) {
-      var ins = grp[date];
+    // Grouper par date + niveau
+    var grpPt = buildGroupes(liste);
+    var hasEvt = false;
+    Object.keys(grpPt).sort().forEach(function(key){
+      var grp=grpPt[key];
+      // Seulement les personnes confirmées (non en attente réelle)
+      var conf=grp.ins.filter(function(e){return !estVraimentAttente(e,grp.ins);});
+      var coursTangoDate=(adminData.coursTango||[]).filter(function(c){return c.statut==='inscrit'&&c.date===grp.date;});
+      if(!conf.length&&!coursTangoDate.length) return;
+      hasEvt=true;
       // Interleave guideurs/guidées
-      var pGui=ins.filter(function(e){return e.role==='guideur';});
-      var pGde=ins.filter(function(e){return e.role==='guidee';});
+      var pGui=conf.filter(function(e){return e.role==='guideur';});
+      var pGde=conf.filter(function(e){return e.role==='guidee';});
       var pAlt=[]; var pml=Math.max(pGui.length,pGde.length);
       for(var pi=0;pi<pml;pi++){if(pi<pGui.length)pAlt.push(pGui[pi]);if(pi<pGde.length)pAlt.push(pGde[pi]);}
-      // Ajouter inscrits cours réguliers si disponibles
-      var coursTangoDate=(adminData.coursTango||[]).filter(function(c){return c.statut==='inscrit'&&c.date===date;});
-      var presCount=ins.filter(function(e){return e.present===true;}).length+(coursTangoDate.filter(function(c){return c.present===true;}).length);
-      var absCount=ins.filter(function(e){return e.present===false;}).length+(coursTangoDate.filter(function(c){return c.present===false;}).length);
-      var totalCount=ins.length+coursTangoDate.length;
+      var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
+      var presCount=conf.filter(function(e){return e.present===true;}).length+(coursTangoDate.filter(function(c){return c.present===true;}).length);
+      var absCount=conf.filter(function(e){return e.present===false;}).length+(coursTangoDate.filter(function(c){return c.present===false;}).length);
+      var totalCount=conf.length+coursTangoDate.length;
       var rest=totalCount-presCount-absCount;
-      var toutPointe = rest===0;
-      h += '<div class="section-hdr">'+fmtDate(date)+' — ✓'+presCount+' ✗'+absCount+' ?'+rest+'</div>';
+      var toutPointe=rest===0;
+      h += '<div class="section-hdr">'+fmtDate(grp.date)+' — '+nivLbl+' — ✓'+presCount+' ✗'+absCount+' ?'+rest+'</div>';
       pAlt.forEach(function(e) {
         var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
         h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+e.prenom+' '+e.nom+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · avec '+e.partenaire:'')+'</div></div>'
-          +'<div style="display:flex;gap:6px;align-items:center;">'
+          +'<div style="display:flex;gap:5px;align-items:center;">'
           +(e.email1Ok===true?'<span class="pill pill-ok" style="font-size:8px;">✉️</span>':'')
           +(e.presenceConfirmee===true?'<span class="pill pill-ok" style="font-size:8px;">✓Conf.</span>':'')
-          +'<span class="pill '+rcls+'" style="font-size:8px;">'+e.role+'</span>'
-          +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
-          +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
+          +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
+          +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'">✓</button>'
+          +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'">✗</button>'
           +'</div></div>';
       });
       coursTangoDate.forEach(function(c) {
         h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+c.prenom+' '+c.nom+'</div>'
           +'<div class="point-sub">'+(c.ville||'')+'</div></div>'
-          +'<div style="display:flex;gap:6px;align-items:center;">'
+          +'<div style="display:flex;gap:5px;align-items:center;">'
           +'<span class="pill pill-ok" style="font-size:8px;">Inscrit cours</span>'
-          +'<button class="btn-point btn-pres'+(c.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+date+'" data-email="'+c.email+'">✓</button>'
-          +'<button class="btn-point btn-abs'+(c.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+date+'" data-email="'+c.email+'">✗</button>'
+          +'<button class="btn-point btn-pres'+(c.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+c.email+'">✓</button>'
+          +'<button class="btn-point btn-abs'+(c.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+c.email+'">✗</button>'
           +'</div></div>';
       });
       h += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
-        +(toutPointe?'<button class="btn btn-ok" data-action="env-j1" data-date="'+date+'">✉️ Emails J+1</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d&#39;abord.</span>')
-        +'<span id="j1s-'+date+'" style="font-size:11px;margin-left:8px;"></span>'
+        +(toutPointe?'<button class="btn btn-ok" data-action="env-j1" data-date="'+grp.date+'">✉️ Emails J+1</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d&#39;abord.</span>')
+        +'<span id="j1s-'+grp.date+'" style="font-size:11px;margin-left:8px;"></span>'
         +'</div>';
     });
-    return h||'<div class="empty-state">Aucun cours d&#39;essai.</div>';
+    return h+(hasEvt?'':'<div class="empty-state">Aucun cours d&#39;essai confirmé.</div>');
   }
-  // Grouper par date + niveau — vue compacte (point-row) avec interleave
-  var grpDateNiv = {};
-  liste.forEach(function(e){
-    var key=e.date+'|'+(e.niveau||'debutant');
-    if(!grpDateNiv[key])grpDateNiv[key]={date:e.date,niveau:e.niveau||'debutant',ins:[]};
-    grpDateNiv[key].ins.push(e);
-  });
-  var keys=Object.keys(grpDateNiv).sort();
+
+  // Vue "Par date" : grouper par date + niveau avec interleave
+  var grpDN = buildGroupes(liste);
+  var keys=Object.keys(grpDN).sort();
   if(!keys.length) return h+'<div class="empty-state">Aucun cours d&#39;essai.</div>';
   keys.forEach(function(key){
-    var grp=grpDateNiv[key], ins=grp.ins;
+    var grp=grpDN[key], ins=grp.ins;
     var guiConf=ins.filter(function(e){return e.role==='guideur'&&e.statut==='confirme';});
     var guiAll=ins.filter(function(e){return e.role==='guideur';});
     var gde=ins.filter(function(e){return e.role==='guidee';}).length;
-    var att=ins.filter(function(e){return e.statut==='attente';}).length;
+    // Compte des vraies attentes (guidées seules + guideurs si >=22 confirmés)
+    var attVrai=ins.filter(function(e){return estVraimentAttente(e,ins);}).length;
     var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
     var limiteGuideurs=guiConf.length>=22;
     h += '<div class="section-hdr">'
       +fmtDate(grp.date)+' — '+nivLbl
       +'<span style="font-weight:400;color:var(--dim);margin-left:8px;">👨 '+guiAll.length+' · 👩 '+gde
-      +(att?' · <span style="color:var(--warn-text)">⏳ '+att+' att.</span>':'')+'</span>'
+      +(attVrai?' · <span style="color:var(--warn-text)">⏳ '+attVrai+' att.</span>':'')+'</span>'
       +(limiteGuideurs?' <span style="color:var(--warn-text);font-size:10px;">(limite 22 guideurs atteinte)</span>':'')
       +'</div>';
-    // Interleave guideurs/guidées pour parité
+    // Interleave guideurs/guidées
     var iGui=ins.filter(function(e){return e.role==='guideur';});
     var iGde=ins.filter(function(e){return e.role==='guidee';});
     var iAlt=[]; var ial=Math.max(iGui.length,iGde.length);
     for(var ia=0;ia<ial;ia++){if(ia<iGui.length)iAlt.push(iGui[ia]);if(ia<iGde.length)iAlt.push(iGde[ia]);}
     iAlt.forEach(function(e){
       var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-      // Pour guideurs : si confirmedGuideurs<=22, afficher comme confirmé même si attente
-      var displayStatut=e.statut;
-      if(e.role==='guideur'&&e.statut==='attente'&&guiConf.length<22)displayStatut='confirme';
-      var pc=displayStatut==='confirme'?'pill-ok':'pill-warn';
+      var vraiAtt=estVraimentAttente(e,ins);
       h += '<div class="point-row">'
         +'<div style="flex:1;min-width:0;">'
         +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
@@ -993,9 +1079,9 @@ function renderEssai() {
         +'<div class="point-sub">'+e.email+(e.partenaire?' · avec '+e.partenaire:'')+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-        +'<span class="pill '+pc+'" style="font-size:8px;">'+(displayStatut==='confirme'?'✓':'Att.')+'</span>'
-        +(e.statut==='attente'
-          ?'<button class="btn-point btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓</button>':'')
+        +(vraiAtt
+          ?'<button class="btn btn-ok" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓</button>'
+          :'<span class="pill pill-ok" style="font-size:8px;">Validé.e</span>')
         +btnEmail(e.email,e.prenom+' '+e.nom)
         +'</div></div>';
     });
@@ -1122,6 +1208,10 @@ function renderCartes() {
   var cartesEleves = (adminData.cartes||[]).filter(function(c){
     return c.utilises>0||c.restants>0||c.datePremierCours;
   });
+  // Initialiser paye si absent : inscription = payé, essai = non payé par défaut
+  cartesEleves.forEach(function(c){
+    if(c.paye===undefined)c.paye=(c.source==='inscription');
+  });
   // Ajouter aussi les inscriptions avec carte10 validées (restants=10, pas encore pointés)
   var emailsCartes = {};
   cartesEleves.forEach(function(c){ emailsCartes[c.email]=true; });
@@ -1154,24 +1244,34 @@ function renderCartes() {
     var bient=!fini&&days!==null&&days<14;
     var sLbl=fini?'À renouveler':bient?'Expire dans '+days+'j':'Active';
     var sCls=fini?'pill-err':bient?'pill-warn':'pill-ok';
-    var dots='<div class="dots-carte">';
+    // Mini barre de progression compacte
+    var miniDots='<div style="display:flex;gap:3px;margin:6px 0;">';
     for(var i=0;i<10;i++){
       var ds=datesCours[i]||null;
-      var dcls=i<nbUtil?(fini?'expire':'pris'):'vide';
-      dots+='<div class="dot-cours"><div class="dot-circle '+dcls+'">'+(i+1)+'</div><div class="dot-date">'+(ds?fmtDateCourt(ds):'')+'</div></div>';
+      var bg=i<nbUtil?(fini?'var(--err-bg)':'var(--ok-bg)'):'var(--s3)';
+      var br=i<nbUtil?(fini?'var(--err-text)':'var(--ok-text)'):'var(--border)';
+      miniDots+='<div title="'+(ds?fmtDateCourt(ds):'cours '+(i+1))+'" style="flex:1;height:6px;border-radius:3px;background:'+bg+';border:1px solid '+br+';"></div>';
     }
-    dots+='</div>';
-    var expTxt=expAff?'Expire : '+fmtDate(expAff):c.datePremierCours?'1er cours : '+fmtDate(c.datePremierCours):'Aucun cours pointé';
-    h+='<div class="card'+(fini||bient?' hl-warn':'')+'"><div class="card-top"><div>'
-      +'<div class="card-nom">'+c.nom+'</div>'
-      +'<div class="card-sub">'+c.id+' · '+(c.niveau||'—')+' · '+(c.ville==='vincennes'?'Vincennes':'Paris')+'</div>'
-      +(c.email?'<div class="card-sub">'+c.email+'</div>':'')
-      +'</div><span class="pill '+sCls+'">'+sLbl+'</span></div>'
-      +dots
-      +'<div class="card-sub" style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>'+nbUtil+'/10 cours · '+(c.restants||0)+' restants</span><span>'+expTxt+'</span></div>'
-      +'<div class="btn-row">'
-      +'<button class="btn btn-gold" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer un cours</button>'
-      +'<button class="btn btn-ok" data-action="renouveler-carte" data-id="'+c.id+'">↻ Renouveler</button>'
+    miniDots+='</div>';
+    var expTxt=expAff?'Exp. '+fmtDate(expAff):c.datePremierCours?'Dép. '+fmtDate(c.datePremierCours):'Pas encore commencée';
+    var payeOk=c.paye===true;
+    var payePill=payeOk
+      ?'<span class="pill pill-ok" style="font-size:8px;cursor:pointer;" data-action="toggle-carte-paye" data-id="'+c.id+'">✓ Payé</span>'
+      :'<span class="pill pill-warn" style="font-size:8px;cursor:pointer;" data-action="toggle-carte-paye" data-id="'+c.id+'">Non payé</span>';
+    h+='<div class="point-row" style="align-items:flex-start;padding:10px 12px;'+(fini||bient?'border-left:3px solid var(--warn-text);':'border-left:3px solid var(--border);')+'">'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">'
+      +'<span class="point-nom" style="font-size:13px;">'+c.nom+'</span>'
+      +'<span class="pill '+sCls+'" style="font-size:8px;">'+sLbl+'</span>'
+      +payePill
+      +'</div>'
+      +'<div class="point-sub" style="font-size:10px;">'+c.id+' · '+(c.niveau||'—')+' · '+(c.ville==='vincennes'?'Vincennes':'Paris')+' · '+nbUtil+'/10 · '+expTxt+'</div>'
+      +(c.email?'<div class="point-sub" style="font-size:10px;">'+c.email+'</div>':'')
+      +miniDots
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;margin-left:8px;">'
+      +(fini?'':'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer</button>')
+      +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="renouveler-carte" data-id="'+c.id+'" data-nom="'+c.nom+'">↻ Renouveler</button>'
       +btnEmail(c.email,c.nom)
       +'</div></div>';
   });
@@ -1187,10 +1287,17 @@ function pointerCoursAction(id, date, btn) {
   var c=adminData.cartes.find(function(x){return x.id===id;});
   postAS({action:'pointageManuel',eleveId:id,date:date,niveau:c?c.niveau:'',note:'Pointage admin'}).then(function(){chargerDonnees();}).catch(function(e){if(btn)btn.disabled=false;});
 }
-function renouvelerCarteAction(id, btn) {
-  if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=10;c.datePremierCours='';c.expiration='';c.datesCours=[];}renderTab();return;}
+function renouvelerCarteAction(id, btn, paye) {
+  if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=10;c.datePremierCours='';c.expiration='';c.datesCours=[];c.paye=paye===true;}renderTab();return;}
   if(btn){btn.disabled=true;btn.textContent='⏳';}
-  postAS({action:'renouvelerCarte',eleveId:id}).then(function(){chargerDonnees();}).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
+  postAS({action:'renouvelerCarte',eleveId:id,paye:paye===true}).then(function(){chargerDonnees();}).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
+}
+function toggleCartePaye(id) {
+  var c=(adminData.cartes||[]).find(function(x){return x.id===id;});
+  if(!c)return;
+  c.paye=!c.paye;
+  if(!IS_DEMO)postAS({action:'toggleCartePaye',eleveId:id,paye:c.paye}).catch(function(){});
+  renderTab();
 }
 
 // ================================================================
@@ -1429,13 +1536,8 @@ function annulerStageInscrit(date, idx, slot, btn) {
       var si=personSlots.indexOf(slot);
       if(si>=0)personSlots.splice(si,1);
       person.slots=personSlots;
-      // Recalculer le montant
-      var mont=0;
-      personSlots.forEach(function(s){
-        if(s==='technique')mont+=20;
-        else if(s==='stage1'||s==='stage2')mont+=25;
-      });
-      person.montant=mont;
+      // Recalculer le montant avec la bonne grille tarifaire
+      person.montant=calcMontantStage(personSlots);
     }
     renderTab(); return;
   }
@@ -1467,27 +1569,44 @@ function renderFormulaireStageAdmin() {
     +'</div>'
     +'<div class="field"><label>Email *</label><input type="email" id="si-email" autocapitalize="none"/></div>'
     +'<div class="field"><label>Téléphone</label><input type="tel" id="si-tel" placeholder="06 XX XX XX XX"/></div>'
-    +'<div class="field"><label>Rôle</label>'
+    // Rôle — hors .field pour éviter le CSS width:100% sur les radios
+    +'<div style="margin-bottom:10px;">'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">Rôle *</div>'
     +'<div style="display:flex;gap:8px;">'
-    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
-    +'<input type="radio" name="si-role" value="guidee" checked> Guidée</label>'
-    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
-    +'<input type="radio" name="si-role" value="guideur"> Guideur</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
+    +'<input type="radio" name="si-role" value="guidee" checked style="width:auto;padding:0;"> 💃 Guidée</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
+    +'<input type="radio" name="si-role" value="guideur" style="width:auto;padding:0;"> 🕺 Guideur</label>'
     +'</div></div>'
-    +'<div class="field"><label>Créneaux</label>'
-    +'<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">'
-    +'<input type="checkbox" id="si-tech"> Technique Leader &amp; Follower — 14h – 15h &nbsp;<strong>20€</strong></label>'
-    +'<label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">'
-    +'<input type="checkbox" id="si-s1"> Stage 1 — 15h – 16h30 &nbsp;<strong>25€</strong></label>'
-    +'<label style="display:flex;align-items:center;gap:8px;padding:7px 0;">'
-    +'<input type="checkbox" id="si-s2"> Stage 2 — 16h30 – 18h &nbsp;<strong>25€</strong></label>'
+    // Créneaux — hors .field pour éviter le CSS width:100% sur les checkboxes
+    +'<div style="margin-bottom:10px;">'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">Créneaux *</div>'
+    +'<label style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;margin-bottom:5px;font-size:13px;">'
+    +'<input type="checkbox" id="si-tech" style="width:auto;padding:0;"> Technique L&amp;F — 14h–15h &nbsp;<strong>20€</strong></label>'
+    +'<label style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;margin-bottom:5px;font-size:13px;">'
+    +'<input type="checkbox" id="si-s1" style="width:auto;padding:0;"> Stage 1 — 15h–16h30 &nbsp;<strong>25€</strong></label>'
+    +'<label style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
+    +'<input type="checkbox" id="si-s2" style="width:auto;padding:0;"> Stage 2 — 16h30–18h &nbsp;<strong>25€</strong></label>'
+    +'<div class="box-info" style="font-size:11px;margin-top:6px;">ℹ️ Stage 1 + Stage 2 = 45€ · Technique + Stage 1 ou 2 = 45€ · Tout = 60€</div>'
     +'</div>'
-    +'<div class="section-hdr" style="margin-top:12px;">Partenaire (optionnel)</div>'
+    // Situation — seul(e) ou avec partenaire
+    +'<div style="margin-bottom:10px;">'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">Situation</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
+    +'<input type="radio" name="si-sit" value="seul" checked style="width:auto;padding:0;"> Seul(e)</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
+    +'<input type="radio" name="si-sit" value="avec" style="width:auto;padding:0;"> Avec partenaire</label>'
+    +'</div></div>'
+    // Partenaire (affiché si situation=avec)
+    +'<div id="si-part-bloc" style="display:none;">'
+    +'<div class="section-hdr" style="margin-top:4px;">Partenaire</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
     +'<div class="field"><label>Prénom Nom</label><input type="text" id="si-part-nom" placeholder="Prénom Nom"/></div>'
     +'<div class="field"><label>Email</label><input type="email" id="si-part-email" autocapitalize="none"/></div>'
     +'</div>'
-    +'<div class="box-info" style="font-size:11px;">ℹ️ Avec partenaire = les deux sont inscrits. La guidée sans partenaire est mise en attente.</div>'
+    +'<div class="box-info" style="font-size:11px;">ℹ️ Avec partenaire = les deux sont inscrits sans attente.</div>'
+    +'</div>'
     +'<div class="box-err" id="si-err"></div>'
     +'<div class="box-ok" id="si-ok">✓ Inscrit(e) au stage.</div>'
     +'<div class="btn-row"><button class="btn btn-gold" data-action="inscrire-stage-admin">✓ Inscrire</button></div>'
@@ -1495,6 +1614,17 @@ function renderFormulaireStageAdmin() {
   return h;
 }
 
+function calcMontantStage(slots) {
+  var tech=slots.indexOf('technique')>=0;
+  var s1=slots.indexOf('stage1')>=0;
+  var s2=slots.indexOf('stage2')>=0;
+  if(tech&&s1&&s2) return 60;
+  if(tech&&(s1||s2)) return 45;
+  if(s1&&s2) return 45;
+  if(tech) return 20;
+  if(s1||s2) return 25;
+  return 0;
+}
 function soumettreInscriptionStageAdmin() {
   var date=(gel('si-stage')||{}).value||filtreStage;
   var prenom=((gel('si-prenom')||{}).value||'').trim();
@@ -1507,17 +1637,16 @@ function soumettreInscriptionStageAdmin() {
   if(gel('si-tech')&&gel('si-tech').checked)slots.push('technique');
   if(gel('si-s1')&&gel('si-s1').checked)slots.push('stage1');
   if(gel('si-s2')&&gel('si-s2').checked)slots.push('stage2');
-  var partNom  =((gel('si-part-nom')||{}).value||'').trim();
-  var partEmail=((gel('si-part-email')||{}).value||'').trim().toLowerCase();
+  var sitEl=document.querySelector('input[name="si-sit"]:checked');
+  var avecSit=sitEl?sitEl.value==='avec':false;
+  var partNom  =avecSit?((gel('si-part-nom')||{}).value||'').trim():'';
+  var partEmail=avecSit?((gel('si-part-email')||{}).value||'').trim().toLowerCase():'';
   var err=gel('si-err'), ok=gel('si-ok');
   if(err)err.style.display='none'; if(ok)ok.style.display='none';
   if(!prenom||!nom||!email){if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';}return;}
   if(!slots.length){if(err){err.textContent='Sélectionnez au moins un créneau.';err.style.display='block';}return;}
-  var montant=0;
-  if(slots.indexOf('technique')>=0)montant+=20;
-  if(slots.indexOf('stage1')>=0)montant+=25;
-  if(slots.indexOf('stage2')>=0)montant+=25;
-  var avecPartenaire=partNom&&partEmail;
+  var montant=calcMontantStage(slots);
+  var avecPartenaire=avecSit&&partNom&&partEmail;
   var attente=role==='guidee'&&!avecPartenaire;
   var inscrit={prenom:prenom,nom:nom,email:email,tel:tel,role:role,slots:slots,present:null,montant:montant,attente:attente,partenaire:partNom,emailPartenaire:partEmail};
   if(IS_DEMO){
@@ -1577,7 +1706,7 @@ function relanceSorano(email, nom, btn) {
 // ================================================================
 function getEventsForDate(dateStr) {
   var evts=[];
-  if(agendaCats.cours){if(COURS_PARIS.indexOf(dateStr)>=0){evts.push({cat:'cours',titre:'Débutant — Paris',heure:'20h30'});evts.push({cat:'cours',titre:'Intermédiaire — Paris',heure:'21h45'});}if(COURS_VINCENNES.indexOf(dateStr)>=0){evts.push({cat:'cours',titre:'Débutant — Vincennes',heure:'19h30'});evts.push({cat:'cours',titre:'Intermédiaire — Vincennes',heure:'21h00'});}}
+  if(agendaCats.cours){if(COURS_PARIS.indexOf(dateStr)>=0){evts.push({cat:'cours-paris',titre:'Débutant — Paris',heure:'20h30'});evts.push({cat:'cours-paris',titre:'Intermédiaire — Paris',heure:'21h45'});}if(COURS_VINCENNES.indexOf(dateStr)>=0){evts.push({cat:'cours-vinc',titre:'Débutant — Vincennes',heure:'19h30'});evts.push({cat:'cours-vinc',titre:'Intermédiaire — Vincennes',heure:'21h00'});}}
   if(agendaCats.stage){var st=STAGES.find(function(s){return s.date===dateStr;});if(st){evts.push({cat:'stage',titre:'Technique Leader & Follower',heure:'14h00'});if(st.s1)evts.push({cat:'stage',titre:st.s1,heure:'15h00'});if(st.s2)evts.push({cat:'stage',titre:st.s2,heure:'16h30'});}}
   if(agendaCats.milonga&&MILONGAS.indexOf(dateStr)>=0)evts.push({cat:'milonga',titre:'Milonga La Dolce Vita',heure:'—'});
   return evts;
@@ -1585,7 +1714,9 @@ function getEventsForDate(dateStr) {
 function renderAgenda() {
   var h='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:12px;">Agenda — 12 prochains mois</div>'
     +'<div class="cat-pills">'
-    +'<button class="cat-pill-ag" style="background:'+(agendaCats.cours?'var(--guideur-bg)':'transparent')+';border-color:'+(agendaCats.cours?'var(--guideur)':'var(--border)')+';color:'+(agendaCats.cours?'var(--guideur-text)':'var(--dim)')+';" data-cat-ag="cours">🎓 Cours</button>'
+    +'<button class="cat-pill-ag" style="background:'+(agendaCats.cours?'#0a1a2a':'transparent')+';border-color:'+(agendaCats.cours?'#4a9eff':'var(--border)')+';color:'+(agendaCats.cours?'#4a9eff':'var(--dim)')+';" data-cat-ag="cours">🎓 Cours Paris</button>'
+    +'<span style="font-size:10px;color:#2dd4bf;">·</span>'
+    +'<button class="cat-pill-ag" style="background:'+(agendaCats.cours?'#0a1a1a':'transparent')+';border-color:'+(agendaCats.cours?'#2dd4bf':'var(--border)')+';color:'+(agendaCats.cours?'#2dd4bf':'var(--dim)')+';" data-cat-ag="cours">🎓 Cours Vincennes</button>'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.stage?'var(--gold-pale)':'transparent')+';border-color:'+(agendaCats.stage?'var(--gold)':'var(--border)')+';color:'+(agendaCats.stage?'var(--gold)':'var(--dim)')+';" data-cat-ag="stage">💃 Stages</button>'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.milonga?'var(--guidee-bg)':'transparent')+';border-color:'+(agendaCats.milonga?'var(--guidee)':'var(--border)')+';color:'+(agendaCats.milonga?'var(--guidee-text)':'var(--dim)')+';" data-cat-ag="milonga">🎶 Milongas</button>'
     +'</div>';
@@ -1604,7 +1735,8 @@ function renderAgenda() {
         h+='<div style="font-family:var(--font-d);font-size:18px;font-weight:300;color:var(--dim);letter-spacing:3px;padding:16px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px;">'+MOIS_FR[d.getMonth()]+' '+d.getFullYear()+'</div>';
       }
       h+='<div class="agenda-day-hdr"><div class="agenda-day-num" style="'+(ds===todayStr?'color:var(--gold)':'')+'">'+d.getDate()+'</div><div class="agenda-day-lbl">'+DOW_LONG[d.getDay()]+'</div>'+(ds===todayStr?'<span class="pill pill-gold" style="font-size:8px;">Aujourd\'hui</span>':'')+'</div>';
-      evts.forEach(function(e){h+='<div class="agenda-event ae-'+e.cat+'"><div><div class="ae-titre">'+(e.heure!=='—'?e.heure+' — ':'')+e.titre+'</div><div class="ae-sub">'+({cours:'Espace Danse Studio / Espace Sorano',stage:'Centre Kim Kan, Paris 20e',milonga:'Paris'}[e.cat]||'')+'</div></div></div>';});
+      var EVT_SUB={'cours-paris':'Espace Danse Studio','cours-vinc':'Espace Sorano, Vincennes',stage:'Centre Kim Kan, Paris 20e',milonga:'Paris'};
+      evts.forEach(function(e){h+='<div class="agenda-event ae-'+e.cat+'"><div><div class="ae-titre">'+(e.heure!=='—'?e.heure+' — ':'')+e.titre+'</div><div class="ae-sub">'+(EVT_SUB[e.cat]||'')+'</div></div></div>';});
     }
     d.setDate(d.getDate()+1);
   }
@@ -1768,7 +1900,7 @@ function renderCoursTango() {
   var tous = (adminData.coursTango||[]);
   var nbAV  = tous.filter(function(e){return e.statut==='demande';}).length;
   var nbVal = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement'||e.statut==='inscrit';}).length;
-  var nbAP  = tous.filter(function(e){return e.statut==='attente_paiement';}).length;
+  var nbAP  = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';}).length;
   var nbIns = tous.filter(function(e){return e.statut==='inscrit';}).length;
 
   var sousOnglets = [
@@ -1809,6 +1941,8 @@ function renderCoursTango() {
     liste = tous.filter(function(e){return e.statut==='demande';});
   } else if(sousOngletCoursTango==='valide') {
     liste = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement'||e.statut==='inscrit';});
+  } else if(sousOngletCoursTango==='attente_paiement') {
+    liste = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';});
   } else {
     liste = tous.filter(function(e){return e.statut===sousOngletCoursTango;});
   }
@@ -1923,18 +2057,14 @@ function renderValiderPaiement() {
     +'<div class="field"><label>Téléphone</label><input type="tel" id="vp-tel" placeholder="06 XX XX XX XX"/></div>'
     +'<div class="field"><label>Email</label><input type="email" id="vp-email" autocapitalize="none"/></div>'
     +'</div>'
-    +'<div class="field"><label>Carte de 10 cours</label>'
+    +'<div style="margin-bottom:10px;">'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">Carte de 10 cours</div>'
     +'<div style="display:flex;gap:8px;">'
-    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
-    +'<input type="radio" name="vp-carte10" value="non" checked> Non</label>'
-    +'<label style="display:flex;align-items:center;gap:6px;flex:1;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
-    +'<input type="radio" name="vp-carte10" value="oui"> Oui</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
+    +'<input type="radio" name="vp-carte10" value="non" checked style="width:auto;padding:0;"> Non</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
+    +'<input type="radio" name="vp-carte10" value="oui" style="width:auto;padding:0;"> Oui</label>'
     +'</div></div>'
-    +'<div class="field"><label>Mode de paiement</label><select id="vp-paie">'
-    +'<option value="cb1x">CB 1×</option><option value="cb3x">CB 3×</option>'
-    +'<option value="especes">Espèces</option><option value="cheque">Chèque</option>'
-    +'<option value="virement1x">Virement 1×</option><option value="virement3x">Virement 3×</option>'
-    +'</select></div>'
     +'<div class="box-err" id="vp-err"></div>'
     +'<div class="box-ok" id="vp-ok">✓ Paiement validé ! L&#39;élève est maintenant inscrit.</div>'
     +'<div class="btn-row"><button class="btn btn-gold" data-action="soumettre-paiement" style="flex:2;">✓ Valider le paiement → Inscrire</button>'
@@ -1947,7 +2077,6 @@ function soumettreValiderPaiement() {
   var id=(gel('vp-eleve-select')||{}).value||'';
   var carte10El=document.querySelector('input[name="vp-carte10"]:checked');
   var carte10=carte10El?carte10El.value:'non';
-  var paie=(gel('vp-paie')||{}).value||'';
   var tel=(gel('vp-tel')||{}).value||'';
   var email=(gel('vp-email')||{}).value||'';
   var err=gel('vp-err'), ok=gel('vp-ok');
@@ -1957,12 +2086,12 @@ function soumettreValiderPaiement() {
     var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
     if(e){
       e.statut='inscrit';
-      e.paiement=paie;
+      e.paiement='';
       if(tel)e.tel=tel; if(email)e.email=email;
       if(!adminData.inscriptionsCours)adminData.inscriptionsCours=[];
       adminData.inscriptionsCours.push({id:'IC'+Date.now(),nom:e.prenom+' '+e.nom,email:e.email,cours:e.cours,type:carte10==='oui'?'carte10':'forfait',paiement:paie,montant:0,date:today(),ville:e.ville||'paris'});
       if(carte10==='oui'&&!adminData.cartes.find(function(c){return c.email===e.email;})){
-        adminData.cartes.push({id:e.id,nom:e.prenom+' '+e.nom,niveau:e.niveau,email:e.email,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Active',source:'inscription',ville:e.ville||'paris',datesCours:[],partenaire:e.partenaire||''});
+        adminData.cartes.push({id:e.id,nom:e.prenom+' '+e.nom,niveau:e.niveau,email:e.email,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Active',source:'inscription',ville:e.ville||'paris',datesCours:[],partenaire:e.partenaire||'',paye:true});
         recalcStats();
       }
     }
@@ -1970,7 +2099,7 @@ function soumettreValiderPaiement() {
     setTimeout(function(){sousOngletCoursTango='inscrit';renderTab();},1500);
     return;
   }
-  postAS({action:'validerPaiementCoursTango',id:id,carte10:carte10,paiement:paie,tel:tel,email:email}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+  postAS({action:'validerPaiementCoursTango',id:id,carte10:carte10,tel:tel,email:email}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
 }
 
 function renderFormulaireDemandeAdmin() {
