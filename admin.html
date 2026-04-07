@@ -746,11 +746,49 @@ function _appliquerCoursInscription(d) {
   sousOngletCoursTango = statut==='demande' ? 'attente_validation' : 'valide';
 }
 
+function _appliquerEssaiInscription(d) {
+  if (!d || !d.prenom || !d.nom) return;
+  if (!adminData.essai) adminData.essai = [];
+  var date = d.date || today();
+  var avecPart = !!(d.partenairePrenom || d.partenaireNom || d.partenaire);
+  // Solo guidée → attente ; couple → confirme ; solo guideur → confirme (place libre)
+  var statut = d.statut || (avecPart ? 'confirme' : (d.role === 'guidee' ? 'attente' : 'confirme'));
+  var partNom = d.partenaire || (((d.partenairePrenom||'')+' '+(d.partenaireNom||'')).trim());
+  var partEmail = d.partenaireEmail || d.emailPartenaire || '';
+  // Eviter doublon (même email + date)
+  var existe = adminData.essai.some(function(e){ return e.email===d.email && e.date===date; });
+  if (!existe) {
+    adminData.essai.push({
+      date:date, ville:d.ville||'paris', niveau:d.niveau||'debutant',
+      prenom:d.prenom, nom:d.nom, email:d.email||'', role:_normRole(d.role),
+      statut:statut, present:null,
+      partenaire:partNom, emailPartenaire:partEmail
+    });
+  }
+  if (avecPart && (d.partenairePrenom || d.partenaireNom)) {
+    var pPrenom = d.partenairePrenom || '';
+    var pNom    = d.partenaireNom    || '';
+    var pEmail  = partEmail;
+    var pRole   = _normRole(d.rolePartenaire) || (d.role==='guideur'?'guidee':'guideur');
+    var existeP = adminData.essai.some(function(e){ return e.email===pEmail && e.date===date && pEmail; });
+    if (!existeP) {
+      adminData.essai.push({
+        date:date, ville:d.ville||'paris', niveau:d.niveau||'debutant',
+        prenom:pPrenom, nom:pNom, email:pEmail, role:pRole,
+        statut:'confirme', present:null,
+        partenaire:(d.prenom+' '+d.nom).trim(), emailPartenaire:d.email||''
+      });
+    }
+  }
+  filtreEssai = 'dates';
+}
+
 // Dispatcher (postMessage iframe + localStorage + BroadcastChannel)
 function traiterMsgInscription(msg, doRender) {
   if (!msg || !msg.type) return;
   if (msg.type === 'stageInscription') _appliquerStageInscription(msg.data);
   if (msg.type === 'coursInscription') _appliquerCoursInscription(msg.data);
+  if (msg.type === 'essaiInscription') _appliquerEssaiInscription(msg.data);
   if (doRender) renderTab();
 }
 
@@ -767,7 +805,8 @@ function traiterInscriptionsEnAttente() {
 
 // Écoute postMessage depuis les iframes (admin utilise les formulaires directement)
 window.addEventListener('message', function(ev) {
-  if (!ev.data || (ev.data.type !== 'stageInscription' && ev.data.type !== 'coursInscription')) return;
+  var t = ev.data && ev.data.type;
+  if (t !== 'stageInscription' && t !== 'coursInscription' && t !== 'essaiInscription') return;
   traiterMsgInscription(ev.data, true);
 });
 
@@ -777,6 +816,42 @@ window.addEventListener('message', function(ev) {
   var bc = new BroadcastChannel('tev_inscriptions');
   bc.onmessage = function(ev) { traiterMsgInscription(ev.data, true); };
 })();
+
+// Polling Apps Script pour nouveaux essais Wix (toutes les 60s, hors démo)
+var _essaiPollTimer = null;
+function demarrerPollEssais() {
+  if (IS_DEMO || _essaiPollTimer) return;
+  _essaiPollTimer = setInterval(function() {
+    postAS({action:'getNouveauxEssais'}).then(function(r) {
+      if (!r || !r.essais || !r.essais.length) return;
+      var changed = false;
+      r.essais.forEach(function(d) {
+        var avantLen = (adminData.essai||[]).length;
+        _appliquerEssaiInscription(d);
+        if ((adminData.essai||[]).length !== avantLen) changed = true;
+      });
+      if (changed) renderTab();
+    }).catch(function() {});
+  }, 60000);
+}
+function rafraichirEssais(btn) {
+  if (btn) { btn.disabled=true; btn.textContent='⏳'; }
+  if (IS_DEMO) {
+    setTimeout(function(){ if(btn){btn.disabled=false;btn.textContent='↻ Rafraîchir';} },600);
+    return;
+  }
+  postAS({action:'getNouveauxEssais'}).then(function(r) {
+    if (btn) { btn.disabled=false; btn.textContent='↻ Rafraîchir'; }
+    if (!r || !r.essais || !r.essais.length) return;
+    var changed = false;
+    r.essais.forEach(function(d) {
+      var avantLen = (adminData.essai||[]).length;
+      _appliquerEssaiInscription(d);
+      if ((adminData.essai||[]).length !== avantLen) changed = true;
+    });
+    if (changed) renderTab();
+  }).catch(function() { if(btn){btn.disabled=false;btn.textContent='↻ Rafraîchir';} });
+}
 
 // AUTH
 // ================================================================
@@ -798,6 +873,7 @@ function demarrerApp(email) {
   gel('app').style.display='block';
   traiterInscriptionsEnAttente();
   renderTab();
+  demarrerPollEssais();
 }
 function logout() {
   gel('app').style.display='none';
@@ -957,6 +1033,9 @@ function handleAction(action, btn) {
       ouvrirModalConfirm('Désactiver cet élève ?', function(){
         desactiverEleve(id, btn.dataset.email||'', btn);
       });
+      break;
+    case 'rafraichir-essais':
+      rafraichirEssais(btn);
       break;
     case 'val-guidee-essai':
       valGuideeEssai(btn.dataset.email||'', btn.dataset.date||'', btn);
@@ -1167,10 +1246,13 @@ function desactiverEleve(id, email, btn) {
 // ================================================================
 function renderEssai() {
   var liste = adminData.essai||[];
-  var h = '<div class="sub-tabs">'
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px;">'
+    +'<div class="sub-tabs" style="margin-bottom:0;">'
     +'<button class="sub-tab'+(filtreEssai==='dates'?' active':'')+'" data-filt-essai="dates">Par date</button>'
     +'<button class="sub-tab'+(filtreEssai==='attente'?' active':'')+'" data-filt-essai="attente">Liste d&#39;attente</button>'
     +'<button class="sub-tab'+(filtreEssai==='pointage'?' active':'')+'" data-filt-essai="pointage">Pointage</button>'
+    +'</div>'
+    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" data-action="rafraichir-essais">&#8635; Rafraîchir</button>'
     +'</div>';
   // Trier : date ASC, puis niveau (debutant avant intermediaire), puis rôle
   liste.sort(function(a,b){
