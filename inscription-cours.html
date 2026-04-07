@@ -724,6 +724,25 @@ function finalize() {
 
   $(id).style.display='block';
   window.scrollTo(0,0);
+
+  // Notifier le parent (admin.html) pour mise à jour de adminData.coursTango
+  try {
+    window.parent.postMessage({
+      type: 'coursInscription',
+      data: {
+        prenom: S.prenom, nom: S.nom, email: S.email, tel: S.tel,
+        role: S.role, niveau: S.c1.niveau,
+        c1: { ville: S.c1.ville, niveau: S.c1.niveau },
+        c2: (S.nbCours===2 && S.c2.ville && S.c2.niveau) ? { ville: S.c2.ville, niveau: S.c2.niveau } : null,
+        nbCours: S.nbCours,
+        venue: S.venue, role2: S.role2, venue2: S.venue2,
+        pPrenom: S.pPrenom, pNom: S.pNom, pEmail: S.pEmail, pTel: S.pTel, pRole: S.pRole,
+        p2Prenom: S.p2Prenom, p2Nom: S.p2Nom, p2Email: S.p2Email,
+        samePartner: S.samePartner,
+        isWaitlist: wait
+      }
+    }, '*');
+  } catch(e) {}
 }
 
 function buildRecapFinal(incl2) {
