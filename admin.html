@@ -65,6 +65,9 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .stats-4{grid-template-columns:repeat(4,1fr);}
 .stats-3{grid-template-columns:repeat(3,1fr);}
 .stat{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 6px;text-align:center;}
+.stat[data-sous-ct]{cursor:pointer;transition:border-color .15s,background .15s;}
+.stat[data-sous-ct]:hover{background:var(--s3);border-color:var(--gold);}
+.stat.stat-active{border-color:var(--gold);background:var(--s3);}
 .stat-n{font-size:20px;font-weight:700;color:var(--text);line-height:1.1;}
 .stat-l{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-top:3px;}
 .n-gold{color:var(--gold);}
@@ -2668,29 +2671,19 @@ function renderCoursTango() {
   var nbAP  = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';}).length;
   var nbIns = tous.filter(function(e){return e.statut==='inscrit';}).length;
 
-  var sousOnglets = [
-    {id:'tous',               lbl:'Demandes ('+tous.length+')'},
-    {id:'attente_validation', lbl:'Att. validation ('+nbAV+')'},
-    {id:'valide',             lbl:'Validé.e.s ('+nbVal+')'},
-    {id:'attente_paiement',   lbl:'Att. paiement ('+nbAP+')'},
-    {id:'inscrit',            lbl:'Inscrits ('+nbIns+')'},
-    {id:'inscrire',           lbl:'✏️ Nouvelle demande'},
-    {id:'valider_paiement',   lbl:'💳 Valider paiement'}
-  ];
+  var filtre = (sousOngletCoursTango==='inscrire'||sousOngletCoursTango==='valider_paiement') ? 'tous' : sousOngletCoursTango;
 
   var h = '<div class="stats-row stats-5">'
-    +'<div class="stat"><div class="stat-n">'+tous.length+'</div><div class="stat-l">Total</div></div>'
-    +'<div class="stat"><div class="stat-n n-warn">'+nbAV+'</div><div class="stat-l">Att. valid.</div></div>'
-    +'<div class="stat"><div class="stat-n n-gold">'+nbVal+'</div><div class="stat-l">Validé.e.s</div></div>'
-    +'<div class="stat"><div class="stat-n" style="color:var(--gold)">'+nbAP+'</div><div class="stat-l">Att. paiement</div></div>'
-    +'<div class="stat"><div class="stat-n n-ok">'+nbIns+'</div><div class="stat-l">Inscrits</div></div>'
+    +'<div class="stat'+(filtre==='tous'?' stat-active':'')+'" data-sous-ct="tous"><div class="stat-n">'+tous.length+'</div><div class="stat-l">Total</div></div>'
+    +'<div class="stat'+(filtre==='attente_validation'?' stat-active':'')+'" data-sous-ct="attente_validation"><div class="stat-n n-warn">'+nbAV+'</div><div class="stat-l">Att. valid.</div></div>'
+    +'<div class="stat'+(filtre==='valide'?' stat-active':'')+'" data-sous-ct="valide"><div class="stat-n n-gold">'+nbVal+'</div><div class="stat-l">Validé.e.s</div></div>'
+    +'<div class="stat'+(filtre==='attente_paiement'?' stat-active':'')+'" data-sous-ct="attente_paiement"><div class="stat-n" style="color:var(--gold)">'+nbAP+'</div><div class="stat-l">Att. paiement</div></div>'
+    +'<div class="stat'+(filtre==='inscrit'?' stat-active':'')+'" data-sous-ct="inscrit"><div class="stat-n n-ok">'+nbIns+'</div><div class="stat-l">Inscrits</div></div>'
+    +'</div>'
+    +'<div class="sub-tabs" style="flex-wrap:wrap;">'
+    +'<button class="sub-tab'+(sousOngletCoursTango==='inscrire'?' active':'')+'" data-sous-ct="inscrire">✏️ Nouvelle demande</button>'
+    +'<button class="sub-tab'+(sousOngletCoursTango==='valider_paiement'?' active':'')+'" data-sous-ct="valider_paiement">💳 Valider paiement</button>'
     +'</div>';
-
-  h += '<div class="sub-tabs" style="flex-wrap:wrap;">';
-  sousOnglets.forEach(function(s){
-    h += '<button class="sub-tab'+(sousOngletCoursTango===s.id?' active':'')+'" data-sous-ct="'+s.id+'">'+s.lbl+'</button>';
-  });
-  h += '</div>';
 
   if(sousOngletCoursTango==='inscrire'){
     return h + renderFormulaireDemandeAdmin();
