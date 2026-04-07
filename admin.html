@@ -135,6 +135,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .login-logo{font-family:var(--font-d);font-size:26px;font-weight:300;letter-spacing:6px;color:var(--gold);margin-bottom:4px;}
 .login-sub{font-size:10px;letter-spacing:3px;color:var(--dim);margin-bottom:24px;text-transform:uppercase;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
 </head>
 <body>
 
@@ -181,6 +182,20 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <div class="modal-btns">
       <button class="modal-cancel" id="modal-ren-cancel">Annuler</button>
       <button class="modal-ok" id="modal-ren-ok">↻ Renouveler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal QR Code carte -->
+<div class="modal-overlay" id="modal-qr">
+  <div class="modal-box" style="text-align:center;">
+    <div class="modal-titre">📱 QR Code pointage</div>
+    <div class="modal-msg" id="modal-qr-nom" style="margin-bottom:12px;"></div>
+    <canvas id="modal-qr-canvas" style="border-radius:8px;max-width:200px;width:100%;margin:0 auto;display:block;"></canvas>
+    <div style="font-size:10px;color:var(--dim);margin-top:10px;">L&#39;élève scanne ce code avec son téléphone pour pointer sa présence</div>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="modal-cancel" id="modal-qr-close">Fermer</button>
+      <button class="modal-ok" id="modal-qr-pointer">+ Pointer maintenant</button>
     </div>
   </div>
 </div>
@@ -558,6 +573,35 @@ function fermerModalRenouveler() {
   gel('modal-renouveler').classList.remove('vis');
   _renewModalId = null;
 }
+var _qrCarteId = null;
+function ouvrirModalQR(id, nom, cours) {
+  _qrCarteId = id;
+  var el = gel('modal-qr-nom');
+  if(el) el.textContent = nom + (cours ? ' — ' + cours : '');
+  gel('modal-qr').classList.add('vis');
+  // Generate QR code pointing to pointer.html with carte id
+  var url = 'pointer.html?id=' + encodeURIComponent(id) + '&nom=' + encodeURIComponent(nom);
+  var canvas = gel('modal-qr-canvas');
+  if(canvas && typeof QRCode !== 'undefined') {
+    QRCode.toCanvas(canvas, url, {width:200, margin:1, color:{dark:'#D4AF37',light:'#0a0a0a'}}, function(err){});
+  }
+}
+function fermerModalQR() {
+  gel('modal-qr').classList.remove('vis');
+  _qrCarteId = null;
+}
+function confirmerModalQRPointer() {
+  var id = _qrCarteId;
+  fermerModalQR();
+  if(id) ouvrirModalDate(function(date){ pointerCoursAction(id, date, null); });
+}
+function afficherToast(msg) {
+  var t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--gold);color:var(--text);padding:10px 16px;border-radius:8px;font-size:12px;z-index:9999;max-width:320px;text-align:center;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.5);';
+  document.body.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .4s';setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},400);},3000);
+}
 function confirmerModalRenouveler() {
   var id = _renewModalId;
   var el = document.querySelector('input[name="ren-paye"]:checked');
@@ -575,6 +619,9 @@ gel('modal-ren-cancel').addEventListener('click', fermerModalRenouveler);
 gel('modal-ren-ok').addEventListener('click', confirmerModalRenouveler);
 gel('pub-view-close').addEventListener('click', fermerPubView);
 gel('pub-view-modal').addEventListener('click', function(e){ if(e.target===this)fermerPubView(); });
+gel('modal-qr-close').addEventListener('click', fermerModalQR);
+gel('modal-qr-pointer').addEventListener('click', confirmerModalQRPointer);
+gel('modal-qr').addEventListener('click', function(e){if(e.target===this)fermerModalQR();});
 
 // ================================================================
 // AUTH
@@ -755,6 +802,9 @@ function handleAction(action, btn) {
       break;
     case 'toggle-carte-paye':
       toggleCartePaye(id);
+      break;
+    case 'qr-carte':
+      ouvrirModalQR(id, btn.dataset.nom||'', btn.dataset.cours||'');
       break;
     case 'filt-stage-slot':
       filtreStageSlot=btn.dataset.slot; renderTab(); break;
@@ -1272,6 +1322,7 @@ function renderCartes() {
     return da-db;
   });
   var h='', lastCours=null;
+  h += '<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Un élève peut pointer deux fois le même jour (cours débutant + intermédiaire).</div>';
   cartes.forEach(function(c){
     // En-tête de groupe par cours
     var coursLbl = c.cours||((c.ville==='vincennes'?'Vincennes':'Paris')+' — '+(c.niveau||'—'));
@@ -1318,6 +1369,7 @@ function renderCartes() {
       +'</div>'
       +'<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;margin-left:8px;">'
       +(fini?'':'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer</button>')
+      +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="qr-carte" data-id="'+c.id+'" data-nom="'+c.nom+'" data-cours="'+(c.cours||'').replace(/"/g,'&quot;')+'">📱 QR</button>'
       +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="renouveler-carte" data-id="'+c.id+'" data-nom="'+c.nom+'">↻ Renouveler</button>'
       +btnEmail(c.email,c.nom)
       +'</div></div>';
@@ -1327,7 +1379,7 @@ function renderCartes() {
 function pointerCoursAction(id, date, btn) {
   if(IS_DEMO){
     var c=adminData.cartes.find(function(x){return x.id===id;});
-    if(c){if(!c.datesCours)c.datesCours=[];c.utilises=Math.min(10,(c.utilises||0)+1);c.restants=Math.max(0,10-c.utilises);c.datesCours.push(date);if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}if(c.restants===0){var msg=gel('modal-confirm-msg');if(msg)msg.textContent='';}}
+    if(c){if(!c.datesCours)c.datesCours=[];var estPremierCours=!c.datePremierCours;c.utilises=Math.min(10,(c.utilises||0)+1);c.restants=Math.max(0,10-c.utilises);c.datesCours.push(date);if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}if(c.restants===0){var msg=gel('modal-confirm-msg');if(msg)msg.textContent='';}if(estPremierCours){afficherToast('✉️ Email de bienvenue envoyé à '+(c.nom||c.email||'')+'');}}
     renderTab(); return;
   }
   if(btn)btn.disabled=true;
@@ -1335,7 +1387,10 @@ function pointerCoursAction(id, date, btn) {
   postAS({action:'pointageManuel',eleveId:id,date:date,niveau:c?c.niveau:'',note:'Pointage admin'}).then(function(){chargerDonnees();}).catch(function(e){if(btn)btn.disabled=false;});
 }
 function renouvelerCarteAction(id, btn, paye) {
-  if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=10;c.datePremierCours='';c.expiration='';c.datesCours=[];c.paye=paye===true;}renderTab();return;}
+  if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=10;c.datePremierCours='';c.expiration='';c.datesCours=[];c.paye=paye===true;
+// Sync coursTango statut: non payé → attente_paiement, payé → inscrit
+var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='inscrit';});
+if(cte){cte.statut=paye===true?'inscrit':'attente_paiement';}}renderTab();return;}
   if(btn){btn.disabled=true;btn.textContent='⏳';}
   postAS({action:'renouvelerCarte',eleveId:id,paye:paye===true}).then(function(){chargerDonnees();}).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
 }
@@ -1343,6 +1398,8 @@ function toggleCartePaye(id) {
   var c=(adminData.cartes||[]).find(function(x){return x.id===id;});
   if(!c)return;
   c.paye=!c.paye;
+  // If now paid, restore coursTango inscrit status
+  if(c.paye){var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='attente_paiement';});if(cte)cte.statut='inscrit';}
   if(!IS_DEMO)postAS({action:'toggleCartePaye',eleveId:id,paye:c.paye}).catch(function(){});
   renderTab();
 }
