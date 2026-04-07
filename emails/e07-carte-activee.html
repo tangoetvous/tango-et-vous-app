@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>E07 — Carte de 10 cours activée</title>
+<style>
+body{margin:0;padding:0;background:#f4f4f4;font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#222;}
+.email-wrap{max-width:580px;margin:30px auto;background:#fff;border-radius:4px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.email-hdr{background:#111;padding:24px 30px;text-align:center;}
+.logo{font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;}
+.logo-sub{font-size:10px;letter-spacing:3px;color:#888;margin-top:4px;}
+.email-body{padding:32px 30px;}
+h2{font-size:20px;font-weight:700;color:#111;margin-bottom:8px;}
+.intro{font-size:15px;color:#444;line-height:1.7;margin-bottom:20px;}
+.recap{background:#f9f9f4;border-left:3px solid #D4AF37;padding:14px 18px;border-radius:0 4px 4px 0;margin:20px 0;}
+.recap h3{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:10px;}
+.recap-row{display:flex;gap:8px;margin-bottom:6px;font-size:13px;}
+.lbl{color:#888;min-width:140px;flex-shrink:0;}
+.val{color:#222;font-weight:600;}
+.cours-counter{display:flex;align-items:center;gap:16px;background:#fffbea;border:1px solid #D4AF37;border-radius:4px;padding:16px 18px;margin:20px 0;}
+.cours-counter .count-big{font-size:40px;font-weight:700;color:#D4AF37;line-height:1;}
+.cours-counter .count-info{font-size:13px;color:#444;line-height:1.6;}
+.cours-counter .count-info strong{color:#222;}
+.info-list{margin:20px 0;}
+.info-item{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f0f0f0;font-size:13px;color:#444;line-height:1.5;}
+.info-item:last-child{border-bottom:none;}
+.info-icon{color:#D4AF37;font-size:15px;flex-shrink:0;margin-top:1px;}
+.btn-cta{display:inline-block;background:#D4AF37;color:#000;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:12px 28px;border-radius:4px;text-decoration:none;}
+.divider{border:none;border-top:1px solid #eee;margin:24px 0;}
+.note{font-size:12px;color:#888;font-style:italic;line-height:1.6;}
+.email-footer{background:#111;padding:20px 30px;text-align:center;font-size:11px;color:#666;line-height:1.8;}
+.email-footer a{color:#D4AF37;text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="email-wrap">
+  <div class="email-hdr">
+    <div class="logo">TANGO &amp; VOUS</div>
+    <div class="logo-sub">École de tango argentin</div>
+  </div>
+  <div class="email-body">
+    <h2>Votre carte de 10 cours est activée !</h2>
+    <p class="intro">
+      Bonjour {{PRENOM}},<br/><br/>
+      Excellent — votre premier pointage vient d'être enregistré et votre carte de 10 cours est maintenant active. Le compteur tourne, profitez-en !
+    </p>
+
+    <div class="recap">
+      <h3>Votre carte</h3>
+      <div class="recap-row"><span class="lbl">Activation :</span><span class="val">{{DATE_ACTIVATION}}</span></div>
+      <div class="recap-row"><span class="lbl">Expiration :</span><span class="val">{{DATE_EXPIRATION}} <span style="font-weight:400;color:#888;">(3 mois glissants)</span></span></div>
+      <div class="recap-row"><span class="lbl">Cours utilisés :</span><span class="val">1 / 10</span></div>
+    </div>
+
+    <div class="cours-counter">
+      <div class="count-big">9</div>
+      <div class="count-info">
+        <strong>cours restants</strong><br/>
+        Valables jusqu'au {{DATE_EXPIRATION}}<br/>
+        sur toutes nos pistes
+      </div>
+    </div>
+
+    <p style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:10px;">Comment fonctionne votre carte</p>
+    <div class="info-list">
+      <div class="info-item">
+        <span class="info-icon">&#9679;</span>
+        <span><strong>Paris &amp; Vincennes :</strong> votre carte est valable dans les deux salles, sans distinction.</span>
+      </div>
+      <div class="info-item">
+        <span class="info-icon">&#9679;</span>
+        <span><strong>3 mois glissants :</strong> la date d'expiration est calculée à partir du jour de votre 1er cours. Vous avez jusqu'au {{DATE_EXPIRATION}} pour utiliser vos 9 cours restants.</span>
+      </div>
+      <div class="info-item">
+        <span class="info-icon">&#9679;</span>
+        <span><strong>Cours débutant &amp; intermédiaire :</strong> la carte couvre les deux niveaux — passez de l'un à l'autre librement selon votre progression.</span>
+      </div>
+      <div class="info-item">
+        <span class="info-icon">&#9679;</span>
+        <span><strong>Pointage à chaque cours :</strong> Marc ou Eva enregistre votre présence. Vous pouvez aussi suivre vos cours directement depuis l'appli élève.</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin:24px 0;">
+      <a href="{{URL_APP_ELEVE}}" class="btn-cta">Suivre ma carte</a>
+    </div>
+
+    <hr class="divider"/>
+    <p class="note">
+      Une question sur votre carte ? Écrivez-nous à <a href="mailto:tangoetvous@gmail.com" style="color:#856000;">tangoetvous@gmail.com</a>.<br/>
+      À bientôt sur la piste !
+    </p>
+  </div>
+  <div class="email-footer">
+    <strong style="color:#D4AF37;">Tango &amp; Vous</strong><br/>
+    Marc &amp; Eva — Tango Argentin<br/>
+    <a href="mailto:tangoetvous@gmail.com">tangoetvous@gmail.com</a>
+  </div>
+</div>
+</body>
+</html>
