@@ -583,13 +583,6 @@
     const past   = STAGES_DATA.filter(s => s.date <  todayStr).reverse();
     const all    = [...future, ...past];
 
-    // Options du select dans le formulaire (à venir uniquement)
-    const stageOptions = future.map(s =>
-      `<option value="${s.date}">${s.label}</option>`
-    ).join('') || all.map(s =>
-      `<option value="${s.date}">${s.label}</option>`
-    ).join('');
-
     // Bouton unique en haut
     let html = `<div class="stages-top">
       <button class="btn-inscrire" id="btn-reserver-stage">📝 R\u00e9server un stage \u2192</button>
@@ -636,74 +629,9 @@
       </div>`;
     });
 
-    // Formulaire d'inscription (inchangé)
-    html += `<div class="stage-form-wrap" id="stage-form-wrap">
-      <div class="stage-form-title">\uD83D\uDCDD Inscription au stage</div>
-      <div id="stage-form-success" class="form-success"></div>
-      <div id="stage-form-inner">
-        <div class="form-field">
-          <label>Stage</label>
-          <select id="sf-date">${stageOptions}</select>
-        </div>
-        <div class="form-field">
-          <label>Pr\u00e9nom &amp; Nom</label>
-          <input type="text" id="sf-nom" value="${nom}" placeholder="Pr\u00e9nom Nom"/>
-        </div>
-        <div class="form-field">
-          <label>Email</label>
-          <input type="email" id="sf-email" value="${email}" placeholder="votre@email.com"/>
-        </div>
-        <div class="form-field">
-          <label>R\u00f4le</label>
-          <div class="radio-group" id="sf-role-group">
-            <div class="radio-opt" data-val="guidee">\uD83D\uDC83 Guid\u00e9e</div>
-            <div class="radio-opt" data-val="guideur">\uD83D\uDD7A Guideur</div>
-          </div>
-        </div>
-        <div class="form-field">
-          <label>Situation</label>
-          <div class="radio-group" id="sf-sit-group">
-            <div class="radio-opt" data-val="seul">Seul(e)</div>
-            <div class="radio-opt" data-val="partenaire">Avec partenaire</div>
-          </div>
-        </div>
-        <div class="partner-section" id="sf-partner-section">
-          <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;">Partenaire</div>
-          <div class="form-field">
-            <label>Pr\u00e9nom &amp; Nom du partenaire</label>
-            <input type="text" id="sf-partner-nom" placeholder="Pr\u00e9nom Nom"/>
-          </div>
-          <div class="form-field">
-            <label>Email du partenaire</label>
-            <input type="email" id="sf-partner-email" placeholder="partenaire@email.com"/>
-          </div>
-        </div>
-        <div class="form-field" style="margin-top:14px;">
-          <label>Cr\u00e9neaux</label>
-          <div>
-            <div class="checkbox-row">
-              <input type="checkbox" id="sf-tech" data-price="20"/>
-              <label for="sf-tech">Technique Leader &amp; Follower \u2014 14h\u201315h</label>
-              <span class="price">20\u20ac</span>
-            </div>
-            <div class="checkbox-row">
-              <input type="checkbox" id="sf-stage1" data-price="25"/>
-              <label for="sf-stage1">Stage 1 \u2014 15h\u201316h30</label>
-              <span class="price">25\u20ac</span>
-            </div>
-            <div class="checkbox-row">
-              <input type="checkbox" id="sf-stage2" data-price="25"/>
-              <label for="sf-stage2">Stage 2 \u2014 16h30\u201318h</label>
-              <span class="price">25\u20ac</span>
-            </div>
-          </div>
-          <div class="total-line">
-            <span style="font-size:13px;color:var(--text-dim);">Total</span>
-            <span class="total-amount" id="sf-total">0\u20ac</span>
-          </div>
-        </div>
-        <button class="btn-submit-stage" id="sf-submit">Confirmer mon inscription</button>
-      </div>
+    // iframe formulaire stages-pwa.html (identique à l'admin)
+    html += `<div id="stage-iframe-wrap" style="margin:0 20px 16px;display:none;">
+      <iframe src="stages-pwa.html" style="border:none;width:100%;height:860px;border-radius:8px;" title="Inscription aux stages de tango"></iframe>
     </div>`;
 
     $('stages-list').innerHTML = html;
@@ -718,65 +646,12 @@
       });
     });
 
-    // Bouton unique de réservation
+    // Bouton unique de réservation → affiche l'iframe et scrolle dessus
     $('btn-reserver-stage').addEventListener('click', () => {
-      const wrap = $('stage-form-wrap');
-      const firstFuture = STAGES_DATA.find(s => s.date >= todayStr);
-      if (firstFuture) $('sf-date').value = firstFuture.date;
-      wrap.classList.add('open');
+      const wrap = $('stage-iframe-wrap');
+      wrap.style.display = 'block';
       wrap.scrollIntoView({behavior:'smooth', block:'start'});
     });
-
-    // Radio groups
-    ['sf-role-group','sf-sit-group'].forEach(groupId => {
-      document.querySelectorAll(`#${groupId} .radio-opt`).forEach(opt => {
-        opt.addEventListener('click', () => {
-          document.querySelectorAll(`#${groupId} .radio-opt`).forEach(o => o.classList.remove('selected'));
-          opt.classList.add('selected');
-          if (groupId === 'sf-sit-group') {
-            $('sf-partner-section').classList.toggle('show', opt.dataset.val === 'partenaire');
-          }
-        });
-      });
-    });
-
-    // Calculateur de total
-    ['sf-tech','sf-stage1','sf-stage2'].forEach(id => {
-      $(id).addEventListener('change', updateStageTotal);
-    });
-
-    // Soumission
-    $('sf-submit').addEventListener('click', () => {
-      const role = document.querySelector('#sf-role-group .radio-opt.selected');
-      const sit  = document.querySelector('#sf-sit-group .radio-opt.selected');
-      if (!role || !sit) {
-        alert('Merci de s\u00e9lectionner votre r\u00f4le et votre situation.');
-        return;
-      }
-      const isGuidee   = role.dataset.val === 'guidee';
-      const hasPartner = sit.dataset.val === 'partenaire';
-      const msg = isGuidee && !hasPartner
-        ? '\u2713 Votre demande est enregistr\u00e9e. Vous \u00eates en liste d\u2019attente \u2014 nous vous contacterons d\u00e8s qu\u2019une place est disponible.'
-        : '\u2713 Votre demande est confirm\u00e9e. Vous recevrez un email avec le lien AssoConnect pour finaliser votre inscription.';
-      if (!IS_DEMO) { /* submit to APPS_SCRIPT_URL */ }
-      const succ = $('stage-form-success');
-      succ.textContent = msg;
-      succ.classList.add('show');
-      $('stage-form-inner').style.display = 'none';
-    });
-  }
-
-  function updateStageTotal() {
-    let total = 0;
-    ['sf-tech','sf-stage1','sf-stage2'].forEach(id => {
-      const el = $(id);
-      if (el && el.checked) total += parseInt(el.dataset.price);
-    });
-    const techOk  = $('sf-tech')   && $('sf-tech').checked;
-    const s1Ok    = $('sf-stage1') && $('sf-stage1').checked;
-    const s2Ok    = $('sf-stage2') && $('sf-stage2').checked;
-    if (techOk && s1Ok && s2Ok) total = 60; // pack
-    $('sf-total').textContent = total + '\u20ac';
   }
 
   // ================================================================
