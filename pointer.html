@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Tango &amp; Vous — Pointage</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{--gold:#D4AF37;--bg:#0a0a0a;--s1:#111;--s2:#181818;--border:#2a2a2a;--text:#f0f0f0;--dim:#888;--ok:#2e7d32;--ok-bg:#0a1200;--ok-text:#81c784;--err:#c62828;--err-bg:#140000;--err-text:#ef9a9a;}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Helvetica Neue',Arial,sans-serif;font-size:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:32px 24px;max-width:360px;width:100%;text-align:center;}
+.logo{font-family:Georgia,serif;font-size:18px;font-weight:300;letter-spacing:5px;color:var(--gold);margin-bottom:4px;}
+.logo-sub{font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:28px;}
+.status-icon{font-size:56px;margin-bottom:16px;line-height:1;}
+.status-title{font-size:20px;font-weight:700;margin-bottom:8px;}
+.status-sub{font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:24px;}
+.info-box{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:left;margin-bottom:24px;}
+.info-row{display:flex;gap:8px;margin-bottom:6px;font-size:13px;}
+.info-row:last-child{margin-bottom:0;}
+.info-lbl{color:var(--dim);min-width:80px;flex-shrink:0;}
+.info-val{color:var(--text);font-weight:600;}
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
+.btn-gold{background:var(--gold);color:#000;}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--dim);margin-top:10px;}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:20px auto;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.state-ok{border-color:var(--ok);}
+.state-err{border-color:var(--err);}
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <div class="logo">TANGO &amp; VOUS</div>
+  <div class="logo-sub">Pointage présence</div>
+
+  <!-- État: chargement -->
+  <div id="state-loading">
+    <div class="spinner"></div>
+    <p style="color:var(--dim);font-size:13px;">Vérification en cours…</p>
+  </div>
+
+  <!-- État: confirmation -->
+  <div id="state-confirm" style="display:none;">
+    <div class="status-icon">📋</div>
+    <div class="status-title">Confirmer votre présence</div>
+    <div class="status-sub" id="confirm-sub">Bonjour ! Vous êtes sur le point de pointer votre présence au cours.</div>
+    <div class="info-box" id="confirm-info"></div>
+    <button class="btn btn-gold" id="btn-confirm">✓ Confirmer ma présence</button>
+    <button class="btn btn-ghost" id="btn-cancel">Ce n'est pas moi</button>
+  </div>
+
+  <!-- État: succès -->
+  <div id="state-ok" style="display:none;">
+    <div class="status-icon">✅</div>
+    <div class="status-title" style="color:var(--ok-text);">Présence enregistrée !</div>
+    <div class="status-sub">Votre présence a bien été pointée pour ce cours. À bientôt sur la piste !</div>
+    <div class="info-box" id="ok-info"></div>
+  </div>
+
+  <!-- État: erreur -->
+  <div id="state-err" style="display:none;">
+    <div class="status-icon">⚠️</div>
+    <div class="status-title" style="color:var(--err-text);">Problème de pointage</div>
+    <div class="status-sub" id="err-msg">Ce QR code n'est pas reconnu ou a déjà été utilisé. Demandez à l'encadrant de vous pointer manuellement.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var id  = params.get('id')  || '';
+  var nom = params.get('nom') || '';
+  var today = new Date();
+  var dateStr = today.toISOString().split('T')[0];
+  var heureStr = today.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+
+  function show(s) {
+    ['loading','confirm','ok','err'].forEach(function(x){ document.getElementById('state-'+x).style.display = x===s?'':'none'; });
+  }
+
+  function fmtDate(d) {
+    var parts = d.split('-');
+    return parseInt(parts[2])+' / '+(parseInt(parts[1]))+' / '+parts[0];
+  }
+
+  if(!id) {
+    document.getElementById('err-msg').textContent = 'QR code invalide — identifiant manquant.';
+    show('err');
+    return;
+  }
+
+  // Simulate loading then show confirm
+  setTimeout(function(){
+    document.getElementById('confirm-sub').textContent = 'Bonjour ' + (nom||'') + ' ! Confirmez votre présence au cours d\'aujourd\'hui.';
+    document.getElementById('confirm-info').innerHTML =
+      '<div class="info-row"><span class="info-lbl">Élève :</span><span class="info-val">'+(nom||id)+'</span></div>'
+      +'<div class="info-row"><span class="info-lbl">Date :</span><span class="info-val">'+fmtDate(dateStr)+'</span></div>'
+      +'<div class="info-row"><span class="info-lbl">Heure :</span><span class="info-val">'+heureStr+'</span></div>';
+    show('confirm');
+  }, 800);
+
+  document.getElementById('btn-confirm').addEventListener('click', function(){
+    this.disabled = true;
+    this.textContent = '⏳ Enregistrement…';
+
+    // En production : appel Apps Script pour enregistrer le pointage
+    // fetch(APPS_SCRIPT_URL + '?action=pointer&id=' + id + '&date=' + dateStr)
+    //   .then(r => r.json()).then(d => { ... })
+
+    // Simulation (demo)
+    setTimeout(function(){
+      document.getElementById('ok-info').innerHTML =
+        '<div class="info-row"><span class="info-lbl">Élève :</span><span class="info-val">'+(nom||id)+'</span></div>'
+        +'<div class="info-row"><span class="info-lbl">Date :</span><span class="info-val">'+fmtDate(dateStr)+'</span></div>'
+        +'<div class="info-row"><span class="info-lbl">Heure :</span><span class="info-val">'+heureStr+'</span></div>';
+      document.getElementById('card').classList.add('state-ok');
+      show('ok');
+    }, 1000);
+  });
+
+  document.getElementById('btn-cancel').addEventListener('click', function(){
+    document.getElementById('err-msg').textContent = 'Si vous avez ouvert ce lien par erreur, fermez simplement cette page. Demandez à l\'encadrant de vous pointer manuellement.';
+    document.getElementById('card').classList.add('state-err');
+    show('err');
+  });
+})();
+</script>
+</body>
+</html>
