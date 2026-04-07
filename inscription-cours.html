@@ -562,7 +562,8 @@ function sTarif() {
     `<div class="field"><label>Formule</label><select id="${idSel}" onchange="${onchg}">
       <option value="">— Choisir —</option>
       ${hasParis?`<option value="forfait"${cur==='forfait'?' selected':''}>Forfait annuel</option>
-      <option value="carte"${cur==='carte'?' selected':''}>Carte de 10 cours</option>`:''}
+      <option value="carte"${cur==='carte'?' selected':''}>Carte de 10 cours</option>
+      <option value="unitaire"${cur==='unitaire'?' selected':''}>Cours à l'unité</option>`:''}
       ${!hasParis&&hasVinc?`<option value="forfait"${cur==='forfait'?' selected':''}>Forfait annuel</option>`:''}
     </select></div>`;
 
@@ -626,17 +627,25 @@ function calcTarif() {
     const hasP=villes.includes('paris'),hasV=villes.includes('vincennes');
     const nb2=villes.length,both2P=nb2===2&&hasP&&!hasV,both2V=nb2===2&&hasV&&!hasP,mix=hasP&&hasV;
 
-    if(both2P){ add(formule==='carte'?'Carte 10 cours (couvre 2 cours) — Paris':'Forfait annuel 2 cours — Paris', formule==='carte'?(r?150:170):(r?660:760)); }
+    if(both2P){
+      if(formule==='carte') add('Carte 10 cours (couvre 2 cours) — Paris',r?150:170);
+      else if(formule==='unitaire'){ add('Cours à l\'unité Paris (×2)',r?34:40); }
+      else add('Forfait annuel 2 cours — Paris',r?660:760);
+    }
     else if(both2V){ add('Forfait annuel 2 cours — Vincennes',r?660:760); }
     else if(mix){
       const fm=formule==='vincarte'?'vincarte':'forfait2';
       if(fm==='vincarte'){ add('Carte 10 cours — Paris',r?150:170); add('Forfait annuel — Vincennes',r?365:435); }
       else add('Forfait annuel 2 cours — Paris + Vincennes',r?660:760);
     }
-    else if(hasP){ add(formule==='carte'?'Carte 10 cours — Paris':'Forfait annuel — Paris', formule==='carte'?(r?150:170):(r?430:490)); }
+    else if(hasP){
+      if(formule==='carte') add('Carte 10 cours — Paris',r?150:170);
+      else if(formule==='unitaire') add('Cours à l\'unité — Paris',r?17:20);
+      else add('Forfait annuel — Paris',r?425:495);
+    }
     else if(hasV){ add('Forfait annuel — Vincennes',r?365:435); }
 
-    add('Adhésion Le Regard Se Pose',10);
+    if(formule!=='unitaire') add('Adhésion Le Regard Se Pose',10);
     if(hasV){ const s=soranoCot(vinc,age); if(s!==null){ sorano==='oui'?addFree('Adhésion Sorano','Déjà réglée ✓'):add('Adhésion Sorano (à régler à Sorano)',s); }}
     return {lines,total};
   }
