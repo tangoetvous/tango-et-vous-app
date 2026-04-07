@@ -479,7 +479,10 @@ var agendaAnnee     = new Date().getFullYear();
 var agendaCats      = {paris:true, vincennes:true, stage:true, milonga:true};
 var sousOngletAgenda = 'calendrier'; // 'calendrier' | 'modif'
 // Modifications d'occurrences : annulations, reports, changements horaire/lieu, notes
-var agendaModifs = [];
+var agendaModifs    = [];
+var agendaOverrides = {}; // keyed 'type:date' → {heure, lieu}
+var amTypeAgenda    = 'paris';   // type sélectionné dans le formulaire
+var amActionAgenda  = 'annule';  // action sélectionnée
 var _dateModalCb    = null;
 var _confirmModalCb = null;
 
@@ -782,6 +785,29 @@ function bindTabEvents(el) {
       var bloc = el.querySelector('#si-part-bloc');
       if (bloc) bloc.style.display = ev.target.value==='avec'?'block':'none';
     }
+    // Agenda modif : changement de type → recalculer la liste d'occurrences
+    if (ev.target.id==='am-type-sel') {
+      amTypeAgenda = ev.target.value;
+      var occSel = el.querySelector('#am-occ-sel');
+      if (occSel) {
+        var dates = getOccurrencesPourType(amTypeAgenda);
+        occSel.innerHTML = dates.map(function(d){return '<option value="'+d+'">'+fmtDate(d)+'</option>';}).join('');
+        occSel.style.display = dates.length ? 'block' : 'none';
+      }
+    }
+    // Agenda modif : changement d'action → afficher/masquer champs conditionnels
+    if (ev.target.id==='am-action-sel') {
+      amActionAgenda = ev.target.value;
+      var fRep = el.querySelector('#am-fields-reporte');
+      var fMod = el.querySelector('#am-fields-modif');
+      if (fRep) fRep.style.display = amActionAgenda==='reporte'?'block':'none';
+      if (fMod) fMod.style.display = amActionAgenda==='modif'?'block':'none';
+    }
+    // Ajout en lot : afficher champs stage si type=stage
+    if (ev.target.id==='am-lot-type-sel') {
+      var stF = el.querySelector('#am-lot-stage-fields');
+      if (stF) stF.style.display = ev.target.value==='stage'?'block':'none';
+    }
   });
   // Upload
   var pubFile = el.querySelector('#pub-file');
@@ -928,6 +954,9 @@ function handleAction(action, btn) {
       break;
     case 'suppr-modif-agenda':
       supprimerModifAgenda(btn.dataset.id||'');
+      break;
+    case 'ajouter-dates-lot':
+      ajouterDatesLot();
       break;
   }
 }
@@ -1853,42 +1882,85 @@ function renderAgendaCalendrier() {
   return h;
 }
 
+// Retourne la liste des occurrences futures pour un type d'agenda donné
+function getOccurrencesPourType(type) {
+  var t = today();
+  if (type==='paris')     return COURS_PARIS.slice().filter(function(d){return d>=t;});
+  if (type==='vincennes') return COURS_VINCENNES.slice().filter(function(d){return d>=t;});
+  if (type==='stage')     return STAGES.map(function(s){return s.date;}).filter(function(d){return d>=t;});
+  if (type==='milonga')   return MILONGAS.slice().filter(function(d){return d>=t;});
+  return [];
+}
+
 function renderAgendaModif() {
+  var occ = getOccurrencesPourType(amTypeAgenda);
+  var typeLbls = {paris:'Cours Paris (jeudi)',vincennes:'Cours Vincennes (lundi)',stage:'Stage',milonga:'Milonga'};
+  var occSelect = occ.length
+    ? '<select id="am-occ-sel">'+occ.map(function(d){return '<option value="'+d+'">'+fmtDate(d)+'</option>';}).join('')+'</select>'
+    : '<div style="font-size:11px;color:var(--warn-text);padding:4px 0;">Aucune occurrence future dans cet agenda.</div><select id="am-occ-sel" style="display:none;"></select>';
+
+  // === Section 1 : Modifier/Annuler ===
   var h = '<div class="card" style="margin-bottom:12px;">'
-    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Ajouter une modification</div>'
-    +'<div class="field"><label>Date de l\'occurrence</label><input type="date" id="am-date" value="'+today()+'"/></div>'
-    +'<div class="field"><label>Type de cours/événement</label><select id="am-type">'
-    +'<option value="paris">Cours Paris (jeudi)</option>'
-    +'<option value="vincennes">Cours Vincennes (lundi)</option>'
-    +'<option value="stage">Stage</option>'
-    +'<option value="milonga">Milonga</option>'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Modifier / Annuler une occurrence</div>'
+    +'<div class="field"><label>Type d\'agenda</label><select id="am-type-sel">'
+    +Object.keys(typeLbls).map(function(k){return '<option value="'+k+'"'+(k===amTypeAgenda?' selected':'')+'>'+typeLbls[k]+'</option>';}).join('')
     +'</select></div>'
-    +'<div class="field"><label>Action</label><select id="am-action">'
-    +'<option value="annule">Annuler cette occurrence</option>'
-    +'<option value="reporte">Reporter à une autre date</option>'
-    +'<option value="modif">Modifier horaire ou lieu</option>'
-    +'<option value="note">Ajouter une note</option>'
+    +'<div class="field"><label>Occurrence à modifier</label>'+occSelect+'</div>'
+    +'<div class="field"><label>Action</label><select id="am-action-sel">'
+    +'<option value="annule"'+(amActionAgenda==='annule'?' selected':'')+'>🚫 Annuler cette occurrence</option>'
+    +'<option value="reporte"'+(amActionAgenda==='reporte'?' selected':'')+'>📅 Reporter à une autre date</option>'
+    +'<option value="modif"'+(amActionAgenda==='modif'?' selected':'')+'>✏️ Modifier horaire / lieu</option>'
+    +'<option value="note"'+(amActionAgenda==='note'?' selected':'')+'>📌 Ajouter une note</option>'
     +'</select></div>'
-    +'<div class="field"><label>Message / note (affiché dans l\'agenda)</label><textarea id="am-note" rows="2" placeholder="Ex: Cours annulé — Marc indisponible. Prochain cours le 14 mai."></textarea></div>'
-    +'<div class="field"><label>Nouvelle date (si report)</label><input type="date" id="am-newdate"/></div>'
-    +'<div class="field"><label>Nouvel horaire (si modification)</label><input type="text" id="am-newheure" placeholder="Ex: 21h00"/></div>'
-    +'<div class="field"><label>Nouveau lieu (si modification)</label><input type="text" id="am-newlieu" placeholder="Ex: Salle des fêtes, 12 rue Gambetta"/></div>'
-    +'<div class="box-ok" id="am-ok" style="display:none;">✓ Modification enregistrée. Email envoyé aux élèves concernés (simulation).</div>'
+    // Champs conditionnels — report
+    +'<div id="am-fields-reporte" style="display:'+(amActionAgenda==='reporte'?'block':'none')+';">'
+    +'<div class="field"><label>Nouvelle date</label><input type="date" id="am-newdate"/></div>'
+    +'<div class="field"><label>Nouvel horaire (optionnel)</label><input type="text" id="am-newheure" placeholder="Ex: 21h00"/></div>'
+    +'<div class="field"><label>Nouveau lieu (optionnel)</label><input type="text" id="am-newlieu" placeholder="Ex: Espace Danse Studio"/></div>'
+    +'</div>'
+    // Champs conditionnels — modification
+    +'<div id="am-fields-modif" style="display:'+(amActionAgenda==='modif'?'block':'none')+';">'
+    +'<div class="field"><label>Nouvel horaire</label><input type="text" id="am-mod-heure" placeholder="Ex: 21h00"/></div>'
+    +'<div class="field"><label>Nouveau lieu</label><input type="text" id="am-mod-lieu" placeholder="Ex: Espace Sorano"/></div>'
+    +'</div>'
+    +'<div class="field"><label>Note / message aux élèves</label><textarea id="am-note" rows="2" placeholder="Message affiché dans l\'agenda et envoyé par email aux inscrits"></textarea></div>'
+    +'<div class="box-ok" id="am-ok" style="display:none;">✓ Modification appliquée. Email envoyé aux élèves concernés (simulation).</div>'
     +'<div class="btn-row"><button class="btn btn-gold" data-action="sauver-modif-agenda" style="flex:2;">✓ Appliquer</button></div>'
     +'</div>';
 
+  // === Section 2 : Ajout en lot ===
+  h += '<div class="card" style="margin-bottom:12px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Ajouter des dates en lot</div>'
+    +'<div class="field"><label>Type d\'agenda concerné</label><select id="am-lot-type-sel">'
+    +'<option value="paris">Cours Paris</option>'
+    +'<option value="vincennes">Cours Vincennes</option>'
+    +'<option value="stage">Stages</option>'
+    +'<option value="milonga">Milongas</option>'
+    +'</select></div>'
+    +'<div class="field"><label>Dates à ajouter — une par ligne (JJ/MM/AAAA ou AAAA-MM-JJ)</label>'
+    +'<textarea id="am-lot-dates" rows="6" style="font-family:monospace;font-size:12px;" placeholder="09/04/2026\n16/04/2026\n23/04/2026\n..."></textarea></div>'
+    +'<div id="am-lot-stage-fields" style="display:none;">'
+    +'<div class="field"><label>Libellé du stage (partagé pour toutes les dates)</label><input type="text" id="am-lot-label" placeholder="Ex: Sam. 11 Avr 2026"/></div>'
+    +'<div class="field"><label>Thème atelier 1</label><input type="text" id="am-lot-s1" placeholder="Ex: Milonga"/></div>'
+    +'<div class="field"><label>Thème atelier 2</label><input type="text" id="am-lot-s2" placeholder="Ex: Lapiz &amp; Enrosque"/></div>'
+    +'</div>'
+    +'<div class="box-ok" id="am-lot-ok" style="display:none;">✓ Dates ajoutées à l\'agenda.</div>'
+    +'<div class="btn-row"><button class="btn btn-ok" data-action="ajouter-dates-lot" style="flex:2;">+ Ajouter ces dates</button></div>'
+    +'</div>';
+
+  // === Section 3 : Historique ===
   if (agendaModifs.length) {
-    h += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--dim);margin:16px 0 8px;">Modifications enregistrées ('+agendaModifs.length+')</div>';
+    h += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--dim);margin:16px 0 8px;">Historique des modifications ('+agendaModifs.length+')</div>';
     agendaModifs.slice().reverse().forEach(function(m) {
-      var typeLabel = {paris:'Cours Paris', vincennes:'Cours Vincennes', stage:'Stage', milonga:'Milonga'}[m.type]||m.type;
-      var actionLabel = {annule:'🚫 Annulé', reporte:'📅 Reporté', modif:'✏️ Modifié', note:'📌 Note'}[m.action]||m.action;
+      var typeLabel = {paris:'Cours Paris',vincennes:'Cours Vincennes',stage:'Stage',milonga:'Milonga'}[m.type]||m.type;
+      var actionLabel = {annule:'🚫 Annulé',reporte:'📅 Reporté',modif:'✏️ Modifié',note:'📌 Note'}[m.action]||m.action;
       var pill = m.action==='annule'?'pill-err':m.action==='reporte'?'pill-warn':m.action==='note'?'pill-info':'pill-ok';
       h += '<div class="card" style="padding:10px 12px;margin-bottom:6px;">'
         +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">'
         +'<span style="font-size:12px;font-weight:600;">'+fmtDate(m.date)+'</span>'
         +'<span class="pill" style="font-size:8px;background:var(--s2);border-color:var(--border);color:var(--dim);">'+typeLabel+'</span>'
         +'<span class="pill '+pill+'" style="font-size:8px;">'+actionLabel+'</span>'
-        +'<button class="btn btn-ghost" style="padding:2px 8px;font-size:10px;margin-left:auto;" data-action="suppr-modif-agenda" data-id="'+m.id+'">✕ Supprimer</button>'
+        +'<button class="btn btn-ghost" style="padding:2px 8px;font-size:10px;margin-left:auto;" data-action="suppr-modif-agenda" data-id="'+m.id+'" title="Supprimer et annuler la modification">✕ Annuler</button>'
         +'</div>'
         +(m.note?'<div style="font-size:12px;color:var(--dim);">'+m.note+'</div>':'')
         +(m.newDate?'<div style="font-size:11px;color:var(--gold);">→ Reporté au '+fmtDate(m.newDate)+'</div>':'')
@@ -1902,24 +1974,145 @@ function renderAgendaModif() {
   return h;
 }
 
+// Applique une mutation sur les tableaux COURS_PARIS/VINCENNES/STAGES/MILONGAS
+function _mutateAgendaArray(type, action, date, newDate) {
+  var stageOldData = null;
+  if (type === 'stage') stageOldData = STAGES.find(function(s){return s.date===date;})||null;
+
+  // Supprimer l'ancienne date si annulation ou report
+  if (action === 'annule' || action === 'reporte') {
+    if (type === 'paris') {
+      COURS_PARIS = COURS_PARIS.filter(function(d){return d!==date;});
+    } else if (type === 'vincennes') {
+      COURS_VINCENNES = COURS_VINCENNES.filter(function(d){return d!==date;});
+    } else if (type === 'stage') {
+      STAGES = STAGES.filter(function(s){return s.date!==date;});
+      if (adminData.stages && adminData.stages[date]) delete adminData.stages[date];
+      if (filtreStage === date) filtreStage = '';
+    } else if (type === 'milonga') {
+      MILONGAS = MILONGAS.filter(function(d){return d!==date;});
+    }
+  }
+
+  // Ajouter la nouvelle date si report
+  if (action === 'reporte' && newDate) {
+    if (type === 'paris' && COURS_PARIS.indexOf(newDate)<0) {
+      COURS_PARIS.push(newDate); COURS_PARIS.sort();
+    } else if (type === 'vincennes' && COURS_VINCENNES.indexOf(newDate)<0) {
+      COURS_VINCENNES.push(newDate); COURS_VINCENNES.sort();
+    } else if (type === 'milonga' && MILONGAS.indexOf(newDate)<0) {
+      MILONGAS.push(newDate); MILONGAS.sort();
+    } else if (type === 'stage' && !STAGES.find(function(s){return s.date===newDate;})) {
+      var dd = new Date(newDate+'T12:00:00');
+      var lbl = (stageOldData&&stageOldData.label)||('Sam. '+dd.getDate()+'/'+(dd.getMonth()+1)+'/'+dd.getFullYear());
+      STAGES.push({date:newDate, label:lbl, s1:stageOldData?stageOldData.s1:'', s2:stageOldData?stageOldData.s2:''});
+      STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
+      if (!adminData.stages) adminData.stages = {};
+      if (!adminData.stages[newDate]) adminData.stages[newDate] = {label:lbl, inscrits:[]};
+    }
+  }
+}
+
+// Inverse une mutation (appelé quand on supprime depuis l'historique)
+function _undoMutateAgendaArray(m) {
+  // Remettre la date originale
+  if (m.action === 'annule' || m.action === 'reporte') {
+    if (m.type === 'paris' && COURS_PARIS.indexOf(m.date)<0) {
+      COURS_PARIS.push(m.date); COURS_PARIS.sort();
+    } else if (m.type === 'vincennes' && COURS_VINCENNES.indexOf(m.date)<0) {
+      COURS_VINCENNES.push(m.date); COURS_VINCENNES.sort();
+    } else if (m.type === 'milonga' && MILONGAS.indexOf(m.date)<0) {
+      MILONGAS.push(m.date); MILONGAS.sort();
+    } else if (m.type === 'stage' && !STAGES.find(function(s){return s.date===m.date;})) {
+      var dd = new Date(m.date+'T12:00:00');
+      var lbl = 'Sam. '+dd.getDate()+'/'+(dd.getMonth()+1)+'/'+dd.getFullYear();
+      STAGES.push({date:m.date, label:lbl, s1:'', s2:''});
+      STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
+      if (!adminData.stages) adminData.stages = {};
+      if (!adminData.stages[m.date]) adminData.stages[m.date] = {label:lbl, inscrits:[]};
+    }
+  }
+  // Enlever la date reportée
+  if (m.action === 'reporte' && m.newDate) {
+    if (m.type === 'paris')     COURS_PARIS = COURS_PARIS.filter(function(d){return d!==m.newDate;});
+    if (m.type === 'vincennes') COURS_VINCENNES = COURS_VINCENNES.filter(function(d){return d!==m.newDate;});
+    if (m.type === 'milonga')   MILONGAS = MILONGAS.filter(function(d){return d!==m.newDate;});
+    if (m.type === 'stage') {
+      STAGES = STAGES.filter(function(s){return s.date!==m.newDate;});
+      if (adminData.stages && adminData.stages[m.newDate]) delete adminData.stages[m.newDate];
+    }
+  }
+  if (m.action === 'modif') delete agendaOverrides[m.type+':'+m.date];
+}
+
 function sauverModifAgenda() {
-  var date = (gel('am-date')||{}).value||'';
-  var type = (gel('am-type')||{}).value||'paris';
-  var action = (gel('am-action')||{}).value||'note';
-  var note = ((gel('am-note')||{}).value||'').trim();
-  var newDate = (gel('am-newdate')||{}).value||'';
-  var newHeure = ((gel('am-newheure')||{}).value||'').trim();
-  var newLieu = ((gel('am-newlieu')||{}).value||'').trim();
-  if (!date) return;
+  var type   = (gel('am-type-sel')||{}).value||'paris';
+  var date   = (gel('am-occ-sel')||{}).value||'';
+  var action = (gel('am-action-sel')||{}).value||'note';
+  var note     = ((gel('am-note')||{}).value||'').trim();
+  var newDate  = (gel('am-newdate')||{}).value||'';
+  var newHeure = (action==='reporte'?((gel('am-newheure')||{}).value||''):((gel('am-mod-heure')||{}).value||'')).trim();
+  var newLieu  = (action==='reporte'?((gel('am-newlieu')||{}).value||''):((gel('am-mod-lieu')||{}).value||'')).trim();
+  if (!date) { afficherToast('⚠️ Aucune occurrence sélectionnée'); return; }
+  if (action === 'reporte' && !newDate) { afficherToast('⚠️ Indiquez la nouvelle date de report'); return; }
+
+  // Appliquer la mutation sur les tableaux
+  _mutateAgendaArray(type, action, date, newDate);
+
+  // Stocker l'override horaire/lieu
+  if (action === 'modif' && (newHeure||newLieu)) {
+    agendaOverrides[type+':'+date] = {heure:newHeure, lieu:newLieu};
+  }
+
+  // Enregistrer dans l'historique
+  amTypeAgenda = type;
   agendaModifs.push({id:'AM'+Date.now(), date:date, type:type, action:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu});
   var ok = gel('am-ok');
-  if (ok) { ok.style.display='block'; setTimeout(function(){ok.style.display='none';},3000); }
+  if (ok) { ok.style.display='block'; setTimeout(function(){ok.style.display='none';},2500); }
   if (!IS_DEMO) postAS({action:'sauverModifAgenda', date:date, type:type, actionType:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu}).catch(function(){});
   renderTab();
 }
 
 function supprimerModifAgenda(id) {
-  agendaModifs = agendaModifs.filter(function(m){ return m.id !== id; });
+  var m = agendaModifs.find(function(x){return x.id===id;});
+  if (m) _undoMutateAgendaArray(m);
+  agendaModifs = agendaModifs.filter(function(x){return x.id!==id;});
+  renderTab();
+}
+
+function ajouterDatesLot() {
+  var type  = (gel('am-lot-type-sel')||{}).value||'paris';
+  var raw   = ((gel('am-lot-dates')||{}).value||'').trim();
+  var label = ((gel('am-lot-label')||{}).value||'').trim();
+  var s1    = ((gel('am-lot-s1')||{}).value||'').trim();
+  var s2    = ((gel('am-lot-s2')||{}).value||'').trim();
+  if (!raw) { afficherToast('⚠️ Aucune date saisie'); return; }
+  var lines = raw.split(/\n/).map(function(l){return l.trim();}).filter(Boolean);
+  var added = 0;
+  lines.forEach(function(line) {
+    var d = '';
+    var m1 = line.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    var m2 = line.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m1) d = m1[3]+'-'+(m1[2].length<2?'0':'')+m1[2]+'-'+(m1[1].length<2?'0':'')+m1[1];
+    else if (m2) d = line;
+    if (!d || isNaN(new Date(d+'T12:00:00').getTime())) return;
+    if (type==='paris' && COURS_PARIS.indexOf(d)<0) {
+      COURS_PARIS.push(d); COURS_PARIS.sort(); added++;
+    } else if (type==='vincennes' && COURS_VINCENNES.indexOf(d)<0) {
+      COURS_VINCENNES.push(d); COURS_VINCENNES.sort(); added++;
+    } else if (type==='milonga' && MILONGAS.indexOf(d)<0) {
+      MILONGAS.push(d); MILONGAS.sort(); added++;
+    } else if (type==='stage' && !STAGES.find(function(s){return s.date===d;})) {
+      var dd = new Date(d+'T12:00:00');
+      var lbl = label || ('Sam. '+dd.getDate()+'/'+(dd.getMonth()+1)+'/'+dd.getFullYear());
+      STAGES.push({date:d, label:lbl, s1:s1, s2:s2});
+      STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
+      if (!adminData.stages) adminData.stages = {};
+      if (!adminData.stages[d]) adminData.stages[d] = {label:lbl, inscrits:[]};
+      added++;
+    }
+  });
+  afficherToast(added>0 ? '✓ '+added+' date'+(added>1?'s':'')+' ajoutée'+(added>1?'s':'')+' à l\'agenda' : '⚠️ Aucune date valide reconnue');
   renderTab();
 }
 
