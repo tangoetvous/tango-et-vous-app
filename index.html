@@ -1895,7 +1895,7 @@ if('serviceWorker' in navigator){
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 (function() {
-  // Coordonnées exactes vérifiées + géocodage Nominatim en arrière-plan pour affinage
+  // Coordonnées exactes vérifiées (OSM) + géocodage Nominatim en arrière-plan pour affinage
   var LIEUX = [
     {
       id: 'paris',
@@ -1904,8 +1904,8 @@ if('serviceWorker' in navigator){
       addr: '24 villa Riberolle, Paris 20e',
       geocodeQuery: '24 villa Riberolle, 75020 Paris',
       sub: 'Jeudi soir \u00b7 M\u00b0 Alexandre Dumas (L2)',
-      lat: 48.8528, lng: 2.3978,
-      metro: { geocodeQuery: 'Alexandre Dumas metro station Paris', lat: 48.8548, lng: 2.3893, name: 'M\u00b0 Alexandre Dumas (L2)' },
+      lat: 48.8527, lng: 2.3982,
+      metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas Paris', lat: 48.8543, lng: 2.3897, name: 'M\u00b0 Alexandre Dumas (L2)' },
       color: '#60b0ff',
       mapsUrl: 'https://maps.google.com/?q=24+villa+Riberolle+75020+Paris'
     },
@@ -1916,8 +1916,8 @@ if('serviceWorker' in navigator){
       addr: '16 rue Charles Path\u00e9, Vincennes',
       geocodeQuery: '16 rue Charles Path\u00e9, 94300 Vincennes',
       sub: 'Lundi soir \u00b7 M\u00b0 Ch\u00e2teau de Vincennes (L1)',
-      lat: 48.8480, lng: 2.4389,
-      metro: { geocodeQuery: 'Chateau de Vincennes metro station', lat: 48.8449, lng: 2.4369, name: 'M\u00b0 Ch\u00e2teau de Vincennes (L1)' },
+      lat: 48.8480, lng: 2.4413,
+      metro: { geocodeQuery: 'station m\u00e9tro Ch\u00e2teau de Vincennes', lat: 48.8444, lng: 2.4392, name: 'M\u00b0 Ch\u00e2teau de Vincennes (L1)' },
       color: '#40d8c0',
       mapsUrl: 'https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes'
     },
@@ -1928,8 +1928,8 @@ if('serviceWorker' in navigator){
       addr: '64 rue Orfila, Paris 20e',
       geocodeQuery: '64 rue Orfila, 75020 Paris',
       sub: 'Samedi \u00b7 M\u00b0 Gambetta (L3)',
-      lat: 48.8663, lng: 2.3968,
-      metro: { geocodeQuery: 'Gambetta metro station Paris', lat: 48.8653, lng: 2.3984, name: 'M\u00b0 Gambetta (L3)' },
+      lat: 48.8669, lng: 2.3980,
+      metro: { geocodeQuery: 'station m\u00e9tro Gambetta Paris', lat: 48.8653, lng: 2.3981, name: 'M\u00b0 Gambetta (L3)' },
       color: '#D4AF37',
       mapsUrl: 'https://maps.google.com/?q=64+rue+Orfila+75020+Paris'
     },
@@ -1940,15 +1940,15 @@ if('serviceWorker' in navigator){
       addr: '16A bd de Reuilly, Paris 12e',
       geocodeQuery: '16 boulevard de Reuilly, 75012 Paris',
       sub: '17h30\u201323h30 \u00b7 M\u00b0 Dugommier (L6)',
-      lat: 48.8466, lng: 2.3862,
-      metro: { geocodeQuery: 'Dugommier metro station Paris', lat: 48.8449, lng: 2.3879, name: 'M\u00b0 Dugommier (L6)' },
+      lat: 48.8462, lng: 2.3857,
+      metro: { geocodeQuery: 'station m\u00e9tro Dugommier Paris', lat: 48.8449, lng: 2.3890, name: 'M\u00b0 Dugommier (L6)' },
       color: '#e040a0',
       mapsUrl: 'https://maps.google.com/?q=16+boulevard+de+Reuilly+75012+Paris'
     }
   ];
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v2';
+  var CACHE_KEY = 'tev_plan_coords_v3';
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
@@ -1971,7 +1971,7 @@ if('serviceWorker' in navigator){
   // Géocode une adresse via Nominatim (avec cache implicite dans les coords)
   function geocode(query) {
     var url = 'https://nominatim.openstreetmap.org/search?q='
-      + encodeURIComponent(query) + '&format=json&limit=1&accept-language=fr';
+      + encodeURIComponent(query) + '&format=json&limit=1&accept-language=fr&countrycodes=fr';
     return fetch(url)
       .then(function(r) { return r.json(); })
       .then(function(data) {
