@@ -1620,7 +1620,35 @@ a{color:var(--gold);text-decoration:none;}
   border:1px solid var(--border);border-radius:8px;
   font-size:13px;color:var(--text-dim);text-align:center;
 }
+/* ================================================================
+   PLAN DES LIEUX
+   ================================================================ */
+#plan-map{
+  height:300px;margin:0 20px 0;border-radius:var(--radius);
+  overflow:hidden;border:1px solid var(--border);
+  background:var(--surface2);
+}
+.plan-btns{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  padding:12px 20px 16px;
+}
+.plan-btn{
+  display:flex;flex-direction:column;align-items:flex-start;
+  padding:10px 12px;border-radius:8px;border:2px solid;
+  background:var(--surface);cursor:pointer;text-align:left;
+  transition:filter .15s;
+}
+.plan-btn:hover{filter:brightness(1.15);}
+.plan-btn-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:3px;}
+.plan-btn-name{font-size:12px;color:var(--text);font-weight:600;margin-bottom:1px;}
+.plan-btn-addr{font-size:10px;color:var(--text-faint);}
+.plan-offline{
+  display:flex;align-items:center;justify-content:center;
+  height:100%;font-size:12px;color:var(--text-faint);
+  flex-direction:column;gap:6px;
+}
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 </head>
 <body>
 
@@ -1729,7 +1757,7 @@ a{color:var(--gold);text-decoration:none;}
     </button>
     <button class="nav-btn" id="nav-carte-lieux" data-tab="carte-lieux">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      Carte
+      Plan
     </button>
     <a class="nav-btn nav-link" href="cours-particuliers.html">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
@@ -1923,35 +1951,12 @@ a{color:var(--gold);text-decoration:none;}
     <div class="dash-sig" style="padding-top:24px;">Florencia &amp; Jérémy</div>
   </div>
 
-  <!-- ── ONGLET CARTE LIEUX (Map) ──────────────────────────── -->
+  <!-- ── ONGLET PLAN DES LIEUX ────────────────────────────── -->
   <div class="tab-pane" id="carte-lieux-pane">
-    <div class="tab-section-title">Nos lieux de cours</div>
-
-    <div class="map-card">
-      <div class="map-card-icon">🏙️</div>
-      <div class="map-card-type">Cours Paris — Jeudi soir</div>
-      <div class="map-card-name">Espace Danse Studio</div>
-      <div class="map-card-addr">24 villa Riberolle<br/>75020 Paris &mdash; M&deg; Alexandre Dumas (L2)</div>
-      <a class="btn-maps" href="https://maps.google.com/?q=24+villa+Riberolle+75020+Paris" target="_blank" rel="noopener">📍 Voir sur Maps</a>
-    </div>
-
-    <div class="map-card">
-      <div class="map-card-icon">🌳</div>
-      <div class="map-card-type">Cours Vincennes — Lundi soir</div>
-      <div class="map-card-name">Espace Sorano</div>
-      <div class="map-card-addr">16 rue Charles Pathé<br/>94300 Vincennes<br/>RER A Vincennes · M° Château de Vincennes ou Bérault (L1)</div>
-      <a class="btn-maps" href="https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes" target="_blank" rel="noopener">📍 Voir sur Maps</a>
-    </div>
-
-    <div class="map-card">
-      <div class="map-card-icon">🥋</div>
-      <div class="map-card-type">Stages — Samedi</div>
-      <div class="map-card-name">Centre Kim Kan</div>
-      <div class="map-card-addr">64 rue Orfila<br/>75020 Paris (Métro Gambetta)</div>
-      <a class="btn-maps" href="https://maps.google.com/?q=64+rue+Orfila+75020+Paris" target="_blank" rel="noopener">📍 Voir sur Maps</a>
-    </div>
-
-    <div class="dash-sig" style="padding-top:20px;">Florencia &amp; Jérémy</div>
+    <div class="tab-section-title" style="padding-bottom:10px;">Plan des lieux</div>
+    <div id="plan-map"></div>
+    <div class="plan-btns" id="plan-btns"></div>
+    <div class="dash-sig" style="padding:8px 20px 20px;">Florencia &amp; Jérémy</div>
   </div>
 
   <!-- ── ONGLET PRE-INSCRIPTION ─────────────────────────────── -->
@@ -1978,6 +1983,131 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   });
 }
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(function() {
+  // Lieux affichés sur le plan
+  var LIEUX = [
+    {
+      id: 'paris',
+      label: 'Cours Paris',
+      name: 'Espace Danse Studio',
+      addr: '24 villa Riberolle, Paris 20e',
+      sub: 'Jeudi soir · M\u00b0 Alexandre Dumas (L2)',
+      lat: 48.8621, lng: 2.4015,
+      color: '#60b0ff',
+      mapsUrl: 'https://maps.google.com/?q=24+villa+Riberolle+75020+Paris'
+    },
+    {
+      id: 'vincennes',
+      label: 'Cours Vincennes',
+      name: 'Espace Sorano',
+      addr: '16 rue Charles Path\u00e9, Vincennes',
+      sub: 'Lundi soir · M\u00b0 Ch\u00e2teau de Vincennes (L1)',
+      lat: 48.8476, lng: 2.4392,
+      color: '#40d8c0',
+      mapsUrl: 'https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes'
+    },
+    {
+      id: 'stage',
+      label: 'Stages',
+      name: 'Centre Kim Kan',
+      addr: '64 rue Orfila, Paris 20e',
+      sub: 'Samedi · M\u00b0 Gambetta',
+      lat: 48.8659, lng: 2.3972,
+      color: '#D4AF37',
+      mapsUrl: 'https://maps.google.com/?q=64+rue+Orfila+75020+Paris'
+    },
+    {
+      id: 'milonga',
+      label: 'Milonga La Dolce Vita',
+      name: 'Centre Re-Corps',
+      addr: '16A bd de Reuilly, Paris 12e',
+      sub: '17h30\u201323h30 · M\u00b0 Dugommier (L6)',
+      lat: 48.8468, lng: 2.3858,
+      color: '#e040a0',
+      mapsUrl: 'https://maps.google.com/?q=16+boulevard+de+Reuilly+75012+Paris'
+    }
+  ];
+
+  var _map = null;
+  var _markers = {};
+
+  function makePinIcon(color) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 40" width="28" height="40">'
+      + '<path d="M14 0C6.3 0 0 6.3 0 14c0 9.3 14 26 14 26S28 23.3 28 14C28 6.3 21.7 0 14 0z" fill="' + color + '" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/>'
+      + '<circle cx="14" cy="14" r="6" fill="white" opacity=".92"/>'
+      + '</svg>';
+    return L.divIcon({
+      html: svg,
+      className: '',
+      iconSize: [28, 40],
+      iconAnchor: [14, 40],
+      popupAnchor: [0, -38]
+    });
+  }
+
+  function initPlan() {
+    if (_map) { _map.invalidateSize(); return; }
+    var mapEl = document.getElementById('plan-map');
+    if (!mapEl) return;
+
+    // Centre sur le milieu de tous les lieux
+    _map = L.map('plan-map', {zoomControl: true, attributionControl: false}).setView([48.857, 2.408], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '\u00a9 OpenStreetMap'
+    }).addTo(_map);
+
+    // Discret attributionControl en bas à droite
+    L.control.attribution({prefix: '\u00a9 <a href="https://openstreetmap.org">OSM</a>'}).addTo(_map);
+
+    LIEUX.forEach(function(lieu) {
+      var marker = L.marker([lieu.lat, lieu.lng], {icon: makePinIcon(lieu.color)}).addTo(_map);
+      marker.bindPopup(
+        '<div style="font-family:sans-serif;min-width:140px;">'
+        + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:' + lieu.color + ';font-weight:700;margin-bottom:3px;">' + lieu.label + '</div>'
+        + '<div style="font-size:13px;font-weight:600;margin-bottom:2px;">' + lieu.name + '</div>'
+        + '<div style="font-size:11px;color:#666;margin-bottom:6px;">' + lieu.addr + '<br/>' + lieu.sub + '</div>'
+        + '<a href="' + lieu.mapsUrl + '" target="_blank" style="font-size:11px;color:' + lieu.color + ';">📍 Ouvrir dans Maps</a>'
+        + '</div>'
+      );
+      _markers[lieu.id] = marker;
+    });
+
+    // Boutons de centrage
+    var btnsEl = document.getElementById('plan-btns');
+    if (btnsEl) {
+      btnsEl.innerHTML = '';
+      LIEUX.forEach(function(lieu) {
+        var btn = document.createElement('button');
+        btn.className = 'plan-btn';
+        btn.style.borderColor = lieu.color;
+        btn.innerHTML = '<span class="plan-btn-label" style="color:' + lieu.color + ';">' + lieu.label + '</span>'
+          + '<span class="plan-btn-name">' + lieu.name + '</span>'
+          + '<span class="plan-btn-addr">' + lieu.addr + '</span>';
+        btn.addEventListener('click', function() {
+          _map.flyTo([lieu.lat, lieu.lng], 16, {duration: 1});
+          _markers[lieu.id].openPopup();
+        });
+        btnsEl.appendChild(btn);
+      });
+    }
+  }
+
+  // Initialiser quand l'onglet Plan devient visible
+  document.addEventListener('DOMContentLoaded', function() {
+    var navBtn = document.getElementById('nav-carte-lieux');
+    if (navBtn) {
+      navBtn.addEventListener('click', function() {
+        // Léger délai pour que le pane soit visible avant init Leaflet
+        setTimeout(initPlan, 60);
+      });
+    }
+  });
+})();
 </script>
 </body>
 </html>
