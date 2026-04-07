@@ -461,12 +461,14 @@
 
     if (filter === 'tous' || filter === 'paris') {
       COURS_PARIS.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
-        events.push({date:d, subtype:'paris', type:'cours', titre:'Cours — Paris', heure:'20h30 / 21h45', lieu:'Espace Danse Studio, 15 rue Planchat, Paris 20e'});
+        events.push({date:d, subtype:'paris', type:'cours', titre:'Cours D\u00e9butant — Paris', heure:'20h30', lieu:'Espace Danse Studio, 15 rue Planchat, Paris 20e'});
+        events.push({date:d, subtype:'paris', type:'cours', titre:'Cours Interm\u00e9diaire & Avanc\u00e9 — Paris', heure:'21h45', lieu:'Espace Danse Studio, 15 rue Planchat, Paris 20e'});
       });
     }
     if (filter === 'tous' || filter === 'vincennes') {
       COURS_VINCENNES.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
-        events.push({date:d, subtype:'vincennes', type:'cours', titre:'Cours — Vincennes', heure:'19h30 / 21h00', lieu:'Espace Sorano, 16 rue Charles Path\u00e9, Vincennes'});
+        events.push({date:d, subtype:'vincennes', type:'cours', titre:'Cours D\u00e9butant — Vincennes', heure:'19h30', lieu:'Espace Sorano, 16 rue Charles Path\u00e9, Vincennes'});
+        events.push({date:d, subtype:'vincennes', type:'cours', titre:'Cours Interm\u00e9diaire & Avanc\u00e9 — Vincennes', heure:'21h00', lieu:'Espace Sorano, 16 rue Charles Path\u00e9, Vincennes'});
       });
     }
     if (filter === 'tous' || filter === 'stage') {
@@ -479,19 +481,6 @@
       MILONGAS_DATA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
         events.push({date:d, subtype:'milonga', type:'milonga', titre:'Milonga La Dolce Vita', heure:'21h–2h', lieu:'Lieu \u00e0 confirmer'});
       });
-    }
-    // Also include personal agenda items from eleveData (not yet in global arrays)
-    if (filter === 'tous' || filter === 'cours' || filter === 'stage' || filter === 'milonga') {
-      (eleveData.agenda || []).filter(e => {
-        if (e.date < todayStr || e.date > maxStr) return false;
-        // skip if already covered by global arrays
-        if (e.type === 'cours' && e.titre && e.titre.includes('Paris') && COURS_PARIS.includes(e.date)) return false;
-        if (e.type === 'cours' && e.titre && e.titre.includes('Vincennes') && COURS_VINCENNES.includes(e.date)) return false;
-        if (e.type === 'stage' && STAGES_DATA.some(s => s.date === e.date)) return false;
-        if (e.type === 'milonga' && MILONGAS_DATA.includes(e.date)) return false;
-        if (filter !== 'tous' && e.type !== filter) return false;
-        return true;
-      }).forEach(e => events.push({...e, subtype: e.type}));
     }
     events.sort((a,b) => a.date.localeCompare(b.date) || (a.heure||'').localeCompare(b.heure||''));
     return events;
@@ -517,7 +506,6 @@
       { id:'tous', label:'Tous' },
       { id:'paris', label:'Paris' },
       { id:'vincennes', label:'Vincennes' },
-      { id:'cours', label:'Cours' },
       { id:'stage', label:'Stages' },
       { id:'milonga', label:'Milongas' },
     ];
