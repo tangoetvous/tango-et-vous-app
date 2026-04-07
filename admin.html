@@ -1601,64 +1601,9 @@ function stageMoveInsrit(date, idx, dir) {
 }
 
 function renderFormulaireStageAdmin() {
-  var dates=Object.keys(adminData.stages||{}).sort();
-  var h='<div class="card">'
-    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Inscrire manuellement à un stage</div>'
-    +'<div class="field"><label>Stage</label><select id="si-stage">';
-  dates.forEach(function(d){
-    var st=adminData.stages[d];
-    h+='<option value="'+d+'"'+(d===filtreStage?' selected':'')+'>'+((st&&st.label)||fmtDate(d))+'</option>';
-  });
-  h+='</select></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-    +'<div class="field"><label>Prénom *</label><input type="text" id="si-prenom"/></div>'
-    +'<div class="field"><label>Nom *</label><input type="text" id="si-nom"/></div>'
-    +'</div>'
-    +'<div class="field"><label>Email *</label><input type="email" id="si-email" autocapitalize="none"/></div>'
-    +'<div class="field"><label>Téléphone</label><input type="tel" id="si-tel" placeholder="06 XX XX XX XX"/></div>'
-    // Rôle — hors .field pour éviter le CSS width:100% sur les radios
-    +'<div style="margin-bottom:10px;">'
-    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">Rôle *</div>'
-    +'<div style="display:flex;gap:8px;">'
-    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
-    +'<input type="radio" name="si-role" value="guidee" checked style="width:auto;padding:0;"> 💃 Guidée</label>'
-    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
-    +'<input type="radio" name="si-role" value="guideur" style="width:auto;padding:0;"> 🕺 Guideur</label>'
-    +'</div></div>'
-    // Créneaux — hors .field pour éviter le CSS width:100% sur les checkboxes
-    +'<div style="margin-bottom:10px;">'
-    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">Créneaux *</div>'
-    +'<label style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;margin-bottom:5px;font-size:13px;">'
-    +'<input type="checkbox" id="si-tech" style="width:auto;padding:0;"> Technique L&amp;F — 14h–15h &nbsp;<strong>20€</strong></label>'
-    +'<label style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;margin-bottom:5px;font-size:13px;">'
-    +'<input type="checkbox" id="si-s1" style="width:auto;padding:0;"> Stage 1 — 15h–16h30 &nbsp;<strong>25€</strong></label>'
-    +'<label style="display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
-    +'<input type="checkbox" id="si-s2" style="width:auto;padding:0;"> Stage 2 — 16h30–18h &nbsp;<strong>25€</strong></label>'
-    +'<div class="box-info" style="font-size:11px;margin-top:6px;">ℹ️ Stage 1 + Stage 2 = 45€ · Technique + Stage 1 ou 2 = 45€ · Tout = 60€</div>'
-    +'</div>'
-    // Situation — seul(e) ou avec partenaire
-    +'<div style="margin-bottom:10px;">'
-    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">Situation</div>'
-    +'<div style="display:flex;gap:8px;">'
-    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
-    +'<input type="radio" name="si-sit" value="seul" checked style="width:auto;padding:0;"> Seul(e)</label>'
-    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:13px;">'
-    +'<input type="radio" name="si-sit" value="avec" style="width:auto;padding:0;"> Avec partenaire</label>'
-    +'</div></div>'
-    // Partenaire (affiché si situation=avec)
-    +'<div id="si-part-bloc" style="display:none;">'
-    +'<div class="section-hdr" style="margin-top:4px;">Partenaire</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-    +'<div class="field"><label>Prénom Nom</label><input type="text" id="si-part-nom" placeholder="Prénom Nom"/></div>'
-    +'<div class="field"><label>Email</label><input type="email" id="si-part-email" autocapitalize="none"/></div>'
-    +'</div>'
-    +'<div class="box-info" style="font-size:11px;">ℹ️ Avec partenaire = les deux sont inscrits sans attente.</div>'
-    +'</div>'
-    +'<div class="box-err" id="si-err"></div>'
-    +'<div class="box-ok" id="si-ok">✓ Inscrit(e) au stage.</div>'
-    +'<div class="btn-row"><button class="btn btn-gold" data-action="inscrire-stage-admin">✓ Inscrire</button></div>'
+  return '<div style="margin:-14px;">'
+    +'<iframe src="stages-pwa.html" style="border:none;width:100%;height:850px;border-radius:8px;" title="Formulaire inscription stage"></iframe>'
     +'</div>';
-  return h;
 }
 
 function calcMontantStage(slots) {
@@ -2150,45 +2095,8 @@ function soumettreValiderPaiement() {
 }
 
 function renderFormulaireDemandeAdmin() {
-  var postMai2026 = new Date() >= new Date('2026-05-01');
-  var saisonHtml = postMai2026 ? ''
-    : '<div class="field"><label>Saison</label><select id="fd-saison">'
-    +'<option value="2025-2026">2025-2026 (saison en cours)</option>'
-    +'<option value="2026-2027">2026-2027 (prochaine saison)</option>'
-    +'</select></div>';
-  return '<div class="card">'
-    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Nouvelle demande d&#39;inscription</div>'
-    +saisonHtml
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-    +'<div class="field"><label>Prénom *</label><input type="text" id="fd-prenom"/></div>'
-    +'<div class="field"><label>Nom *</label><input type="text" id="fd-nom"/></div>'
-    +'</div>'
-    +'<div class="field"><label>Email *</label><input type="email" id="fd-email" autocapitalize="none"/></div>'
-    +'<div class="field"><label>Téléphone</label><input type="tel" id="fd-tel" placeholder="06 XX XX XX XX"/></div>'
-    +'<div class="field"><label>Rôle</label>'
-    +'<div style="display:flex;gap:8px;">'
-    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
-    +'<input type="radio" name="fd-role" value="guidee" checked style="flex-shrink:0;">'
-    +'<span style="font-size:20px;">💃</span><span style="font-size:13px;font-weight:600;">Guidée</span></label>'
-    +'<label style="display:flex;align-items:center;gap:8px;flex:1;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;">'
-    +'<input type="radio" name="fd-role" value="guideur" style="flex-shrink:0;">'
-    +'<span style="font-size:20px;">🕺</span><span style="font-size:13px;font-weight:600;">Guideur</span></label>'
-    +'</div></div>'
-    +'<div class="field"><label>Cours</label><select id="fd-cours">'
-    +'<option value="Paris — Jeudi — Débutant">Paris — Jeudi — Débutant</option>'
-    +'<option value="Paris — Jeudi — Intermédiaire">Paris — Jeudi — Intermédiaire</option>'
-    +'<option value="Vincennes — Lundi — Débutant">Vincennes — Lundi — Débutant</option>'
-    +'<option value="Vincennes — Lundi — Intermédiaire">Vincennes — Lundi — Intermédiaire</option>'
-    +'</select></div>'
-    +'<div class="section-hdr" style="margin-top:4px;">Partenaire (optionnel)</div>'
-    +'<div class="box-info" style="font-size:11px;margin-bottom:10px;">ℹ️ Inscription avec partenaire = validation automatique des deux.</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
-    +'<div class="field"><label>Prénom Nom</label><input type="text" id="fd-part-nom" placeholder="Prénom Nom"/></div>'
-    +'<div class="field"><label>Email</label><input type="email" id="fd-part-email" autocapitalize="none"/></div>'
-    +'</div>'
-    +'<div class="box-err" id="fd-err"></div>'
-    +'<div class="box-ok" id="fd-ok">✓ Demande enregistrée.</div>'
-    +'<div class="btn-row"><button class="btn btn-gold" data-action="soumettre-demande-admin">✓ Enregistrer</button></div>'
+  return '<div style="margin:-14px;">'
+    +'<iframe src="inscription-cours.html?admin=1" style="border:none;width:100%;height:900px;border-radius:8px;" title="Formulaire nouvelle demande"></iframe>'
     +'</div>';
 }
 
