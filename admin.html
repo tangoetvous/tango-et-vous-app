@@ -113,12 +113,12 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .agenda-day-num{font-size:22px;font-weight:700;color:var(--text);line-height:1;}
 .agenda-day-lbl{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;}
 .agenda-event{display:flex;gap:10px;margin-bottom:6px;padding:8px 10px;border-radius:8px;border-left:3px solid;}
-.ae-cours-paris{background:#0a1a2a;border-color:#4a9eff;}
-.ae-cours-vinc{background:#0a1a1a;border-color:#2dd4bf;}
-.ae-stage{background:var(--gold-pale);border-color:var(--gold);}
-.ae-milonga{background:var(--guidee-bg);border-color:var(--guidee);}
-.ae-titre{font-size:12px;font-weight:600;color:var(--text);}
-.ae-sub{font-size:10px;color:var(--dim);}
+.ae-cours-paris{background:#122840;border-color:#60b0ff;color:#60b0ff;}
+.ae-cours-vinc{background:#102828;border-color:#40d8c0;color:#40d8c0;}
+.ae-stage{background:#201800;border-color:#D4AF37;color:#D4AF37;}
+.ae-milonga{background:#200015;border-color:#e040a0;color:#e040a0;}
+.ae-titre{font-size:12px;font-weight:600;color:inherit;}
+.ae-sub{font-size:10px;color:inherit;opacity:0.7;}
 /* Modals (remplacent prompt/confirm) */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end;justify-content:center;}
 .modal-overlay.vis{display:flex;}
@@ -457,7 +457,7 @@ var sousOngletCours   = 'demandes';
 var sousOngletCoursTango = 'tous'; // tous|attente_validation|valide|attente_paiement|inscrit|inscrire|valider_paiement
 var agendaMois      = new Date().getMonth();
 var agendaAnnee     = new Date().getFullYear();
-var agendaCats      = {cours:true, stage:true, milonga:true};
+var agendaCats      = {paris:true, vincennes:true, stage:true, milonga:true};
 var _dateModalCb    = null;
 var _confirmModalCb = null;
 
@@ -1043,47 +1043,75 @@ function renderEssai() {
     return h+(hasEvt?'':'<div class="empty-state">Aucun cours d&#39;essai confirmé.</div>');
   }
 
-  // Vue "Par date" : grouper par date + niveau avec interleave
+  // Vue "Par date" : toutes les dates connues (COURS_PARIS + COURS_VINCENNES à venir) + inscriptions
   var grpDN = buildGroupes(liste);
-  var keys=Object.keys(grpDN).sort();
-  if(!keys.length) return h+'<div class="empty-state">Aucun cours d&#39;essai.</div>';
-  keys.forEach(function(key){
-    var grp=grpDN[key], ins=grp.ins;
-    var guiConf=ins.filter(function(e){return e.role==='guideur'&&e.statut==='confirme';});
-    var guiAll=ins.filter(function(e){return e.role==='guideur';});
-    var gde=ins.filter(function(e){return e.role==='guidee';}).length;
-    // Compte des vraies attentes (guidées seules + guideurs si >=22 confirmés)
-    var attVrai=ins.filter(function(e){return estVraimentAttente(e,ins);}).length;
-    var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
-    var limiteGuideurs=guiConf.length>=22;
-    h += '<div class="section-hdr">'
-      +fmtDate(grp.date)+' — '+nivLbl
-      +'<span style="font-weight:400;color:var(--dim);margin-left:8px;">👨 '+guiAll.length+' · 👩 '+gde
-      +(attVrai?' · <span style="color:var(--warn-text)">⏳ '+attVrai+' att.</span>':'')+'</span>'
-      +(limiteGuideurs?' <span style="color:var(--warn-text);font-size:10px;">(limite 22 guideurs atteinte)</span>':'')
-      +'</div>';
-    // Interleave guideurs/guidées
-    var iGui=ins.filter(function(e){return e.role==='guideur';});
-    var iGde=ins.filter(function(e){return e.role==='guidee';});
-    var iAlt=[]; var ial=Math.max(iGui.length,iGde.length);
-    for(var ia=0;ia<ial;ia++){if(ia<iGui.length)iAlt.push(iGui[ia]);if(ia<iGde.length)iAlt.push(iGde[ia]);}
-    iAlt.forEach(function(e){
-      var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-      var vraiAtt=estVraimentAttente(e,ins);
-      h += '<div class="point-row">'
-        +'<div style="flex:1;min-width:0;">'
-        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
-        +e.prenom+' '+e.nom
-        +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
-        +'</div>'
-        +'<div class="point-sub">'+e.email+(e.partenaire?' · avec '+e.partenaire:'')+'</div>'
-        +'</div>'
-        +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-        +(vraiAtt
-          ?'<button class="btn btn-ok" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓</button>'
-          :'<span class="pill pill-ok" style="font-size:8px;">Validé.e</span>')
-        +btnEmail(e.email,e.prenom+' '+e.nom)
-        +'</div></div>';
+  var todayStr = today();
+  // Construire la liste complète des dates futures connues
+  var allDates = {};
+  (COURS_PARIS||[]).filter(function(d){return d>=todayStr;}).forEach(function(d){
+    if(!allDates[d])allDates[d]=[];
+    if(allDates[d].indexOf('paris')<0)allDates[d].push('paris');
+  });
+  (COURS_VINCENNES||[]).filter(function(d){return d>=todayStr;}).forEach(function(d){
+    if(!allDates[d])allDates[d]=[];
+    if(allDates[d].indexOf('vincennes')<0)allDates[d].push('vincennes');
+  });
+  // Ajouter les dates avec inscriptions qui ne sont pas dans COURS_PARIS/VINCENNES
+  Object.keys(grpDN).forEach(function(key){
+    var d=key.split('|')[0];
+    if(!allDates[d])allDates[d]=['?'];
+  });
+  var sortedDates = Object.keys(allDates).sort().slice(0,30); // limiter à 30 prochaines
+  if(!sortedDates.length) return h+'<div class="empty-state">Aucun cours d&#39;essai.</div>';
+  sortedDates.forEach(function(date){
+    var lieux=allDates[date]||[];
+    var lieuLbl=lieux.indexOf('paris')>=0&&lieux.indexOf('vincennes')>=0?'Paris + Vincennes':lieux.indexOf('vincennes')>=0?'Vincennes':'Paris';
+    // Niveaux existants pour cette date
+    var niveaux=['debutant','intermediaire'];
+    niveaux.forEach(function(niv){
+      var key=date+'|'+niv;
+      var grp=grpDN[key]||{date:date,niveau:niv,ins:[]};
+      var ins=grp.ins;
+      var guiConf=ins.filter(function(e){return e.role==='guideur'&&e.statut==='confirme';});
+      var guiAll=ins.filter(function(e){return e.role==='guideur';});
+      var gde=ins.filter(function(e){return e.role==='guidee';}).length;
+      var attVrai=ins.filter(function(e){return estVraimentAttente(e,ins);}).length;
+      var nivLbl=niv==='debutant'?'Débutant':'Intermédiaire';
+      var limiteGuideurs=guiConf.length>=22;
+      h += '<div class="section-hdr">'
+        +fmtDate(date)+' — '+nivLbl+' <span style="font-weight:400;color:var(--dim);">'+lieuLbl+'</span>'
+        +'<span style="font-weight:400;color:var(--dim);margin-left:8px;">👨 '+guiAll.length+' · 👩 '+gde
+        +(attVrai?' · <span style="color:var(--warn-text)">⏳ '+attVrai+' att.</span>':'')+'</span>'
+        +(limiteGuideurs?' <span style="color:var(--warn-text);font-size:10px;">(limite 22 guideurs atteinte)</span>':'')
+        +'</div>';
+      if(!ins.length){
+        h+='<div style="font-size:11px;color:var(--dim);padding:6px 0 10px;">Aucune inscription</div>';
+        return;
+      }
+      // Interleave guideurs/guidées
+      var iGui=ins.filter(function(e){return e.role==='guideur';});
+      var iGde=ins.filter(function(e){return e.role==='guidee';});
+      var iAlt=[]; var ial=Math.max(iGui.length,iGde.length);
+      for(var ia=0;ia<ial;ia++){if(ia<iGui.length)iAlt.push(iGui[ia]);if(ia<iGde.length)iAlt.push(iGde[ia]);}
+      iAlt.forEach(function(e){
+        var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
+        var vraiAtt=estVraimentAttente(e,ins);
+        h += '<div class="point-row">'
+          +'<div style="flex:1;min-width:0;">'
+          +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
+          +e.prenom+' '+e.nom
+          +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
+          +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
+          +'</div>'
+          +'<div class="point-sub">'+e.email+(e.partenaire?' · avec '+e.partenaire:'')+'</div>'
+          +'</div>'
+          +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+          +(vraiAtt
+            ?'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+date+'">✓ Valider</button>'
+            :'<span class="pill pill-ok" style="font-size:8px;">Validé.e</span>')
+          +btnEmail(e.email,e.prenom+' '+e.nom)
+          +'</div></div>';
+      });
     });
   });
   return h;
@@ -1218,23 +1246,39 @@ function renderCartes() {
   (adminData.coursTango||[]).filter(function(ct){
     return ct.statut==='inscrit' && ct.type && ct.type.indexOf('carte')>=0 && !emailsCartes[ct.email];
   }).forEach(function(ct){
-    cartesEleves.push({
+    var newCarte = {
       id: ct.id, nom: ct.prenom+' '+ct.nom, niveau: ct.niveau,
       email: ct.email, statutEleve:'Actif', utilises:0, restants:10,
       datePremierCours:'', expiration:'', statut:'Nouvelle carte',
-      source:'inscription', ville: ct.ville, datesCours:[], partenaire:ct.partenaire||''
-    });
+      source:'inscription', ville: ct.ville, datesCours:[], partenaire:ct.partenaire||'',
+      paye:true
+    };
+    cartesEleves.push(newCarte);
+    // Aussi pousser dans adminData.cartes pour que pointer/renouveler fonctionnent
+    if(!adminData.cartes)adminData.cartes=[];
+    adminData.cartes.push(newCarte);
+    emailsCartes[ct.email]=true;
   });
   var cartes = cartesEleves;
   if(!cartes.length)return'<div class="empty-state">Aucune carte de 10 cours.<br>Inscrivez un élève avec "Carte de 10 cours" dans l\'onglet Cours.</div>';
   var now=new Date(); now.setHours(0,0,0,0);
+  // Trier par cours (Paris/Vincennes puis niveau), puis par expiration
   cartes.sort(function(a,b){
+    var ca=a.cours||((a.ville==='vincennes'?'Vincennes':'Paris')+(a.niveau||''));
+    var cb=b.cours||((b.ville==='vincennes'?'Vincennes':'Paris')+(b.niveau||''));
+    if(ca!==cb)return ca.localeCompare(cb);
     var da=a.expiration?new Date(a.expiration+'T00:00:00'):new Date('2099-01-01');
     var db=b.expiration?new Date(b.expiration+'T00:00:00'):new Date('2099-01-01');
     return da-db;
   });
-  var h='';
+  var h='', lastCours=null;
   cartes.forEach(function(c){
+    // En-tête de groupe par cours
+    var coursLbl = c.cours||((c.ville==='vincennes'?'Vincennes':'Paris')+' — '+(c.niveau||'—'));
+    if(coursLbl!==lastCours){
+      lastCours=coursLbl;
+      h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>';
+    }
     var nbUtil=c.utilises||0, datesCours=c.datesCours||[];
     var expAff=c.expiration;
     if(!expAff&&c.datePremierCours)expAff=calcExpiration(c.datePremierCours,c.ville||'paris');
@@ -1244,13 +1288,16 @@ function renderCartes() {
     var bient=!fini&&days!==null&&days<14;
     var sLbl=fini?'À renouveler':bient?'Expire dans '+days+'j':'Active';
     var sCls=fini?'pill-err':bient?'pill-warn':'pill-ok';
-    // Mini barre de progression compacte
-    var miniDots='<div style="display:flex;gap:3px;margin:6px 0;">';
+    // Mini barre avec dates visibles sous les barres
+    var miniDots='<div style="display:flex;gap:3px;margin:6px 0;flex-wrap:wrap;">';
     for(var i=0;i<10;i++){
       var ds=datesCours[i]||null;
       var bg=i<nbUtil?(fini?'var(--err-bg)':'var(--ok-bg)'):'var(--s3)';
       var br=i<nbUtil?(fini?'var(--err-text)':'var(--ok-text)'):'var(--border)';
-      miniDots+='<div title="'+(ds?fmtDateCourt(ds):'cours '+(i+1))+'" style="flex:1;height:6px;border-radius:3px;background:'+bg+';border:1px solid '+br+';"></div>';
+      miniDots+='<div style="display:flex;flex-direction:column;align-items:center;min-width:24px;">'
+        +'<div style="width:100%;height:5px;border-radius:2px;background:'+bg+';border:1px solid '+br+';"></div>'
+        +(ds?'<div style="font-size:8px;color:var(--dim);margin-top:1px;white-space:nowrap;">'+fmtDateCourt(ds)+'</div>':'')
+        +'</div>';
     }
     miniDots+='</div>';
     var expTxt=expAff?'Exp. '+fmtDate(expAff):c.datePremierCours?'Dép. '+fmtDate(c.datePremierCours):'Pas encore commencée';
@@ -1265,7 +1312,7 @@ function renderCartes() {
       +'<span class="pill '+sCls+'" style="font-size:8px;">'+sLbl+'</span>'
       +payePill
       +'</div>'
-      +'<div class="point-sub" style="font-size:10px;">'+c.id+' · '+(c.niveau||'—')+' · '+(c.ville==='vincennes'?'Vincennes':'Paris')+' · '+nbUtil+'/10 · '+expTxt+'</div>'
+      +'<div class="point-sub" style="font-size:10px;">'+nbUtil+'/10 cours · '+expTxt+'</div>'
       +(c.email?'<div class="point-sub" style="font-size:10px;">'+c.email+'</div>':'')
       +miniDots
       +'</div>'
@@ -1706,7 +1753,8 @@ function relanceSorano(email, nom, btn) {
 // ================================================================
 function getEventsForDate(dateStr) {
   var evts=[];
-  if(agendaCats.cours){if(COURS_PARIS.indexOf(dateStr)>=0){evts.push({cat:'cours-paris',titre:'Débutant — Paris',heure:'20h30'});evts.push({cat:'cours-paris',titre:'Intermédiaire — Paris',heure:'21h45'});}if(COURS_VINCENNES.indexOf(dateStr)>=0){evts.push({cat:'cours-vinc',titre:'Débutant — Vincennes',heure:'19h30'});evts.push({cat:'cours-vinc',titre:'Intermédiaire — Vincennes',heure:'21h00'});}}
+  if(agendaCats.paris&&COURS_PARIS.indexOf(dateStr)>=0){evts.push({cat:'cours-paris',titre:'Débutant — Paris',heure:'20h30'});evts.push({cat:'cours-paris',titre:'Intermédiaire — Paris',heure:'21h45'});}
+  if(agendaCats.vincennes&&COURS_VINCENNES.indexOf(dateStr)>=0){evts.push({cat:'cours-vinc',titre:'Débutant — Vincennes',heure:'19h30'});evts.push({cat:'cours-vinc',titre:'Intermédiaire — Vincennes',heure:'21h00'});}
   if(agendaCats.stage){var st=STAGES.find(function(s){return s.date===dateStr;});if(st){evts.push({cat:'stage',titre:'Technique Leader & Follower',heure:'14h00'});if(st.s1)evts.push({cat:'stage',titre:st.s1,heure:'15h00'});if(st.s2)evts.push({cat:'stage',titre:st.s2,heure:'16h30'});}}
   if(agendaCats.milonga&&MILONGAS.indexOf(dateStr)>=0)evts.push({cat:'milonga',titre:'Milonga La Dolce Vita',heure:'—'});
   return evts;
@@ -1714,11 +1762,10 @@ function getEventsForDate(dateStr) {
 function renderAgenda() {
   var h='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:12px;">Agenda — 12 prochains mois</div>'
     +'<div class="cat-pills">'
-    +'<button class="cat-pill-ag" style="background:'+(agendaCats.cours?'#0a1a2a':'transparent')+';border-color:'+(agendaCats.cours?'#4a9eff':'var(--border)')+';color:'+(agendaCats.cours?'#4a9eff':'var(--dim)')+';" data-cat-ag="cours">🎓 Cours Paris</button>'
-    +'<span style="font-size:10px;color:#2dd4bf;">·</span>'
-    +'<button class="cat-pill-ag" style="background:'+(agendaCats.cours?'#0a1a1a':'transparent')+';border-color:'+(agendaCats.cours?'#2dd4bf':'var(--border)')+';color:'+(agendaCats.cours?'#2dd4bf':'var(--dim)')+';" data-cat-ag="cours">🎓 Cours Vincennes</button>'
-    +'<button class="cat-pill-ag" style="background:'+(agendaCats.stage?'var(--gold-pale)':'transparent')+';border-color:'+(agendaCats.stage?'var(--gold)':'var(--border)')+';color:'+(agendaCats.stage?'var(--gold)':'var(--dim)')+';" data-cat-ag="stage">💃 Stages</button>'
-    +'<button class="cat-pill-ag" style="background:'+(agendaCats.milonga?'var(--guidee-bg)':'transparent')+';border-color:'+(agendaCats.milonga?'var(--guidee)':'var(--border)')+';color:'+(agendaCats.milonga?'var(--guidee-text)':'var(--dim)')+';" data-cat-ag="milonga">🎶 Milongas</button>'
+    +'<button class="cat-pill-ag" style="background:'+(agendaCats.paris?'#122840':'transparent')+';border-color:'+(agendaCats.paris?'#60b0ff':'var(--border)')+';color:'+(agendaCats.paris?'#60b0ff':'var(--dim)')+';" data-cat-ag="paris">🎓 Paris</button>'
+    +'<button class="cat-pill-ag" style="background:'+(agendaCats.vincennes?'#102828':'transparent')+';border-color:'+(agendaCats.vincennes?'#40d8c0':'var(--border)')+';color:'+(agendaCats.vincennes?'#40d8c0':'var(--dim)')+';" data-cat-ag="vincennes">🎓 Vincennes</button>'
+    +'<button class="cat-pill-ag" style="background:'+(agendaCats.stage?'#201800':'transparent')+';border-color:'+(agendaCats.stage?'#D4AF37':'var(--border)')+';color:'+(agendaCats.stage?'#D4AF37':'var(--dim)')+';" data-cat-ag="stage">💃 Stages</button>'
+    +'<button class="cat-pill-ag" style="background:'+(agendaCats.milonga?'#200015':'transparent')+';border-color:'+(agendaCats.milonga?'#e040a0':'var(--border)')+';color:'+(agendaCats.milonga?'#e040a0':'var(--dim)')+';" data-cat-ag="milonga">🎶 Milongas</button>'
     +'</div>';
   // Vue liste 12 mois glissants à partir d'aujourd'hui
   var todayStr=today();
@@ -2089,7 +2136,7 @@ function soumettreValiderPaiement() {
       e.paiement='';
       if(tel)e.tel=tel; if(email)e.email=email;
       if(!adminData.inscriptionsCours)adminData.inscriptionsCours=[];
-      adminData.inscriptionsCours.push({id:'IC'+Date.now(),nom:e.prenom+' '+e.nom,email:e.email,cours:e.cours,type:carte10==='oui'?'carte10':'forfait',paiement:paie,montant:0,date:today(),ville:e.ville||'paris'});
+      adminData.inscriptionsCours.push({id:'IC'+Date.now(),nom:e.prenom+' '+e.nom,email:e.email,cours:e.cours,type:carte10==='oui'?'carte10':'forfait',paiement:'',montant:0,date:today(),ville:e.ville||'paris'});
       if(carte10==='oui'&&!adminData.cartes.find(function(c){return c.email===e.email;})){
         adminData.cartes.push({id:e.id,nom:e.prenom+' '+e.nom,niveau:e.niveau,email:e.email,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Active',source:'inscription',ville:e.ville||'paris',datesCours:[],partenaire:e.partenaire||'',paye:true});
         recalcStats();
