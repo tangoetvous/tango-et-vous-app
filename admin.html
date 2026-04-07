@@ -191,8 +191,12 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   <div class="modal-box" style="text-align:center;">
     <div class="modal-titre">📱 QR Code pointage</div>
     <div class="modal-msg" id="modal-qr-nom" style="margin-bottom:12px;"></div>
-    <canvas id="modal-qr-canvas" style="border-radius:8px;max-width:200px;width:100%;margin:0 auto;display:block;"></canvas>
-    <div style="font-size:10px;color:var(--dim);margin-top:10px;">L&#39;élève scanne ce code avec son téléphone pour pointer sa présence</div>
+    <div id="modal-qr-img-wrap" style="margin:0 auto;width:200px;height:200px;background:#0a0a0a;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+      <img id="modal-qr-img" src="" alt="QR Code" style="width:200px;height:200px;border-radius:8px;display:none;"/>
+      <canvas id="modal-qr-canvas" style="border-radius:8px;width:200px;height:200px;display:none;"></canvas>
+    </div>
+    <div id="modal-qr-url" style="font-size:10px;color:var(--dim);margin-top:8px;word-break:break-all;"></div>
+    <div style="font-size:10px;color:var(--dim);margin-top:4px;">L&#39;élève scanne ce code avec son téléphone pour pointer sa présence</div>
     <div class="modal-btns" style="margin-top:14px;">
       <button class="modal-cancel" id="modal-qr-close">Fermer</button>
       <button class="modal-ok" id="modal-qr-pointer">+ Pointer maintenant</button>
@@ -475,10 +479,7 @@ var agendaAnnee     = new Date().getFullYear();
 var agendaCats      = {paris:true, vincennes:true, stage:true, milonga:true};
 var sousOngletAgenda = 'calendrier'; // 'calendrier' | 'modif'
 // Modifications d'occurrences : annulations, reports, changements horaire/lieu, notes
-var agendaModifs = [
-  {id:'AM001', date:'2026-05-07', type:'paris', action:'annule', note:'Cours annulé — Marc indisponible', newDate:'', newHeure:'', newLieu:''},
-  {id:'AM002', date:'2026-06-07', type:'milonga', action:'modif', note:'Lieu changé ce soir', newDate:'', newHeure:'21h30', newLieu:'Salle des fêtes, 12 rue Gambetta, Paris 20e'}
-];
+var agendaModifs = [];
 var _dateModalCb    = null;
 var _confirmModalCb = null;
 
@@ -585,12 +586,33 @@ function ouvrirModalQR(id, nom, cours) {
   var el = gel('modal-qr-nom');
   if(el) el.textContent = nom + (cours ? ' — ' + cours : '');
   gel('modal-qr').classList.add('vis');
-  // Generate QR code pointing to pointer.html with carte id
-  var url = 'pointer.html?id=' + encodeURIComponent(id) + '&nom=' + encodeURIComponent(nom);
+  var basePath = window.location.pathname.replace(/\/[^/]*$/, '/');
+  var url = window.location.origin + basePath + 'pointer.html?id=' + encodeURIComponent(id) + '&nom=' + encodeURIComponent(nom);
+  var urlEl = gel('modal-qr-url');
+  if(urlEl) urlEl.textContent = url;
   var canvas = gel('modal-qr-canvas');
+  var img = gel('modal-qr-img');
+  // Essayer d'abord la lib JS locale, sinon utiliser l'API image
   if(canvas && typeof QRCode !== 'undefined') {
-    QRCode.toCanvas(canvas, url, {width:200, margin:1, color:{dark:'#D4AF37',light:'#0a0a0a'}}, function(err){});
+    if(img) img.style.display='none';
+    canvas.style.display='block';
+    QRCode.toCanvas(canvas, url, {width:200, margin:1, color:{dark:'#D4AF37',light:'#0a0a0a'}}, function(err){
+      if(err && img) { canvas.style.display='none'; _chargerQRImage(img, url); }
+    });
+  } else if(img) {
+    if(canvas) canvas.style.display='none';
+    _chargerQRImage(img, url);
   }
+}
+function _chargerQRImage(img, url) {
+  var apiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=D4AF37&bgcolor=0a0a0a&data=' + encodeURIComponent(url);
+  img.src = apiUrl;
+  img.style.display = 'block';
+  img.onerror = function() {
+    img.style.display = 'none';
+    var w = gel('modal-qr-img-wrap');
+    if(w) w.innerHTML = '<div style="color:var(--dim);font-size:11px;padding:20px;text-align:center;">QR non disponible hors-ligne.<br>URL copiée ci-dessous.</div>';
+  };
 }
 function fermerModalQR() {
   gel('modal-qr').classList.remove('vis');
@@ -1328,11 +1350,15 @@ function renderCartes() {
   var cartes = cartesEleves;
   if(!cartes.length)return'<div class="empty-state">Aucune carte de 10 cours.<br>Inscrivez un élève avec "Carte de 10 cours" dans l\'onglet Cours.</div>';
   var now=new Date(); now.setHours(0,0,0,0);
-  // Trier par cours (Paris/Vincennes puis niveau), puis par expiration
+  // Normaliser le niveau pour unifier les casses (debutant → Débutant, intermediaire → Intermédiaire)
+  var NIVEAUX_LABELS = {'debutant':'Débutant','débutant':'Débutant','intermediaire':'Intermédiaire','intermédiaire':'Intermédiaire','avance':'Avancé','avancé':'Avancé'};
+  function normNiveauCartes(n){ return n ? (NIVEAUX_LABELS[n.toLowerCase()]||n) : '—'; }
+  function coursKey(c){ return (c.ville==='vincennes'?'Vincennes':'Paris')+' — '+normNiveauCartes(c.niveau); }
+  // Trier par groupe (Paris/Vincennes + niveau), puis par expiration
   cartes.sort(function(a,b){
-    var ca=a.cours||((a.ville==='vincennes'?'Vincennes':'Paris')+(a.niveau||''));
-    var cb=b.cours||((b.ville==='vincennes'?'Vincennes':'Paris')+(b.niveau||''));
-    if(ca!==cb)return ca.localeCompare(cb);
+    var ca=coursKey(a);
+    var cb=coursKey(b);
+    if(ca!==cb)return ca.localeCompare(cb,'fr');
     var da=a.expiration?new Date(a.expiration+'T00:00:00'):new Date('2099-01-01');
     var db=b.expiration?new Date(b.expiration+'T00:00:00'):new Date('2099-01-01');
     return da-db;
@@ -1340,8 +1366,8 @@ function renderCartes() {
   var h='', lastCours=null;
   h += '<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Un élève peut pointer deux fois le même jour (cours débutant + intermédiaire).</div>';
   cartes.forEach(function(c){
-    // En-tête de groupe par cours
-    var coursLbl = c.cours||((c.ville==='vincennes'?'Vincennes':'Paris')+' — '+(c.niveau||'—'));
+    // En-tête de groupe par cours (ville + niveau normalisé)
+    var coursLbl = coursKey(c);
     if(coursLbl!==lastCours){
       lastCours=coursLbl;
       h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>';
