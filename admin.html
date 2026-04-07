@@ -654,118 +654,130 @@ gel('modal-qr-close').addEventListener('click', fermerModalQR);
 gel('modal-qr-pointer').addEventListener('click', confirmerModalQRPointer);
 gel('modal-qr').addEventListener('click', function(e){if(e.target===this)fermerModalQR();});
 
-// Réception des inscriptions depuis l'iframe stages-pwa.html
-window.addEventListener('message', function(ev) {
-  if (!ev.data || ev.data.type !== 'stageInscription') return;
-  var d = ev.data.data;
+// ================================================================
+// RÉCEPTION DES INSCRIPTIONS (iframe postMessage + cross-tab localStorage)
+// ================================================================
+function _normRole(r) { return (r||'').toLowerCase().indexOf('guideur') >= 0 ? 'guideur' : 'guidee'; }
+
+function _appliquerStageInscription(d) {
   if (!d || !d.inscriptionsParDate) return;
-
-  function normRole(r) { return (r||'').toLowerCase().indexOf('guideur') >= 0 ? 'guideur' : 'guidee'; }
-
   d.inscriptionsParDate.forEach(function(di) {
     var date  = di.date;
     var slots = (di.stagesDetail   ||[]).map(function(s){ return s.type; });
     var slotsP= (di.stagesPartDetail||[]).map(function(s){ return s.type; });
-
     if (!adminData.stages[date]) adminData.stages[date] = {label: di.dateLabel, inscrits:[]};
-
     adminData.stages[date].inscrits.push({
       prenom:d.prenom, nom:d.nom, email:d.email, tel:d.telephone||'',
-      role:normRole(d.role), slots:slots, present:null,
+      role:_normRole(d.role), slots:slots, present:null,
       montant:di.prixInscrit, attente:d.typeConfirmation==='attente',
       partenaire:d.partenaire||'', emailPartenaire:d.partenaireEmail||''
     });
-
-    var avecPart = d.situation==='avec-partenaire' && !d.memePersonne
-                   && (d.partenairePrenom||d.partenaireNom);
+    var avecPart = d.situation==='avec-partenaire' && !d.memePersonne && (d.partenairePrenom||d.partenaireNom);
     if (avecPart) {
-      var slotsPartEffectifs = slotsP.length ? slotsP : slots; // fallback = mêmes créneaux
-      var montantPart = di.prixPartenaire || di.prixInscrit;
+      var slotsP2 = slotsP.length ? slotsP : slots;
       adminData.stages[date].inscrits.push({
         prenom:d.partenairePrenom||'', nom:d.partenaireNom||'',
         email:d.partenaireEmail||'', tel:d.partenaireTel||'',
-        role:normRole(d.rolePartenaire), slots:slotsPartEffectifs, present:null,
-        montant:montantPart, attente:false,
+        role:_normRole(d.rolePartenaire), slots:slotsP2, present:null,
+        montant:di.prixPartenaire||di.prixInscrit, attente:false,
         partenaire:d.prenom+' '+d.nom, emailPartenaire:d.email
       });
     }
   });
-
   if (d.inscriptionsParDate.length) {
     filtreStage     = d.inscriptionsParDate[0].date;
     filtreStageSlot = 'technique';
   }
-  renderTab();
-});
+}
 
-// Réception des inscriptions depuis l'iframe inscription-cours.html
-window.addEventListener('message', function(ev) {
-  if (!ev.data || ev.data.type !== 'coursInscription') return;
-  var d = ev.data.data;
+function _lblCours(ville, niveau) {
+  var v = ville==='paris' ? 'Paris' : 'Vincennes';
+  var j = ville==='paris' ? 'Jeudi' : 'Lundi';
+  var n = niveau==='debutant' ? 'D\u00e9butant' : 'Interm\u00e9diaire';
+  return v + ' \u2014 ' + j + ' \u2014 ' + n;
+}
+
+function _appliquerCoursInscription(d) {
   if (!d || !d.c1 || !d.c1.ville || !d.c1.niveau) return;
-
-  function lblCours(ville, niveau) {
-    var v = ville==='paris' ? 'Paris' : 'Vincennes';
-    var j = ville==='paris' ? 'Jeudi' : 'Lundi';
-    var n = niveau==='debutant' ? 'Débutant' : 'Intermédiaire';
-    return v + ' \u2014 ' + j + ' \u2014 ' + n;
-  }
-
   if (!adminData.coursTango) adminData.coursTango = [];
-  var statut = d.isWaitlist ? 'demande' : 'valide';
-  var cours1 = lblCours(d.c1.ville, d.c1.niveau);
-  var partNom = ((d.pPrenom||'') + ' ' + (d.pNom||'')).trim();
-  var avecPart = (d.venue==='avec-part') && (d.pPrenom || d.pNom);
-
-  // Inscrit principal — cours 1
+  var statut   = d.isWaitlist ? 'demande' : 'valide';
+  var cours1   = _lblCours(d.c1.ville, d.c1.niveau);
+  var partNom  = ((d.pPrenom||'')+' '+(d.pNom||'')).trim();
+  var avecPart = (d.venue==='avec-part') && (d.pPrenom||d.pNom);
+  var ts = Date.now();
   adminData.coursTango.push({
-    id:'CT'+Date.now(), prenom:d.prenom, nom:d.nom, email:d.email, tel:d.tel||'',
+    id:'CT'+ts, prenom:d.prenom, nom:d.nom, email:d.email, tel:d.tel||'',
     role:d.role, niveau:d.c1.niveau, cours:cours1, ville:d.c1.ville,
     statut:statut, partenaire:partNom, emailPartenaire:d.pEmail||'',
     type:'', paiement:'', montant:0, dateInscription:today()
   });
-
-  // Partenaire — cours 1 (si avec partenaire et nom renseigné)
   if (avecPart) {
     var roleP = d.pRole || (d.role==='guideur' ? 'guidee' : 'guideur');
     adminData.coursTango.push({
-      id:'CT'+(Date.now()+1), prenom:d.pPrenom||'', nom:d.pNom||'',
+      id:'CT'+(ts+1), prenom:d.pPrenom||'', nom:d.pNom||'',
       email:d.pEmail||'', tel:d.pTel||'',
       role:roleP, niveau:d.c1.niveau, cours:cours1, ville:d.c1.ville,
       statut:'valide', partenaire:(d.prenom+' '+d.nom).trim(), emailPartenaire:d.email||'',
       type:'', paiement:'', montant:0, dateInscription:today()
     });
   }
-
-  // Cours 2 si 2 cours sélectionnés
   if (d.c2 && d.c2.ville && d.c2.niveau) {
-    var cours2 = lblCours(d.c2.ville, d.c2.niveau);
-    var role2  = d.role2 || d.role;
+    var cours2   = _lblCours(d.c2.ville, d.c2.niveau);
+    var role2    = d.role2 || d.role;
     var partNom2 = d.samePartner===true ? partNom : ((d.p2Prenom||'')+' '+(d.p2Nom||'')).trim();
-    var part2Email = d.samePartner===true ? (d.pEmail||'') : (d.p2Email||'');
+    var partEml2 = d.samePartner===true ? (d.pEmail||'') : (d.p2Email||'');
     adminData.coursTango.push({
-      id:'CT'+(Date.now()+2), prenom:d.prenom, nom:d.nom, email:d.email, tel:d.tel||'',
+      id:'CT'+(ts+2), prenom:d.prenom, nom:d.nom, email:d.email, tel:d.tel||'',
       role:role2, niveau:d.c2.niveau, cours:cours2, ville:d.c2.ville,
-      statut:statut, partenaire:partNom2, emailPartenaire:part2Email,
+      statut:statut, partenaire:partNom2, emailPartenaire:partEml2,
       type:'', paiement:'', montant:0, dateInscription:today()
     });
     if (d.venue2==='avec-part' && partNom2) {
-      var roleP2 = role2==='guideur' ? 'guidee' : 'guideur';
       adminData.coursTango.push({
-        id:'CT'+(Date.now()+3), prenom:d.p2Prenom||d.pPrenom||'', nom:d.p2Nom||d.pNom||'',
-        email:part2Email, tel:d.p2Tel||d.pTel||'',
-        role:roleP2, niveau:d.c2.niveau, cours:cours2, ville:d.c2.ville,
+        id:'CT'+(ts+3), prenom:d.p2Prenom||d.pPrenom||'', nom:d.p2Nom||d.pNom||'',
+        email:partEml2, tel:d.p2Tel||d.pTel||'',
+        role:role2==='guideur' ? 'guidee' : 'guideur',
+        niveau:d.c2.niveau, cours:cours2, ville:d.c2.ville,
         statut:'valide', partenaire:(d.prenom+' '+d.nom).trim(), emailPartenaire:d.email||'',
         type:'', paiement:'', montant:0, dateInscription:today()
       });
     }
   }
-
   sousOngletCoursTango = statut==='demande' ? 'attente_validation' : 'valide';
-  renderTab();
+}
+
+// Dispatcher (postMessage iframe + localStorage + BroadcastChannel)
+function traiterMsgInscription(msg, doRender) {
+  if (!msg || !msg.type) return;
+  if (msg.type === 'stageInscription') _appliquerStageInscription(msg.data);
+  if (msg.type === 'coursInscription') _appliquerCoursInscription(msg.data);
+  if (doRender) renderTab();
+}
+
+// Inscriptions soumises hors admin ouvert (lues au login depuis localStorage)
+function traiterInscriptionsEnAttente() {
+  try {
+    var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
+    if (!pending.length) return;
+    pending.forEach(function(msg) { traiterMsgInscription(msg, false); });
+    localStorage.removeItem('tev_pending_inscriptions');
+    renderTab();
+  } catch(e) {}
+}
+
+// Écoute postMessage depuis les iframes (admin utilise les formulaires directement)
+window.addEventListener('message', function(ev) {
+  if (!ev.data || (ev.data.type !== 'stageInscription' && ev.data.type !== 'coursInscription')) return;
+  traiterMsgInscription(ev.data, true);
 });
 
-// ================================================================
+// Écoute BroadcastChannel (élève sur index.html pendant que admin est ouvert)
+(function() {
+  if (!window.BroadcastChannel) return;
+  var bc = new BroadcastChannel('tev_inscriptions');
+  bc.onmessage = function(ev) { traiterMsgInscription(ev.data, true); };
+})();
+
 // AUTH
 // ================================================================
 function envoyerLien() {
@@ -784,6 +796,7 @@ function demarrerApp(email) {
   filtreStage = Object.keys(adminData.stages)[0]||'';
   gel('login-screen').style.display='none';
   gel('app').style.display='block';
+  traiterInscriptionsEnAttente();
   renderTab();
 }
 function logout() {
