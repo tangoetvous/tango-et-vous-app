@@ -216,6 +216,7 @@
     eleveData = DEMO_DATA;
     renderDashboard();
     showScreen('screen-dashboard');
+    _initAdminSync();
   };
 
   // ================================================================
@@ -246,6 +247,7 @@
       eleveData = data;
       renderDashboard();
       showScreen('screen-dashboard');
+      _initAdminSync();
     } catch(e) {
       showScreen('screen-notfound');
       $('notfound-email').textContent = email || '';
@@ -375,7 +377,11 @@
     const pane = $(tab + '-pane');
     if (pane) pane.classList.add('active');
     const btn = $('nav-' + tab);
-    if (btn) btn.classList.add('active');
+    if (btn) {
+      btn.classList.add('active');
+      const dot = btn.querySelector('.notif-dot');
+      if (dot) dot.remove(); // clear notification dot on visit
+    }
     if (tab === 'agenda') renderAgenda('tous');
     if (tab === 'stages') renderStages();
     if (tab === 'actu')   renderActu();
@@ -707,9 +713,27 @@
       } catch(e) {}
     }
 
+    // Fusionner les publications issues de l'admin (localStorage)
+    try {
+      const stored = JSON.parse(localStorage.getItem('tev_publications') || '[]');
+      stored.forEach(sp => {
+        const idx = pubs.findIndex(p => p.id === sp.id);
+        if (idx >= 0) pubs[idx] = sp; else pubs.push(sp);
+      });
+    } catch(e) {}
+
     const now = new Date();
     const seasonStart = new Date(now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear()-1, 8, 1);
     pubs = pubs.filter(p => new Date(p.dateProgrammee || p.date || 0) >= seasonStart);
+
+    // Filtrer les publications programmées pour le futur (non encore publiées)
+    pubs = pubs.filter(p => {
+      if (p.publiee === true) return true;
+      const dates = p.datesProgrammees && p.datesProgrammees.length ? p.datesProgrammees
+        : (p.dateProgrammee ? [p.dateProgrammee] : []);
+      if (!dates.length) return true; // pas de contrainte de date → publier maintenant
+      return dates.some(d => new Date(d) <= now);
+    });
 
     if (pubs.length === 0) {
       container.innerHTML = '<p class="empty-msg">Aucune publication cette saison.</p>';
@@ -743,6 +767,129 @@
     $('pub-modal').classList.remove('open');
     $('pub-modal-backdrop').classList.remove('open');
   };
+
+  // ================================================================
+  // SYNC ADMIN → INTERFACE ÉLÈVE
+  // ================================================================
+  let _notifTimer = null;
+
+  function _showInAppNotif(message) {
+    const banner = $('notif-banner');
+    if (!banner) return;
+    banner.textContent = message;
+    banner.classList.add('visible');
+    clearTimeout(_notifTimer);
+    _notifTimer = setTimeout(() => banner.classList.remove('visible'), 5000);
+  }
+
+  function _showNotifDot(tab, message) {
+    const btn = $('nav-' + tab);
+    if (btn && !btn.querySelector('.notif-dot')) {
+      const dot = document.createElement('span');
+      dot.className = 'notif-dot';
+      btn.appendChild(dot);
+    }
+    _showInAppNotif(message);
+  }
+
+  function _appliquerAgendaUpdate(upd) {
+    if (!eleveData || !eleveData.agenda) return;
+    if (upd.action === 'annule') {
+      eleveData.agenda = eleveData.agenda.filter(e => {
+        if (e.date !== upd.date) return true;
+        if (upd.type === 'tous') return false;
+        if (upd.type === 'paris' && e.titre && e.titre.includes('Paris')) return false;
+        if (upd.type === 'vincennes' && e.titre && e.titre.includes('Vincennes')) return false;
+        if (upd.type === 'milonga' && e.type === 'milonga') return false;
+        if (upd.type === 'stage' && e.type === 'stage') return false;
+        return true;
+      });
+    } else if (upd.action === 'reporte') {
+      eleveData.agenda.forEach(e => {
+        if (e.date === upd.date) {
+          e.date = upd.newDate || e.date;
+          if (upd.newHeure) e.heure = upd.newHeure;
+          if (upd.newLieu) e.lieu = upd.newLieu;
+        }
+      });
+      eleveData.agenda.sort((a,b) => a.date.localeCompare(b.date));
+    } else if (upd.action === 'modif') {
+      eleveData.agenda.forEach(e => {
+        if (e.date === upd.date) {
+          if (upd.newHeure) e.heure = upd.newHeure;
+          if (upd.newLieu) e.lieu = upd.newLieu;
+          if (upd.note) e._note = upd.note;
+        }
+      });
+    } else if (upd.action === 'annule_modif') {
+      // Undo: re-render will use base agenda — just trigger a re-render
+    }
+  }
+
+  function _handleAdminMsg(msg) {
+    if (!msg || !msg.type || !eleveData) return;
+
+    if (msg.type === 'newPublication') {
+      const pub = msg.data;
+      if (!pub || !pub.id) return;
+      if (!eleveData.publications) eleveData.publications = [];
+      const idx = eleveData.publications.findIndex(p => p.id === pub.id);
+      if (idx >= 0) eleveData.publications[idx] = pub;
+      else eleveData.publications.unshift(pub);
+      const now = new Date();
+      const dates = pub.datesProgrammees && pub.datesProgrammees.length ? pub.datesProgrammees : (pub.dateProgrammee ? [pub.dateProgrammee] : []);
+      const isVisible = pub.publiee || !dates.length || dates.some(d => new Date(d) <= now);
+      if (isVisible) {
+        _showNotifDot('actu', '\uD83D\uDD14 Nouvelle publication : ' + pub.titre);
+        if (currentTab === 'actu') renderActu();
+      }
+    }
+
+    if (msg.type === 'agendaUpdate') {
+      const upd = msg.data;
+      _appliquerAgendaUpdate(upd);
+      const actionLabels = {annule:'annulé', reporte:'reporté', modif:'modifié', annule_modif:'restauré'};
+      _showNotifDot('agenda', '\uD83D\uDD14 Agenda mis à jour (' + (actionLabels[upd.action] || upd.action) + ')');
+      if (currentTab === 'agenda') renderAgenda('tous');
+    }
+
+    if (msg.type === 'carteUpdate') {
+      const d = msg.data;
+      if (eleveData && eleveData.carte) {
+        eleveData.carte.coursUtilises = d.utilises != null ? d.utilises : eleveData.carte.coursUtilises;
+        eleveData.carte.coursRestants = d.restants != null ? d.restants : eleveData.carte.coursRestants;
+        if (d.datePremierCours) eleveData.carte.dateAchat = d.datePremierCours;
+        if (d.expiration) eleveData.carte.dateExpiration = d.expiration;
+      }
+      _showNotifDot('carte', '\uD83D\uDD14 Votre carte : ' + (d.utilises||0) + '/10 cours utilisés, ' + (d.restants||0) + ' restants');
+      if (currentTab === 'carte') renderDashboard();
+    }
+  }
+
+  function _initAdminSync() {
+    // BroadcastChannel real-time
+    if (window.BroadcastChannel) {
+      const bc = new BroadcastChannel('tev_admin_sync');
+      bc.onmessage = ev => _handleAdminMsg(ev.data);
+    }
+    // Appliquer les mises à jour d'agenda stockées en localStorage (si elles ont eu lieu quand l'app était fermée)
+    try {
+      const agUpds = JSON.parse(localStorage.getItem('tev_agenda_updates') || '[]');
+      agUpds.forEach(m => _appliquerAgendaUpdate(m.data || m));
+    } catch(e) {}
+    // Appliquer les publications stockées
+    try {
+      const storedPubs = JSON.parse(localStorage.getItem('tev_publications') || '[]');
+      if (storedPubs.length && eleveData) {
+        if (!eleveData.publications) eleveData.publications = [];
+        storedPubs.forEach(sp => {
+          const idx = eleveData.publications.findIndex(p => p.id === sp.id);
+          if (idx >= 0) eleveData.publications[idx] = sp;
+          else eleveData.publications.push(sp);
+        });
+      }
+    } catch(e) {}
+  }
 
   // ================================================================
   // INIT AU CHARGEMENT
@@ -1208,6 +1355,10 @@ a{color:var(--gold);text-decoration:none;}
 .nav-btn.active{color:var(--gold);}
 .nav-btn:not(.active):hover{color:#ddd;}
 .nav-btn svg{width:18px;height:18px;}
+.nav-btn{position:relative;}
+.notif-dot{position:absolute;top:2px;right:10px;width:7px;height:7px;background:var(--gold);border-radius:50%;border:1.5px solid var(--bg);}
+.notif-banner{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-80px);z-index:999;background:#1a1500;border:1px solid var(--gold);color:var(--gold);font-size:12px;font-weight:600;padding:10px 16px;border-radius:24px;box-shadow:0 4px 20px rgba(0,0,0,.5);white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis;transition:transform .3s ease,opacity .3s ease;opacity:0;pointer-events:none;}
+.notif-banner.visible{transform:translateX(-50%) translateY(0);opacity:1;}
 .nav-link{color:var(--text-faint);}
 .nav-link:hover{color:var(--gold);}
 /* publication modal */
@@ -1617,6 +1768,9 @@ a{color:var(--gold);text-decoration:none;}
      DASHBOARD
      ================================================================ -->
 <div class="screen" id="screen-dashboard">
+
+  <!-- Notification banner (in-app) -->
+  <div id="notif-banner" class="notif-banner" role="status" aria-live="polite"></div>
 
   <!-- Header fixe -->
   <div class="dash-header">

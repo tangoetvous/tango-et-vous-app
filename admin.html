@@ -789,6 +789,7 @@ function traiterMsgInscription(msg, doRender) {
   if (msg.type === 'stageInscription') _appliquerStageInscription(msg.data);
   if (msg.type === 'coursInscription') _appliquerCoursInscription(msg.data);
   if (msg.type === 'essaiInscription') _appliquerEssaiInscription(msg.data);
+  _notifierAdminInscription(msg);
   if (doRender) renderTab();
 }
 
@@ -851,6 +852,43 @@ function rafraichirEssais(btn) {
     });
     if (changed) renderTab();
   }).catch(function() { if(btn){btn.disabled=false;btn.textContent='↻ Rafraîchir';} });
+}
+
+// ================================================================
+// SYNC ADMIN → INTERFACE ÉLÈVE (BroadcastChannel + localStorage)
+// ================================================================
+function _broadcastAdminSync(type, data) {
+  var msg = {type:type, data:data, ts:Date.now()};
+  try {
+    if (type === 'newPublication') {
+      localStorage.setItem('tev_publications', JSON.stringify(adminData.publications||[]));
+    } else if (type === 'agendaUpdate') {
+      var agUpds = JSON.parse(localStorage.getItem('tev_agenda_updates')||'[]');
+      agUpds.push(msg);
+      if (agUpds.length > 100) agUpds = agUpds.slice(-100);
+      localStorage.setItem('tev_agenda_updates', JSON.stringify(agUpds));
+    } else if (type === 'carteUpdate') {
+      localStorage.setItem('tev_carte_update_'+data.email, JSON.stringify(msg));
+    }
+  } catch(e) {}
+  try {
+    if (window.BroadcastChannel) {
+      var bc = new BroadcastChannel('tev_admin_sync');
+      bc.postMessage(msg);
+      bc.close();
+    }
+  } catch(e) {}
+}
+
+function _notifierAdminInscription(msg) {
+  var d = msg.data || {};
+  var nom = ((d.prenom||'') + ' ' + (d.nom||'')).trim();
+  var typeLabel = msg.type === 'essaiInscription' ? 'Cours d\'essai'
+    : msg.type === 'stageInscription' ? 'Stage' : 'Cours régulier';
+  afficherToast('\uD83D\uDD14 Nouvelle inscription (' + typeLabel + ')' + (nom ? ' : ' + nom : ''));
+  if (!IS_DEMO) {
+    postAS({action:'notifierAdmin', type:msg.type, prenom:d.prenom||'', nom:d.nom||'', email:d.email||''}).catch(function(){});
+  }
 }
 
 // AUTH
@@ -1654,7 +1692,8 @@ function renderCartes() {
 function pointerCoursAction(id, date, btn) {
   if(IS_DEMO){
     var c=adminData.cartes.find(function(x){return x.id===id;});
-    if(c){if(!c.datesCours)c.datesCours=[];var estPremierCours=!c.datePremierCours;c.utilises=Math.min(10,(c.utilises||0)+1);c.restants=Math.max(0,10-c.utilises);c.datesCours.push(date);if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}if(c.restants===0){var msg=gel('modal-confirm-msg');if(msg)msg.textContent='';}if(estPremierCours){afficherToast('✉️ Email de bienvenue envoyé à '+(c.nom||c.email||'')+'');}}
+    if(c){if(!c.datesCours)c.datesCours=[];var estPremierCours=!c.datePremierCours;c.utilises=Math.min(10,(c.utilises||0)+1);c.restants=Math.max(0,10-c.utilises);c.datesCours.push(date);if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}if(c.restants===0){var msg=gel('modal-confirm-msg');if(msg)msg.textContent='';}if(estPremierCours){afficherToast('✉️ Email de bienvenue envoyé à '+(c.nom||c.email||'')+'');}
+    _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:c.datePremierCours,expiration:c.expiration});}
     renderTab(); return;
   }
   if(btn)btn.disabled=true;
@@ -1665,7 +1704,8 @@ function renouvelerCarteAction(id, btn, paye) {
   if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=10;c.datePremierCours='';c.expiration='';c.datesCours=[];c.paye=paye===true;
 // Sync coursTango statut: non payé → attente_paiement, payé → inscrit
 var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='inscrit';});
-if(cte){cte.statut=paye===true?'inscrit':'attente_paiement';}}renderTab();return;}
+if(cte){cte.statut=paye===true?'inscrit':'attente_paiement';}
+_broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCours:[],datePremierCours:'',expiration:''});}renderTab();return;}
   if(btn){btn.disabled=true;btn.textContent='⏳';}
   postAS({action:'renouvelerCarte',eleveId:id,paye:paye===true}).then(function(){chargerDonnees();}).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
 }
@@ -2274,12 +2314,13 @@ function sauverModifAgenda() {
   var ok = gel('am-ok');
   if (ok) { ok.style.display='block'; setTimeout(function(){ok.style.display='none';},2500); }
   if (!IS_DEMO) postAS({action:'sauverModifAgenda', date:date, type:type, actionType:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu}).catch(function(){});
+  _broadcastAdminSync('agendaUpdate', {type:type, date:date, action:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu});
   renderTab();
 }
 
 function supprimerModifAgenda(id) {
   var m = agendaModifs.find(function(x){return x.id===id;});
-  if (m) _undoMutateAgendaArray(m);
+  if (m) { _undoMutateAgendaArray(m); _broadcastAdminSync('agendaUpdate', {type:m.type, date:m.date, action:'annule_modif', origAction:m.action, newDate:m.newDate}); }
   agendaModifs = agendaModifs.filter(function(x){return x.id!==id;});
   renderTab();
 }
@@ -2444,15 +2485,18 @@ function savePub(existingId) {
   var payload={action:'sauvegarderPublication',id:existingId,cat:cat,titre:titre.trim(),extrait:extrait,contenu:contenu,image:image,video:video,dateProgrammee:dates[0]||new Date().toISOString(),datesProgrammees:dates,publiee:publiee};
   if(IS_DEMO){
     if(!adminData.publications)adminData.publications=[];
-    if(existingId){var idx=adminData.publications.findIndex(function(p){return p.id===existingId;});if(idx>=0)adminData.publications[idx]=Object.assign({},payload,{id:existingId});}
-    else adminData.publications.unshift(Object.assign({},payload,{id:'p'+Date.now()}));
+    var newId = existingId || ('p'+Date.now());
+    var newPub = Object.assign({},payload,{id:newId});
+    if(existingId){var idx=adminData.publications.findIndex(function(p){return p.id===existingId;});if(idx>=0)adminData.publications[idx]=newPub;}
+    else adminData.publications.unshift(newPub);
+    _broadcastAdminSync('newPublication', newPub);
     gel('pub-ed').innerHTML=''; renderTab(); return;
   }
   postAS(payload).then(function(r){if(r.error)throw new Error(r.error);gel('pub-ed').innerHTML='';chargerDonnees();}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
 }
 function publierPub(id, btn) {
   btn.disabled=true;
-  if(IS_DEMO){var p=adminData.publications&&adminData.publications.find(function(x){return x.id===id;});if(p)p.publiee=true;renderTab();return;}
+  if(IS_DEMO){var p=adminData.publications&&adminData.publications.find(function(x){return x.id===id;});if(p){p.publiee=true;_broadcastAdminSync('newPublication',p);}renderTab();return;}
   postAS({action:'publierPublication',id:id}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;});
 }
 function supprimerPub(id, btn) {
