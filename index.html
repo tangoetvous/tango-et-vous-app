@@ -379,59 +379,274 @@
     if (tab === 'agenda') renderAgenda('tous');
     if (tab === 'stages') renderStages();
     if (tab === 'actu')   renderActu();
+    if (tab === 'contact') renderContact();
+    if (tab === 'carte-lieux') {} // static content
+    if (tab === 'preinscription') renderPreinscription();
     window.scrollTo(0, 0);
   };
+
+  // ================================================================
+  // PRE-INSCRIPTION (visible May 1–Aug 31 only)
+  // ================================================================
+  function isPreinscriptionPeriod() {
+    const now = new Date();
+    const m = now.getMonth() + 1; // 1-based
+    return m >= 5 && m <= 8;
+  }
+
+  function renderPreinscription() {
+    const pane = $('preinscription-pane');
+    if (!pane) return;
+    if (!isPreinscriptionPeriod()) {
+      pane.innerHTML = `<div class="tab-section-title">Pr\u00e9-inscription</div>
+        <div class="preinscription-hidden-notice">
+          La p\u00e9riode de pr\u00e9-inscription est ouverte du 1er mai au 31 ao\u00fbt.<br/>
+          Revenez \u00e0 cette p\u00e9riode pour vous inscrire aux cours de la prochaine saison.
+        </div>`;
+      return;
+    }
+    const nom   = eleveData.eleve.nom;
+    const email = eleveData.eleve.email;
+    const preinscSuccess = $('preinsc-success');
+    if (preinscSuccess && preinscSuccess.classList.contains('show')) return; // already submitted
+    pane.innerHTML = `<div class="tab-section-title">Pr\u00e9-inscription 2026\u20132027</div>
+      <div class="preinscription-info">\uD83D\uDCC5 La p\u00e9riode de pr\u00e9-inscription est ouverte jusqu\u2019au 31 ao\u00fbt.<br/>Remplissez ce formulaire pour r\u00e9server votre place.</div>
+      <div style="margin:12px 20px;">
+        <div id="preinsc-success" class="form-success"></div>
+        <div id="preinsc-form">
+          <div class="form-field">
+            <label>Pr\u00e9nom &amp; Nom</label>
+            <input type="text" id="pi-nom" value="${nom}" placeholder="Pr\u00e9nom Nom"/>
+          </div>
+          <div class="form-field">
+            <label>Email</label>
+            <input type="email" id="pi-email" value="${email}" placeholder="votre@email.com"/>
+          </div>
+          <div class="form-field">
+            <label>Ville souhait\u00e9e</label>
+            <select id="pi-ville">
+              <option value="">— Choisir —</option>
+              <option>Paris</option>
+              <option>Vincennes</option>
+              <option>Les deux</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Niveau</label>
+            <select id="pi-niveau">
+              <option value="">— Choisir —</option>
+              <option>D\u00e9butant(e)</option>
+              <option>Interm\u00e9diaire</option>
+              <option>Avanc\u00e9(e)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>R\u00f4le</label>
+            <div class="radio-group" id="pi-role-group">
+              <div class="radio-opt" data-val="guidee">\uD83D\uDC83 Guid\u00e9e</div>
+              <div class="radio-opt" data-val="guideur">\uD83D\uDD7A Guideur</div>
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Situation</label>
+            <div class="radio-group" id="pi-sit-group">
+              <div class="radio-opt" data-val="seul">Seul(e)</div>
+              <div class="radio-opt" data-val="partenaire">Avec partenaire</div>
+            </div>
+          </div>
+          <div class="partner-section" id="pi-partner-section">
+            <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;">Partenaire</div>
+            <div class="form-field">
+              <label>Pr\u00e9nom &amp; Nom du partenaire</label>
+              <input type="text" id="pi-partner-nom" placeholder="Pr\u00e9nom Nom"/>
+            </div>
+            <div class="form-field">
+              <label>Email du partenaire</label>
+              <input type="email" id="pi-partner-email" placeholder="partenaire@email.com"/>
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Message (facultatif)</label>
+            <textarea id="pi-msg" rows="3" placeholder="Questions, pr\u00e9cisions..."></textarea>
+          </div>
+          <button class="btn-submit-stage" id="pi-submit">Envoyer ma pr\u00e9-inscription</button>
+        </div>
+      </div>`;
+
+    // Wire up radio groups
+    ['pi-role-group','pi-sit-group'].forEach(groupId => {
+      document.querySelectorAll(`#${groupId} .radio-opt`).forEach(opt => {
+        opt.addEventListener('click', () => {
+          document.querySelectorAll(`#${groupId} .radio-opt`).forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
+          if (groupId === 'pi-sit-group') {
+            $('pi-partner-section').classList.toggle('show', opt.dataset.val === 'partenaire');
+          }
+        });
+      });
+    });
+
+    $('pi-submit').addEventListener('click', () => {
+      const role = document.querySelector('#pi-role-group .radio-opt.selected');
+      const sit  = document.querySelector('#pi-sit-group .radio-opt.selected');
+      if (!role || !sit) { alert('Merci de s\u00e9lectionner votre r\u00f4le et votre situation.'); return; }
+      const isGuidee   = role.dataset.val === 'guidee';
+      const hasPartner = sit.dataset.val === 'partenaire';
+      let msg = '';
+      if (isGuidee && !hasPartner) {
+        msg = '\u2713 Votre demande est enregistr\u00e9e. Vous \u00eates en liste d\u2019attente \u2014 nous vous contacterons d\u00e8s qu\u2019une place est disponible.';
+      } else {
+        msg = '\u2713 Votre demande est confirm\u00e9e. Vous recevrez un email avec le lien AssoConnect pour finaliser votre inscription.';
+      }
+      if (!IS_DEMO) { /* submit to APPS_SCRIPT_URL */ }
+      const succ = $('preinsc-success');
+      succ.textContent = msg;
+      succ.classList.add('show');
+      $('preinsc-form').style.display = 'none';
+    });
+  }
+
+  // ================================================================
+  // DONNÉES AGENDA (synchronisées avec admin.html)
+  // ================================================================
+  const COURS_PARIS = ['2026-04-02','2026-04-09','2026-04-16','2026-04-23','2026-05-07','2026-05-21','2026-05-28','2026-06-04','2026-06-11','2026-06-18','2026-06-25','2026-09-03','2026-09-10','2026-09-17','2026-09-24','2026-10-01','2026-10-08','2026-10-15','2026-10-22','2026-11-05','2026-11-12','2026-11-19','2026-11-26','2026-12-03','2026-12-10','2026-12-17','2027-01-07','2027-01-14','2027-01-21','2027-01-28','2027-02-04','2027-02-18','2027-02-25','2027-03-04','2027-03-11','2027-03-18','2027-03-25','2027-04-01','2027-04-15','2027-04-22','2027-04-29','2027-05-13','2027-05-20','2027-05-27','2027-06-03','2027-06-10','2027-06-17','2027-06-24'];
+  const COURS_VINCENNES = ['2026-04-13','2026-05-04','2026-05-11','2026-05-18','2026-06-01','2026-06-08','2026-06-15','2026-06-29','2026-09-07','2026-09-14','2026-09-21','2026-09-28','2026-10-05','2026-10-12','2026-11-02','2026-11-09','2026-11-16','2026-11-23','2026-11-30','2026-12-07','2026-12-14','2027-01-04','2027-01-11','2027-01-18','2027-01-25','2027-02-01','2027-02-22','2027-03-01','2027-03-08','2027-03-15','2027-03-22','2027-04-19','2027-04-26','2027-05-03','2027-05-10','2027-05-24','2027-05-31','2027-06-07','2027-06-14','2027-06-21'];
+  const STAGES_DATA = [
+    {date:'2026-04-11',label:'Sam. 11 Avr 2026',s1:'Milonga',s2:'Lapiz & Enrosque'},
+    {date:'2026-05-30',label:'Sam. 30 Mai 2026',s1:'',s2:''},
+    {date:'2026-06-20',label:'Sam. 20 Juin 2026',s1:'',s2:''},
+    {date:'2026-09-19',label:'Sam. 19 Sep 2026',s1:'À venir',s2:'À venir'},
+    {date:'2026-10-03',label:'Sam. 3 Oct 2026',s1:'À venir',s2:'À venir'},
+    {date:'2026-11-07',label:'Sam. 7 Nov 2026',s1:'À venir',s2:'À venir'},
+    {date:'2026-12-05',label:'Sam. 5 Déc 2026',s1:'À venir',s2:'À venir'},
+    {date:'2027-01-30',label:'Sam. 30 Jan 2027',s1:'À venir',s2:'À venir'},
+    {date:'2027-02-27',label:'Sam. 27 Fév 2027',s1:'À venir',s2:'À venir'},
+    {date:'2027-03-13',label:'Sam. 13 Mar 2027',s1:'À venir',s2:'À venir'},
+    {date:'2027-04-24',label:'Sam. 24 Avr 2027',s1:'À venir',s2:'À venir'},
+    {date:'2027-05-22',label:'Sam. 22 Mai 2027',s1:'À venir',s2:'À venir'},
+    {date:'2027-06-19',label:'Sam. 19 Juin 2027',s1:'À venir',s2:'À venir'}
+  ];
+  const MILONGAS_DATA = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
 
   // ================================================================
   // AGENDA
   // ================================================================
   const MOIS_COURT = ['Jan','Fév','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
   const MOIS_LONG  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  const TYPE_DOT   = { cours:'#1565C0', stage:'#D4AF37', milonga:'#880e4f', evenement:'#2e7d32' };
-  const TYPE_LBL   = { cours:'Cours', stage:'Stage', milonga:'Milonga', evenement:'Événement' };
+  // Paris cours: blue, Vincennes: teal, Stage: gold, Milonga: pink
+  const COLOR_PARIS   = '#60b0ff';
+  const COLOR_VINC    = '#40d8c0';
+  const COLOR_STAGE   = '#D4AF37';
+  const COLOR_MILONGA = '#e040a0';
+
+  function buildAllEvents(filter) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const maxDate = new Date(today); maxDate.setFullYear(maxDate.getFullYear() + 2);
+    const todayStr = today.toISOString().split('T')[0];
+    const maxStr = maxDate.toISOString().split('T')[0];
+    const events = [];
+
+    if (filter === 'tous' || filter === 'paris') {
+      COURS_PARIS.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
+        events.push({date:d, subtype:'paris', type:'cours', titre:'Cours — Paris', heure:'20h30 / 21h45', lieu:'Espace Danse Studio, 15 rue Planchat, Paris 20e'});
+      });
+    }
+    if (filter === 'tous' || filter === 'vincennes') {
+      COURS_VINCENNES.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
+        events.push({date:d, subtype:'vincennes', type:'cours', titre:'Cours — Vincennes', heure:'19h30 / 21h00', lieu:'Espace Sorano, 16 rue Charles Path\u00e9, Vincennes'});
+      });
+    }
+    if (filter === 'tous' || filter === 'stage') {
+      STAGES_DATA.filter(s => s.date >= todayStr && s.date <= maxStr).forEach(s => {
+        const label = s.s1 ? `${s.s1}${s.s2 ? ' · ' + s.s2 : ''}` : 'Stage de Tango';
+        events.push({date:s.date, subtype:'stage', type:'stage', titre:'Stage de Tango' + (s.s1 ? ' — ' + s.s1 : ''), heure:'14h–18h', lieu:'Centre Kim Kan, 64 rue Orfila, Paris 20e'});
+      });
+    }
+    if (filter === 'tous' || filter === 'milonga') {
+      MILONGAS_DATA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
+        events.push({date:d, subtype:'milonga', type:'milonga', titre:'Milonga La Dolce Vita', heure:'21h–2h', lieu:'Lieu \u00e0 confirmer'});
+      });
+    }
+    // Also include personal agenda items from eleveData (not yet in global arrays)
+    if (filter === 'tous' || filter === 'cours' || filter === 'stage' || filter === 'milonga') {
+      (eleveData.agenda || []).filter(e => {
+        if (e.date < todayStr || e.date > maxStr) return false;
+        // skip if already covered by global arrays
+        if (e.type === 'cours' && e.titre && e.titre.includes('Paris') && COURS_PARIS.includes(e.date)) return false;
+        if (e.type === 'cours' && e.titre && e.titre.includes('Vincennes') && COURS_VINCENNES.includes(e.date)) return false;
+        if (e.type === 'stage' && STAGES_DATA.some(s => s.date === e.date)) return false;
+        if (e.type === 'milonga' && MILONGAS_DATA.includes(e.date)) return false;
+        if (filter !== 'tous' && e.type !== filter) return false;
+        return true;
+      }).forEach(e => events.push({...e, subtype: e.type}));
+    }
+    events.sort((a,b) => a.date.localeCompare(b.date) || (a.heure||'').localeCompare(b.heure||''));
+    return events;
+  }
+
+  function getEventColor(subtype) {
+    if (subtype === 'paris') return COLOR_PARIS;
+    if (subtype === 'vincennes') return COLOR_VINC;
+    if (subtype === 'stage') return COLOR_STAGE;
+    if (subtype === 'milonga') return COLOR_MILONGA;
+    return '#888';
+  }
+  function getEventLabel(subtype) {
+    if (subtype === 'paris') return 'Cours Paris';
+    if (subtype === 'vincennes') return 'Cours Vincennes';
+    if (subtype === 'stage') return 'Stage';
+    if (subtype === 'milonga') return 'Milonga';
+    return subtype || '';
+  }
 
   function renderAgenda(filter) {
     const filters = [
-      { id:'tous', label:'Tous' }, { id:'cours', label:'Cours' },
-      { id:'stage', label:'Stages' }, { id:'milonga', label:'Milongas' },
-      { id:'evenement', label:'Événements' },
+      { id:'tous', label:'Tous' },
+      { id:'paris', label:'Paris' },
+      { id:'vincennes', label:'Vincennes' },
+      { id:'cours', label:'Cours' },
+      { id:'stage', label:'Stages' },
+      { id:'milonga', label:'Milongas' },
     ];
     $('agenda-filters').innerHTML = filters.map(f =>
-      `<button class="agenda-filter-btn${f.id===filter?' active':''}" onclick="filterAgenda('${f.id}')">${f.label}</button>`
+      `<button class="agenda-filter-btn${f.id===filter?' active':''}" data-filter="${f.id}">${f.label}</button>`
     ).join('');
+    document.querySelectorAll('.agenda-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.agenda-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderAgendaList(btn.dataset.filter);
+      });
+    });
     renderAgendaList(filter);
   }
 
   window.filterAgenda = function(filter) {
     document.querySelectorAll('.agenda-filter-btn').forEach(b =>
-      b.classList.toggle('active', b.textContent === { tous:'Tous',cours:'Cours',stage:'Stages',milonga:'Milongas',evenement:'Événements' }[filter])
+      b.classList.toggle('active', b.dataset.filter === filter)
     );
     renderAgendaList(filter);
   };
 
   function renderAgendaList(filter) {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const maxDate = new Date(today); maxDate.setFullYear(maxDate.getFullYear() + 1);
-    let events = (eleveData.agenda || []).slice();
-    if (filter !== 'tous') events = events.filter(e => e.type === filter);
-    events = events.filter(e => { const d = new Date(e.date); return d >= today && d <= maxDate; });
-    events.sort((a,b) => a.date.localeCompare(b.date));
+    const events = buildAllEvents(filter);
 
     if (events.length === 0) {
-      $('agenda-list').innerHTML = '<p class="empty-msg">Aucun événement à venir.</p>';
+      $('agenda-list').innerHTML = '<p class="empty-msg">Aucun \u00e9v\u00e9nement \u00e0 venir.</p>';
       return;
     }
 
     let html = '', lastMonth = '';
     events.forEach(e => {
-      const d = new Date(e.date);
+      const d = new Date(e.date + 'T00:00:00');
       const monthKey = d.getMonth() + '-' + d.getFullYear();
       if (monthKey !== lastMonth) {
         const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
         html += `<div class="agenda-month-header">${cap(MOIS_LONG[d.getMonth()])} ${d.getFullYear()}</div>`;
         lastMonth = monthKey;
       }
-      const color = TYPE_DOT[e.type] || '#888';
+      const color = getEventColor(e.subtype);
+      const lbl   = getEventLabel(e.subtype);
       html += `<div class="event-item">
         <div class="event-date-col">
           <div class="event-day">${d.getDate()}</div>
@@ -439,9 +654,9 @@
         </div>
         <div class="event-type-bar" style="background:${color}"></div>
         <div class="event-info">
-          <div class="event-type-lbl" style="color:${color}">${TYPE_LBL[e.type] || e.type}</div>
+          <div class="event-type-lbl" style="color:${color}">${lbl}</div>
           <div class="event-title">${e.titre}</div>
-          <div class="event-sub">${e.heure}${e.lieu ? ' · ' + e.lieu : ''}</div>
+          <div class="event-sub">${e.heure}${e.lieu ? ' \u00b7 ' + e.lieu : ''}</div>
         </div>
       </div>`;
     });
@@ -453,36 +668,216 @@
   // ================================================================
   function renderStages() {
     const today = new Date(); today.setHours(0,0,0,0);
-    const stages = (eleveData.agenda || []).filter(e => e.type === 'stage' && new Date(e.date) >= today);
+    const todayStr = today.toISOString().split('T')[0];
+    const upcomingStages = STAGES_DATA.filter(s => s.date >= todayStr);
     const prenom = eleveData.eleve.nom.split(' ')[0];
+    const nom    = eleveData.eleve.nom;
     const email  = eleveData.eleve.email;
 
-    if (stages.length === 0) {
-      $('stages-list').innerHTML = '<p class="empty-msg">Aucun stage à venir pour le moment.</p>';
+    if (upcomingStages.length === 0) {
+      $('stages-list').innerHTML = '<p class="empty-msg">Aucun stage \u00e0 venir pour le moment.</p>';
       return;
     }
 
-    $('stages-list').innerHTML = stages.map(s => {
-      const d = new Date(s.date);
+    // Build stage dropdown options for the shared form
+    const stageOptions = upcomingStages.map(s => `<option value="${s.date}">${s.label}</option>`).join('');
+
+    let html = upcomingStages.map((s, idx) => {
+      const d = new Date(s.date + 'T00:00:00');
       const df = d.getDate() + ' ' + MOIS_LONG[d.getMonth()] + ' ' + d.getFullYear();
-      const url = `stages-pwa.html?pwa=1&prenom=${encodeURIComponent(prenom)}&email=${encodeURIComponent(email)}`;
+      const themeLabel = s.s1 ? `${s.s1}${s.s2 ? ' · ' + s.s2 : ''}` : 'Th\u00e8mes \u00e0 venir';
       return `<div class="stage-card">
         <div class="stage-card-header">
-          <div class="stage-card-date">📅 ${df}</div>
-          <div class="stage-card-sub">${s.heure} · ${s.lieu}</div>
+          <div class="stage-card-date">\uD83D\uDCC5 ${df}</div>
+          <div class="stage-card-sub">14h\u201318h \u00b7 Centre Kim Kan, 64 rue Orfila, Paris 20e</div>
         </div>
         <div class="stage-card-body">
-          <div class="stage-card-titre">${s.titre}</div>
+          <div class="stage-card-titre">${themeLabel}</div>
           <div class="tarifs-mini">
-            <span>Technique 1h : 20€</span>
-            <span>1 Stage : 25€</span>
-            <span>Technique + 2 Stages : 60€</span>
+            <span>Technique 14h\u201315h : 20\u20ac</span>
+            <span>Stage 1 15h\u201316h30 : 25\u20ac</span>
+            <span>Stage 2 16h30\u201318h : 25\u20ac</span>
+            <span>Technique + 2 Stages : 60\u20ac</span>
           </div>
-          <a href="${url}" class="btn-inscrire">S'inscrire à ce stage →</a>
+          <button class="btn-inscrire" data-stage-date="${s.date}" data-stage-label="${s.label}">S&#39;inscrire \u00e0 ce stage \u2192</button>
         </div>
       </div>`;
     }).join('');
+
+    // Shared inline registration form
+    html += `<div class="stage-form-wrap" id="stage-form-wrap">
+      <div class="stage-form-title">\uD83D\uDCDD Inscription au stage</div>
+      <div id="stage-form-success" class="form-success"></div>
+      <div id="stage-form-inner">
+        <div class="form-field">
+          <label>Stage</label>
+          <select id="sf-date">${stageOptions}</select>
+        </div>
+        <div class="form-field">
+          <label>Pr\u00e9nom &amp; Nom</label>
+          <input type="text" id="sf-nom" value="${nom}" placeholder="Pr\u00e9nom Nom"/>
+        </div>
+        <div class="form-field">
+          <label>Email</label>
+          <input type="email" id="sf-email" value="${email}" placeholder="votre@email.com"/>
+        </div>
+        <div class="form-field">
+          <label>R\u00f4le</label>
+          <div class="radio-group" id="sf-role-group">
+            <div class="radio-opt" data-val="guidee">\uD83D\uDC83 Guid\u00e9e</div>
+            <div class="radio-opt" data-val="guideur">\uD83D\uDD7A Guideur</div>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Situation</label>
+          <div class="radio-group" id="sf-sit-group">
+            <div class="radio-opt" data-val="seul">Seul(e)</div>
+            <div class="radio-opt" data-val="partenaire">Avec partenaire</div>
+          </div>
+        </div>
+        <div class="partner-section" id="sf-partner-section">
+          <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;">Partenaire</div>
+          <div class="form-field">
+            <label>Pr\u00e9nom &amp; Nom du partenaire</label>
+            <input type="text" id="sf-partner-nom" placeholder="Pr\u00e9nom Nom"/>
+          </div>
+          <div class="form-field">
+            <label>Email du partenaire</label>
+            <input type="email" id="sf-partner-email" placeholder="partenaire@email.com"/>
+          </div>
+        </div>
+        <div class="form-field" style="margin-top:14px;">
+          <label>Cr\u00e9neaux</label>
+          <div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="sf-tech" data-price="20"/>
+              <label for="sf-tech">Technique Leader &amp; Follower — 14h\u201315h</label>
+              <span class="price">20\u20ac</span>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="sf-stage1" data-price="25"/>
+              <label for="sf-stage1">Stage 1 — 15h\u201316h30</label>
+              <span class="price">25\u20ac</span>
+            </div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="sf-stage2" data-price="25"/>
+              <label for="sf-stage2">Stage 2 — 16h30\u201318h</label>
+              <span class="price">25\u20ac</span>
+            </div>
+          </div>
+          <div class="total-line">
+            <span style="font-size:13px;color:var(--text-dim);">Total</span>
+            <span class="total-amount" id="sf-total">0\u20ac</span>
+          </div>
+        </div>
+        <button class="btn-submit-stage" id="sf-submit">Confirmer mon inscription</button>
+      </div>
+    </div>`;
+
+    $('stages-list').innerHTML = html;
+
+    // Wire up "S'inscrire" buttons
+    document.querySelectorAll('.btn-inscrire[data-stage-date]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wrap = $('stage-form-wrap');
+        const dateVal = btn.dataset.stageDate;
+        $('sf-date').value = dateVal;
+        wrap.classList.add('open');
+        wrap.scrollIntoView({behavior:'smooth', block:'start'});
+      });
+    });
+
+    // Radio groups
+    ['sf-role-group','sf-sit-group'].forEach(groupId => {
+      document.querySelectorAll(`#${groupId} .radio-opt`).forEach(opt => {
+        opt.addEventListener('click', () => {
+          document.querySelectorAll(`#${groupId} .radio-opt`).forEach(o => o.classList.remove('selected'));
+          opt.classList.add('selected');
+          if (groupId === 'sf-sit-group') {
+            $('sf-partner-section').classList.toggle('show', opt.dataset.val === 'partenaire');
+          }
+        });
+      });
+    });
+
+    // Total calculator
+    ['sf-tech','sf-stage1','sf-stage2'].forEach(id => {
+      $(id).addEventListener('change', updateStageTotal);
+    });
+
+    // Submit
+    $('sf-submit').addEventListener('click', () => {
+      const role = document.querySelector('#sf-role-group .radio-opt.selected');
+      const sit  = document.querySelector('#sf-sit-group .radio-opt.selected');
+      if (!role || !sit) {
+        alert('Merci de s\u00e9lectionner votre r\u00f4le et votre situation.');
+        return;
+      }
+      const isGuidee = role.dataset.val === 'guidee';
+      const hasPartner = sit.dataset.val === 'partenaire';
+      let msg = '';
+      if (isGuidee && !hasPartner) {
+        msg = '\u2713 Votre demande est enregistr\u00e9e. Vous \u00eates en liste d\u2019attente \u2014 nous vous contacterons d\u00e8s qu\u2019une place est disponible.';
+      } else {
+        msg = '\u2713 Votre demande est confirm\u00e9e. Vous recevrez un email avec le lien AssoConnect pour finaliser votre inscription.';
+      }
+      if (!IS_DEMO) {
+        // In production, submit to APPS_SCRIPT_URL here
+      }
+      const succ = $('stage-form-success');
+      succ.textContent = msg;
+      succ.classList.add('show');
+      $('stage-form-inner').style.display = 'none';
+    });
   }
+
+  function updateStageTotal() {
+    let total = 0;
+    ['sf-tech','sf-stage1','sf-stage2'].forEach(id => {
+      const el = $(id);
+      if (el && el.checked) total += parseInt(el.dataset.price);
+    });
+    const techOk  = $('sf-tech')   && $('sf-tech').checked;
+    const s1Ok    = $('sf-stage1') && $('sf-stage1').checked;
+    const s2Ok    = $('sf-stage2') && $('sf-stage2').checked;
+    if (techOk && s1Ok && s2Ok) total = 60; // pack
+    $('sf-total').textContent = total + '\u20ac';
+  }
+
+  // ================================================================
+  // CONTACT
+  // ================================================================
+  function renderContact() {
+    const nom   = eleveData.eleve.nom;
+    const email = eleveData.eleve.email;
+    // Forms are pre-rendered in HTML; just pre-fill fields
+    const nomFields = document.querySelectorAll('.cf-nom');
+    const emailFields = document.querySelectorAll('.cf-email');
+    nomFields.forEach(f => { if (!f.value) f.value = nom; });
+    emailFields.forEach(f => { if (!f.value) f.value = email; });
+  }
+
+  window.toggleContactForm = function(formId) {
+    const wrap = $(formId);
+    if (!wrap) return;
+    wrap.classList.toggle('open');
+    if (wrap.classList.contains('open')) {
+      renderContact();
+      wrap.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  };
+
+  window.submitContactForm = function(formId, recipient) {
+    const succ = $(formId + '-success');
+    const inner = $(formId + '-inner');
+    const sujet = $(formId + '-sujet').value.trim();
+    const msg   = $(formId + '-msg').value.trim();
+    if (!sujet || !msg) { alert('Merci de remplir tous les champs.'); return; }
+    if (!IS_DEMO) { /* submit */ }
+    succ.textContent = '\u2713 Votre message a \u00e9t\u00e9 envoy\u00e9. Nous vous r\u00e9pondrons rapidement.';
+    succ.classList.add('show');
+    if (inner) inner.style.display = 'none';
+  };
 
   // ================================================================
   // PUBLICATIONS
@@ -513,7 +908,7 @@
     window._pubs = pubs;
 
     container.innerHTML = pubs.map(p => `
-      <div class="pub-card" onclick="openPub('${p.id}')">
+      <div class="pub-card" data-pub-id="${p.id}" style="cursor:pointer;">
         ${p.cat ? `<div class="pub-cat">${p.cat}</div>` : ''}
         <div class="pub-titre">${p.titre}</div>
         ${p.extrait ? `<div class="pub-extrait">${p.extrait}</div>` : ''}
@@ -542,6 +937,60 @@
   // ================================================================
   document.addEventListener('DOMContentLoaded', () => {
     showScreen('screen-loading');
+
+    // Nav buttons — use addEventListener, no inline onclick
+    document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // Auth buttons
+    const btnMagic = $('btn-magic');
+    if (btnMagic) btnMagic.addEventListener('click', () => window.sendMagicLink());
+    const authEmail = $('auth-email');
+    if (authEmail) authEmail.addEventListener('keydown', e => { if (e.key === 'Enter') window.sendMagicLink(); });
+    const btnDemo = document.querySelector('.btn-demo');
+    if (btnDemo) btnDemo.addEventListener('click', () => window.demoLogin());
+    const btnBackSent = $('btn-back-sent');
+    if (btnBackSent) btnBackSent.addEventListener('click', () => window.goBackAuth());
+    const btnBackNF = $('btn-back-notfound');
+    if (btnBackNF) btnBackNF.addEventListener('click', () => window.goBackAuth());
+    document.querySelectorAll('.btn-logout').forEach(b => b.addEventListener('click', () => window.logout()));
+
+    // Pub modal
+    const backdrop = $('pub-modal-backdrop');
+    if (backdrop) backdrop.addEventListener('click', () => window.closePubModal());
+    const closeBtn = $('pub-modal-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', () => window.closePubModal());
+
+    // Contact forms — event delegation
+    document.addEventListener('click', e => {
+      const toggleCard = e.target.closest('[data-toggle-form]');
+      if (toggleCard) {
+        const formId = toggleCard.dataset.toggleForm;
+        const wrap = $(formId);
+        if (wrap) {
+          wrap.classList.toggle('open');
+          if (wrap.classList.contains('open')) {
+            renderContact();
+            wrap.scrollIntoView({behavior:'smooth', block:'start'});
+          }
+        }
+      }
+      const submitBtn = e.target.closest('[data-submit-form]');
+      if (submitBtn) {
+        const formId = submitBtn.dataset.submitForm;
+        const recipient = submitBtn.dataset.recipient;
+        window.submitContactForm(formId, recipient);
+      }
+      // Pub cards (dynamically rendered)
+      const pubCard = e.target.closest('.pub-card[data-pub-id]');
+      if (pubCard) window.openPub(pubCard.dataset.pubId);
+    });
+
+    // Preinscription nav button visibility
+    const navPreinsc = $('nav-preinscription');
+    if (navPreinsc) navPreinsc.style.display = isPreinscriptionPeriod() ? '' : 'none';
+
     setTimeout(initAuth, 400);
   });
 </script>
@@ -732,15 +1181,15 @@ a{color:var(--gold);text-decoration:none;}
    SCREEN DASHBOARD
    ================================================================ */
 #screen-dashboard{background:var(--bg);}
-.dash-wrap{max-width:480px;margin:0 auto;padding:0 0 80px;}
+.dash-wrap{max-width:480px;margin:0 auto;padding:0 0 20px;}
 
 /* Header */
 .dash-header{
   background:var(--surface);
   border-bottom:1px solid var(--border);
-  padding:16px 20px 14px;
+  padding:14px 20px 12px;
   display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;z-index:10;
+  position:sticky;top:0;z-index:101;
   backdrop-filter:blur(12px);
 }
 .dash-logo{font-family:var(--font-display);font-size:18px;font-weight:300;letter-spacing:4px;color:var(--gold);}
@@ -920,24 +1369,23 @@ a{color:var(--gold);text-decoration:none;}
    ================================================================ */
 @supports(padding-top: env(safe-area-inset-top)){
   .dash-header{padding-top:max(16px, env(safe-area-inset-top));}
-  .dash-wrap{padding-bottom:max(80px, env(safe-area-inset-bottom));}
+  .dash-wrap{padding-bottom:20px;}
 }
 
 /* ================================================================
-   BOTTOM NAV
+   TOP NAV
    ================================================================ */
-.bottom-nav{
-  position:fixed;bottom:0;left:0;right:0;
-  height:60px;background:#0f0f0f;
-  border-top:1px solid var(--border);
-  display:flex;z-index:200;
-  padding-bottom:env(safe-area-inset-bottom);
+.top-nav{
+  position:sticky;top:0;left:0;right:0;
+  height:52px;background:#0f0f0f;
+  border-bottom:1px solid var(--border);
+  display:flex;z-index:100;
   overflow-x:auto;-webkit-overflow-scrolling:touch;
   scrollbar-width:none;
 }
-.bottom-nav::-webkit-scrollbar{display:none;}
+.top-nav::-webkit-scrollbar{display:none;}
 .nav-btn{
-  flex:0 0 68px;display:flex;flex-direction:column;
+  flex:0 0 72px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:3px;
   background:none;border:none;color:var(--text-faint);
   cursor:pointer;font-size:9px;letter-spacing:.5px;
@@ -946,7 +1394,7 @@ a{color:var(--gold);text-decoration:none;}
   white-space:nowrap;
 }
 .nav-btn.active{color:var(--gold);}
-.nav-btn svg{width:20px;height:20px;}
+.nav-btn svg{width:18px;height:18px;}
 .nav-link{color:var(--text-faint);}
 .nav-link:hover{color:var(--gold);}
 /* publication modal */
@@ -980,7 +1428,7 @@ a{color:var(--gold);text-decoration:none;}
 /* ================================================================
    TAB PANES
    ================================================================ */
-.tab-pane{display:none;padding-bottom:80px;min-height:60vh;}
+.tab-pane{display:none;padding-bottom:20px;min-height:60vh;}
 .tab-pane.active{display:block;}
 .tab-section-title{
   font-size:10px;letter-spacing:3px;text-transform:uppercase;
@@ -1121,6 +1569,99 @@ a{color:var(--gold);text-decoration:none;}
   border-radius:var(--radius);padding:16px;
   font-size:14px;color:#81c784;margin-bottom:14px;
 }
+
+/* ================================================================
+   STAGE INLINE FORM
+   ================================================================ */
+.stage-form-wrap{
+  display:none;margin:0 20px 12px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--radius);padding:18px;
+}
+.stage-form-wrap.open{display:block;}
+.stage-form-title{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:14px;}
+.form-field{margin-bottom:12px;}
+.form-field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:5px;}
+.form-field input,.form-field select,.form-field textarea{
+  width:100%;padding:10px 12px;background:var(--surface3);
+  border:1px solid var(--border);color:var(--text);border-radius:8px;
+  font-size:14px;font-family:var(--font-body);
+}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{
+  outline:none;border-color:var(--gold);
+}
+.form-field select option{background:var(--surface2);}
+.radio-group{display:flex;gap:10px;flex-wrap:wrap;}
+.radio-opt{
+  flex:1;min-width:120px;padding:10px 14px;border-radius:8px;
+  border:1px solid var(--border);background:var(--surface3);
+  cursor:pointer;text-align:center;font-size:13px;transition:all .2s;
+}
+.radio-opt.selected{border-color:var(--gold);background:var(--gold-pale);color:var(--gold);}
+.checkbox-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1a1a1a;}
+.checkbox-row:last-child{border-bottom:none;}
+.checkbox-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--gold);}
+.checkbox-row label{flex:1;font-size:13px;color:var(--text);cursor:pointer;}
+.checkbox-row .price{font-size:12px;color:var(--gold);font-weight:700;}
+.total-line{display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:8px;border-top:1px solid var(--border);font-weight:700;}
+.total-amount{font-size:20px;color:var(--gold);font-family:var(--font-display);}
+.btn-submit-stage{
+  width:100%;margin-top:14px;padding:13px;
+  background:var(--gold);color:#000;border:none;border-radius:10px;
+  font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:var(--font-body);cursor:pointer;transition:opacity .2s;
+}
+.btn-submit-stage:hover{opacity:.88;}
+.form-success{
+  display:none;padding:14px;background:#0a1a0a;border:1px solid #2e7d32;
+  border-radius:8px;color:#81c784;font-size:13px;line-height:1.6;margin-top:10px;
+}
+.form-success.show{display:block;}
+.partner-section{display:none;margin-top:10px;padding:12px;background:var(--surface3);border-radius:8px;border:1px solid var(--border);}
+.partner-section.show{display:block;}
+
+/* ================================================================
+   CONTACT FORMS
+   ================================================================ */
+.contact-form-wrap{
+  display:none;margin:0 20px 12px;padding:16px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);
+}
+.contact-form-wrap.open{display:block;}
+.contact-card{cursor:pointer;}
+
+/* ================================================================
+   MAP / CARTE TAB
+   ================================================================ */
+.map-card{
+  margin:12px 20px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius);padding:16px;
+}
+.map-card-icon{font-size:28px;margin-bottom:8px;}
+.map-card-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.map-card-type{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+.map-card-addr{font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;}
+.btn-maps{
+  display:inline-block;padding:8px 16px;
+  background:transparent;color:var(--gold);
+  border:1px solid var(--gold-dim);border-radius:8px;
+  font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+  font-family:var(--font-body);text-decoration:none;transition:all .2s;cursor:pointer;
+}
+.btn-maps:hover{background:var(--gold-pale);}
+
+/* ================================================================
+   PRE-INSCRIPTION TAB
+   ================================================================ */
+.preinscription-info{
+  margin:12px 20px;padding:14px;background:#060d1a;
+  border:1px solid #1565C0;border-radius:8px;
+  font-size:13px;color:#7aaaff;line-height:1.6;
+}
+.preinscription-hidden-notice{
+  margin:12px 20px;padding:14px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:8px;
+  font-size:13px;color:var(--text-dim);text-align:center;
+}
 </style>
 </head>
 <body>
@@ -1151,14 +1692,13 @@ a{color:var(--gold);text-decoration:none;}
       <div class="auth-desc">Entrez votre adresse email — vous recevrez un lien de connexion valable 1 heure. Aucun mot de passe à retenir.</div>
       <div class="field">
         <label>Adresse email</label>
-        <input type="email" id="auth-email" placeholder="votre@email.com" autocomplete="email" autocapitalize="none"
-          onkeydown="if(event.key==='Enter') sendMagicLink()"/>
+        <input type="email" id="auth-email" placeholder="votre@email.com" autocomplete="email" autocapitalize="none"/>
       </div>
-      <button class="btn-primary" id="btn-magic" onclick="sendMagicLink()">Recevoir mon lien de connexion</button>
+      <button class="btn-primary" id="btn-magic">Recevoir mon lien de connexion</button>
       <div class="msg" id="auth-msg"></div>
       <div id="demo-btn-wrap">
         <p style="font-size:11px;color:#444;margin-bottom:8px;letter-spacing:1px;">— MODE DÉMONSTRATION —</p>
-        <button class="btn-demo" onclick="demoLogin()">Voir le dashboard démo</button>
+        <button class="btn-demo">Voir le dashboard démo</button>
       </div>
       <p class="auth-mention">Vos données sont utilisées uniquement pour la gestion de votre inscription.<br/>© Tango &amp; Vous — Le Regard Se Pose</p>
     </div>
@@ -1175,7 +1715,7 @@ a{color:var(--gold);text-decoration:none;}
     <div class="sent-desc">Un lien de connexion a été envoyé à</div>
     <div class="sent-email" id="auth-email-sent"></div>
     <div class="sent-note">Vérifiez votre boîte de réception (et vos spams si besoin).<br/>Le lien est valable <strong style="color:var(--text)">1 heure</strong>.<br/>Appuyez dessus depuis votre téléphone pour vous connecter.</div>
-    <button class="btn-back" onclick="goBackAuth()">← Changer d'adresse email</button>
+    <button class="btn-back" id="btn-back-sent">← Changer d'adresse email</button>
   </div>
 </div>
 
@@ -1189,7 +1729,7 @@ a{color:var(--gold);text-decoration:none;}
     <div class="notfound-desc">Aucun élève enregistré avec l'adresse</div>
     <div class="notfound-email" id="notfound-email"></div>
     <div class="notfound-contact">Vérifiez que vous utilisez la même adresse email que lors de votre inscription.<br/><br/>Un problème ? Contactez-nous :<br/><a href="mailto:tangoetvous@gmail.com">tangoetvous@gmail.com</a></div>
-    <button class="btn-back" onclick="goBackAuth()" style="margin-top:18px;">← Réessayer</button>
+    <button class="btn-back" id="btn-back-notfound" style="margin-top:18px;">← Réessayer</button>
   </div>
 </div>
 
@@ -1203,9 +1743,45 @@ a{color:var(--gold);text-decoration:none;}
     <div class="dash-logo">T&amp;V</div>
     <div class="dash-header-right">
       <div class="dash-id-pill" id="dash-id"></div>
-      <button class="btn-logout" onclick="logout()">Déconnexion</button>
+      <button class="btn-logout">Déconnexion</button>
     </div>
   </div>
+
+  <!-- ── TOP NAV ──────────────────────────────────────────────── -->
+  <nav class="top-nav">
+    <button class="nav-btn active" id="nav-carte" data-tab="carte">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Carte
+    </button>
+    <button class="nav-btn" id="nav-agenda" data-tab="agenda">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Agenda
+    </button>
+    <button class="nav-btn" id="nav-stages" data-tab="stages">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M19 10l2 2-2 2"/></svg>
+      Stages
+    </button>
+    <button class="nav-btn" id="nav-actu" data-tab="actu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4h16v2H4z"/><rect x="4" y="8" width="16" height="12" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>
+      Actu
+    </button>
+    <button class="nav-btn" id="nav-contact" data-tab="contact">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Contact
+    </button>
+    <button class="nav-btn" id="nav-carte-lieux" data-tab="carte-lieux">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Carte
+    </button>
+    <a class="nav-btn nav-link" href="cours-particuliers.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      Cours&nbsp;part.
+    </a>
+    <button class="nav-btn" id="nav-preinscription" data-tab="preinscription">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Pré-inscr.
+    </button>
+  </nav>
 
   <!-- ── ONGLET CARTE ───────────────────────────────────────── -->
   <div class="tab-pane active" id="carte-pane">
@@ -1320,67 +1896,115 @@ a{color:var(--gold);text-decoration:none;}
   <div class="tab-pane" id="contact-pane">
     <div class="tab-section-title">Nous contacter</div>
 
-    <a class="contact-card" href="mailto:tangoetvous@gmail.com">
+    <!-- Card 1 : Équipe pédagogique -->
+    <div class="contact-card" data-toggle-form="cf-pedago" style="cursor:pointer;">
       <div class="contact-icon-wrap">💃</div>
       <div class="contact-info">
         <div class="contact-label">Équipe pédagogique</div>
         <div class="contact-val">tangoetvous@gmail.com</div>
-        <div class="contact-sub">Cours, pointage, questions artistiques</div>
+        <div class="contact-sub">Cours, pointage, questions artistiques — cliquer pour écrire</div>
       </div>
-    </a>
+    </div>
+    <div class="contact-form-wrap" id="cf-pedago">
+      <div class="stage-form-title">✉️ Message à l&#39;équipe pédagogique</div>
+      <div id="cf-pedago-success" class="form-success"></div>
+      <div id="cf-pedago-inner">
+        <div class="form-field">
+          <label>Prénom &amp; Nom</label>
+          <input type="text" class="cf-nom" id="cf-pedago-nom" placeholder="Votre nom"/>
+        </div>
+        <div class="form-field">
+          <label>Email</label>
+          <input type="email" class="cf-email" id="cf-pedago-email" placeholder="votre@email.com"/>
+        </div>
+        <div class="form-field">
+          <label>Sujet</label>
+          <input type="text" id="cf-pedago-sujet" placeholder="Sujet de votre message"/>
+        </div>
+        <div class="form-field">
+          <label>Message</label>
+          <textarea id="cf-pedago-msg" rows="4" placeholder="Votre message..."></textarea>
+        </div>
+        <button class="btn-submit-stage" data-submit-form="cf-pedago" data-recipient="tangoetvous@gmail.com">Envoyer</button>
+      </div>
+    </div>
 
-    <a class="contact-card" href="mailto:regardsepose@gmail.com">
-      <div class="contact-icon-wrap">📋</div>
+    <!-- Card 2 : Regard Se Pose -->
+    <div class="contact-card" data-toggle-form="cf-regard" style="cursor:pointer;">
+      <div class="contact-icon-wrap">📷</div>
       <div class="contact-info">
-        <div class="contact-label">Association Le Regard Se Pose</div>
+        <div class="contact-label">Le Regard Se Pose</div>
         <div class="contact-val">regardsepose@gmail.com</div>
-        <div class="contact-sub">Inscriptions, paiements, administratif</div>
+        <div class="contact-sub">Inscriptions, paiements, administratif — cliquer pour écrire</div>
       </div>
-    </a>
+    </div>
+    <div class="contact-form-wrap" id="cf-regard">
+      <div class="stage-form-title">✉️ Message au Regard Se Pose</div>
+      <div id="cf-regard-success" class="form-success"></div>
+      <div id="cf-regard-inner">
+        <div class="form-field">
+          <label>Prénom &amp; Nom</label>
+          <input type="text" class="cf-nom" id="cf-regard-nom" placeholder="Votre nom"/>
+        </div>
+        <div class="form-field">
+          <label>Email</label>
+          <input type="email" class="cf-email" id="cf-regard-email" placeholder="votre@email.com"/>
+        </div>
+        <div class="form-field">
+          <label>Sujet</label>
+          <input type="text" id="cf-regard-sujet" placeholder="Sujet de votre message"/>
+        </div>
+        <div class="form-field">
+          <label>Message</label>
+          <textarea id="cf-regard-msg" rows="4" placeholder="Votre message..."></textarea>
+        </div>
+        <button class="btn-submit-stage" data-submit-form="cf-regard" data-recipient="regardsepose@gmail.com">Envoyer</button>
+      </div>
+    </div>
 
     <div class="dash-sig" style="padding-top:24px;">Florencia &amp; Jérémy</div>
   </div>
 
-  <!-- ── BOTTOM NAV ────────────────────────────────────────── -->
-  <nav class="bottom-nav">
-    <button class="nav-btn active" id="nav-carte" onclick="switchTab('carte')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-      Carte
-    </button>
-    <button class="nav-btn" id="nav-agenda" onclick="switchTab('agenda')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      Agenda
-    </button>
-    <button class="nav-btn" id="nav-stages" onclick="switchTab('stages')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M19 10l2 2-2 2"/></svg>
-      Stages
-    </button>
-    <button class="nav-btn" id="nav-actu" onclick="switchTab('actu')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4h16v2H4z"/><rect x="4" y="8" width="16" height="12" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>
-      Actu
-    </button>
-    <button class="nav-btn" id="nav-contact" onclick="switchTab('contact')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      Contact
-    </button>
-    <a class="nav-btn nav-link" href="cours-particuliers.html">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-      Cours part.
-    </a>
-    <a class="nav-btn nav-link" href="inscription-cours.html">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      S&#39;inscrire
-    </a>
-    <a class="nav-btn nav-link" href="cours-essai.html">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 22V12"/><path d="M12 12C12 12 8 8 8 5a4 4 0 0 1 8 0c0 3-4 7-4 7z"/><path d="M5 20c0-3 3-5 7-5s7 2 7 5"/></svg>
-      Essai
-    </a>
-  </nav>
+  <!-- ── ONGLET CARTE LIEUX (Map) ──────────────────────────── -->
+  <div class="tab-pane" id="carte-lieux-pane">
+    <div class="tab-section-title">Nos lieux de cours</div>
+
+    <div class="map-card">
+      <div class="map-card-icon">🏙️</div>
+      <div class="map-card-type">Cours Paris — Jeudi soir</div>
+      <div class="map-card-name">Espace Danse Studio</div>
+      <div class="map-card-addr">15 rue Planchat<br/>75020 Paris (Métro Voltaire / Nation)</div>
+      <a class="btn-maps" href="https://maps.google.com/?q=15+rue+Planchat+75020+Paris" target="_blank" rel="noopener">📍 Voir sur Maps</a>
+    </div>
+
+    <div class="map-card">
+      <div class="map-card-icon">🌳</div>
+      <div class="map-card-type">Cours Vincennes — Lundi soir</div>
+      <div class="map-card-name">Espace Sorano</div>
+      <div class="map-card-addr">16 rue Charles Pathé<br/>94300 Vincennes (Métro Château de Vincennes)</div>
+      <a class="btn-maps" href="https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes" target="_blank" rel="noopener">📍 Voir sur Maps</a>
+    </div>
+
+    <div class="map-card">
+      <div class="map-card-icon">🥋</div>
+      <div class="map-card-type">Stages — Samedi</div>
+      <div class="map-card-name">Centre Kim Kan</div>
+      <div class="map-card-addr">64 rue Orfila<br/>75020 Paris (Métro Gambetta)</div>
+      <a class="btn-maps" href="https://maps.google.com/?q=64+rue+Orfila+75020+Paris" target="_blank" rel="noopener">📍 Voir sur Maps</a>
+    </div>
+
+    <div class="dash-sig" style="padding-top:20px;">Florencia &amp; Jérémy</div>
+  </div>
+
+  <!-- ── ONGLET PRE-INSCRIPTION ─────────────────────────────── -->
+  <div class="tab-pane" id="preinscription-pane">
+    <!-- Content rendered dynamically by renderPreinscription() -->
+  </div>
 
   <!-- ── PUBLICATION MODAL ──────────────────────────────────── -->
-  <div id="pub-modal-backdrop" class="pub-modal-backdrop" onclick="closePubModal()"></div>
+  <div id="pub-modal-backdrop" class="pub-modal-backdrop"></div>
   <div id="pub-modal" class="pub-modal" role="dialog" aria-modal="true">
-    <button class="pub-modal-close" onclick="closePubModal()">✕</button>
+    <button class="pub-modal-close" id="pub-modal-close-btn">✕</button>
     <div class="pub-modal-cat" id="pub-modal-cat"></div>
     <div class="pub-modal-titre" id="pub-modal-titre"></div>
     <div class="pub-modal-date" id="pub-modal-date"></div>
