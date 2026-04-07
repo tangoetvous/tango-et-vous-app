@@ -1774,7 +1774,7 @@ function getEventsForDate(dateStr) {
   if(agendaCats.paris&&COURS_PARIS.indexOf(dateStr)>=0){evts.push({cat:'cours-paris',titre:'Débutant — Paris',heure:'20h30'});evts.push({cat:'cours-paris',titre:'Intermédiaire — Paris',heure:'21h45'});}
   if(agendaCats.vincennes&&COURS_VINCENNES.indexOf(dateStr)>=0){evts.push({cat:'cours-vinc',titre:'Débutant — Vincennes',heure:'19h30'});evts.push({cat:'cours-vinc',titre:'Intermédiaire — Vincennes',heure:'21h00'});}
   if(agendaCats.stage){var st=STAGES.find(function(s){return s.date===dateStr;});if(st){evts.push({cat:'stage',titre:'Technique Leader & Follower',heure:'14h00'});if(st.s1)evts.push({cat:'stage',titre:st.s1,heure:'15h00'});if(st.s2)evts.push({cat:'stage',titre:st.s2,heure:'16h30'});}}
-  if(agendaCats.milonga&&MILONGAS.indexOf(dateStr)>=0)evts.push({cat:'milonga',titre:'Milonga La Dolce Vita',heure:'—'});
+  if(agendaCats.milonga&&MILONGAS.indexOf(dateStr)>=0)evts.push({cat:'milonga',titre:'Milonga La Dolce Vita',heure:'17h30–23h30'});
   return evts;
 }
 function renderAgenda() {
@@ -1810,7 +1810,7 @@ function renderAgendaCalendrier() {
         h+='<div style="font-family:var(--font-d);font-size:18px;font-weight:300;color:var(--dim);letter-spacing:3px;padding:16px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px;">'+MOIS_FR[d.getMonth()]+' '+d.getFullYear()+'</div>';
       }
       h+='<div class="agenda-day-hdr"><div class="agenda-day-num" style="'+(ds===todayStr?'color:var(--gold)':'')+'">'+d.getDate()+'</div><div class="agenda-day-lbl">'+DOW_LONG[d.getDay()]+'</div>'+(ds===todayStr?'<span class="pill pill-gold" style="font-size:8px;">Aujourd\'hui</span>':'')+'</div>';
-      var EVT_SUB={'cours-paris':'Espace Danse Studio','cours-vinc':'Espace Sorano, Vincennes',stage:'Centre Kim Kan, Paris 20e',milonga:'Paris'};
+      var EVT_SUB={'cours-paris':'Espace Danse Studio, 15 rue Planchat, Paris 20e','cours-vinc':'Espace Sorano, 16 rue Charles Path\u00e9, Vincennes',stage:'Centre Kim Kan, 64 rue Orfila, Paris 20e',milonga:'Centre Re-Corps \u2014 16A bd de Reuilly, Paris 12e \u00b7 M\u00b0 Dugommier (L6)'};
       evts.forEach(function(e){h+='<div class="agenda-event ae-'+e.cat+'"><div><div class="ae-titre">'+(e.heure!=='—'?e.heure+' — ':'')+e.titre+'</div><div class="ae-sub">'+(EVT_SUB[e.cat]||'')+'</div></div></div>';});
       modifsDuJour.forEach(function(m){
         var label = {annule:'🚫 Annulé', reporte:'📅 Reporté', modif:'✏️ Modifié', note:'📌 Note'}[m.action]||m.action;
