@@ -1916,7 +1916,7 @@ if('serviceWorker' in navigator){
       geocodeQuery: '24 villa Riberolle, 75020 Paris',
       sub: 'Jeudi soir \u00b7 M\u00b0 Alexandre Dumas (L2)',
       lat: 48.8534, lng: 2.3991,
-      metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas Paris', lat: 48.8540, lng: 2.3892, name: 'M\u00b0 Alexandre Dumas (L2)' },
+      metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas Paris', lat: 48.85644, lng: 2.39443, name: 'M\u00b0 Alexandre Dumas (L2)' },
       color: '#60b0ff',
       mapsUrl: 'https://maps.google.com/?q=24+villa+Riberolle+75020+Paris'
     },
@@ -1940,7 +1940,7 @@ if('serviceWorker' in navigator){
       geocodeQuery: '64 rue Orfila, 75020 Paris',
       sub: 'Samedi \u00b7 M\u00b0 Gambetta (L3)',
       lat: 48.8671, lng: 2.3977,
-      metro: { geocodeQuery: 'station m\u00e9tro Gambetta Paris', lat: 48.8650, lng: 2.3976, name: 'M\u00b0 Gambetta (L3)' },
+      metro: { geocodeQuery: 'station m\u00e9tro Gambetta Paris', lat: 48.86515, lng: 2.39868, name: 'M\u00b0 Gambetta (L3)' },
       color: '#D4AF37',
       mapsUrl: 'https://maps.google.com/?q=64+rue+Orfila+75020+Paris'
     },
@@ -1952,14 +1952,14 @@ if('serviceWorker' in navigator){
       geocodeQuery: '16 boulevard de Reuilly, 75012 Paris',
       sub: '17h30\u201323h30 \u00b7 M\u00b0 Dugommier (L6)',
       lat: 48.8465, lng: 2.3870,
-      metro: { geocodeQuery: 'station m\u00e9tro Dugommier Paris', lat: 48.8452, lng: 2.3884, name: 'M\u00b0 Dugommier (L6)' },
+      metro: { geocodeQuery: 'station m\u00e9tro Dugommier Paris', lat: 48.83914, lng: 2.38997, name: 'M\u00b0 Dugommier (L6)' },
       color: '#e040a0',
       mapsUrl: 'https://maps.google.com/?q=16+boulevard+de+Reuilly+75012+Paris'
     }
   ];
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v4';
+  var CACHE_KEY = 'tev_plan_coords_v5';
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
@@ -2015,6 +2015,8 @@ if('serviceWorker' in navigator){
 
   var _map = null;
   var _markers = {};
+  var _metroMarkers = {};
+  var _routeLayer = null;
 
   function makePinIcon(color) {
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 40" width="28" height="40">'
@@ -2035,19 +2037,44 @@ if('serviceWorker' in navigator){
     return L.divIcon({ html: svg, className: '', iconSize: [30,30], iconAnchor: [15,15], popupAnchor: [0,-16] });
   }
 
-  function popupContent(lieu) {
+  function popupContent(lieu, marche) {
     return '<div style="font-family:sans-serif;min-width:160px;">'
       + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:' + lieu.color + ';font-weight:700;margin-bottom:3px;">' + lieu.label + '</div>'
       + '<div style="font-size:13px;font-weight:600;margin-bottom:2px;">' + lieu.name + '</div>'
-      + '<div style="font-size:11px;color:#555;margin-bottom:8px;">' + lieu.addr + '</div>'
-      + '<div style="font-size:12px;font-weight:700;color:#1a1a2e;background:#e8e8f0;border-radius:4px;padding:5px 8px;margin-bottom:8px;">'
+      + '<div style="font-size:11px;color:#555;margin-bottom:6px;">' + lieu.addr + '</div>'
+      + '<div style="font-size:12px;font-weight:700;color:#1a1a2e;background:#e8e8f0;border-radius:4px;padding:5px 8px;margin-bottom:' + (marche ? '5' : '8') + 'px;">'
       + '\uD83D\uDE87\u00a0' + lieu.metro.name + '</div>'
+      + (marche ? '<div style="font-size:12px;color:#c0392b;margin-bottom:8px;">\uD83D\uDEB6 ' + marche + ' min \u00e0 pied</div>' : '')
       + '<a href="' + lieu.mapsUrl + '" target="_blank" style="font-size:11px;color:' + lieu.color + ';">\uD83D\uDCCD Ouvrir dans Maps</a>'
       + '</div>';
   }
 
+  function afficherItineraire(lieu) {
+    if (_routeLayer) { _map.removeLayer(_routeLayer); _routeLayer = null; }
+    Object.keys(_metroMarkers).forEach(function(k){ _map.removeLayer(_metroMarkers[k]); });
+    _metroMarkers = {};
+    var m = lieu.metro;
+    if (!m.lat) { _markers[lieu.id].openPopup(); return; }
+    _metroMarkers[lieu.id] = L.marker([m.lat, m.lng], { icon: makeTransportIcon(m.name) })
+      .addTo(_map).bindTooltip(m.name, { permanent: false, direction: 'top', className: 'transport-tooltip' });
+    var url = 'https://router.project-osrm.org/route/v1/foot/'
+      + m.lng + ',' + m.lat + ';' + lieu.lng + ',' + lieu.lat
+      + '?overview=full&geometries=geojson';
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (!data.routes || !data.routes[0]) { _markers[lieu.id].openPopup(); return; }
+        var mins = Math.ceil(data.routes[0].duration / 60);
+        _routeLayer = L.geoJSON(data.routes[0].geometry, {
+          style: { color: '#ff3333', weight: 6, opacity: 0.9, dashArray: '10 6' }
+        }).addTo(_map);
+        _markers[lieu.id].getPopup().setContent(popupContent(lieu, mins));
+        _markers[lieu.id].openPopup();
+      })
+      .catch(function(){ _markers[lieu.id].openPopup(); });
+  }
+
   function placerMarqueurs() {
-    // Centre la carte sur la moyenne des lieux
     var valid = LIEUX.filter(function(l){ return l.lat; });
     if (valid.length) {
       var latMoy = valid.reduce(function(s,l){ return s+l.lat; }, 0) / valid.length;
@@ -2057,21 +2084,17 @@ if('serviceWorker' in navigator){
 
     LIEUX.forEach(function(lieu) {
       if (!lieu.lat) return;
-      // Marqueur du lieu
       var marker = L.marker([lieu.lat, lieu.lng], { icon: makePinIcon(lieu.color) }).addTo(_map);
-      marker.bindPopup(popupContent(lieu));
+      marker.bindPopup(popupContent(lieu, null));
       _markers[lieu.id] = marker;
-
-      // Marqueur transport toujours visible, avec tooltip permanent
+      // Marqueur transport permanent
       if (lieu.metro.lat) {
         L.marker([lieu.metro.lat, lieu.metro.lng], { icon: makeTransportIcon(lieu.metro.name) })
           .addTo(_map)
-          .bindTooltip(lieu.metro.name, { permanent: true, direction: 'top', offset: [0, -16],
-            className: 'transport-tooltip' });
+          .bindTooltip(lieu.metro.name, { permanent: true, direction: 'top', offset: [0,-16], className: 'transport-tooltip' });
       }
     });
 
-    // Boutons
     var btnsEl = document.getElementById('plan-btns');
     if (btnsEl) {
       btnsEl.innerHTML = '';
@@ -2085,7 +2108,7 @@ if('serviceWorker' in navigator){
         btn.addEventListener('click', function() {
           if (!lieu.lat) return;
           _map.flyTo([lieu.lat, lieu.lng], 16, { duration: 1 });
-          _markers[lieu.id].openPopup();
+          afficherItineraire(lieu);
         });
         btnsEl.appendChild(btn);
       });
