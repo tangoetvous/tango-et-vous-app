@@ -676,12 +676,16 @@ window.addEventListener('message', function(ev) {
       partenaire:d.partenaire||'', emailPartenaire:d.partenaireEmail||''
     });
 
-    if (d.situation==='avec-partenaire' && !d.memePersonne && d.partenaireEmail && slotsP.length) {
+    var avecPart = d.situation==='avec-partenaire' && !d.memePersonne
+                   && (d.partenairePrenom||d.partenaireNom);
+    if (avecPart) {
+      var slotsPartEffectifs = slotsP.length ? slotsP : slots; // fallback = mêmes créneaux
+      var montantPart = di.prixPartenaire || di.prixInscrit;
       adminData.stages[date].inscrits.push({
         prenom:d.partenairePrenom||'', nom:d.partenaireNom||'',
-        email:d.partenaireEmail, tel:d.partenaireTel||'',
-        role:normRole(d.rolePartenaire), slots:slotsP, present:null,
-        montant:di.prixPartenaire, attente:false,
+        email:d.partenaireEmail||'', tel:d.partenaireTel||'',
+        role:normRole(d.rolePartenaire), slots:slotsPartEffectifs, present:null,
+        montant:montantPart, attente:false,
         partenaire:d.prenom+' '+d.nom, emailPartenaire:d.email
       });
     }
