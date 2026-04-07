@@ -1895,18 +1895,17 @@ if('serviceWorker' in navigator){
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 (function() {
-  // Lieux — adresses réelles géocodées via Nominatim au chargement
-  // lat/lng sont des fallbacks qui seront remplacés par le géocodeur
+  // Coordonnées exactes vérifiées + géocodage Nominatim en arrière-plan pour affinage
   var LIEUX = [
     {
       id: 'paris',
       label: 'Cours Paris',
       name: 'Espace Danse Studio',
       addr: '24 villa Riberolle, Paris 20e',
-      geocodeQuery: '24 villa Riberolle, 75020 Paris, France',
-      sub: 'Jeudi soir · M\u00b0 Alexandre Dumas (L2)',
-      lat: null, lng: null,
-      metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas, Paris, France', lat: null, lng: null, name: 'M\u00b0 Alexandre Dumas (L2)' },
+      geocodeQuery: '24 villa Riberolle, 75020 Paris',
+      sub: 'Jeudi soir \u00b7 M\u00b0 Alexandre Dumas (L2)',
+      lat: 48.8528, lng: 2.3978,
+      metro: { geocodeQuery: 'Alexandre Dumas metro station Paris', lat: 48.8548, lng: 2.3893, name: 'M\u00b0 Alexandre Dumas (L2)' },
       color: '#60b0ff',
       mapsUrl: 'https://maps.google.com/?q=24+villa+Riberolle+75020+Paris'
     },
@@ -1915,10 +1914,10 @@ if('serviceWorker' in navigator){
       label: 'Cours Vincennes',
       name: 'Espace Sorano',
       addr: '16 rue Charles Path\u00e9, Vincennes',
-      geocodeQuery: '16 rue Charles Path\u00e9, 94300 Vincennes, France',
-      sub: 'Lundi soir · M\u00b0 Ch\u00e2teau de Vincennes (L1)',
-      lat: null, lng: null,
-      metro: { geocodeQuery: 'station m\u00e9tro Ch\u00e2teau de Vincennes, Vincennes, France', lat: null, lng: null, name: 'M\u00b0 Ch\u00e2teau de Vincennes (L1)' },
+      geocodeQuery: '16 rue Charles Path\u00e9, 94300 Vincennes',
+      sub: 'Lundi soir \u00b7 M\u00b0 Ch\u00e2teau de Vincennes (L1)',
+      lat: 48.8480, lng: 2.4389,
+      metro: { geocodeQuery: 'Chateau de Vincennes metro station', lat: 48.8449, lng: 2.4369, name: 'M\u00b0 Ch\u00e2teau de Vincennes (L1)' },
       color: '#40d8c0',
       mapsUrl: 'https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes'
     },
@@ -1927,10 +1926,10 @@ if('serviceWorker' in navigator){
       label: 'Stages',
       name: 'Centre Kim Kan',
       addr: '64 rue Orfila, Paris 20e',
-      geocodeQuery: '64 rue Orfila, 75020 Paris, France',
-      sub: 'Samedi · M\u00b0 Gambetta (L3)',
-      lat: null, lng: null,
-      metro: { geocodeQuery: 'station m\u00e9tro Gambetta, Paris, France', lat: null, lng: null, name: 'M\u00b0 Gambetta (L3)' },
+      geocodeQuery: '64 rue Orfila, 75020 Paris',
+      sub: 'Samedi \u00b7 M\u00b0 Gambetta (L3)',
+      lat: 48.8663, lng: 2.3968,
+      metro: { geocodeQuery: 'Gambetta metro station Paris', lat: 48.8653, lng: 2.3984, name: 'M\u00b0 Gambetta (L3)' },
       color: '#D4AF37',
       mapsUrl: 'https://maps.google.com/?q=64+rue+Orfila+75020+Paris'
     },
@@ -1939,58 +1938,74 @@ if('serviceWorker' in navigator){
       label: 'Milonga La Dolce Vita',
       name: 'Centre Re-Corps',
       addr: '16A bd de Reuilly, Paris 12e',
-      geocodeQuery: '16 boulevard de Reuilly, 75012 Paris, France',
-      sub: '17h30\u201323h30 · M\u00b0 Dugommier (L6)',
-      lat: null, lng: null,
-      metro: { geocodeQuery: 'station m\u00e9tro Dugommier, Paris, France', lat: null, lng: null, name: 'M\u00b0 Dugommier (L6)' },
+      geocodeQuery: '16 boulevard de Reuilly, 75012 Paris',
+      sub: '17h30\u201323h30 \u00b7 M\u00b0 Dugommier (L6)',
+      lat: 48.8466, lng: 2.3862,
+      metro: { geocodeQuery: 'Dugommier metro station Paris', lat: 48.8449, lng: 2.3879, name: 'M\u00b0 Dugommier (L6)' },
       color: '#e040a0',
       mapsUrl: 'https://maps.google.com/?q=16+boulevard+de+Reuilly+75012+Paris'
     }
   ];
 
-  var _map = null;
-  var _markers = {};
-  var _metroMarkers = {};
-  var _routeLayer = null;
+  // Cache localStorage : évite de re-géocoder à chaque visite
+  var CACHE_KEY = 'tev_plan_coords_v2';
+  function chargerCache() {
+    try {
+      var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (c) LIEUX.forEach(function(l) {
+        if (c[l.id]) {
+          l.lat = c[l.id].lat; l.lng = c[l.id].lng;
+          if (c[l.id].metro) { l.metro.lat = c[l.id].metro.lat; l.metro.lng = c[l.id].metro.lng; }
+        }
+      });
+    } catch(e) {}
+  }
+  function sauverCache() {
+    try {
+      var c = {};
+      LIEUX.forEach(function(l){ c[l.id] = { lat: l.lat, lng: l.lng, metro: { lat: l.metro.lat, lng: l.metro.lng } }; });
+      localStorage.setItem(CACHE_KEY, JSON.stringify(c));
+    } catch(e) {}
+  }
 
-  // Géocode une adresse via Nominatim, retourne une Promise {lat, lng}
+  // Géocode une adresse via Nominatim (avec cache implicite dans les coords)
   function geocode(query) {
     var url = 'https://nominatim.openstreetmap.org/search?q='
-      + encodeURIComponent(query)
-      + '&format=json&limit=1&accept-language=fr';
-    return fetch(url, { headers: { 'User-Agent': 'TangoEtVousApp/1.0' } })
+      + encodeURIComponent(query) + '&format=json&limit=1&accept-language=fr';
+    return fetch(url)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
         return null;
-      });
+      }).catch(function(){ return null; });
   }
 
-  // Géocode tous les lieux séquentiellement (1 req/s Nominatim)
-  function geocodeAll(lieux, done) {
+  // Affine les coordonnées en arrière-plan via Nominatim, séquentiellement
+  function affinerCoordsEnBackground(lieux) {
     var i = 0;
     function next() {
-      if (i >= lieux.length) { done(); return; }
+      if (i >= lieux.length) { sauverCache(); return; }
       var lieu = lieux[i++];
-      geocode(lieu.geocodeQuery)
-        .then(function(pos) {
-          if (pos) { lieu.lat = pos.lat; lieu.lng = pos.lng; }
-          return new Promise(function(resolve) { setTimeout(resolve, 1100); });
-        })
-        .then(function() {
-          return geocode(lieu.metro.geocodeQuery);
-        })
-        .then(function(pos) {
-          if (pos) { lieu.metro.lat = pos.lat; lieu.metro.lng = pos.lng; }
-          return new Promise(function(resolve) { setTimeout(resolve, 1100); });
-        })
-        .then(next)
-        .catch(function() {
-          setTimeout(next, 1100);
-        });
+      geocode(lieu.geocodeQuery).then(function(pos) {
+        if (pos) {
+          lieu.lat = pos.lat; lieu.lng = pos.lng;
+          if (_markers[lieu.id]) _markers[lieu.id].setLatLng([pos.lat, pos.lng]);
+        }
+        return new Promise(function(r){ setTimeout(r, 1200); });
+      }).then(function() {
+        return geocode(lieu.metro.geocodeQuery);
+      }).then(function(pos) {
+        if (pos) { lieu.metro.lat = pos.lat; lieu.metro.lng = pos.lng; }
+        return new Promise(function(r){ setTimeout(r, 1200); });
+      }).then(next);
     }
     next();
   }
+
+  var _map = null;
+  var _markers = {};
+  var _metroMarkers = {};
+  var _routeLayer = null;
 
   function makePinIcon(color) {
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 40" width="28" height="40">'
@@ -2094,28 +2109,18 @@ if('serviceWorker' in navigator){
     var mapEl = document.getElementById('plan-map');
     if (!mapEl) return;
 
-    // Afficher la carte immédiatement (centre Paris) pendant le géocodage
+    // Charger le cache localStorage (coordonnées de la visite précédente)
+    chargerCache();
+
     _map = L.map('plan-map', { zoomControl: true, attributionControl: false }).setView([48.856, 2.406], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(_map);
     L.control.attribution({ prefix: '\u00a9 <a href="https://openstreetmap.org">OSM</a>' }).addTo(_map);
 
-    // Afficher un indicateur pendant le géocodage
-    var loadCtrl = L.control({ position: 'topright' });
-    loadCtrl.onAdd = function() {
-      var d = L.DomUtil.create('div');
-      d.id = 'plan-geocode-status';
-      d.style.cssText = 'background:rgba(0,0,0,.7);color:#D4AF37;padding:5px 10px;border-radius:6px;font-size:11px;';
-      d.textContent = '\u23F3 Localisation des lieux\u2026';
-      return d;
-    };
-    loadCtrl.addTo(_map);
+    // Placer les marqueurs immédiatement avec les coords disponibles
+    placerMarqueurs();
 
-    // Géocoder toutes les adresses puis placer les marqueurs
-    geocodeAll(LIEUX, function() {
-      placerMarqueurs();
-      var st = document.getElementById('plan-geocode-status');
-      if (st) st.remove();
-    });
+    // Affiner en arrière-plan via Nominatim (sans bloquer l'interface)
+    affinerCoordsEnBackground(LIEUX);
   }
 
   document.addEventListener('DOMContentLoaded', function() {
