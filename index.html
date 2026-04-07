@@ -570,42 +570,74 @@
   function renderStages() {
     const today = new Date(); today.setHours(0,0,0,0);
     const todayStr = today.toISOString().split('T')[0];
-    const upcomingStages = STAGES_DATA.filter(s => s.date >= todayStr);
-    const prenom = eleveData.eleve.nom.split(' ')[0];
-    const nom    = eleveData.eleve.nom;
-    const email  = eleveData.eleve.email;
+    const nom   = eleveData.eleve.nom;
+    const email = eleveData.eleve.email;
 
-    if (upcomingStages.length === 0) {
-      $('stages-list').innerHTML = '<p class="empty-msg">Aucun stage \u00e0 venir pour le moment.</p>';
+    if (!STAGES_DATA.length) {
+      $('stages-list').innerHTML = '<p class="empty-msg">Aucun stage programm\u00e9 pour le moment.</p>';
       return;
     }
 
-    // Build stage dropdown options for the shared form
-    const stageOptions = upcomingStages.map(s => `<option value="${s.date}">${s.label}</option>`).join('');
+    // Trier : à venir d'abord, passés ensuite
+    const future = STAGES_DATA.filter(s => s.date >= todayStr);
+    const past   = STAGES_DATA.filter(s => s.date <  todayStr).reverse();
+    const all    = [...future, ...past];
 
-    let html = upcomingStages.map((s, idx) => {
+    // Options du select dans le formulaire (à venir uniquement)
+    const stageOptions = future.map(s =>
+      `<option value="${s.date}">${s.label}</option>`
+    ).join('') || all.map(s =>
+      `<option value="${s.date}">${s.label}</option>`
+    ).join('');
+
+    // Bouton unique en haut
+    let html = `<div class="stages-top">
+      <button class="btn-inscrire" id="btn-reserver-stage">📝 R\u00e9server un stage \u2192</button>
+    </div>`;
+
+    // Accordéon
+    all.forEach(s => {
       const d = new Date(s.date + 'T00:00:00');
-      const df = d.getDate() + ' ' + MOIS_LONG[d.getMonth()] + ' ' + d.getFullYear();
-      const themeLabel = s.s1 ? `${s.s1}${s.s2 ? ' · ' + s.s2 : ''}` : 'Th\u00e8mes \u00e0 venir';
-      return `<div class="stage-card">
-        <div class="stage-card-header">
-          <div class="stage-card-date">\uD83D\uDCC5 ${df}</div>
-          <div class="stage-card-sub">14h\u201318h \u00b7 Centre Kim Kan, 64 rue Orfila, Paris 20e</div>
-        </div>
-        <div class="stage-card-body">
-          <div class="stage-card-titre">${themeLabel}</div>
-          <div class="tarifs-mini">
-            <span>Technique 14h\u201315h : 20\u20ac</span>
-            <span>Stage 1 15h\u201316h30 : 25\u20ac</span>
-            <span>Stage 2 16h30\u201318h : 25\u20ac</span>
-            <span>Technique + 2 Stages : 60\u20ac</span>
+      const df = d.getDate() + '\u00a0' + MOIS_LONG[d.getMonth()] + '\u00a0' + d.getFullYear();
+      const isPast = s.date < todayStr;
+      const hasTheme = t => t && t !== '\u00c0 venir';
+      const slot1 = 'Technique Leader &amp; Follower' + (hasTheme(s.tech) ? ' \u2014 ' + s.tech : '');
+      const slot2 = 'Stage 1' + (hasTheme(s.s1) ? ' \u2014 ' + s.s1 : (s.s1 === '\u00c0 venir' ? ' \u2014 th\u00e8me \u00e0 venir' : ''));
+      const slot3 = 'Stage 2' + (hasTheme(s.s2) ? ' \u2014 ' + s.s2 : (s.s2 === '\u00c0 venir' ? ' \u2014 th\u00e8me \u00e0 venir' : ''));
+
+      html += `<div class="acc-item${isPast ? ' acc-past' : ''}" data-date="${s.date}">
+        <div class="acc-header">
+          <div class="acc-header-left">
+            <span class="acc-date-label">📅 ${df}</span>
+            ${isPast ? '<span class="acc-badge-past">Pass\u00e9</span>' : ''}
           </div>
-          <button class="btn-inscrire" data-stage-date="${s.date}" data-stage-label="${s.label}">S&#39;inscrire \u00e0 ce stage \u2192</button>
+          <span class="acc-arrow">\u203a</span>
+        </div>
+        <div class="acc-body">
+          <div class="acc-sub-loc">14h\u201318h\u00a0\u00b7\u00a0Centre Kim Kan, 64 rue Orfila, Paris 20e</div>
+          <div class="acc-ateliers">
+            <div class="acc-atelier">
+              <span class="acc-slot-name">${slot1}</span>
+              <span class="acc-slot-heure">14h\u201315h</span>
+              <span class="acc-slot-tarif">20\u20ac</span>
+            </div>
+            <div class="acc-atelier">
+              <span class="acc-slot-name">${slot2}</span>
+              <span class="acc-slot-heure">15h\u201316h30</span>
+              <span class="acc-slot-tarif">25\u20ac</span>
+            </div>
+            <div class="acc-atelier">
+              <span class="acc-slot-name">${slot3}</span>
+              <span class="acc-slot-heure">16h30\u201318h</span>
+              <span class="acc-slot-tarif">25\u20ac</span>
+            </div>
+          </div>
+          <div class="acc-forfait">Forfait Technique + 2 Stages : 60\u20ac</div>
         </div>
       </div>`;
-    }).join('');
+    });
 
-    // Shared inline registration form
+    // Formulaire d'inscription (inchangé)
     html += `<div class="stage-form-wrap" id="stage-form-wrap">
       <div class="stage-form-title">\uD83D\uDCDD Inscription au stage</div>
       <div id="stage-form-success" class="form-success"></div>
@@ -652,17 +684,17 @@
           <div>
             <div class="checkbox-row">
               <input type="checkbox" id="sf-tech" data-price="20"/>
-              <label for="sf-tech">Technique Leader &amp; Follower — 14h\u201315h</label>
+              <label for="sf-tech">Technique Leader &amp; Follower \u2014 14h\u201315h</label>
               <span class="price">20\u20ac</span>
             </div>
             <div class="checkbox-row">
               <input type="checkbox" id="sf-stage1" data-price="25"/>
-              <label for="sf-stage1">Stage 1 — 15h\u201316h30</label>
+              <label for="sf-stage1">Stage 1 \u2014 15h\u201316h30</label>
               <span class="price">25\u20ac</span>
             </div>
             <div class="checkbox-row">
               <input type="checkbox" id="sf-stage2" data-price="25"/>
-              <label for="sf-stage2">Stage 2 — 16h30\u201318h</label>
+              <label for="sf-stage2">Stage 2 \u2014 16h30\u201318h</label>
               <span class="price">25\u20ac</span>
             </div>
           </div>
@@ -677,15 +709,23 @@
 
     $('stages-list').innerHTML = html;
 
-    // Wire up "S'inscrire" buttons
-    document.querySelectorAll('.btn-inscrire[data-stage-date]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const wrap = $('stage-form-wrap');
-        const dateVal = btn.dataset.stageDate;
-        $('sf-date').value = dateVal;
-        wrap.classList.add('open');
-        wrap.scrollIntoView({behavior:'smooth', block:'start'});
+    // Accordéon — toggle au clic sur le header
+    document.querySelectorAll('#stages-list .acc-header').forEach(hdr => {
+      hdr.addEventListener('click', () => {
+        const item = hdr.closest('.acc-item');
+        const isOpen = item.classList.contains('acc-open');
+        document.querySelectorAll('#stages-list .acc-item.acc-open').forEach(i => i.classList.remove('acc-open'));
+        if (!isOpen) item.classList.add('acc-open');
       });
+    });
+
+    // Bouton unique de réservation
+    $('btn-reserver-stage').addEventListener('click', () => {
+      const wrap = $('stage-form-wrap');
+      const firstFuture = STAGES_DATA.find(s => s.date >= todayStr);
+      if (firstFuture) $('sf-date').value = firstFuture.date;
+      wrap.classList.add('open');
+      wrap.scrollIntoView({behavior:'smooth', block:'start'});
     });
 
     // Radio groups
@@ -701,12 +741,12 @@
       });
     });
 
-    // Total calculator
+    // Calculateur de total
     ['sf-tech','sf-stage1','sf-stage2'].forEach(id => {
       $(id).addEventListener('change', updateStageTotal);
     });
 
-    // Submit
+    // Soumission
     $('sf-submit').addEventListener('click', () => {
       const role = document.querySelector('#sf-role-group .radio-opt.selected');
       const sit  = document.querySelector('#sf-sit-group .radio-opt.selected');
@@ -714,17 +754,12 @@
         alert('Merci de s\u00e9lectionner votre r\u00f4le et votre situation.');
         return;
       }
-      const isGuidee = role.dataset.val === 'guidee';
+      const isGuidee   = role.dataset.val === 'guidee';
       const hasPartner = sit.dataset.val === 'partenaire';
-      let msg = '';
-      if (isGuidee && !hasPartner) {
-        msg = '\u2713 Votre demande est enregistr\u00e9e. Vous \u00eates en liste d\u2019attente \u2014 nous vous contacterons d\u00e8s qu\u2019une place est disponible.';
-      } else {
-        msg = '\u2713 Votre demande est confirm\u00e9e. Vous recevrez un email avec le lien AssoConnect pour finaliser votre inscription.';
-      }
-      if (!IS_DEMO) {
-        // In production, submit to APPS_SCRIPT_URL here
-      }
+      const msg = isGuidee && !hasPartner
+        ? '\u2713 Votre demande est enregistr\u00e9e. Vous \u00eates en liste d\u2019attente \u2014 nous vous contacterons d\u00e8s qu\u2019une place est disponible.'
+        : '\u2713 Votre demande est confirm\u00e9e. Vous recevrez un email avec le lien AssoConnect pour finaliser votre inscription.';
+      if (!IS_DEMO) { /* submit to APPS_SCRIPT_URL */ }
       const succ = $('stage-form-success');
       succ.textContent = msg;
       succ.classList.add('show');
@@ -1376,31 +1411,58 @@ a{color:var(--gold);text-decoration:none;}
 /* ================================================================
    STAGES
    ================================================================ */
-.stage-card{
-  margin:12px 20px;background:var(--surface);
-  border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
-}
-.stage-card-header{
-  background:#1f1a00;padding:12px 16px;border-bottom:1px solid #3a2d00;
-}
-.stage-card-date{font-size:15px;font-weight:600;color:var(--gold);}
-.stage-card-sub{font-size:12px;color:#888;margin-top:2px;}
-.stage-card-body{padding:14px 16px;}
-.stage-card-titre{font-size:14px;color:var(--text);margin-bottom:10px;}
-.tarifs-mini{
-  display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;
-}
-.tarifs-mini span{
-  font-size:11px;color:var(--text-faint);background:var(--surface2);
-  padding:3px 8px;border-radius:4px;border:1px solid var(--border);
-}
+/* Accordéon stages */
+.stages-top{padding:16px 20px 8px;}
 .btn-inscrire{
   display:block;background:var(--gold);color:#000;text-align:center;
-  padding:12px;border-radius:8px;font-size:12px;font-weight:700;
-  letter-spacing:2px;text-transform:uppercase;text-decoration:none;
-  transition:opacity .2s;
+  padding:13px;border-radius:8px;font-size:12px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;border:none;cursor:pointer;
+  transition:opacity .2s;width:100%;
 }
 .btn-inscrire:hover{opacity:.88;}
+.acc-item{
+  margin:0 20px 6px;border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  background:var(--surface);
+}
+.acc-item.acc-past{opacity:.55;}
+.acc-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;cursor:pointer;user-select:none;
+  background:#1a1500;transition:background .15s;
+}
+.acc-header:hover{background:#221c00;}
+.acc-header-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
+.acc-date-label{font-size:14px;font-weight:600;color:var(--gold);}
+.acc-badge-past{
+  font-size:9px;letter-spacing:1px;text-transform:uppercase;
+  background:var(--surface2);color:var(--text-faint);
+  padding:2px 6px;border-radius:4px;border:1px solid var(--border);
+}
+.acc-arrow{
+  font-size:18px;color:var(--gold);flex-shrink:0;margin-left:8px;
+  transition:transform .2s;line-height:1;
+}
+.acc-item.acc-open .acc-arrow{transform:rotate(90deg);}
+.acc-body{display:none;padding:14px;border-top:1px solid var(--border);}
+.acc-item.acc-open .acc-body{display:block;}
+.acc-sub-loc{font-size:11px;color:var(--gold);margin-bottom:12px;}
+.acc-ateliers{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.acc-atelier{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:8px 10px;
+}
+.acc-slot-name{flex:1;font-size:13px;color:var(--text);}
+.acc-slot-heure{font-size:11px;color:var(--text-dim);}
+.acc-slot-tarif{
+  font-size:12px;font-weight:700;color:var(--gold);
+  background:#1f1a00;padding:2px 7px;border-radius:4px;
+}
+.acc-forfait{
+  font-size:11px;color:var(--text-faint);
+  border-top:1px solid var(--border);padding-top:8px;
+}
 
 /* ================================================================
    PUBLICATIONS
