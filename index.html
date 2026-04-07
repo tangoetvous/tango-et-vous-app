@@ -1887,16 +1887,18 @@ if('serviceWorker' in navigator){
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 (function() {
-  // Lieux avec coordonnées venue + sortie de métro
+  // Lieux — adresses réelles géocodées via Nominatim au chargement
+  // lat/lng sont des fallbacks qui seront remplacés par le géocodeur
   var LIEUX = [
     {
       id: 'paris',
       label: 'Cours Paris',
       name: 'Espace Danse Studio',
       addr: '24 villa Riberolle, Paris 20e',
+      geocodeQuery: '24 villa Riberolle, 75020 Paris, France',
       sub: 'Jeudi soir · M\u00b0 Alexandre Dumas (L2)',
-      lat: 48.8621, lng: 2.4015,
-      metro: { lat: 48.8607, lng: 2.3963, name: 'M\u00b0 Alexandre Dumas (L2)' },
+      lat: null, lng: null,
+      metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas, Paris, France', lat: null, lng: null, name: 'M\u00b0 Alexandre Dumas (L2)' },
       color: '#60b0ff',
       mapsUrl: 'https://maps.google.com/?q=24+villa+Riberolle+75020+Paris'
     },
@@ -1905,9 +1907,10 @@ if('serviceWorker' in navigator){
       label: 'Cours Vincennes',
       name: 'Espace Sorano',
       addr: '16 rue Charles Path\u00e9, Vincennes',
+      geocodeQuery: '16 rue Charles Path\u00e9, 94300 Vincennes, France',
       sub: 'Lundi soir · M\u00b0 Ch\u00e2teau de Vincennes (L1)',
-      lat: 48.8476, lng: 2.4392,
-      metro: { lat: 48.8449, lng: 2.4369, name: 'M\u00b0 Ch\u00e2teau de Vincennes (L1)' },
+      lat: null, lng: null,
+      metro: { geocodeQuery: 'station m\u00e9tro Ch\u00e2teau de Vincennes, Vincennes, France', lat: null, lng: null, name: 'M\u00b0 Ch\u00e2teau de Vincennes (L1)' },
       color: '#40d8c0',
       mapsUrl: 'https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes'
     },
@@ -1916,9 +1919,10 @@ if('serviceWorker' in navigator){
       label: 'Stages',
       name: 'Centre Kim Kan',
       addr: '64 rue Orfila, Paris 20e',
+      geocodeQuery: '64 rue Orfila, 75020 Paris, France',
       sub: 'Samedi · M\u00b0 Gambetta (L3)',
-      lat: 48.8659, lng: 2.3972,
-      metro: { lat: 48.8652, lng: 2.3981, name: 'M\u00b0 Gambetta (L3)' },
+      lat: null, lng: null,
+      metro: { geocodeQuery: 'station m\u00e9tro Gambetta, Paris, France', lat: null, lng: null, name: 'M\u00b0 Gambetta (L3)' },
       color: '#D4AF37',
       mapsUrl: 'https://maps.google.com/?q=64+rue+Orfila+75020+Paris'
     },
@@ -1927,9 +1931,10 @@ if('serviceWorker' in navigator){
       label: 'Milonga La Dolce Vita',
       name: 'Centre Re-Corps',
       addr: '16A bd de Reuilly, Paris 12e',
+      geocodeQuery: '16 boulevard de Reuilly, 75012 Paris, France',
       sub: '17h30\u201323h30 · M\u00b0 Dugommier (L6)',
-      lat: 48.8468, lng: 2.3858,
-      metro: { lat: 48.8449, lng: 2.3879, name: 'M\u00b0 Dugommier (L6)' },
+      lat: null, lng: null,
+      metro: { geocodeQuery: 'station m\u00e9tro Dugommier, Paris, France', lat: null, lng: null, name: 'M\u00b0 Dugommier (L6)' },
       color: '#e040a0',
       mapsUrl: 'https://maps.google.com/?q=16+boulevard+de+Reuilly+75012+Paris'
     }
@@ -1939,6 +1944,45 @@ if('serviceWorker' in navigator){
   var _markers = {};
   var _metroMarkers = {};
   var _routeLayer = null;
+
+  // Géocode une adresse via Nominatim, retourne une Promise {lat, lng}
+  function geocode(query) {
+    var url = 'https://nominatim.openstreetmap.org/search?q='
+      + encodeURIComponent(query)
+      + '&format=json&limit=1&accept-language=fr';
+    return fetch(url, { headers: { 'User-Agent': 'TangoEtVousApp/1.0' } })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        return null;
+      });
+  }
+
+  // Géocode tous les lieux séquentiellement (1 req/s Nominatim)
+  function geocodeAll(lieux, done) {
+    var i = 0;
+    function next() {
+      if (i >= lieux.length) { done(); return; }
+      var lieu = lieux[i++];
+      geocode(lieu.geocodeQuery)
+        .then(function(pos) {
+          if (pos) { lieu.lat = pos.lat; lieu.lng = pos.lng; }
+          return new Promise(function(resolve) { setTimeout(resolve, 1100); });
+        })
+        .then(function() {
+          return geocode(lieu.metro.geocodeQuery);
+        })
+        .then(function(pos) {
+          if (pos) { lieu.metro.lat = pos.lat; lieu.metro.lng = pos.lng; }
+          return new Promise(function(resolve) { setTimeout(resolve, 1100); });
+        })
+        .then(next)
+        .catch(function() {
+          setTimeout(next, 1100);
+        });
+    }
+    next();
+  }
 
   function makePinIcon(color) {
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 40" width="28" height="40">'
@@ -1956,82 +2000,67 @@ if('serviceWorker' in navigator){
     return L.divIcon({ html: svg, className: '', iconSize: [26,26], iconAnchor: [13,13], popupAnchor: [0,-14] });
   }
 
+  function popupContent(lieu, marche) {
+    return '<div style="font-family:sans-serif;min-width:150px;">'
+      + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:' + lieu.color + ';font-weight:700;margin-bottom:3px;">' + lieu.label + '</div>'
+      + '<div style="font-size:13px;font-weight:600;margin-bottom:2px;">' + lieu.name + '</div>'
+      + '<div style="font-size:11px;color:#666;margin-bottom:6px;">' + lieu.addr + '<br/>' + lieu.sub + '</div>'
+      + (marche ? '<div style="font-size:12px;color:' + lieu.color + ';margin-bottom:6px;">\uD83D\uDEB6 ' + marche + ' min \u00e0 pied depuis ' + lieu.metro.name + '</div>' : '')
+      + '<a href="' + lieu.mapsUrl + '" target="_blank" style="font-size:11px;color:' + lieu.color + ';">\uD83D\uDCCD Ouvrir dans Maps</a>'
+      + '</div>';
+  }
+
   function afficherItineraire(lieu) {
-    // Effacer l'itinéraire précédent
+    if (!lieu.lat) { return; }
     if (_routeLayer) { _map.removeLayer(_routeLayer); _routeLayer = null; }
-    // Masquer les anciens marqueurs métro
-    Object.values(_metroMarkers).forEach(function(m){ _map.removeLayer(m); });
+    Object.keys(_metroMarkers).forEach(function(k){ _map.removeLayer(_metroMarkers[k]); });
     _metroMarkers = {};
 
     var m = lieu.metro;
-    // Marqueur métro
-    var mMarker = L.marker([m.lat, m.lng], { icon: makeMetroIcon(lieu.color) })
-      .addTo(_map)
-      .bindTooltip(m.name, { permanent: false, direction: 'top' });
-    _metroMarkers[lieu.id] = mMarker;
+    if (m.lat) {
+      _metroMarkers[lieu.id] = L.marker([m.lat, m.lng], { icon: makeMetroIcon(lieu.color) })
+        .addTo(_map)
+        .bindTooltip(m.name, { permanent: false, direction: 'top' });
 
-    // Appel OSRM (foot routing, gratuit)
-    var url = 'https://router.project-osrm.org/route/v1/foot/'
-      + m.lng + ',' + m.lat + ';'
-      + lieu.lng + ',' + lieu.lat
-      + '?overview=full&geometries=geojson';
+      var url = 'https://router.project-osrm.org/route/v1/foot/'
+        + m.lng + ',' + m.lat + ';'
+        + lieu.lng + ',' + lieu.lat
+        + '?overview=full&geometries=geojson';
 
-    fetch(url)
-      .then(function(r){ return r.json(); })
-      .then(function(data) {
-        if (!data.routes || !data.routes[0]) return;
-        var route = data.routes[0];
-        var geojson = route.geometry;
-        var secs = Math.round(route.duration);
-        var mins = Math.ceil(secs / 60);
-
-        _routeLayer = L.geoJSON(geojson, {
-          style: { color: lieu.color, weight: 4, opacity: 0.85, dashArray: '8 5' }
-        }).addTo(_map);
-
-        // Mettre à jour le popup du lieu avec le temps de marche
-        var popup = _markers[lieu.id].getPopup();
-        popup.setContent(
-          '<div style="font-family:sans-serif;min-width:150px;">'
-          + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:' + lieu.color + ';font-weight:700;margin-bottom:3px;">' + lieu.label + '</div>'
-          + '<div style="font-size:13px;font-weight:600;margin-bottom:2px;">' + lieu.name + '</div>'
-          + '<div style="font-size:11px;color:#666;margin-bottom:6px;">' + lieu.addr + '<br/>' + lieu.sub + '</div>'
-          + '<div style="font-size:12px;color:' + lieu.color + ';margin-bottom:6px;">🚶 ' + mins + ' min à pied depuis ' + m.name + '</div>'
-          + '<a href="' + lieu.mapsUrl + '" target="_blank" style="font-size:11px;color:' + lieu.color + ';">📍 Ouvrir dans Maps</a>'
-          + '</div>'
-        );
-        _markers[lieu.id].openPopup();
-      })
-      .catch(function() {
-        // En cas d'erreur réseau : ouvrir le popup sans le temps
-        _markers[lieu.id].openPopup();
-      });
+      fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.routes || !data.routes[0]) { _markers[lieu.id].openPopup(); return; }
+          var mins = Math.ceil(data.routes[0].duration / 60);
+          _routeLayer = L.geoJSON(data.routes[0].geometry, {
+            style: { color: '#ff3333', weight: 6, opacity: 0.9, dashArray: '10 6' }
+          }).addTo(_map);
+          _markers[lieu.id].getPopup().setContent(popupContent(lieu, mins));
+          _markers[lieu.id].openPopup();
+        })
+        .catch(function() { _markers[lieu.id].openPopup(); });
+    } else {
+      _markers[lieu.id].openPopup();
+    }
   }
 
-  function initPlan() {
-    if (_map) { _map.invalidateSize(); return; }
-    var mapEl = document.getElementById('plan-map');
-    if (!mapEl) return;
+  function placerMarqueurs() {
+    // Centre la carte sur la moyenne des lieux géocodés
+    var valid = LIEUX.filter(function(l){ return l.lat; });
+    if (valid.length) {
+      var latMoy = valid.reduce(function(s,l){ return s+l.lat; }, 0) / valid.length;
+      var lngMoy = valid.reduce(function(s,l){ return s+l.lng; }, 0) / valid.length;
+      _map.setView([latMoy, lngMoy], 13);
+    }
 
-    _map = L.map('plan-map', { zoomControl: true, attributionControl: false }).setView([48.857, 2.408], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(_map);
-    L.control.attribution({ prefix: '\u00a9 <a href="https://openstreetmap.org">OSM</a>' }).addTo(_map);
-
-    // Marqueurs venues
     LIEUX.forEach(function(lieu) {
+      if (!lieu.lat) return;
       var marker = L.marker([lieu.lat, lieu.lng], { icon: makePinIcon(lieu.color) }).addTo(_map);
-      marker.bindPopup(
-        '<div style="font-family:sans-serif;min-width:150px;">'
-        + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:' + lieu.color + ';font-weight:700;margin-bottom:3px;">' + lieu.label + '</div>'
-        + '<div style="font-size:13px;font-weight:600;margin-bottom:2px;">' + lieu.name + '</div>'
-        + '<div style="font-size:11px;color:#666;margin-bottom:6px;">' + lieu.addr + '<br/>' + lieu.sub + '</div>'
-        + '<a href="' + lieu.mapsUrl + '" target="_blank" style="font-size:11px;color:' + lieu.color + ';">📍 Ouvrir dans Maps</a>'
-        + '</div>'
-      );
+      marker.bindPopup(popupContent(lieu, null));
       _markers[lieu.id] = marker;
     });
 
-    // Boutons de centrage
+    // Construire les boutons après géocodage
     var btnsEl = document.getElementById('plan-btns');
     if (btnsEl) {
       btnsEl.innerHTML = '';
@@ -2043,12 +2072,42 @@ if('serviceWorker' in navigator){
           + '<span class="plan-btn-name">' + lieu.name + '</span>'
           + '<span class="plan-btn-addr">' + lieu.addr + '</span>';
         btn.addEventListener('click', function() {
+          if (!lieu.lat) return;
           _map.flyTo([lieu.lat, lieu.lng], 16, { duration: 1 });
           afficherItineraire(lieu);
         });
         btnsEl.appendChild(btn);
       });
     }
+  }
+
+  function initPlan() {
+    if (_map) { _map.invalidateSize(); return; }
+    var mapEl = document.getElementById('plan-map');
+    if (!mapEl) return;
+
+    // Afficher la carte immédiatement (centre Paris) pendant le géocodage
+    _map = L.map('plan-map', { zoomControl: true, attributionControl: false }).setView([48.856, 2.406], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(_map);
+    L.control.attribution({ prefix: '\u00a9 <a href="https://openstreetmap.org">OSM</a>' }).addTo(_map);
+
+    // Afficher un indicateur pendant le géocodage
+    var loadCtrl = L.control({ position: 'topright' });
+    loadCtrl.onAdd = function() {
+      var d = L.DomUtil.create('div');
+      d.id = 'plan-geocode-status';
+      d.style.cssText = 'background:rgba(0,0,0,.7);color:#D4AF37;padding:5px 10px;border-radius:6px;font-size:11px;';
+      d.textContent = '\u23F3 Localisation des lieux\u2026';
+      return d;
+    };
+    loadCtrl.addTo(_map);
+
+    // Géocoder toutes les adresses puis placer les marqueurs
+    geocodeAll(LIEUX, function() {
+      placerMarqueurs();
+      var st = document.getElementById('plan-geocode-status');
+      if (st) st.remove();
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function() {
