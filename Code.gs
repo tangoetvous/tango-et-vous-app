@@ -21,8 +21,10 @@ const SHEET_PRESENCES    = 'Présences';
 const SHEET_CP           = 'Cours Particuliers';
 const SHEET_STAGES       = 'Stages';
 const SHEET_ESSAI        = 'Inscriptions';
-const SHEET_PUBLICATIONS = 'Publications';
-const SHEET_AGENDA       = 'Agenda';
+const SHEET_PUBLICATIONS  = 'Publications';
+const SHEET_AGENDA        = 'Agenda';
+const SHEET_COURS_TANGO   = 'Cours Tango';     // inscriptions régulières
+const SHEET_AGENDA_MODIFS = 'Agenda Modifs';   // modifications/annulations d'occurrences
 
 // ── Lignes de départ ──────────────────────────────────────────
 const ELEVES_START_ROW    = 5;
@@ -99,19 +101,30 @@ function doPost(e) {
     const b = JSON.parse(e.postData.contents||'{}'), a = (b.action||'').trim();
     let r;
     switch(a) {
-      case 'pointageManuel':         r = ajouterPresenceManuelle(b); break;
-      case 'pointerEssai':           r = pointerEssaiGs(b); break;
-      case 'envoyerEmailsEssaiJ1':   r = envoyerEmailsEssaiJ1(b); break;
-      case 'reservationCP':          r = traiterReservationCP(b); break;
-      case 'updateStatutCP':         r = updateStatutCP(b); break;
-      case 'inscriptionStage':       r = traiterInscriptionStage(b); break;
-      case 'validerAttente':         r = validerAttenteStage(b); break;
-      case 'creerEleve':             r = creerEleve(b); break;
-      case 'activerEleve':           r = activerEleve(b); break;
-      case 'desactiverEleve':        r = desactiverEleve(b); break;
-      case 'sauvegarderPublication': r = sauvegarderPublication(b); break;
-      case 'publierPublication':     r = publierPublication(b); break;
-      case 'supprimerPublication':   r = supprimerPublication(b); break;
+      case 'pointageManuel':              r = ajouterPresenceManuelle(b); break;
+      case 'pointerEssai':                r = pointerEssaiGs(b); break;
+      case 'envoyerEmailsEssaiJ1':        r = envoyerEmailsEssaiJ1(b); break;
+      case 'reservationCP':               r = traiterReservationCP(b); break;
+      case 'updateStatutCP':              r = updateStatutCP(b); break;
+      case 'inscriptionStage':            r = traiterInscriptionStage(b); break;
+      case 'validerAttente':              r = validerAttenteStage(b); break;
+      case 'creerEleve':                  r = creerEleve(b); break;
+      case 'activerEleve':                r = activerEleve(b); break;
+      case 'desactiverEleve':             r = desactiverEleve(b); break;
+      case 'sauvegarderPublication':      r = sauvegarderPublication(b); break;
+      case 'publierPublication':          r = publierPublication(b); break;
+      case 'supprimerPublication':        r = supprimerPublication(b); break;
+      // ── Cours Tango (inscriptions régulières) ─────────────────
+      case 'inscriptionCoursRegulier':    r = traiterInscriptionCoursRegulier(b); break;
+      case 'changerStatutCoursTango':     r = changerStatutCoursTangoGs(b); break;
+      case 'validerPaiementCoursTango':   r = validerPaiementCoursTangoGs(b); break;
+      // ── Cartes de 10 cours ────────────────────────────────────
+      case 'renouvelerCarte':             r = renouvelerCarteGs(b); break;
+      case 'toggleCartePaye':             r = toggleCartePaye(b); break;
+      // ── Agenda modifications ───────────────────────────────────
+      case 'sauverModifAgenda':           r = sauverModifAgendaGs(b); break;
+      // ── Pointage QR code (depuis pointer.html) ────────────────
+      case 'pointageQR':                  r = ajouterPresenceManuelle(b); break;
       default:                       r = {error:'Action POST inconnue : '+a};
     }
     out.setContent(JSON.stringify(r));
@@ -296,6 +309,7 @@ function getAdminData(email) {
     stages:            _getStagesAdmin(),
     coursEssai:        _getEssaiAdmin(),
     publications:      _getPublicationsAdmin(),
+    coursTango:        _getCoursTangoAdmin(),
     stats:{
       total:     cartes.length,
       actifs:    cartes.filter(c=>c.statutEleve===STATUT.ACTIF).length,
@@ -315,6 +329,9 @@ function ajouterPresenceManuelle(body) {
   const sp   = _getSheet(ss, SHEET_PRESENCES);
   const se   = _getSheet(ss, SHEET_ELEVES);
   const nom  = _getNomEleve(se, eleveId);
+  // Détecter 1ère présence de la saison → E04
+  const presencesExistantes = _getPresences(sp, eleveId);
+  const estPremierCours     = presencesExistantes.length === 0;
   const nr   = Math.max(sp.getLastRow(), PRESENCES_START_ROW-1)+1;
   const hora = Utilities.formatDate(new Date(),'Europe/Paris','yyyy-MM-dd HH:mm');
   sp.getRange(nr,1).setValue(hora);  sp.getRange(nr,2).setValue(eleveId);
@@ -323,6 +340,20 @@ function ajouterPresenceManuelle(body) {
   sp.getRange(nr,5).setValue(niveau);
   sp.getRange(nr,6).setFormula(`=IF(B${nr}="","",IF(COUNTIFS($B$${PRESENCES_START_ROW}:B${nr},B${nr},$D$${PRESENCES_START_ROW}:D${nr},D${nr},$E$${PRESENCES_START_ROW}:E${nr},E${nr})>1,"OUI","NON"))`);
   sp.getRange(nr,7).setValue(note||'Ajout manuel (admin)');
+  // E04 — bienvenue 1ère séance
+  if (estPremierCours) {
+    const lr  = se.getLastRow();
+    if (lr >= ELEVES_START_ROW) {
+      const data  = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues();
+      const elRow = data.find(r => r[COL.ID] === eleveId);
+      if (elRow) {
+        const email = (elRow[COL.EMAIL]||'').toString().trim();
+        if (email) {
+          try { _emailBienvenuePremiereCours(nom, email, '', niveau); } catch(err) {}
+        }
+      }
+    }
+  }
   return {ok:true,message:`Présence ajoutée pour ${nom} le ${date}`};
 }
 
@@ -784,3 +815,361 @@ function _tplEssaiAbsent(p,date,niv,ville,ue){
     <a href="${ue}" style="display:block;background:#D4AF37;color:#000;text-align:center;padding:14px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;margin-bottom:16px;">S'inscrire à un cours d'essai</a>
     <div style="text-align:center;color:#D4AF37;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></div>`);
 }
+// ================================================================
+// COURS TANGO — Inscriptions régulières
+// ================================================================
+
+// ── Helpers feuille Cours Tango ──────────────────────────────
+function _ensureSheetCoursTango(ss) {
+  let s = ss.getSheetByName(SHEET_COURS_TANGO);
+  if (!s) {
+    s = ss.insertSheet(SHEET_COURS_TANGO);
+    const h = ['ID','Prénom','Nom','Email','Téléphone','Rôle','Niveau','Cours','Ville',
+      'Statut','Partenaire','Email Partenaire','Type','Paiement','Montant','Date Inscription','Payé'];
+    const hr = s.getRange(1,1,1,h.length);
+    hr.setValues([h]).setBackground('#D4AF37').setFontColor('#000').setFontWeight('bold');
+    s.setFrozenRows(1);
+  }
+  return s;
+}
+
+function _getCoursTangoAdmin() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s  = ss.getSheetByName(SHEET_COURS_TANGO);
+  if (!s || s.getLastRow() < 2) return [];
+  return s.getRange(2,1,s.getLastRow()-1,17).getValues()
+    .filter(r => r[0])
+    .map(r => ({
+      id:r[0], prenom:r[1], nom:r[2], email:r[3], tel:r[4],
+      role:r[5], niveau:r[6], cours:r[7], ville:r[8], statut:r[9],
+      partenaire:r[10], emailPartenaire:r[11], type:r[12],
+      paiement:r[13], montant:Number(r[14])||0,
+      dateInscription:_fmtDate(r[15]), paye:r[16]===true||r[16]==='TRUE',
+    }));
+}
+
+// ── Nouvelle demande (depuis inscription-cours.html) ─────────
+function traiterInscriptionCoursRegulier(body) {
+  const {prenom,nom,email,tel,role,niveau,cours,ville,partenaire,emailPartenaire,type,montant} = body;
+  if (!prenom||!nom||!email) throw new Error('prenom, nom, email requis');
+  const ss  = SpreadsheetApp.getActiveSpreadsheet();
+  const s   = _ensureSheetCoursTango(ss);
+  const now = Utilities.formatDate(new Date(),'Europe/Paris','yyyy-MM-dd');
+  const id  = 'CT'+Utilities.formatDate(new Date(),'Europe/Paris','yyyyMMddHHmmss');
+  s.appendRow([id,prenom||'',nom||'',email||'',tel||'',role||'guidee',niveau||'',
+    cours||'',ville||'paris','demande',partenaire||'',emailPartenaire||'',
+    type||'carte10','',Number(montant)||170,now,false]);
+  creerEleve({nom:prenom+' '+nom,email,niveau:niveau||'',source:'inscription',notes:'Via formulaire inscription cours'});
+  // E01 — accusé de réception élève
+  try { _emailDemandeRecue(prenom,email,cours||'',niveau||'',role||''); } catch(e) {}
+  // Notif admin
+  try { ADMIN_EMAILS.forEach(a=>MailApp.sendEmail({to:a,subject:NOM_ECOLE+' — Nouvelle demande : '+prenom+' '+nom,
+    htmlBody:_emailWrap('Nouvelle demande inscription',`<p style="color:#ccc;font-size:13px;">Demande de <strong style="color:#D4AF37;">${prenom} ${nom}</strong> (${email}) pour <strong>${cours||niveau}</strong>.</p><p style="color:#888;font-size:12px;">Rôle : ${role} — Type : ${type}</p>`)})); } catch(e) {}
+  return {ok:true,id};
+}
+
+// ── Changer statut d'une demande ──────────────────────────────
+function changerStatutCoursTangoGs(body) {
+  const {id,statut} = body;
+  if (!id||!statut) throw new Error('id et statut requis');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s  = _ensureSheetCoursTango(ss);
+  const lr = s.getLastRow();
+  if (lr < 2) throw new Error('Aucune ligne');
+  const data = s.getRange(2,1,lr-1,10).getValues();
+  const idx  = data.findIndex(r => r[0]===id);
+  if (idx < 0) throw new Error('Entrée introuvable : '+id);
+  s.getRange(idx+2,10).setValue(statut);
+  // E02 — email validation si statut → 'valide'
+  if (statut === 'valide') {
+    const r = data[idx];
+    try { _emailValidation(r[1],r[3],r[7],r[6],r[8]); } catch(e) {}
+  }
+  return {ok:true};
+}
+
+// ── Valider paiement → inscrit ────────────────────────────────
+function validerPaiementCoursTangoGs(body) {
+  const {id,carte10,tel,email} = body;
+  if (!id) throw new Error('id requis');
+  const ss  = SpreadsheetApp.getActiveSpreadsheet();
+  const s   = _ensureSheetCoursTango(ss);
+  const lr  = s.getLastRow();
+  const data = lr >= 2 ? s.getRange(2,1,lr-1,17).getValues() : [];
+  const idx  = data.findIndex(r => r[0]===id);
+  if (idx < 0) throw new Error('Entrée introuvable : '+id);
+  const r = data[idx];
+  s.getRange(idx+2,10).setValue('inscrit');
+  s.getRange(idx+2,17).setValue(true);
+  if (tel) s.getRange(idx+2,5).setValue(tel);
+  const emailEff = email || r[3];
+  if (email && email !== r[3]) s.getRange(idx+2,4).setValue(email);
+  // Créer carte de 10 si demandé
+  if (carte10 === 'oui') {
+    const now = Utilities.formatDate(new Date(),'Europe/Paris','yyyy-MM-dd');
+    const se  = _getSheet(ss, SHEET_ELEVES);
+    const lre = se.getLastRow();
+    const elData = lre >= ELEVES_START_ROW ? se.getRange(ELEVES_START_ROW,1,lre-ELEVES_START_ROW+1,13).getValues() : [];
+    const eleveRow = elData.findIndex(row => (row[COL.EMAIL]||'').toString().trim().toLowerCase() === (emailEff||'').toLowerCase());
+    if (eleveRow >= 0) {
+      se.getRange(eleveRow+ELEVES_START_ROW, COL.DATE_ACHAT+1).setValue(new Date(now));
+      se.getRange(eleveRow+ELEVES_START_ROW, COL.UTILISES+1).setValue(0);
+      se.getRange(eleveRow+ELEVES_START_ROW, COL.RESTANTS+1).setValue(10);
+      se.getRange(eleveRow+ELEVES_START_ROW, COL.STATUT_CARTE+1).setValue('Active');
+    }
+  }
+  // E03 — inscription confirmée
+  try { _emailInscriptionConfirmee(r[1],emailEff,r[7],r[6],r[8],carte10==='oui'?'Carte 10 cours':'Forfait'); } catch(e) {}
+  return {ok:true};
+}
+
+// ── Mise à jour getAdminData pour inclure coursTango ─────────
+// (à appeler dans getAdminData existant — ajout du champ coursTango)
+function _getCoursTangoForAdmin() {
+  return _getCoursTangoAdmin();
+}
+
+// ================================================================
+// CARTES DE 10 COURS
+// ================================================================
+
+function renouvelerCarteGs(body) {
+  const {eleveId, paye} = body;
+  if (!eleveId) throw new Error('eleveId requis');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const se = _getSheet(ss, SHEET_ELEVES);
+  const lr = se.getLastRow();
+  if (lr < ELEVES_START_ROW) throw new Error('Aucun élève');
+  const data = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues();
+  const idx  = data.findIndex(r => r[COL.ID] === eleveId);
+  if (idx < 0) throw new Error('Élève introuvable : '+eleveId);
+  const rowNum = idx + ELEVES_START_ROW;
+  const nom = data[idx][COL.NOM];
+  const email = (data[idx][COL.EMAIL]||'').toString().trim();
+  // Réinitialiser la carte
+  se.getRange(rowNum, COL.UTILISES+1).setValue(0);
+  se.getRange(rowNum, COL.RESTANTS+1).setValue(10);
+  se.getRange(rowNum, COL.DATE_ACHAT+1).setValue('');
+  se.getRange(rowNum, COL.EXPIRATION+1).setValue('');
+  se.getRange(rowNum, COL.STATUT_CARTE+1).setValue('Active');
+  // E10 — carte renouvelée (si payé)
+  if (paye && email) {
+    const prenom = nom.split(' ')[0]||nom;
+    try { MailApp.sendEmail({to:email,replyTo:EMAIL_CONTACT,
+      subject:NOM_ECOLE+' — Carte renouvelée, à bientôt !',
+      htmlBody:_emailCarteRenouvelee(prenom,email)}); } catch(e) {}
+  }
+  return {ok:true};
+}
+
+function toggleCartePaye(body) {
+  // Le toggle paye est géré côté admin uniquement (UI) — pas de persistance Sheets nécessaire
+  // pour l'instant. Si besoin, ajouter une colonne "Payé" dans SHEET_ELEVES.
+  return {ok:true};
+}
+
+// ================================================================
+// AGENDA — Modifications d'occurrences
+// ================================================================
+
+function sauverModifAgendaGs(body) {
+  const {date,type,actionType,note,newDate,newHeure,newLieu} = body;
+  if (!date||!type) throw new Error('date et type requis');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let s    = ss.getSheetByName(SHEET_AGENDA_MODIFS);
+  if (!s) {
+    s = ss.insertSheet(SHEET_AGENDA_MODIFS);
+    const h = ['Horodatage','Date','Type','Action','Note','Nouvelle date','Nouvel horaire','Nouveau lieu'];
+    const hr = s.getRange(1,1,1,h.length);
+    hr.setValues([h]).setBackground('#D4AF37').setFontColor('#000').setFontWeight('bold');
+    s.setFrozenRows(1);
+  }
+  const now = Utilities.formatDate(new Date(),'Europe/Paris','dd/MM/yyyy HH:mm');
+  s.appendRow([now,date,type,actionType||'note',note||'',newDate||'',newHeure||'',newLieu||'']);
+  // Envoyer emails aux élèves inscrits si annulation/report (selon type)
+  if (actionType === 'annule' || actionType === 'reporte') {
+    try { _notifModifAgenda(date,type,actionType,note||'',newDate||''); } catch(err) {}
+  }
+  return {ok:true};
+}
+
+// Notif email lors d'une modification d'agenda
+function _notifModifAgenda(date,type,action,note,newDate) {
+  const dateFr = _fmtDateFr(date);
+  const typeLabel = {paris:'cours de Paris',vincennes:'cours de Vincennes',
+    stage:'stage',milonga:'milonga'}[type]||type;
+  const actionLabel = action==='annule'?'annulé':'reporté';
+  const sujet = NOM_ECOLE+' — '+(action==='annule'?'Annulation':'Report')+' : '+typeLabel+' du '+dateFr;
+  const corps = _emailWrap('Information importante',`
+    <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">Bonjour,</p>
+    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:14px;">
+      Nous vous informons que le <strong style="color:#D4AF37;">${typeLabel} du ${dateFr}</strong> est <strong>${actionLabel}</strong>.
+      ${note ? '<br/><br/>'+note : ''}
+      ${newDate ? '<br/><br/>Il est reporté au <strong style="color:#D4AF37;">'+_fmtDateFr(newDate)+'</strong>.' : ''}
+    </p>
+    <p style="font-size:12px;color:#888;">Des questions ? Contactez-nous à <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a>.</p>
+  `);
+  // Envoyer aux admins (en production : récupérer emails des inscrits au cours concerné)
+  ADMIN_EMAILS.forEach(a => { try { MailApp.sendEmail({to:a,subject:sujet,htmlBody:corps}); } catch(e) {} });
+}
+
+// ================================================================
+// INTÉGRATION getAdminData — ajout coursTango
+// (getAdminData inclut maintenant coursTango — défini plus haut ligne 298)
+
+// ================================================================
+// EMAILS — Cours Tango & Cartes
+// ================================================================
+
+// E01 — Accusé de réception demande d'inscription
+function _emailDemandeRecue(prenom, email, cours, niveau, role) {
+  const r = role==='guideur'?'Guideur':'Guidée';
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject: NOM_ECOLE+' — Votre demande a bien été reçue',
+    htmlBody: _emailWrap('Demande d\'inscription reçue', `
+    <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">Bonjour <strong style="color:#D4AF37;">${prenom}</strong> !</p>
+    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:18px;">
+      Merci pour votre demande d'inscription aux cours <strong>Tango &amp; Vous</strong>.
+      Nous l'avons bien reçue et allons l'étudier dans les 48 à 72 heures.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:18px;">
+      ${_row('Cours demandé', cours||niveau||'—')}
+      ${_row('Niveau', niveau||'—')}
+      ${_row('Rôle', r)}
+    </table>
+    <div style="background:#0f0d00;border:1px solid #3a2d00;border-radius:8px;padding:14px;font-size:12px;color:#888;line-height:1.8;">
+      <strong style="color:#D4AF37;">Prochaines étapes :</strong><br/>
+      1. Validation de votre demande (48–72h)<br/>
+      2. Email de confirmation avec les modalités de paiement<br/>
+      3. Paiement → place confirmée définitivement
+    </div>
+    <p style="font-size:12px;color:#666;margin-top:16px;">
+      Une question ? Écrivez à <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a>
+    </p>`),
+  });
+}
+
+// E02 — Validation de la demande
+function _emailValidation(prenom, email, cours, niveau, ville) {
+  const montant = 170; // carte 10 cours par défaut
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject: NOM_ECOLE+' — Votre inscription est validée 🎉',
+    htmlBody: _emailWrap('Inscription validée', `
+    <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">Bonjour <strong style="color:#D4AF37;">${prenom}</strong> !</p>
+    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:18px;">
+      Excellente nouvelle : votre demande est validée. Votre place est réservée — il reste à finaliser le paiement.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:18px;">
+      ${_row('Cours', cours||niveau||'—')}
+      ${_row('Niveau', niveau||'—')}
+      ${_row('Formule', 'Carte de 10 cours')}
+      ${_row('Montant', montant+' €')}
+    </table>
+    <div style="background:#0f0d00;border:1px solid #3a2d00;border-radius:8px;padding:14px;font-size:13px;color:#ccc;line-height:1.8;">
+      <strong style="color:#D4AF37;">Comment payer :</strong><br/>
+      💳 Virement bancaire (IBAN sur demande)<br/>
+      💵 Espèces le premier soir<br/>
+      🔄 3× sans frais par CB (lien sur demande)
+    </div>
+    <p style="font-size:12px;color:#666;margin-top:16px;">
+      Contactez-nous à <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a>
+    </p>`),
+  });
+}
+
+// E03 — Inscription confirmée (paiement validé)
+function _emailInscriptionConfirmee(prenom, email, cours, niveau, ville, formule) {
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject: NOM_ECOLE+' — Inscription confirmée, à bientôt !',
+    htmlBody: _emailWrap('Inscription confirmée', `
+    <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">À bientôt, <strong style="color:#D4AF37;">${prenom}</strong> ! 🎉</p>
+    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:18px;">
+      Votre paiement a été reçu. Votre place est confirmée — nous avons hâte de vous accueillir sur la piste !
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:18px;">
+      ${_row('Cours', cours||niveau||'—')}
+      ${_row('Niveau', niveau||'—')}
+      ${_row('Ville', ville||'—')}
+      ${_row('Formule', formule||'Carte 10 cours')}
+    </table>
+    <div style="background:#060d1a;border:2px solid #1565C0;border-radius:8px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:10px;color:#7aaaff;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;">📱 Votre espace élève</div>
+      <p style="font-size:12px;color:#aaa;line-height:1.7;margin-bottom:10px;">Accédez à votre app pour suivre vos présences, l'agenda et les stages.</p>
+      <a href="${URL_PWA}" style="display:block;background:#D4AF37;color:#000;text-align:center;padding:12px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;letter-spacing:2px;">ACCÉDER À MON ESPACE</a>
+    </div>
+    <p style="font-size:12px;color:#666;">
+      Questions ? <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a>
+    </p>`),
+  });
+}
+
+// E04 — Bienvenue 1ère séance (déclenché au 1er pointage)
+function _emailBienvenuePremiereCours(nom, email, cours, niveau) {
+  const prenom = nom.split(' ')[0]||nom;
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject: NOM_ECOLE+' — Bienvenue dans votre cours ! 💃',
+    htmlBody: _emailWrap('Bienvenue dans votre cours', `
+    <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">Bienvenue, <strong style="color:#D4AF37;">${prenom}</strong> !</p>
+    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:18px;">
+      C'est avec plaisir que nous vous avons accueilli(e) ce soir. Votre première séance de la saison est enregistrée.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:18px;">
+      ${_row('Cours', cours||niveau||'—')}
+      ${_row('Niveau', niveau||'—')}
+    </table>
+    <div style="background:#060d1a;border:2px solid #1565C0;border-radius:8px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:10px;color:#7aaaff;text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;">📱 Installez votre espace élève</div>
+      <p style="font-size:12px;color:#aaa;line-height:1.7;margin-bottom:4px;">Agenda, carte de 10 cours, stages, actualités — tout en un clic.</p>
+      <p style="font-size:12px;color:#aaa;">1. Ouvrez <a href="${URL_PWA}" style="color:#D4AF37;">${URL_PWA}</a><br/>2. Connectez-vous avec ${email}<br/>3. Ajoutez l'app à votre écran d'accueil</p>
+    </div>`),
+  });
+}
+
+// E10 — Carte renouvelée
+function _emailCarteRenouvelee(prenom, email) {
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject: NOM_ECOLE+' — Carte renouvelée, à bientôt !',
+    htmlBody: _emailWrap('Carte de 10 cours renouvelée', `
+    <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">Bonjour <strong style="color:#D4AF37;">${prenom}</strong> !</p>
+    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:18px;">
+      Votre carte de 10 cours a été renouvelée. Vous disposez de <strong style="color:#D4AF37;">10 nouveaux cours</strong>, valables 3 mois à partir de votre prochain pointage.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:18px;">
+      ${_row('Cours restants', '10 / 10')}
+      ${_row('Validité', '3 mois à partir du 1er cours pointé')}
+      ${_row('Valable', 'Paris + Vincennes')}
+    </table>
+    <p style="font-size:12px;color:#888;">À très bientôt sur la piste !</p>`),
+  });
+}
+
+// E17 — Pré-inscription reçue (période mai–août)
+function _emailPreinscriptionRecue(prenom, email, cours, niveau, role) {
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject: NOM_ECOLE+' — Pré-inscription 2026–2027 bien reçue ✓',
+    htmlBody: _emailWrap('Pré-inscription reçue', `
+    <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">Bonjour <strong style="color:#D4AF37;">${prenom}</strong> !</p>
+    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:18px;">
+      Votre pré-inscription pour la saison 2026–2027 est bien enregistrée.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:18px;">
+      ${_row('Cours souhaité', cours||niveau||'—')}
+      ${_row('Niveau', niveau||'—')}
+      ${_row('Rôle', role||'—')}
+    </table>
+    <div style="background:#0f0d00;border:1px solid #3a2d00;border-radius:8px;padding:14px;font-size:12px;color:#aaa;line-height:1.8;">
+      Les cours reprennent en septembre. Vous recevrez un email de confirmation fin août avec la marche à suivre pour finaliser votre inscription.
+    </div>
+    <p style="font-size:12px;color:#666;margin-top:16px;">
+      Questions ? <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a>
+    </p>`),
+  });
+}
+
+// ================================================================
+// POINTAGE — 1ère présence de la saison → E04
+// (hook dans ajouterPresenceManuelle)
+// ================================================================
+// Note : intégrer dans ajouterPresenceManuelle :
+//   if (!datePremierCours) { _emailBienvenuePremiereCours(nom,email,cours,niveau); }
+
