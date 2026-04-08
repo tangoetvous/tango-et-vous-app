@@ -541,7 +541,7 @@ function ouvrirContact(nom, tel, email, ctx) {
       +'<div class="btn-row" style="flex-wrap:wrap;gap:6px;">'
       +'<button class="btn btn-warn" style="font-size:12px;" data-action="essai-vers-cours" data-email="'+(email||'')+'" data-statut="demande">Demande en att.</button>'
       +'<button class="btn btn-gold" style="font-size:12px;" data-action="essai-vers-cours" data-email="'+(email||'')+'" data-statut="attente_paiement">✓ Validé·e</button>'
-      +'<button class="btn btn-ok" style="font-size:12px;" data-action="essai-vers-cours" data-email="'+(email||'')+'" data-statut="inscrit">⭐ Inscrit·e</button>'
+      +'<button class="btn btn-ok" style="font-size:12px;" data-action="open-insc-essai" data-email="'+(email||'')+'">⭐ Inscrit·e</button>'
       +'</div></div>';
   }
   box.innerHTML='<div class="modal-titre">'+nom+'</div>'
@@ -576,6 +576,87 @@ function essaiVersCoursTango(email, statut, btn) {
   fermerContact();
   var lbls={demande:'Demande en attente',attente_paiement:'Validé·e',inscrit:'Inscrit·e'};
   afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' dans Inscr Tango');
+}
+function ouvrirFormulaireInscriptionEssai(email) {
+  var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
+  if(!ess) return;
+  var villeLabel=ess.ville==='vincennes'?'Vincennes':'Paris';
+  var jourlbl=ess.ville==='vincennes'?'Lundi':'Jeudi';
+  var nivlbl=ess.niveau==='intermediaire'?'Intermédiaire':'Débutant';
+  var coursDefaut=villeLabel+' — '+jourlbl+' — '+nivlbl;
+  var COURS=['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
+  var box=gel('modal-contact-box');
+  if(!box)return;
+  var h='<div class="modal-titre">⭐ Inscrire '+(ess.prenom||'')+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+    +'<div class="field" style="margin:0;"><label>Prénom</label><input type="text" id="ei-prenom" value="'+(ess.prenom||'').replace(/"/g,'&quot;')+'"/></div>'
+    +'<div class="field" style="margin:0;"><label>Nom</label><input type="text" id="ei-nom" value="'+(ess.nom||'').replace(/"/g,'&quot;')+'"/></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+    +'<div class="field" style="margin:0;"><label>Téléphone</label><input type="tel" id="ei-tel" placeholder="06 XX XX XX XX"/></div>'
+    +'<div class="field" style="margin:0;"><label>Email</label><input type="email" id="ei-email" value="'+(email||'')+'" autocapitalize="none"/></div>'
+    +'</div>'
+    +'<div class="field"><label>Cours</label><select id="ei-cours">';
+  COURS.forEach(function(c){h+='<option'+(c===coursDefaut?' selected':'')+'>'+c+'</option>';});
+  h+='</select></div>'
+    +'<div style="margin-bottom:10px;">'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">Formule</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">'
+    +'<label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:11px;text-align:center;">'
+    +'<input type="radio" name="ei-formule" value="forfait" checked style="width:auto;padding:0;"> Forfait annuel</label>'
+    +'<label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:11px;text-align:center;">'
+    +'<input type="radio" name="ei-formule" value="carte10" style="width:auto;padding:0;"> Carte 10 cours</label>'
+    +'<label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:11px;text-align:center;">'
+    +'<input type="radio" name="ei-formule" value="unitaire" style="width:auto;padding:0;"> À l\'unité</label>'
+    +'</div></div>'
+    +'<div class="field"><label>Paiement</label><select id="ei-paie"><option value="cb1x">CB 1×</option><option value="cb3x">CB 3×</option><option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="virement1x">Virement 1×</option><option value="virement3x">Virement 3×</option></select></div>'
+    +'<div class="box-err" id="ei-err"></div>'
+    +'<div class="box-ok" id="ei-ok">✓ Élève inscrit·e !</div>'
+    +'<div class="btn-row">'
+    +'<button class="btn btn-gold" style="flex:2;" data-action="soumettre-insc-essai" data-email="'+(email||'')+'">⭐ Valider l\'inscription</button>'
+    +'<button class="btn btn-ghost" data-action="fermer-contact">Annuler</button>'
+    +'</div>';
+  box.innerHTML=h;
+  gel('modal-contact').classList.add('vis');
+}
+function soumettreInscriptionEssai(email) {
+  var prenom=((gel('ei-prenom')||{}).value||'').trim();
+  var nom=((gel('ei-nom')||{}).value||'').trim();
+  var tel=((gel('ei-tel')||{}).value||'').trim();
+  var emailV=((gel('ei-email')||{}).value||'').trim().toLowerCase();
+  var cours=(gel('ei-cours')||{}).value||'Paris — Jeudi — Débutant';
+  var formuleEl=document.querySelector('input[name="ei-formule"]:checked');
+  var formule=formuleEl?formuleEl.value:'forfait';
+  var paie=(gel('ei-paie')||{}).value||'cb1x';
+  var err=gel('ei-err'),ok=gel('ei-ok');
+  if(err)err.style.display='none'; if(ok)ok.style.display='none';
+  if(!prenom||!nom||!emailV){if(err){err.textContent='Prénom, nom et email requis.';err.style.display='block';}return;}
+  var ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
+  var niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
+  var montant=formule==='carte10'?TARIFS.carte10:formule==='unitaire'?(ville==='vincennes'?TARIFS.unitaire_paris:TARIFS.unitaire_paris):(ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris);
+  var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
+  var role=ess?(ess.role||'guidee'):'guidee';
+  var partenaire=ess?(ess.partenaire||''):'';
+  var emailPartenaire=ess?(ess.emailPartenaire||''):'';
+  var ct=adminData.coursTango||[];
+  var existing=ct.find(function(e){return e.email===emailV;});
+  if(existing){
+    existing.statut='inscrit'; existing.type=formule; existing.paiement=paie; existing.montant=montant;
+    existing.cours=cours; existing.ville=ville; existing.niveau=niveau;
+    if(tel)existing.tel=tel; existing.email=emailV;
+  } else {
+    ct.push({id:'CT'+Date.now(),prenom:prenom,nom:nom,email:emailV,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',partenaire:partenaire,emailPartenaire:emailPartenaire,type:formule,paiement:paie,montant:montant,dateInscription:today()});
+  }
+  adminData.coursTango=ct;
+  if(!adminData.inscriptionsCours)adminData.inscriptionsCours=[];
+  adminData.inscriptionsCours.push({id:'IC'+Date.now(),nom:prenom+' '+nom,email:emailV,cours:cours,type:formule,paiement:paie,montant:montant,date:today(),ville:ville});
+  if(formule==='carte10'&&!(adminData.cartes||[]).find(function(c){return c.email===emailV;})){
+    adminData.cartes.push({id:'C'+Date.now(),nom:prenom+' '+nom,niveau:niveau,email:emailV,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Active',source:'inscription',ville:ville,datesCours:[],partenaire:partenaire,paye:true});
+    recalcStats();
+  }
+  if(!IS_DEMO){postAS({action:'inscrireDepuisEssai',email:emailV,prenom:prenom,nom:nom,tel:tel,cours:cours,formule:formule,paie:paie,montant:montant}).catch(function(){});}
+  if(ok)ok.style.display='block';
+  setTimeout(function(){fermerContact();switchTab('eleves-tango');},1500);
 }
 function toggleInteret(date, email, btn) {
   var e=(adminData.essai||[]).find(function(x){return x.date===date&&x.email===email;});
@@ -1448,6 +1529,15 @@ function handleAction(action, btn) {
       break;
     case 'essai-vers-cours':
       essaiVersCoursTango(btn.dataset.email||'', btn.dataset.statut||'demande', btn);
+      break;
+    case 'open-insc-essai':
+      ouvrirFormulaireInscriptionEssai(btn.dataset.email||'');
+      break;
+    case 'soumettre-insc-essai':
+      soumettreInscriptionEssai(btn.dataset.email||'');
+      break;
+    case 'fermer-contact':
+      fermerContact();
       break;
     case 'toggle-interet':
       toggleInteret(btn.dataset.date||'', btn.dataset.email||'', btn);
