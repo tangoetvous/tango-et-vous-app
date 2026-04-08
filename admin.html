@@ -295,6 +295,7 @@ var URL_SORANO           = 'LIEN_ASSOCONNECT_SORANO';
 var URL_ASSOCONNECT_COURS = 'https://le-regard-se-pose.assoconnect.com/collect/description/695654-a-inscription-aux-cours-de-tango-argentin-avec-florencia-garcia-jeremy-braitbart-septembre-2026-juin-2027';
 var CLOUDINARY_NAME = 'VOTRE_CLOUD_NAME';
 var IS_DEMO         = APPS_SCRIPT_URL.indexOf('VOTRE_DEPLOYMENT') >= 0;
+var DEMO_DATE       = new Date(2026, 8, 2); // 2 septembre 2026 (mois 0-indexé)
 
 // ================================================================
 // DONNÉES AGENDA
@@ -363,7 +364,11 @@ var DEMO_DATA = {
     {id:'E014',nom:'Camille Roux',     niveau:'Débutant',      email:'camille@ex.com',   statutEleve:'Actif',      utilises:6, restants:4, datePremierCours:'2026-01-22',expiration:'2026-07-10',statut:'Active',   source:'inscription',ville:'paris',     datesCours:['2026-01-22','2026-01-29','2026-02-05','2026-02-12','2026-02-19','2026-02-26'],partenaire:'',emailPartenaire:'',saison:'2025-2026'},
     {id:'E015',nom:'Inès Blanc',       niveau:'Intermédiaire', email:'ines@ex.com',      statutEleve:'Actif',      utilises:2, restants:8, datePremierCours:'2026-03-19',expiration:'2026-08-30',statut:'Active',   source:'essai',      ville:'paris',     datesCours:['2026-03-19','2026-03-26'],partenaire:'',emailPartenaire:'',saison:'2025-2026'},
     // En attente (essai récent)
-    {id:'E016',nom:'Sophie Martin',    niveau:'Débutant',      email:'sophie@ex.com',    statutEleve:'En attente', utilises:0, restants:0, datePremierCours:'',expiration:'',statut:'',             source:'essai',      ville:'paris',     datesCours:[],partenaire:'Lucas Martin',       emailPartenaire:'lucas@ex.com',saison:'2025-2026'}
+    {id:'E016',nom:'Sophie Martin',    niveau:'Débutant',      email:'sophie@ex.com',    statutEleve:'En attente', utilises:0, restants:0, datePremierCours:'',expiration:'',statut:'',             source:'essai',      ville:'paris',     datesCours:[],partenaire:'Lucas Martin',       emailPartenaire:'lucas@ex.com',saison:'2025-2026'},
+    // ── Cartes saison 2026-2027 ──
+    {id:'E017',nom:'Nadia Cheikh',     niveau:'Débutant',      email:'nadia@ex.com',     statutEleve:'Actif',      utilises:0, restants:10,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:'paris',     datesCours:[],partenaire:'Julien Cheikh',       emailPartenaire:'julien@ex.com', saison:'2026-2027'},
+    {id:'E018',nom:'Julien Cheikh',    niveau:'Débutant',      email:'julien@ex.com',    statutEleve:'Actif',      utilises:0, restants:10,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:'paris',     datesCours:[],partenaire:'Nadia Cheikh',        emailPartenaire:'nadia@ex.com',  saison:'2026-2027'},
+    {id:'E019',nom:'Alexis Moreau',    niveau:'Débutant',      email:'alexis@ex.com',    statutEleve:'Actif',      utilises:0, restants:10,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:'paris',     datesCours:[],partenaire:'',                   emailPartenaire:'',              saison:'2026-2027'}
   ],
   essai: [
     // Paris Jeudi 9 Avril — Débutant
@@ -425,7 +430,12 @@ var DEMO_DATA = {
     {id:'CT026',prenom:'Kevin',  nom:'Dupré',    email:'kevin@ex.com',   tel:'06 22 33 44 55',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'demande',           partenaire:'Manon Dupré',    emailPartenaire:'manon@ex.com', type:'',       paiement:'',      montant:0,  dateInscription:'2026-05-02',saison:'2026-2027'},
     {id:'CT027',prenom:'Sofia',  nom:'Rizzi',    email:'sofia@ex.com',   tel:'06 33 44 55 66',role:'guidee', niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'valide',            partenaire:'',               emailPartenaire:'',              type:'',       paiement:'',      montant:0,  dateInscription:'2026-05-10',saison:'2026-2027'},
     {id:'CT028',prenom:'Omar',   nom:'Benali',   email:'omar@ex.com',    tel:'06 44 55 66 77',role:'guideur',niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'demande',           partenaire:'',               emailPartenaire:'',              type:'',       paiement:'',      montant:0,  dateInscription:'2026-05-15',saison:'2026-2027'},
-    {id:'CT029',prenom:'Léa',    nom:'Fontaine', email:'leaf@ex.com',    tel:'06 55 66 77 88',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement',  partenaire:'',               emailPartenaire:'',              type:'carte10',paiement:'',      montant:150,dateInscription:'2026-05-20',saison:'2026-2027'}
+    {id:'CT029',prenom:'Léa',    nom:'Fontaine', email:'leaf@ex.com',    tel:'06 55 66 77 88',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'attente_paiement',  partenaire:'',               emailPartenaire:'',              type:'carte10',paiement:'',      montant:150,dateInscription:'2026-05-20',saison:'2026-2027'},
+    // ── INSCRITS saison 2026-2027 (traités en août-septembre) ──
+    {id:'CT030',prenom:'Nadia',  nom:'Cheikh',   email:'nadia@ex.com',   tel:'06 60 70 80 90',role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'inscrit',           partenaire:'Julien Cheikh',  emailPartenaire:'julien@ex.com', type:'carte10',paiement:'cb1x',   montant:170,dateInscription:'2026-08-28',saison:'2026-2027'},
+    {id:'CT031',prenom:'Julien', nom:'Cheikh',   email:'julien@ex.com',  tel:'06 61 71 81 91',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'inscrit',           partenaire:'Nadia Cheikh',   emailPartenaire:'nadia@ex.com',  type:'carte10',paiement:'cb1x',   montant:170,dateInscription:'2026-08-28',saison:'2026-2027'},
+    {id:'CT032',prenom:'Yasmine',nom:'Amara',    email:'yasmine@ex.com', tel:'06 62 72 82 92',role:'guidee', niveau:'intermediaire', cours:'Vincennes — Lundi — Intermédiaire', ville:'vincennes',statut:'inscrit',           partenaire:'',               emailPartenaire:'',              type:'forfait',paiement:'cb3x',   montant:455,dateInscription:'2026-09-01',saison:'2026-2027'},
+    {id:'CT033',prenom:'Alexis', nom:'Moreau',   email:'alexis@ex.com',  tel:'06 63 73 83 93',role:'guideur',niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          ville:'paris',    statut:'inscrit',           partenaire:'',               emailPartenaire:'',              type:'carte10',paiement:'especes',montant:170,dateInscription:'2026-09-01',saison:'2026-2027'}
   ],
   demandesInscription: [
     {id:'DI001',date:'2026-03-29',prenom:'Lucie',    nom:'Fabre',      email:'lucie@ex.com',    role:'guidee', niveau:'debutant',     cours:'Paris — Jeudi — Débutant',          statut:'en_attente',ville:'paris',    partenaire:'Maxime Fabre',   emailPartenaire:'maxime@ex.com',saison:'2025-2026'},
@@ -524,7 +534,7 @@ var saisonVue       = null; // null = saison courante (auto)
 // GESTION DES SAISONS
 // ================================================================
 function saisonCourante() {
-  var d=new Date(),m=d.getMonth()+1,y=d.getFullYear();
+  var d=IS_DEMO?DEMO_DATE:new Date(), m=d.getMonth()+1, y=d.getFullYear();
   return (m>=9?y:y-1)+'-'+(m>=9?y+1:y);
 }
 function saisonSuivante() {
@@ -538,9 +548,8 @@ function dateAppartientSaison(dateStr, saison) {
   return dateStr>=(y1+'-09-01') && dateStr<=((y1+1)+'-08-31');
 }
 function isPreinscriptionPeriod() {
-  if (IS_DEMO) return true; // Démo : simule le 1er mai
   try { var c=JSON.parse(localStorage.getItem('tev_config_saison')||'{}'); if(c.preInscriptionOuverte) return true; } catch(ex){}
-  var m=new Date().getMonth()+1; return m>=5&&m<=8;
+  var d=IS_DEMO?DEMO_DATE:new Date(), m=d.getMonth()+1; return m>=5&&m<=8;
 }
 function saisonPourNouvelleEntree() {
   // Pendant la période de pré-inscription, les nouvelles demandes sont pour la saison prochaine
@@ -791,7 +800,7 @@ var TARIFS_DEFAUT = {carte10:170,carte10_reduit:150,unitaire_paris:20,unitaire_p
 var TARIFS = Object.assign({}, TARIFS_DEFAUT);
 
 function gel(id) { return document.getElementById(id); }
-function today()  { return new Date().toISOString().slice(0,10); }
+function today()  { return (IS_DEMO?DEMO_DATE:new Date()).toISOString().slice(0,10); }
 function fmtDate(str) {
   if (!str) return '—';
   var d = new Date(str + 'T00:00:00');
