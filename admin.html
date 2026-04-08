@@ -270,8 +270,8 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     </div>
   </div>
   <div class="main-tabs" id="main-tabs">
-    <button class="tab-btn active" data-tab="cours-tango">🎓 Inscr Tango</button>
     <button class="tab-btn" data-tab="eleves-tango">👥 Élèves</button>
+    <button class="tab-btn active" data-tab="cours-tango">🎓 Inscr Tango</button>
     <button class="tab-btn" data-tab="essai">🎯 Essai Tango</button>
     <button class="tab-btn" data-tab="cartes">🎴 Cartes 10</button>
     <button class="tab-btn" data-tab="stages">💃 Stages</button>
@@ -1844,11 +1844,18 @@ function renderEssai() {
       h += '<div class="section-hdr">'+fmtDate(grp.date)+' — '+nivLbl+' — ✓'+presCount+' ✗'+absCount+' ?'+rest+'</div>';
       pAlt.forEach(function(e) {
         var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
+        var ctEntry = (adminData.coursTango||[]).find(function(c){return c.email===e.email;});
+        var ctStatut = ctEntry ? ctEntry.statut : null;
+        var pastille = '';
+        if (ctStatut==='inscrit') pastille='<span class="pill pill-ok" style="font-size:8px;padding:1px 5px;">Inscrit</span>';
+        else if (ctStatut==='valide'||ctStatut==='attente_paiement') pastille='<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">att. paiem.</span>';
+        else if (ctStatut==='demande') pastille='<span class="pill" style="font-size:8px;padding:1px 5px;background:var(--s2);color:var(--text);">dem</span>';
         h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · avec '+e.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:5px;align-items:center;">'
           +(e.email1Ok===true?'<span class="pill pill-ok" style="font-size:8px;">✉️</span>':'')
           +(e.presenceConfirmee===true?'<span class="pill pill-ok" style="font-size:8px;">✓Conf.</span>':'')
+          +pastille
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
           +'<button class="btn-heart'+(e.interesse?' on':'')+'" data-action="toggle-interet" data-date="'+grp.date+'" data-email="'+e.email+'" title="Intérêt">'+(e.interesse?'❤️':'🤍')+'</button>'
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'">✓</button>'
