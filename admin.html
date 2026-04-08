@@ -2850,17 +2850,15 @@ var STATUT_LBL = {
 function renderCoursTango() {
   var tous = (adminData.coursTango||[]).filter(function(e){return e.statut!=='inscrit';});
   var nbAV  = tous.filter(function(e){return e.statut==='demande';}).length;
-  var nbVal = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';}).length;
   var nbAP  = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';}).length;
-  // Si un état 'inscrit' était mémorisé, revenir à 'tous'
-  if (sousOngletCoursTango==='inscrit') sousOngletCoursTango='tous';
+  // Si un état 'inscrit' ou 'valide' était mémorisé, revenir à 'tous'
+  if (sousOngletCoursTango==='inscrit'||sousOngletCoursTango==='valide') sousOngletCoursTango='tous';
 
   var filtre = (sousOngletCoursTango==='inscrire'||sousOngletCoursTango==='valider_paiement') ? 'tous' : sousOngletCoursTango;
 
-  var h = '<div class="stats-row stats-4">'
+  var h = '<div class="stats-row stats-3">'
     +'<div class="stat'+(filtre==='tous'?' stat-active':'')+'" data-sous-ct="tous"><div class="stat-n">'+tous.length+'</div><div class="stat-l">Total</div></div>'
     +'<div class="stat'+(filtre==='attente_validation'?' stat-active':'')+'" data-sous-ct="attente_validation"><div class="stat-n n-warn">'+nbAV+'</div><div class="stat-l">Att. valid.</div></div>'
-    +'<div class="stat'+(filtre==='valide'?' stat-active':'')+'" data-sous-ct="valide"><div class="stat-n n-gold">'+nbVal+'</div><div class="stat-l">Validé.e.s</div></div>'
     +'<div class="stat'+(filtre==='attente_paiement'?' stat-active':'')+'" data-sous-ct="attente_paiement"><div class="stat-n" style="color:var(--gold)">'+nbAP+'</div><div class="stat-l">Att. paiement</div></div>'
     +'</div>'
     +'<div class="sub-tabs" style="flex-wrap:wrap;">'
@@ -2880,8 +2878,6 @@ function renderCoursTango() {
     liste = tous.slice();
   } else if(sousOngletCoursTango==='attente_validation') {
     liste = tous.filter(function(e){return e.statut==='demande';});
-  } else if(sousOngletCoursTango==='valide') {
-    liste = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';});
   } else if(sousOngletCoursTango==='attente_paiement') {
     liste = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';});
   } else {
