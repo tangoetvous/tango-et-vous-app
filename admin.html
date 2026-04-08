@@ -1871,7 +1871,7 @@ function desactiverEleve(id, email, btn) {
 // ================================================================
 function renderEssai() {
   var sai = saisonActive();
-  var liste = (adminData.essai||[]).filter(function(e){return (e.saison||saisonCourante())===sai;});
+  var liste = (adminData.essai||[]).filter(function(e){return dateAppartientSaison(e.date,sai);});
   var h = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px;">'
     +'<div class="sub-tabs" style="margin-bottom:0;">'
     +'<button class="sub-tab'+(filtreEssai==='dates'?' active':'')+'" data-filt-essai="dates">Par date</button>'
@@ -1948,7 +1948,7 @@ function renderEssai() {
       var grp=grpPt[key];
       // Seulement les personnes confirmées (non en attente réelle)
       var conf=grp.ins.filter(function(e){return !estVraimentAttente(e,grp.ins);});
-      var coursTangoDate=(adminData.coursTango||[]).filter(function(c){return c.statut==='inscrit'&&c.date===grp.date&&(c.saison||saisonCourante())===sai;});
+      var coursTangoDate=(adminData.coursTango||[]).filter(function(c){return c.statut==='inscrit'&&c.date===grp.date&&dateAppartientSaison(c.date,sai);});
       if(!conf.length&&!coursTangoDate.length) return;
       hasEvt=true;
       // Interleave guideurs/guidées
