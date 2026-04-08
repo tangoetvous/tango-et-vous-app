@@ -68,6 +68,12 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .stat[data-sous-ct]{cursor:pointer;transition:border-color .15s,background .15s;}
 .stat[data-sous-ct]:hover{background:var(--s3);border-color:var(--gold);}
 .stat.stat-active{border-color:var(--gold);background:var(--s3);}
+.nom-clickable{cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:var(--gold);transition:color .15s;}
+.nom-clickable:hover{color:var(--gold);}
+.btn-heart{background:none;border:1px solid var(--border);border-radius:5px;padding:2px 6px;font-size:14px;line-height:1;transition:border-color .15s;}
+.btn-heart.on{border-color:#e53935;}
+.mc-tel{font-size:17px;font-weight:600;color:var(--text);margin:4px 0 10px;}
+.mc-email{font-size:12px;color:var(--dim);margin-bottom:2px;}
 .stat-n{font-size:20px;font-weight:700;color:var(--text);line-height:1.1;}
 .stat-l{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-top:3px;}
 .n-gold{color:var(--gold);}
@@ -221,6 +227,12 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     </div>
     <div id="pv-img"></div>
     <div id="pv-body" style="padding:0 18px 18px;font-size:14px;color:var(--text);line-height:1.7;white-space:pre-wrap;"></div>
+  </div>
+</div>
+
+<!-- Modal fiche contact élève -->
+<div class="modal-overlay" id="modal-contact">
+  <div class="modal-box" id="modal-contact-box">
   </div>
 </div>
 
@@ -497,6 +509,80 @@ var _confirmModalCb = null;
 var MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 var DOW_LONG = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 var PAI_LBL  = {cb1x:'CB 1×',cb3x:'CB 3×',especes:'Espèces',cheque:'Chèque',virement1x:'Virement 1×',virement3x:'Virement 3×'};
+// ================================================================
+// MODAL CONTACT ÉLÈVE
+// ================================================================
+var _contactCtx = null;
+function nomCliquable(nom, email, tel, ctx) {
+  var sn=(nom||'').replace(/"/g,'&quot;'), se=(email||'').replace(/"/g,'&quot;'), st=(tel||'').replace(/"/g,'&quot;');
+  return '<span class="nom-clickable" data-action="open-contact" data-nom="'+sn+'" data-email="'+se+'" data-tel="'+st+'" data-ctx="'+(ctx||'')+'">'+nom+'</span>';
+}
+function ouvrirContact(nom, tel, email, ctx) {
+  _contactCtx={nom:nom,tel:tel,email:email,ctx:ctx};
+  var box=gel('modal-contact-box');
+  if(!box)return;
+  var telRaw=(tel||'').replace(/\s/g,'');
+  var telHtml=tel
+    ?'<div class="mc-tel">'+tel+'</div>'
+    :'<div class="mc-tel" style="color:var(--dim);font-style:italic;font-size:13px;">Pas de téléphone</div>';
+  var actHtml='<div class="btn-row" style="flex-wrap:wrap;gap:6px;margin-top:4px;">';
+  if(email) actHtml+='<a href="'+mailtoGmail(email,'Tango &amp; Vous')+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">✉️ Email</a>';
+  if(telRaw){
+    actHtml+='<a href="tel:'+telRaw+'" class="btn btn-ghost" style="font-size:12px;">📞 Appeler</a>';
+    actHtml+='<a href="sms:'+telRaw+'" class="btn btn-ghost" style="font-size:12px;">💬 SMS</a>';
+  }
+  actHtml+='</div>';
+  var essaiHtml='';
+  if(ctx==='essai'){
+    essaiHtml='<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:14px;">'
+      +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px;">→ Transférer vers Cours Tango</div>'
+      +'<div class="btn-row" style="flex-wrap:wrap;gap:6px;">'
+      +'<button class="btn btn-warn" style="font-size:12px;" data-action="essai-vers-cours" data-email="'+(email||'')+'" data-statut="demande">Demande en att.</button>'
+      +'<button class="btn btn-gold" style="font-size:12px;" data-action="essai-vers-cours" data-email="'+(email||'')+'" data-statut="attente_paiement">✓ Validé·e</button>'
+      +'<button class="btn btn-ok" style="font-size:12px;" data-action="essai-vers-cours" data-email="'+(email||'')+'" data-statut="inscrit">⭐ Inscrit·e</button>'
+      +'</div></div>';
+  }
+  box.innerHTML='<div class="modal-titre">'+nom+'</div>'
+    +'<div class="mc-email">'+(email||'—')+'</div>'
+    +telHtml+actHtml+essaiHtml
+    +'<div class="modal-btns" style="margin-top:16px;">'
+    +'<button class="modal-cancel" id="mc-close">Fermer</button>'
+    +'</div>';
+  gel('mc-close').addEventListener('click',fermerContact);
+  gel('modal-contact').classList.add('vis');
+}
+function fermerContact() {
+  gel('modal-contact').classList.remove('vis');
+  _contactCtx=null;
+}
+function essaiVersCoursTango(email, statut, btn) {
+  var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
+  if(!ess){fermerContact();return;}
+  var ct=adminData.coursTango||[];
+  var existing=ct.find(function(e){return e.email===email;});
+  var villeLabel=ess.ville==='vincennes'?'Vincennes':'Paris';
+  var jourlbl=ess.ville==='vincennes'?'Lundi':'Jeudi';
+  var nivlbl=ess.niveau==='intermediaire'?'Intermédiaire':'Débutant';
+  var cours=villeLabel+' — '+jourlbl+' — '+nivlbl;
+  if(existing){
+    existing.statut=statut;
+  } else {
+    ct.push({id:'CT'+Date.now(),prenom:ess.prenom||'',nom:ess.nom||'',email:email,tel:'',role:ess.role||'guidee',niveau:ess.niveau||'',cours:cours,ville:ess.ville||'paris',statut:statut,partenaire:ess.partenaire||'',emailPartenaire:ess.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today()});
+  }
+  adminData.coursTango=ct;
+  if(!IS_DEMO){postAS({action:'essaiVersCoursTango',email:email,statut:statut,cours:cours}).catch(function(){});}
+  fermerContact();
+  var lbls={demande:'Demande en attente',attente_paiement:'Validé·e',inscrit:'Inscrit·e'};
+  afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' dans Cours Tango');
+}
+function toggleInteret(date, email, btn) {
+  var e=(adminData.essai||[]).find(function(x){return x.date===date&&x.email===email;});
+  if(!e)return;
+  e.interesse=!e.interesse;
+  btn.textContent=e.interesse?'❤️':'🤍';
+  btn.classList.toggle('on',e.interesse);
+}
+
 var TARIFS_DEFAUT = {carte10:170,carte10_reduit:150,unitaire_paris:20,unitaire_paris_reduit:17,forfait_paris:495,forfait_paris_reduit:425,forfait_vincennes:435,forfait_vincennes_reduit:340,forfait_2cours:790,forfait_2cours_reduit:640,forfait_pv_di:740,forfait_pv_id:740,adhesion_lrp:10,sorano_vinc:36,sorano_vinc_m16:26,sorano_ext:45,sorano_ext_m16:35};
 var TARIFS = Object.assign({}, TARIFS_DEFAUT);
 
@@ -659,6 +745,11 @@ gel('pub-view-modal').addEventListener('click', function(e){ if(e.target===this)
 gel('modal-qr-close').addEventListener('click', fermerModalQR);
 gel('modal-qr-pointer').addEventListener('click', confirmerModalQRPointer);
 gel('modal-qr').addEventListener('click', function(e){if(e.target===this)fermerModalQR();});
+gel('modal-contact').addEventListener('click', function(e){
+  if(e.target===this){fermerContact();return;}
+  var btn=e.target.closest('[data-action]');
+  if(btn)handleAction(btn.dataset.action,btn);
+});
 
 // ================================================================
 // RÉCEPTION DES INSCRIPTIONS (iframe postMessage + cross-tab localStorage)
@@ -1345,6 +1436,15 @@ function handleAction(action, btn) {
     case 'reset-tarifs':
       ouvrirModalConfirm('Réinitialiser avec les tarifs par défaut ?', function(){ resetTarifs(); });
       break;
+    case 'open-contact':
+      ouvrirContact(btn.dataset.nom||'', btn.dataset.tel||'', btn.dataset.email||'', btn.dataset.ctx||'');
+      break;
+    case 'essai-vers-cours':
+      essaiVersCoursTango(btn.dataset.email||'', btn.dataset.statut||'demande', btn);
+      break;
+    case 'toggle-interet':
+      toggleInteret(btn.dataset.date||'', btn.dataset.email||'', btn);
+      break;
   }
 }
 
@@ -1372,7 +1472,7 @@ function renderEleves() {
     var st = c.statutEleve||'En attente';
     var pc = st==='Actif'?'pill-ok':st==='En attente'?'pill-warn':'';
     h += '<div class="card'+(st==='En attente'?' hl-warn':'')+'"><div class="card-top"><div>'
-      +'<div class="card-nom">'+c.nom+'</div>'
+      +'<div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+c.nom.replace(/"/g,'&quot;')+'" data-email="'+(c.email||'')+'" data-tel="" data-ctx="eleve">'+c.nom+'</div>'
       +'<div class="card-sub">'+(c.id)+' · '+(c.niveau||'—')+' · '+(c.ville||'—')+'</div>'
       +(c.email?'<div class="card-sub">'+c.email+'</div>':'')
       +partenaireTag(c.partenaire, c.role||'guidee')
@@ -1483,7 +1583,7 @@ function renderEssai() {
         h += '<div class="point-row">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
-          +e.prenom+' '+e.nom
+          +nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')
           +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
           +'</div>'
           +'<div class="point-sub">'+e.email+(e.partenaire?' · avec '+e.partenaire:'')+'</div>'
@@ -1523,18 +1623,19 @@ function renderEssai() {
       h += '<div class="section-hdr">'+fmtDate(grp.date)+' — '+nivLbl+' — ✓'+presCount+' ✗'+absCount+' ?'+rest+'</div>';
       pAlt.forEach(function(e) {
         var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
-        h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+e.prenom+' '+e.nom+'</div>'
+        h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · avec '+e.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:5px;align-items:center;">'
           +(e.email1Ok===true?'<span class="pill pill-ok" style="font-size:8px;">✉️</span>':'')
           +(e.presenceConfirmee===true?'<span class="pill pill-ok" style="font-size:8px;">✓Conf.</span>':'')
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
+          +'<button class="btn-heart'+(e.interesse?' on':'')+'" data-action="toggle-interet" data-date="'+grp.date+'" data-email="'+e.email+'" title="Intérêt">'+(e.interesse?'❤️':'🤍')+'</button>'
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'">✗</button>'
           +'</div></div>';
       });
       coursTangoDate.forEach(function(c) {
-        h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+c.prenom+' '+c.nom+'</div>'
+        h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(c.prenom+' '+c.nom,c.email||'',c.tel||'','ct')+'</div>'
           +'<div class="point-sub">'+(c.ville||'')+'</div></div>'
           +'<div style="display:flex;gap:5px;align-items:center;">'
           +'<span class="pill pill-ok" style="font-size:8px;">Inscrit cours</span>'
@@ -1606,7 +1707,7 @@ function renderEssai() {
         h += '<div class="point-row">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
-          +e.prenom+' '+e.nom
+          +nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')
           +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
           +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
           +'</div>'
@@ -1820,7 +1921,7 @@ function renderCartes() {
     h+='<div class="point-row" style="align-items:flex-start;padding:10px 12px;'+(fini||bient?'border-left:3px solid var(--warn-text);':'border-left:3px solid var(--border);')+'">'
       +'<div style="flex:1;min-width:0;">'
       +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">'
-      +'<span class="point-nom" style="font-size:13px;">'+c.nom+'</span>'
+      +'<span class="point-nom nom-clickable" style="font-size:13px;" data-action="open-contact" data-nom="'+c.nom.replace(/"/g,'&quot;')+'" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-tel="" data-ctx="carte">'+c.nom+'</span>'
       +'<span class="pill '+sCls+'" style="font-size:8px;">'+sLbl+'</span>'
       +payePill
       +'</div>'
@@ -1922,7 +2023,7 @@ function renderStages() {
     if(att.filter(function(i){return i.role==='guidee';}).length){
       h+='<div class="section-hdr">Guidées en attente</div>';
       att.filter(function(i){return i.role==='guidee';}).forEach(function(i){
-        h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+i.prenom+' '+i.nom+'</div>'
+        h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+(i.prenom+' '+i.nom).replace(/"/g,'&quot;')+'" data-email="'+(i.email||'')+'" data-tel="'+(i.tel||'')+'" data-ctx="stage">'+i.prenom+' '+i.nom+'</div>'
           +'<div class="card-sub">'+(i.slots||[]).join(', ')+'</div>'+partenaireTag(i.partenaire,'guidee')+'</div>'
           +'<span class="pill pill-warn">Attente</span></div>'
           +'<div class="btn-row"><button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Confirmer</button></div></div>';
@@ -2057,7 +2158,7 @@ function renderStages() {
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
       h+='<div class="point-row">'
         +'<div style="flex:1;min-width:0;">'
-        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+i.prenom+' '+i.nom
+        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
         +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
         +'<div class="point-sub">'+(i.slots||[]).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
         +'</div>'
@@ -2074,7 +2175,7 @@ function renderStages() {
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
       h+='<div class="point-row">'
         +'<div style="flex:1;min-width:0;">'
-        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+i.prenom+' '+i.nom
+        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
         +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
         +'<div class="point-sub">'+(i.slots||[]).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
         +'</div>'
@@ -2198,8 +2299,8 @@ function renderSorano() {
   var payes=liste.filter(function(s){return s.paiementSorano;}), nonPayes=liste.filter(function(s){return !s.paiementSorano;});
   var h='<div class="stats-row stats-3"><div class="stat"><div class="stat-n n-gold">'+liste.length+'</div><div class="stat-l">Total</div></div><div class="stat"><div class="stat-n n-ok">'+payes.length+'</div><div class="stat-l">Réglé</div></div><div class="stat"><div class="stat-n n-warn">'+nonPayes.length+'</div><div class="stat-l">En attente</div></div></div>';
   if(!liste.length)return h+'<div class="empty-state">Aucun élève Vincennes.</div>';
-  if(nonPayes.length){h+='<div class="section-hdr">Non réglé ('+nonPayes.length+')</div>';nonPayes.forEach(function(s){h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+s.nom+'" data-id="'+s.id+'">✉️ Relance</button></div></div>';});}
-  if(payes.length){h+='<div class="section-hdr">Réglé ('+payes.length+')</div>';payes.forEach(function(s){h+='<div class="card hl-ok"><div class="card-top"><div><div class="card-nom">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button></div></div>';});}
+  if(nonPayes.length){h+='<div class="section-hdr">Non réglé ('+nonPayes.length+')</div>';nonPayes.forEach(function(s){h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+s.nom.replace(/"/g,'&quot;')+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+s.nom+'" data-id="'+s.id+'">✉️ Relance</button></div></div>';});}
+  if(payes.length){h+='<div class="section-hdr">Réglé ('+payes.length+')</div>';payes.forEach(function(s){h+='<div class="card hl-ok"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+s.nom.replace(/"/g,'&quot;')+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button></div></div>';});}
   return h;
 }
 function soranoAction(id, paye, btn) {
@@ -2732,7 +2833,7 @@ function ficheEleve(e) {
 
   var h = '<div class="point-row" style="flex-wrap:wrap;align-items:flex-start;gap:6px;padding:9px 0;">'
     +'<div style="flex:1;min-width:160px;">'
-    +'<div class="point-nom">'+e.prenom+' '+e.nom+'</div>'
+    +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+'</div>'
     +'<div class="point-sub">'+(e.email||'')+(e.partenaire?' · ♥ '+e.partenaire:'')+'</div>'
     +'</div>'
     +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
