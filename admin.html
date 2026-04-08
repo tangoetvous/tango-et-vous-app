@@ -656,6 +656,54 @@ function soumettreInscriptionEssai(email) {
   if(ok)ok.style.display='block';
   setTimeout(function(){fermerContact();switchTab('eleves-tango');},1500);
 }
+function ouvrirFormulaireEssaiStatut(email, statut) {
+  var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
+  if(!ess) return;
+  var villeLabel=ess.ville==='vincennes'?'Vincennes':'Paris';
+  var jourlbl=ess.ville==='vincennes'?'Lundi':'Jeudi';
+  var nivlbl=ess.niveau==='intermediaire'?'Intermédiaire':'Débutant';
+  var coursDefaut=villeLabel+' — '+jourlbl+' — '+nivlbl;
+  var COURS=['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
+  var lblStatut=statut==='demande'?'Demande en attente':'Validé·e';
+  var box=gel('modal-contact-box');
+  if(!box) return;
+  var h='<div class="modal-titre">'+(statut==='demande'?'📋':'✓')+' '+lblStatut+' — '+(ess.prenom||'')+'</div>'
+    +'<div style="font-size:12px;color:var(--dim);margin-bottom:14px;">Sélectionnez le cours souhaité :</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">';
+  COURS.forEach(function(c){
+    var sel=(c===coursDefaut);
+    h+='<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s3);border:1px solid '+(sel?'var(--gold)':'var(--border)')+';border-radius:8px;cursor:pointer;font-size:13px;">'
+      +'<input type="radio" name="es-cours" value="'+c+'" '+(sel?'checked':'')+' style="width:auto;padding:0;flex-shrink:0;">'
+      +c+'</label>';
+  });
+  h+='</div>'
+    +'<div class="btn-row">'
+    +'<button class="btn btn-gold" style="flex:2;" data-action="soumettre-essai-statut" data-email="'+(email||'')+'" data-statut="'+statut+'">'+(statut==='demande'?'📋 Enregistrer la demande':'✓ Valider')+'</button>'
+    +'<button class="btn btn-ghost" data-action="fermer-contact">Annuler</button>'
+    +'</div>';
+  box.innerHTML=h;
+  gel('modal-contact').classList.add('vis');
+}
+function soumettreEssaiStatut(email, statut) {
+  var coursEl=document.querySelector('input[name="es-cours"]:checked');
+  var cours=coursEl?coursEl.value:'Paris — Jeudi — Débutant';
+  var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
+  if(!ess){fermerContact();return;}
+  var ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
+  var niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
+  var ct=adminData.coursTango||[];
+  var existing=ct.find(function(e){return e.email===email;});
+  if(existing){
+    existing.statut=statut; existing.cours=cours; existing.ville=ville; existing.niveau=niveau;
+  } else {
+    ct.push({id:'CT'+Date.now(),prenom:ess.prenom||'',nom:ess.nom||'',email:email,tel:'',role:ess.role||'guidee',niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:ess.partenaire||'',emailPartenaire:ess.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today()});
+  }
+  adminData.coursTango=ct;
+  if(!IS_DEMO){postAS({action:'essaiVersCoursTango',email:email,statut:statut,cours:cours}).catch(function(){});}
+  fermerContact();
+  var lbls={demande:'Demande en attente',attente_paiement:'Validé·e'};
+  afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' · '+cours);
+}
 function toggleInteret(date, email, btn) {
   var e=(adminData.essai||[]).find(function(x){return x.date===date&&x.email===email;});
   if(!e)return;
@@ -1526,7 +1574,10 @@ function handleAction(action, btn) {
       ouvrirContact(btn.dataset.nom||'', btn.dataset.tel||'', btn.dataset.email||'', btn.dataset.ctx||'');
       break;
     case 'essai-vers-cours':
-      essaiVersCoursTango(btn.dataset.email||'', btn.dataset.statut||'demande', btn);
+      ouvrirFormulaireEssaiStatut(btn.dataset.email||'', btn.dataset.statut||'demande');
+      break;
+    case 'soumettre-essai-statut':
+      soumettreEssaiStatut(btn.dataset.email||'', btn.dataset.statut||'demande');
       break;
     case 'open-insc-essai':
       ouvrirFormulaireInscriptionEssai(btn.dataset.email||'');
