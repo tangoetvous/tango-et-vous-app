@@ -495,12 +495,15 @@ var DEMO_DATA = {
     '2027-06-19': {label:'Sam. 19 Juin 2027',    inscrits:[]}
   },
   sorano: [
-    {id:'E003',nom:'Ana García',      email:'ana@ex.com',     statutEleve:'Actif',paiementSorano:true},
-    {id:'E004',nom:'Carlos García',   email:'carlos@ex.com',  statutEleve:'Actif',paiementSorano:true},
-    {id:'E007',nom:'Laure Simon',     email:'laure@ex.com',   statutEleve:'Actif',paiementSorano:false},
-    {id:'E008',nom:'Paul Renard',     email:'paul@ex.com',    statutEleve:'Actif',paiementSorano:false},
-    {id:'E011',nom:'Thomas Bernard',  email:'thomas@ex.com',  statutEleve:'Actif',paiementSorano:true},
-    {id:'E012',nom:'Luc Petit',       email:'luc@ex.com',     statutEleve:'Actif',paiementSorano:false}
+    {id:'E003',nom:'Ana García',      email:'ana@ex.com',     statutEleve:'Actif',paiementSorano:true, saison:'2025-2026'},
+    {id:'E004',nom:'Carlos García',   email:'carlos@ex.com',  statutEleve:'Actif',paiementSorano:true, saison:'2025-2026'},
+    {id:'E007',nom:'Laure Simon',     email:'laure@ex.com',   statutEleve:'Actif',paiementSorano:false,saison:'2025-2026'},
+    {id:'E008',nom:'Paul Renard',     email:'paul@ex.com',    statutEleve:'Actif',paiementSorano:false,saison:'2025-2026'},
+    {id:'E011',nom:'Thomas Bernard',  email:'thomas@ex.com',  statutEleve:'Actif',paiementSorano:true, saison:'2025-2026'},
+    {id:'E012',nom:'Luc Petit',       email:'luc@ex.com',     statutEleve:'Actif',paiementSorano:false,saison:'2025-2026'},
+    // ── Sorano saison 2026-2027 (re-inscrits Vincennes) ──
+    {id:'CT032',nom:'Yasmine Amara',  email:'yasmine@ex.com', statutEleve:'Actif',paiementSorano:false,saison:'2026-2027'},
+    {id:'CT027',nom:'Sofia Rizzi',    email:'sofia@ex.com',   statutEleve:'Actif',paiementSorano:true, saison:'2026-2027'}
   ],
   publications: []
 };
@@ -2651,7 +2654,8 @@ function pointerStage(date, idx, present) {
 // TAB SORANO
 // ================================================================
 function renderSorano() {
-  var liste=(adminData.sorano||[]).slice().sort(function(a,b){
+  var sai=saisonActive();
+  var liste=(adminData.sorano||[]).filter(function(s){return (s.saison||saisonCourante())===sai;}).slice().sort(function(a,b){
     var na=a.niveau||'', nb=b.niveau||'';
     if(na!==nb)return na.localeCompare(nb);
     return (a.nom||'').localeCompare(b.nom||'');
