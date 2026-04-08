@@ -686,9 +686,11 @@ function ouvrirFormulaireEssaiStatut(email, statut) {
   gel('modal-contact').classList.add('vis');
 }
 function soumettreEssaiStatut(email, statut) {
+  console.log('[TEV] soumettreEssaiStatut', email, statut);
   var coursEl=document.querySelector('input[name="es-cours"]:checked');
   var cours=coursEl?coursEl.value:'Paris — Jeudi — Débutant';
   var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
+  console.log('[TEV] ess trouvé:', !!ess, '| email cherché:', email);
   if(!ess){fermerContact();return;}
   var ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   var niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
@@ -700,10 +702,17 @@ function soumettreEssaiStatut(email, statut) {
     ct.push({id:'CT'+Date.now(),prenom:ess.prenom||'',nom:ess.nom||'',email:email,tel:'',role:ess.role||'guidee',niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:ess.partenaire||'',emailPartenaire:ess.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today()});
   }
   adminData.coursTango=ct;
+  console.log('[TEV] coursTango mis à jour, entrée:', ct.find(function(c){return c.email===email;}));
   if(!IS_DEMO){postAS({action:'essaiVersCoursTango',email:email,statut:statut,cours:cours}).catch(function(){});}
   fermerContact();
   var elTc=gel('tab-content');
-  if(elTc){elTc.innerHTML=renderEssai();bindTabEvents(elTc);}
+  console.log('[TEV] tab-content trouvé:', !!elTc);
+  if(elTc){
+    var html=renderEssai();
+    console.log('[TEV] HTML contient DEM:', html.indexOf('DEM')>=0, '| longueur:', html.length);
+    elTc.innerHTML=html;
+    bindTabEvents(elTc);
+  }
   var lbls={demande:'Demande en attente',attente_paiement:'Validé·e'};
   afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' · '+cours);
 }
