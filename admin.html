@@ -383,7 +383,13 @@ var DEMO_DATA = {
     // Vincennes Lundi 13 Avril — Débutant
     {date:'2026-04-13',ville:'vincennes',niveau:'debutant',     prenom:'Jade',     nom:'Perret',     email:'jade@ex.com',     role:'guidee',  statut:'attente', present:null,partenaire:'',                emailPartenaire:'',saison:'2025-2026'},
     {date:'2026-04-13',ville:'vincennes',niveau:'debutant',     prenom:'Robin',    nom:'Mercier',    email:'robin@ex.com',    role:'guideur', statut:'confirme',present:null,partenaire:'',                emailPartenaire:'',saison:'2025-2026'},
-    {date:'2026-04-13',ville:'vincennes',niveau:'debutant',     prenom:'Chloé',    nom:'Vidal',      email:'chloe@ex.com',    role:'guidee',  statut:'confirme',present:null,partenaire:'',                emailPartenaire:'',saison:'2025-2026'}
+    {date:'2026-04-13',ville:'vincennes',niveau:'debutant',     prenom:'Chloé',    nom:'Vidal',      email:'chloe@ex.com',    role:'guidee',  statut:'confirme',present:null,partenaire:'',                emailPartenaire:'',saison:'2025-2026'},
+    // ── Essais saison 2026-2027 (septembre 2026) ──
+    {date:'2026-09-10',ville:'paris',    niveau:'debutant',     prenom:'Manon',    nom:'Dupré',      email:'manon@ex.com',    role:'guidee',  statut:'confirme',present:null,partenaire:'Kevin Dupré',    emailPartenaire:'kevin@ex.com',saison:'2026-2027'},
+    {date:'2026-09-10',ville:'paris',    niveau:'debutant',     prenom:'Kevin',    nom:'Dupré',      email:'kevin@ex.com',    role:'guideur', statut:'confirme',present:null,partenaire:'Manon Dupré',    emailPartenaire:'manon@ex.com',saison:'2026-2027'},
+    {date:'2026-09-10',ville:'paris',    niveau:'debutant',     prenom:'Léa',      nom:'Fontaine',   email:'leaf@ex.com',     role:'guidee',  statut:'confirme',present:null,partenaire:'',                emailPartenaire:'',saison:'2026-2027'},
+    {date:'2026-09-15',ville:'vincennes',niveau:'intermediaire',prenom:'Sofia',    nom:'Rizzi',      email:'sofia@ex.com',    role:'guidee',  statut:'confirme',present:null,partenaire:'',                emailPartenaire:'',saison:'2026-2027'},
+    {date:'2026-09-15',ville:'vincennes',niveau:'intermediaire',prenom:'Omar',     nom:'Benali',     email:'omar@ex.com',     role:'guideur', statut:'attente', present:null,partenaire:'',                emailPartenaire:'',saison:'2026-2027'}
   ],
   coursTango: [
     // ── DEMANDES (solos uniquement — couples = auto-validés) ──
@@ -526,6 +532,11 @@ function saisonSuivante() {
   return (n+1)+'-'+(n+2);
 }
 function saisonActive() { return saisonVue||saisonCourante(); }
+function dateAppartientSaison(dateStr, saison) {
+  // Saison "Y1-Y2" : du 01/09/Y1 au 31/08/Y2
+  var p=saison.split('-'), y1=parseInt(p[0]);
+  return dateStr>=(y1+'-09-01') && dateStr<=((y1+1)+'-08-31');
+}
 function isPreinscriptionPeriod() {
   if (IS_DEMO) return true; // Démo : simule le 1er mai
   try { var c=JSON.parse(localStorage.getItem('tev_config_saison')||'{}'); if(c.preInscriptionOuverte) return true; } catch(ex){}
@@ -2193,7 +2204,7 @@ function renderCartes() {
   var emailsCartes = {};
   cartesEleves.forEach(function(c){ emailsCartes[c.email]=true; });
   (adminData.coursTango||[]).filter(function(ct){
-    return ct.statut==='inscrit' && ct.type && ct.type.indexOf('carte')>=0 && !emailsCartes[ct.email];
+    return ct.statut==='inscrit' && ct.type && ct.type.indexOf('carte')>=0 && !emailsCartes[ct.email] && (ct.saison||saisonCourante())===sai;
   }).forEach(function(ct){
     var newCarte = {
       id: ct.id, nom: ct.prenom+' '+ct.nom, niveau: ct.niveau,
@@ -2311,10 +2322,11 @@ function toggleCartePaye(id) {
 // TAB STAGES
 // ================================================================
 function renderStages() {
+  var saiStage=saisonActive();
   var stages=adminData.stages||{};
-  var dates=Object.keys(stages).sort();
-  if(!dates.length)return'<div class="empty-state">Aucun stage.</div>';
-  if(!filtreStage||!stages[filtreStage])filtreStage=dates[0];
+  var dates=Object.keys(stages).sort().filter(function(d){return dateAppartientSaison(d,saiStage);});
+  if(!dates.length)return'<div class="empty-state">Aucun stage pour la saison '+saiStage+'.<br><span style="font-size:11px;font-style:italic;">Les dates seront ajoutées dans l\'onglet Tarifs.</span></div>';
+  if(!filtreStage||dates.indexOf(filtreStage)<0)filtreStage=dates[0];
 
   // Onglets dates
   var h='<div class="sub-tabs" style="margin-bottom:8px;">';
