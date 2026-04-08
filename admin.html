@@ -271,6 +271,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   </div>
   <div class="main-tabs" id="main-tabs">
     <button class="tab-btn active" data-tab="cours-tango">🎓 Inscr Tango</button>
+    <button class="tab-btn" data-tab="eleves-tango">👥 Élèves</button>
     <button class="tab-btn" data-tab="essai">🎯 Essai Tango</button>
     <button class="tab-btn" data-tab="cartes">🎴 Cartes 10</button>
     <button class="tab-btn" data-tab="stages">💃 Stages</button>
@@ -490,7 +491,8 @@ var filtreEssai       = 'dates';
 var filtreStage       = '';
 var filtreStageSlot   = 'technique';  // sous-onglet stage : technique|stage1|stage2|pointage
 var sousOngletCours   = 'demandes';
-var sousOngletCoursTango = 'tous'; // tous|attente_validation|valide|attente_paiement|inscrit|inscrire|valider_paiement
+var sousOngletCoursTango = 'tous'; // tous|attente_validation|valide|attente_paiement|inscrire|valider_paiement
+var sousOngletEleves     = 'paris-deb'; // paris-deb|paris-int|vincennes-deb|vincennes-int
 var agendaMois      = new Date().getMonth();
 var agendaAnnee     = new Date().getFullYear();
 var agendaCats      = {paris:true, vincennes:true, stage:true, milonga:true};
@@ -1181,6 +1183,7 @@ function renderTab() {
   setTimeout(function() {
     var html = '';
     if      (currentTab==='cours-tango')  html=renderCoursTango();
+    else if (currentTab==='eleves-tango') html=renderElevesTango();
     else if (currentTab==='essai')        html=renderEssai();
     else if (currentTab==='cartes')       html=renderCartes();
     else if (currentTab==='stages')       html=renderStages();
@@ -1227,6 +1230,10 @@ function bindTabEvents(el) {
   el.addEventListener('click', function(e) {
     var b = e.target.closest('[data-sous-ct]');
     if (b) { sousOngletCoursTango=b.dataset.sousCt; renderTab(); }
+  });
+  el.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-sous-el]');
+    if (b) { sousOngletEleves=b.dataset.sousEl; renderTab(); }
   });
   el.addEventListener('click', function(e) {
     var b = e.target.closest('[data-cat-ag]');
@@ -1449,7 +1456,82 @@ function handleAction(action, btn) {
 }
 
 // ================================================================
-// TAB ÉLÈVES
+// TAB ÉLÈVES (inscrits aux cours, par groupe)
+// ================================================================
+function renderElevesTango() {
+  var inscrits = (adminData.coursTango||[]).filter(function(e){return e.statut==='inscrit';});
+  var ONGLETS = [
+    {id:'paris-deb',     lbl:'Paris Débutants',          ville:'paris',     niv:'debutant'},
+    {id:'paris-int',     lbl:'Paris Intermédiaires',      ville:'paris',     niv:'intermediaire'},
+    {id:'vincennes-deb', lbl:'Vincennes Débutants',       ville:'vincennes', niv:'debutant'},
+    {id:'vincennes-int', lbl:'Vincennes Intermédiaires',  ville:'vincennes', niv:'intermediaire'}
+  ];
+  var h = '<div class="sub-tabs" style="flex-wrap:wrap;">';
+  ONGLETS.forEach(function(o){
+    var n=inscrits.filter(function(e){return e.ville===o.ville&&e.niveau===o.niv;}).length;
+    h+='<button class="sub-tab'+(sousOngletEleves===o.id?' active':'')+'" data-sous-el="'+o.id+'">'+o.lbl+' ('+n+')</button>';
+  });
+  h+='</div>';
+  var ong=ONGLETS.find(function(o){return o.id===sousOngletEleves;});
+  if(!ong) return h;
+  var liste=inscrits.filter(function(e){return e.ville===ong.ville&&e.niveau===ong.niv;});
+  if(!liste.length) return h+'<div class="empty-state">Aucun élève inscrit dans ce cours.</div>';
+  // Construire couples (les deux membres du couple présents dans la liste)
+  var used={}, couples=[], soloGui=[], soloGde=[];
+  liste.forEach(function(e){
+    if(used[e.email]) return;
+    if(e.emailPartenaire){
+      var p=liste.find(function(x){return x.email===e.emailPartenaire;});
+      if(p&&!used[p.email]){
+        used[e.email]=true; used[p.email]=true;
+        var gui=e.role==='guideur'?e:p, gde=e.role==='guidee'?e:p;
+        couples.push([gui,gde]);
+        return;
+      }
+    }
+    used[e.email]=true;
+    if(e.role==='guideur') soloGui.push(e); else soloGde.push(e);
+  });
+  var nbTotal=liste.length, nbCouples=couples.length, nbSolos=soloGui.length+soloGde.length;
+  h+='<div style="font-size:11px;color:var(--dim);padding:5px 12px 8px;font-style:italic;">'+nbTotal+' élève'+(nbTotal>1?'s':'')+' — '+nbCouples+' couple'+(nbCouples>1?'s':'')+', '+nbSolos+' solo'+(nbSolos>1?'s':'')+'</div>';
+  if(couples.length){
+    h+='<div class="section-hdr">Couples ('+couples.length+')</div>';
+    couples.forEach(function(pair,idx){
+      var border=idx>0?'border-top:1px solid var(--border);':'';
+      h+=ficheEleveInscrit(pair[0], border);
+      h+=ficheEleveInscrit(pair[1], '');
+    });
+  }
+  if(soloGui.length||soloGde.length){
+    h+='<div class="section-hdr">Solos ('+(soloGui.length+soloGde.length)+')</div>';
+    var maxS=Math.max(soloGui.length,soloGde.length);
+    for(var si=0;si<maxS;si++){
+      if(si<soloGui.length) h+=ficheEleveInscrit(soloGui[si],'');
+      if(si<soloGde.length) h+=ficheEleveInscrit(soloGde[si],'');
+    }
+  }
+  return h;
+}
+function ficheEleveInscrit(e, borderStyle) {
+  var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
+  var roleLbl=e.role==='guideur'?'Guideur':'Guidée';
+  var typeLbl={forfait:'Forfait',carte10:'Carte 10',unitaire:'À l\'unité'}[e.type]||e.type||'';
+  var paiLbl=PAI_LBL[e.paiement]||e.paiement||'';
+  return '<div class="point-row" style="'+(borderStyle||'')+'flex-wrap:wrap;align-items:center;gap:5px;padding:8px 0;">'
+    +'<div style="flex:1;min-width:160px;">'
+    +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+'</div>'
+    +'<div class="point-sub">'+(e.email||'')+(e.partenaire?' · ♥ '+e.partenaire:'')+'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
+    +'<span class="pill '+rcls+'">'+roleLbl+'</span>'
+    +(typeLbl?'<span class="pill pill-ok" style="font-size:8px;">'+typeLbl+'</span>':'')
+    +(paiLbl?'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+'</span>':'')
+    +(e.email?'<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;font-size:11px;">✉️</a>':'')
+    +'</div></div>';
+}
+
+// ================================================================
+// TAB ÉLÈVES (cartes — section existante non utilisée dans le nav)
 // ================================================================
 function renderEleves() {
   var cartes = adminData.cartes||[];
@@ -2766,20 +2848,20 @@ var STATUT_LBL = {
 };
 
 function renderCoursTango() {
-  var tous = (adminData.coursTango||[]);
+  var tous = (adminData.coursTango||[]).filter(function(e){return e.statut!=='inscrit';});
   var nbAV  = tous.filter(function(e){return e.statut==='demande';}).length;
-  var nbVal = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement'||e.statut==='inscrit';}).length;
+  var nbVal = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';}).length;
   var nbAP  = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';}).length;
-  var nbIns = tous.filter(function(e){return e.statut==='inscrit';}).length;
+  // Si un état 'inscrit' était mémorisé, revenir à 'tous'
+  if (sousOngletCoursTango==='inscrit') sousOngletCoursTango='tous';
 
   var filtre = (sousOngletCoursTango==='inscrire'||sousOngletCoursTango==='valider_paiement') ? 'tous' : sousOngletCoursTango;
 
-  var h = '<div class="stats-row stats-5">'
+  var h = '<div class="stats-row stats-4">'
     +'<div class="stat'+(filtre==='tous'?' stat-active':'')+'" data-sous-ct="tous"><div class="stat-n">'+tous.length+'</div><div class="stat-l">Total</div></div>'
     +'<div class="stat'+(filtre==='attente_validation'?' stat-active':'')+'" data-sous-ct="attente_validation"><div class="stat-n n-warn">'+nbAV+'</div><div class="stat-l">Att. valid.</div></div>'
     +'<div class="stat'+(filtre==='valide'?' stat-active':'')+'" data-sous-ct="valide"><div class="stat-n n-gold">'+nbVal+'</div><div class="stat-l">Validé.e.s</div></div>'
     +'<div class="stat'+(filtre==='attente_paiement'?' stat-active':'')+'" data-sous-ct="attente_paiement"><div class="stat-n" style="color:var(--gold)">'+nbAP+'</div><div class="stat-l">Att. paiement</div></div>'
-    +'<div class="stat'+(filtre==='inscrit'?' stat-active':'')+'" data-sous-ct="inscrit"><div class="stat-n n-ok">'+nbIns+'</div><div class="stat-l">Inscrits</div></div>'
     +'</div>'
     +'<div class="sub-tabs" style="flex-wrap:wrap;">'
     +'<button class="sub-tab'+(sousOngletCoursTango==='inscrire'?' active':'')+'" data-sous-ct="inscrire">✏️ Nouvelle demande</button>'
@@ -2799,7 +2881,7 @@ function renderCoursTango() {
   } else if(sousOngletCoursTango==='attente_validation') {
     liste = tous.filter(function(e){return e.statut==='demande';});
   } else if(sousOngletCoursTango==='valide') {
-    liste = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement'||e.statut==='inscrit';});
+    liste = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';});
   } else if(sousOngletCoursTango==='attente_paiement') {
     liste = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';});
   } else {
@@ -2955,7 +3037,7 @@ function soumettreValiderPaiement() {
       }
     }
     if(ok)ok.style.display='block';
-    setTimeout(function(){sousOngletCoursTango='inscrit';renderTab();},1500);
+    setTimeout(function(){switchTab('eleves-tango');},1500);
     return;
   }
   postAS({action:'validerPaiementCoursTango',id:id,carte10:carte10,tel:tel,email:email}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
