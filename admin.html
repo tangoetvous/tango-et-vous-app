@@ -578,7 +578,7 @@ var DEMO_DATA = {
   essaiYoga: [
     {id:'EY001',prenom:'Claire',  nom:'Dupont',  email:'claire@ex.com',  tel:'06 11 22 33 44',cours:'forfait',date:'2026-04-14',statut:'confirme',present:null,gratuit:false,presenceConfirmee:true, saison:'2025-2026',dateInscription:'2026-04-07'},
     {id:'EY002',prenom:'Marc',    nom:'Lefort',  email:'marc@ex.com',    tel:'06 22 33 44 55',cours:'yin',    date:'2026-04-14',statut:'confirme',present:null,gratuit:false,presenceConfirmee:false,saison:'2025-2026',dateInscription:'2026-04-08'},
-    {id:'EY003',prenom:'Sophie',  nom:'Martin',  email:'sophie@ex.com',  tel:'06 33 44 55 66',cours:'hatha',  date:'2026-05-05',statut:'attente', present:null,gratuit:false,saison:'2025-2026',dateInscription:'2026-04-09'},
+    {id:'EY003',prenom:'Sophie',  nom:'Martin',  email:'sophie@ex.com',  tel:'06 33 44 55 66',cours:'hatha',  date:'2026-05-05',statut:'confirme',present:null,gratuit:false,saison:'2025-2026',dateInscription:'2026-04-09'},
     {id:'EY004',prenom:'Nadia',   nom:'Cheikh',  email:'nadia@ex.com',   tel:'06 60 70 80 90',cours:'forfait',date:'2026-09-08',statut:'confirme',present:null,gratuit:true, saison:'2026-2027',dateInscription:'2026-08-25'},
     {id:'EY005',prenom:'Yasmine', nom:'Amara',   email:'yasmine@ex.com', tel:'06 62 72 82 92',cours:'yin',    date:'2026-09-08',statut:'confirme',present:null,gratuit:true, saison:'2026-2027',dateInscription:'2026-08-26'}
   ],
@@ -3474,7 +3474,7 @@ function renderYogaEssai() {
         h += '<div class="point-row">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','yoga')+' <span class="pill pill-info" style="font-size:8px;padding:1px 5px;">'+coursLbl+'</span></div>'
-          +'<div class="point-sub">'+e.email+(e.statut==='attente'?' · <span style="color:var(--warn-text);">en attente</span>':'')+'</div>'
+          +'<div class="point-sub">'+e.email+'</div>'
           +'</div>'
           +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
           +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Confirmé.e</span>':'')
@@ -3506,14 +3506,11 @@ function renderYogaEssai() {
   if (!sortedDates.length) return h+'<div class="empty-state">Aucun cours de yoga prévu.</div>';
   sortedDates.forEach(function(date) {
     var ins = parDate[date]||[];
-    var conf = ins.filter(function(e){ return e.statut==='confirme'; });
-    var att  = ins.filter(function(e){ return e.statut==='attente'; });
     var gratuit = estEssaiYogaGratuit(date);
     h += '<div class="section-hdr">'+fmtDate(date)
       +' <span style="font-weight:400;color:var(--dim);">Espace Sorano</span>'
       +(gratuit?' <span class="pill pill-ok" style="font-size:9px;">Gratuit</span>':' <span style="font-size:10px;color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')
-      +(att.length?' <span style="color:var(--warn-text);font-size:10px;">('+att.length+' att.)</span>':'')
-      +' <span style="font-weight:400;color:var(--dim);font-size:10px;">'+conf.length+' confirmé'+(conf.length>1?'s':'')+'</span>'
+      +' <span style="font-weight:400;color:var(--dim);font-size:10px;">'+ins.length+' inscrit'+(ins.length>1?'s':'')+'</span>'
       +'</div>';
     if (!ins.length) {
       h += '<div style="font-size:11px;color:var(--dim);padding:6px 0 10px;">Aucune inscription pour cette date.</div>';
@@ -3521,23 +3518,19 @@ function renderYogaEssai() {
     }
     ins.forEach(function(e) {
       var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
-      var vraiAtt = e.statut==='attente';
       h += '<div class="point-row">'
         +'<div style="flex:1;min-width:0;">'
         +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
         +nomCliquable(e.prenom+' '+e.nom,e.email||'','','yoga')
         +' <span class="pill pill-info" style="font-size:8px;padding:1px 5px;">'+coursLbl+'</span>'
-        +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
         +'</div>'
         +'<div class="point-sub">'+e.email+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
         +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Confirmé.e</span>':'')
-        +(vraiAtt
-          ?'<button class="btn btn-ok" style="padding:3px 9px;font-size:10px;" data-action="val-yoga-essai" data-email="'+e.email+'" data-date="'+date+'">✓ Confirmer</button>'
-          :(estDejaEleveYoga(e.email)
-            ?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>'
-            :'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" title="Inscrire comme élève">💳 Inscrire</button>'))
+        +(estDejaEleveYoga(e.email)
+          ?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>'
+          :'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" title="Inscrire comme élève">💳 Inscrire</button>')
         +btnEmail(e.email,e.prenom+' '+e.nom)
         +'</div></div>';
     });
