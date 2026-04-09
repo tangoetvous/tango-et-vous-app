@@ -103,6 +103,10 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .btn-abs{border-color:var(--err);color:var(--err-text);}
 .btn-abs.on{background:var(--err-bg);}
 .inline-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
+.saison-archivee .btn{display:none!important;}
+.saison-archivee .btn-point{display:none!important;}
+.saison-archivee .btn-row{display:none!important;}
+.saison-archivee input,.saison-archivee select,.saison-archivee textarea{pointer-events:none;opacity:.5;}
 .inline-row:last-child{border-bottom:none;}
 .partenaire-tag{display:inline-flex;align-items:center;gap:5px;background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--dim);margin-top:5px;}
 .partenaire-tag .pip{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
@@ -542,6 +546,7 @@ function saisonSuivante() {
   return (n+1)+'-'+(n+2);
 }
 function saisonActive() { return saisonVue||saisonCourante(); }
+function isSaisonPassee() { return saisonActive()<saisonCourante(); }
 function dateAppartientSaison(dateStr, saison) {
   // Saison "Y1-Y2" : du 01/09/Y1 au 31/08/Y2
   var p=saison.split('-'), y1=parseInt(p[0]);
@@ -1432,6 +1437,10 @@ function renderTab() {
     else if (currentTab==='agenda')       html=renderAgenda();
     else if (currentTab==='publications') html=renderPublications();
     else if (currentTab==='tarifs')       html=renderTarifs();
+    if(isSaisonPassee()){
+      var banner='<div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--warn-text);display:flex;align-items:center;gap:8px;">🔒 Saison '+saisonActive()+' archivée — consultation uniquement</div>';
+      html='<div class="saison-archivee">'+banner+html+'</div>';
+    }
     el.innerHTML = html;
     bindTabEvents(el);
   }, 40);
