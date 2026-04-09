@@ -441,6 +441,8 @@
       if (prochain) {
         const d = new Date(prochain + 'T00:00:00');
         const gratuit = estEssaiYogaGratuitIndex(prochain);
+        const lieu = 'Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes · RER A Château de Vincennes';
+        const badge = gratuit ? ' · <span style="font-size:10px;">🎁 Essai gratuit</span>' : '';
         prochainsEl.innerHTML = `<div class="event-item">
           <div class="event-date-col">
             <div class="event-day">${d.getDate()}</div>
@@ -448,9 +450,21 @@
           </div>
           <div class="event-type-bar" style="background:#a78bfa"></div>
           <div class="event-info">
-            <div class="event-type-lbl" style="color:#a78bfa">Yoga${gratuit ? ' · <span style="font-size:10px;">🎁 Essai gratuit</span>' : ''}</div>
-            <div class="event-title">Yin Yoga 10h30 · Hatha Yoga 11h30</div>
-            <div class="event-sub">Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes · RER A Château de Vincennes</div>
+            <div class="event-type-lbl" style="color:#a78bfa">Yoga${badge}</div>
+            <div class="event-title">🌙 Yin Yoga — 10h30</div>
+            <div class="event-sub">${lieu}</div>
+          </div>
+        </div>
+        <div class="event-item">
+          <div class="event-date-col" style="visibility:hidden;">
+            <div class="event-day">${d.getDate()}</div>
+            <div class="event-month-lbl">${MOIS_COURT[d.getMonth()]}</div>
+          </div>
+          <div class="event-type-bar" style="background:#a78bfa"></div>
+          <div class="event-info">
+            <div class="event-type-lbl" style="color:#a78bfa">Yoga</div>
+            <div class="event-title">☀️ Hatha Yoga — 11h30</div>
+            <div class="event-sub">${lieu}</div>
           </div>
         </div>`;
       } else {
@@ -586,7 +600,8 @@
     }
     if (filter === 'tous' || filter === 'yoga') {
       COURS_YOGA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
-        events.push({date:d, subtype:'yoga', type:'cours', titre:'Yoga — Yin Yoga 10h30 · Hatha Yoga 11h30', heure:'10h30', lieu:'Espace Sorano \u2014 16 rue Charles Path\u00e9, 94300 Vincennes \u00b7 RER A Ch\u00e2teau de Vincennes'});
+        events.push({date:d, subtype:'yoga', type:'cours', titre:'🌙 Yin Yoga', heure:'10h30', lieu:'Espace Sorano \u2014 16 rue Charles Path\u00e9, 94300 Vincennes \u00b7 RER A Ch\u00e2teau de Vincennes'});
+        events.push({date:d, subtype:'yoga', type:'cours', titre:'☀️ Hatha Yoga', heure:'11h30', lieu:'Espace Sorano \u2014 16 rue Charles Path\u00e9, 94300 Vincennes \u00b7 RER A Ch\u00e2teau de Vincennes'});
       });
     }
     events.sort((a,b) => a.date.localeCompare(b.date) || (a.heure||'').localeCompare(b.heure||''));
