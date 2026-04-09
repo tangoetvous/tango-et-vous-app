@@ -34,6 +34,9 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .tab-btn.active{border-bottom-color:var(--gold);color:var(--gold);}
 .content{padding:12px;max-width:660px;margin:0 auto;padding-bottom:80px;}
 .section-hdr{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--dim);padding:12px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.mois-acc-hdr{font-family:var(--font-d);font-size:17px;font-weight:300;color:var(--dim);letter-spacing:2px;padding:14px 8px 6px;border-bottom:1px solid var(--border);margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;border-radius:6px 6px 0 0;}
+.mois-acc-hdr:hover{color:var(--text);background:rgba(255,255,255,0.03);}
+.mois-acc-arrow{font-size:12px;color:var(--dim);transition:transform .2s;}
 .empty-state{text-align:center;padding:32px 20px;font-size:13px;color:var(--dim);font-style:italic;}
 .spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:30px auto;}
 @keyframes spin{to{transform:rotate(360deg);}}
@@ -2185,6 +2188,7 @@ function renderEssai() {
     var grpPt = buildGroupes(liste);
     var hasEvt = false;
     var currentMoisPt = '';
+    var accBodyOpenPt = false;
     Object.keys(grpPt).sort().forEach(function(key){
       var grp=grpPt[key];
       // Seulement les personnes confirmées (non en attente réelle)
@@ -2194,9 +2198,13 @@ function renderEssai() {
       hasEvt=true;
       var moisKeyPt = grp.date.slice(0,7);
       if (moisKeyPt !== currentMoisPt) {
+        if (accBodyOpenPt) h += '</div>';
         currentMoisPt = moisKeyPt;
+        accBodyOpenPt = true;
         var dmPt = new Date(moisKeyPt+'-01T00:00:00');
-        h += '<div style="font-family:var(--font-d);font-size:17px;font-weight:300;color:var(--dim);letter-spacing:2px;padding:14px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px;">'+MOIS_FR[dmPt.getMonth()]+' '+dmPt.getFullYear()+'</div>';
+        var accIdPt = 'acc-pt-'+moisKeyPt;
+        h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdPt+'\')">'+MOIS_FR[dmPt.getMonth()]+' '+dmPt.getFullYear()+'<span class="mois-acc-arrow">▼</span></div>';
+        h += '<div id="'+accIdPt+'">';
       }
       // Interleave guideurs/guidées
       var pGui=conf.filter(function(e){return e.role==='guideur';});
@@ -2243,6 +2251,7 @@ function renderEssai() {
         +'<span id="j1s-'+grp.date+'" style="font-size:11px;margin-left:8px;"></span>'
         +'</div>';
     });
+    if (accBodyOpenPt) h += '</div>';
     return h+(hasEvt?'':'<div class="empty-state">Aucun cours d&#39;essai confirmé.</div>');
   }
 
@@ -2267,12 +2276,17 @@ function renderEssai() {
   var sortedDates = Object.keys(allDates).sort().slice(0,30); // limiter à 30 prochaines
   if(!sortedDates.length) return h+'<div class="empty-state">Aucun cours d&#39;essai.</div>';
   var currentMoisEssai = '';
+  var accBodyOpenEd = false;
   sortedDates.forEach(function(date){
     var moisKey = date.slice(0,7);
     if (moisKey !== currentMoisEssai) {
+      if (accBodyOpenEd) h += '</div>';
       currentMoisEssai = moisKey;
+      accBodyOpenEd = true;
       var dm = new Date(moisKey+'-01T00:00:00');
-      h += '<div style="font-family:var(--font-d);font-size:17px;font-weight:300;color:var(--dim);letter-spacing:2px;padding:14px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px;">'+MOIS_FR[dm.getMonth()]+' '+dm.getFullYear()+'</div>';
+      var accIdEd = 'acc-ed-'+moisKey;
+      h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdEd+'\')">'+MOIS_FR[dm.getMonth()]+' '+dm.getFullYear()+'<span class="mois-acc-arrow">▼</span></div>';
+      h += '<div id="'+accIdEd+'">';
     }
     var lieux=allDates[date]||[];
     var lieuLbl=lieux.indexOf('paris')>=0&&lieux.indexOf('vincennes')>=0?'Paris + Vincennes':lieux.indexOf('vincennes')>=0?'Vincennes':'Paris';
@@ -2324,6 +2338,7 @@ function renderEssai() {
       });
     });
   });
+  if (accBodyOpenEd) h += '</div>';
   return h;
 }
 function valGuideeEssai(email, date, btn) {
@@ -2336,6 +2351,14 @@ function pointerEssai(date, email, present) {
   if (e) e.present = present;
   if (!IS_DEMO) postAS({action:'pointerEssai',email:email,date:date,present:present}).catch(function(){});
   renderTab();
+}
+function toggleMoisAcc(id) {
+  var body = document.getElementById(id);
+  if (!body) return;
+  var hdr = body.previousElementSibling;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  if (hdr) { var arrow = hdr.querySelector('.mois-acc-arrow'); if (arrow) arrow.textContent = isOpen ? '▶' : '▼'; }
 }
 function envJ1(date, btn) {
   btn.disabled=true;
@@ -3532,7 +3555,9 @@ function renderYogaEssai() {
   });
   Object.keys(parMois).sort().forEach(function(moisKey) {
     var d = new Date(moisKey+'-01T00:00:00');
-    h += '<div style="font-family:var(--font-d);font-size:17px;font-weight:300;color:var(--dim);letter-spacing:2px;padding:14px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px;">'+MOIS_FR[d.getMonth()]+' '+d.getFullYear()+'</div>';
+    var accIdEy = 'acc-ey-'+moisKey;
+    h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdEy+'\')">'+MOIS_FR[d.getMonth()]+' '+d.getFullYear()+'<span class="mois-acc-arrow">▼</span></div>';
+    h += '<div id="'+accIdEy+'">';
     parMois[moisKey].forEach(function(date) {
       var ins = (parDate[date]||[]);
       var gratuit = estEssaiYogaGratuit(date);
@@ -3566,6 +3591,7 @@ function renderYogaEssai() {
           +'</div></div>';
       });
     });
+    h += '</div>';
   });
   return h;
 }
