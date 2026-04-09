@@ -900,7 +900,9 @@ var TARIFS_DEFAUT = {
   // Cotisation Sorano (réglée directement à Sorano)
   sorano_vinc:36, sorano_vinc_m16:26, sorano_ext:45, sorano_ext_m16:35,
   // Yoga — cours d'essai (gratuit les 2 premiers mardis de septembre)
-  yoga_essai:15
+  yoga_essai:15,
+  // Stages — tarifs par créneau
+  stage_technique:20, stage_1seance:25, stage_2seances:45, stage_3seances:60
 };
 var TARIFS = Object.assign({}, TARIFS_DEFAUT);
 
@@ -1287,7 +1289,7 @@ function sauverTarifs(btn) {
   if (!saison || !dateEffet) { if(err){err.textContent='Saison et date d\'effet requis.';err.style.display='block';} return; }
   if(err) err.style.display='none';
   var tarifs = {};
-  var CHAMPS = ['carte10','carte10_reduit','carte10_renouv','carte10_renouv_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours','forfait_2cours_reduit','adhesion_lrp','sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16','yoga_essai'];
+  var CHAMPS = ['carte10','carte10_reduit','carte10_renouv','carte10_renouv_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours','forfait_2cours_reduit','adhesion_lrp','sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16','yoga_essai','stage_technique','stage_1seance','stage_2seances','stage_3seances'];
   var ok = true;
   CHAMPS.forEach(function(k) {
     var inp = gel('tr-'+k);
@@ -1322,6 +1324,86 @@ function resetTarifs() {
   Object.assign(TARIFS, TARIFS_DEFAUT);
   renderTab();
   afficherToast('Tarifs réinitialisés.');
+}
+function chargerDatesYogaStages() {
+  try {
+    var storedYoga = JSON.parse(localStorage.getItem('tev_dates_yoga')||'null');
+    if (storedYoga && storedYoga.saison && storedYoga.dates) {
+      var sai = storedYoga.saison;
+      var p = sai.split('-'), y1 = parseInt(p[0]);
+      var debut = (y1)+'-09-01', fin = (y1+1)+'-08-31';
+      // Retirer les dates existantes pour cette saison
+      COURS_YOGA = COURS_YOGA.filter(function(d){ return d<debut||d>fin; });
+      // Ajouter les dates stockées
+      storedYoga.dates.forEach(function(d){ if(COURS_YOGA.indexOf(d)<0) COURS_YOGA.push(d); });
+      COURS_YOGA.sort();
+    }
+  } catch(e){}
+  try {
+    var storedStages = JSON.parse(localStorage.getItem('tev_dates_stages')||'null');
+    if (storedStages && storedStages.saison && storedStages.stages) {
+      var sai = storedStages.saison;
+      var p = sai.split('-'), y1 = parseInt(p[0]);
+      var debut = (y1)+'-09-01', fin = (y1+1)+'-08-31';
+      // Retirer les stages existants pour cette saison
+      STAGES = STAGES.filter(function(s){ return s.date<debut||s.date>fin; });
+      // Ajouter les stages stockés
+      storedStages.stages.forEach(function(st){
+        if (!STAGES.find(function(s){return s.date===st.date;})) STAGES.push(st);
+      });
+      STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
+    }
+  } catch(e){}
+}
+function _parseDateLine(line) {
+  var m1 = line.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  var m2 = line.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m1) return m1[3]+'-'+(m1[2].length<2?'0':'')+m1[2]+'-'+(m1[1].length<2?'0':'')+m1[1];
+  if (m2) return m2[1]+'-'+m2[2]+'-'+m2[3];
+  return null;
+}
+function sauverDatesYoga(sai) {
+  var raw = ((gel('dates-yoga-'+sai)||{}).value||'').trim();
+  var lines = raw.split(/\n/).map(function(l){return l.trim().replace(/#.*/,'').trim();}).filter(Boolean);
+  var dates = [];
+  lines.forEach(function(line){
+    var d = _parseDateLine(line);
+    if (d && !isNaN(new Date(d+'T12:00:00').getTime()) && dates.indexOf(d)<0) dates.push(d);
+  });
+  dates.sort();
+  if (!dates.length) { afficherToast('⚠️ Aucune date valide'); return; }
+  try { localStorage.setItem('tev_dates_yoga', JSON.stringify({saison:sai, dates:dates, modifie:today()})); } catch(e){}
+  chargerDatesYogaStages();
+  afficherToast('✓ '+dates.length+' dates yoga '+sai+' enregistrées');
+  renderTab();
+}
+function sauverDatesStages(sai) {
+  var raw = ((gel('dates-stages-'+sai)||{}).value||'').trim();
+  var lines = raw.split(/\n/).map(function(l){return l.trim().replace(/#.*/,'').trim();}).filter(Boolean);
+  var stages = [];
+  lines.forEach(function(line){
+    var parts = line.split('|').map(function(p){return p.trim();});
+    var d = _parseDateLine(parts[0]||'');
+    if (!d || isNaN(new Date(d+'T12:00:00').getTime())) return;
+    var dd = new Date(d+'T12:00:00');
+    var jours = ['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'];
+    var label = jours[dd.getDay()]+' '+dd.getDate()+' '+MOIS_FR[dd.getMonth()].slice(0,3)+' '+dd.getFullYear();
+    var s1 = parts[1]||'';
+    var s2 = parts[2]||'';
+    if (!stages.find(function(s){return s.date===d;})) stages.push({date:d, label:label, s1:s1, s2:s2});
+  });
+  stages.sort(function(a,b){return a.date.localeCompare(b.date);});
+  if (!stages.length) { afficherToast('⚠️ Aucune date valide'); return; }
+  try { localStorage.setItem('tev_dates_stages', JSON.stringify({saison:sai, stages:stages, modifie:today()})); } catch(e){}
+  chargerDatesYogaStages();
+  // Synchroniser adminData.stages
+  stages.forEach(function(st){
+    if (!adminData.stages) adminData.stages = {};
+    if (!adminData.stages[st.date]) adminData.stages[st.date] = {label:st.label, inscrits:[]};
+    else adminData.stages[st.date].label = st.label;
+  });
+  afficherToast('✓ '+stages.length+' stages '+sai+' enregistrés');
+  renderTab();
 }
 function renderTarifs() {
   var stored = null;
@@ -1388,21 +1470,29 @@ function renderTarifs() {
     +row('Extérieur — 16 ans et +','sorano_ext',null)
     +row('Extérieur — moins de 16 ans','sorano_ext_m16',null)
     +section('Yoga (Espace Sorano Vincennes)')
-    +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Cours d\'essai — gratuit les 2 premiers mardis de septembre, <b>'+t.yoga_essai+'€</b> les suivants (Yin, Hatha, ou Forfait Yin+Hatha). Modifier via le champ ci-dessous.</td></tr>'
+    +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Cours d\'essai — gratuit les 2 premiers mardis de septembre, <b>'+t.yoga_essai+'€</b> les suivants (Yin, Hatha, ou Forfait Yin+Hatha 2×tarif).</td></tr>'
     +row('Cours d\'essai yoga (prix après la période gratuite)','yoga_essai',null)
+    +section('Stages (par créneau)')
+    +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Chaque stage comprend 3 créneaux : Initiation technique, Séance 1, Séance 2. Tarif calculé selon les créneaux choisis.</td></tr>'
+    +row('Initiation technique seule','stage_technique',null)
+    +row('1 séance de stage (S1 ou S2)','stage_1seance',null)
+    +row('2 créneaux (tech+S1, tech+S2 ou S1+S2)','stage_2seances',null)
+    +row('Pack complet (technique + S1 + S2)','stage_3seances',null)
     +'</tbody></table></div>'
     +'<div style="margin-top:20px;padding:12px;background:var(--s3);border-radius:8px;font-size:12px;color:var(--dim);">'
     +'<b style="color:var(--text);">Tarif réduit</b> — Applicable aux personnes de moins de 26 ans, étudiants, demandeurs d\'emploi (sur justificatif).'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Le Regard Se Pose</b> — Requise pour toutes les formules sauf cours à l\'unité.'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Cours à l\'unité</b> — Paris uniquement. Sans adhésion LRP.'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Sorano</b> — Cours Vincennes uniquement. Tarifée selon âge et statut vincennois. Réglée directement à Sorano.'
-    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Yoga — essai</b> — Gratuit les 2 premiers mardis de septembre. 15€ les mardis suivants (Yin, Hatha ou Forfait Yin+Hatha).'
+    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Yoga — essai</b> — Gratuit les 2 premiers mardis de septembre. Tarif ci-dessus les mardis suivants (Yin, Hatha ou Forfait = 2× le tarif).'
+    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Stages</b> — Tarifs calculés selon le nombre de créneaux choisis. Paiement sur place en espèces ou en ligne via AssoConnect.'
     +'</div>'
     +'</div>';
 
   // ── Section Préparer la saison prochaine ──
   var prochSai = saisonSuivante();
   var prochAnnee = prochSai.split('-')[1];
+  var prochY1 = parseInt(prochSai.split('-')[0]);
   var cfgSai = {};
   try { cfgSai = JSON.parse(localStorage.getItem('tev_config_saison')||'{}'); } catch(ex){}
   var preInscOuverte = cfgSai.preInscriptionOuverte || false;
@@ -1415,6 +1505,19 @@ function renderTarifs() {
   var lienRenouvVal = liensProch.renouv || liensDefProch.renouv || '';
   var lienYogaVal   = liensProch.yoga   || liensDefProch.yoga   || '';
   var liensSaved = !!(liensStored[prochSai]);
+  // Dates yoga pour la prochaine saison
+  var storedDatesYoga = null;
+  try { storedDatesYoga = JSON.parse(localStorage.getItem('tev_dates_yoga')||'null'); } catch(ex){}
+  var yogaSaisonOk = storedDatesYoga && storedDatesYoga.saison === prochSai;
+  var yogaDatesProch = yogaSaisonOk ? storedDatesYoga.dates : (COURS_YOGA||[]).filter(function(d){return d>=(prochY1+'-09-01')&&d<=((prochY1+1)+'-08-31');});
+  var yogaTextareaVal = yogaDatesProch.join('\n');
+  // Dates stages pour la prochaine saison
+  var storedDatesStages = null;
+  try { storedDatesStages = JSON.parse(localStorage.getItem('tev_dates_stages')||'null'); } catch(ex){}
+  var stagesSaisonOk = storedDatesStages && storedDatesStages.saison === prochSai;
+  var stagesProch = stagesSaisonOk ? storedDatesStages.stages : (STAGES||[]).filter(function(s){return s.date>=(prochY1+'-09-01')&&s.date<=((prochY1+1)+'-08-31');});
+  var stagesTextareaVal = stagesProch.map(function(s){return s.date+(s.s1?(' | '+s.s1+(s.s2?' | '+s.s2:'')):'');}).join('\n');
+  var inputStyle = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-family:monospace;';
   h += '<div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;">'
     +'<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">📅 Préparer la saison '+prochSai+'</div>'
     +'<div style="font-size:11px;color:var(--dim);margin-bottom:14px;">À faire avant le 1ᵉʳ mai</div>'
@@ -1422,6 +1525,28 @@ function renderTarifs() {
     +'<div class="box-info" style="display:flex;align-items:center;gap:8px;padding:10px 12px;"><span style="font-size:16px;">📌</span><span>Saisir les <b>dates des cours Paris</b> pour '+prochSai+' dans l\'onglet <b>Agenda</b></span></div>'
     +'<div class="box-info" style="display:flex;align-items:center;gap:8px;padding:10px 12px;"><span style="font-size:16px;">📌</span><span>Saisir les <b>dates des cours Vincennes</b> pour '+prochSai+' dans l\'onglet <b>Agenda</b></span></div>'
     +'<div class="box-info" style="display:flex;align-items:center;gap:8px;padding:10px 12px;"><span style="font-size:16px;">📌</span><span>Saisir les <b>tarifs '+prochSai+'</b> ci-dessus avec date d\'effet <b>01/09/'+prochAnnee+'</b></span></div>'
+    +'</div>'
+    // Dates Yoga
+    +'<div style="margin-bottom:16px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
+    +'<div style="font-size:12px;font-weight:600;color:var(--text);">🧘 Dates yoga '+prochSai
+      +(yogaSaisonOk?' <span class="pill pill-ok" style="font-size:11px;">✓ Enregistrées ('+yogaDatesProch.length+')</span>':' <span class="pill" style="font-size:11px;background:var(--s3);color:var(--dim);">'+yogaDatesProch.length+' par défaut</span>')
+    +'</div>'
+    +'<button class="btn btn-gold" data-action="sauver-dates-yoga" data-saison="'+prochSai+'" style="font-size:12px;">💾 Enregistrer</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">Une date par ligne, format <code>YYYY-MM-DD</code> ou <code>JJ/MM/AAAA</code>. Les 2 premiers mardis de septembre sont automatiquement gratuits.</div>'
+    +'<textarea id="dates-yoga-'+prochSai+'" rows="10" style="'+inputStyle+'resize:vertical;">'+yogaTextareaVal+'</textarea>'
+    +'</div>'
+    // Dates Stages
+    +'<div style="margin-bottom:16px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">'
+    +'<div style="font-size:12px;font-weight:600;color:var(--text);">💃 Dates stages '+prochSai
+      +(stagesSaisonOk?' <span class="pill pill-ok" style="font-size:11px;">✓ Enregistrés ('+stagesProch.length+')</span>':' <span class="pill" style="font-size:11px;background:var(--s3);color:var(--dim);">'+stagesProch.length+' par défaut</span>')
+    +'</div>'
+    +'<button class="btn btn-gold" data-action="sauver-dates-stages" data-saison="'+prochSai+'" style="font-size:12px;">💾 Enregistrer</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">Format : <code>YYYY-MM-DD | Thème S1 | Thème S2</code> (les thèmes sont facultatifs). Une ligne par stage.</div>'
+    +'<textarea id="dates-stages-'+prochSai+'" rows="8" style="'+inputStyle+'resize:vertical;">'+stagesTextareaVal+'</textarea>'
     +'</div>'
     // Liens AssoConnect
     +'<div style="margin-bottom:16px;">'
@@ -1543,6 +1668,7 @@ function demarrerApp(email) {
   recalcStats();
   filtreStage = Object.keys(adminData.stages)[0]||'';
   chargerTarifs();
+  chargerDatesYogaStages();
   gel('login-screen').style.display='none';
   gel('app').style.display='block';
   updateSaisonSelect();
@@ -1901,6 +2027,12 @@ function handleAction(action, btn) {
       break;
     case 'reset-tarifs':
       ouvrirModalConfirm('Réinitialiser avec les tarifs par défaut ?', function(){ resetTarifs(); });
+      break;
+    case 'sauver-dates-yoga':
+      sauverDatesYoga(btn.dataset.saison||saisonSuivante());
+      break;
+    case 'sauver-dates-stages':
+      sauverDatesStages(btn.dataset.saison||saisonSuivante());
       break;
     case 'sauver-liens':
       (function() {
@@ -2920,11 +3052,11 @@ function calcMontantStage(slots) {
   var tech=slots.indexOf('technique')>=0;
   var s1=slots.indexOf('stage1')>=0;
   var s2=slots.indexOf('stage2')>=0;
-  if(tech&&s1&&s2) return 60;
-  if(tech&&(s1||s2)) return 45;
-  if(s1&&s2) return 45;
-  if(tech) return 20;
-  if(s1||s2) return 25;
+  var nbSeances=(tech?1:0)+(s1?1:0)+(s2?1:0);
+  if(nbSeances>=3) return TARIFS.stage_3seances||60;
+  if(nbSeances===2) return TARIFS.stage_2seances||45;
+  if(tech) return TARIFS.stage_technique||20;
+  if(s1||s2) return TARIFS.stage_1seance||25;
   return 0;
 }
 function soumettreInscriptionStageAdmin() {
