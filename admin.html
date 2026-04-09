@@ -576,8 +576,8 @@ var DEMO_DATA = {
   publications: [],
   // ── Yoga ──
   essaiYoga: [
-    {id:'EY001',prenom:'Claire',  nom:'Dupont',  email:'claire@ex.com',  tel:'06 11 22 33 44',cours:'forfait',date:'2026-04-14',statut:'confirme',present:null,gratuit:false,saison:'2025-2026',dateInscription:'2026-04-07'},
-    {id:'EY002',prenom:'Marc',    nom:'Lefort',  email:'marc@ex.com',    tel:'06 22 33 44 55',cours:'yin',    date:'2026-04-14',statut:'confirme',present:null,gratuit:false,saison:'2025-2026',dateInscription:'2026-04-08'},
+    {id:'EY001',prenom:'Claire',  nom:'Dupont',  email:'claire@ex.com',  tel:'06 11 22 33 44',cours:'forfait',date:'2026-04-14',statut:'confirme',present:null,gratuit:false,presenceConfirmee:true, saison:'2025-2026',dateInscription:'2026-04-07'},
+    {id:'EY002',prenom:'Marc',    nom:'Lefort',  email:'marc@ex.com',    tel:'06 22 33 44 55',cours:'yin',    date:'2026-04-14',statut:'confirme',present:null,gratuit:false,presenceConfirmee:false,saison:'2025-2026',dateInscription:'2026-04-08'},
     {id:'EY003',prenom:'Sophie',  nom:'Martin',  email:'sophie@ex.com',  tel:'06 33 44 55 66',cours:'hatha',  date:'2026-05-05',statut:'attente', present:null,gratuit:false,saison:'2025-2026',dateInscription:'2026-04-09'},
     {id:'EY004',prenom:'Nadia',   nom:'Cheikh',  email:'nadia@ex.com',   tel:'06 60 70 80 90',cours:'forfait',date:'2026-09-08',statut:'confirme',present:null,gratuit:true, saison:'2026-2027',dateInscription:'2026-08-25'},
     {id:'EY005',prenom:'Yasmine', nom:'Amara',   email:'yasmine@ex.com', tel:'06 62 72 82 92',cours:'yin',    date:'2026-09-08',statut:'confirme',present:null,gratuit:true, saison:'2026-2027',dateInscription:'2026-08-26'}
@@ -1205,11 +1205,18 @@ function _appliquerYogaEssaiInscription(d) {
       prenom:d.prenom, nom:d.nom, email:d.email||'', tel:d.tel||'',
       cours:d.cours||'yin',
       date:date, statut:'confirme', present:null,
-      gratuit:gratuit,
+      gratuit:gratuit, presenceConfirmee:false,
       saison:saisonPourNouvelleEntree(), dateInscription:today()
     });
   }
   filtreEssaiYoga = 'dates';
+}
+function _appliquerYogaConfirmPresence(d) {
+  if (!d || !d.email || !d.date) return;
+  if (!adminData.essaiYoga) adminData.essaiYoga = [];
+  var rec = adminData.essaiYoga.find(function(e){ return e.email===d.email && e.date===d.date; });
+  if (rec) { rec.presenceConfirmee = true; }
+  // Si pas encore de fiche (lien cliqué avant que l'admin ait rechargé), on ignore — l'info sera perdue
 }
 
 // Dispatcher (postMessage iframe + localStorage + BroadcastChannel)
@@ -1219,6 +1226,7 @@ function traiterMsgInscription(msg, doRender) {
   if (msg.type === 'coursInscription') _appliquerCoursInscription(msg.data);
   if (msg.type === 'essaiInscription') _appliquerEssaiInscription(msg.data);
   if (msg.type === 'yogaEssaiInscription') _appliquerYogaEssaiInscription(msg.data);
+  if (msg.type === 'yogaConfirmerPresence') _appliquerYogaConfirmPresence(msg.data);
   _notifierAdminInscription(msg);
   if (doRender) renderTab();
 }
@@ -1237,7 +1245,7 @@ function traiterInscriptionsEnAttente() {
 // Écoute postMessage depuis les iframes (admin utilise les formulaires directement)
 window.addEventListener('message', function(ev) {
   var t = ev.data && ev.data.type;
-  if (t !== 'stageInscription' && t !== 'coursInscription' && t !== 'essaiInscription' && t !== 'yogaEssaiInscription') return;
+  if (t !== 'stageInscription' && t !== 'coursInscription' && t !== 'essaiInscription' && t !== 'yogaEssaiInscription' && t !== 'yogaConfirmerPresence') return;
   traiterMsgInscription(ev.data, true);
 });
 
@@ -2204,8 +2212,7 @@ function renderEssai() {
         else if (ctStatut==='demande') pastille='<span style="display:inline-block;background:#FFD600;color:#003399;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;border:2px solid #003399;white-space:nowrap;">DEM</span>';
         h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · avec '+e.partenaire:'')+'</div></div>'
-          +'<div style="display:flex;gap:5px;align-items:center;">'
-          +(e.email1Ok===true?'<span class="pill pill-ok" style="font-size:8px;">✉️</span>':'')
+          +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
           +(e.presenceConfirmee===true?'<span class="pill pill-ok" style="font-size:8px;">✓Conf.</span>':'')
           +pastille
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
@@ -2217,7 +2224,7 @@ function renderEssai() {
       coursTangoDate.forEach(function(c) {
         h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(c.prenom+' '+c.nom,c.email||'',c.tel||'','ct')+'</div>'
           +'<div class="point-sub">'+(c.ville||'')+'</div></div>'
-          +'<div style="display:flex;gap:5px;align-items:center;">'
+          +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
           +'<span class="pill pill-ok" style="font-size:8px;">Inscrit cours</span>'
           +'<button class="btn-point btn-pres'+(c.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+c.email+'">✓</button>'
           +'<button class="btn-point btn-abs'+(c.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+c.email+'">✗</button>'
@@ -3469,7 +3476,8 @@ function renderYogaEssai() {
           +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','yoga')+' <span class="pill pill-info" style="font-size:8px;padding:1px 5px;">'+coursLbl+'</span></div>'
           +'<div class="point-sub">'+e.email+(e.statut==='attente'?' · <span style="color:var(--warn-text);">en attente</span>':'')+'</div>'
           +'</div>'
-          +'<div style="display:flex;gap:5px;align-items:center;">'
+          +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+          +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Confirmé.e</span>':'')
           +(e.gratuit?'<span class="pill pill-ok" style="font-size:8px;">Gratuit</span>':'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')
           +(e.present===true&&!estDejaEleveYoga(e.email)?'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" title="Inscrire comme élève">💳</button>':'')
           +(estDejaEleveYoga(e.email)?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>':'')
@@ -3524,6 +3532,7 @@ function renderYogaEssai() {
         +'<div class="point-sub">'+e.email+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+        +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Confirmé.e</span>':'')
         +(vraiAtt
           ?'<button class="btn btn-ok" style="padding:3px 9px;font-size:10px;" data-action="val-yoga-essai" data-email="'+e.email+'" data-date="'+date+'">✓ Confirmer</button>'
           :(estDejaEleveYoga(e.email)

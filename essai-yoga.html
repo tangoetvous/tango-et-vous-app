@@ -133,6 +133,17 @@ select option{background:var(--s2);}
   <button class="btn-submit" id="btn-submit" onclick="soumettre()">S'inscrire au cours d'essai</button>
 </div>
 
+<!-- Confirmation de présence (lien email) -->
+<div class="success" id="confirm-presence" style="display:none;">
+  <span class="s-icon">✅</span>
+  <div class="s-title">PRÉSENCE CONFIRMÉE !</div>
+  <div class="s-card">
+    <div class="s-line"><span class="s-ico">🧘</span><span id="cp-recap"></span></div>
+    <div class="s-line"><span class="s-ico">📍</span><span>Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes</span></div>
+  </div>
+  <div class="s-sig">À très bientôt sur le tapis !<br/><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
+</div>
+
 <!-- Succès (gratuit ou payant) -->
 <div class="success" id="success-yoga">
   <span class="s-icon">✅</span>
@@ -245,6 +256,29 @@ let dateSelectionnee = '';
 // INIT
 // ================================================================
 function init() {
+  // Détection lien "Confirmer ma présence" depuis l'email
+  const params = new URLSearchParams(location.search);
+  if (params.get('conf') === '1') {
+    const email = decodeURIComponent(params.get('email') || '');
+    const date  = params.get('date') || '';
+    if (email && date) {
+      document.getElementById('form-zone').style.display = 'none';
+      const coursLbl = COURS_YOGA.indexOf(date) >= 0 ? fmtDate(date) : date;
+      document.getElementById('cp-recap').textContent = coursLbl + ' · ' + email;
+      document.getElementById('confirm-presence').style.display = 'block';
+      // Notifier l'admin
+      const msg = { type:'yogaConfirmerPresence', data:{ email, date } };
+      try { const bc = new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } catch(e){}
+      try {
+        const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]');
+        pending.push(msg);
+        localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+      } catch(e){}
+      window.scrollTo(0,0);
+      return;
+    }
+  }
+
   const sel = document.getElementById('sel-date');
   const today = todayISO();
   const futures = COURS_YOGA.filter(d => d >= today).slice(0, 20);
