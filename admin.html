@@ -281,6 +281,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <button class="tab-btn" data-tab="cartes">🎴 Cartes 10</button>
     <button class="tab-btn" data-tab="stages">💃 Stages</button>
     <button class="tab-btn" data-tab="sorano">🏛 Sorano</button>
+    <button class="tab-btn" data-tab="yoga">🧘 Inscr Yoga</button>
     <button class="tab-btn" data-tab="agenda">📅 Agenda</button>
     <button class="tab-btn" data-tab="publications">📝 Publis</button>
     <button class="tab-btn" data-tab="tarifs">💶 Tarifs</button>
@@ -337,6 +338,41 @@ var DEMO_DATE       = new Date(); // date réelle
 // ================================================================
 var COURS_PARIS = ['2026-04-02','2026-04-09','2026-04-16','2026-04-23','2026-05-07','2026-05-21','2026-05-28','2026-06-04','2026-06-11','2026-06-18','2026-06-25','2026-09-03','2026-09-10','2026-09-17','2026-09-24','2026-10-01','2026-10-08','2026-10-15','2026-10-22','2026-11-05','2026-11-12','2026-11-19','2026-11-26','2026-12-03','2026-12-10','2026-12-17','2027-01-07','2027-01-14','2027-01-21','2027-01-28','2027-02-04','2027-02-18','2027-02-25','2027-03-04','2027-03-11','2027-03-18','2027-03-25','2027-04-01','2027-04-15','2027-04-22','2027-04-29','2027-05-13','2027-05-20','2027-05-27','2027-06-03','2027-06-10','2027-06-17','2027-06-24'];
 var COURS_VINCENNES = ['2026-04-13','2026-05-04','2026-05-11','2026-05-18','2026-06-01','2026-06-08','2026-06-15','2026-06-29','2026-09-07','2026-09-14','2026-09-21','2026-09-28','2026-10-05','2026-10-12','2026-11-02','2026-11-09','2026-11-16','2026-11-23','2026-11-30','2026-12-07','2026-12-14','2027-01-04','2027-01-11','2027-01-18','2027-01-25','2027-02-01','2027-02-22','2027-03-01','2027-03-08','2027-03-15','2027-03-22','2027-04-19','2027-04-26','2027-05-03','2027-05-10','2027-05-24','2027-05-31','2027-06-07','2027-06-14','2027-06-21'];
+// Cours Yoga — Mardis à l'Espace Sorano Vincennes (Yin Yoga 10h30, Hatha Yoga 11h30)
+// Débute le 2ème mardi de septembre. Les 2 premiers mardis = essai gratuit.
+// À mettre à jour chaque saison.
+var COURS_YOGA = [
+  // 2025-2026 (gratuit : 2025-09-09 et 2025-09-16)
+  '2025-09-09','2025-09-16','2025-09-23','2025-09-30',
+  '2025-10-07','2025-10-14',
+  '2025-11-04','2025-11-18','2025-11-25',
+  '2025-12-02','2025-12-09','2025-12-16',
+  '2026-01-06','2026-01-13','2026-01-20','2026-01-27',
+  '2026-02-03','2026-02-10','2026-02-17',
+  '2026-03-03','2026-03-10','2026-03-17','2026-03-24','2026-03-31',
+  '2026-04-07','2026-04-14',
+  '2026-05-05','2026-05-12','2026-05-19','2026-05-26',
+  '2026-06-02','2026-06-09','2026-06-16','2026-06-23',
+  // 2026-2027 (gratuit : 2026-09-08 et 2026-09-15)
+  '2026-09-08','2026-09-15','2026-09-22','2026-09-29',
+  '2026-10-06','2026-10-13',
+  '2026-11-03','2026-11-17','2026-11-24',
+  '2026-12-01','2026-12-08','2026-12-15',
+  '2027-01-05','2027-01-12','2027-01-19','2027-01-26',
+  '2027-02-02','2027-02-09','2027-02-16',
+  '2027-03-02','2027-03-09','2027-03-16','2027-03-23','2027-03-30',
+  '2027-04-06','2027-04-13',
+  '2027-05-04','2027-05-11','2027-05-18','2027-05-25',
+  '2027-06-01','2027-06-08','2027-06-15','2027-06-22'
+];
+// Retourne true si la date yoga est l'une des 2 premières de la saison (essai gratuit)
+function estEssaiYogaGratuit(dateStr) {
+  var annee = dateStr.slice(0, 4);
+  if (dateStr.slice(5, 7) !== '09') return false;
+  var septDates = (COURS_YOGA || []).filter(function(d){ return d.slice(0,7) === annee+'-09'; }).sort();
+  var idx = septDates.indexOf(dateStr);
+  return idx >= 0 && idx < 2;
+}
 var STAGES = [
   {date:'2026-04-11',label:'Sam. 11 Avr 2026',s1:'Milonga',s2:'Lapiz & Enrosque'},
   {date:'2026-05-30',label:'Sam. 30 Mai 2026',s1:'',s2:''},
@@ -537,7 +573,18 @@ var DEMO_DATA = {
     {email:'luc@ex.com',    paiementSorano:true, saison:'2025-2026'}
     // laure@ex.com et paul@ex.com absents → non réglés par défaut
   ],
-  publications: []
+  publications: [],
+  // ── Yoga ──
+  essaiYoga: [
+    {id:'EY001',prenom:'Claire',  nom:'Dupont',  email:'claire@ex.com',  tel:'06 11 22 33 44',cours:'forfait',date:'2026-04-14',statut:'confirme',present:null,gratuit:false,saison:'2025-2026',dateInscription:'2026-04-07'},
+    {id:'EY002',prenom:'Marc',    nom:'Lefort',  email:'marc@ex.com',    tel:'06 22 33 44 55',cours:'yin',    date:'2026-04-14',statut:'confirme',present:null,gratuit:false,saison:'2025-2026',dateInscription:'2026-04-08'},
+    {id:'EY003',prenom:'Sophie',  nom:'Martin',  email:'sophie@ex.com',  tel:'06 33 44 55 66',cours:'hatha',  date:'2026-05-05',statut:'attente', present:null,gratuit:false,saison:'2025-2026',dateInscription:'2026-04-09'},
+    {id:'EY004',prenom:'Nadia',   nom:'Cheikh',  email:'nadia@ex.com',   tel:'06 60 70 80 90',cours:'forfait',date:'2026-09-08',statut:'confirme',present:null,gratuit:true, saison:'2026-2027',dateInscription:'2026-08-25'},
+    {id:'EY005',prenom:'Yasmine', nom:'Amara',   email:'yasmine@ex.com', tel:'06 62 72 82 92',cours:'yin',    date:'2026-09-08',statut:'confirme',present:null,gratuit:true, saison:'2026-2027',dateInscription:'2026-08-26'}
+  ],
+  coursYoga: [
+    {id:'CY001',prenom:'Claire',  nom:'Dupont',  email:'claire@ex.com',  tel:'06 11 22 33 44',cours:'forfait',statut:'inscrit',saison:'2025-2026',dateInscription:'2025-09-16'}
+  ]
 };
 
 // ================================================================
@@ -552,6 +599,8 @@ var filtreStageSlot   = 'technique';  // sous-onglet stage : technique|stage1|st
 var sousOngletCours   = 'demandes';
 var sousOngletCoursTango = 'tous'; // tous|attente_validation|valide|attente_paiement|inscrire|valider_paiement
 var sousOngletEleves     = 'paris-deb'; // paris-deb|paris-int|vincennes-deb|vincennes-int
+var sousOngletYoga    = 'essai';      // essai | eleves
+var filtreEssaiYoga   = 'dates';      // dates | pointage
 var agendaMois      = new Date().getMonth();
 var agendaAnnee     = new Date().getFullYear();
 var agendaCats      = {paris:true, vincennes:true, stage:true, milonga:true};
@@ -845,7 +894,9 @@ var TARIFS_DEFAUT = {
   // Adhésions
   adhesion_lrp:5,
   // Cotisation Sorano (réglée directement à Sorano)
-  sorano_vinc:36, sorano_vinc_m16:26, sorano_ext:45, sorano_ext_m16:35
+  sorano_vinc:36, sorano_vinc_m16:26, sorano_ext:45, sorano_ext_m16:35,
+  // Yoga — cours d'essai (gratuit les 2 premiers mardis de septembre)
+  yoga_essai:15
 };
 var TARIFS = Object.assign({}, TARIFS_DEFAUT);
 
@@ -1142,6 +1193,24 @@ function _appliquerEssaiInscription(d) {
   }
   filtreEssai = 'dates';
 }
+function _appliquerYogaEssaiInscription(d) {
+  if (!d || !d.prenom || !d.nom) return;
+  if (!adminData.essaiYoga) adminData.essaiYoga = [];
+  var date   = d.date || today();
+  var gratuit = estEssaiYogaGratuit(date);
+  var existe  = (adminData.essaiYoga).some(function(e){ return e.email===d.email && e.date===date; });
+  if (!existe) {
+    adminData.essaiYoga.push({
+      id:'EY'+Date.now(),
+      prenom:d.prenom, nom:d.nom, email:d.email||'', tel:d.tel||'',
+      cours:d.cours||'yin',
+      date:date, statut:'confirme', present:null,
+      gratuit:gratuit,
+      saison:saisonPourNouvelleEntree(), dateInscription:today()
+    });
+  }
+  filtreEssaiYoga = 'dates';
+}
 
 // Dispatcher (postMessage iframe + localStorage + BroadcastChannel)
 function traiterMsgInscription(msg, doRender) {
@@ -1149,6 +1218,7 @@ function traiterMsgInscription(msg, doRender) {
   if (msg.type === 'stageInscription') _appliquerStageInscription(msg.data);
   if (msg.type === 'coursInscription') _appliquerCoursInscription(msg.data);
   if (msg.type === 'essaiInscription') _appliquerEssaiInscription(msg.data);
+  if (msg.type === 'yogaEssaiInscription') _appliquerYogaEssaiInscription(msg.data);
   _notifierAdminInscription(msg);
   if (doRender) renderTab();
 }
@@ -1167,7 +1237,7 @@ function traiterInscriptionsEnAttente() {
 // Écoute postMessage depuis les iframes (admin utilise les formulaires directement)
 window.addEventListener('message', function(ev) {
   var t = ev.data && ev.data.type;
-  if (t !== 'stageInscription' && t !== 'coursInscription' && t !== 'essaiInscription') return;
+  if (t !== 'stageInscription' && t !== 'coursInscription' && t !== 'essaiInscription' && t !== 'yogaEssaiInscription') return;
   traiterMsgInscription(ev.data, true);
 });
 
@@ -1205,7 +1275,7 @@ function sauverTarifs(btn) {
   if (!saison || !dateEffet) { if(err){err.textContent='Saison et date d\'effet requis.';err.style.display='block';} return; }
   if(err) err.style.display='none';
   var tarifs = {};
-  var CHAMPS = ['carte10','carte10_reduit','carte10_renouv','carte10_renouv_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours','forfait_2cours_reduit','adhesion_lrp','sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16'];
+  var CHAMPS = ['carte10','carte10_reduit','carte10_renouv','carte10_renouv_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours','forfait_2cours_reduit','adhesion_lrp','sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16','yoga_essai'];
   var ok = true;
   CHAMPS.forEach(function(k) {
     var inp = gel('tr-'+k);
@@ -1305,12 +1375,16 @@ function renderTarifs() {
     +row('Vincennois — moins de 16 ans','sorano_vinc_m16',null)
     +row('Extérieur — 16 ans et +','sorano_ext',null)
     +row('Extérieur — moins de 16 ans','sorano_ext_m16',null)
+    +section('Yoga (Espace Sorano Vincennes)')
+    +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Cours d\'essai — gratuit les 2 premiers mardis de septembre, <b>'+t.yoga_essai+'€</b> les suivants (Yin, Hatha, ou Forfait Yin+Hatha). Modifier via le champ ci-dessous.</td></tr>'
+    +row('Cours d\'essai yoga (prix après la période gratuite)','yoga_essai',null)
     +'</tbody></table></div>'
     +'<div style="margin-top:20px;padding:12px;background:var(--s3);border-radius:8px;font-size:12px;color:var(--dim);">'
     +'<b style="color:var(--text);">Tarif réduit</b> — Applicable aux personnes de moins de 26 ans, étudiants, demandeurs d\'emploi (sur justificatif).'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Le Regard Se Pose</b> — Requise pour toutes les formules sauf cours à l\'unité.'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Cours à l\'unité</b> — Paris uniquement. Sans adhésion LRP.'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Sorano</b> — Cours Vincennes uniquement. Tarifée selon âge et statut vincennois. Réglée directement à Sorano.'
+    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Yoga — essai</b> — Gratuit les 2 premiers mardis de septembre. 15€ les mardis suivants (Yin, Hatha ou Forfait Yin+Hatha).'
     +'</div>'
     +'</div>';
 
@@ -1512,6 +1586,7 @@ function renderTab() {
     else if (currentTab==='cartes')       html=renderCartes();
     else if (currentTab==='stages')       html=renderStages();
     else if (currentTab==='sorano')       html=renderSorano();
+    else if (currentTab==='yoga')         html=renderYoga();
     else if (currentTab==='agenda')       html=renderAgenda();
     else if (currentTab==='publications') html=renderPublications();
     else if (currentTab==='tarifs')       html=renderTarifs();
@@ -1542,6 +1617,14 @@ function bindTabEvents(el) {
   el.addEventListener('click', function(e) {
     var b = e.target.closest('[data-filt-essai]');
     if (b) { filtreEssai=b.dataset.filtEssai; renderTab(); }
+  });
+  el.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-sous-yoga]');
+    if (b) { sousOngletYoga=b.dataset.sousYoga; renderTab(); }
+  });
+  el.addEventListener('click', function(e) {
+    var b = e.target.closest('[data-filt-essai-yoga]');
+    if (b) { filtreEssaiYoga=b.dataset.filtEssaiYoga; renderTab(); }
   });
   el.addEventListener('click', function(e) {
     var b = e.target.closest('[data-sous-c]');
@@ -1652,6 +1735,18 @@ function handleAction(action, btn) {
       break;
     case 'env-j1':
       envJ1(btn.dataset.date, btn);
+      break;
+    case 'val-yoga-essai':
+      valYogaEssai(btn.dataset.email||'', btn.dataset.date||'', btn);
+      break;
+    case 'pointer-yoga-pres':
+      pointerYoga(btn.dataset.date, btn.dataset.email, true);
+      break;
+    case 'pointer-yoga-abs':
+      pointerYoga(btn.dataset.date, btn.dataset.email, false);
+      break;
+    case 'env-yoga-j1':
+      envYogaJ1(btn.dataset.date, btn);
       break;
     case 'inscrire-cours':
       inscrireCours();
@@ -2205,6 +2300,39 @@ function envJ1(date, btn) {
   if (el) { el.style.color='var(--gold)'; el.textContent='⏳'; }
   if (IS_DEMO) { setTimeout(function(){ if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+pres.length+'+'+abs.length+' (démo)';}btn.disabled=false;},800); return; }
   postAS({action:'envoyerEmailsEssaiJ1',date:date,presents:pres,absents:abs}).then(function(r){if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+r.presentsSent+'+'+r.absentsSent;}}).catch(function(){if(el){el.style.color='var(--err-text)';el.textContent='Erreur';}btn.disabled=false;});
+}
+
+// ================================================================
+// YOGA — fonctions actions
+// ================================================================
+function valYogaEssai(email, date, btn) {
+  btn.disabled=true; btn.textContent='⏳';
+  if (IS_DEMO) {
+    var e=(adminData.essaiYoga||[]).find(function(x){return x.email===email&&x.date===date;});
+    if(e) e.statut='confirme';
+    renderTab(); return;
+  }
+  postAS({action:'validerYogaEssai',email:email,date:date}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;btn.textContent='✓';});
+}
+function pointerYoga(date, email, present) {
+  var e = (adminData.essaiYoga||[]).find(function(x){return x.email===email&&x.date===date;});
+  if (e) e.present = present;
+  if (!IS_DEMO) postAS({action:'pointerYogaEssai',email:email,date:date,present:present}).catch(function(){});
+  renderTab();
+}
+function envYogaJ1(date, btn) {
+  btn.disabled=true;
+  var ins  = (adminData.essaiYoga||[]).filter(function(e){return e.date===date;});
+  var pres = ins.filter(function(e){return e.present===true;}).map(function(e){return {prenom:e.prenom,nom:e.nom,email:e.email};});
+  var abs  = ins.filter(function(e){return e.present===false;}).map(function(e){return {prenom:e.prenom,nom:e.nom,email:e.email};});
+  var el   = gel('yoga-j1s-'+date);
+  if (el) { el.style.color='var(--gold)'; el.textContent='⏳'; }
+  if (IS_DEMO) {
+    setTimeout(function(){ if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+pres.length+'+'+abs.length+' (démo)';}btn.disabled=false;},800); return;
+  }
+  postAS({action:'envoyerEmailsYogaJ1',date:date,presents:pres,absents:abs})
+    .then(function(r){if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+r.presentsSent+'+'+r.absentsSent;}})
+    .catch(function(){if(el){el.style.color='var(--err-text)';el.textContent='Erreur';}btn.disabled=false;});
 }
 
 // ================================================================
@@ -3241,6 +3369,135 @@ function supprimerPub(id, btn) {
 // TAB — COURS TANGO (fusion Élèves + Cours)
 // Statuts : demande | valide | attente_paiement | inscrit
 // ================================================================
+// ================================================================
+// TAB YOGA
+// ================================================================
+var COURS_YOGA_LBL = {yin:'Yin Yoga 10h30', hatha:'Hatha Yoga 11h30', forfait:'Forfait Yin+Hatha 10h30–12h30'};
+
+function renderYoga() {
+  var h = '<div class="sub-tabs">'
+    +'<button class="sub-tab'+(sousOngletYoga==='essai'?' active':'')+'" data-sous-yoga="essai">Essai</button>'
+    +'<button class="sub-tab'+(sousOngletYoga==='eleves'?' active':'')+'" data-sous-yoga="eleves">Élèves</button>'
+    +'</div>';
+  if (sousOngletYoga==='eleves') return h + renderYogaEleves();
+  return h + renderYogaEssai();
+}
+
+function renderYogaEssai() {
+  var sai = saisonActive();
+  var liste = (adminData.essaiYoga||[]).filter(function(e){ return dateAppartientSaison(e.date, sai); });
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px;">'
+    +'<div class="sub-tabs" style="margin-bottom:0;">'
+    +'<button class="sub-tab'+(filtreEssaiYoga==='dates'?' active':'')+'" data-filt-essai-yoga="dates">Par date</button>'
+    +'<button class="sub-tab'+(filtreEssaiYoga==='pointage'?' active':'')+'" data-filt-essai-yoga="pointage">Pointage</button>'
+    +'</div>'
+    +'<a href="essai-yoga.html" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:4px 10px;text-decoration:none;">🔗 Formulaire essai</a>'
+    +'</div>';
+  liste.sort(function(a,b){ return a.date!==b.date?a.date.localeCompare(b.date):a.prenom.localeCompare(b.prenom); });
+
+  if (filtreEssaiYoga==='pointage') {
+    var parDate = {};
+    liste.forEach(function(e){ if(!parDate[e.date])parDate[e.date]=[]; parDate[e.date].push(e); });
+    var hasEvt = false;
+    Object.keys(parDate).sort().forEach(function(date) {
+      var ins = parDate[date];
+      var pres = ins.filter(function(e){ return e.present===true; }).length;
+      var abs  = ins.filter(function(e){ return e.present===false; }).length;
+      var rest = ins.length - pres - abs;
+      hasEvt = true;
+      var gratuit = estEssaiYogaGratuit(date);
+      h += '<div class="section-hdr">'+fmtDate(date)+(gratuit?' <span style="color:var(--ok-text);font-size:10px;">Gratuit</span>':' <span style="font-size:10px;color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')+'&nbsp;— ✓'+pres+' ✗'+abs+' ?'+rest+'</div>';
+      ins.forEach(function(e) {
+        var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
+        h += '<div class="point-row">'
+          +'<div style="flex:1;min-width:0;">'
+          +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','yoga')+' <span class="pill pill-info" style="font-size:8px;padding:1px 5px;">'+coursLbl+'</span></div>'
+          +'<div class="point-sub">'+e.email+(e.statut==='attente'?' · <span style="color:var(--warn-text);">en attente</span>':'')+'</div>'
+          +'</div>'
+          +'<div style="display:flex;gap:5px;align-items:center;">'
+          +(e.gratuit?'<span class="pill pill-ok" style="font-size:8px;">Gratuit</span>':'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')
+          +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
+          +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
+          +'</div></div>';
+      });
+      var toutPointe = rest===0;
+      h += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
+        +(toutPointe?'<button class="btn btn-ok" data-action="env-yoga-j1" data-date="'+date+'">✉️ Emails J+1 Yoga</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d\'abord.</span>')
+        +'<span id="yoga-j1s-'+date+'" style="font-size:11px;margin-left:8px;"></span>'
+        +'</div>';
+    });
+    return h + (hasEvt?'':'<div class="empty-state">Aucun cours d\'essai yoga confirmé.</div>');
+  }
+
+  // Vue "Par date" : toutes les dates COURS_YOGA futures de la saison
+  var todayStr = today();
+  var allDates = {};
+  (COURS_YOGA||[]).filter(function(d){ return d>=todayStr && dateAppartientSaison(d,sai); })
+    .forEach(function(d){ allDates[d]=true; });
+  var parDate = {};
+  liste.forEach(function(e){ if(!parDate[e.date])parDate[e.date]=[]; parDate[e.date].push(e); });
+  Object.keys(parDate).forEach(function(d){ allDates[d]=true; });
+  var sortedDates = Object.keys(allDates).sort().slice(0,20);
+  if (!sortedDates.length) return h+'<div class="empty-state">Aucun cours de yoga prévu.</div>';
+  sortedDates.forEach(function(date) {
+    var ins = parDate[date]||[];
+    var conf = ins.filter(function(e){ return e.statut==='confirme'; });
+    var att  = ins.filter(function(e){ return e.statut==='attente'; });
+    var gratuit = estEssaiYogaGratuit(date);
+    h += '<div class="section-hdr">'+fmtDate(date)
+      +' <span style="font-weight:400;color:var(--dim);">Espace Sorano</span>'
+      +(gratuit?' <span class="pill pill-ok" style="font-size:9px;">Gratuit</span>':' <span style="font-size:10px;color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')
+      +(att.length?' <span style="color:var(--warn-text);font-size:10px;">('+att.length+' att.)</span>':'')
+      +' <span style="font-weight:400;color:var(--dim);font-size:10px;">'+conf.length+' confirmé'+(conf.length>1?'s':'')+'</span>'
+      +'</div>';
+    if (!ins.length) {
+      h += '<div style="font-size:11px;color:var(--dim);padding:6px 0 10px;">Aucune inscription pour cette date.</div>';
+      return;
+    }
+    ins.forEach(function(e) {
+      var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
+      var vraiAtt = e.statut==='attente';
+      h += '<div class="point-row">'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
+        +nomCliquable(e.prenom+' '+e.nom,e.email||'','','yoga')
+        +' <span class="pill pill-info" style="font-size:8px;padding:1px 5px;">'+coursLbl+'</span>'
+        +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
+        +'</div>'
+        +'<div class="point-sub">'+e.email+'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+        +(vraiAtt
+          ?'<button class="btn btn-ok" style="padding:3px 9px;font-size:10px;" data-action="val-yoga-essai" data-email="'+e.email+'" data-date="'+date+'">✓ Confirmer</button>'
+          :'<span class="pill pill-ok" style="font-size:8px;">Confirmé.e</span>')
+        +btnEmail(e.email,e.prenom+' '+e.nom)
+        +'</div></div>';
+    });
+  });
+  return h;
+}
+
+function renderYogaEleves() {
+  var sai = saisonActive();
+  var liste = (adminData.coursYoga||[]).filter(function(e){ return (e.saison||saisonCourante())===sai; });
+  if (!liste.length) return '<div class="empty-state">Aucun élève yoga inscrit pour la saison '+sai+'.</div>';
+  var h = '<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">'+liste.length+' élève'+(liste.length>1?'s':'')+' inscrit'+(liste.length>1?'s':'')+' en yoga — saison '+sai+'</div>';
+  liste.slice().sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom); })
+    .forEach(function(e) {
+      var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
+      h += '<div class="point-row">'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','yoga')+'</div>'
+        +'<div class="point-sub"><span class="pill pill-info" style="font-size:8px;">'+coursLbl+'</span> · Inscrit le '+fmtDate(e.dateInscription)+'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+        +'<span class="pill pill-ok" style="font-size:10px;">Inscrit.e</span>'
+        +btnEmail(e.email,e.prenom+' '+e.nom)
+        +'</div></div>';
+    });
+  return h;
+}
+
 var STATUT_LBL = {
   demande:           {lbl:'Demande',          pill:'pill-info',  border:'hl-warn'},
   valide:            {lbl:'Demande validée',  pill:'pill-warn',  border:'hl-warn'},

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Tango &amp; Vous — Cours d'essai Yoga</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600;700&display=swap"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#D4AF37;--gold-dim:#D4AF37;--gold-pale:#1f1a00;--gold-border:#3a2d00;
+  --bg:#0f0f0f;--s1:#141414;--s2:#1a1a1a;--s3:#222;
+  --border:#2a2a2a;--text:#f0f0f0;--dim:#ccc;--faint:#aaa;
+  --danger:#c62828;
+  --font-d:'Cormorant Garamond',Georgia,serif;
+  --font-b:'Montserrat',sans-serif;
+}
+html{background:transparent;}
+body{font-family:var(--font-b);font-size:14px;color:var(--text);background:var(--bg);min-height:100vh;}
+.wrap{max-width:520px;margin:0 auto;}
+.hdr{background:#000;border-bottom:2px solid var(--gold);padding:18px 24px 14px;text-align:center;}
+.hdr-logo{font-family:var(--font-d);font-size:22px;font-weight:300;letter-spacing:5px;color:var(--gold);}
+.hdr-sub{font-size:10px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin-top:4px;}
+.body{padding:24px;}
+.field{margin-bottom:14px;}
+label{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+input,select{width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:14px;font-family:var(--font-b);transition:border-color .2s;}
+input:focus,select:focus{outline:none;border-color:var(--gold);background:var(--gold-pale);}
+input::placeholder{color:var(--faint);}
+select option{background:var(--s2);}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:420px){.row2{grid-template-columns:1fr;}}
+/* Boutons type cours */
+.btn-grp{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.btn-choix{
+  flex:1;min-width:110px;background:#100d00;border:2px solid var(--gold-border);
+  color:#8a6820;padding:14px 8px;border-radius:10px;cursor:pointer;
+  text-align:center;font-size:12px;font-weight:700;font-family:var(--font-b);
+  transition:all .22s;display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.btn-choix:hover,.btn-choix.sel{border-color:var(--gold);background:#261d00;color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.2);}
+.btn-choix .bc-hr{font-size:10px;color:var(--faint);font-weight:400;}
+/* Tarif badge */
+.tarif-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;font-size:14px;font-weight:700;margin:12px 0;}
+.tarif-gratuit{background:#0a1400;border:1px solid #2e5c00;color:#8bc34a;}
+.tarif-paye{background:#1a1400;border:1px solid var(--gold-border);color:var(--gold);}
+/* Info box */
+.info-box{background:#100d00;border-left:3px solid var(--gold-dim);padding:10px 13px;border-radius:0 7px 7px 0;font-size:12px;color:var(--gold);margin-bottom:14px;line-height:1.7;}
+/* Bouton soumettre */
+.btn-submit{width:100%;background:var(--gold);color:#000;border:none;padding:14px;border-radius:7px;font-size:14px;font-weight:700;font-family:var(--font-b);letter-spacing:1px;cursor:pointer;transition:opacity .2s;margin-top:6px;}
+.btn-submit:hover{opacity:.88;}
+.btn-submit:disabled{opacity:.45;cursor:not-allowed;}
+/* Erreur */
+.errmsg{display:none;background:#140000;border-left:3px solid var(--danger);padding:9px 12px;border-radius:0 7px 7px 0;font-size:12px;color:#ff6b6b;margin-top:8px;}
+/* Succès */
+.success{display:none;padding:28px 24px 36px;text-align:center;}
+.s-icon{font-size:50px;display:block;margin-bottom:14px;}
+.s-title{font-family:var(--font-d);font-size:24px;font-weight:300;color:var(--gold);letter-spacing:3px;margin-bottom:8px;}
+.s-card{background:#080700;border:2px solid var(--gold-border);border-radius:12px;padding:16px;margin-bottom:18px;text-align:left;}
+.s-line{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #1a1400;font-size:13px;color:#e8c84a;line-height:1.6;}
+.s-line:last-child{border-bottom:none;}
+.s-ico{font-size:18px;flex-shrink:0;margin-top:1px;}
+.asso-btn{display:block;width:100%;padding:15px;background:var(--gold);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:2px;text-transform:uppercase;margin:16px 0 6px;font-family:var(--font-b);transition:opacity .2s;}
+.asso-btn:hover{opacity:.88;}
+.asso-note{font-size:12px;color:#ff6b6b;text-align:center;line-height:1.8;margin-bottom:14px;}
+.s-sig{margin-top:16px;font-family:var(--font-d);font-size:16px;color:var(--gold);letter-spacing:2px;font-weight:300;}
+.btn-nouveau{display:inline-block;margin-top:14px;background:transparent;color:var(--gold);border:1px solid var(--gold);padding:10px 22px;border-radius:7px;font-size:13px;font-weight:700;font-family:var(--font-b);cursor:pointer;letter-spacing:1px;transition:all .2s;}
+.btn-nouveau:hover{background:var(--gold);color:#000;}
+.footer{font-size:11px;color:var(--faint);text-align:center;padding:14px 24px 18px;border-top:1px solid var(--border);line-height:1.7;}
+.footer a{color:var(--gold);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hdr">
+  <div class="hdr-logo">TANGO &amp; VOUS</div>
+  <div class="hdr-sub">Cours d'essai Yoga — Espace Sorano, Vincennes</div>
+</div>
+
+<div class="body" id="form-zone">
+  <div class="info-box">
+    🧘 Cours de yoga le mardi matin à l'<b>Espace Sorano, Vincennes</b><br/>
+    Yin Yoga <b>10h30</b> · Hatha Yoga <b>11h30</b><br/>
+    Les <b>2 premiers cours de septembre</b> sont <b>gratuits</b>.
+  </div>
+
+  <div class="field">
+    <label>Type de cours *</label>
+    <div class="btn-grp" id="cours-grp">
+      <button type="button" class="btn-choix sel" data-cours="yin" onclick="selectCours(this)">
+        Yin Yoga<br/><span class="bc-hr">10h30</span>
+      </button>
+      <button type="button" class="btn-choix" data-cours="hatha" onclick="selectCours(this)">
+        Hatha Yoga<br/><span class="bc-hr">11h30</span>
+      </button>
+      <button type="button" class="btn-choix" data-cours="forfait" onclick="selectCours(this)">
+        Forfait Yin+Hatha<br/><span class="bc-hr">10h30–12h30</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Date d'essai *</label>
+    <select id="sel-date" onchange="updatePrix()">
+      <option value="">— Choisir une date —</option>
+    </select>
+  </div>
+
+  <div id="tarif-zone" style="display:none;"></div>
+
+  <div class="row2">
+    <div class="field">
+      <label>Prénom *</label>
+      <input type="text" id="inp-prenom" autocomplete="given-name"/>
+    </div>
+    <div class="field">
+      <label>Nom *</label>
+      <input type="text" id="inp-nom" autocomplete="family-name"/>
+    </div>
+  </div>
+  <div class="field">
+    <label>Email *</label>
+    <input type="email" id="inp-email" autocomplete="email" autocapitalize="none"/>
+  </div>
+  <div class="field">
+    <label>Téléphone</label>
+    <input type="tel" id="inp-tel" autocomplete="tel" placeholder="06 00 00 00 00"/>
+  </div>
+
+  <div class="errmsg" id="errmsg"></div>
+  <button class="btn-submit" id="btn-submit" onclick="soumettre()">S'inscrire au cours d'essai</button>
+</div>
+
+<!-- Succès gratuit -->
+<div class="success" id="success-gratuit">
+  <span class="s-icon">✅</span>
+  <div class="s-title">INSCRIPTION ENREGISTRÉE !</div>
+  <div class="s-card">
+    <div class="s-line"><span class="s-ico">📧</span><span>Vous allez recevoir un email de confirmation.</span></div>
+    <div class="s-line"><span class="s-ico">🎁</span><span>Ce cours d'essai est <b>gratuit</b>. Bienvenue !</span></div>
+    <div class="s-line"><span class="s-ico">📍</span><span>Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes (RER A, Château de Vincennes)</span></div>
+  </div>
+  <div id="recap-gratuit"></div>
+  <div class="s-sig">À très bientôt sur le tapis !<br/><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
+  <button class="btn-nouveau" onclick="restart()">← Nouvelle inscription</button>
+</div>
+
+<!-- Succès payant -->
+<div class="success" id="success-paye">
+  <span class="s-icon">✅</span>
+  <div class="s-title">INSCRIPTION ENREGISTRÉE !</div>
+  <div class="s-card">
+    <div class="s-line"><span class="s-ico">📧</span><span>Vous allez recevoir un email de confirmation.</span></div>
+    <div class="s-line"><span class="s-ico">💳</span><span>Finalisez et réglez sur AssoConnect, ou en espèces lors du cours.</span></div>
+    <div class="s-line"><span class="s-ico">📍</span><span>Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes (RER A, Château de Vincennes)</span></div>
+  </div>
+  <button class="asso-btn" id="asso-link">FINALISER SUR ASSOCONNECT</button>
+  <p class="asso-note">Paiement CB en ligne, ou en espèces sur place.<br/>AssoConnect vous demandera un pourboire — celui-ci ne nous revient pas.</p>
+  <div id="recap-paye"></div>
+  <div class="s-sig">À très bientôt sur le tapis !<br/><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
+  <button class="btn-nouveau" onclick="restart()">← Nouvelle inscription</button>
+</div>
+
+<div class="footer">
+  Un problème ? <a href="mailto:tangoetvous@gmail.com">tangoetvous@gmail.com</a>
+</div>
+
+</div><!-- .wrap -->
+
+<script>
+// ================================================================
+// CONFIG
+// ================================================================
+const IS_DEMO = true; // passer à false en production
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
+
+// Liens AssoConnect yoga par saison (défauts)
+const LIENS_YOGA_DEFAUT = {
+  '2025-2026': 'https://le-regard-se-pose.assoconnect.com/collect/description/524249-q-yoga-avec-florencia-garcia-septembre-2025-juin-2026',
+  '2026-2027': 'https://le-regard-se-pose.assoconnect.com/collect/description/697805-q-yoga-avec-florencia-garcia-septembre-2026-juin-2027'
+};
+
+// Prix essai yoga (après la période gratuite)
+const YOGA_ESSAI_PRIX_DEFAUT = 15;
+function getYogaEssaiPrix() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('tev_tarifs_actifs')||'null');
+    if (stored && stored.yoga_essai) return stored.yoga_essai;
+    const prog = JSON.parse(localStorage.getItem('tev_tarifs')||'null');
+    if (prog && prog.tarifs && prog.tarifs.yoga_essai) return prog.tarifs.yoga_essai;
+  } catch(e){}
+  return YOGA_ESSAI_PRIX_DEFAUT;
+}
+function getSaisonCourante() {
+  const d = new Date(), m = d.getMonth()+1, y = d.getFullYear();
+  return (m>=9?y:y-1)+'-'+(m>=9?y+1:y);
+}
+function getYogaLien() {
+  try {
+    const sai = getSaisonCourante();
+    const stored = JSON.parse(localStorage.getItem('tev_liens_assoconnect')||'{}');
+    const custom = stored[sai]||{};
+    return custom.yoga || LIENS_YOGA_DEFAUT[sai] || 'https://le-regard-se-pose.assoconnect.com';
+  } catch(e){ return 'https://le-regard-se-pose.assoconnect.com'; }
+}
+
+// ================================================================
+// DATES YOGA
+// ================================================================
+const COURS_YOGA = [
+  // 2025-2026 (gratuit : 2025-09-09 et 2025-09-16)
+  '2025-09-09','2025-09-16','2025-09-23','2025-09-30',
+  '2025-10-07','2025-10-14',
+  '2025-11-04','2025-11-18','2025-11-25',
+  '2025-12-02','2025-12-09','2025-12-16',
+  '2026-01-06','2026-01-13','2026-01-20','2026-01-27',
+  '2026-02-03','2026-02-10','2026-02-17',
+  '2026-03-03','2026-03-10','2026-03-17','2026-03-24','2026-03-31',
+  '2026-04-07','2026-04-14',
+  '2026-05-05','2026-05-12','2026-05-19','2026-05-26',
+  '2026-06-02','2026-06-09','2026-06-16','2026-06-23',
+  // 2026-2027 (gratuit : 2026-09-08 et 2026-09-15)
+  '2026-09-08','2026-09-15','2026-09-22','2026-09-29',
+  '2026-10-06','2026-10-13',
+  '2026-11-03','2026-11-17','2026-11-24',
+  '2026-12-01','2026-12-08','2026-12-15',
+  '2027-01-05','2027-01-12','2027-01-19','2027-01-26',
+  '2027-02-02','2027-02-09','2027-02-16',
+  '2027-03-02','2027-03-09','2027-03-16','2027-03-23','2027-03-30',
+  '2027-04-06','2027-04-13',
+  '2027-05-04','2027-05-11','2027-05-18','2027-05-25',
+  '2027-06-01','2027-06-08','2027-06-15','2027-06-22'
+];
+
+const JOURS_FR = ['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'];
+const MOIS_FR  = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+
+function fmtDate(iso) {
+  const d = new Date(iso+'T00:00:00');
+  return JOURS_FR[d.getDay()]+' '+d.getDate()+' '+MOIS_FR[d.getMonth()]+' '+d.getFullYear();
+}
+function todayISO() { return new Date().toISOString().slice(0,10); }
+
+function estGratuit(dateStr) {
+  const annee = dateStr.slice(0,4);
+  if (dateStr.slice(5,7) !== '09') return false;
+  const septDates = COURS_YOGA.filter(d => d.slice(0,7) === annee+'-09').sort();
+  const idx = septDates.indexOf(dateStr);
+  return idx >= 0 && idx < 2;
+}
+
+// ================================================================
+// ÉTAT
+// ================================================================
+let coursSelectionne = 'yin';
+let dateSelectionnee = '';
+
+// ================================================================
+// INIT
+// ================================================================
+function init() {
+  const sel = document.getElementById('sel-date');
+  const today = todayISO();
+  const futures = COURS_YOGA.filter(d => d >= today).slice(0, 20);
+  futures.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    const gratuit = estGratuit(d);
+    opt.textContent = fmtDate(d) + (gratuit ? ' — Gratuit' : ' — '+getYogaEssaiPrix()+'€');
+    sel.appendChild(opt);
+  });
+  // Préremplir depuis localStorage (élève connecté)
+  try {
+    const pwa = JSON.parse(localStorage.getItem('tev_user')||'null');
+    if (pwa) {
+      if (pwa.prenom) document.getElementById('inp-prenom').value = pwa.prenom;
+      if (pwa.nom)    document.getElementById('inp-nom').value    = pwa.nom;
+      if (pwa.email)  document.getElementById('inp-email').value  = pwa.email;
+      if (pwa.tel)    document.getElementById('inp-tel').value    = pwa.tel;
+    }
+  } catch(e){}
+}
+
+function selectCours(btn) {
+  document.querySelectorAll('#cours-grp .btn-choix').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  coursSelectionne = btn.dataset.cours;
+}
+
+function updatePrix() {
+  const sel   = document.getElementById('sel-date');
+  const zone  = document.getElementById('tarif-zone');
+  const date  = sel.value;
+  dateSelectionnee = date;
+  if (!date) { zone.style.display='none'; return; }
+  const gratuit = estGratuit(date);
+  const prix    = getYogaEssaiPrix();
+  zone.style.display = 'block';
+  zone.innerHTML = gratuit
+    ? '<div class="tarif-badge tarif-gratuit">🎁 Ce cours d\'essai est <b>gratuit</b></div>'
+    : '<div class="tarif-badge tarif-paye">💶 Cours d\'essai : <b>'+prix+'€</b></div>';
+}
+
+function soumettre() {
+  const prenom = document.getElementById('inp-prenom').value.trim();
+  const nom    = document.getElementById('inp-nom').value.trim();
+  const email  = document.getElementById('inp-email').value.trim().toLowerCase();
+  const tel    = document.getElementById('inp-tel').value.trim();
+  const date   = document.getElementById('sel-date').value;
+  const err    = document.getElementById('errmsg');
+  err.style.display='none';
+
+  if (!prenom || !nom) { err.textContent='Prénom et nom requis.'; err.style.display='block'; return; }
+  if (!email || !email.includes('@')) { err.textContent='Email invalide.'; err.style.display='block'; return; }
+  if (!date) { err.textContent='Veuillez choisir une date.'; err.style.display='block'; return; }
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = '⏳ Enregistrement…';
+
+  const gratuit = estGratuit(date);
+  const data = { prenom, nom, email, tel, cours:coursSelectionne, date, gratuit };
+
+  // Notifier admin (BroadcastChannel + localStorage)
+  const msg = { type:'yogaEssaiInscription', data };
+  try {
+    const bc = new BroadcastChannel('tev_inscriptions');
+    bc.postMessage(msg);
+    bc.close();
+  } catch(e){}
+  try {
+    const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]');
+    pending.push(msg);
+    localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+  } catch(e){}
+
+  if (!IS_DEMO) {
+    fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      body: JSON.stringify({action:'yogaEssaiInscription', ...data})
+    }).catch(()=>{});
+  }
+
+  // Construire récap
+  const coursLbl = {yin:'Yin Yoga 10h30', hatha:'Hatha Yoga 11h30', forfait:'Forfait Yin+Hatha 10h30–12h30'}[coursSelectionne]||coursSelectionne;
+  const recapHtml = `<div class="s-card">
+    <div class="s-line"><span class="s-ico">🧘</span><span><b>${coursLbl}</b></span></div>
+    <div class="s-line"><span class="s-ico">📅</span><span>${fmtDate(date)}</span></div>
+    <div class="s-line"><span class="s-ico">👤</span><span>${prenom} ${nom}</span></div>
+    <div class="s-line"><span class="s-ico">✉️</span><span>${email}</span></div>
+  </div>`;
+
+  setTimeout(() => {
+    document.getElementById('form-zone').style.display = 'none';
+    if (gratuit) {
+      document.getElementById('recap-gratuit').innerHTML = recapHtml;
+      document.getElementById('success-gratuit').style.display = 'block';
+    } else {
+      document.getElementById('recap-paye').innerHTML = recapHtml;
+      document.getElementById('asso-link').onclick = () => window.open(getYogaLien(), '_blank');
+      document.getElementById('success-paye').style.display = 'block';
+    }
+    window.scrollTo(0,0);
+    btn.disabled = false;
+    btn.textContent = 'S\'inscrire au cours d\'essai';
+  }, IS_DEMO ? 600 : 0);
+}
+
+function restart() {
+  document.getElementById('success-gratuit').style.display = 'none';
+  document.getElementById('success-paye').style.display   = 'none';
+  document.getElementById('form-zone').style.display      = 'block';
+  document.getElementById('inp-prenom').value = '';
+  document.getElementById('inp-nom').value    = '';
+  document.getElementById('inp-email').value  = '';
+  document.getElementById('inp-tel').value    = '';
+  document.getElementById('sel-date').value   = '';
+  document.getElementById('tarif-zone').style.display = 'none';
+  document.getElementById('errmsg').style.display    = 'none';
+  window.scrollTo(0,0);
+}
+
+init();
+</script>
+</body>
+</html>
