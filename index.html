@@ -389,6 +389,7 @@
     if (tab === 'carte-lieux') {} // static content
     if (tab === 'cours-particuliers') {} // iframe, chargement statique
     if (tab === 'preinscription') renderPreinscription();
+    if (tab === 'yoga') renderYogaPane();
     window.scrollTo(0, 0);
   };
 
@@ -428,6 +429,66 @@
   }
 
   // ================================================================
+  // YOGA PANE
+  // ================================================================
+  function renderYogaPane() {
+    // Prochain cours
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const prochains = COURS_YOGA.filter(d => d >= todayStr);
+    const prochain = prochains[0] || null;
+    const prochainsEl = $('yoga-prochain-cours');
+    if (prochainsEl) {
+      if (prochain) {
+        const d = new Date(prochain + 'T00:00:00');
+        const gratuit = estEssaiYogaGratuitIndex(prochain);
+        prochainsEl.innerHTML = `<div class="event-item">
+          <div class="event-date-col">
+            <div class="event-day">${d.getDate()}</div>
+            <div class="event-month-lbl">${MOIS_COURT[d.getMonth()]}</div>
+          </div>
+          <div class="event-type-bar" style="background:#a78bfa"></div>
+          <div class="event-info">
+            <div class="event-type-lbl" style="color:#a78bfa">Yoga${gratuit ? ' · <span style="font-size:10px;">🎁 Essai gratuit</span>' : ''}</div>
+            <div class="event-title">Yin Yoga 10h30 · Hatha Yoga 11h30</div>
+            <div class="event-sub">Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes · RER A Château de Vincennes</div>
+          </div>
+        </div>`;
+      } else {
+        prochainsEl.innerHTML = '<p class="empty-msg">Pas de cours à venir pour le moment.</p>';
+      }
+    }
+
+    // Statut élève yoga
+    const statutEl = $('yoga-statut-eleve');
+    if (statutEl && eleveData) {
+      const email = (eleveData.eleve || {}).email || '';
+      const inscrit = (eleveData.coursYoga || []).some(x => x.email === email);
+      if (inscrit) {
+        const cx = (eleveData.coursYoga || []).find(x => x.email === email);
+        const coursLbl = {yin:'Yin Yoga 10h30', hatha:'Hatha Yoga 11h30', forfait:'Yin Yoga+Hatha Yoga 10h30–12h30'}[cx.cours] || cx.cours;
+        statutEl.innerHTML = `<div class="contact-card" style="cursor:default;margin-bottom:14px;border-left:4px solid #a78bfa;">
+          <div class="contact-icon-wrap" style="font-size:28px;">✅</div>
+          <div class="contact-info">
+            <div class="contact-label" style="color:#a78bfa;">Inscrit·e au Yoga</div>
+            <div class="contact-val">${coursLbl}</div>
+            <div class="contact-sub">Saison ${cx.saison || ''}</div>
+          </div>
+        </div>`;
+      } else {
+        statutEl.innerHTML = '';
+      }
+    }
+  }
+
+  function estEssaiYogaGratuitIndex(dateStr) {
+    const annee = dateStr.slice(0, 4);
+    if (dateStr.slice(5, 7) !== '09') return false;
+    const septDates = COURS_YOGA.filter(d => d.slice(0, 7) === annee + '-09').sort();
+    const idx = septDates.indexOf(dateStr);
+    return idx >= 0 && idx < 2;
+  }
+
+  // ================================================================
   // DONNÉES AGENDA (synchronisées avec admin.html)
   // ================================================================
   const COURS_PARIS = ['2026-04-02','2026-04-09','2026-04-16','2026-04-23','2026-05-07','2026-05-21','2026-05-28','2026-06-04','2026-06-11','2026-06-18','2026-06-25','2026-09-03','2026-09-10','2026-09-17','2026-09-24','2026-10-01','2026-10-08','2026-10-15','2026-10-22','2026-11-05','2026-11-12','2026-11-19','2026-11-26','2026-12-03','2026-12-10','2026-12-17','2027-01-07','2027-01-14','2027-01-21','2027-01-28','2027-02-04','2027-02-18','2027-02-25','2027-03-04','2027-03-11','2027-03-18','2027-03-25','2027-04-01','2027-04-15','2027-04-22','2027-04-29','2027-05-13','2027-05-20','2027-05-27','2027-06-03','2027-06-10','2027-06-17','2027-06-24'];
@@ -448,6 +509,19 @@
     {date:'2027-06-19',label:'Sam. 19 Juin 2027',s1:'À venir',s2:'À venir'}
   ];
   const MILONGAS_DATA = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
+  // Yoga — mardis à l'Espace Sorano Vincennes (Yin 10h30, Hatha 11h30)
+  const COURS_YOGA = [
+    '2025-09-09','2025-09-16','2025-09-23','2025-09-30','2025-10-07','2025-10-14',
+    '2025-11-04','2025-11-18','2025-11-25','2025-12-02','2025-12-09','2025-12-16',
+    '2026-01-06','2026-01-13','2026-01-20','2026-01-27','2026-02-03','2026-02-10','2026-02-17',
+    '2026-03-03','2026-03-10','2026-03-17','2026-03-24','2026-03-31','2026-04-07','2026-04-14',
+    '2026-05-05','2026-05-12','2026-05-19','2026-05-26','2026-06-02','2026-06-09','2026-06-16','2026-06-23',
+    '2026-09-08','2026-09-15','2026-09-22','2026-09-29','2026-10-06','2026-10-13',
+    '2026-11-03','2026-11-17','2026-11-24','2026-12-01','2026-12-08','2026-12-15',
+    '2027-01-05','2027-01-12','2027-01-19','2027-01-26','2027-02-02','2027-02-09','2027-02-16',
+    '2027-03-02','2027-03-09','2027-03-16','2027-03-23','2027-03-30','2027-04-06','2027-04-13',
+    '2027-05-04','2027-05-11','2027-05-18','2027-05-25','2027-06-01','2027-06-08','2027-06-15','2027-06-22'
+  ];
 
   // ================================================================
   // AGENDA
@@ -459,6 +533,7 @@
   const COLOR_VINC    = '#40d8c0';
   const COLOR_STAGE   = '#D4AF37';
   const COLOR_MILONGA = '#e040a0';
+  const COLOR_YOGA    = '#a78bfa'; // violet
 
   function buildAllEvents(filter) {
     const today = new Date(); today.setHours(0,0,0,0);
@@ -490,6 +565,11 @@
         events.push({date:d, subtype:'milonga', type:'milonga', titre:'Milonga La Dolce Vita', heure:'17h30–23h30', lieu:'Centre Re-Corps \u2014 16A bd de Reuilly, Paris 12e \u00b7 M\u00b0 Dugommier (L6)'});
       });
     }
+    if (filter === 'tous' || filter === 'yoga') {
+      COURS_YOGA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
+        events.push({date:d, subtype:'yoga', type:'cours', titre:'Yoga — Yin Yoga 10h30 · Hatha Yoga 11h30', heure:'10h30', lieu:'Espace Sorano \u2014 16 rue Charles Path\u00e9, 94300 Vincennes \u00b7 RER A Ch\u00e2teau de Vincennes'});
+      });
+    }
     events.sort((a,b) => a.date.localeCompare(b.date) || (a.heure||'').localeCompare(b.heure||''));
     return events;
   }
@@ -499,6 +579,7 @@
     if (subtype === 'vincennes') return COLOR_VINC;
     if (subtype === 'stage') return COLOR_STAGE;
     if (subtype === 'milonga') return COLOR_MILONGA;
+    if (subtype === 'yoga') return COLOR_YOGA;
     return '#888';
   }
   function getEventLabel(subtype) {
@@ -506,6 +587,7 @@
     if (subtype === 'vincennes') return 'Cours Vincennes';
     if (subtype === 'stage') return 'Stage';
     if (subtype === 'milonga') return 'Milonga';
+    if (subtype === 'yoga') return 'Yoga';
     return subtype || '';
   }
 
@@ -514,6 +596,7 @@
       { id:'tous', label:'Tous' },
       { id:'paris', label:'Paris' },
       { id:'vincennes', label:'Vincennes' },
+      { id:'yoga', label:'🧘 Yoga' },
       { id:'stage', label:'Stages' },
       { id:'milonga', label:'Milongas' },
     ];
@@ -1833,6 +1916,10 @@ a{color:var(--gold);text-decoration:none;}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Contact
     </button>
+    <button class="nav-btn" id="nav-yoga" data-tab="yoga">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="5" r="2"/><path d="M12 7c-3 2-5 5-5 8h10c0-3-2-6-5-8z"/><path d="M7 15c-2 1-3 2-3 4h16c0-2-1-3-3-4"/></svg>
+      Yoga
+    </button>
     <button class="nav-btn" id="nav-preinscription" data-tab="preinscription">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Pré-inscr.
@@ -2057,6 +2144,60 @@ a{color:var(--gold);text-decoration:none;}
   <!-- ── ONGLET PRE-INSCRIPTION ─────────────────────────────── -->
   <div class="tab-pane" id="preinscription-pane">
     <!-- Content rendered dynamically by renderPreinscription() -->
+  </div>
+
+  <!-- ── ONGLET YOGA ───────────────────────────────────────── -->
+  <div class="tab-pane" id="yoga-pane">
+    <div class="tab-section-title">🧘 Yoga — Espace Sorano, Vincennes</div>
+
+    <!-- Présentation -->
+    <div class="contact-card" style="cursor:default;margin-bottom:14px;">
+      <div class="contact-icon-wrap" style="font-size:28px;">🧘</div>
+      <div class="contact-info">
+        <div class="contact-label">Cours du mardi matin</div>
+        <div class="contact-val">Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes</div>
+        <div class="contact-sub">RER A · Château de Vincennes</div>
+      </div>
+    </div>
+
+    <!-- Cours proposés -->
+    <div class="section" style="margin-bottom:14px;">
+      <div class="section-title">Cours proposés</div>
+      <div class="stages-tarifs">
+        <div class="stages-tarif-item">
+          <span class="stages-tarif-label">🌙 Yin Yoga</span>
+          <span class="stages-tarif-price" style="color:#a78bfa;">10h30</span>
+        </div>
+        <div class="stages-tarif-item">
+          <span class="stages-tarif-label">☀️ Hatha Yoga</span>
+          <span class="stages-tarif-price" style="color:#a78bfa;">11h30</span>
+        </div>
+        <div class="stages-tarif-item">
+          <span class="stages-tarif-label">Forfait Yin Yoga + Hatha Yoga</span>
+          <span class="stages-tarif-price" style="color:#a78bfa;">10h30–12h30</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cours d'essai -->
+    <div class="section" style="margin-bottom:14px;">
+      <div class="section-title">Cours d'essai gratuit</div>
+      <p style="color:var(--dim);font-size:13px;margin:0 0 12px;">Les deux premiers cours de septembre sont gratuits. Venez essayer sans engagement !</p>
+      <a href="essai-yoga.html" class="btn-inscr-yoga" style="display:block;text-align:center;background:#a78bfa;color:#fff;font-weight:700;padding:14px 20px;border-radius:10px;font-size:15px;text-decoration:none;letter-spacing:0.3px;">
+        S'inscrire à un cours d'essai →
+      </a>
+    </div>
+
+    <!-- Statut élève yoga (rendu dynamiquement) -->
+    <div id="yoga-statut-eleve"></div>
+
+    <!-- Prochain cours -->
+    <div class="section">
+      <div class="section-title">Prochain cours</div>
+      <div id="yoga-prochain-cours"><p class="empty-msg">Chargement…</p></div>
+    </div>
+
+    <div class="dash-sig" style="padding:8px 20px 20px;">Florencia &amp; Jérémy</div>
   </div>
 
   <!-- ── PUBLICATION MODAL ──────────────────────────────────── -->

@@ -281,7 +281,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <button class="tab-btn" data-tab="cartes">🎴 Cartes 10</button>
     <button class="tab-btn" data-tab="stages">💃 Stages</button>
     <button class="tab-btn" data-tab="sorano">🏛 Sorano</button>
-    <button class="tab-btn" data-tab="yoga">🧘 Inscr Yoga</button>
+    <button class="tab-btn" data-tab="yoga">🧘 Yoga</button>
     <button class="tab-btn" data-tab="agenda">📅 Agenda</button>
     <button class="tab-btn" data-tab="publications">📝 Publis</button>
     <button class="tab-btn" data-tab="tarifs">💶 Tarifs</button>
@@ -1739,6 +1739,30 @@ function handleAction(action, btn) {
     case 'val-yoga-essai':
       valYogaEssai(btn.dataset.email||'', btn.dataset.date||'', btn);
       break;
+    case 'ouvrir-yoga-inscr':
+      ouvrirModalYogaEnrollement(btn.dataset.email||'', btn.dataset.prenom||'', btn.dataset.nom||'');
+      break;
+    case 'confirmer-yoga-inscr':
+      (function(){
+        var email  = btn.dataset.email||'';
+        var prenom = btn.dataset.prenom||'';
+        var nom    = btn.dataset.nom||'';
+        var cours  = (gel('modal-yoga-cours-sel')||{}).value || 'yin';
+        var sai    = saisonActive();
+        if (!adminData.coursYoga) adminData.coursYoga=[];
+        var existe = adminData.coursYoga.some(function(x){ return x.email===email && (x.saison||saisonCourante())===sai; });
+        if (!existe) {
+          adminData.coursYoga.push({id:'CY'+Date.now(),prenom:prenom,nom:nom,email:email,tel:'',cours:cours,statut:'inscrit',saison:sai,dateInscription:today()});
+        }
+        if (!IS_DEMO) postAS({action:'inscrireEleveYoga',email:email,prenom:prenom,nom:nom,cours:cours,saison:sai}).catch(function(){});
+        fermerContact();
+        afficherToast('✓ '+prenom+' '+nom+' inscrit.e en yoga — '+COURS_YOGA_LBL[cours]);
+        renderTab();
+      })();
+      break;
+    case 'soumettre-yoga-inscr':
+      soumettreYogaInscrManuel();
+      break;
     case 'pointer-yoga-pres':
       pointerYoga(btn.dataset.date, btn.dataset.email, true);
       break;
@@ -2333,6 +2357,35 @@ function envYogaJ1(date, btn) {
   postAS({action:'envoyerEmailsYogaJ1',date:date,presents:pres,absents:abs})
     .then(function(r){if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+r.presentsSent+'+'+r.absentsSent;}})
     .catch(function(){if(el){el.style.color='var(--err-text)';el.textContent='Erreur';}btn.disabled=false;});
+}
+
+function soumettreYogaInscrManuel() {
+  var prenom = ((gel('yi-prenom')||{}).value||'').trim();
+  var nom    = ((gel('yi-nom')||{}).value||'').trim();
+  var email  = ((gel('yi-email')||{}).value||'').trim().toLowerCase();
+  var tel    = ((gel('yi-tel')||{}).value||'').trim();
+  var cours  = (gel('yi-cours')||{}).value || 'yin';
+  var date   = (gel('yi-date')||{}).value || '';
+  var err = gel('yi-err'), ok = gel('yi-ok');
+  if (ok) ok.style.display='none';
+  if (err) err.style.display='none';
+  if (!prenom || !nom) { if(err){err.textContent='Prénom et nom requis.';err.style.display='block';} return; }
+  if (!email || email.indexOf('@')<0) { if(err){err.textContent='Email invalide.';err.style.display='block';} return; }
+  if (!date) { if(err){err.textContent='Date requise.';err.style.display='block';} return; }
+  var gratuit = estEssaiYogaGratuit(date);
+  if (!adminData.essaiYoga) adminData.essaiYoga=[];
+  var existe = adminData.essaiYoga.some(function(x){ return x.email===email && x.date===date; });
+  if (!existe) {
+    adminData.essaiYoga.push({id:'EY'+Date.now(),prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,date:date,statut:'confirme',present:null,gratuit:gratuit,saison:saisonPourNouvelleEntree(),dateInscription:today()});
+  }
+  if (!IS_DEMO) postAS({action:'yogaEssaiInscription',prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,date:date,gratuit:gratuit}).catch(function(){});
+  if (ok) ok.style.display='block';
+  if (gel('yi-prenom')) gel('yi-prenom').value='';
+  if (gel('yi-nom'))    gel('yi-nom').value='';
+  if (gel('yi-email'))  gel('yi-email').value='';
+  if (gel('yi-tel'))    gel('yi-tel').value='';
+  if (gel('yi-date'))   gel('yi-date').value='';
+  afficherToast('✓ '+prenom+' '+nom+' inscrit.e en essai yoga — '+fmtDate(date));
 }
 
 // ================================================================
@@ -3372,14 +3425,16 @@ function supprimerPub(id, btn) {
 // ================================================================
 // TAB YOGA
 // ================================================================
-var COURS_YOGA_LBL = {yin:'Yin Yoga 10h30', hatha:'Hatha Yoga 11h30', forfait:'Forfait Yin+Hatha 10h30–12h30'};
+var COURS_YOGA_LBL = {yin:'Yin Yoga 10h30', hatha:'Hatha Yoga 11h30', forfait:'Yin Yoga+Hatha Yoga 10h30–12h30'};
 
 function renderYoga() {
   var h = '<div class="sub-tabs">'
-    +'<button class="sub-tab'+(sousOngletYoga==='essai'?' active':'')+'" data-sous-yoga="essai">Essai</button>'
-    +'<button class="sub-tab'+(sousOngletYoga==='eleves'?' active':'')+'" data-sous-yoga="eleves">Élèves</button>'
+    +'<button class="sub-tab'+(sousOngletYoga==='essai'?' active':'')+'" data-sous-yoga="essai">Essai Yoga</button>'
+    +'<button class="sub-tab'+(sousOngletYoga==='eleves'?' active':'')+'" data-sous-yoga="eleves">Élèves Yoga</button>'
+    +'<button class="sub-tab'+(sousOngletYoga==='inscrire'?' active':'')+'" data-sous-yoga="inscrire">✏️ Inscrire</button>'
     +'</div>';
-  if (sousOngletYoga==='eleves') return h + renderYogaEleves();
+  if (sousOngletYoga==='eleves')   return h + renderYogaEleves();
+  if (sousOngletYoga==='inscrire') return h + renderYogaInscrire();
   return h + renderYogaEssai();
 }
 
@@ -3416,6 +3471,8 @@ function renderYogaEssai() {
           +'</div>'
           +'<div style="display:flex;gap:5px;align-items:center;">'
           +(e.gratuit?'<span class="pill pill-ok" style="font-size:8px;">Gratuit</span>':'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')
+          +(e.present===true&&!estDejaEleveYoga(e.email)?'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" title="Inscrire comme élève">💳</button>':'')
+          +(estDejaEleveYoga(e.email)?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>':'')
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
           +'</div></div>';
@@ -3469,7 +3526,9 @@ function renderYogaEssai() {
         +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
         +(vraiAtt
           ?'<button class="btn btn-ok" style="padding:3px 9px;font-size:10px;" data-action="val-yoga-essai" data-email="'+e.email+'" data-date="'+date+'">✓ Confirmer</button>'
-          :'<span class="pill pill-ok" style="font-size:8px;">Confirmé.e</span>')
+          :(estDejaEleveYoga(e.email)
+            ?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>'
+            :'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" title="Inscrire comme élève">💳 Inscrire</button>'))
         +btnEmail(e.email,e.prenom+' '+e.nom)
         +'</div></div>';
     });
@@ -3496,6 +3555,58 @@ function renderYogaEleves() {
         +'</div></div>';
     });
   return h;
+}
+
+// Retourne true si cet email est déjà inscrit en yoga pour la saison active
+function estDejaEleveYoga(email) {
+  var sai = saisonActive();
+  return (adminData.coursYoga||[]).some(function(x){ return x.email===email && (x.saison||saisonCourante())===sai; });
+}
+
+function renderYogaInscrire() {
+  var todayStr = today();
+  var opts = (COURS_YOGA||[]).filter(function(d){ return d>=todayStr && dateAppartientSaison(d,saisonActive()); })
+    .slice(0,20).map(function(d){
+      var gratuit = estEssaiYogaGratuit(d);
+      return '<option value="'+d+'">'+fmtDate(d)+(gratuit?' (Gratuit)':' ('+TARIFS.yoga_essai+'€)')+'</option>';
+    }).join('');
+  return '<div class="card">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Inscrire manuellement</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    +'<div class="field" style="margin:0;"><label>Prénom *</label><input type="text" id="yi-prenom"/></div>'
+    +'<div class="field" style="margin:0;"><label>Nom *</label><input type="text" id="yi-nom"/></div>'
+    +'</div>'
+    +'<div class="field"><label>Email *</label><input type="email" id="yi-email" autocapitalize="none"/></div>'
+    +'<div class="field"><label>Téléphone</label><input type="tel" id="yi-tel" placeholder="06 00 00 00 00"/></div>'
+    +'<div class="field"><label>Cours *</label><select id="yi-cours">'
+    +'<option value="yin">Yin Yoga 10h30</option>'
+    +'<option value="hatha">Hatha Yoga 11h30</option>'
+    +'<option value="forfait">Yin Yoga+Hatha Yoga 10h30–12h30</option>'
+    +'</select></div>'
+    +'<div class="field"><label>Date *</label><select id="yi-date"><option value="">— Choisir —</option>'
+    +opts
+    +'</select></div>'
+    +'<div class="box-err" id="yi-err"></div>'
+    +'<div class="box-ok" id="yi-ok">✓ Inscription enregistrée.</div>'
+    +'<div class="btn-row"><button class="btn btn-gold" data-action="soumettre-yoga-inscr">✓ Enregistrer</button></div>'
+    +'</div>';
+}
+
+function ouvrirModalYogaEnrollement(email, prenom, nom) {
+  var box = gel('modal-contact-box');
+  var h = '<div class="modal-titre">🧘 Inscrire '+(prenom||'')+' '+(nom||'')+'</div>';
+  h += '<div style="font-size:12px;color:var(--dim);margin-bottom:14px;">Choisir le cours auquel cette personne s\'inscrit définitivement :</div>';
+  h += '<div class="field"><label>Cours</label><select id="modal-yoga-cours-sel">'
+    +'<option value="yin">Yin Yoga 10h30</option>'
+    +'<option value="hatha">Hatha Yoga 11h30</option>'
+    +'<option value="forfait">Yin Yoga+Hatha Yoga 10h30–12h30</option>'
+    +'</select></div>';
+  h += '<div class="btn-row">'
+    +'<button class="btn btn-ok" data-action="confirmer-yoga-inscr" data-email="'+email+'" data-prenom="'+(prenom||'')+'" data-nom="'+(nom||'')+'">✓ Confirmer inscription</button>'
+    +'<button class="btn btn-ghost" data-action="fermer-contact">Annuler</button>'
+    +'</div>';
+  box.innerHTML = h;
+  gel('modal-contact').classList.add('vis');
 }
 
 var STATUT_LBL = {

@@ -96,7 +96,7 @@ select option{background:var(--s2);}
         Hatha Yoga<br/><span class="bc-hr">11h30</span>
       </button>
       <button type="button" class="btn-choix" data-cours="forfait" onclick="selectCours(this)">
-        Forfait Yin+Hatha<br/><span class="bc-hr">10h30–12h30</span>
+        Yin Yoga+Hatha Yoga<br/><span class="bc-hr">10h30–12h30</span>
       </button>
     </div>
   </div>
@@ -133,32 +133,16 @@ select option{background:var(--s2);}
   <button class="btn-submit" id="btn-submit" onclick="soumettre()">S'inscrire au cours d'essai</button>
 </div>
 
-<!-- Succès gratuit -->
-<div class="success" id="success-gratuit">
+<!-- Succès (gratuit ou payant) -->
+<div class="success" id="success-yoga">
   <span class="s-icon">✅</span>
   <div class="s-title">INSCRIPTION ENREGISTRÉE !</div>
   <div class="s-card">
     <div class="s-line"><span class="s-ico">📧</span><span>Vous allez recevoir un email de confirmation.</span></div>
-    <div class="s-line"><span class="s-ico">🎁</span><span>Ce cours d'essai est <b>gratuit</b>. Bienvenue !</span></div>
+    <div class="s-line" id="s-tarif-line"></div>
     <div class="s-line"><span class="s-ico">📍</span><span>Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes (RER A, Château de Vincennes)</span></div>
   </div>
-  <div id="recap-gratuit"></div>
-  <div class="s-sig">À très bientôt sur le tapis !<br/><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
-  <button class="btn-nouveau" onclick="restart()">← Nouvelle inscription</button>
-</div>
-
-<!-- Succès payant -->
-<div class="success" id="success-paye">
-  <span class="s-icon">✅</span>
-  <div class="s-title">INSCRIPTION ENREGISTRÉE !</div>
-  <div class="s-card">
-    <div class="s-line"><span class="s-ico">📧</span><span>Vous allez recevoir un email de confirmation.</span></div>
-    <div class="s-line"><span class="s-ico">💳</span><span>Finalisez et réglez sur AssoConnect, ou en espèces lors du cours.</span></div>
-    <div class="s-line"><span class="s-ico">📍</span><span>Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes (RER A, Château de Vincennes)</span></div>
-  </div>
-  <button class="asso-btn" id="asso-link">FINALISER SUR ASSOCONNECT</button>
-  <p class="asso-note">Paiement CB en ligne, ou en espèces sur place.<br/>AssoConnect vous demandera un pourboire — celui-ci ne nous revient pas.</p>
-  <div id="recap-paye"></div>
+  <div id="recap-yoga"></div>
   <div class="s-sig">À très bientôt sur le tapis !<br/><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
   <button class="btn-nouveau" onclick="restart()">← Nouvelle inscription</button>
 </div>
@@ -344,7 +328,7 @@ function soumettre() {
   }
 
   // Construire récap
-  const coursLbl = {yin:'Yin Yoga 10h30', hatha:'Hatha Yoga 11h30', forfait:'Forfait Yin+Hatha 10h30–12h30'}[coursSelectionne]||coursSelectionne;
+  const coursLbl = {yin:'Yin Yoga 10h30', hatha:'Hatha Yoga 11h30', forfait:'Yin Yoga+Hatha Yoga 10h30–12h30'}[coursSelectionne]||coursSelectionne;
   const recapHtml = `<div class="s-card">
     <div class="s-line"><span class="s-ico">🧘</span><span><b>${coursLbl}</b></span></div>
     <div class="s-line"><span class="s-ico">📅</span><span>${fmtDate(date)}</span></div>
@@ -354,14 +338,11 @@ function soumettre() {
 
   setTimeout(() => {
     document.getElementById('form-zone').style.display = 'none';
-    if (gratuit) {
-      document.getElementById('recap-gratuit').innerHTML = recapHtml;
-      document.getElementById('success-gratuit').style.display = 'block';
-    } else {
-      document.getElementById('recap-paye').innerHTML = recapHtml;
-      document.getElementById('asso-link').onclick = () => window.open(getYogaLien(), '_blank');
-      document.getElementById('success-paye').style.display = 'block';
-    }
+    document.getElementById('s-tarif-line').innerHTML = gratuit
+      ? '<span class="s-ico">🎁</span><span>Ce cours d\'essai est <b>gratuit</b>. Bienvenue !</span>'
+      : '<span class="s-ico">💶</span><span>Paiement sur place en espèces pour le cours d\'essai ('+getYogaEssaiPrix()+'€).</span>';
+    document.getElementById('recap-yoga').innerHTML = recapHtml;
+    document.getElementById('success-yoga').style.display = 'block';
     window.scrollTo(0,0);
     btn.disabled = false;
     btn.textContent = 'S\'inscrire au cours d\'essai';
@@ -369,9 +350,8 @@ function soumettre() {
 }
 
 function restart() {
-  document.getElementById('success-gratuit').style.display = 'none';
-  document.getElementById('success-paye').style.display   = 'none';
-  document.getElementById('form-zone').style.display      = 'block';
+  document.getElementById('success-yoga').style.display = 'none';
+  document.getElementById('form-zone').style.display    = 'block';
   document.getElementById('inp-prenom').value = '';
   document.getElementById('inp-nom').value    = '';
   document.getElementById('inp-email').value  = '';
