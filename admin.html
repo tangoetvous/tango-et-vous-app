@@ -33,7 +33,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .tab-btn{flex-shrink:0;padding:10px 11px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--dim);font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s;}
 .tab-btn.active{border-bottom-color:var(--gold);color:var(--gold);}
 .content{padding:12px;max-width:660px;margin:0 auto;padding-bottom:80px;}
-.section-hdr{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--dim);padding:12px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.section-hdr{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-weight:700;padding:12px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;}
 .mois-acc-hdr{font-family:var(--font-d);font-size:17px;font-weight:300;color:var(--dim);letter-spacing:2px;padding:14px 8px 6px;border-bottom:1px solid var(--border);margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none;border-radius:6px 6px 0 0;}
 .mois-acc-hdr:hover{color:var(--text);background:rgba(255,255,255,0.03);}
 .mois-acc-arrow{font-size:12px;color:var(--dim);transition:transform .2s;}
@@ -2321,6 +2321,7 @@ function renderEssai() {
     var hasEvt = false;
     var currentMoisPt = '';
     var accBodyOpenPt = false;
+    var currentMoisKey = today().slice(0,7);
     Object.keys(grpPt).sort().forEach(function(key){
       var grp=grpPt[key];
       // Seulement les personnes confirmées (non en attente réelle)
@@ -2335,8 +2336,9 @@ function renderEssai() {
         accBodyOpenPt = true;
         var dmPt = new Date(moisKeyPt+'-01T00:00:00');
         var accIdPt = 'acc-pt-'+moisKeyPt;
-        h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdPt+'\')">'+MOIS_FR[dmPt.getMonth()]+' '+dmPt.getFullYear()+'<span class="mois-acc-arrow">▼</span></div>';
-        h += '<div id="'+accIdPt+'">';
+        var isOpenPt = (moisKeyPt === currentMoisKey);
+        h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdPt+'\')">'+MOIS_FR[dmPt.getMonth()]+' '+dmPt.getFullYear()+'<span class="mois-acc-arrow">'+(isOpenPt?'▼':'▶')+'</span></div>';
+        h += '<div id="'+accIdPt+'"'+(isOpenPt?'':' style="display:none;"')+'>';
       }
       // Interleave guideurs/guidées
       var pGui=conf.filter(function(e){return e.role==='guideur';});
@@ -2409,6 +2411,7 @@ function renderEssai() {
   if(!sortedDates.length) return h+'<div class="empty-state">Aucun cours d&#39;essai.</div>';
   var currentMoisEssai = '';
   var accBodyOpenEd = false;
+  var currentMoisKeyEd = today().slice(0,7);
   sortedDates.forEach(function(date){
     var moisKey = date.slice(0,7);
     if (moisKey !== currentMoisEssai) {
@@ -2417,8 +2420,9 @@ function renderEssai() {
       accBodyOpenEd = true;
       var dm = new Date(moisKey+'-01T00:00:00');
       var accIdEd = 'acc-ed-'+moisKey;
-      h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdEd+'\')">'+MOIS_FR[dm.getMonth()]+' '+dm.getFullYear()+'<span class="mois-acc-arrow">▼</span></div>';
-      h += '<div id="'+accIdEd+'">';
+      var isOpenEd = (moisKey === currentMoisKeyEd);
+      h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdEd+'\')">'+MOIS_FR[dm.getMonth()]+' '+dm.getFullYear()+'<span class="mois-acc-arrow">'+(isOpenEd?'▼':'▶')+'</span></div>';
+      h += '<div id="'+accIdEd+'"'+(isOpenEd?'':' style="display:none;"')+'>';
     }
     var lieux=allDates[date]||[];
     var lieuLbl=lieux.indexOf('paris')>=0&&lieux.indexOf('vincennes')>=0?'Paris + Vincennes':lieux.indexOf('vincennes')>=0?'Vincennes':'Paris';
@@ -3631,56 +3635,14 @@ function renderYoga() {
 function renderYogaEssai() {
   var sai = saisonActive();
   var liste = (adminData.essaiYoga||[]).filter(function(e){ return dateAppartientSaison(e.date, sai); });
-  var h = '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px;">'
-    +'<div class="sub-tabs" style="margin-bottom:0;">'
-    +'<button class="sub-tab'+(filtreEssaiYoga==='dates'?' active':'')+'" data-filt-essai-yoga="dates">Par date</button>'
-    +'<button class="sub-tab'+(filtreEssaiYoga==='pointage'?' active':'')+'" data-filt-essai-yoga="pointage">Pointage</button>'
-    +'</div>'
+  var h = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">'
     +'<a href="essai-yoga.html" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:4px 10px;text-decoration:none;">🔗 Formulaire essai</a>'
     +'</div>';
   liste.sort(function(a,b){ return a.date!==b.date?a.date.localeCompare(b.date):a.prenom.localeCompare(b.prenom); });
 
-  if (filtreEssaiYoga==='pointage') {
-    var parDate = {};
-    liste.forEach(function(e){ if(!parDate[e.date])parDate[e.date]=[]; parDate[e.date].push(e); });
-    var hasEvt = false;
-    Object.keys(parDate).sort().forEach(function(date) {
-      var ins = parDate[date];
-      var pres = ins.filter(function(e){ return e.present===true; }).length;
-      var abs  = ins.filter(function(e){ return e.present===false; }).length;
-      var rest = ins.length - pres - abs;
-      hasEvt = true;
-      var gratuit = estEssaiYogaGratuit(date);
-      h += '<div class="section-hdr">'+fmtDate(date)+(gratuit?' <span style="color:var(--ok-text);font-size:10px;">Gratuit</span>':' <span style="font-size:10px;color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')+'&nbsp;— ✓'+pres+' ✗'+abs+' ?'+rest+'</div>';
-      ins.forEach(function(e) {
-        var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
-        h += '<div class="point-row">'
-          +'<div style="flex:1;min-width:0;">'
-          +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','yoga')+' <span class="pill pill-info" style="font-size:8px;padding:1px 5px;">'+coursLbl+'</span></div>'
-          +'<div class="point-sub">'+e.email+'</div>'
-          +'</div>'
-          +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-          +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Confirmé.e</span>':'')
-          +(e.gratuit?'<span class="pill pill-ok" style="font-size:8px;">Gratuit</span>':'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')
-          +(e.present===true&&!estDejaEleveYoga(e.email)?'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" title="Inscrire comme élève">💳</button>':'')
-          +(estDejaEleveYoga(e.email)?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>':'')
-          +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
-          +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
-          +'</div></div>';
-      });
-      var toutPointe = rest===0;
-      h += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
-        +(toutPointe?'<button class="btn btn-ok" data-action="env-yoga-j1" data-date="'+date+'">✉️ Emails J+1 Yoga</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d\'abord.</span>')
-        +'<span id="yoga-j1s-'+date+'" style="font-size:11px;margin-left:8px;"></span>'
-        +'</div>';
-    });
-    return h + (hasEvt?'':'<div class="empty-state">Aucun cours d\'essai yoga confirmé.</div>');
-  }
-
-  // Vue "Par date" : classement par mois, puis par cours (yin→hatha→forfait)
   var COURS_ORDER = {yin:0, hatha:1, forfait:2};
   var todayStr = today();
-  // Collecter toutes les dates à afficher (futures de la saison + dates avec inscriptions passées)
+  var currentMoisKeyYoga = todayStr.slice(0,7);
   var allDates = {};
   (COURS_YOGA||[]).filter(function(d){ return d>=todayStr && dateAppartientSaison(d,sai); })
     .forEach(function(d){ allDates[d]=true; });
@@ -3689,31 +3651,33 @@ function renderYogaEssai() {
   Object.keys(parDate).forEach(function(d){ allDates[d]=true; });
   var sortedDates = Object.keys(allDates).sort().slice(0,20);
   if (!sortedDates.length) return h+'<div class="empty-state">Aucun cours de yoga prévu.</div>';
-  // Grouper par mois
   var parMois = {};
   sortedDates.forEach(function(date){
-    var moisKey = date.slice(0,7); // YYYY-MM
+    var moisKey = date.slice(0,7);
     if (!parMois[moisKey]) parMois[moisKey] = [];
     parMois[moisKey].push(date);
   });
   Object.keys(parMois).sort().forEach(function(moisKey) {
     var d = new Date(moisKey+'-01T00:00:00');
     var accIdEy = 'acc-ey-'+moisKey;
-    h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdEy+'\')">'+MOIS_FR[d.getMonth()]+' '+d.getFullYear()+'<span class="mois-acc-arrow">▼</span></div>';
-    h += '<div id="'+accIdEy+'">';
+    var isOpenEy = (moisKey === currentMoisKeyYoga);
+    h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdEy+'\')">'+MOIS_FR[d.getMonth()]+' '+d.getFullYear()+'<span class="mois-acc-arrow">'+(isOpenEy?'▼':'▶')+'</span></div>';
+    h += '<div id="'+accIdEy+'"'+(isOpenEy?'':' style="display:none;"')+'>';
     parMois[moisKey].forEach(function(date) {
       var ins = (parDate[date]||[]);
       var gratuit = estEssaiYogaGratuit(date);
+      var pres = ins.filter(function(e){ return e.present===true; }).length;
+      var abs  = ins.filter(function(e){ return e.present===false; }).length;
+      var rest = ins.length - pres - abs;
       h += '<div class="section-hdr" style="margin-top:8px;">'+fmtDate(date)
         +' <span style="font-weight:400;color:var(--dim);">Espace Sorano</span>'
         +(gratuit?' <span class="pill pill-ok" style="font-size:9px;">Gratuit</span>':' <span style="font-size:10px;color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')
-        +' <span style="font-weight:400;color:var(--dim);font-size:10px;">'+ins.length+' inscrit'+(ins.length>1?'s':'')+'</span>'
+        +(ins.length?' <span style="font-weight:400;color:var(--dim);font-size:10px;">'+ins.length+' inscrit'+(ins.length>1?'s':'')+'</span> <span style="font-weight:400;font-size:10px;">— ✓'+pres+' ✗'+abs+' ?'+rest+'</span>':'')
         +'</div>';
       if (!ins.length) {
         h += '<div style="font-size:11px;color:var(--dim);padding:4px 0 8px;">Aucune inscription pour cette date.</div>';
         return;
       }
-      // Trier par cours : yin → hatha → forfait
       var sorted = ins.slice().sort(function(a,b){ return (COURS_ORDER[a.cours]||0)-(COURS_ORDER[b.cours]||0); });
       sorted.forEach(function(e) {
         var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
@@ -3725,14 +3689,21 @@ function renderYogaEssai() {
           +'</div>'
           +'<div class="point-sub">'+e.email+'</div>'
           +'</div>'
-          +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-          +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Confirmé.e</span>':'')
+          +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
+          +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Conf.</span>':'')
           +(estDejaEleveYoga(e.email)
             ?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>'
             :'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" title="Inscrire comme élève">💳 Inscrire</button>')
           +btnEmail(e.email,e.prenom+' '+e.nom)
+          +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
+          +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
           +'</div></div>';
       });
+      var toutPointe = rest === 0;
+      h += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
+        +(toutPointe?'<button class="btn btn-ok" data-action="env-yoga-j1" data-date="'+date+'">✉️ Emails J+1 Yoga</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d\'abord.</span>')
+        +'<span id="yoga-j1s-'+date+'" style="font-size:11px;margin-left:8px;"></span>'
+        +'</div>';
     });
     h += '</div>';
   });
