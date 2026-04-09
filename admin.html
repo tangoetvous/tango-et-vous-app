@@ -3241,33 +3241,42 @@ function pointerStage(date, idx, present) {
 // ================================================================
 function renderSorano() {
   var sai=saisonActive();
-  // Liste dérivée des inscrits Paris pour la saison active
-  var inscritsParis=(adminData.coursTango||[]).filter(function(ct){
-    return ct.statut==='inscrit' && ct.ville==='vincennes' && (ct.saison||saisonCourante())===sai;
-  });
-  // Registre paiements (email → bool) pour la saison
   var reg={};
   (adminData.sorano||[]).forEach(function(s){
     if((s.saison||saisonCourante())===sai) reg[s.email]=s.paiementSorano;
   });
-  var liste=inscritsParis.map(function(ct){
-    return {id:ct.id, nom:ct.prenom+' '+ct.nom, email:ct.email, niveau:ct.niveau, paiementSorano:!!reg[ct.email]};
-  }).sort(function(a,b){
-    if(a.niveau!==b.niveau)return (a.niveau||'').localeCompare(b.niveau||'');
-    return (a.nom||'').localeCompare(b.nom||'','fr');
+  function alpha(a,b){return (a.nom+' '+a.prenom).localeCompare(b.nom+' '+b.prenom,'fr');}
+  function cardRow(s){
+    var nomQ=s.nom.replace(/"/g,'&quot;');
+    if(s.paiementSorano){
+      return '<div class="card hl-ok"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button></div></div>';
+    }
+    return '<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+nomQ+'" data-id="'+s.id+'">✉️ Relance</button></div></div>';
+  }
+  var groups=[
+    {lbl:'Tango Vincennes Débutants',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return ct.statut==='inscrit'&&ct.ville==='vincennes'&&ct.niveau==='debutant'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email]};}).sort(alpha)},
+    {lbl:'Tango Vincennes Intermédiaires',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return ct.statut==='inscrit'&&ct.ville==='vincennes'&&ct.niveau==='intermediaire'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email]};}).sort(alpha)},
+    {lbl:'🌙 Yin Yoga 10h30',color:'#a78bfa',list:(adminData.coursYoga||[]).filter(function(cy){return (cy.cours==='yin'||cy.cours==='forfait')&&cy.statut==='inscrit'&&(cy.saison||saisonCourante())===sai;}).map(function(cy){return{id:cy.id,nom:cy.prenom+' '+cy.nom,email:cy.email||'',paiementSorano:!!reg[cy.email]};}).sort(alpha)},
+    {lbl:'☀️ Hatha Yoga 11h30',color:'#a78bfa',list:(adminData.coursYoga||[]).filter(function(cy){return (cy.cours==='hatha'||cy.cours==='forfait')&&cy.statut==='inscrit'&&(cy.saison||saisonCourante())===sai;}).map(function(cy){return{id:cy.id,nom:cy.prenom+' '+cy.nom,email:cy.email||'',paiementSorano:!!reg[cy.email]};}).sort(alpha)}
+  ];
+  var emailsSeen={};var allDedup=[];
+  groups.forEach(function(g){g.list.forEach(function(s){var k=s.email||s.nom;if(!emailsSeen[k]){emailsSeen[k]=true;allDedup.push(s);}});});
+  var totalPaye=allDedup.filter(function(s){return s.paiementSorano;}).length;
+  var totalNonPaye=allDedup.length-totalPaye;
+  var h='<div class="stats-row stats-3"><div class="stat"><div class="stat-n n-gold">'+allDedup.length+'</div><div class="stat-l">Total</div></div><div class="stat"><div class="stat-n n-ok">'+totalPaye+'</div><div class="stat-l">Réglé</div></div><div class="stat"><div class="stat-n n-warn">'+totalNonPaye+'</div><div class="stat-l">En attente</div></div></div>';
+  groups.forEach(function(g){
+    h+='<div class="section-hdr" style="color:'+g.color+'">'+g.lbl+' ('+g.list.length+')</div>';
+    if(!g.list.length){h+='<div style="color:var(--dim);font-size:12px;padding:8px 0 12px;">Aucun élève inscrit</div>';return;}
+    g.list.forEach(function(s){h+=cardRow(s);});
   });
-  var payes=liste.filter(function(s){return s.paiementSorano;}), nonPayes=liste.filter(function(s){return !s.paiementSorano;});
-  var h='<div class="stats-row stats-3"><div class="stat"><div class="stat-n n-gold">'+liste.length+'</div><div class="stat-l">Total</div></div><div class="stat"><div class="stat-n n-ok">'+payes.length+'</div><div class="stat-l">Réglé</div></div><div class="stat"><div class="stat-n n-warn">'+nonPayes.length+'</div><div class="stat-l">En attente</div></div></div>';
-  if(!liste.length)return h+'<div class="empty-state">Aucun élève inscrit à un cours Vincennes pour la saison '+sai+'.</div>';
-  if(nonPayes.length){h+='<div class="section-hdr">Non réglé ('+nonPayes.length+')</div>';nonPayes.forEach(function(s){h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+s.nom.replace(/"/g,'&quot;')+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+s.nom+'" data-id="'+s.id+'">✉️ Relance</button></div></div>';});}
-  if(payes.length){h+='<div class="section-hdr">Réglé ('+payes.length+')</div>';payes.forEach(function(s){h+='<div class="card hl-ok"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+s.nom.replace(/"/g,'&quot;')+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button></div></div>';});}
   return h;
 }
 function soranoAction(id, paye, btn) {
   btn.disabled=true;
   var sai=saisonActive();
-  // Retrouver l'email depuis coursTango
-  var ct=(adminData.coursTango||[]).find(function(c){return c.id===id;});
+  // Retrouver l'email depuis coursTango ou coursYoga
+  var ct=(adminData.coursTango||[]).find(function(c){return c.id===id;})
+      ||(adminData.coursYoga||[]).find(function(c){return c.id===id;});
   if(!ct){btn.disabled=false;return;}
   if(IS_DEMO){
     var s=(adminData.sorano||[]).find(function(x){return x.email===ct.email&&(x.saison||saisonCourante())===sai;});
