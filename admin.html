@@ -2154,11 +2154,25 @@ window.repOuvrirGmail = function() {
   if (!emails.length) { afficherToast('⚠️ Sélectionnez au moins un groupe'); return; }
   var sujet = (gel('rep-sujet')||{}).value||'';
   var msg   = (gel('rep-message')||{}).value||'';
-  var url = 'https://mail.google.com/mail/?view=cm'
-    +'&bcc='+encodeURIComponent(emails.join(','))
-    +(sujet?'&su='+encodeURIComponent(sujet):'')
-    +(msg?'&body='+encodeURIComponent(msg):'');
-  window.open(url,'_blank');
+  var bcc   = emails.join(',');
+  // Scheme natif Gmail app (iOS/Android)
+  var appUrl = 'googlegmail://co?bcc='+encodeURIComponent(bcc)
+    +(sujet?'&subject='+encodeURIComponent(sujet):'')
+    +(msg  ?'&body='+encodeURIComponent(msg):'');
+  // Fallback mailto (client mail par défaut si Gmail app absent)
+  var mailtoUrl = 'mailto:?bcc='+encodeURIComponent(bcc)
+    +(sujet?'&subject='+encodeURIComponent(sujet):'')
+    +(msg  ?'&body='+encodeURIComponent(msg):'');
+  var appOpened = false;
+  var fallback = setTimeout(function(){
+    if(!appOpened) window.location.href = mailtoUrl;
+  }, 600);
+  function onVis(){
+    document.removeEventListener('visibilitychange', onVis);
+    if(document.hidden){ appOpened=true; clearTimeout(fallback); }
+  }
+  document.addEventListener('visibilitychange', onVis);
+  window.location.href = appUrl;
 };
 function renderRepertoire() {
   var sai = saisonActive();
