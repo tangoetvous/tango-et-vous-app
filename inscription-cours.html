@@ -191,6 +191,16 @@ const IS_DEMO = true; // Passer à false après déploiement Apps Script
 const TARIFS_BASE = {carte10:170,carte10_reduit:150,unitaire_paris:20,unitaire_paris_reduit:17,forfait_paris:495,forfait_paris_reduit:425,forfait_vincennes:435,forfait_vincennes_reduit:340,forfait_2cours:790,forfait_2cours_reduit:640,forfait_pv_di:740,forfait_pv_id:740,adhesion_lrp:10,sorano_vinc:36,sorano_vinc_m16:26,sorano_ext:45,sorano_ext_m16:35};
 const T = (function() {
   try {
+    // Formulaire admin (nouvelle demande saison courante) → toujours tarifs actifs
+    const isAdmin = new URLSearchParams(location.search).get('admin') === '1';
+    if (!isAdmin) {
+      // Formulaire public : pendant la pré-inscription (mai–août), utiliser les tarifs prochaine saison si définis
+      const m = new Date().getMonth() + 1;
+      if (m >= 5 && m <= 8) {
+        const next = JSON.parse(localStorage.getItem('tev_tarifs_prochaine_saison')||'null');
+        if (next) return Object.assign({}, TARIFS_BASE, next);
+      }
+    }
     const stored = JSON.parse(localStorage.getItem('tev_tarifs_actifs')||'null');
     return stored ? Object.assign({}, TARIFS_BASE, stored) : Object.assign({}, TARIFS_BASE);
   } catch(e) { return Object.assign({}, TARIFS_BASE); }

@@ -1144,10 +1144,13 @@ function chargerTarifs() {
     if (!dateEffet || today() >= dateEffet) {
       // Tarifs actifs : appliquer
       Object.assign(TARIFS, stored.tarifs);
-      // Diffuser aussi vers inscription-cours.html
       try { localStorage.setItem('tev_tarifs_actifs', JSON.stringify(stored.tarifs)); } catch(e){}
+      // Ces tarifs sont maintenant actifs → supprimer la clé prochaine saison
+      try { localStorage.removeItem('tev_tarifs_prochaine_saison'); } catch(e){}
+    } else {
+      // Tarifs futurs : stocker pour les formulaires de pré-inscription
+      try { localStorage.setItem('tev_tarifs_prochaine_saison', JSON.stringify(stored.tarifs)); } catch(e){}
     }
-    // Si dateEffet dans le futur : ne pas appliquer, juste conserver en attente
   } catch(e) {}
 }
 function sauverTarifs(btn) {
@@ -1168,10 +1171,11 @@ function sauverTarifs(btn) {
   if (!ok) { if(err){err.textContent='Veuillez corriger les valeurs en rouge.';err.style.display='block';} return; }
   var payload = {saison:saison, dateEffet:dateEffet, tarifs:tarifs, modifie:today()};
   try { localStorage.setItem('tev_tarifs', JSON.stringify(payload)); } catch(e) {}
-  // Si dateEffet <= aujourd'hui : appliquer immédiatement
   if (today() >= dateEffet) {
+    // Tarifs immédiats : appliquer et diffuser
     Object.assign(TARIFS, tarifs);
-    try { localStorage.setItem('tev_tarifs_actifs', JSON.stringify(tarifs)); } catch(e) {}
+    try { localStorage.setItem('tev_tarifs_actifs', JSON.stringify(tarifs)); } catch(e){}
+    try { localStorage.removeItem('tev_tarifs_prochaine_saison'); } catch(e){}
     try {
       if (window.BroadcastChannel) {
         var bc = new BroadcastChannel('tev_admin_sync');
@@ -1179,12 +1183,15 @@ function sauverTarifs(btn) {
         bc.close();
       }
     } catch(e) {}
+  } else {
+    // Tarifs futurs (prochaine saison) : stocker pour les formulaires de pré-inscription publics
+    try { localStorage.setItem('tev_tarifs_prochaine_saison', JSON.stringify(tarifs)); } catch(e){}
   }
   if (!IS_DEMO) { postAS({action:'sauverTarifs', payload:JSON.stringify(payload)}).catch(function(){}); }
   if(btn) { btn.textContent='✓ Enregistré'; btn.disabled=true; setTimeout(function(){btn.textContent='💾 Enregistrer';btn.disabled=false;renderTab();},1800); }
 }
 function resetTarifs() {
-  try { localStorage.removeItem('tev_tarifs'); localStorage.removeItem('tev_tarifs_actifs'); } catch(e){}
+  try { localStorage.removeItem('tev_tarifs'); localStorage.removeItem('tev_tarifs_actifs'); localStorage.removeItem('tev_tarifs_prochaine_saison'); } catch(e){}
   Object.assign(TARIFS, TARIFS_DEFAUT);
   renderTab();
   afficherToast('Tarifs réinitialisés.');
