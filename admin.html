@@ -803,16 +803,14 @@ function toggleInteret(date, email, btn) {
 
 var TARIFS_DEFAUT = {
   // Paris
-  carte10:155, carte10_reduit:130,                       // 1ère inscription (inclut LRP 5€)
-  carte10_renouv:150, carte10_renouv_reduit:125,         // Renouvellement (sans LRP)
+  carte10:155, carte10_reduit:130,             // 1ère inscription (inclut LRP 5€)
+  carte10_renouv:150, carte10_renouv_reduit:125, // Renouvellement (sans LRP)
   unitaire_paris:18, unitaire_paris_reduit:15,
-  forfait_paris:485, forfait_paris_reduit:415,           // inclut LRP 5€
-  forfait_2cours:760, forfait_2cours_reduit:660,         // 2 cours Paris, inclut LRP 5€
+  forfait_paris:485, forfait_paris_reduit:415, // inclut LRP 5€
   // Vincennes (Sorano payé séparément à Sorano — voir ci-dessous)
-  forfait_vincennes:485, forfait_vincennes_reduit:365,   // inclut LRP 5€
-  forfait_2cours_vinc:760, forfait_2cours_vinc_reduit:660, // 2 cours Vincennes, inclut LRP 5€
-  // Combos Paris + Vincennes
-  forfait_pv_di:740, forfait_pv_id:740,
+  forfait_vincennes:485, forfait_vincennes_reduit:365, // inclut LRP 5€
+  // Forfait 2 cours — toutes combinaisons (2×Paris, 2×Vincennes, Paris+Vincennes)
+  forfait_2cours:760, forfait_2cours_reduit:660, // inclut LRP 5€
   // Adhésions
   adhesion_lrp:5,
   // Cotisation Sorano (réglée directement à Sorano)
@@ -1176,7 +1174,7 @@ function sauverTarifs(btn) {
   if (!saison || !dateEffet) { if(err){err.textContent='Saison et date d\'effet requis.';err.style.display='block';} return; }
   if(err) err.style.display='none';
   var tarifs = {};
-  var CHAMPS = ['carte10','carte10_reduit','carte10_renouv','carte10_renouv_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours_vinc','forfait_2cours_vinc_reduit','forfait_2cours','forfait_2cours_reduit','forfait_pv_di','forfait_pv_id','adhesion_lrp','sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16'];
+  var CHAMPS = ['carte10','carte10_reduit','carte10_renouv','carte10_renouv_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours','forfait_2cours_reduit','adhesion_lrp','sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16'];
   var ok = true;
   CHAMPS.forEach(function(k) {
     var inp = gel('tr-'+k);
@@ -1267,11 +1265,8 @@ function renderTarifs() {
     +row('Cours à l\'unité','unitaire_paris','unitaire_paris_reduit')
     +section('Vincennes')
     +row('Forfait annuel','forfait_vincennes','forfait_vincennes_reduit')
-    +row('Forfait 2 cours Vincennes','forfait_2cours_vinc','forfait_2cours_vinc_reduit')
-    +section('Multi-cours Paris')
-    +row('Forfait 2 cours Paris','forfait_2cours','forfait_2cours_reduit')
-    +row('Paris Déb + Vincennes Int','forfait_pv_di',null)
-    +row('Paris Int + Vincennes Déb','forfait_pv_id',null)
+    +section('Forfait 2 cours — toutes combinaisons')
+    +row('2×Paris · 2×Vincennes · Paris+Vincennes','forfait_2cours','forfait_2cours_reduit')
     +section('Adhésions')
     +row('Adhésion Le Regard Se Pose','adhesion_lrp',null)
     +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Adhésion Sorano <span style="font-style:italic;">(à régler directement à Sorano — cours Vincennes uniquement)</span></td></tr>'
