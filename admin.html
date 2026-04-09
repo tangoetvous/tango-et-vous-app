@@ -2159,20 +2159,11 @@ window.repOuvrirGmail = function() {
   var appUrl = 'googlegmail://co?bcc='+encodeURIComponent(bcc)
     +(sujet?'&subject='+encodeURIComponent(sujet):'')
     +(msg  ?'&body='+encodeURIComponent(msg):'');
-  // Fallback mailto (client mail par défaut si Gmail app absent)
-  var mailtoUrl = 'mailto:?bcc='+encodeURIComponent(bcc)
-    +(sujet?'&subject='+encodeURIComponent(sujet):'')
-    +(msg  ?'&body='+encodeURIComponent(msg):'');
-  var appOpened = false;
-  var fallback = setTimeout(function(){
-    if(!appOpened) window.location.href = mailtoUrl;
-  }, 600);
-  function onVis(){
-    document.removeEventListener('visibilitychange', onVis);
-    if(document.hidden){ appOpened=true; clearTimeout(fallback); }
-  }
-  document.addEventListener('visibilitychange', onVis);
   window.location.href = appUrl;
+  // Si l'app Gmail ne s'ouvre pas après 1s, afficher un message
+  setTimeout(function(){
+    if(!document.hidden) afficherToast('⚠️ App Gmail non trouvée — installez Gmail ou copiez les adresses');
+  }, 1000);
 };
 function renderRepertoire() {
   var sai = saisonActive();
