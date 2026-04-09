@@ -184,7 +184,34 @@ select option{background:var(--s2);}
 // ================================================================
 // ⚙️  CONFIG
 // ================================================================
-const ASSO_CONNECT_URL = 'https://le-regard-se-pose.assoconnect.com';
+// Liens AssoConnect par saison (défauts, remplacés par localStorage si l'admin les a mis à jour)
+const LIENS_ASSOCONNECT_DEFAUT = {
+  '2025-2026': {
+    cours:  'https://le-regard-se-pose.assoconnect.com/collect/description/524220-a-inscription-aux-cours-de-tango-argentin-avec-florencia-garcia-jeremy-braitbart-septembre-2025-juin-2026',
+    renouv: 'https://le-regard-se-pose.assoconnect.com/collect/description/524239-j-renouvellement-de-carte-de-10-ou-20-cours-2025-2026'
+  },
+  '2026-2027': {
+    cours:  'https://le-regard-se-pose.assoconnect.com/collect/description/695654-a-inscription-aux-cours-de-tango-argentin-avec-florencia-garcia-jeremy-braitbart-septembre-2026-juin-2027',
+    renouv: 'https://le-regard-se-pose.assoconnect.com/collect/description/696013-j-renouvellement-de-carte-de-10-ou-20-cours-2026-2027'
+  }
+};
+// Retourne la saison courante (Sep-Août)
+function getSaisonCourante() {
+  const d = new Date(), m = d.getMonth() + 1, y = d.getFullYear();
+  return (m >= 9 ? y : y - 1) + '-' + (m >= 9 ? y + 1 : y);
+}
+// Retourne le lien AssoConnect pour le type donné ('cours' ou 'renouv'), en fonction de la saison
+function getAssoConnectLien(type) {
+  const sai = getSaisonCourante();
+  try {
+    const stored = JSON.parse(localStorage.getItem('tev_liens_assoconnect') || '{}');
+    const custom = stored[sai] || {};
+    const defaut = LIENS_ASSOCONNECT_DEFAUT[sai] || {};
+    return custom[type] || defaut[type] || 'https://le-regard-se-pose.assoconnect.com';
+  } catch(e) {
+    return (LIENS_ASSOCONNECT_DEFAUT[sai] || {})[type] || 'https://le-regard-se-pose.assoconnect.com';
+  }
+}
 const IS_DEMO = true; // Passer à false après déploiement Apps Script
 
 // Tarifs — lus depuis localStorage si l'admin les a mis à jour, sinon valeurs par défaut
@@ -761,7 +788,7 @@ function finalize() {
   $(rid).innerHTML = recapHtml;
 
   if(!wait) {
-    $('asso-link').onclick = () => window.open(ASSO_CONNECT_URL, '_blank');
+    $('asso-link').onclick = () => window.open(getAssoConnectLien('cours'), '_blank');
   }
 
   $(id).style.display='block';

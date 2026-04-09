@@ -295,8 +295,39 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
 var ADMIN_EMAILS    = ['tangoetvous@gmail.com','florencia@tangoetvous.com','jeremy@tangoetvous.com'];
 var URL_PWA              = 'https://tangoetvous.github.io/tango-et-vous-app';
-var URL_SORANO           = 'LIEN_ASSOCONNECT_SORANO';
-var URL_ASSOCONNECT_COURS = 'https://le-regard-se-pose.assoconnect.com/collect/description/695654-a-inscription-aux-cours-de-tango-argentin-avec-florencia-garcia-jeremy-braitbart-septembre-2026-juin-2027';
+
+// ── Liens AssoConnect par saison (mis à jour chaque année avant le 1er mai) ──
+var LIENS_ASSOCONNECT_DEFAUT = {
+  '2025-2026': {
+    cours:  'https://le-regard-se-pose.assoconnect.com/collect/description/524220-a-inscription-aux-cours-de-tango-argentin-avec-florencia-garcia-jeremy-braitbart-septembre-2025-juin-2026',
+    renouv: 'https://le-regard-se-pose.assoconnect.com/collect/description/524239-j-renouvellement-de-carte-de-10-ou-20-cours-2025-2026',
+    yoga:   'https://le-regard-se-pose.assoconnect.com/collect/description/524249-q-yoga-avec-florencia-garcia-septembre-2025-juin-2026'
+  },
+  '2026-2027': {
+    cours:  'https://le-regard-se-pose.assoconnect.com/collect/description/695654-a-inscription-aux-cours-de-tango-argentin-avec-florencia-garcia-jeremy-braitbart-septembre-2026-juin-2027',
+    renouv: 'https://le-regard-se-pose.assoconnect.com/collect/description/696013-j-renouvellement-de-carte-de-10-ou-20-cours-2026-2027',
+    yoga:   'https://le-regard-se-pose.assoconnect.com/collect/description/697805-q-yoga-avec-florencia-garcia-septembre-2026-juin-2027'
+  }
+};
+function getAssoConnectLien(type) {
+  var sai = saisonActive();
+  var stored = {};
+  try { stored = JSON.parse(localStorage.getItem('tev_liens_assoconnect')||'{}'); } catch(e){}
+  var custom = stored[sai] || {};
+  var defaut = LIENS_ASSOCONNECT_DEFAUT[sai] || {};
+  return custom[type] || defaut[type] || '';
+}
+function sauverLiensAssoconnect(saison, data) {
+  var stored = {};
+  try { stored = JSON.parse(localStorage.getItem('tev_liens_assoconnect')||'{}'); } catch(e){}
+  stored[saison] = data;
+  try { localStorage.setItem('tev_liens_assoconnect', JSON.stringify(stored)); } catch(e){}
+  try {
+    var bc = new BroadcastChannel('tev_admin');
+    bc.postMessage({type:'liensAssoconnectUpdated', saison:saison, liens:data});
+    bc.close();
+  } catch(e){}
+}
 var CLOUDINARY_NAME = 'VOTRE_CLOUD_NAME';
 var IS_DEMO         = APPS_SCRIPT_URL.indexOf('VOTRE_DEPLOYMENT') >= 0;
 var DEMO_DATE       = new Date(); // date réelle
@@ -1289,6 +1320,15 @@ function renderTarifs() {
   var cfgSai = {};
   try { cfgSai = JSON.parse(localStorage.getItem('tev_config_saison')||'{}'); } catch(ex){}
   var preInscOuverte = cfgSai.preInscriptionOuverte || false;
+  // Liens AssoConnect pour la saison prochaine
+  var liensStored = {};
+  try { liensStored = JSON.parse(localStorage.getItem('tev_liens_assoconnect')||'{}'); } catch(ex){}
+  var liensProch = liensStored[prochSai] || {};
+  var liensDefProch = LIENS_ASSOCONNECT_DEFAUT[prochSai] || {};
+  var lienCoursVal  = liensProch.cours  || liensDefProch.cours  || '';
+  var lienRenouvVal = liensProch.renouv || liensDefProch.renouv || '';
+  var lienYogaVal   = liensProch.yoga   || liensDefProch.yoga   || '';
+  var liensSaved = !!(liensStored[prochSai]);
   h += '<div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;">'
     +'<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">📅 Préparer la saison '+prochSai+'</div>'
     +'<div style="font-size:11px;color:var(--dim);margin-bottom:14px;">À faire avant le 1ᵉʳ mai</div>'
@@ -1296,6 +1336,24 @@ function renderTarifs() {
     +'<div class="box-info" style="display:flex;align-items:center;gap:8px;padding:10px 12px;"><span style="font-size:16px;">📌</span><span>Saisir les <b>dates des cours Paris</b> pour '+prochSai+' dans l\'onglet <b>Agenda</b></span></div>'
     +'<div class="box-info" style="display:flex;align-items:center;gap:8px;padding:10px 12px;"><span style="font-size:16px;">📌</span><span>Saisir les <b>dates des cours Vincennes</b> pour '+prochSai+' dans l\'onglet <b>Agenda</b></span></div>'
     +'<div class="box-info" style="display:flex;align-items:center;gap:8px;padding:10px 12px;"><span style="font-size:16px;">📌</span><span>Saisir les <b>tarifs '+prochSai+'</b> ci-dessus avec date d\'effet <b>01/09/'+prochAnnee+'</b></span></div>'
+    +'</div>'
+    // Liens AssoConnect
+    +'<div style="margin-bottom:16px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">'
+    +'<div style="font-size:12px;font-weight:600;color:var(--text);">🔗 Liens AssoConnect '+prochSai
+      +(liensSaved?' <span class="pill pill-ok" style="font-size:11px;">✓ Enregistrés</span>':' <span class="pill" style="font-size:11px;background:var(--s3);color:var(--dim);">Défauts</span>')
+    +'</div>'
+    +'<button class="btn btn-gold" data-action="sauver-liens" data-saison="'+prochSai+'" style="font-size:12px;">💾 Enregistrer les liens</button>'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;">'
+    +'<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Inscription Tango (formulaire cours)</label>'
+    +'<input type="url" id="lien-cours-'+prochSai+'" value="'+lienCoursVal+'" placeholder="https://le-regard-se-pose.assoconnect.com/collect/..." style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;"></div>'
+    +'<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Renouvellement Tango (carte 10/20 cours)</label>'
+    +'<input type="url" id="lien-renouv-'+prochSai+'" value="'+lienRenouvVal+'" placeholder="https://le-regard-se-pose.assoconnect.com/collect/..." style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;"></div>'
+    +'<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Yoga</label>'
+    +'<input type="url" id="lien-yoga-'+prochSai+'" value="'+lienYogaVal+'" placeholder="https://le-regard-se-pose.assoconnect.com/collect/..." style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;"></div>'
+    +'</div>'
+    +'<div class="box-err" id="liens-err" style="margin-top:8px;"></div>'
     +'</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">'
     +(preInscOuverte
@@ -1712,6 +1770,22 @@ function handleAction(action, btn) {
       break;
     case 'reset-tarifs':
       ouvrirModalConfirm('Réinitialiser avec les tarifs par défaut ?', function(){ resetTarifs(); });
+      break;
+    case 'sauver-liens':
+      (function() {
+        var sai = btn.dataset.saison || saisonSuivante();
+        var cours  = (gel('lien-cours-'+sai)||{}).value  || '';
+        var renouv = (gel('lien-renouv-'+sai)||{}).value || '';
+        var yoga   = (gel('lien-yoga-'+sai)||{}).value   || '';
+        var errEl  = gel('liens-err');
+        if (!cours && !renouv && !yoga) {
+          if (errEl) errEl.textContent = 'Saisir au moins un lien.';
+          return;
+        }
+        sauverLiensAssoconnect(sai, {cours:cours, renouv:renouv, yoga:yoga});
+        afficherToast('✓ Liens AssoConnect '+sai+' enregistrés');
+        renderTab();
+      })();
       break;
     case 'ouvrir-preinscription':
       try { var _cfg=JSON.parse(localStorage.getItem('tev_config_saison')||'{}');_cfg.preInscriptionOuverte=true;_cfg.saisonProchaine=saisonSuivante();localStorage.setItem('tev_config_saison',JSON.stringify(_cfg)); } catch(ex){}
@@ -2720,7 +2794,7 @@ function soranoAction(id, paye, btn) {
 function relanceSorano(email, nom, btn) {
   btn.disabled=true; btn.textContent='⏳';
   if(IS_DEMO){setTimeout(function(){btn.disabled=false;btn.textContent='✓ Envoyé (démo)';},800);return;}
-  postAS({action:'relanceSorano',email:email,nom:nom,lienPaiement:URL_SORANO}).then(function(){btn.textContent='✓ Envoyé';}).catch(function(e){btn.disabled=false;btn.textContent='✉️ Relance';});
+  postAS({action:'relanceSorano',email:email,nom:nom,lienPaiement:getAssoConnectLien('sorano')||getAssoConnectLien('cours')}).then(function(){btn.textContent='✓ Envoyé';}).catch(function(e){btn.disabled=false;btn.textContent='✉️ Relance';});
 }
 
 // ================================================================
