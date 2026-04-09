@@ -495,12 +495,12 @@ var DEMO_DATA = {
     '2027-06-19': {label:'Sam. 19 Juin 2027',    inscrits:[]}
   },
   sorano: [
-    // Registre paiements Sorano 2025-2026 (inscrits Paris — liste dérivée de coursTango)
-    {email:'clara@ex.com',  paiementSorano:true, saison:'2025-2026'},
-    {email:'pierre@ex.com', paiementSorano:true, saison:'2025-2026'},
-    {email:'ines@ex.com',   paiementSorano:true, saison:'2025-2026'},
-    {email:'marc@ex.com',   paiementSorano:true, saison:'2025-2026'}
-    // david@ex.com absent → non réglé par défaut
+    // Registre paiements Sorano 2025-2026 (inscrits Vincennes — liste dérivée de coursTango)
+    {email:'ana@ex.com',    paiementSorano:true, saison:'2025-2026'},
+    {email:'carlos@ex.com', paiementSorano:true, saison:'2025-2026'},
+    {email:'thomas@ex.com', paiementSorano:true, saison:'2025-2026'},
+    {email:'luc@ex.com',    paiementSorano:true, saison:'2025-2026'}
+    // laure@ex.com et paul@ex.com absents → non réglés par défaut
   ],
   publications: []
 };
@@ -2654,7 +2654,7 @@ function renderSorano() {
   var sai=saisonActive();
   // Liste dérivée des inscrits Paris pour la saison active
   var inscritsParis=(adminData.coursTango||[]).filter(function(ct){
-    return ct.statut==='inscrit' && ct.ville==='paris' && (ct.saison||saisonCourante())===sai;
+    return ct.statut==='inscrit' && ct.ville==='vincennes' && (ct.saison||saisonCourante())===sai;
   });
   // Registre paiements (email → bool) pour la saison
   var reg={};
@@ -2669,7 +2669,7 @@ function renderSorano() {
   });
   var payes=liste.filter(function(s){return s.paiementSorano;}), nonPayes=liste.filter(function(s){return !s.paiementSorano;});
   var h='<div class="stats-row stats-3"><div class="stat"><div class="stat-n n-gold">'+liste.length+'</div><div class="stat-l">Total</div></div><div class="stat"><div class="stat-n n-ok">'+payes.length+'</div><div class="stat-l">Réglé</div></div><div class="stat"><div class="stat-n n-warn">'+nonPayes.length+'</div><div class="stat-l">En attente</div></div></div>';
-  if(!liste.length)return h+'<div class="empty-state">Aucun élève inscrit à un cours Paris pour la saison '+sai+'.</div>';
+  if(!liste.length)return h+'<div class="empty-state">Aucun élève inscrit à un cours Vincennes pour la saison '+sai+'.</div>';
   if(nonPayes.length){h+='<div class="section-hdr">Non réglé ('+nonPayes.length+')</div>';nonPayes.forEach(function(s){h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+s.nom.replace(/"/g,'&quot;')+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+s.nom+'" data-id="'+s.id+'">✉️ Relance</button></div></div>';});}
   if(payes.length){h+='<div class="section-hdr">Réglé ('+payes.length+')</div>';payes.forEach(function(s){h+='<div class="card hl-ok"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+s.nom.replace(/"/g,'&quot;')+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button></div></div>';});}
   return h;
