@@ -3678,14 +3678,13 @@ function renderYogaEssai() {
         h += '<div style="font-size:11px;color:var(--dim);padding:4px 0 8px;">Aucune inscription pour cette date.</div>';
         return;
       }
-      var sorted = ins.slice().sort(function(a,b){ return (COURS_ORDER[a.cours]||0)-(COURS_ORDER[b.cours]||0); });
-      sorted.forEach(function(e) {
-        var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
-        h += '<div class="point-row">'
+      // Deux sous-sections : Yin Yoga (yin + forfait) puis Hatha Yoga (hatha + forfait)
+      function rowYoga(e) {
+        return '<div class="point-row">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
           +nomCliquable(e.prenom+' '+e.nom,e.email||'','','yoga')
-          +' <span class="pill pill-info" style="font-size:8px;padding:1px 5px;">'+coursLbl+'</span>'
+          +(e.cours==='forfait'?'<span class="pill pill-info" style="font-size:8px;padding:1px 5px;">Forfait</span>':'')
           +'</div>'
           +'<div class="point-sub">'+e.email+'</div>'
           +'</div>'
@@ -3698,7 +3697,24 @@ function renderYogaEssai() {
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
           +'</div></div>';
-      });
+      }
+      var subHdrStyle = 'font-size:11px;font-weight:700;color:#a78bfa;padding:8px 0 4px;margin-top:4px;border-top:1px solid rgba(167,139,250,0.2);';
+      var yin     = ins.filter(function(e){ return e.cours==='yin'||e.cours==='forfait'; });
+      var hatha   = ins.filter(function(e){ return e.cours==='hatha'||e.cours==='forfait'; });
+      var yinPres = yin.filter(function(e){ return e.present===true; }).length;
+      var yinAbs  = yin.filter(function(e){ return e.present===false; }).length;
+      var hPres   = hatha.filter(function(e){ return e.present===true; }).length;
+      var hAbs    = hatha.filter(function(e){ return e.present===false; }).length;
+      h += '<div style="'+subHdrStyle+'">🌙 Yin Yoga 10h30'
+        +' <span style="font-weight:400;color:var(--dim);">'+yin.length+' inscrit'+(yin.length>1?'s':'')+'</span>'
+        +' <span style="font-weight:400;">— ✓'+yinPres+' ✗'+yinAbs+' ?'+(yin.length-yinPres-yinAbs)+'</span>'
+        +'</div>';
+      yin.forEach(function(e){ h += rowYoga(e); });
+      h += '<div style="'+subHdrStyle+'margin-top:10px;">☀️ Hatha Yoga 11h30'
+        +' <span style="font-weight:400;color:var(--dim);">'+hatha.length+' inscrit'+(hatha.length>1?'s':'')+'</span>'
+        +' <span style="font-weight:400;">— ✓'+hPres+' ✗'+hAbs+' ?'+(hatha.length-hPres-hAbs)+'</span>'
+        +'</div>';
+      hatha.forEach(function(e){ h += rowYoga(e); });
       var toutPointe = rest === 0;
       h += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
         +(toutPointe?'<button class="btn btn-ok" data-action="env-yoga-j1" data-date="'+date+'">✉️ Emails J+1 Yoga</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d\'abord.</span>')
@@ -3714,20 +3730,29 @@ function renderYogaEleves() {
   var sai = saisonActive();
   var liste = (adminData.coursYoga||[]).filter(function(e){ return (e.saison||saisonCourante())===sai; });
   if (!liste.length) return '<div class="empty-state">Aucun élève yoga inscrit pour la saison '+sai+'.</div>';
+  var sorted = liste.slice().sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom); });
+  var yin   = sorted.filter(function(e){ return e.cours==='yin'||e.cours==='forfait'; });
+  var hatha = sorted.filter(function(e){ return e.cours==='hatha'||e.cours==='forfait'; });
   var h = '<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">'+liste.length+' élève'+(liste.length>1?'s':'')+' inscrit'+(liste.length>1?'s':'')+' en yoga — saison '+sai+'</div>';
-  liste.slice().sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom); })
-    .forEach(function(e) {
-      var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
-      h += '<div class="point-row">'
-        +'<div style="flex:1;min-width:0;">'
-        +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','yoga')+'</div>'
-        +'<div class="point-sub"><span class="pill pill-info" style="font-size:8px;">'+coursLbl+'</span> · Inscrit le '+fmtDate(e.dateInscription)+'</div>'
-        +'</div>'
-        +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-        +'<span class="pill pill-ok" style="font-size:10px;">Inscrit.e</span>'
-        +btnEmail(e.email,e.prenom+' '+e.nom)
-        +'</div></div>';
-    });
+  function eleveRow(e) {
+    var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
+    return '<div class="point-row">'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','yoga')+'</div>'
+      +'<div class="point-sub"><span class="pill pill-info" style="font-size:8px;">'+coursLbl+'</span> · Inscrit le '+fmtDate(e.dateInscription)+'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+      +'<span class="pill pill-ok" style="font-size:10px;">Inscrit.e</span>'
+      +btnEmail(e.email,e.prenom+' '+e.nom)
+      +'</div></div>';
+  }
+  var secStyle = 'font-size:12px;font-weight:700;color:#a78bfa;padding:10px 0 6px;border-bottom:1px solid rgba(167,139,250,0.3);margin-bottom:6px;';
+  h += '<div style="'+secStyle+'">🌙 Yin Yoga 10h30 <span style="font-weight:400;color:var(--dim);">'+yin.length+' élève'+(yin.length>1?'s':'')+'</span></div>';
+  if (yin.length) yin.forEach(function(e){ h += eleveRow(e); });
+  else h += '<div style="font-size:11px;color:var(--dim);padding:4px 0 8px;">Aucun élève inscrit.</div>';
+  h += '<div style="'+secStyle+'margin-top:16px;">☀️ Hatha Yoga 11h30 <span style="font-weight:400;color:var(--dim);">'+hatha.length+' élève'+(hatha.length>1?'s':'')+'</span></div>';
+  if (hatha.length) hatha.forEach(function(e){ h += eleveRow(e); });
+  else h += '<div style="font-size:11px;color:var(--dim);padding:4px 0 8px;">Aucun élève inscrit.</div>';
   return h;
 }
 
