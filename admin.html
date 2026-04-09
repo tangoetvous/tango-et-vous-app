@@ -2207,7 +2207,7 @@ function renderRepertoire() {
         h += '<div class="point-row">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',tel,'ct')+'</div>'
-          +'<div class="point-sub">'+(tel||'<span style="color:var(--dim);font-style:italic;">pas de tél.</span>')+' · '+e.email+'</div>'
+          +'<div class="point-sub">'+(tel||'<span style="color:var(--dim);font-style:italic;">pas de tél.</span>')+'</div>'
           +'</div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
           +btnEmail(e.email,e.prenom+' '+e.nom)
@@ -2319,7 +2319,7 @@ function renderEleves() {
     h += '<div class="card'+(st==='En attente'?' hl-warn':'')+'"><div class="card-top"><div>'
       +'<div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+c.nom.replace(/"/g,'&quot;')+'" data-email="'+(c.email||'')+'" data-tel="" data-ctx="eleve">'+c.nom+'</div>'
       +'<div class="card-sub">'+(c.id)+' · '+(c.niveau||'—')+' · '+(c.ville||'—')+'</div>'
-      +(c.email?'<div class="card-sub">'+c.email+'</div>':'')
+
       +partenaireTag(c.partenaire, c.role||'guidee')
       +'</div><span class="pill '+pc+'">'+st+'</span></div>'
       +'<div class="btn-row">'
@@ -2712,7 +2712,7 @@ function renderCours() {
   if (sousOngletCours==='attente') {
     var g=demandes.filter(function(d){return d.role==='guidee'&&d.statut==='en_attente';});
     if(!g.length)return h+'<div class="empty-state">Aucune guidée en attente.</div>';
-    g.forEach(function(d){h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+d.prenom+' '+d.nom+'</div><div class="card-sub">'+d.email+'<br/>'+d.cours+'</div>'+partenaireTag(d.partenaire,'guidee')+'</div><span class="pill pill-warn">Attente</span></div><div class="btn-row"><button class="btn btn-ok" data-action="val-demande" data-id="'+d.id+'">✓ Valider</button>'+btnEmail(d.email,d.prenom+' '+d.nom)+'</div></div>';});
+    g.forEach(function(d){h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+d.prenom+' '+d.nom+'</div><div class="card-sub">'+d.cours+'</div>'+partenaireTag(d.partenaire,'guidee')+'</div><span class="pill pill-warn">Attente</span></div><div class="btn-row"><button class="btn btn-ok" data-action="val-demande" data-id="'+d.id+'">✓ Valider</button>'+btnEmail(d.email,d.prenom+' '+d.nom)+'</div></div>';});
     return h;
   }
   if (sousOngletCours==='inscrire') {
@@ -2764,7 +2764,7 @@ function renderCours() {
     h+='<div class="card'+(att?' hl-warn':'')+'"><div class="card-top"><div class="card-nom">'+cours+'</div>'+(att?'<span class="pill pill-warn">'+att+' attente</span>':'')+'</div>';
     list.slice().sort(function(a,b){return a.role.localeCompare(b.role);}).forEach(function(d){
       var rcls=d.role==='guideur'?'pill-guideur':'pill-guidee';
-      h+='<div class="inline-row"><div style="flex:1;"><div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">'+d.prenom+' '+d.nom+' <span class="pill '+rcls+'" style="font-size:8px;">'+d.role+'</span></div><div class="card-sub">'+d.email+'</div>'+(d.partenaire?partenaireTag(d.partenaire,d.role):'')+'</div><div style="display:flex;gap:5px;align-items:center;flex-shrink:0;"><span class="pill '+(d.statut==='valide'?'pill-ok':'pill-warn')+'">'+(d.statut==='valide'?'✓ Validé':'Attente')+'</span>'+(d.statut==='en_attente'&&d.role==='guidee'?'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-demande" data-id="'+d.id+'">✓</button>':'')+'</div></div>';
+      h+='<div class="inline-row"><div style="flex:1;"><div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">'+d.prenom+' '+d.nom+' <span class="pill '+rcls+'" style="font-size:8px;">'+d.role+'</span></div>'+(d.partenaire?partenaireTag(d.partenaire,d.role):'')+' </div><div style="display:flex;gap:5px;align-items:center;flex-shrink:0;"><span class="pill '+(d.statut==='valide'?'pill-ok':'pill-warn')+'">'+(d.statut==='valide'?'✓ Validé':'Attente')+'</span>'+(d.statut==='en_attente'&&d.role==='guidee'?'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-demande" data-id="'+d.id+'">✓</button>':'')+'</div></div>';
     });
     h+='</div>';
   });
@@ -2879,7 +2879,7 @@ function renderCartes() {
       +payePill
       +'</div>'
       +'<div class="point-sub" style="font-size:10px;">'+nbUtil+'/10 cours · '+expTxt+'</div>'
-      +(c.email?'<div class="point-sub" style="font-size:10px;">'+c.email+'</div>':'')
+
       +miniDots
       +'</div>'
       +'<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;margin-left:8px;">'
@@ -3254,9 +3254,9 @@ function renderSorano() {
   function cardRow(s){
     var nomQ=s.nom.replace(/"/g,'&quot;');
     if(s.paiementSorano){
-      return '<div class="card hl-ok"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button></div></div>';
+      return '<div class="card hl-ok"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button></div></div>';
     }
-    return '<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div><div class="card-sub">'+s.email+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+nomQ+'" data-id="'+s.id+'">✉️ Relance</button></div></div>';
+    return '<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+nomQ+'" data-id="'+s.id+'">✉️ Relance</button></div></div>';
   }
   var groups=[
     {lbl:'Tango Vincennes Débutants',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return ct.statut==='inscrit'&&ct.ville==='vincennes'&&ct.niveau==='debutant'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email]};}).sort(alpha)},
@@ -3824,7 +3824,6 @@ function renderYogaEssai() {
           +nomCliquable(e.prenom+' '+e.nom,e.email||'','','yoga')
           +(e.cours==='forfait'?'<span class="pill pill-info" style="font-size:8px;padding:1px 5px;">Forfait</span>':'')
           +'</div>'
-          +'<div class="point-sub">'+e.email+'</div>'
           +'</div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
           +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Conf.</span>':'')
