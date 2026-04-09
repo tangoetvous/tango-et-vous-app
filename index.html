@@ -480,6 +480,25 @@
     }
   }
 
+  window.toggleYogaEssaiForm = function() {
+    const container = $('yoga-essai-container');
+    const btn       = $('btn-yoga-essai');
+    const iframe    = $('yoga-essai-iframe');
+    if (!container) return;
+    const open = container.style.display === 'block';
+    if (!open) {
+      container.style.display = 'block';
+      if (!iframe.src || iframe.src === window.location.href) iframe.src = 'essai-yoga.html';
+      btn.textContent = '✕ Fermer le formulaire';
+      btn.style.background = '#6b46c1';
+      container.scrollIntoView({behavior:'smooth', block:'start'});
+    } else {
+      container.style.display = 'none';
+      btn.textContent = "S'inscrire à un cours d'essai →";
+      btn.style.background = '#a78bfa';
+    }
+  };
+
   function estEssaiYogaGratuitIndex(dateStr) {
     const annee = dateStr.slice(0, 4);
     if (dateStr.slice(5, 7) !== '09') return false;
@@ -2183,9 +2202,13 @@ a{color:var(--gold);text-decoration:none;}
     <div class="section" style="margin-bottom:14px;">
       <div class="section-title">Cours d'essai gratuit</div>
       <p style="color:var(--dim);font-size:13px;margin:0 0 12px;">Les deux premiers cours de septembre sont gratuits. Venez essayer sans engagement !</p>
-      <a href="essai-yoga.html" class="btn-inscr-yoga" style="display:block;text-align:center;background:#a78bfa;color:#fff;font-weight:700;padding:14px 20px;border-radius:10px;font-size:15px;text-decoration:none;letter-spacing:0.3px;">
+      <button id="btn-yoga-essai" onclick="toggleYogaEssaiForm()" style="display:block;width:100%;text-align:center;background:#a78bfa;color:#fff;font-weight:700;padding:14px 20px;border-radius:10px;font-size:15px;letter-spacing:0.3px;border:none;cursor:pointer;">
         S'inscrire à un cours d'essai →
-      </a>
+      </button>
+      <div id="yoga-essai-container" style="display:none;margin-top:12px;">
+        <button onclick="toggleYogaEssaiForm()" style="background:none;border:none;color:var(--dim);font-size:12px;cursor:pointer;margin-bottom:8px;">← Fermer le formulaire</button>
+        <iframe id="yoga-essai-iframe" src="" style="border:none;width:100%;min-height:700px;border-radius:10px;background:#0f0f0f;" title="Formulaire cours d'essai yoga"></iframe>
+      </div>
     </div>
 
     <!-- Statut élève yoga (rendu dynamiquement) -->
@@ -2262,6 +2285,18 @@ if('serviceWorker' in navigator){
       mapsUrl: 'https://maps.google.com/?q=64+rue+Orfila+75020+Paris'
     },
     {
+      id: 'yoga',
+      label: '🧘 Yoga',
+      name: 'Espace Sorano — Yoga',
+      addr: '16 rue Charles Pathé, 94300 Vincennes',
+      geocodeQuery: '16 rue Charles Pathé, 94300 Vincennes',
+      sub: 'Mardi matin · Yin 10h30 / Hatha 11h30 · RER A Château de Vincennes',
+      lat: 48.8482, lng: 2.4416,
+      metro: { geocodeQuery: 'gare RER Vincennes place Pierre Sémard', lat: 48.8478, lng: 2.4342, name: 'RER A — Vincennes' },
+      color: '#a78bfa',
+      mapsUrl: 'https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes'
+    },
+    {
       id: 'milonga',
       label: 'Milonga La Dolce Vita',
       name: 'Centre Re-Corps',
@@ -2276,7 +2311,7 @@ if('serviceWorker' in navigator){
   ];
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v5';
+  var CACHE_KEY = 'tev_plan_coords_v6';
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');

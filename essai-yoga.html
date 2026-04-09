@@ -305,6 +305,7 @@ function selectCours(btn) {
   document.querySelectorAll('#cours-grp .btn-choix').forEach(b => b.classList.remove('sel'));
   btn.classList.add('sel');
   coursSelectionne = btn.dataset.cours;
+  updatePrix(); // rafraîchir le tarif affiché si une date est déjà choisie
 }
 
 function updatePrix() {
@@ -313,12 +314,17 @@ function updatePrix() {
   const date  = sel.value;
   dateSelectionnee = date;
   if (!date) { zone.style.display='none'; return; }
-  const gratuit = estGratuit(date);
-  const prix    = getYogaEssaiPrix();
+  const gratuit  = estGratuit(date);
+  const unitaire = getYogaEssaiPrix();
+  const isForfait = coursSelectionne === 'forfait';
   zone.style.display = 'block';
-  zone.innerHTML = gratuit
-    ? '<div class="tarif-badge tarif-gratuit">🎁 Ce cours d\'essai est <b>gratuit</b></div>'
-    : '<div class="tarif-badge tarif-paye">💶 Cours d\'essai : <b>'+prix+'€</b></div>';
+  if (gratuit) {
+    zone.innerHTML = '<div class="tarif-badge tarif-gratuit">🎁 Ce cours d\'essai est <b>gratuit</b></div>';
+  } else if (isForfait) {
+    zone.innerHTML = '<div class="tarif-badge tarif-paye">💶 Forfait (2 cours) : <b>2 × '+unitaire+'€ = '+(unitaire*2)+'€</b></div>';
+  } else {
+    zone.innerHTML = '<div class="tarif-badge tarif-paye">💶 Cours d\'essai : <b>'+unitaire+'€</b></div>';
+  }
 }
 
 function soumettre() {
@@ -372,9 +378,13 @@ function soumettre() {
 
   setTimeout(() => {
     document.getElementById('form-zone').style.display = 'none';
+    const unitaire = getYogaEssaiPrix();
+    const isForfait = (data.cours === 'forfait');
+    const montant = isForfait ? unitaire * 2 : unitaire;
+    const montantStr = isForfait ? '2 × '+unitaire+'€ = '+montant+'€' : montant+'€';
     document.getElementById('s-tarif-line').innerHTML = gratuit
       ? '<span class="s-ico">🎁</span><span>Ce cours d\'essai est <b>gratuit</b>. Bienvenue !</span>'
-      : '<span class="s-ico">💶</span><span>Paiement sur place en espèces pour le cours d\'essai ('+getYogaEssaiPrix()+'€).</span>';
+      : '<span class="s-ico">💶</span><span>Paiement sur place en espèces ('+montantStr+').</span>';
     document.getElementById('recap-yoga').innerHTML = recapHtml;
     document.getElementById('success-yoga').style.display = 'block';
     window.scrollTo(0,0);
