@@ -2560,62 +2560,69 @@ function renderElevesTango() {
     h+='<button class="sub-tab'+(sousOngletEleves===o.id?' active':'')+'" data-sous-el="'+o.id+'">'+o.lbl+' ('+n+')'+dot+'</button>';
   });
   h+='</div>';
-  var ong=ONGLETS.find(function(o){return o.id===sousOngletEleves;});
-  if(!ong) return h;
-  // Barre de recherche
-  h+='<div style="margin-bottom:10px;">'
-    +'<input type="search" id="rech-eleve" value="'+rechercheEleve.replace(/"/g,'&quot;')+'" placeholder="🔍 Rechercher un élève..." oninput="rechercheEleve=this.value;renderTab();" style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;">'
-    +'</div>';
+  h+='<div style="margin-bottom:10px;"><input type="search" id="rech-eleve" value="'+rechercheEleve.replace(/"/g,'&quot;')+'" placeholder="🔍 Rechercher parmi tous les cours..." oninput="majRechercheEleve(this.value)" style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;" autocomplete="off"></div>';
+  h+='<div id="eleves-resultats">'+_elevesResultatsHTML(inscrits)+'</div>';
+  return h;
+}
+function _elevesOnglets() {
+  return [
+    {id:'paris-deb',     ville:'paris',     niv:'debutant'},
+    {id:'paris-int',     ville:'paris',     niv:'intermediaire'},
+    {id:'vincennes-deb', ville:'vincennes', niv:'debutant'},
+    {id:'vincennes-int', ville:'vincennes', niv:'intermediaire'}
+  ];
+}
+function _elevesResultatsHTML(inscrits) {
   var q=rechercheEleve.toLowerCase().trim();
-  var liste=inscrits.filter(function(e){
-    if(e.ville!==ong.ville||e.niveau!==ong.niv) return false;
-    if(!q) return true;
-    return (e.prenom+' '+e.nom+' '+(e.partenaire||'')+' '+(e.email||'')).toLowerCase().indexOf(q)>=0;
-  });
-  // Barre de capacité du cours actif
+  if(q) {
+    var resultats=inscrits.filter(function(e){
+      return (e.prenom+' '+e.nom+' '+(e.partenaire||'')+' '+(e.email||'')).toLowerCase().indexOf(q)>=0;
+    });
+    if(!resultats.length) return '<div class="empty-state">Aucun élève trouvé pour « '+rechercheEleve+' ».</div>';
+    var r='<div style="font-size:11px;color:var(--dim);padding:4px 0 10px;">'+resultats.length+' résultat'+(resultats.length>1?'s':'')+' dans tous les cours</div>';
+    resultats.sort(function(a,b){return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);});
+    resultats.forEach(function(e){
+      r+='<div style="font-size:10px;color:var(--dim);padding:6px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'+e.cours+'</div>';
+      r+=ficheEleveInscrit(e,'');
+    });
+    return r;
+  }
+  var ong=_elevesOnglets().find(function(o){return o.id===sousOngletEleves;});
+  if(!ong) return '';
+  var liste=inscrits.filter(function(e){return e.ville===ong.ville&&e.niveau===ong.niv;});
   var cap=capaciteCours(ong.ville,ong.niv);
   function capCol(n,max){return n>=max?'#ff6b6b':n>=Math.round(max*0.85)?'#ffaa44':'#4ade80';}
-  h+='<div style="display:flex;align-items:center;gap:12px;padding:8px 4px 10px;border-bottom:1px solid var(--border);margin-bottom:6px;flex-wrap:wrap;">'
+  var r='<div style="display:flex;align-items:center;gap:12px;padding:8px 4px 10px;border-bottom:1px solid var(--border);margin-bottom:6px;flex-wrap:wrap;">'
     +'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gui,cap.maxGui)+';">👨 '+cap.gui+' / '+cap.maxGui+' guideurs</span>'
     +'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gde,cap.maxGde)+';">👩 '+cap.gde+' / '+cap.maxGde+' guidées</span>'
     +(cap.fullGui||cap.fullGde?'<span style="font-size:11px;font-weight:700;color:#ff6b6b;border:1px solid #ff6b6b;border-radius:4px;padding:1px 6px;">COMPLET</span>':'')
     +'</div>';
-  if(!liste.length) return h+'<div class="empty-state">Aucun élève inscrit dans ce cours.</div>';
-  // Construire couples (les deux membres du couple présents dans la liste)
+  if(!liste.length) return r+'<div class="empty-state">Aucun élève inscrit dans ce cours.</div>';
   var used={}, couples=[], soloGui=[], soloGde=[];
   liste.forEach(function(e){
     if(used[e.email]) return;
     if(e.emailPartenaire){
       var p=liste.find(function(x){return x.email===e.emailPartenaire;});
-      if(p&&!used[p.email]){
-        used[e.email]=true; used[p.email]=true;
-        var gui=e.role==='guideur'?e:p, gde=e.role==='guidee'?e:p;
-        couples.push([gui,gde]);
-        return;
-      }
+      if(p&&!used[p.email]){used[e.email]=true;used[p.email]=true;var gui=e.role==='guideur'?e:p,gde=e.role==='guidee'?e:p;couples.push([gui,gde]);return;}
     }
     used[e.email]=true;
     if(e.role==='guideur') soloGui.push(e); else soloGde.push(e);
   });
-  var nbTotal=liste.length, nbCouples=couples.length, nbSolos=soloGui.length+soloGde.length;
-  h+='<div style="font-size:11px;color:var(--dim);padding:5px 12px 8px;font-style:italic;">'+nbTotal+' élève'+(nbTotal>1?'s':'')+' — '+nbCouples+' couple'+(nbCouples>1?'s':'')+', '+nbSolos+' solo'+(nbSolos>1?'s':'')+'</div>';
+  var nbTotal=liste.length,nbCouples=couples.length,nbSolos=soloGui.length+soloGde.length;
+  r+='<div style="font-size:11px;color:var(--dim);padding:5px 12px 8px;font-style:italic;">'+nbTotal+' élève'+(nbTotal>1?'s':'')+' — '+nbCouples+' couple'+(nbCouples>1?'s':'')+', '+nbSolos+' solo'+(nbSolos>1?'s':'')+'</div>';
   if(couples.length){
-    h+='<div class="section-hdr">Couples ('+couples.length+')</div>';
-    couples.forEach(function(pair,idx){
-      var border=idx>0?'border-top:1px solid var(--border);':'';
-      h+=ficheEleveInscrit(pair[0], border);
-      h+=ficheEleveInscrit(pair[1], '');
-    });
+    r+='<div class="section-hdr">Couples ('+couples.length+')</div>';
+    couples.forEach(function(pair,idx){r+=ficheEleveInscrit(pair[0],idx>0?'border-top:1px solid var(--border);':'');r+=ficheEleveInscrit(pair[1],'');});
   }
   if(soloGui.length||soloGde.length){
-    h+='<div class="section-hdr">Solos ('+(soloGui.length+soloGde.length)+')</div>';
+    r+='<div class="section-hdr">Solos ('+(soloGui.length+soloGde.length)+')</div>';
     var maxS=Math.max(soloGui.length,soloGde.length);
     for(var si=0;si<maxS;si++){
-      if(si<soloGui.length) h+=ficheEleveInscrit(soloGui[si],'');
-      if(si<soloGde.length) h+=ficheEleveInscrit(soloGde[si],'');
+      if(si<soloGui.length) r+=ficheEleveInscrit(soloGui[si],'');
+      if(si<soloGde.length) r+=ficheEleveInscrit(soloGde[si],'');
     }
   }
-  return h;
+  return r;
 }
 function ficheEleveInscrit(e, borderStyle) {
   var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
@@ -2693,6 +2700,14 @@ function confirmerSupprimerEleve(id) {
   fermerContact();
   afficherToast('🗑 '+nom+' supprimé·e');
   renderTab();
+}
+function majRechercheEleve(val) {
+  rechercheEleve = val;
+  var zone = gel('eleves-resultats');
+  if (!zone) return;
+  var sai = saisonActive();
+  var inscrits = (adminData.coursTango||[]).filter(function(e){return e.statut==='inscrit'&&(e.saison||saisonCourante())===sai;});
+  zone.innerHTML = _elevesResultatsHTML(inscrits);
 }
 function basculerRole(id) {
   var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
