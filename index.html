@@ -561,14 +561,15 @@
     var h = '';
 
     // ── Bandeau d'accueil ──────────────────────────────────────
-    h += '<div style="background:linear-gradient(135deg,var(--surface2) 0%,var(--surface3) 100%);padding:24px 20px 20px;margin-bottom:20px;">'
-      + '<div style="font-family:var(--font-display,serif);font-size:26px;font-weight:300;color:var(--gold);letter-spacing:1px;margin-bottom:4px;">Bonjour, ' + prenom + ' 🩷</div>'
-      + '<div style="font-size:13px;color:var(--text-dim);line-height:1.6;">' + coursName + ' · ' + coursJour + ' ' + coursHeure
-      + (yogaInscrit ? '<br>' + ({yin:'🌙 Yin Yoga · Mardi 10h30', hatha:'☀️ Hatha Yoga · Mardi 11h30', forfait:'🌙☀️ Yin + Hatha Yoga · Mardi'}[yogaInscrit.cours] || '') : '')
+    h += '<div style="background:linear-gradient(160deg,#1a1020 0%,#2a1535 50%,#1a1820 100%);padding:36px 20px 28px;text-align:center;position:relative;overflow:hidden;">'
+      + '<div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(212,175,55,0.12) 0%,transparent 70%);pointer-events:none;"></div>'
+      + '<div style="font-family:var(--font-display,serif);font-size:34px;font-weight:300;color:var(--gold);letter-spacing:1px;margin-bottom:8px;position:relative;">Bonjour, ' + prenom + ' 🩷</div>'
+      + '<div style="font-size:15px;color:rgba(255,255,255,0.85);line-height:1.8;position:relative;">' + coursName + ' · ' + coursJour + ' ' + coursHeure
+      + (yogaInscrit ? '<br><span style="color:rgba(255,255,255,0.7);font-size:14px;">' + ({yin:'🌙 Yin Yoga · Mardi 10h30', hatha:'☀️ Hatha Yoga · Mardi 11h30', forfait:'🌙☀️ Yin + Hatha Yoga · Mardi'}[yogaInscrit.cours] || '') + '</span>' : '')
       + '</div>'
       + '</div>';
 
-    h += '<div style="padding:0 16px 24px;">';
+    h += '<div style="padding:0 16px 28px;">';
 
     // ── Carte de 10 cours (mini jauge SVG) ────────────────────
     if (carte && carte.type !== 'forfait' && (carte.coursUtilises != null || carte.coursRestants != null)) {
@@ -577,44 +578,39 @@
       const pct       = Math.min(100, (used / 10) * 100);
       const sc = (carte.statut||'').includes('🔴') || (carte.statut||'').includes('⚫') ? '#c62828'
                : (carte.statut||'').includes('🟡') ? '#ff8800' : '#D4AF37';
-      // Mini circular gauge — r=34, cx=40, cy=40, viewBox 80×80
       const circ = 2 * Math.PI * 34;
       const offset = circ * (1 - pct / 100);
-      // 10 dots progress
-      let dots = '<div style="display:flex;gap:5px;margin:10px 0 6px;">';
+      let dots = '<div style="display:flex;gap:5px;margin:12px 0 8px;">';
       for (let i = 0; i < 10; i++) {
-        const filled = i < used;
-        dots += '<div style="flex:1;height:5px;border-radius:3px;background:' + (filled ? sc : 'var(--surface3)') + ';transition:background .3s;"></div>';
+        dots += '<div style="flex:1;height:6px;border-radius:3px;background:' + (i < used ? sc : 'rgba(255,255,255,0.1)') + ';transition:background .3s;"></div>';
       }
       dots += '</div>';
-      h += '<div style="margin-bottom:18px;">';
-      h += '<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;">🎫 Ma carte de 10 cours</div>';
-      h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;">';
-      h += '<div style="display:flex;align-items:center;gap:18px;">';
-      // SVG mini gauge
+      h += '<div style="margin-top:20px;margin-bottom:20px;">';
+      h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:12px;text-align:center;">🎫 Ma carte de 10 cours</div>';
+      h += '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:20px 18px;">';
+      h += '<div style="display:flex;align-items:center;gap:20px;">';
       h += '<div style="flex-shrink:0;position:relative;width:80px;height:80px;">'
         + '<svg width="80" height="80" viewBox="0 0 80 80" style="transform:rotate(-90deg);">'
-        + '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--surface3)" stroke-width="7"/>'
+        + '<circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="7"/>'
         + '<circle cx="40" cy="40" r="34" fill="none" stroke="' + sc + '" stroke-width="7" stroke-linecap="round"'
         + ' stroke-dasharray="' + circ.toFixed(2) + '" stroke-dashoffset="' + offset.toFixed(2) + '"/>'
         + '</svg>'
         + '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">'
-        + '<span style="font-size:22px;font-weight:600;color:var(--gold);line-height:1;">' + used + '</span>'
-        + '<span style="font-size:8px;color:var(--text-dim);letter-spacing:1px;">utilisés</span>'
+        + '<span style="font-size:24px;font-weight:600;color:var(--gold);line-height:1;">' + used + '</span>'
+        + '<span style="font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:1px;">utilisés</span>'
         + '</div></div>';
-      // Info à droite
       h += '<div style="flex:1;">'
-        + '<div style="font-size:28px;font-weight:300;color:var(--text);line-height:1;">' + remaining + '</div>'
-        + '<div style="font-size:11px;color:var(--text-dim);letter-spacing:1px;margin-bottom:8px;">cours restants</div>';
-      if (carte.statut) h += '<span class="statut-pill ' + ((carte.statut||'').includes('🟢') ? 'active' : (carte.statut||'').includes('🟡') ? 'soon' : 'empty') + '" style="font-size:10px;">' + carte.statut + '</span>';
+        + '<div style="font-size:38px;font-weight:200;color:#fff;line-height:1;">' + remaining + '</div>'
+        + '<div style="font-size:13px;color:rgba(255,255,255,0.6);letter-spacing:1px;margin-bottom:10px;">cours restants</div>';
+      if (carte.statut) h += '<span class="statut-pill ' + ((carte.statut||'').includes('🟢') ? 'active' : (carte.statut||'').includes('🟡') ? 'soon' : 'empty') + '" style="font-size:11px;">' + carte.statut + '</span>';
       h += '</div></div>';
       h += dots;
-      if (carte.dateExpiration) h += '<div style="font-size:11px;color:var(--text-faint);">Expiration : ' + formatDate(carte.dateExpiration) + '</div>';
+      if (carte.dateExpiration) h += '<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:4px;">Expiration : ' + formatDate(carte.dateExpiration) + '</div>';
       h += '</div></div>';
     } else if (carte && carte.type === 'forfait') {
-      h += '<div style="margin-bottom:18px;">';
-      h += '<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;">🎫 Mon inscription</div>';
-      h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;">'
+      h += '<div style="margin-top:20px;margin-bottom:20px;">';
+      h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:12px;text-align:center;">🎫 Mon inscription</div>';
+      h += '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px;">'
         + '<div class="forfait-badge" style="margin:0;">✅ Forfait annuel actif</div></div></div>';
     }
 
@@ -624,35 +620,35 @@
     const prochainStage = STAGES_DATA.find(s => s.date >= todayStr) || null;
     const prochaineMilonga = MILONGAS_DATA.find(d => d >= todayStr) || null;
 
-    h += '<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;">📅 Prochains rendez-vous</div>';
-    h += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">';
+    h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px;text-align:center;">📅 Prochains rendez-vous</div>';
+    h += '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px;">';
 
-    // Prochain cours
-    h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">'
-      + '<span style="font-size:22px;">🎶</span>'
-      + '<div><div style="font-size:11px;color:var(--text-dim);margin-bottom:1px;">Prochain cours</div>'
-      + '<div style="font-size:15px;font-weight:600;color:var(--gold);">' + (prochainCours ? fmtLong(prochainCours) : 'Aucun à venir') + '</div></div></div>';
+    // Prochain cours — bleu
+    h += '<div style="background:rgba(96,176,255,0.07);border:1px solid rgba(96,176,255,0.25);border-left:4px solid #60b0ff;border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;">'
+      + '<span style="font-size:26px;line-height:1;">🎶</span>'
+      + '<div><div style="font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:3px;letter-spacing:.5px;">Prochain cours</div>'
+      + '<div style="font-size:18px;font-weight:500;color:#fff;">' + (prochainCours ? fmtLong(prochainCours) : 'Aucun à venir') + '</div></div></div>';
 
-    // Prochain stage
+    // Prochain stage — violet
     if (prochainStage) {
       const ds = new Date(prochainStage.date + 'T00:00:00');
       const stageLbl = cap(JOURS_LONG[ds.getDay()]) + ' ' + ds.getDate() + ' ' + MOIS_LOC[ds.getMonth()];
       const thème = prochainStage.s1 ? prochainStage.s1 + (prochainStage.s2 ? ' · ' + prochainStage.s2 : '') : '';
-      h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">'
-        + '<span style="font-size:22px;">🥁</span>'
-        + '<div><div style="font-size:11px;color:var(--text-dim);margin-bottom:1px;">Prochain stage</div>'
-        + '<div style="font-size:15px;font-weight:600;color:var(--gold);">' + stageLbl + '</div>'
-        + (thème ? '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">' + thème + '</div>' : '')
+      h += '<div style="background:rgba(181,123,238,0.07);border:1px solid rgba(181,123,238,0.25);border-left:4px solid #b57bee;border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;">'
+        + '<span style="font-size:26px;line-height:1;">🥁</span>'
+        + '<div><div style="font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:3px;letter-spacing:.5px;">Prochain stage</div>'
+        + '<div style="font-size:18px;font-weight:500;color:#fff;">' + stageLbl + '</div>'
+        + (thème ? '<div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:3px;">' + thème + '</div>' : '')
         + '</div></div>';
     }
 
-    // Prochaine milonga
+    // Prochaine milonga — rose
     if (prochaineMilonga) {
-      h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">'
-        + '<span style="font-size:22px;">💃</span>'
-        + '<div><div style="font-size:11px;color:var(--text-dim);margin-bottom:1px;">Prochaine milonga</div>'
-        + '<div style="font-size:15px;font-weight:600;color:var(--gold);">' + fmtLong(prochaineMilonga) + '</div>'
-        + '<div style="font-size:12px;color:var(--text-dim);margin-top:2px;">La Dolce Vita · 17h30–23h30</div>'
+      h += '<div style="background:rgba(255,107,157,0.07);border:1px solid rgba(255,107,157,0.25);border-left:4px solid #ff6b9d;border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;">'
+        + '<span style="font-size:26px;line-height:1;">💃</span>'
+        + '<div><div style="font-size:12px;color:rgba(255,255,255,0.55);margin-bottom:3px;letter-spacing:.5px;">Prochaine milonga</div>'
+        + '<div style="font-size:18px;font-weight:500;color:#fff;">' + fmtLong(prochaineMilonga) + '</div>'
+        + '<div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:3px;">La Dolce Vita · 17h30–23h30</div>'
         + '</div></div>';
     }
 
@@ -661,14 +657,14 @@
     // ── Rappel stages réservés ─────────────────────────────────
     const stagesInscrits = (eleveData.stagesInscrits || eleveData.stagesReserves || []).filter(s => (s.date||s.dateStage||'') >= todayStr);
     if (stagesInscrits.length > 0) {
-      h += '<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;">📝 Mes stages réservés</div>';
+      h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px;text-align:center;">📝 Mes stages réservés</div>';
       stagesInscrits.forEach(s => {
         const dsi = new Date((s.date || s.dateStage || '') + 'T00:00:00');
         const lbl = cap(JOURS_LONG[dsi.getDay()]) + ' ' + dsi.getDate() + ' ' + MOIS_LOC[dsi.getMonth()] + ' ' + dsi.getFullYear();
-        h += '<div style="background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:14px 16px;margin-bottom:8px;">'
-          + '<div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:6px;">📅 ' + lbl + '</div>';
+        h += '<div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.3);border-left:4px solid var(--gold);border-radius:12px;padding:16px 18px;margin-bottom:10px;">'
+          + '<div style="font-size:16px;font-weight:500;color:#fff;margin-bottom:8px;">📅 ' + lbl + '</div>';
         const ateliers = s.ateliers || s.slots || [];
-        ateliers.forEach(a => { h += '<div style="font-size:12px;color:var(--text-dim);">· ' + a + '</div>'; });
+        ateliers.forEach(a => { h += '<div style="font-size:13px;color:rgba(255,255,255,0.6);">· ' + a + '</div>'; });
         h += '</div>';
       });
     }
