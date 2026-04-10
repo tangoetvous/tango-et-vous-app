@@ -217,10 +217,11 @@ const IS_DEMO = true; // Passer à false après déploiement Apps Script
 
 const IS_ADMIN = new URLSearchParams(location.search).get('admin') === '1';
 // MODE : auto-détecté selon la date (mai–août → preinscription, sinon regulier)
-// Peut être forcé via ?mode=... si besoin
+// En mai–juin sans mode fixé dans l'URL → écran de choix saison proposé à l'utilisateur
 const _nowM = new Date().getMonth() + 1;
-const _modeAuto = (_nowM >= 5 && _nowM <= 8) ? 'preinscription' : 'regulier';
-const MODE = new URLSearchParams(location.search).get('mode') || _modeAuto;
+const _modeFromUrl = new URLSearchParams(location.search).get('mode');
+const NEED_CHOIX = !_modeFromUrl && (_nowM === 5 || _nowM === 6);
+const MODE = _modeFromUrl || (_nowM >= 5 && _nowM <= 8 ? 'preinscription' : 'regulier');
 
 // Retourne la saison suivante (débutant le 1er septembre suivant)
 function getSaisonSuivante() {
@@ -232,9 +233,6 @@ function getSaisonSuivante() {
 function getSaisonCible() {
   return MODE === 'preinscription' ? getSaisonSuivante() : getSaisonCourante();
 }
-
-// Bandeau email mai–juin sur le formulaire de pré-inscription
-const SHOW_EMAIL_BANNER = MODE === 'preinscription' && (_nowM === 5 || _nowM === 6);
 
 // Tarifs — lus depuis localStorage si l'admin les a mis à jour, sinon valeurs par défaut
 const TARIFS_BASE = {
@@ -380,6 +378,32 @@ function soranoCot(vinc, age) {
 // RENDER
 // ================================================================
 function render() {
+  if (NEED_CHOIX) {
+    $('prog-zone').style.display = 'none';
+    const sc = getSaisonCourante(), ss = getSaisonSuivante();
+    $('app').innerHTML = `
+      <div class="etape-lbl" style="margin-bottom:14px;">Pour quelle saison souhaitez-vous vous inscrire ?</div>
+      <div class="btn-grp" style="flex-direction:column;gap:10px;">
+        <div class="btn-choix" onclick="pickChoixMode('regulier')" style="flex-direction:row;align-items:center;gap:16px;text-align:left;padding:16px 18px;">
+          <span style="font-size:30px;line-height:1;flex-shrink:0;">📅</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Saison actuelle — ${sc}</div>
+            <div style="font-size:11px;font-weight:300;color:var(--dim);">Rejoindre les cours déjà en cours</div>
+          </div>
+        </div>
+        <div class="btn-choix" onclick="pickChoixMode('preinscription')" style="flex-direction:row;align-items:center;gap:16px;text-align:left;padding:16px 18px;">
+          <span style="font-size:30px;line-height:1;flex-shrink:0;">🗓</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Prochaine saison — ${ss}</div>
+            <div style="font-size:11px;font-weight:300;color:var(--dim);">Pré-inscription pour septembre prochain</div>
+          </div>
+        </div>
+      </div>`;
+    hideErr();
+    window.scrollTo(0,0);
+    return;
+  }
+  $('prog-zone').style.display = 'block';
   const arr = getSteps(), tot = arr.length, e = S.step;
   let bar = '';
   arr.forEach((s,i) => {
@@ -391,14 +415,15 @@ function render() {
   $('steps-bar').innerHTML = bar;
   $('pfill').style.width = (tot>1?(e-1)/(tot-1)*100:0)+'%';
   const cur = arr[e-1];
-  let banner = '';
-  if (SHOW_EMAIL_BANNER) {
-    const sc = getSaisonCourante();
-    banner = `<div class="info-note" style="margin-bottom:16px;">📝 Ce formulaire est pour la saison <strong>${getSaisonCible()}</strong>.<br>Pour vous inscrire pour la saison actuelle (<strong>${sc}</strong>), écrivez-nous à <a href="mailto:tangoetvous@gmail.com" style="color:var(--gold);">tangoetvous@gmail.com</a>.</div>`;
-  }
-  if(cur) $('app').innerHTML = banner + buildScreen(cur.id);
+  if(cur) $('app').innerHTML = buildScreen(cur.id);
   hideErr();
   window.scrollTo(0,0);
+}
+
+function pickChoixMode(mode) {
+  const params = new URLSearchParams(window.location.search);
+  params.set('mode', mode);
+  window.location.href = window.location.pathname + '?' + params.toString();
 }
 
 function jumpTo(n){ if(n<S.step){ saveStep(); S.step=n; render(); } }
@@ -859,11 +884,12 @@ function restart(){
 (function() {
   const el = $('hdr-sub');
   if (!el) return;
-  const sc = getSaisonCible();
-  if (MODE === 'preinscription') {
-    el.textContent = 'Pré-inscription — saison ' + sc;
+  if (NEED_CHOIX) {
+    el.textContent = 'Inscription aux cours';
+  } else if (MODE === 'preinscription') {
+    el.textContent = 'Pré-inscription — saison ' + getSaisonCible();
   } else {
-    el.textContent = 'Inscription aux cours — saison ' + sc;
+    el.textContent = 'Inscription aux cours — saison ' + getSaisonCible();
   }
 })();
 render();
