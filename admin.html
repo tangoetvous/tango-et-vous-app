@@ -2466,6 +2466,11 @@ function renderEssai() {
     });
     return g;
   }
+  // Helper : couleur du titre selon ville + niveau
+  function couleurCours(ville, niveau) {
+    if(ville==='vincennes') return niveau==='debutant'?'#ff8c42':'#D4AF37';
+    return niveau==='debutant'?'#60b0ff':'#4ade80';
+  }
   // Helper : compter les élèves inscrits (coursTango) pour une ville+niveau+rôle
   function countElevesInscrits(date, niveau, role) {
     var isVinc=(COURS_VINCENNES||[]).indexOf(date)>=0;
@@ -2504,7 +2509,8 @@ function renderEssai() {
       var villeAtt=isVincAtt?'vincennes':'paris';
       var guiConf=grp.ins.filter(function(x){return x.role==='guideur'&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guideur');
       var gdeConf=grp.ins.filter(function(x){return x.role==='guidee'&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guidee');
-      h+='<div class="section-hdr">'+fmtDate(grp.date)+' — '+nivLbl
+      var ccAtt=couleurCours(villeAtt,grp.niveau);
+      h+='<div class="section-hdr" style="color:'+ccAtt+';">'+fmtDate(grp.date)+' — '+nivLbl
         +' <span style="font-weight:400;color:var(--warn-text);font-size:11px;">👨 '+guiConf+'/22 · 👩 '+gdeConf+'/23 — complet</span></div>';
       attenteGrp.forEach(function(e){
         var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
@@ -2565,7 +2571,8 @@ function renderEssai() {
       var absEssai=conf.filter(function(e){return e.present===false;}).length;
       var restEssai=conf.length-presEssai-absEssai;
       var toutPointe=restEssai===0;
-      h += '<div class="section-hdr">'+fmtDate(grp.date)+' — '+nivLbl
+      var ccPt=couleurCours(villePt,grp.niveau);
+      h += '<div class="section-hdr" style="color:'+ccPt+';">'+fmtDate(grp.date)+' — '+nivLbl
         +' — Essai: ✓'+presEssai+' ✗'+absEssai+' ?'+restEssai
         +' · Élèves: '+elevesPresents.length+(elevesAbsents.length?' ('+elevesAbsents.length+' absent'+(elevesAbsents.length>1?'s':'')+')':'')+'</div>';
       // ── Cours d'essai ──
@@ -2681,7 +2688,10 @@ function renderEssai() {
       var totalGui=guiConf.length+elevesGuiEd;
       var totalGde=gde+elevesGdeEd;
       var complet=totalGui>=22||totalGde>=23;
-      h += '<div class="section-hdr">'
+      var isVincEd2=(COURS_VINCENNES||[]).indexOf(date)>=0;
+      var villeEd2=isVincEd2?'vincennes':'paris';
+      var ccEd=couleurCours(villeEd2,niv);
+      h += '<div class="section-hdr" style="color:'+ccEd+';">'
         +fmtDate(date)+' — '+nivLbl+' <span style="font-weight:400;color:var(--dim);">'+lieuLbl+'</span>'
         +' <span style="font-weight:400;margin-left:6px;color:'+(totalGui>=22?'var(--warn-text)':'var(--dim)')+';">👨 '+totalGui+'/22</span>'
         +' <span style="font-weight:400;color:'+(totalGde>=23?'var(--warn-text)':'var(--dim)')+';">👩 '+totalGde+'/23</span>'
