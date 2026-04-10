@@ -590,7 +590,8 @@ var DEMO_DATA = {
   coursYoga: [
     {id:'CY001',prenom:'Claire',  nom:'Dupont',  email:'claire@ex.com',  tel:'06 11 22 33 44',cours:'forfait',statut:'inscrit',saison:'2025-2026',dateInscription:'2025-09-16'}
   ],
-  carteReports: []
+  carteReports: [],
+  absencesJour: []
 };
 
 // ================================================================
@@ -1927,6 +1928,12 @@ function handleAction(action, btn) {
     case 'env-j1':
       envJ1(btn.dataset.date, btn);
       break;
+    case 'marquer-absence-jour':
+      marquerAbsenceJour(btn.dataset.date, btn.dataset.email, btn);
+      break;
+    case 'email-attente':
+      envoyerEmailAttente(btn.dataset.email, btn.dataset.date, btn.dataset.niveau, btn.dataset.role, btn);
+      break;
     case 'val-yoga-essai':
       valYogaEssai(btn.dataset.email||'', btn.dataset.date||'', btn);
       break;
@@ -2459,20 +2466,32 @@ function renderEssai() {
     });
     return g;
   }
-  // Helper : true si guideur est vraiment en attente (>=22 guideurs confirmés dans son groupe)
+  // Helper : compter les élèves inscrits (coursTango) pour une ville+niveau+rôle
+  function countElevesInscrits(date, niveau, role) {
+    var isVinc=(COURS_VINCENNES||[]).indexOf(date)>=0;
+    var ville=isVinc?'vincennes':'paris';
+    return (adminData.coursTango||[]).filter(function(c){
+      return c.statut==='inscrit'&&c.ville===ville&&c.niveau===(niveau||'debutant')&&c.role===role;
+    }).length;
+  }
+  // Helper : true si guideur est vraiment en attente (>=22 guideurs confirmés + inscrits dans son groupe)
   function guideurVraimentAttente(e, grpIns) {
     var guiConf=grpIns.filter(function(x){return x.role==='guideur'&&x.statut==='confirme';}).length;
-    return guiConf>=22;
+    var elevesGui=countElevesInscrits(e.date,e.niveau,'guideur');
+    return (guiConf+elevesGui)>=22;
   }
-  // Helper : true si la personne est vraiment en attente (doit attendre confirmation)
+  // Helper : true si la personne est vraiment en attente (doit attendre confirmation / capacité)
   function estVraimentAttente(e, grpIns) {
     if(e.statut!=='attente') return false;
-    if(e.role==='guidee') return true;
+    if(e.role==='guidee') {
+      var gdeConf=grpIns.filter(function(x){return x.role==='guidee'&&x.statut==='confirme';}).length;
+      var elevesGde=countElevesInscrits(e.date,e.niveau,'guidee');
+      return (gdeConf+elevesGde)>=23;
+    }
     return guideurVraimentAttente(e, grpIns);
   }
 
   if (filtreEssai==='attente') {
-    // Liste d'attente : guidées avec statut===attente + guideurs avec statut===attente ET >=22 guideurs confirmés
     var grpAtt = buildGroupes(liste);
     var hasAtt = false;
     Object.keys(grpAtt).sort().forEach(function(key){
@@ -2481,7 +2500,12 @@ function renderEssai() {
       if(!attenteGrp.length) return;
       hasAtt=true;
       var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
-      h+='<div class="section-hdr">'+fmtDate(grp.date)+' — '+nivLbl+'</div>';
+      var isVincAtt=(COURS_VINCENNES||[]).indexOf(grp.date)>=0;
+      var villeAtt=isVincAtt?'vincennes':'paris';
+      var guiConf=grp.ins.filter(function(x){return x.role==='guideur'&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guideur');
+      var gdeConf=grp.ins.filter(function(x){return x.role==='guidee'&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guidee');
+      h+='<div class="section-hdr">'+fmtDate(grp.date)+' — '+nivLbl
+        +' <span style="font-weight:400;color:var(--warn-text);font-size:11px;">👨 '+guiConf+'/22 · 👩 '+gdeConf+'/23 — complet</span></div>';
       attenteGrp.forEach(function(e){
         var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
         h += '<div class="point-row">'
@@ -2493,8 +2517,8 @@ function renderEssai() {
           +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
           +'</div>'
           +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+          +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="email-attente" data-email="'+e.email+'" data-date="'+grp.date+'" data-niveau="'+grp.niveau+'" data-role="'+e.role+'">✉️</button>'
           +'<button class="btn btn-ok" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓ Confirmer</button>'
-          +btnEmail(e.email,e.prenom+' '+e.nom)
           +'</div></div>';
       });
     });
@@ -2503,7 +2527,6 @@ function renderEssai() {
   }
 
   if (filtreEssai==='pointage') {
-    // Grouper par date + niveau
     var grpPt = buildGroupes(liste);
     var hasEvt = false;
     var currentMoisPt = '';
@@ -2511,10 +2534,20 @@ function renderEssai() {
     var currentMoisKey = today().slice(0,7);
     Object.keys(grpPt).sort().forEach(function(key){
       var grp=grpPt[key];
-      // Seulement les personnes confirmées (non en attente réelle)
       var conf=grp.ins.filter(function(e){return !estVraimentAttente(e,grp.ins);});
-      var coursTangoDate=(adminData.coursTango||[]).filter(function(c){return c.statut==='inscrit'&&c.date===grp.date&&dateAppartientSaison(c.date,sai);});
-      if(!conf.length&&!coursTangoDate.length) return;
+      // Élèves inscrits (coursTango) pour ce cours (ville déduite de la date)
+      var isVincPt=(COURS_VINCENNES||[]).indexOf(grp.date)>=0;
+      var villePt=isVincPt?'vincennes':'paris';
+      var absJour=adminData.absencesJour||[];
+      var elevesPresents=(adminData.coursTango||[]).filter(function(c){
+        return c.statut==='inscrit'&&c.ville===villePt&&c.niveau===grp.niveau
+          &&!absJour.some(function(a){return a.date===grp.date&&a.email===c.email;});
+      });
+      var elevesAbsents=(adminData.coursTango||[]).filter(function(c){
+        return c.statut==='inscrit'&&c.ville===villePt&&c.niveau===grp.niveau
+          &&absJour.some(function(a){return a.date===grp.date&&a.email===c.email;});
+      });
+      if(!conf.length&&!elevesPresents.length&&!elevesAbsents.length) return;
       hasEvt=true;
       var moisKeyPt = grp.date.slice(0,7);
       if (moisKeyPt !== currentMoisPt) {
@@ -2527,26 +2560,28 @@ function renderEssai() {
         h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdPt+'\')">'+MOIS_FR[dmPt.getMonth()]+' '+dmPt.getFullYear()+'<span class="mois-acc-arrow">'+(isOpenPt?'▼':'▶')+'</span></div>';
         h += '<div id="'+accIdPt+'"'+(isOpenPt?'':' style="display:none;"')+'>';
       }
-      // Interleave guideurs/guidées
+      var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
+      var presEssai=conf.filter(function(e){return e.present===true;}).length;
+      var absEssai=conf.filter(function(e){return e.present===false;}).length;
+      var restEssai=conf.length-presEssai-absEssai;
+      var toutPointe=restEssai===0;
+      h += '<div class="section-hdr">'+fmtDate(grp.date)+' — '+nivLbl
+        +' — Essai: ✓'+presEssai+' ✗'+absEssai+' ?'+restEssai
+        +' · Élèves: '+elevesPresents.length+(elevesAbsents.length?' ('+elevesAbsents.length+' absent'+(elevesAbsents.length>1?'s':'')+')':'')+'</div>';
+      // ── Cours d'essai ──
+      if(conf.length) h += '<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);padding:6px 0 3px;">Cours d\'essai ('+conf.length+')</div>';
       var pGui=conf.filter(function(e){return e.role==='guideur';});
       var pGde=conf.filter(function(e){return e.role==='guidee';});
       var pAlt=[]; var pml=Math.max(pGui.length,pGde.length);
       for(var pi=0;pi<pml;pi++){if(pi<pGui.length)pAlt.push(pGui[pi]);if(pi<pGde.length)pAlt.push(pGde[pi]);}
-      var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
-      var presCount=conf.filter(function(e){return e.present===true;}).length+(coursTangoDate.filter(function(c){return c.present===true;}).length);
-      var absCount=conf.filter(function(e){return e.present===false;}).length+(coursTangoDate.filter(function(c){return c.present===false;}).length);
-      var totalCount=conf.length+coursTangoDate.length;
-      var rest=totalCount-presCount-absCount;
-      var toutPointe=rest===0;
-      h += '<div class="section-hdr">'+fmtDate(grp.date)+' — '+nivLbl+' — ✓'+presCount+' ✗'+absCount+' ?'+rest+'</div>';
       pAlt.forEach(function(e) {
-        var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
-        var ctEntry = (adminData.coursTango||[]).find(function(c){return c.email===e.email;});
-        var ctStatut = ctEntry ? ctEntry.statut : null;
-        var pastille = '';
-        if (ctStatut==='inscrit') pastille='<span class="pill pill-ok" style="font-size:8px;padding:1px 5px;">Inscrit</span>';
-        else if (ctStatut==='valide'||ctStatut==='attente_paiement') pastille='<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">att. paiem.</span>';
-        else if (ctStatut==='demande') pastille='<span style="display:inline-block;background:#FFD600;color:#003399;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;border:2px solid #003399;white-space:nowrap;">DEM</span>';
+        var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
+        var ctEntry=(adminData.coursTango||[]).find(function(c){return c.email===e.email;});
+        var ctStatut=ctEntry?ctEntry.statut:null;
+        var pastille='';
+        if(ctStatut==='inscrit') pastille='<span class="pill pill-ok" style="font-size:8px;padding:1px 5px;">Inscrit</span>';
+        else if(ctStatut==='valide'||ctStatut==='attente_paiement') pastille='<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">att. paiem.</span>';
+        else if(ctStatut==='demande') pastille='<span style="display:inline-block;background:#FFD600;color:#003399;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;border:2px solid #003399;white-space:nowrap;">DEM</span>';
         h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · avec '+e.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
@@ -2558,17 +2593,37 @@ function renderEssai() {
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'">✗</button>'
           +'</div></div>';
       });
-      coursTangoDate.forEach(function(c) {
+      // ── Élèves inscrits présents ──
+      if(elevesPresents.length||elevesAbsents.length) {
+        h += '<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);padding:8px 0 3px;border-top:1px solid var(--border);margin-top:6px;">Élèves inscrits ('+(elevesPresents.length+elevesAbsents.length)+')</div>';
+      }
+      var eGui=elevesPresents.filter(function(c){return c.role==='guideur';});
+      var eGde=elevesPresents.filter(function(c){return c.role==='guidee';});
+      var eAlt=[]; var eal=Math.max(eGui.length,eGde.length);
+      for(var ei=0;ei<eal;ei++){if(ei<eGui.length)eAlt.push(eGui[ei]);if(ei<eGde.length)eAlt.push(eGde[ei]);}
+      eAlt.forEach(function(c) {
+        var rcls=c.role==='guideur'?'pill-guideur':'pill-guidee';
         h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(c.prenom+' '+c.nom,c.email||'',c.tel||'','ct')+'</div>'
-          +'<div class="point-sub">'+(c.ville||'')+'</div></div>'
+          +'<div class="point-sub">'+(c.ville||'')+(c.partenaire?' · avec '+c.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
-          +'<span class="pill pill-ok" style="font-size:8px;">Inscrit cours</span>'
-          +'<button class="btn-point btn-pres'+(c.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+c.email+'">✓</button>'
-          +'<button class="btn-point btn-abs'+(c.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+c.email+'">✗</button>'
+          +'<span class="pill pill-ok" style="font-size:8px;">Inscrit</span>'
+          +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+c.role+'</span>'
+          +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--warn-text);border-color:var(--warn-text);" data-action="marquer-absence-jour" data-date="'+grp.date+'" data-email="'+c.email+'">🚫 Absent</button>'
+          +'</div></div>';
+      });
+      // ── Élèves absents ce jour ──
+      elevesAbsents.forEach(function(c) {
+        h += '<div class="point-row" style="opacity:0.45;"><div style="flex:1;min-width:0;">'
+          +'<div class="point-nom" style="text-decoration:line-through;color:var(--dim);">'+nomCliquable(c.prenom+' '+c.nom,c.email||'',c.tel||'','ct')+'</div>'
+          +'<div class="point-sub">Absent · '+c.role+'</div>'
+          +'</div>'
+          +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
+          +'<span class="pill" style="font-size:8px;background:#c62828;color:#fff;">Absent</span>'
+          +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px;" data-action="marquer-absence-jour" data-date="'+grp.date+'" data-email="'+c.email+'">↩ Rétablir</button>'
           +'</div></div>';
       });
       h += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
-        +(toutPointe?'<button class="btn btn-ok" data-action="env-j1" data-date="'+grp.date+'">✉️ Emails J+1</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d&#39;abord.</span>')
+        +(toutPointe?'<button class="btn btn-ok" data-action="env-j1" data-date="'+grp.date+'">✉️ Emails J+1</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tous les essais d&#39;abord.</span>')
         +'<span id="j1s-'+grp.date+'" style="font-size:11px;margin-left:8px;"></span>'
         +'</div>';
     });
@@ -2624,12 +2679,18 @@ function renderEssai() {
       var gde=ins.filter(function(e){return e.role==='guidee';}).length;
       var attVrai=ins.filter(function(e){return estVraimentAttente(e,ins);}).length;
       var nivLbl=niv==='debutant'?'Débutant':'Intermédiaire';
-      var limiteGuideurs=guiConf.length>=22;
+      // Capacité totale = essai confirmés + élèves inscrits
+      var elevesGuiEd=countElevesInscrits(date,niv,'guideur');
+      var elevesGdeEd=countElevesInscrits(date,niv,'guidee');
+      var totalGui=guiConf.length+elevesGuiEd;
+      var totalGde=gde+elevesGdeEd;
+      var complet=totalGui>=22||totalGde>=23;
       h += '<div class="section-hdr">'
         +fmtDate(date)+' — '+nivLbl+' <span style="font-weight:400;color:var(--dim);">'+lieuLbl+'</span>'
-        +'<span style="font-weight:400;color:var(--dim);margin-left:8px;">👨 '+guiAll.length+' · 👩 '+gde
-        +(attVrai?' · <span style="color:var(--warn-text)">⏳ '+attVrai+' att.</span>':'')+'</span>'
-        +(limiteGuideurs?' <span style="color:var(--warn-text);font-size:10px;">(limite 22 guideurs atteinte)</span>':'')
+        +' <span style="font-weight:400;margin-left:6px;color:'+(totalGui>=22?'var(--warn-text)':'var(--dim)')+';">👨 '+totalGui+'/22</span>'
+        +' <span style="font-weight:400;color:'+(totalGde>=23?'var(--warn-text)':'var(--dim)')+';">👩 '+totalGde+'/23</span>'
+        +(attVrai?' <span style="color:var(--warn-text);">⏳ '+attVrai+' att.</span>':'')
+        +(complet?' <span style="color:var(--warn-text);font-size:10px;font-weight:700;">COMPLET</span>':'')
         +'</div>';
       if(!ins.length){
         h+='<div style="font-size:11px;color:var(--dim);padding:6px 0 10px;">Aucune inscription</div>';
@@ -2668,6 +2729,31 @@ function valGuideeEssai(email, date, btn) {
   btn.disabled=true; btn.textContent='⏳';
   if (IS_DEMO) { var e=adminData.essai.find(function(x){return x.email===email&&x.date===date;}); if(e)e.statut='confirme'; renderTab(); return; }
   postAS({action:'validerGuideeEssai',email:email,date:date}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓';});
+}
+function marquerAbsenceJour(date, email, btn) {
+  if(!adminData.absencesJour) adminData.absencesJour=[];
+  var idx=-1;
+  adminData.absencesJour.forEach(function(a,i){if(a.date===date&&a.email===email) idx=i;});
+  if(idx>=0) adminData.absencesJour.splice(idx,1);
+  else adminData.absencesJour.push({date:date,email:email,ts:Date.now()});
+  if(!IS_DEMO) postAS({action:'absenceJour',date:date,email:email}).catch(function(){});
+  renderTab();
+}
+function envoyerEmailAttente(email, date, niveau, role, btn) {
+  if(btn){btn.disabled=true;btn.textContent='⏳';}
+  var ess=(adminData.essai||[]).find(function(e){return e.email===email&&e.date===date;});
+  var prenomAff=ess?(ess.prenom||email):email;
+  if(IS_DEMO){
+    setTimeout(function(){
+      afficherToast('✉️ Email liste d\'attente envoyé à '+prenomAff+' (démo)');
+      if(btn){btn.disabled=false;btn.textContent='✉️';}
+    },800);
+    return;
+  }
+  postAS({action:'envoyerEmailAttente',email:email,date:date,niveau:niveau,role:role}).then(function(){
+    afficherToast('✉️ Email envoyé à '+prenomAff);
+    if(btn){btn.disabled=false;btn.textContent='✓';}
+  }).catch(function(){if(btn){btn.disabled=false;btn.textContent='✉️';}});
 }
 function pointerEssai(date, email, present) {
   var e = adminData.essai.find(function(x){return x.email===email&&x.date===date;});
