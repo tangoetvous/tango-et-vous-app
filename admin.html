@@ -1164,12 +1164,28 @@ var TARIFS_DEFAUT = {
   adhesion_lrp:5,
   // Cotisation Sorano (réglée directement à Sorano)
   sorano_vinc:36, sorano_vinc_m16:26, sorano_ext:45, sorano_ext_m16:35,
-  // Yoga — cours d'essai (gratuit les 2 premiers mardis de septembre)
-  yoga_essai:15,
+  // Yoga — tarifs
+  yoga_essai:15,          // cours d'essai (gratuit les 2 premiers mardis de septembre)
+  yoga_forfait_1cours:250, // forfait annuel 1 cours (Yin ou Hatha)
+  yoga_forfait_2cours:430, // forfait annuel 2 cours (Yin + Hatha)
   // Stages — tarifs par créneau
   stage_technique:20, stage_1seance:25, stage_2seances:45, stage_3seances:60
 };
 var TARIFS = Object.assign({}, TARIFS_DEFAUT);
+
+// Livrets d'information (liens Google Drive) — chargés depuis localStorage
+var LIVRETS = {paris_deb:'',paris_int:'',vincennes_deb:'',vincennes_int:'',yin_yoga:'',hatha_yoga:''};
+function chargerLivrets() {
+  try { var s=JSON.parse(localStorage.getItem('tev_livrets')||'null'); if(s) Object.assign(LIVRETS,s); } catch(e){}
+}
+function sauverLivrets() {
+  var champs=['paris_deb','paris_int','vincennes_deb','vincennes_int','yin_yoga','hatha_yoga'];
+  var data={};
+  champs.forEach(function(k){data[k]=(gel('livret-'+k)||{}).value||'';});
+  try { localStorage.setItem('tev_livrets',JSON.stringify(data)); Object.assign(LIVRETS,data); } catch(e){}
+  afficherToast('✓ Livrets enregistrés');
+  renderTab();
+}
 
 function gel(id) { return document.getElementById(id); }
 function today()  { return (IS_DEMO?DEMO_DATE:new Date()).toISOString().slice(0,10); }
@@ -1555,7 +1571,7 @@ function sauverTarifs(btn) {
   if (!saison || !dateEffet) { if(err){err.textContent='Saison et date d\'effet requis.';err.style.display='block';} return; }
   if(err) err.style.display='none';
   var tarifs = {};
-  var CHAMPS = ['carte10','carte10_reduit','carte10_renouv','carte10_renouv_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours','forfait_2cours_reduit','adhesion_lrp','sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16','yoga_essai','stage_technique','stage_1seance','stage_2seances','stage_3seances'];
+  var CHAMPS = ['carte10','carte10_reduit','carte10_renouv','carte10_renouv_reduit','unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit','forfait_vincennes','forfait_vincennes_reduit','forfait_2cours','forfait_2cours_reduit','adhesion_lrp','sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16','yoga_essai','yoga_forfait_1cours','yoga_forfait_2cours','stage_technique','stage_1seance','stage_2seances','stage_3seances'];
   var ok = true;
   CHAMPS.forEach(function(k) {
     var inp = gel('tr-'+k);
@@ -1736,8 +1752,10 @@ function renderTarifs() {
     +row('Extérieur — 16 ans et +','sorano_ext',null)
     +row('Extérieur — moins de 16 ans','sorano_ext_m16',null)
     +section('Yoga (Espace Sorano Vincennes)')
-    +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Cours d\'essai — gratuit les 2 premiers mardis de septembre, <b>'+t.yoga_essai+'€</b> les suivants (Yin, Hatha, ou Forfait Yin+Hatha 2×tarif).</td></tr>'
-    +row('Cours d\'essai yoga (prix après la période gratuite)','yoga_essai',null)
+    +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Cours d\'essai — gratuit les 2 premiers mardis de septembre, <b>'+t.yoga_essai+'€</b> les suivants.</td></tr>'
+    +row('Cours d\'essai (Yin ou Hatha)','yoga_essai',null)
+    +row('Forfait annuel — 1 cours (Yin ou Hatha)','yoga_forfait_1cours',null)
+    +row('Forfait annuel — 2 cours (Yin + Hatha)','yoga_forfait_2cours',null)
     +section('Stages (par créneau)')
     +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Chaque stage comprend 3 créneaux : Initiation technique, Séance 1, Séance 2. Tarif calculé selon les créneaux choisis.</td></tr>'
     +row('Initiation technique seule','stage_technique',null)
@@ -1753,6 +1771,32 @@ function renderTarifs() {
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Stages</b> — Tarifs calculés selon le nombre de créneaux choisis. Paiement sur place en espèces ou en ligne via AssoConnect.'
     +'</div>'
     +'</div>';
+
+  // ── Section Livrets d'information ──
+  var livretsStored = LIVRETS;
+  var livretChamps = [
+    {key:'paris_deb',     lbl:'📘 Paris — Débutant'},
+    {key:'paris_int',     lbl:'📗 Paris — Intermédiaire'},
+    {key:'vincennes_deb', lbl:'📙 Vincennes — Débutant'},
+    {key:'vincennes_int', lbl:'📒 Vincennes — Intermédiaire'},
+    {key:'yin_yoga',      lbl:'🌙 Yin Yoga'},
+    {key:'hatha_yoga',    lbl:'☀️ Hatha Yoga'},
+  ];
+  var allFilled = livretChamps.every(function(c){return !!livretsStored[c.key];});
+  h += '<div style="margin-top:24px;border-top:1px solid var(--border);padding-top:20px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">'
+    +'<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:13px;font-weight:700;">📄 Livrets d\'information</span>'
+    +(allFilled?'<span class="pill pill-ok" style="font-size:11px;">✓ Tous renseignés</span>':'<span class="pill pill-warn" style="font-size:11px;">À compléter</span>')
+    +'</div>'
+    +'<button class="btn btn-gold" onclick="sauverLivrets()" style="font-size:12px;">💾 Enregistrer les livrets</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:14px;">Lien Google Drive vers le livret PDF de chaque cours. Utilisé dans les e-mails de confirmation (essais, inscriptions, rappels).</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;">';
+  livretChamps.forEach(function(c){
+    h += '<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">'+c.lbl+'</label>'
+      +'<input type="url" id="livret-'+c.key+'" value="'+(livretsStored[c.key]||'').replace(/"/g,'&quot;')+'" placeholder="https://drive.google.com/..." style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;" autocapitalize="none"></div>';
+  });
+  h += '</div></div>';
 
   // ── Section Préparer la saison prochaine ──
   var prochSai = saisonSuivante();
@@ -1933,6 +1977,7 @@ function demarrerApp(email) {
   recalcStats();
   filtreStage = Object.keys(adminData.stages)[0]||'';
   chargerTarifs();
+  chargerLivrets();
   chargerDatesYogaStages();
   gel('login-screen').style.display='none';
   gel('app').style.display='block';
