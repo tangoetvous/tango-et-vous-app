@@ -589,7 +589,8 @@ var DEMO_DATA = {
   ],
   coursYoga: [
     {id:'CY001',prenom:'Claire',  nom:'Dupont',  email:'claire@ex.com',  tel:'06 11 22 33 44',cours:'forfait',statut:'inscrit',saison:'2025-2026',dateInscription:'2025-09-16'}
-  ]
+  ],
+  carteReports: []
 };
 
 // ================================================================
@@ -1481,10 +1482,9 @@ function renderTarifs() {
     +row('Pack complet (technique + S1 + S2)','stage_3seances',null)
     +'</tbody></table></div>'
     +'<div style="margin-top:20px;padding:12px;background:var(--s3);border-radius:8px;font-size:12px;color:var(--dim);">'
-    +'<b style="color:var(--text);">Tarif réduit</b> — Applicable aux personnes de moins de 26 ans, étudiants, demandeurs d\'emploi (sur justificatif).'
-    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Le Regard Se Pose</b> — Requise pour toutes les formules sauf cours à l\'unité.'
-    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Cours à l\'unité</b> — Paris uniquement. Sans adhésion LRP.'
-    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Sorano</b> — Cours Vincennes uniquement. Tarifée selon âge et statut vincennois. Réglée directement à Sorano.'
+    +'<b style="color:var(--text);">Tarif réduit</b> — Applicable à Vincennes aux personnes de moins de 25 ans. Et à Paris aux étudiants et demandeurs d\'emploi (sur justificatif).'
+    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Le Regard Se Pose</b> — Requise pour tous les forfaits annuels et Cartes de 10 cours.'
+    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Sorano</b> — Demandé par l\'Espace Sorano. Uniquement pour les Cours à Vincennes. Son Tarif est en fonction de votre âge et votre lieu de résidence. Réglée directement à Sorano via le lien <a href="https://urls.fr/i3KQ7b" target="_blank" style="color:var(--gold);">https://urls.fr/i3KQ7b</a>'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Yoga — essai</b> — Gratuit les 2 premiers mardis de septembre. Tarif ci-dessus les mardis suivants (Yin, Hatha ou Forfait = 2× le tarif).'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Stages</b> — Tarifs calculés selon le nombre de créneaux choisis. Paiement sur place en espèces ou en ligne via AssoConnect.'
     +'</div>'
@@ -1693,6 +1693,7 @@ async function chargerDonnees() {
     var d = await r.json();
     if (d.error) throw new Error(d.error);
     adminData = d;
+    if(!adminData.carteReports)adminData.carteReports=[];
     if (!filtreStage && adminData.stages) filtreStage=Object.keys(adminData.stages)[0]||'';
     renderTab();
   } catch(e) { console.error('Erreur:', e.message); }
@@ -2793,6 +2794,44 @@ function valDemande(id, btn) {
 // ================================================================
 // TAB CARTES 10
 // ================================================================
+function renderReportSection(sai, cartes) {
+  var saiArr=sai.split('-'), saiEndYear=parseInt(saiArr[1]);
+  var saiProch=(parseInt(saiArr[0])+1)+'-'+(saiEndYear+1);
+  var reportFrom=saiEndYear+'-07-01', reportUntil=saiEndYear+'-08-31';
+  var todayStr=today();
+  if(!IS_DEMO&&(todayStr<reportFrom||todayStr>reportUntil))return'';
+  var eligibles=cartes.filter(function(c){return(c.restants||0)>0&&!c.isReport;});
+  if(!eligibles.length)return'';
+  var reports=adminData.carteReports||[];
+  var h='<div class="section-hdr" style="color:var(--gold);margin-top:4px;">↩ Report saison '+saiProch+'</div>';
+  h+='<div style="font-size:11px;color:var(--dim);padding:4px 12px 10px;font-style:italic;">Cartes non terminées pouvant être reportées sur la saison suivante'+(IS_DEMO&&todayStr<reportFrom?' <span style="color:var(--warn-text)">(démo — actif à partir du 01/07)</span>':'')+'</div>';
+  eligibles.forEach(function(c){
+    var rep=reports.find(function(r){return r.carteId===c.id&&r.saisonOrigine===sai;});
+    var statut=rep?rep.statut:null;
+    var n=c.restants||0;
+    h+='<div class="point-row" style="align-items:flex-start;padding:10px 12px;border-left:3px solid var(--gold);margin-bottom:4px;">';
+    h+='<div style="flex:1;min-width:0;">';
+    h+='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">';
+    h+='<span class="point-nom nom-clickable" data-action="open-contact" data-nom="'+c.nom.replace(/"/g,'&quot;')+'" data-email="'+(c.email||'')+'" data-tel="" data-ctx="carte">'+c.nom+'</span>';
+    h+='<span class="pill pill-gold" style="font-size:9px;">'+n+' cours restant'+(n>1?'s':'')+'</span>';
+    if(statut==='valide')h+='<span class="pill pill-ok" style="font-size:9px;">✓ Inscrit.e '+saiProch+'</span>';
+    h+='</div>';
+    if(statut==='email_envoye'||statut==='valide')h+='<div class="point-sub" style="font-size:10px;">Email envoyé le '+fmtDate(rep.dateEnvoi)+'</div>';
+    if(statut==='valide'&&rep.dateValidation)h+='<div class="point-sub" style="font-size:10px;">Validé le '+fmtDate(rep.dateValidation)+'</div>';
+    h+='</div>';
+    h+='<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;margin-left:8px;">';
+    if(!statut||statut==='attente'){
+      h+='<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="proposer-report" data-id="'+c.id+'">✉️ Proposer le report</button>';
+    } else if(statut==='email_envoye'){
+      h+='<span style="font-size:10px;color:var(--dim);text-align:right;">Email envoyé</span>';
+      h+='<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="valider-report" data-id="'+(rep?rep.id:'')+'">✓ Valider l\'inscription</button>';
+    } else if(statut==='valide'){
+      h+='<span style="font-size:10px;color:var(--ok-text);">✓ Report validé</span>';
+    }
+    h+='</div></div>';
+  });
+  return h;
+}
 function renderCartes() {
   var sai = saisonActive();
   // Inclure les élèves avec carte10 validée même sans cours pointé encore
@@ -2838,6 +2877,7 @@ function renderCartes() {
   });
   var h='', lastCours=null;
   h += '<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Un élève peut pointer deux fois le même jour (cours débutant + intermédiaire).</div>';
+  h += renderReportSection(sai, cartes);
   cartes.forEach(function(c){
     // En-tête de groupe par cours (ville + niveau normalisé)
     var coursLbl = coursKey(c);
@@ -2846,17 +2886,18 @@ function renderCartes() {
       h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>';
     }
     var nbUtil=c.utilises||0, datesCours=c.datesCours||[];
+    var totalSlots=c.isReport?(c.classesReportees||c.restants||10):10;
     var expAff=c.expiration;
     if(!expAff&&c.datePremierCours)expAff=calcExpiration(c.datePremierCours,c.ville||'paris');
     var exp=expAff?new Date(expAff+'T00:00:00'):null;
     var days=exp?Math.ceil((exp-now)/86400000):null;
-    var fini=nbUtil>=10||(days!==null&&days<0);
+    var fini=nbUtil>=totalSlots||(days!==null&&days<0);
     var bient=!fini&&days!==null&&days<14;
     var sLbl=fini?'À renouveler':bient?'Expire dans '+days+'j':'Active';
     var sCls=fini?'pill-err':bient?'pill-warn':'pill-ok';
     // Mini barre avec dates visibles sous les barres
     var miniDots='<div style="display:flex;gap:3px;margin:6px 0;flex-wrap:wrap;">';
-    for(var i=0;i<10;i++){
+    for(var i=0;i<totalSlots;i++){
       var ds=datesCours[i]||null;
       var bg=i<nbUtil?(fini?'var(--err-bg)':'var(--ok-bg)'):'var(--s3)';
       var br=i<nbUtil?(fini?'var(--err-text)':'var(--ok-text)'):'var(--border)';
@@ -2866,7 +2907,7 @@ function renderCartes() {
         +'</div>';
     }
     miniDots+='</div>';
-    var expTxt=expAff?'Exp. '+fmtDate(expAff):c.datePremierCours?'Dép. '+fmtDate(c.datePremierCours):'Pas encore commencée';
+    var expTxt=c.isReport&&!c.datePremierCours?'Report de '+c.saisonOrigine+' · Dém. au 1er cours':expAff?'Exp. '+fmtDate(expAff):c.datePremierCours?'Dép. '+fmtDate(c.datePremierCours):'Pas encore commencée';
     var payeOk=c.paye===true;
     var payePill=payeOk
       ?'<span class="pill pill-ok" style="font-size:8px;cursor:pointer;" data-action="toggle-carte-paye" data-id="'+c.id+'">✓ Payé</span>'
@@ -2876,9 +2917,10 @@ function renderCartes() {
       +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">'
       +'<span class="point-nom nom-clickable" style="font-size:13px;" data-action="open-contact" data-nom="'+c.nom.replace(/"/g,'&quot;')+'" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-tel="" data-ctx="carte">'+c.nom+'</span>'
       +'<span class="pill '+sCls+'" style="font-size:8px;">'+sLbl+'</span>'
+      +(c.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report</span>':'')
       +payePill
       +'</div>'
-      +'<div class="point-sub" style="font-size:10px;">'+nbUtil+'/10 cours · '+expTxt+'</div>'
+      +'<div class="point-sub" style="font-size:10px;">'+nbUtil+'/'+totalSlots+' cours · '+expTxt+'</div>'
 
       +miniDots
       +'</div>'
