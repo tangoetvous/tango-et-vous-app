@@ -289,7 +289,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <button class="tab-btn" data-tab="yoga">🧘 Yoga</button>
     <button class="tab-btn" data-tab="agenda">📅 Agenda</button>
     <button class="tab-btn" data-tab="publications">📝 Publis</button>
-    <button class="tab-btn" data-tab="tarifs">💶 Tarifs</button>
+    <button class="tab-btn" data-tab="tarifs">⚙️</button>
   </div>
   <div class="content" id="tab-content"><div class="spinner"></div></div>
 </div>
@@ -712,10 +712,60 @@ function ouvrirContact(nom, tel, email, ctx) {
     +'<div class="mc-email">'+(email||'—')+'</div>'
     +telHtml+actHtml+essaiHtml
     +'<div class="modal-btns" style="margin-top:16px;">'
+    +'<button class="btn btn-ghost" style="font-size:12px;" id="mc-edit">✏️ Modifier</button>'
     +'<button class="modal-cancel" id="mc-close">Fermer</button>'
     +'</div>';
   gel('mc-close').addEventListener('click',fermerContact);
+  gel('mc-edit').addEventListener('click',basculerEditContact);
   gel('modal-contact').classList.add('vis');
+}
+function basculerEditContact() {
+  var c=_contactCtx||{};
+  var nomParts=(c.nom||'').trim().split(' ');
+  var prenom=nomParts[0]||'', nomFam=nomParts.slice(1).join(' ')||'';
+  var box=gel('modal-contact-box');
+  box.innerHTML='<div class="modal-titre" style="margin-bottom:12px;">✏️ Modifier les coordonnées</div>'
+    +'<div class="field"><label>Prénom</label><input type="text" id="ec-prenom" value="'+prenom.replace(/"/g,'&quot;')+'" autocapitalize="words"/></div>'
+    +'<div class="field"><label>Nom</label><input type="text" id="ec-nom" value="'+nomFam.replace(/"/g,'&quot;')+'" autocapitalize="words"/></div>'
+    +'<div class="field"><label>Téléphone</label><input type="tel" id="ec-tel" value="'+(c.tel||'').replace(/"/g,'&quot;')+'"/></div>'
+    +'<div class="field"><label>Email</label><input type="email" id="ec-email" value="'+(c.email||'').replace(/"/g,'&quot;')+'" autocapitalize="none"/></div>'
+    +'<div class="box-err" id="ec-err"></div>'
+    +'<div class="modal-btns" style="margin-top:14px;">'
+    +'<button class="btn btn-gold" id="ec-save">✓ Enregistrer</button>'
+    +'<button class="modal-cancel" id="ec-cancel">Annuler</button>'
+    +'</div>';
+  gel('ec-save').addEventListener('click',function(){sauverContact(this);});
+  gel('ec-cancel').addEventListener('click',function(){ouvrirContact(c.nom,c.tel,c.email,c.ctx);});
+}
+function sauverContact(btn) {
+  var c=_contactCtx||{};
+  var prenom=(gel('ec-prenom')||{}).value||'';
+  var nom=(gel('ec-nom')||{}).value||'';
+  var tel=(gel('ec-tel')||{}).value||'';
+  var newEmail=(gel('ec-email')||{}).value||'';
+  var err=gel('ec-err');
+  if(!prenom.trim()||!nom.trim()){if(err){err.textContent='Prénom et nom requis.';err.style.display='block';}return;}
+  if(!newEmail.trim()){if(err){err.textContent='Email requis.';err.style.display='block';}return;}
+  if(err)err.style.display='none';
+  btn.disabled=true; btn.textContent='⏳';
+  var oldEmail=c.email||'';
+  var fullNom=prenom.trim()+' '+nom.trim();
+  if(IS_DEMO){
+    // Mettre à jour dans toutes les structures de données
+    function upd(arr){ (arr||[]).forEach(function(x){
+      if(x.email===oldEmail){ x.email=newEmail; x.tel=tel; if(x.prenom!==undefined)x.prenom=prenom.trim(); if(x.nom!==undefined)x.nom=nom.trim(); }
+      if(x.email===oldEmail||x.emailPartenaire===oldEmail){ if(x.emailPartenaire===oldEmail)x.emailPartenaire=newEmail; }
+    });}
+    upd(adminData.coursTango); upd(adminData.coursYoga); upd(adminData.cartes); upd(adminData.essai);
+    // cartes.nom est "Prenom Nom" combiné
+    (adminData.cartes||[]).forEach(function(x){if(x.email===newEmail||x.email===oldEmail)x.nom=fullNom;});
+    _contactCtx.nom=fullNom; _contactCtx.tel=tel; _contactCtx.email=newEmail;
+    afficherToast('✓ Coordonnées mises à jour');
+    fermerContact(); renderTab(); return;
+  }
+  postAS({action:'updateContact',oldEmail:oldEmail,prenom:prenom.trim(),nom:nom.trim(),tel:tel,newEmail:newEmail})
+    .then(function(){afficherToast('✓ Coordonnées mises à jour');fermerContact();chargerDonnees();})
+    .catch(function(e){btn.disabled=false;btn.textContent='✓ Enregistrer';if(err){err.textContent=e.message;err.style.display='block';}});
 }
 function fermerContact() {
   gel('modal-contact').classList.remove('vis');
@@ -3747,6 +3797,7 @@ function renderPublications() {
       +'<span class="pill '+est+'">'+lbl+'</span></div>'
       +(p.image?'<img src="'+p.image+'" style="width:100%;height:80px;object-fit:cover;border-radius:6px;margin:8px 0;" loading="lazy"/>':'')
       +(p.extrait?'<div class="card-sub" style="margin-bottom:8px;">'+p.extrait+'</div>':'')
+      +(p.cours&&p.cours.length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">'+(p.cours.map(function(id){var lbMap={'paris-deb':'Paris Déb.','paris-int':'Paris Int.','vincennes-deb':'Vinc. Déb.','vincennes-int':'Vinc. Int.','yin-yoga':'🌙 Yin','hatha-yoga':'☀️ Hatha'};var cMap={'paris-deb':'#60b0ff','paris-int':'#60b0ff','vincennes-deb':'#40d8c0','vincennes-int':'#40d8c0','yin-yoga':'#a78bfa','hatha-yoga':'#a78bfa'};return'<span style="font-size:9px;padding:2px 7px;border-radius:10px;background:var(--s3);color:'+(cMap[id]||'var(--dim)')+';">'+( lbMap[id]||id)+'</span>';}).join(''))+'</div>':'')
       +'<div class="btn-row">'
       +'<button class="btn btn-ghost" data-action="editer-pub" data-idx="'+i+'">✏️ Modifier</button>'
       +'<button class="btn btn-ghost" data-action="dupliquer-pub" data-idx="'+i+'">⧉ Dupliquer</button>'
@@ -3778,6 +3829,10 @@ function ouvrirPub(pub) {
   gel('pub-ed').innerHTML='<div class="card" style="margin-bottom:14px;">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:12px;">'+(pub?'Modifier':'Nouvelle publication')+'</div>'
     +'<div class="field"><label>Catégorie</label><select id="ed-cat"><option value="actu"'+(p.cat==='actu'?' selected':'')+'>Actualité</option><option value="article"'+(p.cat==='article'?' selected':'')+'>Article</option><option value="event"'+(p.cat==='event'?' selected':'')+'>Événement</option><option value="media"'+(p.cat==='media'?' selected':'')+'>Média</option></select></div>'
+    +'<div class="field"><label>Destinataires <span style="font-size:10px;color:var(--dim);font-weight:400;">(laisser vide = tous les élèves)</span></label>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">'
+    +(function(){var cc=p.cours||[];return[{id:'paris-deb',lbl:'Paris Déb.',c:'#60b0ff'},{id:'paris-int',lbl:'Paris Int.',c:'#60b0ff'},{id:'vincennes-deb',lbl:'Vinc. Déb.',c:'#40d8c0'},{id:'vincennes-int',lbl:'Vinc. Int.',c:'#40d8c0'},{id:'yin-yoga',lbl:'🌙 Yin Yoga',c:'#a78bfa'},{id:'hatha-yoga',lbl:'☀️ Hatha',c:'#a78bfa'}].map(function(g){return'<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:3px 8px;border:1px solid var(--border);border-radius:12px;background:var(--s3);"><input type="checkbox" id="ed-cours-'+g.id+'"'+(cc.indexOf(g.id)>=0?' checked':'')+' style="cursor:pointer;accent-color:var(--gold);"><span style="color:'+g.c+';">'+g.lbl+'</span></label>';}).join('');})()
+    +'</div></div>'
     +'<div class="field"><label>Titre *</label><input type="text" id="ed-titre" value="'+(p.titre||'')+'"/></div>'
     +'<div class="field"><label>Résumé</label><textarea id="ed-extrait" rows="2" style="width:100%;padding:9px;background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:13px;">'+(p.extrait||'')+'</textarea></div>'
     +'<div class="field"><label>Contenu</label><textarea id="ed-contenu" rows="7" style="width:100%;padding:9px;background:var(--s3);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:13px;resize:vertical;">'+(p.contenu||'')+'</textarea></div>'
@@ -3842,7 +3897,9 @@ function savePub(existingId) {
   if(!titre.trim()){if(err){err.textContent='Titre requis.';err.style.display='block';}return;}
   if(err)err.style.display='none';
   var publiee=dates.length===0||(dates.length===1&&new Date(dates[0])<=new Date());
-  var payload={action:'sauvegarderPublication',id:existingId,cat:cat,titre:titre.trim(),extrait:extrait,contenu:contenu,image:image,video:video,dateProgrammee:dates[0]||new Date().toISOString(),datesProgrammees:dates,publiee:publiee};
+  var coursIds=['paris-deb','paris-int','vincennes-deb','vincennes-int','yin-yoga','hatha-yoga'];
+  var cours=coursIds.filter(function(id){var el=document.getElementById('ed-cours-'+id);return el&&el.checked;});
+  var payload={action:'sauvegarderPublication',id:existingId,cat:cat,titre:titre.trim(),extrait:extrait,contenu:contenu,image:image,video:video,dateProgrammee:dates[0]||new Date().toISOString(),datesProgrammees:dates,publiee:publiee,cours:cours};
   if(IS_DEMO){
     if(!adminData.publications)adminData.publications=[];
     var newId = existingId || ('p'+Date.now());
