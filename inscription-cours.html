@@ -216,8 +216,11 @@ function getAssoConnectLien(type) {
 const IS_DEMO = true; // Passer à false après déploiement Apps Script
 
 const IS_ADMIN = new URLSearchParams(location.search).get('admin') === '1';
-// MODE: 'regulier' (défaut) ou 'preinscription'
-const MODE = new URLSearchParams(location.search).get('mode') || 'regulier';
+// MODE : auto-détecté selon la date (mai–août → preinscription, sinon regulier)
+// Peut être forcé via ?mode=... si besoin
+const _nowM = new Date().getMonth() + 1;
+const _modeAuto = (_nowM >= 5 && _nowM <= 8) ? 'preinscription' : 'regulier';
+const MODE = new URLSearchParams(location.search).get('mode') || _modeAuto;
 
 // Retourne la saison suivante (débutant le 1er septembre suivant)
 function getSaisonSuivante() {
@@ -230,11 +233,8 @@ function getSaisonCible() {
   return MODE === 'preinscription' ? getSaisonSuivante() : getSaisonCourante();
 }
 
-// Formulaire régulier fermé en juillet–août (sauf accès admin)
-const _nowM = new Date().getMonth() + 1;
-const FORM_FERME = !IS_ADMIN && MODE === 'regulier' && (_nowM === 7 || _nowM === 8);
-// Bandeau info en mai–juin sur le formulaire régulier
-const SHOW_PREINSCR_BANNER = MODE === 'regulier' && (_nowM === 5 || _nowM === 6);
+// Bandeau email mai–juin sur le formulaire de pré-inscription
+const SHOW_EMAIL_BANNER = MODE === 'preinscription' && (_nowM === 5 || _nowM === 6);
 
 // Tarifs — lus depuis localStorage si l'admin les a mis à jour, sinon valeurs par défaut
 const TARIFS_BASE = {
@@ -380,21 +380,6 @@ function soranoCot(vinc, age) {
 // RENDER
 // ================================================================
 function render() {
-  if (FORM_FERME) {
-    $('prog-zone').style.display = 'none';
-    const sc = getSaisonCourante(), ss = getSaisonSuivante();
-    $('app').innerHTML = `<div style="text-align:center;padding:20px 0 10px;">
-      <div style="font-size:40px;margin-bottom:14px;">🔒</div>
-      <div style="font-family:var(--font-d);font-size:22px;color:var(--gold);letter-spacing:2px;margin-bottom:16px;">INSCRIPTIONS CLOSES</div>
-      <div class="info-note" style="text-align:left;">
-        Les inscriptions pour la saison <strong>${sc}</strong> sont closes pour l'été.<br><br>
-        Pour vous inscrire pour la saison <strong>${ss}</strong>, rendez-vous sur le formulaire de pré-inscription.
-      </div>
-    </div>`;
-    hideErr();
-    window.scrollTo(0,0);
-    return;
-  }
   const arr = getSteps(), tot = arr.length, e = S.step;
   let bar = '';
   arr.forEach((s,i) => {
@@ -407,9 +392,9 @@ function render() {
   $('pfill').style.width = (tot>1?(e-1)/(tot-1)*100:0)+'%';
   const cur = arr[e-1];
   let banner = '';
-  if (SHOW_PREINSCR_BANNER) {
-    const sc = getSaisonCourante(), ss = getSaisonSuivante();
-    banner = `<div class="info-note" style="margin-bottom:16px;">📝 Ce formulaire prend les demandes pour la saison <strong>${sc}</strong>.<br>Pour la saison <strong>${ss}</strong>, utilisez le formulaire de pré-inscription.</div>`;
+  if (SHOW_EMAIL_BANNER) {
+    const sc = getSaisonCourante();
+    banner = `<div class="info-note" style="margin-bottom:16px;">📝 Ce formulaire est pour la saison <strong>${getSaisonCible()}</strong>.<br>Pour vous inscrire pour la saison actuelle (<strong>${sc}</strong>), écrivez-nous à <a href="mailto:tangoetvous@gmail.com" style="color:var(--gold);">tangoetvous@gmail.com</a>.</div>`;
   }
   if(cur) $('app').innerHTML = banner + buildScreen(cur.id);
   hideErr();
@@ -875,9 +860,7 @@ function restart(){
   const el = $('hdr-sub');
   if (!el) return;
   const sc = getSaisonCible();
-  if (FORM_FERME) {
-    el.textContent = 'Inscriptions closes — ' + getSaisonCourante();
-  } else if (MODE === 'preinscription') {
+  if (MODE === 'preinscription') {
     el.textContent = 'Pré-inscription — saison ' + sc;
   } else {
     el.textContent = 'Inscription aux cours — saison ' + sc;
