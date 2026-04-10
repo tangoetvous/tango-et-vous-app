@@ -634,6 +634,34 @@ function saisonSuivante() {
 }
 function saisonActive() { return saisonVue||saisonCourante(); }
 function isSaisonPassee() { return saisonActive()<saisonCourante(); }
+
+// Capacité max par rôle dans les cours réguliers
+var CAP_GUI = 22, CAP_GDE = 23;
+// Nombre d'élèves inscrits (statut==='inscrit') pour une ville+niveau+rôle
+function nbInscritsCours(ville, niveau, role) {
+  var sai = saisonActive();
+  return (adminData.coursTango||[]).filter(function(e){
+    return e.statut==='inscrit' && e.ville===ville && e.niveau===niveau
+      && e.role===role && (e.saison||saisonCourante())===sai;
+  }).length;
+}
+// Retourne {gui, gde, maxGui, maxGde, fullGui, fullGde}
+function capaciteCours(ville, niveau) {
+  var gui = nbInscritsCours(ville, niveau, 'guideur');
+  var gde = nbInscritsCours(ville, niveau, 'guidee');
+  return { gui:gui, gde:gde, maxGui:CAP_GUI, maxGde:CAP_GDE,
+           fullGui:gui>=CAP_GUI, fullGde:gde>=CAP_GDE };
+}
+// Rendu d'un petit badge de capacité (inline)
+function capBadge(ville, niveau) {
+  var c = capaciteCours(ville, niveau);
+  function col(n, max) { return n>=max?'#ff6b6b':n>=Math.round(max*0.85)?'#ffaa44':'#4ade80'; }
+  var badge = '<span style="font-size:10px;color:'+col(c.gui,c.maxGui)+';font-weight:600;">👨 '+c.gui+'/'+c.maxGui+'</span>'
+            + ' <span style="font-size:10px;color:'+col(c.gde,c.maxGde)+';font-weight:600;">👩 '+c.gde+'/'+c.maxGde+'</span>';
+  if (c.fullGui || c.fullGde) badge += ' <span style="font-size:9px;color:#ff6b6b;font-weight:700;letter-spacing:.5px;">COMPLET</span>';
+  return badge;
+}
+
 function dateAppartientSaison(dateStr, saison) {
   // Saison "Y1-Y2" : du 01/09/Y1 au 31/08/Y2
   var p=saison.split('-'), y1=parseInt(p[0]);
@@ -2297,12 +2325,22 @@ function renderElevesTango() {
   var h = '<div class="sub-tabs" style="flex-wrap:wrap;">';
   ONGLETS.forEach(function(o){
     var n=inscrits.filter(function(e){return e.ville===o.ville&&e.niveau===o.niv;}).length;
-    h+='<button class="sub-tab'+(sousOngletEleves===o.id?' active':'')+'" data-sous-el="'+o.id+'">'+o.lbl+' ('+n+')</button>';
+    var c=capaciteCours(o.ville,o.niv);
+    var dot=(c.fullGui||c.fullGde)?' 🔴':'';
+    h+='<button class="sub-tab'+(sousOngletEleves===o.id?' active':'')+'" data-sous-el="'+o.id+'">'+o.lbl+' ('+n+')'+dot+'</button>';
   });
   h+='</div>';
   var ong=ONGLETS.find(function(o){return o.id===sousOngletEleves;});
   if(!ong) return h;
   var liste=inscrits.filter(function(e){return e.ville===ong.ville&&e.niveau===ong.niv;});
+  // Barre de capacité du cours actif
+  var cap=capaciteCours(ong.ville,ong.niv);
+  function capCol(n,max){return n>=max?'#ff6b6b':n>=Math.round(max*0.85)?'#ffaa44':'#4ade80';}
+  h+='<div style="display:flex;align-items:center;gap:12px;padding:8px 4px 10px;border-bottom:1px solid var(--border);margin-bottom:6px;flex-wrap:wrap;">'
+    +'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gui,cap.maxGui)+';">👨 '+cap.gui+' / '+cap.maxGui+' guideurs</span>'
+    +'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gde,cap.maxGde)+';">👩 '+cap.gde+' / '+cap.maxGde+' guidées</span>'
+    +(cap.fullGui||cap.fullGde?'<span style="font-size:11px;font-weight:700;color:#ff6b6b;border:1px solid #ff6b6b;border-radius:4px;padding:1px 6px;">COMPLET</span>':'')
+    +'</div>';
   if(!liste.length) return h+'<div class="empty-state">Aucun élève inscrit dans ce cours.</div>';
   // Construire couples (les deux membres du couple présents dans la liste)
   var used={}, couples=[], soloGui=[], soloGde=[];
@@ -4386,7 +4424,7 @@ function renderValiderPaiement() {
   return h;
 }
 
-function soumettreValiderPaiement() {
+function soumettreValiderPaiement(force) {
   var id=(gel('vp-eleve-select')||{}).value||'';
   var carte10El=document.querySelector('input[name="vp-carte10"]:checked');
   var carte10=carte10El?carte10El.value:'non';
@@ -4397,6 +4435,20 @@ function soumettreValiderPaiement() {
   if(!id){if(err){err.textContent='Sélectionnez un élève.';err.style.display='block';}return;}
   if(IS_DEMO){
     var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
+    // Vérification capacité (sauf si forçage explicite)
+    if(e && !force) {
+      var cap=capaciteCours(e.ville||'paris', e.niveau||'debutant');
+      var estGui=e.role==='guideur', actuel=estGui?cap.gui:cap.gde, max=estGui?cap.maxGui:cap.maxGde;
+      if(actuel>=max){
+        var rLbl=estGui?'guideurs':'guidées';
+        if(err){
+          err.innerHTML='⚠️ Cours complet : '+actuel+'/'+max+' '+rLbl+' déjà inscrits.'
+            +'<br><button class="btn btn-warn" onclick="soumettreValiderPaiement(true)" style="margin-top:8px;width:100%;">⚡ Forcer l\'inscription quand même</button>';
+          err.style.display='block';
+        }
+        return;
+      }
+    }
     if(e){
       e.statut='inscrit';
       e.paiement='';
