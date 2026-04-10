@@ -1928,6 +1928,12 @@ function handleAction(action, btn) {
     case 'toggle-carte-paye':
       toggleCartePaye(id);
       break;
+    case 'proposer-report':
+      proposerReport(id, btn);
+      break;
+    case 'valider-report':
+      validerReport(id, btn);
+      break;
     case 'qr-carte':
       ouvrirModalQR(id, btn.dataset.nom||'', btn.dataset.cours||'');
       break;
@@ -2288,6 +2294,7 @@ function ficheEleveInscrit(e, borderStyle) {
     +'</div>'
     +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
     +'<span class="pill '+rcls+'">'+roleLbl+'</span>'
+    +(e.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report '+(e.classesReportees||e.restants)+' cours</span>':'')
     +(typeLbl?'<span class="pill pill-ok" style="font-size:8px;">'+typeLbl+'</span>':'')
     +(paiLbl?'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+'</span>':'')
     +(e.email?'<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;font-size:11px;">✉️</a>':'')
@@ -2961,6 +2968,72 @@ function toggleCartePaye(id) {
   if(c.paye){var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='attente_paiement';});if(cte)cte.statut='inscrit';}
   if(!IS_DEMO)postAS({action:'toggleCartePaye',eleveId:id,paye:c.paye}).catch(function(){});
   renderTab();
+}
+function proposerReport(carteId, btn) {
+  btn.disabled=true; btn.textContent='⏳';
+  var sai=saisonActive();
+  var saiArr=sai.split('-');
+  var saiProch=(parseInt(saiArr[0])+1)+'-'+(parseInt(saiArr[1])+1);
+  var c=(adminData.cartes||[]).find(function(x){return x.id===carteId;});
+  if(!c){btn.disabled=false;return;}
+  if(!adminData.carteReports)adminData.carteReports=[];
+  var rep=adminData.carteReports.find(function(r){return r.carteId===carteId&&r.saisonOrigine===sai;});
+  if(IS_DEMO){
+    if(rep){rep.dateEnvoi=today();rep.statut='email_envoye';}
+    else adminData.carteReports.push({id:'CR'+Date.now(),carteId:carteId,email:c.email,nom:c.nom,
+      ville:c.ville||'paris',niveau:c.niveau||'',partenaire:c.partenaire||'',emailPartenaire:c.emailPartenaire||'',
+      saisonOrigine:sai,saisonDestination:saiProch,classesRestantes:c.restants,
+      dateEnvoi:today(),statut:'email_envoye',dateValidation:null});
+    afficherToast('✉️ Email report envoyé à '+c.nom);
+    renderTab();return;
+  }
+  postAS({action:'envoyerEmailReport',eleveId:carteId,nom:c.nom,email:c.email,
+    classesRestantes:c.restants,saisonOrigine:sai,saisonDestination:saiProch,
+    lienAssoConnect:getAssoConnectLien('cours')})
+    .then(function(){chargerDonnees();})
+    .catch(function(){btn.disabled=false;btn.textContent='✉️ Proposer le report';});
+}
+function validerReport(reportId, btn) {
+  btn.disabled=true; btn.textContent='⏳';
+  var sai=saisonActive();
+  var saiArr=sai.split('-'), saiEndYear=parseInt(saiArr[1]);
+  var saiProch=(parseInt(saiArr[0])+1)+'-'+(saiEndYear+1);
+  if(!adminData.carteReports)adminData.carteReports=[];
+  var rep=adminData.carteReports.find(function(r){return r.id===reportId;});
+  if(!rep){btn.disabled=false;return;}
+  var c=(adminData.cartes||[]).find(function(x){return x.id===rep.carteId;});
+  if(!c){btn.disabled=false;return;}
+  var coursArr=rep.ville==='vincennes'?COURS_VINCENNES:COURS_PARIS;
+  var firstNext=coursArr.find(function(d){return d>=(saiEndYear+'-09-01');})||'';
+  var expProvisoire=firstNext?calcExpiration(firstNext,rep.ville||'paris'):'';
+  if(IS_DEMO){
+    rep.statut='valide'; rep.dateValidation=today();
+    if(!adminData.cartes)adminData.cartes=[];
+    var newId='CR'+Date.now();
+    adminData.cartes.push({id:newId,nom:c.nom,niveau:c.niveau,email:c.email,
+      statutEleve:'Actif',utilises:0,restants:rep.classesRestantes,
+      datePremierCours:'',expiration:expProvisoire,statut:'Report',
+      source:'report',ville:rep.ville||'paris',datesCours:[],
+      partenaire:rep.partenaire||'',paye:true,
+      isReport:true,classesReportees:rep.classesRestantes,saisonOrigine:sai,saison:saiProch});
+    var ct=(adminData.coursTango||[]).find(function(x){return x.email===rep.email&&(x.saison||saisonCourante())===sai&&x.type&&x.type.indexOf('carte')>=0;});
+    if(ct){
+      var newCT=JSON.parse(JSON.stringify(ct));
+      newCT.id='CTR'+Date.now(); newCT.statut='inscrit'; newCT.saison=saiProch;
+      newCT.dateInscription=today(); newCT.isReport=true;
+      if(!adminData.coursTango)adminData.coursTango=[];
+      adminData.coursTango.push(newCT);
+    }
+    var expAff=expProvisoire?fmtDate(expProvisoire):'à calculer dès le 1er cours';
+    afficherToast('✓ '+c.nom+' inscrit.e saison '+saiProch+' — '+rep.classesRestantes+' cours reportés (exp. '+expAff+')');
+    renderTab();return;
+  }
+  postAS({action:'validerReport',reportId:reportId,email:rep.email,nom:rep.nom,
+    classesRestantes:rep.classesRestantes,saisonOrigine:sai,saisonDestination:saiProch,
+    ville:rep.ville,niveau:rep.niveau,expProvisoire:expProvisoire,
+    partenaire:rep.partenaire,emailPartenaire:rep.emailPartenaire})
+    .then(function(){chargerDonnees();})
+    .catch(function(){btn.disabled=false;btn.textContent='✓ Valider l\'inscription';});
 }
 
 // ================================================================
@@ -4063,7 +4136,8 @@ function ficheEleve(e) {
     +(e.partenaire?'<div class="point-sub">♥ '+e.partenaire+'</div>':'')
     +'</div>'
     +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
-    +'<span class="pill '+rcls+'">'+roleLbl+'</span>';
+    +'<span class="pill '+rcls+'">'+roleLbl+'</span>'
+    +(e.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report '+(e.classesReportees||e.restants)+' cours</span>':'');
 
   // Pill validation
   if(isValide){
