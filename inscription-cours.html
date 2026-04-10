@@ -133,7 +133,7 @@ select option{background:var(--s2);}
 
 <div class="hdr">
   <div class="hdr-logo">TANGO &amp; VOUS</div>
-  <div class="hdr-sub">Demande d'inscription aux cours</div>
+  <div class="hdr-sub" id="hdr-sub">Demande d'inscription aux cours</div>
 </div>
 
 <div class="prog-bar" id="prog-zone">
@@ -203,7 +203,7 @@ function getSaisonCourante() {
 }
 // Retourne le lien AssoConnect pour le type donné ('cours' ou 'renouv'), en fonction de la saison
 function getAssoConnectLien(type) {
-  const sai = getSaisonCourante();
+  const sai = getSaisonCible();
   try {
     const stored = JSON.parse(localStorage.getItem('tev_liens_assoconnect') || '{}');
     const custom = stored[sai] || {};
@@ -214,6 +214,27 @@ function getAssoConnectLien(type) {
   }
 }
 const IS_DEMO = true; // Passer à false après déploiement Apps Script
+
+const IS_ADMIN = new URLSearchParams(location.search).get('admin') === '1';
+// MODE: 'regulier' (défaut) ou 'preinscription'
+const MODE = new URLSearchParams(location.search).get('mode') || 'regulier';
+
+// Retourne la saison suivante (débutant le 1er septembre suivant)
+function getSaisonSuivante() {
+  const d = new Date(), m = d.getMonth() + 1, y = d.getFullYear();
+  const debut = m >= 9 ? y + 1 : y;
+  return debut + '-' + (debut + 1);
+}
+// Retourne la saison cible selon le mode
+function getSaisonCible() {
+  return MODE === 'preinscription' ? getSaisonSuivante() : getSaisonCourante();
+}
+
+// Formulaire régulier fermé en juillet–août (sauf accès admin)
+const _nowM = new Date().getMonth() + 1;
+const FORM_FERME = !IS_ADMIN && MODE === 'regulier' && (_nowM === 7 || _nowM === 8);
+// Bandeau info en mai–juin sur le formulaire régulier
+const SHOW_PREINSCR_BANNER = MODE === 'regulier' && (_nowM === 5 || _nowM === 6);
 
 // Tarifs — lus depuis localStorage si l'admin les a mis à jour, sinon valeurs par défaut
 const TARIFS_BASE = {
@@ -229,19 +250,14 @@ const TARIFS_BASE = {
 const T = (function() {
   try {
     const today = new Date().toISOString().slice(0,10);
-    const isAdmin = new URLSearchParams(location.search).get('admin') === '1';
-    // Vérifier si des tarifs programmés sont désormais actifs (même sans connexion admin)
+    // Vérifier si des tarifs programmés sont désormais actifs
     const prog = JSON.parse(localStorage.getItem('tev_tarifs')||'null');
     if (prog && prog.tarifs && prog.dateEffet && today >= prog.dateEffet) {
       return Object.assign({}, TARIFS_BASE, prog.tarifs);
     }
-    if (!isAdmin) {
-      // Formulaire public en période de pré-inscription (mai–août) → tarifs prochaine saison
-      const m = new Date().getMonth() + 1;
-      if (m >= 5 && m <= 8) {
-        const next = JSON.parse(localStorage.getItem('tev_tarifs_prochaine_saison')||'null');
-        if (next) return Object.assign({}, TARIFS_BASE, next);
-      }
+    if (MODE === 'preinscription') {
+      const next = JSON.parse(localStorage.getItem('tev_tarifs_prochaine_saison')||'null');
+      if (next) return Object.assign({}, TARIFS_BASE, next);
     }
     const stored = JSON.parse(localStorage.getItem('tev_tarifs_actifs')||'null');
     return stored ? Object.assign({}, TARIFS_BASE, stored) : Object.assign({}, TARIFS_BASE);
@@ -251,9 +267,6 @@ const T = (function() {
 // ================================================================
 // DONNÉES
 // ================================================================
-const SAISON_DEFAUT = '2026-2027';
-const SKIP_SAISON   = new Date() > new Date('2026-06-30');
-
 const CI = {
   paris:     { debutant:     { jour:'Jeudi soir',  h:'20h30', lieu:'Espace Danse Studio',  adr:'24 villa Riberolle, Paris 20e' },
                intermediaire:{ jour:'Jeudi soir',  h:'21h45', lieu:'Espace Danse Studio',  adr:'24 villa Riberolle, Paris 20e' } },
@@ -280,7 +293,7 @@ function fresh() {
   return {
     step: 1,
     pwaMode: false, eleveId: '',
-    saison: SKIP_SAISON ? SAISON_DEFAUT : null,
+    saison: getSaisonCible(),
     nbCours: null,
     // Cours 1
     c1: { ville: null, niveau: null },
@@ -321,7 +334,6 @@ let S = fresh();
 // ================================================================
 function getSteps() {
   const a = [];
-  if (!SKIP_SAISON) a.push({ id:'saison', lbl:'Saison' });
   a.push({ id:'nbcours', lbl:'Nb cours' });
   a.push({ id:'cours1',  lbl: S.nbCours===2 ? 'Cours 1' : 'Cours' });
   a.push({ id:'infos1',  lbl: S.nbCours===2 ? 'Infos 1' : 'Infos' });
@@ -368,6 +380,21 @@ function soranoCot(vinc, age) {
 // RENDER
 // ================================================================
 function render() {
+  if (FORM_FERME) {
+    $('prog-zone').style.display = 'none';
+    const sc = getSaisonCourante(), ss = getSaisonSuivante();
+    $('app').innerHTML = `<div style="text-align:center;padding:20px 0 10px;">
+      <div style="font-size:40px;margin-bottom:14px;">🔒</div>
+      <div style="font-family:var(--font-d);font-size:22px;color:var(--gold);letter-spacing:2px;margin-bottom:16px;">INSCRIPTIONS CLOSES</div>
+      <div class="info-note" style="text-align:left;">
+        Les inscriptions pour la saison <strong>${sc}</strong> sont closes pour l'été.<br><br>
+        Pour vous inscrire pour la saison <strong>${ss}</strong>, rendez-vous sur le formulaire de pré-inscription.
+      </div>
+    </div>`;
+    hideErr();
+    window.scrollTo(0,0);
+    return;
+  }
   const arr = getSteps(), tot = arr.length, e = S.step;
   let bar = '';
   arr.forEach((s,i) => {
@@ -379,14 +406,18 @@ function render() {
   $('steps-bar').innerHTML = bar;
   $('pfill').style.width = (tot>1?(e-1)/(tot-1)*100:0)+'%';
   const cur = arr[e-1];
-  if(cur) $('app').innerHTML = buildScreen(cur.id);
+  let banner = '';
+  if (SHOW_PREINSCR_BANNER) {
+    const sc = getSaisonCourante(), ss = getSaisonSuivante();
+    banner = `<div class="info-note" style="margin-bottom:16px;">📝 Ce formulaire prend les demandes pour la saison <strong>${sc}</strong>.<br>Pour la saison <strong>${ss}</strong>, utilisez le formulaire de pré-inscription.</div>`;
+  }
+  if(cur) $('app').innerHTML = banner + buildScreen(cur.id);
   hideErr();
   window.scrollTo(0,0);
 }
 
 function jumpTo(n){ if(n<S.step){ saveStep(); S.step=n; render(); } }
 function buildScreen(id){
-  if(id==='saison')  return sSaison();
   if(id==='nbcours') return sNbCours();
   if(id==='cours1')  return sCours(1);
   if(id==='cours2')  return sCours(2);
@@ -395,18 +426,6 @@ function buildScreen(id){
   if(id==='tarif')   return sTarif();
   return '';
 }
-
-// ================================================================
-// ÉTAPE SAISON
-// ================================================================
-function sSaison() {
-  const btn = (v,l) => `<div class="btn-choix${S.saison===v?' sel':''}" onclick="pickSaison('${v}')">
-    <span style="font-size:20px;">📅</span><span>${l}</span></div>`;
-  return `<div class="etape-lbl">Pour quelle saison ?</div>
-    <div class="btn-grp">${btn('2025-2026','2025–2026')}${btn('2026-2027','2026–2027')}</div>
-    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>`;
-}
-function pickSaison(v){ S.saison=v; next(); }
 
 // ================================================================
 // ÉTAPE NB COURS
@@ -799,6 +818,7 @@ function finalize() {
   const msg = {
     type: 'coursInscription',
     data: {
+      saison: S.saison, mode: MODE,
       prenom: S.prenom, nom: S.nom, email: S.email, tel: S.tel,
       role: S.role, niveau: S.c1.niveau,
       c1: { ville: S.c1.ville, niveau: S.c1.niveau },
@@ -850,6 +870,19 @@ function restart(){
 // ================================================================
 // INIT
 // ================================================================
+// Titre dynamique selon le mode et la saison cible
+(function() {
+  const el = $('hdr-sub');
+  if (!el) return;
+  const sc = getSaisonCible();
+  if (FORM_FERME) {
+    el.textContent = 'Inscriptions closes — ' + getSaisonCourante();
+  } else if (MODE === 'preinscription') {
+    el.textContent = 'Pré-inscription — saison ' + sc;
+  } else {
+    el.textContent = 'Inscription aux cours — saison ' + sc;
+  }
+})();
 render();
 
 // Auto-resize Wix

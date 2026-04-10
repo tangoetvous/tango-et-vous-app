@@ -1175,11 +1175,12 @@ function _appliquerCoursInscription(d) {
   var partNom  = ((d.pPrenom||'')+' '+(d.pNom||'')).trim();
   var avecPart = (d.venue==='avec-part') && (d.pPrenom||d.pNom);
   var ts = Date.now();
+  var saison = d.saison || saisonCourante();
   adminData.coursTango.push({
     id:'CT'+ts, prenom:d.prenom, nom:d.nom, email:d.email, tel:d.tel||'',
     role:d.role, niveau:d.c1.niveau, cours:cours1, ville:d.c1.ville,
     statut:statut, partenaire:partNom, emailPartenaire:d.pEmail||'',
-    type:'', paiement:'', montant:0, dateInscription:today()
+    type:'', paiement:'', montant:0, dateInscription:today(), saison:saison
   });
   if (avecPart) {
     var roleP = d.pRole || (d.role==='guideur' ? 'guidee' : 'guideur');
@@ -1188,7 +1189,7 @@ function _appliquerCoursInscription(d) {
       email:d.pEmail||'', tel:d.pTel||'',
       role:roleP, niveau:d.c1.niveau, cours:cours1, ville:d.c1.ville,
       statut:'valide', partenaire:(d.prenom+' '+d.nom).trim(), emailPartenaire:d.email||'',
-      type:'', paiement:'', montant:0, dateInscription:today()
+      type:'', paiement:'', montant:0, dateInscription:today(), saison:saison
     });
   }
   if (d.c2 && d.c2.ville && d.c2.niveau) {
@@ -1200,7 +1201,7 @@ function _appliquerCoursInscription(d) {
       id:'CT'+(ts+2), prenom:d.prenom, nom:d.nom, email:d.email, tel:d.tel||'',
       role:role2, niveau:d.c2.niveau, cours:cours2, ville:d.c2.ville,
       statut:statut, partenaire:partNom2, emailPartenaire:partEml2,
-      type:'', paiement:'', montant:0, dateInscription:today()
+      type:'', paiement:'', montant:0, dateInscription:today(), saison:saison
     });
     if (d.venue2==='avec-part' && partNom2) {
       adminData.coursTango.push({
@@ -1209,7 +1210,7 @@ function _appliquerCoursInscription(d) {
         role:role2==='guideur' ? 'guidee' : 'guideur',
         niveau:d.c2.niveau, cours:cours2, ville:d.c2.ville,
         statut:'valide', partenaire:(d.prenom+' '+d.nom).trim(), emailPartenaire:d.email||'',
-        type:'', paiement:'', montant:0, dateInscription:today()
+        type:'', paiement:'', montant:0, dateInscription:today(), saison:saison
       });
     }
   }
@@ -4412,7 +4413,7 @@ function soumettreValiderPaiement() {
 
 function renderFormulaireDemandeAdmin() {
   return '<div style="margin:-14px;">'
-    +'<iframe src="inscription-cours.html?admin=1" style="border:none;width:100%;height:900px;border-radius:8px;" title="Formulaire nouvelle demande"></iframe>'
+    +'<iframe src="inscription-cours.html?admin=1&mode=regulier" style="border:none;width:100%;height:900px;border-radius:8px;" title="Formulaire nouvelle demande"></iframe>'
     +'</div>';
 }
 
