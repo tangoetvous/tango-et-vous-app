@@ -2298,6 +2298,9 @@ function handleAction(action, btn) {
     case 'valider-report':
       validerReport(id, btn);
       break;
+    case 'reporter-carte':
+      reporterCarteJs(id, btn);
+      break;
     case 'qr-carte':
       ouvrirModalQR(id, btn.dataset.nom||'', btn.dataset.cours||'');
       break;
@@ -3446,9 +3449,17 @@ function renderReportSection(sai, cartes) {
 }
 function renderCartes() {
   var sai = saisonActive();
+  // Période de report : 1er juillet au 31 août (ou démo)
+  var todayD = today();
+  var yyyyCur = todayD.slice(0,4);
+  var reportFrom = yyyyCur+'-07-01', reportUntil = yyyyCur+'-08-31';
+  var isReportPeriod = IS_DEMO || (todayD>=reportFrom && todayD<=reportUntil);
+
   // Inclure les élèves avec carte10 validée même sans cours pointé encore
+  // + les cartes reportées sur cette saison depuis la saison précédente
   var cartesEleves = (adminData.cartes||[]).filter(function(c){
-    return (c.saison||saisonCourante())===sai&&(c.utilises>0||c.restants>0||c.datePremierCours);
+    var carteS = c.saison || saisonCourante();
+    return carteS===sai && (c.utilises>0||c.restants>0||c.datePremierCours);
   });
   // Initialiser paye si absent : inscription = payé, essai = non payé par défaut
   cartesEleves.forEach(function(c){
@@ -3539,6 +3550,7 @@ function renderCartes() {
       +(fini?'':'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer</button>')
       +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="qr-carte" data-id="'+c.id+'" data-nom="'+c.nom+'" data-cours="'+(c.cours||'').replace(/"/g,'&quot;')+'">📱 QR</button>'
       +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="renouveler-carte" data-id="'+c.id+'" data-nom="'+c.nom+'">↻ Renouveler</button>'
+      +(isReportPeriod&&!fini&&!c.isReport&&(c.restants||0)>0?'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="reporter-carte" data-id="'+c.id+'">↩ Reporter</button>':'')
       +btnEmail(c.email,c.nom)
       +'</div></div>';
   });
@@ -3586,6 +3598,38 @@ function toggleCartePaye(id) {
   if(c.paye){var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='attente_paiement';});if(cte)cte.statut='inscrit';}
   if(!IS_DEMO)postAS({action:'toggleCartePaye',eleveId:id,paye:c.paye}).catch(function(){});
   renderTab();
+}
+function reporterCarteJs(id, btn) {
+  btn.disabled=true; btn.textContent='⏳';
+  var c=(adminData.cartes||[]).find(function(x){return x.id===id;});
+  if(!c){btn.disabled=false;btn.textContent='↩ Reporter';return;}
+  var sai=saisonActive();
+  var saiArr=sai.split('-');
+  var saiProch=(parseInt(saiArr[0])+1)+'-'+(parseInt(saiArr[1])+1);
+  if(IS_DEMO){
+    c.isReport=true;
+    c.saisonOrigine=sai;
+    c.saison=saiProch;
+    c.statut='Active';
+    c.datePremierCours='';
+    c.expiration='';
+    afficherToast('↩ Carte de '+c.nom+' reportée sur '+saiProch);
+    renderTab();return;
+  }
+  postAS({action:'reporterCarte',eleveId:id})
+    .then(function(r){
+      if(r&&r.ok){
+        c.isReport=true;
+        c.saisonOrigine=sai;
+        c.saison=r.nextSaison||saiProch;
+        c.statut='Active';
+        c.datePremierCours='';
+        c.expiration='';
+        afficherToast('↩ Carte reportée sur '+(r.nextSaison||saiProch));
+      }
+      chargerDonnees();
+    })
+    .catch(function(){btn.disabled=false;btn.textContent='↩ Reporter';});
 }
 function proposerReport(carteId, btn) {
   btn.disabled=true; btn.textContent='⏳';

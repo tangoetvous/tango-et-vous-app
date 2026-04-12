@@ -157,6 +157,7 @@ function doPost(e) {
       case 'validerPaiementCoursTango':   r = validerPaiementCoursTangoGs(b); break;
       // ── Cartes de 10 cours ────────────────────────────────────
       case 'renouvelerCarte':             r = renouvelerCarteGs(b); break;
+      case 'reporterCarte':               r = reporterCarteGs(b); break;
       case 'toggleCartePaye':             r = toggleCartePaye(b); break;
       // ── Agenda modifications ───────────────────────────────────
       case 'sauverModifAgenda':           r = sauverModifAgendaGs(b); break;
@@ -301,6 +302,12 @@ function declencheurNouvelleS() {
   const noms  = [];
   data.forEach((r,i)=>{
     if ((r[COL.STATUT_ELEVE]||'').toString().trim()===STATUT.ACTIF) {
+      const statutCarte = (r[COL.STATUT_CARTE]||'').toString();
+      // Garder les élèves avec une carte reportée sur la nouvelle saison : réinitialiser statut carte → Active
+      if (statutCarte.startsWith('Report:')) {
+        sheet.getRange(i+ELEVES_START_ROW, COL.STATUT_CARTE+1).setValue('Active');
+        return; // rester Actif, carte repart de zéro côté expiration
+      }
       sheet.getRange(i+ELEVES_START_ROW, COL.STATUT_ELEVE+1).setValue(STATUT.INACTIF);
       count++; if (r[COL.NOM]) noms.push(r[COL.NOM]);
     }
@@ -335,7 +342,7 @@ function declencheurNouvelleS() {
 // Se déclenche 2 fois par an (quotidien 8h-9h, actif les bons jours) :
 //   • J+1 après DERNIER_COURS_PARIS_JUIN : email à tous les élèves actifs
 //     ayant des cours restants sur leur carte non expirée
-//   • 1er septembre : même email aux élèves qui n'ont toujours pas
+//   • 25 août : même email aux élèves qui n'ont toujours pas
 //     soumis de pré-inscription depuis la fin des cours
 function declencheurCartesFinSaison() {
   const today = Utilities.formatDate(new Date(), 'Europe/Paris', 'yyyy-MM-dd');
@@ -346,8 +353,8 @@ function declencheurCartesFinSaison() {
   const jourJ1 = Utilities.formatDate(dernierCoursDate, 'Europe/Paris', 'yyyy-MM-dd');
 
   const isJ1    = (today === jourJ1);
-  const isSept1 = today.slice(5) === '09-01';
-  if (!isJ1 && !isSept1) return;
+  const isAug25 = today.slice(5) === '08-25';
+  if (!isJ1 && !isAug25) return;
 
   const ss   = SpreadsheetApp.getActiveSpreadsheet();
   const se   = _getSheet(ss, SHEET_ELEVES);
@@ -357,10 +364,10 @@ function declencheurCartesFinSaison() {
   const data = se.getRange(ELEVES_START_ROW, 1, lr - ELEVES_START_ROW + 1, 13).getValues();
   const now  = new Date(); now.setHours(0, 0, 0, 0);
 
-  // Si 1er sept : construire l'ensemble des emails ayant déjà pré-inscrit
+  // Si 25 août : construire l'ensemble des emails ayant déjà pré-inscrit
   // (toute entrée dans SHEET_COURS_TANGO soumise après DERNIER_COURS_PARIS_JUIN)
   const emailsPreInscrits = new Set();
-  if (isSept1) {
+  if (isAug25) {
     const sCT = ss.getSheetByName(SHEET_COURS_TANGO);
     if (sCT && sCT.getLastRow() >= 2) {
       sCT.getRange(2, 1, sCT.getLastRow() - 1, 16).getValues()
@@ -390,18 +397,20 @@ function declencheurCartesFinSaison() {
     }
     const email = (r[COL.EMAIL]||'').toString().toLowerCase().trim();
     if (!email) return;
-    if (isSept1 && emailsPreInscrits.has(email)) return;
+    if (isAug25 && emailsPreInscrits.has(email)) return;
+    // Ne pas relancer les cartes déjà reportées (statut Report:...)
+    if ((r[COL.STATUT_CARTE]||'').toString().startsWith('Report:')) return;
 
     const prenom  = (r[COL.NOM]||'').toString().split(' ')[0];
     const expAff  = expVal ? _fmtDateFr(_fmtDate(expVal)) : 'non commencée (valable dès votre 1er cours)';
     try {
-      _emailCarteFinSaison(prenom, email, restants, expAff, urlInscription);
+      _emailCarteFinSaison(prenom, email, restants, expAff, urlInscription, isJ1);
       sent++;
     } catch(e) {}
   });
 
   if (sent > 0) {
-    const tag = isJ1 ? 'fin de saison J+1' : '1er septembre';
+    const tag = isJ1 ? 'fin de saison J+1' : '25 août';
     ADMIN_EMAILS.forEach(a => {
       try {
         MailApp.sendEmail({
@@ -900,17 +909,28 @@ function _getCartesAdmin() {
   if (!s) return [];
   const lr = s.getLastRow();
   if (lr<ELEVES_START_ROW) return [];
+  // Calculer la saison courante (sept–juin)
+  const now = new Date();
+  const currentSaison = (now.getMonth()>=8?now.getFullYear():now.getFullYear()-1)+'-'
+                       +(now.getMonth()>=8?now.getFullYear()+1:now.getFullYear());
   return s.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues()
     .filter(r=>r[COL.ID])
-    .map(r=>({
-      id:r[COL.ID],nom:r[COL.NOM],niveau:r[COL.NIVEAU],
-      dateAchat:_fmtDate(r[COL.DATE_ACHAT]),expiration:_fmtDate(r[COL.EXPIRATION]),
-      utilises:Number(r[COL.UTILISES])||0,restants:Number(r[COL.RESTANTS])||0,
-      statut:(r[COL.STATUT_CARTE]||'').toString(),
-      email:(r[COL.EMAIL]||'').toString().trim(),
-      statutEleve:(r[COL.STATUT_ELEVE]||STATUT.EN_ATTENTE).toString().trim(),
-      source:(r[COL.SOURCE]||'manuel').toString(),
-    }));
+    .map(r=>{
+      const statutCarte = (r[COL.STATUT_CARTE]||'').toString();
+      const isReport    = statutCarte.startsWith('Report:');
+      const saisonReport= isReport ? statutCarte.replace('Report:','') : '';
+      return {
+        id:r[COL.ID],nom:r[COL.NOM],niveau:r[COL.NIVEAU],
+        dateAchat:_fmtDate(r[COL.DATE_ACHAT]),expiration:_fmtDate(r[COL.EXPIRATION]),
+        utilises:Number(r[COL.UTILISES])||0,restants:Number(r[COL.RESTANTS])||0,
+        statut:isReport?'Active':statutCarte,  // masquer 'Report:...' en 'Active' pour l'affichage
+        email:(r[COL.EMAIL]||'').toString().trim(),
+        statutEleve:(r[COL.STATUT_ELEVE]||STATUT.EN_ATTENTE).toString().trim(),
+        source:(r[COL.SOURCE]||'manuel').toString(),
+        isReport, saisonOrigine: isReport ? currentSaison : '',
+        saison: isReport ? saisonReport : currentSaison, // pour filtrage admin par saison
+      };
+    });
 }
 
 function _getCPAdmin() {
@@ -1332,6 +1352,34 @@ function renouvelerCarteGs(body) {
   return {ok:true};
 }
 
+// ── Reporter la carte sur la saison suivante ─────────────────
+// Visible dans l'admin entre le 1/07 et le 31/08.
+// Effet : STATUT_CARTE = 'Report:NEXT_SAISON', DATE_ACHAT et EXPIRATION vidés
+// → la carte redémarre au 1er cours de la saison suivante.
+// declencheurNouvelleS (1 sept) détecte ce flag et garde l'élève 'Actif'.
+function reporterCarteGs(body) {
+  const {eleveId} = body;
+  if (!eleveId) throw new Error('eleveId requis');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const se = _getSheet(ss, SHEET_ELEVES);
+  const lr = se.getLastRow();
+  if (lr < ELEVES_START_ROW) throw new Error('Aucun élève');
+  const data = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues();
+  const idx  = data.findIndex(r => r[COL.ID] === eleveId);
+  if (idx < 0) throw new Error('Élève introuvable : '+eleveId);
+  const rowNum = idx + ELEVES_START_ROW;
+  // Calculer la saison suivante
+  const now   = new Date();
+  const annee = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear()-1;
+  const nextSai = (annee+1)+'-'+(annee+2);
+  // Marquer la carte comme reportée
+  se.getRange(rowNum, COL.STATUT_CARTE+1).setValue('Report:'+nextSai);
+  // Vider DATE_ACHAT et EXPIRATION → recalculés dès le 1er cours de la nouvelle saison
+  se.getRange(rowNum, COL.DATE_ACHAT+1).setValue('');
+  se.getRange(rowNum, COL.EXPIRATION+1).setValue('');
+  return {ok:true, nextSaison:nextSai};
+}
+
 function toggleCartePaye(body) {
   // Le toggle paye est géré côté admin uniquement (UI) — pas de persistance Sheets nécessaire
   // pour l'instant. Si besoin, ajouter une colonne "Payé" dans SHEET_ELEVES.
@@ -1536,30 +1584,45 @@ function _emailPreinscriptionRecue(prenom, email, cours, niveau, role) {
   });
 }
 
-// E19 — Carte non terminée fin de saison (envoyé J+1 dernier cours Paris et 1er sept si pas pré-inscrit)
-function _emailCarteFinSaison(prenom, email, restants, expAff, urlInscription) {
+// E19 — Carte non terminée fin de saison
+// isJ1=true → premier email (J+1 après dernier cours Paris)
+// isJ1=false → relance 25 août (dernier rappel avant que la carte ne devienne invalide)
+function _emailCarteFinSaison(prenom, email, restants, expAff, urlInscription, isJ1) {
   const plural = restants > 1 ? 's' : '';
+  const deadline = '25 août';
+  const warningBlock = isJ1
+    ? `<div style="background:#1a0a00;border:2px solid #ff6b35;border-radius:8px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:#ffb085;line-height:1.8;">
+        <strong style="color:#ff8c42;">⚠ Important :</strong> Si vous ne faites pas de demande de pré-inscription
+        avant le <strong>${deadline}</strong>, votre carte de 10 cours ne sera
+        <strong>plus utilisable pour la saison suivante</strong>.
+       </div>`
+    : `<div style="background:#1a0a00;border:2px solid #ff6b35;border-radius:8px;padding:14px 16px;margin-bottom:20px;font-size:13px;color:#ffb085;line-height:1.8;">
+        <strong style="color:#ff4444;">⚠ Dernier rappel :</strong> C'est votre dernière chance ! Sans pré-inscription,
+        votre carte de 10 cours et vos <strong>${restants} cours restant${plural}</strong>
+        ne seront <strong>plus valables à la rentrée</strong>.
+       </div>`;
   MailApp.sendEmail({ to: email, replyTo: EMAIL_CONTACT,
-    subject: `${NOM_ECOLE} — Il vous reste ${restants} cours sur votre carte 🎵`,
+    subject: isJ1
+      ? `${NOM_ECOLE} — Il vous reste ${restants} cours — pré-inscrivez-vous avant le ${deadline}`
+      : `${NOM_ECOLE} — Dernier rappel : vos ${restants} cours expirent si vous ne pré-inscrivez pas`,
     htmlBody: _emailWrap('Vos cours restants', `
     <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">
       Bonjour <strong style="color:#D4AF37;">${prenom}</strong> !
     </p>
     <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:16px;">
-      La saison de tango argentin se termine à Paris, mais votre carte de 10 cours
-      n'est pas encore épuisée.<br/>
-      Bonne nouvelle : vos cours restants sont valables jusqu'à leur date d'expiration !
+      La saison de tango argentin se termine à Paris, mais votre carte de 10 cours n'est pas encore épuisée.
     </p>
-    <div style="background:#0f0d00;border:2px solid #D4AF37;border-radius:10px;padding:20px;margin-bottom:20px;text-align:center;">
+    <div style="background:#0f0d00;border:2px solid #D4AF37;border-radius:10px;padding:20px;margin-bottom:16px;text-align:center;">
       <div style="font-size:40px;font-weight:700;color:#D4AF37;font-family:Georgia,serif;line-height:1;">${restants}</div>
       <div style="font-size:13px;color:#ccc;margin-top:6px;">cours restant${plural} sur votre carte</div>
       <div style="font-size:12px;color:#888;margin-top:8px;border-top:1px solid #2a2000;padding-top:10px;">
-        Expiration : <strong style="color:#D4AF37;">${expAff}</strong>
+        Expiration actuelle : <strong style="color:#D4AF37;">${expAff}</strong>
       </div>
     </div>
+    ${warningBlock}
     <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:16px;">
-      Pour utiliser vos cours restants à la rentrée, inscrivez-vous dès maintenant
-      pour la prochaine saison. Votre carte sera active dès le premier cours.
+      Faites votre demande de pré-inscription maintenant pour continuer à danser à la rentrée.
+      Vos cours restants seront reportés sur la saison suivante.
     </p>
     <div style="text-align:center;margin:24px 0;">
       <a href="${urlInscription}" style="display:inline-block;background:#D4AF37;color:#000;text-decoration:none;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.5px;">
