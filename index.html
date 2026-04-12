@@ -1222,6 +1222,67 @@
   }
 
   // ================================================================
+  // POINTAGE SELF — Carte 10 (exposé sur window pour les onclick HTML)
+  // ================================================================
+  function ouvrirModalPointerSelf() {
+    const d = new Date().toISOString().slice(0,10);
+    document.getElementById('self-pointer-date').value = d;
+    const r1 = document.querySelector('input[name="self-nb"][value="1"]');
+    if (r1) r1.checked = true;
+    const m = document.getElementById('self-pointer-msg');
+    if (m) { m.style.display='none'; m.textContent=''; }
+    document.getElementById('modal-pointer-self').style.display = 'flex';
+  }
+  function fermerModalPointerSelf() {
+    document.getElementById('modal-pointer-self').style.display = 'none';
+  }
+  async function confirmerPointerSelf() {
+    if (!eleveData || !eleveData.eleve) return;
+    const date  = document.getElementById('self-pointer-date').value;
+    const nbEl  = document.querySelector('input[name="self-nb"]:checked');
+    const nb    = nbEl ? parseInt(nbEl.value)||1 : 1;
+    const msgEl = document.getElementById('self-pointer-msg');
+    if (!date) { msgEl.textContent='Merci de choisir une date.'; msgEl.style.display='block'; return; }
+    const btn = document.getElementById('btn-pointer-self-ok');
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      if (IS_DEMO) {
+        const already = (eleveData.presences||[]).filter(p => p.date===date).length;
+        const toAdd = Math.max(0, nb - already);
+        if (toAdd === 0) {
+          msgEl.textContent='Déjà pointé pour ce jour.'; msgEl.style.display='block';
+          btn.disabled=false; btn.textContent='✓ Valider'; return;
+        }
+        for (let i=0; i<toAdd; i++)
+          (eleveData.presences=eleveData.presences||[]).unshift({date,niveau:eleveData.eleve.niveau,note:'Pointage élève'});
+        eleveData.carte.coursUtilises = Math.min(10,(eleveData.carte.coursUtilises||0)+toAdd);
+        eleveData.carte.coursRestants = Math.max(0,(eleveData.carte.coursRestants||0)-toAdd);
+        fermerModalPointerSelf(); renderDashboard(); return;
+      }
+      const resp = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
+        action:'pointageManuel', eleveId:eleveData.eleve.id,
+        date, niveau:eleveData.eleve.niveau, note:'Pointage élève (auto)', nbCours:nb
+      })});
+      const data = await resp.json();
+      if (data.skipped) {
+        msgEl.textContent='Déjà pointé pour ce jour — aucun doublon créé.'; msgEl.style.display='block';
+        btn.disabled=false; btn.textContent='✓ Valider'; return;
+      }
+      fermerModalPointerSelf();
+      const r2 = await fetch(`${APPS_SCRIPT_URL}?action=getEleve&email=${encodeURIComponent(eleveData.eleve.email||'')}`);
+      const d2  = await r2.json();
+      if (d2 && d2.carte) { eleveData.carte=d2.carte; eleveData.presences=d2.presences||eleveData.presences; renderDashboard(); }
+    } catch(err) {
+      msgEl.textContent='Erreur de connexion. Réessayez.'; msgEl.style.display='block';
+      btn.disabled=false; btn.textContent='✓ Valider';
+    }
+  }
+  // Exposer sur window pour que les onclick HTML puissent les appeler
+  window.ouvrirModalPointerSelf = ouvrirModalPointerSelf;
+  window.fermerModalPointerSelf = fermerModalPointerSelf;
+  window.confirmerPointerSelf   = confirmerPointerSelf;
+
+  // ================================================================
   // INIT AU CHARGEMENT
   // ================================================================
   document.addEventListener('DOMContentLoaded', () => {
@@ -1279,6 +1340,10 @@
     // Preinscription nav button visibility
     const navPreinsc = $('nav-preinscription');
     if (navPreinsc) navPreinsc.style.display = isPreinscriptionPeriod() ? '' : 'none';
+
+    // Fermer modal pointer self en cliquant sur le fond
+    const mpSelf = document.getElementById('modal-pointer-self');
+    if (mpSelf) mpSelf.addEventListener('click', e => { if (e.target === mpSelf) fermerModalPointerSelf(); });
 
     setTimeout(initAuth, 400);
   });
@@ -2702,66 +2767,6 @@ if('serviceWorker' in navigator){
   });
 })();
 
-// ── Pointage élève (self-report carte 10) ────────────────────
-function ouvrirModalPointerSelf() {
-  var today = new Date().toISOString().slice(0,10);
-  document.getElementById('self-pointer-date').value = today;
-  var r1 = document.querySelector('input[name="self-nb"][value="1"]');
-  if (r1) r1.checked = true;
-  var m = document.getElementById('self-pointer-msg');
-  if (m) { m.style.display='none'; m.textContent=''; }
-  document.getElementById('modal-pointer-self').style.display = 'flex';
-}
-function fermerModalPointerSelf() {
-  document.getElementById('modal-pointer-self').style.display = 'none';
-}
-async function confirmerPointerSelf() {
-  if (!eleveData || !eleveData.eleve) return;
-  var date = document.getElementById('self-pointer-date').value;
-  var nbEl = document.querySelector('input[name="self-nb"]:checked');
-  var nb = nbEl ? parseInt(nbEl.value)||1 : 1;
-  var msgEl = document.getElementById('self-pointer-msg');
-  if (!date) { msgEl.textContent='Merci de choisir une date.'; msgEl.style.display='block'; return; }
-  var btn = document.getElementById('btn-pointer-self-ok');
-  btn.disabled = true; btn.textContent = '…';
-  try {
-    if (IS_DEMO) {
-      var already = (eleveData.presences||[]).filter(function(p){return p.date===date;}).length;
-      var toAdd = Math.max(0, nb - already);
-      if (toAdd === 0) {
-        msgEl.textContent = 'Déjà pointé pour ce jour.';
-        msgEl.style.display='block'; btn.disabled=false; btn.textContent='✓ Valider'; return;
-      }
-      for (var i=0; i<toAdd; i++) {
-        (eleveData.presences=eleveData.presences||[]).unshift({date:date,niveau:eleveData.eleve.niveau,note:'Pointage élève'});
-      }
-      eleveData.carte.coursUtilises = Math.min(10,(eleveData.carte.coursUtilises||0)+toAdd);
-      eleveData.carte.coursRestants = Math.max(0,(eleveData.carte.coursRestants||0)-toAdd);
-      fermerModalPointerSelf(); renderDashboard(); return;
-    }
-    const resp = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
-      action:'pointageManuel', eleveId:eleveData.eleve.id,
-      date:date, niveau:eleveData.eleve.niveau,
-      note:'Pointage élève (auto)', nbCours:nb
-    })});
-    const data = await resp.json();
-    if (data.skipped) {
-      msgEl.textContent = 'Déjà pointé pour ce jour — aucun doublon créé.';
-      msgEl.style.display='block'; btn.disabled=false; btn.textContent='✓ Valider'; return;
-    }
-    fermerModalPointerSelf();
-    const r2 = await fetch(`${APPS_SCRIPT_URL}?action=getEleve&email=${encodeURIComponent(eleveData.eleve.email||'')}`);
-    const d2  = await r2.json();
-    if (d2 && d2.carte) { eleveData.carte = d2.carte; eleveData.presences = d2.presences||eleveData.presences; renderDashboard(); }
-  } catch(e) {
-    msgEl.textContent = 'Erreur de connexion. Réessayez.'; msgEl.style.display='block';
-    btn.disabled=false; btn.textContent='✓ Valider';
-  }
-}
-document.addEventListener('DOMContentLoaded', function(){
-  var m = document.getElementById('modal-pointer-self');
-  if (m) m.addEventListener('click', function(e){if(e.target===this)fermerModalPointerSelf();});
-});
 </script>
 
 <!-- Modal pointage élève -->

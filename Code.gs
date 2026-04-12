@@ -81,10 +81,35 @@ const DERNIER_COURS_PARIS_JUIN = '2026-06-26'; // vendredi 26 juin 2026
 // GET
 // ================================================================
 function doGet(e) {
+  const p = e.parameter, a = (p.action||'').trim();
+  // ── Confirmation de présence via lien email (retourne une page HTML) ──────
+  if (a === 'confirmerPresenceEssai') {
+    try { confirmerPresenceEssai({email:p.email||'',date:p.date||''}); } catch(err) {}
+    return HtmlService.createHtmlOutput(
+      '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>'
+      +'<meta name="viewport" content="width=device-width,initial-scale=1"/>'
+      +'<title>Présence confirmée — Tango &amp; Vous</title>'
+      +'<style>body{margin:0;font-family:Arial,sans-serif;background:#0a0a0a;color:#f0f0f0;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;}'
+      +'.box{max-width:360px;padding:40px 24px;}'
+      +'.logo{font-size:22px;letter-spacing:6px;color:#D4AF37;font-weight:300;margin-bottom:24px;}'
+      +'.check{font-size:56px;margin-bottom:16px;}'
+      +'h2{color:#81c784;margin:0 0 14px;}'
+      +'p{color:#aaa;line-height:1.8;font-size:14px;margin:0 0 10px;}'
+      +'.sig{color:#666;font-size:12px;margin-top:24px;}'
+      +'</style></head><body>'
+      +'<div class="box">'
+      +'<div class="logo">TANGO &amp; VOUS</div>'
+      +'<div class="check">✓</div>'
+      +'<h2>Présence confirmée !</h2>'
+      +'<p>Merci, votre présence au cours d\'essai est bien enregistrée.</p>'
+      +'<p>À très bientôt sur la piste !</p>'
+      +'<p class="sig">Marc &amp; Eva — Tango &amp; Vous</p>'
+      +'</div></body></html>'
+    );
+  }
   const out = ContentService.createTextOutput();
   out.setMimeType(ContentService.MimeType.JSON);
   try {
-    const p = e.parameter, a = (p.action||'').trim();
     let r;
     switch(a) {
       case 'ping':            r = {ok:true,ts:new Date().toISOString(),version:'2.0'}; break;
@@ -114,6 +139,8 @@ function doPost(e) {
       case 'inscriptionEssai':            r = traiterInscriptionEssai(b); break;
       case 'pointerEssai':                r = pointerEssaiGs(b); break;
       case 'envoyerEmailsEssaiJ1':        r = envoyerEmailsEssaiJ1(b); break;
+      case 'validerGuideeEssai':          r = validerGuideeEssai(b); break;
+      case 'confirmerPresenceEssai':      r = confirmerPresenceEssai(b); break;
       case 'reservationCP':               r = traiterReservationCP(b); break;
       case 'updateStatutCP':              r = updateStatutCP(b); break;
       case 'inscriptionStage':            r = traiterInscriptionStage(b); break;
@@ -601,6 +628,55 @@ function pointerEssaiGs(body) {
   return {ok:true};
 }
 
+// ── Valider un élève de la liste d'attente d'un essai ────────
+// Passe le statut à 'confirme', marque presenceConfirmee, envoie E15
+function validerGuideeEssai(body) {
+  const {email, date} = body;
+  if (!email || !date) throw new Error('email et date requis');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s  = _getSheet(ss, SHEET_ESSAI);
+  const lr = s.getLastRow();
+  if (lr < 2) return {ok:true};
+  const data = s.getRange(2, 1, lr - 1, 13).getValues();
+  let prenom = '', horaire = '', lieu = '', niveau = '', dateLbl = '';
+  data.forEach((r, i) => {
+    const em = (r[3]||'').toString().trim().toLowerCase();
+    if (em === email.toLowerCase() && _fmtDate(r[7]) === date) {
+      s.getRange(i + 2, 11).setValue('confirme');   // col 11 = statut
+      s.getRange(i + 2, 13).setValue(true);          // col 13 = presenceConfirmee
+      if (!prenom) {
+        prenom  = r[1] || '';
+        horaire = r[9] || ''; // niveauEleve stocké en col 10, horaire absent ici
+        lieu    = LIEUX_ESSAI_LABEL[r[5]||''] || (r[5]||'');
+        niveau  = r[6] || '';
+        dateLbl = _fmtDateFrLong(date);
+      }
+    }
+  });
+  // Envoyer E15 si on a les données
+  if (prenom && email) {
+    try { _emailEssaiConfirme(prenom, email, dateLbl, horaire||niveau, lieu); } catch(e) {}
+  }
+  return {ok:true};
+}
+
+// ── Confirmer sa présence via le bouton dans l'email E15 ─────
+function confirmerPresenceEssai(body) {
+  const {email, date} = body;
+  if (!email || !date) return {ok:false, error:'email et date requis'};
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s  = _getSheet(ss, SHEET_ESSAI);
+  const lr = s.getLastRow();
+  if (lr < 2) return {ok:true};
+  const data = s.getRange(2, 1, lr - 1, 8).getValues();
+  data.forEach((r, i) => {
+    if ((r[3]||'').toString().trim().toLowerCase() === email.toLowerCase() && _fmtDate(r[7]) === date) {
+      s.getRange(i + 2, 13).setValue(true); // col 13 = presenceConfirmee
+    }
+  });
+  return {ok:true};
+}
+
 function envoyerEmailsEssaiJ1(body) {
   const {date,ville,niveau,presents,absents} = body;
   let ps=0,as=0;
@@ -866,10 +942,12 @@ function _getStagesAdmin() {
 function _getEssaiAdmin() {
   const ss=SpreadsheetApp.getActiveSpreadsheet(),s=ss.getSheetByName(SHEET_ESSAI);
   if (!s||s.getLastRow()<2) return [];
-  return s.getRange(2,1,s.getLastRow()-1,12).getValues().filter(r=>r[0])
+  const ncols = Math.min(13, s.getLastColumn());
+  return s.getRange(2,1,s.getLastRow()-1,ncols).getValues().filter(r=>r[0])
     .map(r=>({date:_fmtDate(r[7]),ville:r[5]||'',niveau:r[6]||'',
       prenom:r[1]||'',nom:r[2]||'',email:r[3]||'',role:r[8]||'',statut:r[10]||'Inscrit',
-      present:r[11]===true||r[11]==='TRUE'?true:r[11]===false||r[11]==='FALSE'?false:null}));
+      present:r[11]===true||r[11]==='TRUE'?true:r[11]===false||r[11]==='FALSE'?false:null,
+      presenceConfirmee:r[12]===true||r[12]==='TRUE'}));
 }
 
 // ================================================================
@@ -1033,6 +1111,22 @@ function _tplEssaiAbsent(p,date,niv,ville,ue){
 // E15 — Confirmation inscription cours d'essai
 function _emailEssaiConfirme(prenom, email, date, horaire, lieu) {
   const jourSem = (date||'').split(' ')[0]; // ex: "jeudi"
+  // Lien de confirmation de présence (1 clic depuis l'email)
+  let confirmUrl = '';
+  try {
+    const baseUrl = ScriptApp.getService().getUrl();
+    // date raw format yyyy-MM-dd pour l'URL (on prend la date telle que passée si c'est une date courte)
+    const dateParam = date.replace(/[^0-9\-]/g,'').slice(0,10) || date;
+    confirmUrl = baseUrl + '?action=confirmerPresenceEssai&email=' + encodeURIComponent(email) + '&date=' + dateParam;
+  } catch(e) {}
+  const btnConfirm = confirmUrl
+    ? `<div style="text-align:center;margin:20px 0;">
+        <a href="${confirmUrl}" style="display:inline-block;background:#D4AF37;color:#000;text-decoration:none;padding:14px 28px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.5px;">
+          ✓ Je confirme ma présence
+        </a>
+        <p style="font-size:11px;color:#666;margin-top:8px;">Cliquez pour confirmer que vous serez bien présent(e).</p>
+       </div>`
+    : '';
   MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
     subject: NOM_ECOLE+' — Cours d\'essai confirmé — à '+jourSem+' !',
     htmlBody: _emailWrap('Cours d\'essai confirmé',`
@@ -1050,6 +1144,7 @@ function _emailEssaiConfirme(prenom, email, date, horaire, lieu) {
         ${_row('Tarif','<span style="color:#81c784;font-weight:700;">Essai offert</span>')}
       </table>
     </div>
+    ${btnConfirm}
     <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:12px;">Ce qu'il faut savoir</div>
     <div style="font-size:13px;color:#ccc;line-height:2.1;">
       ✓ <strong style="color:#f0f0f0;">Arrivez 5 minutes en avance</strong> — pour vous changer et commencer détendu(e).<br/>
