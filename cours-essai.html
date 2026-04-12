@@ -892,6 +892,7 @@ async function soumettre(){
     document.getElementById("success").style.display="block";
     afficherMsgRappel();
     afficherRecapSucces();
+    _notifierAdminEssai(payload);
     return;
   }
   try{
@@ -903,6 +904,7 @@ async function soumettre(){
       document.getElementById("success").style.display="block";
       afficherMsgRappel();
       afficherRecapSucces();
+      _notifierAdminEssai(payload);
     } else {
       err.textContent="Une erreur est survenue. Merci de réessayer ou de nous contacter.";
       err.style.display="block"; btn.disabled=false; btn.textContent="ENVOYER MON INSCRIPTION";
@@ -910,6 +912,34 @@ async function soumettre(){
   } catch(e){
     err.textContent="Erreur de connexion. Merci de réessayer.";
     err.style.display="block"; btn.disabled=false; btn.textContent="ENVOYER MON INSCRIPTION";
+  }
+}
+
+// ── NOTIFICATION ADMIN ────────────────────────────────────
+function _notifierAdminEssai(payload) {
+  // Convertir DD/MM/YYYY → YYYY-MM-DD
+  var dp = (payload.date||'').split('/');
+  var dateIso = dp.length===3 ? dp[2]+'-'+dp[1]+'-'+dp[0] : payload.date;
+  var d = {
+    prenom: payload.prenom, nom: payload.nom, email: payload.email,
+    date: dateIso, ville: payload.lieu, niveau: payload.niveau,
+    role: payload.role,
+    partenairePrenom: payload.partPrenom||'',
+    partenaireNom:    payload.partNom||'',
+    partenaireEmail:  payload.partEmail||'',
+    rolePartenaire:   payload.partRole||''
+  };
+  var msg = {type:'essaiInscription', data:d};
+  var isIframe = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
+  if (isIframe) {
+    try { window.parent.postMessage(msg, '*'); } catch(e){}
+  } else {
+    try {
+      var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]');
+      pending.push(msg);
+      localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+    } catch(e){}
+    try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
   }
 }
 

@@ -2923,8 +2923,9 @@ function renderEssai() {
     +'<button class="sub-tab'+(filtreEssai==='dates'?' active':'')+'" data-filt-essai="dates">Par date</button>'
     +'<button class="sub-tab'+(filtreEssai==='attente'?' active':'')+'" data-filt-essai="attente">Liste d&#39;attente</button>'
     +'<button class="sub-tab'+(filtreEssai==='pointage'?' active':'')+'" data-filt-essai="pointage">Pointage</button>'
+    +'<button class="sub-tab'+(filtreEssai==='inscrire'?' active':'')+'" data-filt-essai="inscrire">&#43; Inscrire</button>'
     +'</div>'
-    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" data-action="rafraichir-essais">&#8635; Rafraîchir</button>'
+    +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" data-action="rafraichir-essais">&#8635; Rafraîchir</button>':'')
     +'</div>';
   // Trier : date ASC, puis niveau (debutant avant intermediaire), puis rôle
   liste.sort(function(a,b){
@@ -2971,6 +2972,12 @@ function renderEssai() {
       return (gdeConf+elevesGde)>=23;
     }
     return guideurVraimentAttente(e, grpIns);
+  }
+
+  if (filtreEssai==='inscrire') {
+    return h + '<div style="margin:-14px;">'
+      +'<iframe src="cours-essai.html" style="border:none;width:100%;height:900px;border-radius:8px;" title="Formulaire cours d\'essai"></iframe>'
+      +'</div>';
   }
 
   if (filtreEssai==='attente') {
