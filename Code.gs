@@ -11,8 +11,9 @@
 //                 publierPublication | supprimerPublication
 // ================================================================
 //  DÉCLENCHEURS (Apps Script → Déclencheurs) :
-//    • declencheurEmailsEssai → Quotidien 9h-10h
-//    • declencheurNouvelleS   → Annuel · 1er septembre · 8h-9h
+//    • declencheurEmailsEssai      → Quotidien 9h-10h
+//    • declencheurNouvelleS        → Annuel · 1er septembre · 8h-9h
+//    • declencheurCartesFinSaison  → Quotidien · 8h-9h (actif toute l'année)
 // ================================================================
 
 // ── Onglets Google Sheets ──────────────────────────────────────
@@ -71,6 +72,10 @@ const DATES_STAGES_LABELS = {
 
 const CAPACITE_ESSAI    = 16;  // max inscriptions par créneau d'essai
 const LIEUX_ESSAI_LABEL = {paris:'Paris — Centre Kim Kan',vincennes:'Vincennes'};
+
+// ── Dernier cours Paris de la saison (à mettre à jour chaque année) ──
+// J+1 de cette date → email cartes restantes envoyé automatiquement
+const DERNIER_COURS_PARIS_JUIN = '2026-06-26'; // vendredi 26 juin 2026
 
 // ================================================================
 // GET
@@ -295,6 +300,91 @@ function declencheurNouvelleS() {
       Bonne saison ${saison} !<br/><strong>Système ${NOM_ECOLE}</strong>
     </div>`);
   ADMIN_EMAILS.forEach(a=>{ try { MailApp.sendEmail({to:a,subject:sujet,htmlBody:corps}); } catch(e){} });
+}
+
+// ================================================================
+// DÉCLENCHEUR — Cartes non terminées fin de saison
+// ================================================================
+// Se déclenche 2 fois par an (quotidien 8h-9h, actif les bons jours) :
+//   • J+1 après DERNIER_COURS_PARIS_JUIN : email à tous les élèves actifs
+//     ayant des cours restants sur leur carte non expirée
+//   • 1er septembre : même email aux élèves qui n'ont toujours pas
+//     soumis de pré-inscription depuis la fin des cours
+function declencheurCartesFinSaison() {
+  const today = Utilities.formatDate(new Date(), 'Europe/Paris', 'yyyy-MM-dd');
+
+  // Calculer J+1 après le dernier cours Paris juin
+  const dernierCoursDate = new Date(DERNIER_COURS_PARIS_JUIN + 'T00:00:00');
+  dernierCoursDate.setDate(dernierCoursDate.getDate() + 1);
+  const jourJ1 = Utilities.formatDate(dernierCoursDate, 'Europe/Paris', 'yyyy-MM-dd');
+
+  const isJ1    = (today === jourJ1);
+  const isSept1 = today.slice(5) === '09-01';
+  if (!isJ1 && !isSept1) return;
+
+  const ss   = SpreadsheetApp.getActiveSpreadsheet();
+  const se   = _getSheet(ss, SHEET_ELEVES);
+  const lr   = se.getLastRow();
+  if (lr < ELEVES_START_ROW) return;
+
+  const data = se.getRange(ELEVES_START_ROW, 1, lr - ELEVES_START_ROW + 1, 13).getValues();
+  const now  = new Date(); now.setHours(0, 0, 0, 0);
+
+  // Si 1er sept : construire l'ensemble des emails ayant déjà pré-inscrit
+  // (toute entrée dans SHEET_COURS_TANGO soumise après DERNIER_COURS_PARIS_JUIN)
+  const emailsPreInscrits = new Set();
+  if (isSept1) {
+    const sCT = ss.getSheetByName(SHEET_COURS_TANGO);
+    if (sCT && sCT.getLastRow() >= 2) {
+      sCT.getRange(2, 1, sCT.getLastRow() - 1, 16).getValues()
+        .filter(r => r[0] && r[15])
+        .forEach(r => {
+          const di = _fmtDate(r[15]);
+          if (di > DERNIER_COURS_PARIS_JUIN && (r[9]||'').toLowerCase() !== 'annulé') {
+            emailsPreInscrits.add((r[3]||'').toString().toLowerCase().trim());
+          }
+        });
+    }
+  }
+
+  const urlInscription = URL_SITE + '/l-ecole-de-tango-argentin/demande-inscription-cours-tango';
+  let sent = 0;
+
+  data.forEach(r => {
+    if ((r[COL.STATUT_ELEVE]||'').toString().trim() !== STATUT.ACTIF) return;
+    const restants = Number(r[COL.RESTANTS]) || 0;
+    if (restants <= 0) return;
+    if ((r[COL.STATUT_CARTE]||'').toString().trim() === 'Expirée') return;
+    // Vérifier que la carte n'est pas expirée
+    const expVal = r[COL.EXPIRATION];
+    if (expVal) {
+      const expDate = new Date(_fmtDate(expVal) + 'T00:00:00');
+      if (expDate < now) return;
+    }
+    const email = (r[COL.EMAIL]||'').toString().toLowerCase().trim();
+    if (!email) return;
+    if (isSept1 && emailsPreInscrits.has(email)) return;
+
+    const prenom  = (r[COL.NOM]||'').toString().split(' ')[0];
+    const expAff  = expVal ? _fmtDateFr(_fmtDate(expVal)) : 'non commencée (valable dès votre 1er cours)';
+    try {
+      _emailCarteFinSaison(prenom, email, restants, expAff, urlInscription);
+      sent++;
+    } catch(e) {}
+  });
+
+  if (sent > 0) {
+    const tag = isJ1 ? 'fin de saison J+1' : '1er septembre';
+    ADMIN_EMAILS.forEach(a => {
+      try {
+        MailApp.sendEmail({
+          to: a,
+          subject: `${NOM_ECOLE} — Emails cartes restantes (${tag}) : ${sent} envoyé(s)`,
+          body: `${sent} email(s) envoyé(s) le ${today} via le déclencheur "${tag}".\n\nCes élèves ont encore des cours sur leur carte et ont été invités à se pré-inscrire pour la saison suivante.`
+        });
+      } catch(e) {}
+    });
+  }
 }
 
 // ================================================================
@@ -1347,6 +1437,46 @@ function _emailPreinscriptionRecue(prenom, email, cours, niveau, role) {
     </div>
     <p style="font-size:12px;color:#666;margin-top:16px;">
       Questions ? <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a>
+    </p>`),
+  });
+}
+
+// E19 — Carte non terminée fin de saison (envoyé J+1 dernier cours Paris et 1er sept si pas pré-inscrit)
+function _emailCarteFinSaison(prenom, email, restants, expAff, urlInscription) {
+  const plural = restants > 1 ? 's' : '';
+  MailApp.sendEmail({ to: email, replyTo: EMAIL_CONTACT,
+    subject: `${NOM_ECOLE} — Il vous reste ${restants} cours sur votre carte 🎵`,
+    htmlBody: _emailWrap('Vos cours restants', `
+    <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">
+      Bonjour <strong style="color:#D4AF37;">${prenom}</strong> !
+    </p>
+    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:16px;">
+      La saison de tango argentin se termine à Paris, mais votre carte de 10 cours
+      n'est pas encore épuisée.<br/>
+      Bonne nouvelle : vos cours restants sont valables jusqu'à leur date d'expiration !
+    </p>
+    <div style="background:#0f0d00;border:2px solid #D4AF37;border-radius:10px;padding:20px;margin-bottom:20px;text-align:center;">
+      <div style="font-size:40px;font-weight:700;color:#D4AF37;font-family:Georgia,serif;line-height:1;">${restants}</div>
+      <div style="font-size:13px;color:#ccc;margin-top:6px;">cours restant${plural} sur votre carte</div>
+      <div style="font-size:12px;color:#888;margin-top:8px;border-top:1px solid #2a2000;padding-top:10px;">
+        Expiration : <strong style="color:#D4AF37;">${expAff}</strong>
+      </div>
+    </div>
+    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:16px;">
+      Pour utiliser vos cours restants à la rentrée, inscrivez-vous dès maintenant
+      pour la prochaine saison. Votre carte sera active dès le premier cours.
+    </p>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${urlInscription}" style="display:inline-block;background:#D4AF37;color:#000;text-decoration:none;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.5px;">
+        → Je me pré-inscris pour la rentrée
+      </a>
+    </div>
+    <hr style="border:none;border-top:1px solid #222;margin:20px 0;"/>
+    <p style="font-size:12px;color:#666;line-height:1.8;">
+      Une question ? Écrivez-nous à
+      <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a><br/>
+      À très bientôt sur la piste !<br/>
+      <strong style="color:#888;">Marc &amp; Eva — Tango &amp; Vous</strong>
     </p>`),
   });
 }

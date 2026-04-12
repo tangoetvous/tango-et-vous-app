@@ -3485,7 +3485,6 @@ function renderCartes() {
   });
   var h='', lastCours=null;
   h += '<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Un élève peut pointer deux fois le même jour (cours débutant + intermédiaire).</div>';
-  h += renderReportSection(sai, cartes);
   cartes.forEach(function(c){
     // En-tête de groupe par cours (ville + niveau normalisé)
     var coursLbl = coursKey(c);
@@ -3503,15 +3502,15 @@ function renderCartes() {
     var bient=!fini&&days!==null&&days<14;
     var sLbl=fini?'À renouveler':bient?'Expire dans '+days+'j':'Active';
     var sCls=fini?'pill-err':bient?'pill-warn':'pill-ok';
-    // Mini barre avec dates visibles sous les barres
-    var miniDots='<div style="display:flex;gap:3px;margin:6px 0;flex-wrap:wrap;">';
+    // Mini ronds dorés avec dates en blanc
+    var miniDots='<div style="display:flex;gap:5px;margin:8px 0;flex-wrap:wrap;align-items:flex-start;">';
     for(var i=0;i<totalSlots;i++){
       var ds=datesCours[i]||null;
-      var bg=i<nbUtil?(fini?'var(--err-bg)':'var(--ok-bg)'):'var(--s3)';
-      var br=i<nbUtil?(fini?'var(--err-text)':'var(--ok-text)'):'var(--border)';
-      miniDots+='<div style="display:flex;flex-direction:column;align-items:center;min-width:24px;">'
-        +'<div style="width:100%;height:5px;border-radius:2px;background:'+bg+';border:1px solid '+br+';"></div>'
-        +(ds?'<div style="font-size:8px;color:var(--dim);margin-top:1px;white-space:nowrap;">'+fmtDateCourt(ds)+'</div>':'')
+      var circleBg=i<nbUtil?(fini?'var(--err-text)':'#D4AF37'):'var(--s3)';
+      var circleBorder=i<nbUtil?(fini?'var(--err-text)':'#b8961e'):'var(--border)';
+      miniDots+='<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">'
+        +'<div style="width:18px;height:18px;border-radius:50%;background:'+circleBg+';border:1px solid '+circleBorder+';flex-shrink:0;"></div>'
+        +(ds?'<div style="font-size:10px;color:#fff;white-space:nowrap;font-weight:600;letter-spacing:-0.2px;">'+fmtDateCourt(ds)+'</div>':'<div style="height:14px;"></div>')
         +'</div>';
     }
     miniDots+='</div>';
