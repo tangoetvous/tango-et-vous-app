@@ -3578,7 +3578,17 @@ function pointerCoursAction(id, date, nbCours, btn) {
   if(btn)btn.disabled=true;
   var c=adminData.cartes.find(function(x){return x.id===id;});
   postAS({action:'pointageManuel',eleveId:id,date:date,niveau:c?c.niveau:'',note:'Pointage admin',nbCours:nbCours})
-    .then(function(r){if(r&&r.skipped)afficherToast('Déjà pointé ce jour');chargerDonnees();})
+    .then(function(r){
+      if(r&&r.skipped){afficherToast('Déjà pointé ce jour');}
+      else if(c){
+        // Sync temps-réel vers l'interface élève (même navigateur)
+        var newUtil=Math.min(10,(c.utilises||0)+nbCours);
+        var newRest=Math.max(0,(c.restants||0)-nbCours);
+        _broadcastAdminSync('carteUpdate',{email:c.email,utilises:newUtil,restants:newRest,
+          datePremierCours:c.datePremierCours||date,expiration:c.expiration});
+      }
+      chargerDonnees();
+    })
     .catch(function(e){if(btn)btn.disabled=false;});
 }
 function renouvelerCarteAction(id, btn, paye) {

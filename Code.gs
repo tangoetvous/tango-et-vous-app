@@ -913,22 +913,44 @@ function _getCartesAdmin() {
   const now = new Date();
   const currentSaison = (now.getMonth()>=8?now.getFullYear():now.getFullYear()-1)+'-'
                        +(now.getMonth()>=8?now.getFullYear()+1:now.getFullYear());
+
+  // Lire toutes les présences une seule fois pour construire datesCours par élève
+  const presencesByEleve = {};
+  const sp = ss.getSheetByName(SHEET_PRESENCES);
+  if (sp && sp.getLastRow() >= PRESENCES_START_ROW) {
+    sp.getRange(PRESENCES_START_ROW,1,sp.getLastRow()-PRESENCES_START_ROW+1,6).getValues()
+      .forEach(p=>{
+        const id = (p[1]||'').toString().trim();
+        if (!id) return;
+        const doublon = (p[5]||'').toString().trim().toUpperCase()==='OUI';
+        if (doublon) return; // ignorer les doublons (2ème cours le même jour)
+        const d = _fmtDate(p[3]);
+        if (!d) return;
+        if (!presencesByEleve[id]) presencesByEleve[id]=[];
+        presencesByEleve[id].push(d);
+      });
+    // Trier chaque liste chronologiquement
+    Object.keys(presencesByEleve).forEach(id=>presencesByEleve[id].sort());
+  }
+
   return s.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues()
     .filter(r=>r[COL.ID])
     .map(r=>{
+      const id          = (r[COL.ID]||'').toString();
       const statutCarte = (r[COL.STATUT_CARTE]||'').toString();
       const isReport    = statutCarte.startsWith('Report:');
       const saisonReport= isReport ? statutCarte.replace('Report:','') : '';
       return {
-        id:r[COL.ID],nom:r[COL.NOM],niveau:r[COL.NIVEAU],
+        id, nom:r[COL.NOM], niveau:r[COL.NIVEAU],
         dateAchat:_fmtDate(r[COL.DATE_ACHAT]),expiration:_fmtDate(r[COL.EXPIRATION]),
         utilises:Number(r[COL.UTILISES])||0,restants:Number(r[COL.RESTANTS])||0,
-        statut:isReport?'Active':statutCarte,  // masquer 'Report:...' en 'Active' pour l'affichage
+        statut:isReport?'Active':statutCarte,
         email:(r[COL.EMAIL]||'').toString().trim(),
         statutEleve:(r[COL.STATUT_ELEVE]||STATUT.EN_ATTENTE).toString().trim(),
         source:(r[COL.SOURCE]||'manuel').toString(),
         isReport, saisonOrigine: isReport ? currentSaison : '',
-        saison: isReport ? saisonReport : currentSaison, // pour filtrage admin par saison
+        saison: isReport ? saisonReport : currentSaison,
+        datesCours: presencesByEleve[id] || [],
       };
     });
 }
