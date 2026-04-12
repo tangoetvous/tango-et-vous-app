@@ -1564,6 +1564,17 @@ function traiterMsgInscription(msg, doRender) {
   if (msg.type === 'essaiInscription') _appliquerEssaiInscription(msg.data);
   if (msg.type === 'yogaEssaiInscription') _appliquerYogaEssaiInscription(msg.data);
   if (msg.type === 'yogaConfirmerPresence') _appliquerYogaConfirmPresence(msg.data);
+  if (msg.type === 'cartePointage') {
+    var d = msg.data || {};
+    var c = (adminData.cartes||[]).find(function(x){return x.email===d.email;});
+    if (c) {
+      c.utilises = d.utilises != null ? d.utilises : c.utilises;
+      c.restants  = d.restants  != null ? d.restants  : c.restants;
+      if (d.date) { if (!c.datesCours) c.datesCours=[]; if (c.datesCours.indexOf(d.date)<0) c.datesCours.push(d.date); c.datesCours.sort(); }
+      if (!c.datePremierCours && d.date) { c.datePremierCours=d.date; c.expiration=calcExpiration(d.date,c.ville||'paris'); }
+    }
+    if (doRender) { renderTab(); return; }
+  }
   _notifierAdminInscription(msg);
   if (doRender) renderTab();
 }

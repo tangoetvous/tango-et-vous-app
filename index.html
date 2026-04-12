@@ -1257,6 +1257,19 @@
           (eleveData.presences=eleveData.presences||[]).unshift({date,niveau:eleveData.eleve.niveau,note:'Pointage élève'});
         eleveData.carte.coursUtilises = Math.min(10,(eleveData.carte.coursUtilises||0)+toAdd);
         eleveData.carte.coursRestants = Math.max(0,(eleveData.carte.coursRestants||0)-toAdd);
+        // Notifier l'interface admin si ouverte dans le même navigateur
+        try {
+          if (window.BroadcastChannel) {
+            const bc = new BroadcastChannel('tev_inscriptions');
+            bc.postMessage({type:'cartePointage', data:{
+              email: eleveData.eleve.email,
+              date,
+              utilises: eleveData.carte.coursUtilises,
+              restants: eleveData.carte.coursRestants,
+            }});
+            bc.close();
+          }
+        } catch(e) {}
         fermerModalPointerSelf(); renderDashboard(); return;
       }
       const resp = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
