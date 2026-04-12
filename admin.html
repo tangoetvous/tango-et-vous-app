@@ -2079,6 +2079,8 @@ function switchTab(tab) {
   renderTab();
 }
 function renderTab() {
+  // Sauvegarder la position de scroll avant de remplacer le contenu
+  var savedScroll = window.scrollY || document.documentElement.scrollTop || 0;
   // Remplacer l'élément pour éviter l'accumulation de listeners event
   var old = gel('tab-content');
   var fresh = document.createElement('div');
@@ -2106,6 +2108,8 @@ function renderTab() {
     }
     el.innerHTML = html;
     bindTabEvents(el);
+    // Restaurer la position de scroll (uniquement si l'utilisateur était déjà scrollé)
+    if (savedScroll > 0) window.scrollTo(0, savedScroll);
   }, 40);
 }
 
