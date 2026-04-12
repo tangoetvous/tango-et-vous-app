@@ -2934,7 +2934,10 @@ function renderEssai() {
     return a.role.localeCompare(b.role);
   });
 
-  // Helper : construit groupes date+niveau avec guiConf count
+  // À partir du 1/12, plus de limites de capacité pour le tango
+  function noLimitsTango(date) { return (date||'').slice(5) >= '12-01'; }
+
+  // Helper : construit groupes date+niveau
   function buildGroupes(src) {
     var g={};
     src.forEach(function(e){
@@ -2957,21 +2960,29 @@ function renderEssai() {
       return c.statut==='inscrit'&&c.ville===ville&&c.niveau===(niveau||'debutant')&&c.role===role;
     }).length;
   }
-  // Helper : true si guideur est vraiment en attente (>=22 guideurs confirmés + inscrits dans son groupe)
+  // Helper : true si guideur est vraiment en attente (>=22 guideurs dans son groupe)
   function guideurVraimentAttente(e, grpIns) {
+    if(noLimitsTango(e.date)) return false;
     var guiConf=grpIns.filter(function(x){return x.role==='guideur'&&x.statut==='confirme';}).length;
     var elevesGui=countElevesInscrits(e.date,e.niveau,'guideur');
     return (guiConf+elevesGui)>=22;
   }
-  // Helper : true si la personne est vraiment en attente (doit attendre confirmation / capacité)
+  // Helper : true si la personne est vraiment en attente (capacité dépassée)
   function estVraimentAttente(e, grpIns) {
     if(e.statut!=='attente') return false;
+    if(noLimitsTango(e.date)) return false;
     if(e.role==='guidee') {
       var gdeConf=grpIns.filter(function(x){return x.role==='guidee'&&x.statut==='confirme';}).length;
       var elevesGde=countElevesInscrits(e.date,e.niveau,'guidee');
       return (gdeConf+elevesGde)>=23;
     }
     return guideurVraimentAttente(e, grpIns);
+  }
+  // Helper : rend un accordéon compatible toggleMoisAcc
+  function renderAcc(id, hdrHtml, bodyHtml, isOpen) {
+    return '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+id+'\')">'
+      +hdrHtml+'<span class="mois-acc-arrow">'+(isOpen?'▼':'▶')+'</span></div>'
+      +'<div id="'+id+'"'+(isOpen?'':' style="display:none;"')+'>'+bodyHtml+'</div>';
   }
 
   if (filtreEssai==='inscrire') {
@@ -2980,25 +2991,28 @@ function renderEssai() {
       +'</div>';
   }
 
+  var todayStr = today();
+
   if (filtreEssai==='attente') {
     var grpAtt = buildGroupes(liste);
-    var hasAtt = false;
+    var pastBodyAtt = '';
+    var futureBodyAtt = '';
+    var firstFutureOpenAtt = false;
     Object.keys(grpAtt).sort().forEach(function(key){
       var grp=grpAtt[key];
       var attenteGrp=grp.ins.filter(function(e){return estVraimentAttente(e,grp.ins);});
       if(!attenteGrp.length) return;
-      hasAtt=true;
       var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
       var isVincAtt=(COURS_VINCENNES||[]).indexOf(grp.date)>=0;
       var villeAtt=isVincAtt?'vincennes':'paris';
       var guiConf=grp.ins.filter(function(x){return x.role==='guideur'&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guideur');
       var gdeConf=grp.ins.filter(function(x){return x.role==='guidee'&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guidee');
       var ccAtt=couleurCours(villeAtt,grp.niveau);
-      h+='<div class="section-hdr" style="color:'+ccAtt+';">'+fmtDate(grp.date)+' — '+nivLbl
+      var body='<div class="section-hdr" style="color:'+ccAtt+';">'+fmtDate(grp.date)+' — '+nivLbl
         +' <span style="font-weight:400;color:var(--warn-text);font-size:11px;">👨 '+guiConf+'/22 · 👩 '+gdeConf+'/23 — complet</span></div>';
       attenteGrp.forEach(function(e){
         var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-        h += '<div class="point-row">'
+        body += '<div class="point-row">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
           +nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')
@@ -3011,21 +3025,28 @@ function renderEssai() {
           +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓ Valider</button>'
           +'</div></div>';
       });
+      var isPastAtt = grp.date < todayStr;
+      var accIdAtt = 'acc-att-'+key.replace('|','-');
+      var isOpenAtt = !isPastAtt && !firstFutureOpenAtt;
+      if (!isPastAtt && !firstFutureOpenAtt) firstFutureOpenAtt = true;
+      var accHdrAtt = '<span style="color:'+ccAtt+';">'+fmtDate(grp.date)+' — '+nivLbl+'</span>';
+      if (isPastAtt) { pastBodyAtt += renderAcc(accIdAtt, accHdrAtt, body, false); }
+      else { futureBodyAtt += renderAcc(accIdAtt, accHdrAtt, body, isOpenAtt); }
     });
-    if(!hasAtt) return h+'<div class="empty-state">Aucune personne en attente.</div>';
+    if(!pastBodyAtt && !futureBodyAtt) return h+'<div class="empty-state">Aucune personne en attente.</div>';
+    if (pastBodyAtt) h += renderAcc('acc-att-passes', 'Cours passés', pastBodyAtt, false);
+    h += futureBodyAtt;
     return h;
   }
 
   if (filtreEssai==='pointage') {
     var grpPt = buildGroupes(liste);
-    var hasEvt = false;
-    var currentMoisPt = '';
-    var accBodyOpenPt = false;
-    var currentMoisKey = today().slice(0,7);
+    var pastBodyPt = '';
+    var futureBodyPt = '';
+    var firstFutureOpenPt = false;
     Object.keys(grpPt).sort().forEach(function(key){
       var grp=grpPt[key];
       var conf=grp.ins.filter(function(e){return !estVraimentAttente(e,grp.ins);});
-      // Élèves inscrits (coursTango) pour ce cours (ville déduite de la date)
       var isVincPt=(COURS_VINCENNES||[]).indexOf(grp.date)>=0;
       var villePt=isVincPt?'vincennes':'paris';
       var absJour=adminData.absencesJour||[];
@@ -3038,25 +3059,13 @@ function renderEssai() {
           &&absJour.some(function(a){return a.date===grp.date&&a.email===c.email;});
       });
       if(!conf.length&&!elevesPresents.length&&!elevesAbsents.length) return;
-      hasEvt=true;
-      var moisKeyPt = grp.date.slice(0,7);
-      if (moisKeyPt !== currentMoisPt) {
-        if (accBodyOpenPt) h += '</div>';
-        currentMoisPt = moisKeyPt;
-        accBodyOpenPt = true;
-        var dmPt = new Date(moisKeyPt+'-01T00:00:00');
-        var accIdPt = 'acc-pt-'+moisKeyPt;
-        var isOpenPt = (moisKeyPt === currentMoisKey);
-        h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdPt+'\')">'+MOIS_FR[dmPt.getMonth()]+' '+dmPt.getFullYear()+'<span class="mois-acc-arrow">'+(isOpenPt?'▼':'▶')+'</span></div>';
-        h += '<div id="'+accIdPt+'"'+(isOpenPt?'':' style="display:none;"')+'>';
-      }
       var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
       var presEssai=conf.filter(function(e){return e.present===true;}).length;
       var absEssai=conf.filter(function(e){return e.present===false;}).length;
       var restEssai=conf.length-presEssai-absEssai;
       var toutPointe=restEssai===0;
       var ccPt=couleurCours(villePt,grp.niveau);
-      h += '<div class="section-hdr" style="color:'+ccPt+';">'+fmtDate(grp.date)+' — '+nivLbl
+      var body='<div class="section-hdr" style="color:'+ccPt+';">'+fmtDate(grp.date)+' — '+nivLbl
         +' — Essai: ✓'+presEssai+' ✗'+absEssai+' ?'+restEssai
         +' · Élèves: '+elevesPresents.length+(elevesAbsents.length?' ('+elevesAbsents.length+' absent'+(elevesAbsents.length>1?'s':'')+')':'')+'</div>';
       // ── Cours d'essai ──
@@ -3072,7 +3081,7 @@ function renderEssai() {
         if(ctStatut==='inscrit') pastille='<span class="pill pill-ok" style="font-size:8px;padding:1px 5px;">Inscrit</span>';
         else if(ctStatut==='valide'||ctStatut==='attente_paiement') pastille='<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">att. paiem.</span>';
         else if(ctStatut==='demande') pastille='<span style="display:inline-block;background:#FFD600;color:#003399;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;border:2px solid #003399;white-space:nowrap;">DEM</span>';
-        h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
+        body += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · avec '+e.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
           +(e.presenceConfirmee===true?'<span class="pill pill-ok" style="font-size:8px;">✓Conf.</span>':'')
@@ -3090,7 +3099,7 @@ function renderEssai() {
       for(var ei=0;ei<eal;ei++){if(ei<eGui.length)eAlt.push(eGui[ei]);if(ei<eGde.length)eAlt.push(eGde[ei]);}
       eAlt.forEach(function(c) {
         var rcls=c.role==='guideur'?'pill-guideur':'pill-guidee';
-        h += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(c.prenom+' '+c.nom,c.email||'',c.tel||'','ct')+'</div>'
+        body += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(c.prenom+' '+c.nom,c.email||'',c.tel||'','ct')+'</div>'
           +'<div class="point-sub">'+(c.ville||'')+(c.partenaire?' · avec '+c.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
           +'<span class="pill pill-ok" style="font-size:8px;">Inscrit</span>'
@@ -3100,7 +3109,7 @@ function renderEssai() {
       });
       // ── Élèves absents ce jour ──
       elevesAbsents.forEach(function(c) {
-        h += '<div class="point-row" style="opacity:0.45;"><div style="flex:1;min-width:0;">'
+        body += '<div class="point-row" style="opacity:0.45;"><div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="text-decoration:line-through;color:var(--dim);">'+nomCliquable(c.prenom+' '+c.nom,c.email||'',c.tel||'','ct')+'</div>'
           +'<div class="point-sub">Absent · '+c.role+'</div>'
           +'</div>'
@@ -3109,25 +3118,32 @@ function renderEssai() {
           +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px;" data-action="marquer-absence-jour" data-date="'+grp.date+'" data-email="'+c.email+'">↩ Rétablir</button>'
           +'</div></div>';
       });
-      h += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
+      body += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
         +(toutPointe?'<button class="btn btn-ok" data-action="env-j1" data-date="'+grp.date+'">✉️ Emails J+1</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tous les essais d&#39;abord.</span>')
         +'<span id="j1s-'+grp.date+'" style="font-size:11px;margin-left:8px;"></span>'
         +'</div>';
+      var isPastPt = grp.date < todayStr;
+      var accIdPt = 'acc-pt-'+key.replace('|','-');
+      var isOpenPt = !isPastPt && !firstFutureOpenPt;
+      if (!isPastPt && !firstFutureOpenPt) firstFutureOpenPt = true;
+      var accHdrPt = '<span style="color:'+ccPt+';">'+fmtDate(grp.date)+' — '+nivLbl+'</span>';
+      if (isPastPt) { pastBodyPt += renderAcc(accIdPt, accHdrPt, body, false); }
+      else { futureBodyPt += renderAcc(accIdPt, accHdrPt, body, isOpenPt); }
     });
-    if (accBodyOpenPt) h += '</div>';
-    return h+(hasEvt?'':'<div class="empty-state">Aucun cours d&#39;essai confirmé.</div>');
+    if(!pastBodyPt && !futureBodyPt) return h+'<div class="empty-state">Aucun cours d&#39;essai confirmé.</div>';
+    if (pastBodyPt) h += renderAcc('acc-pt-passes', 'Cours passés', pastBodyPt, false);
+    h += futureBodyPt;
+    return h;
   }
 
-  // Vue "Par date" : toutes les dates connues (COURS_PARIS + COURS_VINCENNES à venir) + inscriptions
+  // Vue "Par date" : toutes les dates de la saison (passées + futures) + inscriptions
   var grpDN = buildGroupes(liste);
-  var todayStr = today();
-  // Construire la liste complète des dates futures connues
   var allDates = {};
-  (COURS_PARIS||[]).filter(function(d){return d>=todayStr&&dateAppartientSaison(d,sai);}).forEach(function(d){
+  (COURS_PARIS||[]).filter(function(d){return dateAppartientSaison(d,sai);}).forEach(function(d){
     if(!allDates[d])allDates[d]=[];
     if(allDates[d].indexOf('paris')<0)allDates[d].push('paris');
   });
-  (COURS_VINCENNES||[]).filter(function(d){return d>=todayStr&&dateAppartientSaison(d,sai);}).forEach(function(d){
+  (COURS_VINCENNES||[]).filter(function(d){return dateAppartientSaison(d,sai);}).forEach(function(d){
     if(!allDates[d])allDates[d]=[];
     if(allDates[d].indexOf('vincennes')<0)allDates[d].push('vincennes');
   });
@@ -3136,83 +3152,85 @@ function renderEssai() {
     var d=key.split('|')[0];
     if(!allDates[d])allDates[d]=['?'];
   });
-  var sortedDates = Object.keys(allDates).sort().slice(0,30); // limiter à 30 prochaines
+  var sortedDates = Object.keys(allDates).sort();
   if(!sortedDates.length) return h+'<div class="empty-state">Aucun cours d&#39;essai.</div>';
-  var currentMoisEssai = '';
-  var accBodyOpenEd = false;
-  var currentMoisKeyEd = today().slice(0,7);
+
+  var pastBodyDN = '';
+  var futureBodyDN = '';
+  var firstFutureOpenDN = false;
+
   sortedDates.forEach(function(date){
-    var moisKey = date.slice(0,7);
-    if (moisKey !== currentMoisEssai) {
-      if (accBodyOpenEd) h += '</div>';
-      currentMoisEssai = moisKey;
-      accBodyOpenEd = true;
-      var dm = new Date(moisKey+'-01T00:00:00');
-      var accIdEd = 'acc-ed-'+moisKey;
-      var isOpenEd = (moisKey === currentMoisKeyEd);
-      h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdEd+'\')">'+MOIS_FR[dm.getMonth()]+' '+dm.getFullYear()+'<span class="mois-acc-arrow">'+(isOpenEd?'▼':'▶')+'</span></div>';
-      h += '<div id="'+accIdEd+'"'+(isOpenEd?'':' style="display:none;"')+'>';
-    }
     var lieux=allDates[date]||[];
     var lieuLbl=lieux.indexOf('paris')>=0&&lieux.indexOf('vincennes')>=0?'Paris + Vincennes':lieux.indexOf('vincennes')>=0?'Vincennes':'Paris';
-    // Niveaux existants pour cette date
     var niveaux=['debutant','intermediaire'];
     niveaux.forEach(function(niv){
       var key=date+'|'+niv;
       var grp=grpDN[key]||{date:date,niveau:niv,ins:[]};
       var ins=grp.ins;
       var guiConf=ins.filter(function(e){return e.role==='guideur'&&e.statut==='confirme';});
-      var guiAll=ins.filter(function(e){return e.role==='guideur';});
       var gde=ins.filter(function(e){return e.role==='guidee';}).length;
       var attVrai=ins.filter(function(e){return estVraimentAttente(e,ins);}).length;
       var nivLbl=niv==='debutant'?'Débutant':'Intermédiaire';
-      // Capacité totale = essai confirmés + élèves inscrits
       var elevesGuiEd=countElevesInscrits(date,niv,'guideur');
       var elevesGdeEd=countElevesInscrits(date,niv,'guidee');
       var totalGui=guiConf.length+elevesGuiEd;
       var totalGde=gde+elevesGdeEd;
-      var complet=totalGui>=22||totalGde>=23;
+      var noLimits=noLimitsTango(date);
+      var complet=!noLimits&&(totalGui>=22||totalGde>=23);
       var isVincEd2=(COURS_VINCENNES||[]).indexOf(date)>=0;
       var villeEd2=isVincEd2?'vincennes':'paris';
       var ccEd=couleurCours(villeEd2,niv);
-      h += '<div class="section-hdr" style="color:'+ccEd+';">'
-        +fmtDate(date)+' — '+nivLbl+' <span style="font-weight:400;color:var(--dim);">'+lieuLbl+'</span>'
-        +' <span style="font-weight:400;margin-left:6px;color:'+(totalGui>=22?'var(--warn-text)':'var(--dim)')+';">👨 '+totalGui+'/22</span>'
-        +' <span style="font-weight:400;color:'+(totalGde>=23?'var(--warn-text)':'var(--dim)')+';">👩 '+totalGde+'/23</span>'
-        +(attVrai?' <span style="color:var(--warn-text);">⏳ '+attVrai+' att.</span>':'')
-        +(complet?' <span style="color:var(--warn-text);font-size:10px;font-weight:700;">COMPLET</span>':'')
-        +'</div>';
-      if(!ins.length){
-        h+='<div style="font-size:11px;color:var(--dim);padding:6px 0 10px;">Aucune inscription</div>';
-        return;
+      var capaciteHtml='';
+      if(noLimits){
+        capaciteHtml=' <span style="font-weight:400;color:var(--dim);">👨 '+totalGui+' · 👩 '+totalGde+'</span>';
+      } else {
+        capaciteHtml=' <span style="font-weight:400;margin-left:6px;color:'+(totalGui>=22?'var(--warn-text)':'var(--dim)')+';">👨 '+totalGui+'/22</span>'
+          +' <span style="font-weight:400;color:'+(totalGde>=23?'var(--warn-text)':'var(--dim)')+';">👩 '+totalGde+'/23</span>'
+          +(attVrai?' <span style="color:var(--warn-text);">⏳ '+attVrai+' att.</span>':'')
+          +(complet?' <span style="color:var(--warn-text);font-size:10px;font-weight:700;">COMPLET</span>':'');
       }
-      // Interleave guideurs/guidées
-      var iGui=ins.filter(function(e){return e.role==='guideur';});
-      var iGde=ins.filter(function(e){return e.role==='guidee';});
-      var iAlt=[]; var ial=Math.max(iGui.length,iGde.length);
-      for(var ia=0;ia<ial;ia++){if(ia<iGui.length)iAlt.push(iGui[ia]);if(ia<iGde.length)iAlt.push(iGde[ia]);}
-      iAlt.forEach(function(e){
-        var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-        var vraiAtt=estVraimentAttente(e,ins);
-        h += '<div class="point-row">'
-          +'<div style="flex:1;min-width:0;">'
-          +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
-          +nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')
-          +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
-          +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
-          +'</div>'
-          +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
-          +'</div>'
-          +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-          +(vraiAtt
-            ?'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+date+'">✓ Valider</button>'
-            :'<span class="pill pill-ok" style="font-size:8px;">Validé.e</span>')
-          +btnEmail(e.email,e.prenom+' '+e.nom)
-          +'</div></div>';
-      });
+      var hdrHtml = '<span style="color:'+ccEd+';">'+fmtDate(date)+' — '+nivLbl+'</span>'
+        +' <span style="font-weight:400;color:var(--dim);font-size:11px;">'+lieuLbl+'</span>'
+        +capaciteHtml;
+      var body='';
+      if(!ins.length){
+        body='<div style="font-size:11px;color:var(--dim);padding:6px 0 10px;">Aucune inscription</div>';
+      } else {
+        var iGui=ins.filter(function(e){return e.role==='guideur';});
+        var iGde=ins.filter(function(e){return e.role==='guidee';});
+        var iAlt=[]; var ial=Math.max(iGui.length,iGde.length);
+        for(var ia=0;ia<ial;ia++){if(ia<iGui.length)iAlt.push(iGui[ia]);if(ia<iGde.length)iAlt.push(iGde[ia]);}
+        iAlt.forEach(function(e){
+          var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
+          var vraiAtt=estVraimentAttente(e,ins);
+          body += '<div class="point-row">'
+            +'<div style="flex:1;min-width:0;">'
+            +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
+            +nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')
+            +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
+            +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
+            +'</div>'
+            +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
+            +'</div>'
+            +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+            +(vraiAtt
+              ?'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+date+'">✓ Valider</button>'
+              :'<span class="pill pill-ok" style="font-size:8px;">Validé.e</span>')
+            +btnEmail(e.email,e.prenom+' '+e.nom)
+            +'</div></div>';
+        });
+      }
+      var isPastDN = date < todayStr;
+      var accIdDN = 'acc-ed-'+key.replace('|','-');
+      var isOpenDN = !isPastDN && !firstFutureOpenDN;
+      if (!isPastDN && !firstFutureOpenDN) firstFutureOpenDN = true;
+      if (isPastDN) { pastBodyDN += renderAcc(accIdDN, hdrHtml, body, false); }
+      else { futureBodyDN += renderAcc(accIdDN, hdrHtml, body, isOpenDN); }
     });
   });
-  if (accBodyOpenEd) h += '</div>';
+  if(!pastBodyDN && !futureBodyDN) return h+'<div class="empty-state">Aucun cours d&#39;essai.</div>';
+  if (pastBodyDN) h += renderAcc('acc-dn-passes', 'Cours passés', pastBodyDN, false);
+  h += futureBodyDN;
   return h;
 }
 function valGuideeEssai(email, date, btn) {
