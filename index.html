@@ -2246,6 +2246,9 @@ a{color:var(--gold);text-decoration:none;}
                 <span class="meta-key" style="font-size:11px;color:var(--text-faint)">Validité : 3 mois + vacances scolaires</span>
               </div>
             </div>
+            <button id="btn-je-pointe" onclick="ouvrirModalPointerSelf()" style="width:100%;background:var(--gold);color:#000;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;margin-bottom:10px;font-family:var(--font-body);">
+              ✓ Je pointe ma présence
+            </button>
             <a class="btn-renouveler"
                href="https://le-regard-se-pose.assoconnect.com/collect/description/696013-j-renouvellement-de-carte-de-10-ou-20-cours-2026-2027"
                target="_blank">
@@ -2698,6 +2701,90 @@ if('serviceWorker' in navigator){
     }
   });
 })();
+</script>
+
+<!-- Modal pointage élève -->
+<div id="modal-pointer-self" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:24px;width:min(320px,92vw);font-family:var(--font-body);">
+    <div style="font-size:15px;font-weight:700;color:var(--gold);margin-bottom:16px;letter-spacing:1px;">✓ Pointer ma présence</div>
+    <label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Date du cours</label>
+    <input type="date" id="self-pointer-date" style="width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px;color:var(--text);font-size:14px;box-sizing:border-box;"/>
+    <label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;display:block;margin-top:14px;margin-bottom:6px;">Cours pris ce jour</label>
+    <div style="display:flex;gap:8px;">
+      <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;color:var(--text);">
+        <input type="radio" name="self-nb" value="1" checked/> 1 cours
+      </label>
+      <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;color:var(--text);">
+        <input type="radio" name="self-nb" value="2"/> 2 cours
+      </label>
+    </div>
+    <div id="self-pointer-msg" style="display:none;font-size:12px;color:#ff6b6b;margin-top:10px;"></div>
+    <div style="display:flex;gap:8px;margin-top:18px;">
+      <button onclick="fermerModalPointerSelf()" style="flex:1;padding:12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;">Annuler</button>
+      <button id="btn-pointer-self-ok" onclick="confirmerPointerSelf()" style="flex:1;padding:12px;border-radius:8px;border:none;background:var(--gold);color:#000;font-size:13px;font-weight:700;cursor:pointer;">✓ Valider</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function ouvrirModalPointerSelf() {
+  var today = new Date().toISOString().slice(0,10);
+  document.getElementById('self-pointer-date').value = today;
+  var r1 = document.querySelector('input[name="self-nb"][value="1"]');
+  if (r1) r1.checked = true;
+  var m = document.getElementById('self-pointer-msg');
+  if (m) { m.style.display='none'; m.textContent=''; }
+  document.getElementById('modal-pointer-self').style.display = 'flex';
+}
+function fermerModalPointerSelf() {
+  document.getElementById('modal-pointer-self').style.display = 'none';
+}
+async function confirmerPointerSelf() {
+  if (!eleveData || !eleveData.eleve) return;
+  var date = document.getElementById('self-pointer-date').value;
+  var nbEl = document.querySelector('input[name="self-nb"]:checked');
+  var nb = nbEl ? parseInt(nbEl.value)||1 : 1;
+  if (!date) { var m=document.getElementById('self-pointer-msg'); m.textContent='Merci de choisir une date.'; m.style.display='block'; return; }
+  var btn = document.getElementById('btn-pointer-self-ok');
+  btn.disabled = true; btn.textContent = '…';
+  var msgEl = document.getElementById('self-pointer-msg');
+  try {
+    if (IS_DEMO) {
+      // Mode démo : mise à jour locale
+      var already = (eleveData.presences||[]).filter(function(p){return p.date===date;}).length;
+      var toAdd = Math.max(0, nb - already);
+      if (toAdd === 0) { msgEl.textContent = 'Déjà pointé pour ce jour.'; msgEl.style.display='block'; btn.disabled=false; btn.textContent='✓ Valider'; return; }
+      for (var i=0; i<toAdd; i++) { eleveData.presences = eleveData.presences||[]; eleveData.presences.unshift({date:date,niveau:eleveData.eleve.niveau,note:'Pointage élève'}); }
+      eleveData.carte.coursUtilises = Math.min(10,(eleveData.carte.coursUtilises||0)+toAdd);
+      eleveData.carte.coursRestants = Math.max(0,(eleveData.carte.coursRestants||0)-toAdd);
+      fermerModalPointerSelf();
+      renderDashboard();
+      return;
+    }
+    const resp = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
+      action:'pointageManuel', eleveId:eleveData.eleve.id,
+      date:date, niveau:eleveData.eleve.niveau,
+      note:'Pointage élève (auto)', nbCours:nb
+    })});
+    const data = await resp.json();
+    if (data.skipped) {
+      msgEl.textContent = 'Déjà pointé pour ce jour — aucun doublon créé.';
+      msgEl.style.display = 'block';
+      btn.disabled=false; btn.textContent='✓ Valider';
+      return;
+    }
+    fermerModalPointerSelf();
+    // Rafraîchir les données de la carte
+    const r2 = await fetch(`${APPS_SCRIPT_URL}?action=getEleve&email=${encodeURIComponent(eleveData.eleve.email||eleveData.email||'')}`);
+    const d2  = await r2.json();
+    if (d2.carte) { eleveData.carte = d2.carte; eleveData.presences = d2.presences||eleveData.presences; renderDashboard(); }
+  } catch(e) {
+    msgEl.textContent = 'Erreur de connexion. Réessayez.';
+    msgEl.style.display = 'block';
+    btn.disabled=false; btn.textContent='✓ Valider';
+  }
+}
+document.getElementById('modal-pointer-self').addEventListener('click', function(e){if(e.target===this)fermerModalPointerSelf();});
 </script>
 </body>
 </html>

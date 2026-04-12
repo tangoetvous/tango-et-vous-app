@@ -169,6 +169,29 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   </div>
 </div>
 
+<!-- Modal pointage avec nb de cours -->
+<div class="modal-overlay" id="modal-pointer">
+  <div class="modal-box">
+    <div class="modal-titre">+ Pointer une présence</div>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:10px;" id="modal-pointer-nom"></div>
+    <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;">Date du cours</label>
+    <input type="date" id="modal-pointer-date" class="modal-input" style="margin-top:4px;"/>
+    <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:10px;display:block;">Cours pris ce jour</label>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--s3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">
+        <input type="radio" name="pointer-nb" value="1" checked/> 1 cours
+      </label>
+      <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--s3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">
+        <input type="radio" name="pointer-nb" value="2"/> 2 cours
+      </label>
+    </div>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="modal-cancel" id="modal-pointer-cancel">Annuler</button>
+      <button class="modal-ok" id="modal-pointer-ok">✓ Pointer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal confirmation (remplace confirm) -->
 <div class="modal-overlay" id="modal-confirm">
   <div class="modal-box">
@@ -1249,6 +1272,27 @@ function confirmerModalDate() {
   fermerModalDate();
   if (date && cb) cb(date);
 }
+var _pointerModalCb = null;
+function ouvrirModalPointer(nom, callback) {
+  gel('modal-pointer-date').value = today();
+  gel('modal-pointer-nom').textContent = nom || '';
+  var r1 = document.querySelector('input[name="pointer-nb"][value="1"]');
+  if (r1) r1.checked = true;
+  gel('modal-pointer').classList.add('vis');
+  _pointerModalCb = callback;
+}
+function fermerModalPointer() {
+  gel('modal-pointer').classList.remove('vis');
+  _pointerModalCb = null;
+}
+function confirmerModalPointer() {
+  var date = gel('modal-pointer-date').value;
+  var nbEl = document.querySelector('input[name="pointer-nb"]:checked');
+  var nb = nbEl ? parseInt(nbEl.value)||1 : 1;
+  var cb = _pointerModalCb;
+  fermerModalPointer();
+  if (date && cb) cb(date, nb);
+}
 function ouvrirModalConfirm(msg, callback) {
   gel('modal-confirm-msg').textContent = msg;
   gel('modal-confirm').classList.add('vis');
@@ -1317,8 +1361,9 @@ function fermerModalQR() {
 }
 function confirmerModalQRPointer() {
   var id = _qrCarteId;
+  var c = id ? (adminData.cartes||[]).find(function(x){return x.id===id;}) : null;
   fermerModalQR();
-  if(id) ouvrirModalDate(function(date){ pointerCoursAction(id, date, null); });
+  if(id) ouvrirModalPointer(c?c.nom:'', function(date,nb){ pointerCoursAction(id,date,nb,null); });
 }
 function afficherToast(msg) {
   var t=document.createElement('div');
@@ -1338,6 +1383,9 @@ function confirmerModalRenouveler() {
 // Attacher les boutons des modals une seule fois
 gel('modal-date-cancel').addEventListener('click', fermerModalDate);
 gel('modal-date-ok').addEventListener('click', confirmerModalDate);
+gel('modal-pointer-cancel').addEventListener('click', fermerModalPointer);
+gel('modal-pointer-ok').addEventListener('click', confirmerModalPointer);
+gel('modal-pointer').addEventListener('click', function(e){if(e.target===this)fermerModalPointer();});
 gel('modal-confirm-cancel').addEventListener('click', fermerModalConfirm);
 gel('modal-confirm-ok').addEventListener('click', confirmerModalConfirm);
 gel('modal-ren-cancel').addEventListener('click', fermerModalRenouveler);
@@ -2236,7 +2284,7 @@ function handleAction(action, btn) {
       valDemande(id, btn);
       break;
     case 'pointer-cours':
-      ouvrirModalDate(function(date){ pointerCoursAction(id, date, btn); });
+      (function(){ var c=adminData.cartes.find(function(x){return x.id===id;}); ouvrirModalPointer(c?c.nom:'',function(date,nb){ pointerCoursAction(id,date,nb,btn); }); })();
       break;
     case 'renouveler-carte':
       ouvrirModalRenouveler(id, btn.dataset.nom||'');
@@ -3493,16 +3541,30 @@ function renderCartes() {
   });
   return h;
 }
-function pointerCoursAction(id, date, btn) {
+function pointerCoursAction(id, date, nbCours, btn) {
+  nbCours = Math.min(2, Math.max(1, parseInt(nbCours)||1));
   if(IS_DEMO){
     var c=adminData.cartes.find(function(x){return x.id===id;});
-    if(c){if(!c.datesCours)c.datesCours=[];var estPremierCours=!c.datePremierCours;c.utilises=Math.min(10,(c.utilises||0)+1);c.restants=Math.max(0,10-c.utilises);c.datesCours.push(date);if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}if(c.restants===0){var msg=gel('modal-confirm-msg');if(msg)msg.textContent='';}if(estPremierCours){afficherToast('✉️ Email de bienvenue envoyé à '+(c.nom||c.email||'')+'');}
-    _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:c.datePremierCours,expiration:c.expiration});}
+    if(c){
+      if(!c.datesCours)c.datesCours=[];
+      var dejaPointe=c.datesCours.filter(function(d){return d===date;}).length;
+      var aAjouter=Math.max(0,nbCours-dejaPointe);
+      if(aAjouter===0){afficherToast('Déjà pointé ce jour');renderTab();return;}
+      var estPremierCours=!c.datePremierCours;
+      for(var i=0;i<aAjouter;i++)c.datesCours.push(date);
+      c.utilises=Math.min(10,(c.utilises||0)+aAjouter);
+      c.restants=Math.max(0,10-c.utilises);
+      if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}
+      if(estPremierCours)afficherToast('✉️ Email de bienvenue envoyé à '+(c.nom||c.email||''));
+      _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:c.datePremierCours,expiration:c.expiration});
+    }
     renderTab(); return;
   }
   if(btn)btn.disabled=true;
   var c=adminData.cartes.find(function(x){return x.id===id;});
-  postAS({action:'pointageManuel',eleveId:id,date:date,niveau:c?c.niveau:'',note:'Pointage admin'}).then(function(){chargerDonnees();}).catch(function(e){if(btn)btn.disabled=false;});
+  postAS({action:'pointageManuel',eleveId:id,date:date,niveau:c?c.niveau:'',note:'Pointage admin',nbCours:nbCours})
+    .then(function(r){if(r&&r.skipped)afficherToast('Déjà pointé ce jour');chargerDonnees();})
+    .catch(function(e){if(btn)btn.disabled=false;});
 }
 function renouvelerCarteAction(id, btn, paye) {
   if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=10;c.datePremierCours='';c.expiration='';c.datesCours=[];c.paye=paye===true;

@@ -328,38 +328,73 @@ function getAdminData(email) {
 // PRÉSENCES
 // ================================================================
 function ajouterPresenceManuelle(body) {
-  const {eleveId,date,niveau,note} = body;
+  const {eleveId,date,niveau,note,nbCours} = body;
   if (!eleveId||!date||!niveau) throw new Error('eleveId, date et niveau requis');
-  const ss   = SpreadsheetApp.getActiveSpreadsheet();
-  const sp   = _getSheet(ss, SHEET_PRESENCES);
-  const se   = _getSheet(ss, SHEET_ELEVES);
-  const nom  = _getNomEleve(se, eleveId);
-  // Détecter 1ère présence de la saison → E04
+  const n = Math.min(2, Math.max(1, parseInt(nbCours)||1));
+
+  const ss  = SpreadsheetApp.getActiveSpreadsheet();
+  const sp  = _getSheet(ss, SHEET_PRESENCES);
+  const se  = _getSheet(ss, SHEET_ELEVES);
+  const nom = _getNomEleve(se, eleveId);
+
+  // Anti-doublon : déjà combien de cours pointés ce jour pour cet élève ?
+  const dejaPointe = _countPresencesRaw(sp, eleveId, date);
+  if (dejaPointe >= n) {
+    return {ok:true, skipped:true, message:`Déjà ${dejaPointe} cours pointé(s) le ${date}`};
+  }
+  const aAjouter = n - dejaPointe;
+
+  // 1ère présence de la saison → E04
   const presencesExistantes = _getPresences(sp, eleveId);
   const estPremierCours     = presencesExistantes.length === 0;
-  const nr   = Math.max(sp.getLastRow(), PRESENCES_START_ROW-1)+1;
+
   const hora = Utilities.formatDate(new Date(),'Europe/Paris','yyyy-MM-dd HH:mm');
-  sp.getRange(nr,1).setValue(hora);  sp.getRange(nr,2).setValue(eleveId);
-  sp.getRange(nr,3).setValue(nom);   sp.getRange(nr,4).setValue(new Date(date));
-  sp.getRange(nr,4).setNumberFormat('dd/MM/yyyy');
-  sp.getRange(nr,5).setValue(niveau);
-  sp.getRange(nr,6).setFormula(`=IF(B${nr}="","",IF(COUNTIFS($B$${PRESENCES_START_ROW}:B${nr},B${nr},$D$${PRESENCES_START_ROW}:D${nr},D${nr},$E$${PRESENCES_START_ROW}:E${nr},E${nr})>1,"OUI","NON"))`);
-  sp.getRange(nr,7).setValue(note||'Ajout manuel (admin)');
-  // E04 — bienvenue 1ère séance
-  if (estPremierCours) {
-    const lr  = se.getLastRow();
-    if (lr >= ELEVES_START_ROW) {
-      const data  = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues();
-      const elRow = data.find(r => r[COL.ID] === eleveId);
-      if (elRow) {
-        const email = (elRow[COL.EMAIL]||'').toString().trim();
-        if (email) {
-          try { _emailBienvenuePremiereCours(nom, email, '', niveau); } catch(err) {}
-        }
+  for (let i=0; i<aAjouter; i++) {
+    const nr = Math.max(sp.getLastRow(), PRESENCES_START_ROW-1)+1;
+    sp.getRange(nr,1).setValue(hora);   sp.getRange(nr,2).setValue(eleveId);
+    sp.getRange(nr,3).setValue(nom);    sp.getRange(nr,4).setValue(new Date(date));
+    sp.getRange(nr,4).setNumberFormat('dd/MM/yyyy');
+    sp.getRange(nr,5).setValue(niveau);
+    sp.getRange(nr,6).setFormula(`=IF(B${nr}="","",IF(COUNTIFS($B$${PRESENCES_START_ROW}:B${nr},B${nr},$D$${PRESENCES_START_ROW}:D${nr},D${nr},$E$${PRESENCES_START_ROW}:E${nr},E${nr})>1,"OUI","NON"))`);
+    sp.getRange(nr,7).setValue(note||(n>1?`Cours ${dejaPointe+i+1}/${n}`:'Ajout'));
+  }
+
+  // Mettre à jour UTILISES / RESTANTS dans SHEET_ELEVES
+  const lr = se.getLastRow();
+  if (lr >= ELEVES_START_ROW) {
+    const data = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues();
+    const idx  = data.findIndex(r => r[COL.ID]===eleveId);
+    if (idx >= 0) {
+      const rn      = idx+ELEVES_START_ROW;
+      const newUtil = Math.min(10, (Number(data[idx][COL.UTILISES])||0)+aAjouter);
+      const newRest = Math.max(0,  (Number(data[idx][COL.RESTANTS])||0)-aAjouter);
+      se.getRange(rn, COL.UTILISES+1).setValue(newUtil);
+      se.getRange(rn, COL.RESTANTS+1).setValue(newRest);
+      // Premier cours : activer la carte si pas encore commencée
+      if (!data[idx][COL.DATE_ACHAT]||!_fmtDate(data[idx][COL.DATE_ACHAT])) {
+        se.getRange(rn, COL.DATE_ACHAT+1).setValue(new Date(date));
+        const exp = _calcExpiration(date);
+        if (exp) se.getRange(rn, COL.EXPIRATION+1).setValue(new Date(exp));
+        if (!(data[idx][COL.STATUT_CARTE]||'').toString().trim())
+          se.getRange(rn, COL.STATUT_CARTE+1).setValue('Active');
       }
     }
   }
-  return {ok:true,message:`Présence ajoutée pour ${nom} le ${date}`};
+
+  // E04 — bienvenue 1ère séance
+  if (estPremierCours) {
+    const lr2  = se.getLastRow();
+    if (lr2 >= ELEVES_START_ROW) {
+      const d2   = se.getRange(ELEVES_START_ROW,1,lr2-ELEVES_START_ROW+1,13).getValues();
+      const elRow = d2.find(r => r[COL.ID]===eleveId);
+      if (elRow) {
+        const email = (elRow[COL.EMAIL]||'').toString().trim();
+        if (email) try { _emailBienvenuePremiereCours(nom,email,'',niveau); } catch(err){}
+      }
+    }
+  }
+  return {ok:true, added:aAjouter, skipped:dejaPointe||undefined,
+    message:`${aAjouter} présence(s) ajoutée(s) pour ${nom} le ${date}`};
 }
 
 // ================================================================
@@ -757,6 +792,10 @@ function _fmtDateFr(s){if(!s)return'';const m=['janvier','février','mars','avri
 function _fmtDateFrLong(s){if(!s)return'';const j=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'],m=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'],d=new Date(s);return j[d.getDay()]+' '+d.getDate()+' '+m[d.getMonth()]+' '+d.getFullYear();}
 function _getNomEleve(s,id){const lr=s.getLastRow();if(lr<ELEVES_START_ROW)return id;const d=s.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,2).getValues(),r=d.find(r=>r[0]===id);return r?r[1]:id;}
 function _getPresences(s,id){const lr=s.getLastRow();if(lr<PRESENCES_START_ROW)return[];const data=s.getRange(PRESENCES_START_ROW,1,lr-PRESENCES_START_ROW+1,7).getValues(),res=[];for(const r of data){if((r[1]||'').toString().trim()!==id||(r[5]||'').toString().trim().toUpperCase()==='OUI')continue;const d=_fmtDate(r[3]);if(d)res.push({date:d,niveau:(r[4]||'').toString(),note:(r[6]||'').toString()});}return res.sort((a,b)=>b.date.localeCompare(a.date));}
+// Compte TOUTES les lignes (sans filtrer les doublons) pour un élève + date
+function _countPresencesRaw(s,id,date){const lr=s.getLastRow();if(lr<PRESENCES_START_ROW)return 0;return s.getRange(PRESENCES_START_ROW,1,lr-PRESENCES_START_ROW+1,4).getValues().filter(r=>(r[1]||'').toString().trim()===id&&_fmtDate(r[3])===date).length;}
+// Expiration carte = date de début + 3 mois (hors vacances scolaires)
+function _calcExpiration(dateDebut){if(!dateDebut)return'';const d=new Date(dateDebut+'T00:00:00');d.setMonth(d.getMonth()+3);return Utilities.formatDate(d,'Europe/Paris','yyyy-MM-dd');}
 function _genId(s){const lr=s.getLastRow();if(lr<ELEVES_START_ROW)return'E001';const ids=s.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,1).getValues().map(r=>r[0]).filter(v=>v&&/^E\d+$/.test(v.toString())).map(v=>parseInt(v.toString().replace('E',''),10));const mx=ids.length?Math.max(...ids):0;return'E'+String(mx+1).padStart(3,'0');}
 
 // ================================================================
