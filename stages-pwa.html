@@ -978,15 +978,19 @@ async function soumettre(){
       body: JSON.stringify(data)
     });
     afficherConfirmation(data);
-    // Notifier : postMessage si dans un iframe admin, localStorage+BroadcastChannel sinon
+    // Notifier admin : postMessage si dans un iframe, localStorage+BroadcastChannel sinon
     var msg = {type:'stageInscription', data:data};
-    try { window.parent.postMessage(msg, '*'); } catch(e){}
-    try {
-      var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
-      pending.push(msg);
-      localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
-    } catch(e){}
-    try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
+    var isIframe = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
+    if (isIframe) {
+      try { window.parent.postMessage(msg, '*'); } catch(e){}
+    } else {
+      try {
+        var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
+        pending.push(msg);
+        localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+      } catch(e){}
+      try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
+    }
   } catch(err){
     btn.disabled=false; btn.textContent="Je m'inscris";
     document.getElementById('err-global-2').textContent='Une erreur est survenue. Veuillez réessayer ou nous contacter à tangoetvous@gmail.com';
