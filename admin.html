@@ -2960,23 +2960,10 @@ function renderEssai() {
       return c.statut==='inscrit'&&c.ville===ville&&c.niveau===(niveau||'debutant')&&c.role===role;
     }).length;
   }
-  // Helper : true si guideur est vraiment en attente (>=22 guideurs dans son groupe)
-  function guideurVraimentAttente(e, grpIns) {
-    if(noLimitsTango(e.date)) return false;
-    var guiConf=grpIns.filter(function(x){return x.role==='guideur'&&x.statut==='confirme';}).length;
-    var elevesGui=countElevesInscrits(e.date,e.niveau,'guideur');
-    return (guiConf+elevesGui)>=22;
-  }
-  // Helper : true si la personne est vraiment en attente (capacité dépassée)
-  function estVraimentAttente(e, grpIns) {
-    if(e.statut!=='attente') return false;
-    if(noLimitsTango(e.date)) return false;
-    if(e.role==='guidee') {
-      var gdeConf=grpIns.filter(function(x){return x.role==='guidee'&&x.statut==='confirme';}).length;
-      var elevesGde=countElevesInscrits(e.date,e.niveau,'guidee');
-      return (gdeConf+elevesGde)>=23;
-    }
-    return guideurVraimentAttente(e, grpIns);
+  // Helper : true si la personne attend validation admin (statut 'attente')
+  // Apparaît dans "Liste d'attente" et "Par date" mais PAS dans "Pointage"
+  function estVraimentAttente(e) {
+    return e.statut === 'attente';
   }
   // Helper : rend un accordéon compatible toggleMoisAcc
   function renderAcc(id, hdrHtml, bodyHtml, isOpen) {
@@ -3008,8 +2995,13 @@ function renderEssai() {
       var guiConf=grp.ins.filter(function(x){return x.role==='guideur'&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guideur');
       var gdeConf=grp.ins.filter(function(x){return x.role==='guidee'&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guidee');
       var ccAtt=couleurCours(villeAtt,grp.niveau);
+      var noLimAtt=noLimitsTango(grp.date);
+      var compAtt=!noLimAtt&&(guiConf>=22||gdeConf>=23);
       var body='<div class="section-hdr" style="color:'+ccAtt+';">'+fmtDate(grp.date)+' — '+nivLbl
-        +' <span style="font-weight:400;color:var(--warn-text);font-size:11px;">👨 '+guiConf+'/22 · 👩 '+gdeConf+'/23 — complet</span></div>';
+        +(noLimAtt
+          ?' <span style="font-weight:400;color:var(--dim);font-size:11px;">👨 '+guiConf+' · 👩 '+gdeConf+' confirmés</span>'
+          :' <span style="font-weight:400;color:'+(compAtt?'var(--warn-text)':'var(--dim)')+';font-size:11px;">👨 '+guiConf+'/22 · 👩 '+gdeConf+'/23'+(compAtt?' — complet':'')+' </span>')
+        +'</div>';
       attenteGrp.forEach(function(e){
         var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
         body += '<div class="point-row">'
