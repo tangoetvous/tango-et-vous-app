@@ -860,9 +860,18 @@ function capaciteCours(ville, niveau) {
   return { gui:gui, gde:gde, maxGui:CAP_GUI, maxGde:CAP_GDE,
            fullGui:gui>=CAP_GUI, fullGde:gde>=CAP_GDE };
 }
+// Pas de limites tango à partir du 1/12 (déc–juin = seconde moitié de saison)
+function noLimitsTangoToday() {
+  var mm = parseInt(today().slice(5,7), 10);
+  return mm < 9 || mm >= 12;
+}
 // Rendu d'un petit badge de capacité (inline)
 function capBadge(ville, niveau) {
   var c = capaciteCours(ville, niveau);
+  if (noLimitsTangoToday()) {
+    return '<span style="font-size:10px;color:#4ade80;font-weight:600;">👨 '+c.gui+'</span>'
+         + ' <span style="font-size:10px;color:#4ade80;font-weight:600;">👩 '+c.gde+'</span>';
+  }
   function col(n, max) { return n>=max?'#ff6b6b':n>=Math.round(max*0.85)?'#ffaa44':'#4ade80'; }
   var badge = '<span style="font-size:10px;color:'+col(c.gui,c.maxGui)+';font-weight:600;">👨 '+c.gui+'/'+c.maxGui+'</span>'
             + ' <span style="font-size:10px;color:'+col(c.gde,c.maxGde)+';font-weight:600;">👩 '+c.gde+'/'+c.maxGde+'</span>';
@@ -2622,7 +2631,7 @@ function renderElevesTango() {
   ONGLETS.forEach(function(o){
     var n=inscrits.filter(function(e){return e.ville===o.ville&&e.niveau===o.niv;}).length;
     var c=capaciteCours(o.ville,o.niv);
-    var dot=(c.fullGui||c.fullGde)?' 🔴':'';
+    var dot=(c.fullGui||c.fullGde)&&!noLimitsTangoToday()?' 🔴':'';
     h+='<button class="sub-tab'+(sousOngletEleves===o.id?' active':'')+'" data-sous-el="'+o.id+'">'+o.lbl+' ('+n+')'+dot+'</button>';
   });
   h+='</div>';
@@ -2657,11 +2666,15 @@ function _elevesResultatsHTML(inscrits) {
   if(!ong) return '';
   var liste=inscrits.filter(function(e){return e.ville===ong.ville&&e.niveau===ong.niv;});
   var cap=capaciteCours(ong.ville,ong.niv);
+  var noLimEl=noLimitsTangoToday();
   function capCol(n,max){return n>=max?'#ff6b6b':n>=Math.round(max*0.85)?'#ffaa44':'#4ade80';}
   var r='<div style="display:flex;align-items:center;gap:12px;padding:8px 4px 10px;border-bottom:1px solid var(--border);margin-bottom:6px;flex-wrap:wrap;">'
-    +'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gui,cap.maxGui)+';">👨 '+cap.gui+' / '+cap.maxGui+' guideurs</span>'
-    +'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gde,cap.maxGde)+';">👩 '+cap.gde+' / '+cap.maxGde+' guidées</span>'
-    +(cap.fullGui||cap.fullGde?'<span style="font-size:11px;font-weight:700;color:#ff6b6b;border:1px solid #ff6b6b;border-radius:4px;padding:1px 6px;">COMPLET</span>':'')
+    +(noLimEl
+      ?'<span style="font-size:12px;font-weight:600;color:#4ade80;">👨 '+cap.gui+' guideurs</span>'
+       +'<span style="font-size:12px;font-weight:600;color:#4ade80;">👩 '+cap.gde+' guidées</span>'
+      :'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gui,cap.maxGui)+';">👨 '+cap.gui+' / '+cap.maxGui+' guideurs</span>'
+       +'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gde,cap.maxGde)+';">👩 '+cap.gde+' / '+cap.maxGde+' guidées</span>'
+       +(cap.fullGui||cap.fullGde?'<span style="font-size:11px;font-weight:700;color:#ff6b6b;border:1px solid #ff6b6b;border-radius:4px;padding:1px 6px;">COMPLET</span>':''))
     +'</div>';
   if(!liste.length) return r+'<div class="empty-state">Aucun élève inscrit dans ce cours.</div>';
   var used={}, couples=[], soloGui=[], soloGde=[];
@@ -4965,7 +4978,7 @@ function soumettreValiderPaiement(force) {
   if(IS_DEMO){
     var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
     // Vérification capacité (sauf si forçage explicite)
-    if(e && !force) {
+    if(e && !force && !noLimitsTangoToday()) {
       var cap=capaciteCours(e.ville||'paris', e.niveau||'debutant');
       var estGui=e.role==='guideur', actuel=estGui?cap.gui:cap.gde, max=estGui?cap.maxGui:cap.maxGde;
       if(actuel>=max){
