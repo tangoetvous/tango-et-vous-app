@@ -2935,7 +2935,11 @@ function renderEssai() {
   });
 
   // À partir du 1/12, plus de limites de capacité pour le tango
-  function noLimitsTango(date) { return (date||'').slice(5) >= '12-01'; }
+  // Pas de limites à partir du 1/12 : mois 12 + toute la partie jan-juin (seconde moitié de saison)
+  function noLimitsTango(date) {
+    var mm = parseInt((date||'').slice(5,7), 10);
+    return mm < 9 || mm >= 12; // sept-nov = limites, déc-juin = sans limites
+  }
 
   // Helper : construit groupes date+niveau
   function buildGroupes(src) {
