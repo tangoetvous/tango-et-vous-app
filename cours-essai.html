@@ -384,7 +384,9 @@ const SCRIPT_URL = "https://script.google.com/macros/s/VOTRE_ID_DEPLOIEMENT/exec
 const QUOTA_MAX  = 22;
 
 // ── DONNÉES DATES ─────────────────────────────────────────
-const DATES = {
+// Valeurs initiales hardcodées (fallback si Apps Script inaccessible).
+// Au chargement de la page, getCoursDates est appelé et DATES est mis à jour.
+let DATES = {
   Paris: {
     "Débutant": [
       {d:"02/04/2026",saison:"2025-2026"},{d:"09/04/2026",saison:"2025-2026"},
@@ -1022,6 +1024,43 @@ function afficherRecapSucces() {
       ${niv  ? `<div class="sr-row"><span class="srk">Expérience</span><span class="srv">${niv}</span></div>` : ""}
     </div>
     ${partHTML}`;
+}
+
+// ── CHARGEMENT DYNAMIQUE DES DATES DEPUIS APPS SCRIPT ─────
+// Construit l'objet DATES à partir des tableaux plats paris/vincennes.
+// Les deux niveaux (Débutant / Intermédiaire & Avancé) partagent les mêmes dates.
+// Le flag gratuit:true est positionné automatiquement pour les débutants en septembre.
+function _buildDatesFromArrays(paris, vincennes) {
+  function toDMY(d) { return d.slice(8)+'/'+d.slice(5,7)+'/'+d.slice(0,4); }
+  function saison(d) {
+    var y=parseInt(d.slice(0,4)), m=parseInt(d.slice(5,7));
+    var sy = m>=9 ? y : y-1;
+    return sy+'-'+(sy+1);
+  }
+  function mkList(dates, isDebutant) {
+    return dates.map(function(d) {
+      var e = {d:toDMY(d), saison:saison(d)};
+      if (isDebutant && parseInt(d.slice(5,7))===9) e.gratuit = true;
+      return e;
+    });
+  }
+  return {
+    Paris:     {'Débutant':mkList(paris,true), 'Intermédiaire & Avancé':mkList(paris,false)},
+    Vincennes: {'Débutant':mkList(vincennes,true), 'Intermédiaire & Avancé':mkList(vincennes,false)},
+  };
+}
+
+// Récupère les dates depuis Apps Script et met à jour DATES.
+// Si le script n'est pas configuré ou si la requête échoue, les valeurs hardcodées sont conservées.
+if (!SCRIPT_URL.includes('VOTRE_ID')) {
+  fetch(SCRIPT_URL+'?action=getCoursDates')
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (Array.isArray(data.paris) && Array.isArray(data.vincennes) && data.paris.length && data.vincennes.length) {
+        DATES = _buildDatesFromArrays(data.paris, data.vincennes);
+      }
+    })
+    .catch(function(){});
 }
 
 // ── RÉINITIALISATION ──────────────────────────────────────

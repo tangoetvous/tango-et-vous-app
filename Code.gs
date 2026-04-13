@@ -108,6 +108,40 @@ const LIVRETS = {
 const CAPACITE_ESSAI    = 16;  // max inscriptions par créneau d'essai
 const LIEUX_ESSAI_LABEL = {paris:'Paris — Espace Danse Studio',vincennes:'Vincennes — Espace Sorano'};
 
+// ── Dates des cours par défaut (source de vérité initiale) ────
+// Ces valeurs sont utilisées comme fallback si PropertiesService est vide.
+// Après toute modification dans l'admin, les tableaux sont persistés via saveCoursDates.
+const DEFAULT_COURS_PARIS = [
+  '2026-04-02','2026-04-09','2026-04-16','2026-04-23',
+  '2026-05-07','2026-05-21','2026-05-28',
+  '2026-06-04','2026-06-11','2026-06-18','2026-06-25',
+  '2026-09-03','2026-09-10','2026-09-17','2026-09-24',
+  '2026-10-01','2026-10-08','2026-10-15','2026-10-22',
+  '2026-11-05','2026-11-12','2026-11-19','2026-11-26',
+  '2026-12-03','2026-12-10','2026-12-17',
+  '2027-01-07','2027-01-14','2027-01-21','2027-01-28',
+  '2027-02-04','2027-02-18','2027-02-25',
+  '2027-03-04','2027-03-11','2027-03-18','2027-03-25',
+  '2027-04-01','2027-04-15','2027-04-22','2027-04-29',
+  '2027-05-13','2027-05-20','2027-05-27',
+  '2027-06-03','2027-06-10','2027-06-17','2027-06-24',
+];
+const DEFAULT_COURS_VINCENNES = [
+  '2026-04-13',
+  '2026-05-04','2026-05-11','2026-05-18',
+  '2026-06-01','2026-06-08','2026-06-15','2026-06-29',
+  '2026-09-07','2026-09-14','2026-09-21','2026-09-28',
+  '2026-10-05','2026-10-12',
+  '2026-11-02','2026-11-09','2026-11-16','2026-11-23','2026-11-30',
+  '2026-12-07','2026-12-14',
+  '2027-01-04','2027-01-11','2027-01-18','2027-01-25',
+  '2027-02-01','2027-02-22',
+  '2027-03-01','2027-03-08','2027-03-15','2027-03-22',
+  '2027-04-19','2027-04-26',
+  '2027-05-03','2027-05-10','2027-05-24','2027-05-31',
+  '2027-06-07','2027-06-14','2027-06-21',
+];
+
 // ── Dernier cours Paris de la saison (à mettre à jour chaque année) ──
 // J+1 de cette date → email cartes restantes envoyé automatiquement
 const DERNIER_COURS_PARIS_JUIN = '2026-06-26'; // vendredi 26 juin 2026
@@ -152,6 +186,8 @@ function doGet(e) {
       case 'getAdminData':    r = getAdminData(p.email||''); break;
       case 'getPublications': r = getPublications(); break;
       case 'getAgendaExtra':  r = getAgendaExtra(); break;
+      case 'getCoursDates':   r = getCoursDates(); break;
+      case 'getInscrits':     r = getInscrits(p); break;
       default:                r = {error:'Action GET inconnue : '+a};
     }
     out.setContent(JSON.stringify(r));
@@ -196,6 +232,7 @@ function doPost(e) {
       case 'toggleCartePaye':             r = toggleCartePaye(b); break;
       // ── Agenda modifications ───────────────────────────────────
       case 'sauverModifAgenda':           r = sauverModifAgendaGs(b); break;
+      case 'saveCoursDates':              r = saveCoursDates(b); break;
       // ── Pointage QR code (depuis pointer.html) ────────────────
       case 'pointageQR':                  r = ajouterPresenceManuelle(b); break;
       default:                       r = {error:'Action POST inconnue : '+a};
@@ -1607,6 +1644,71 @@ function sauverModifAgendaGs(body) {
     try { _notifModifAgenda(date,type,actionType,note||'',newDate||''); } catch(err) {}
   }
   return {ok:true};
+}
+
+// ================================================================
+// DATES DES COURS — lecture / écriture PropertiesService
+// ================================================================
+
+// Retourne les tableaux de dates actuels (PropertiesService ou valeurs par défaut).
+// Action GET publique — appelée par cours-essai.html pour construire le sélecteur de dates.
+function getCoursDates() {
+  const props = PropertiesService.getScriptProperties();
+  return {
+    paris:     JSON.parse(props.getProperty('COURS_PARIS_DATES')     || JSON.stringify(DEFAULT_COURS_PARIS)),
+    vincennes: JSON.parse(props.getProperty('COURS_VINCENNES_DATES') || JSON.stringify(DEFAULT_COURS_VINCENNES)),
+  };
+}
+
+// Persiste les tableaux de dates dans PropertiesService.
+// Action POST admin — appelée depuis admin.html après chaque modification.
+function saveCoursDates(body) {
+  const email = (body.email||'').trim().toLowerCase();
+  if (!email || !ADMIN_EMAILS.includes(email)) throw new Error('Accès refusé');
+  const props = PropertiesService.getScriptProperties();
+  if (Array.isArray(body.paris))
+    props.setProperty('COURS_PARIS_DATES',     JSON.stringify(body.paris.slice().sort()));
+  if (Array.isArray(body.vincennes))
+    props.setProperty('COURS_VINCENNES_DATES', JSON.stringify(body.vincennes.slice().sort()));
+  return {ok:true};
+}
+
+// Retourne le nombre de guideurs / guidées inscrit(e)s pour un créneau donné.
+// Appelée par cours-essai.html pour afficher les quotas sur chaque date.
+// Paramètres GET : lieu (paris|vincennes), niveau, date (DD/MM/YYYY ou YYYY-MM-DD)
+function getInscrits(p) {
+  const lieu   = (p.lieu||'').trim().toLowerCase();
+  const niveau = (p.niveau||'').trim();
+  const dateRaw = (p.date||'').trim();
+
+  // Normaliser DD/MM/YYYY → YYYY-MM-DD
+  let dateNorm = dateRaw;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateRaw)) {
+    const pts = dateRaw.split('/');
+    dateNorm = pts[2]+'-'+pts[1]+'-'+pts[0];
+  }
+  if (!lieu || !niveau || !dateNorm) return {guideurs:[], guides:[]};
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s  = ss.getSheetByName(SHEET_ESSAI);
+  if (!s || s.getLastRow() < 2) return {guideurs:[], guides:[]};
+
+  const rows = s.getRange(2, 1, s.getLastRow()-1, 11).getValues();
+  const guideurs = [], guides = [];
+
+  rows.forEach(r => {
+    if (!r[0]) return;
+    if (_fmtDate(r[7]) !== dateNorm) return;
+    if ((r[5]||'').toString().toLowerCase() !== lieu) return;
+    if ((r[6]||'').toString() !== niveau) return;
+    if (((r[10]||'inscrit').toString().toLowerCase()) !== 'inscrit') return;
+    const role = (r[8]||'').toString().toLowerCase();
+    const obj  = {prenom:r[1]||'', nom:r[2]||''};
+    if (role.includes('guideur') || role.includes('double')) guideurs.push(obj);
+    if (role.includes('guidé')   || role.includes('double')) guides.push(obj);
+  });
+
+  return {guideurs, guides};
 }
 
 // Notif email lors d'une modification d'agenda

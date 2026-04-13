@@ -2073,8 +2073,22 @@ async function chargerDonnees() {
     adminData = d;
     if(!adminData.carteReports)adminData.carteReports=[];
     if (!filtreStage && adminData.stages) filtreStage=Object.keys(adminData.stages)[0]||'';
+    // Charger les dates persistées (écrase les valeurs hardcodées si elles existent)
+    try {
+      var rc = await fetch(APPS_SCRIPT_URL+'?action=getCoursDates');
+      var dc = await rc.json();
+      if (Array.isArray(dc.paris)     && dc.paris.length)     COURS_PARIS     = dc.paris;
+      if (Array.isArray(dc.vincennes) && dc.vincennes.length) COURS_VINCENNES = dc.vincennes;
+    } catch(ex) { /* conserver les valeurs hardcodées si erreur */ }
     renderTab();
   } catch(e) { console.error('Erreur:', e.message); }
+}
+
+// Persiste les tableaux COURS_PARIS / COURS_VINCENNES dans Apps Script
+function saveCoursDatesRemote() {
+  if (IS_DEMO || !adminData._email) return;
+  postAS({action:'saveCoursDates', email:adminData._email,
+          paris:COURS_PARIS, vincennes:COURS_VINCENNES}).catch(function(){});
 }
 
 // ================================================================
@@ -4393,6 +4407,7 @@ function sauverModifAgenda() {
   var ok = gel('am-ok');
   if (ok) { ok.style.display='block'; setTimeout(function(){ok.style.display='none';},2500); }
   if (!IS_DEMO) postAS({action:'sauverModifAgenda', date:date, type:type, actionType:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu}).catch(function(){});
+  saveCoursDatesRemote();
   _broadcastAdminSync('agendaUpdate', {type:type, date:date, action:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu});
   renderTab();
 }
@@ -4401,6 +4416,7 @@ function supprimerModifAgenda(id) {
   var m = agendaModifs.find(function(x){return x.id===id;});
   if (m) { _undoMutateAgendaArray(m); _broadcastAdminSync('agendaUpdate', {type:m.type, date:m.date, action:'annule_modif', origAction:m.action, newDate:m.newDate}); }
   agendaModifs = agendaModifs.filter(function(x){return x.id!==id;});
+  saveCoursDatesRemote();
   renderTab();
 }
 
@@ -4439,6 +4455,7 @@ function ajouterDatesLot() {
     }
   });
   afficherToast(added>0 ? '✓ '+added+' date'+(added>1?'s':'')+' ajoutée'+(added>1?'s':'')+' à l\'agenda' : '⚠️ Aucune date valide reconnue');
+  if (added > 0) saveCoursDatesRemote();
   renderTab();
 }
 
