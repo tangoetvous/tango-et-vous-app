@@ -241,7 +241,17 @@
     showScreen('screen-loading');
     try {
       const url = `${APPS_SCRIPT_URL}?action=getEleve&email=${encodeURIComponent(email)}`;
-      const res = await fetch(url);
+      let res;
+      try { res = await fetch(url); }
+      catch(netErr) {
+        // Erreur réseau (hors-ligne, serveur inaccessible)
+        $('notfound-icon').textContent = '📡';
+        $('notfound-title').textContent = 'Connexion impossible';
+        $('notfound-desc').textContent = 'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.';
+        $('notfound-email').textContent = '';
+        showScreen('screen-notfound'); return;
+      }
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       eleveData = data;
@@ -249,8 +259,12 @@
       showScreen('screen-dashboard');
       _initAdminSync();
     } catch(e) {
-      showScreen('screen-notfound');
+      // Erreur API : élève introuvable ou erreur serveur
+      $('notfound-icon').textContent = '🔍';
+      $('notfound-title').textContent = 'Compte introuvable';
+      $('notfound-desc').textContent = 'Aucun élève enregistré avec l\'adresse';
       $('notfound-email').textContent = email || '';
+      showScreen('screen-notfound');
     }
   }
 
@@ -981,8 +995,7 @@
     if (!IS_DEMO) {
       try {
         const res  = await fetch(`${APPS_SCRIPT_URL}?action=getPublications`);
-        const data = await res.json();
-        pubs = data.publications || [];
+        if (res.ok) { const data = await res.json(); pubs = data.publications || []; }
       } catch(e) {}
     }
 
@@ -1276,6 +1289,7 @@
         action:'pointageManuel', eleveId:eleveData.eleve.id,
         date, niveau:eleveData.eleve.niveau, note:'Pointage élève (auto)', nbCours:nb
       })});
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const data = await resp.json();
       if (data.skipped) {
         msgEl.textContent='Déjà pointé pour ce jour — aucun doublon créé.'; msgEl.style.display='block';
@@ -1283,6 +1297,7 @@
       }
       fermerModalPointerSelf();
       const r2 = await fetch(`${APPS_SCRIPT_URL}?action=getEleve&email=${encodeURIComponent(eleveData.eleve.email||'')}`);
+      if (!r2.ok) throw new Error('HTTP ' + r2.status);
       const d2  = await r2.json();
       if (d2 && d2.carte) { eleveData.carte=d2.carte; eleveData.presences=d2.presences||eleveData.presences; renderDashboard(); }
     } catch(err) {
@@ -2179,9 +2194,9 @@ a{color:var(--gold);text-decoration:none;}
      ================================================================ -->
 <div class="screen" id="screen-notfound">
   <div class="notfound-card">
-    <span class="notfound-icon">🔍</span>
-    <div class="notfound-title">Compte introuvable</div>
-    <div class="notfound-desc">Aucun élève enregistré avec l'adresse</div>
+    <span class="notfound-icon" id="notfound-icon">🔍</span>
+    <div class="notfound-title" id="notfound-title">Compte introuvable</div>
+    <div class="notfound-desc" id="notfound-desc">Aucun élève enregistré avec l'adresse</div>
     <div class="notfound-email" id="notfound-email"></div>
     <div class="notfound-contact">Vérifiez que vous utilisez la même adresse email que lors de votre inscription.<br/><br/>Un problème ? Contactez-nous :<br/><a href="mailto:tangoetvous@gmail.com">tangoetvous@gmail.com</a></div>
     <button class="btn-back" id="btn-back-notfound" style="margin-top:18px;">← Réessayer</button>

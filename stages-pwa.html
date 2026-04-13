@@ -575,6 +575,7 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 const APPS_SCRIPT_URL = 'REMPLACER_PAR_TON_URL_APPS_SCRIPT';
+const IS_DEMO = APPS_SCRIPT_URL.includes('REMPLACER');
 
 // ── Données ─────────────────────────────────────────────────────
 const DATES_STAGES = [
@@ -970,6 +971,20 @@ async function soumettre(){
     remarques: document.getElementById('remarques').value.trim(),
     timestamp: new Date().toLocaleString('fr-FR')
   };
+
+  // Mode démo : simuler le succès sans appel réseau
+  if (IS_DEMO) {
+    afficherConfirmation(data);
+    var msgDemo = {type:'stageInscription', data:data};
+    var isIframeDemo = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
+    if (isIframeDemo) {
+      try { window.parent.postMessage(msgDemo, '*'); } catch(e){}
+    } else {
+      try { var pd=JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]'); pd.push(msgDemo); localStorage.setItem('tev_pending_inscriptions',JSON.stringify(pd)); } catch(e){}
+      try { if(window.BroadcastChannel){ var bcd=new BroadcastChannel('tev_inscriptions'); bcd.postMessage(msgDemo); bcd.close(); } } catch(e){}
+    }
+    return;
+  }
 
   try {
     await fetch(APPS_SCRIPT_URL, {

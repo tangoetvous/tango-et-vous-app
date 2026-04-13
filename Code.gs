@@ -392,8 +392,11 @@ function declencheurCartesFinSaison() {
     // Vérifier que la carte n'est pas expirée
     const expVal = r[COL.EXPIRATION];
     if (expVal) {
-      const expDate = new Date(_fmtDate(expVal) + 'T00:00:00');
-      if (expDate < now) return;
+      const expFmt = _fmtDate(expVal);
+      if (expFmt) {
+        const expDate = new Date(expFmt + 'T00:00:00');
+        if (!isNaN(expDate.getTime()) && expDate < now) return;
+      }
     }
     const email = (r[COL.EMAIL]||'').toString().toLowerCase().trim();
     if (!email) return;
