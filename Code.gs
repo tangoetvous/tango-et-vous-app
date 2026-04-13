@@ -69,6 +69,12 @@ const DATES_STAGES_LABELS = {
   '2026-03-13':'Samedi 13 Mars 2026',    '2026-04-24':'Samedi 24 Avril 2026',
   '2026-05-22':'Samedi 22 Mai 2026',     '2026-06-19':'Samedi 19 Juin 2026',
 };
+// Thèmes des stages (optionnel — laisser '' si pas de thème)
+const STAGES_THEMES = {
+  '2025-09-19':'', '2025-10-03':'', '2025-11-07':'', '2025-12-05':'',
+  '2026-01-30':'', '2026-02-27':'', '2026-03-13':'', '2026-04-24':'',
+  '2026-05-22':'', '2026-06-19':'',
+};
 
 const CAPACITE_ESSAI    = 16;  // max inscriptions par créneau d'essai
 const LIEUX_ESSAI_LABEL = {paris:'Paris — Centre Kim Kan',vincennes:'Vincennes'};
@@ -610,9 +616,11 @@ function validerAttenteStage(body) {
     if (_fmtDate(r[7])!==date||(r[9]||'').toString().toLowerCase()!=='attente') return;
     s.getRange(i+2,10).setValue('confirme'); count++;
     const em = (r[3]||'').toString().trim();
-    if (em) MailApp.sendEmail({to:em,replyTo:EMAIL_CONTACT,
-      subject:NOM_ECOLE+' — Stage confirmé !',
-      htmlBody:_tplConfirmAttenteStage((r[1]||'').toString(),date)});
+    if (em) _emailStageConfirmationTardive(
+      (r[1]||'').toString().trim(), em, date,
+      (r[8]||'').toString(),
+      (r[11]||'').toString().trim(),
+      +(r[14]||0), +(r[15]||0));
   });
   return {ok:true,message:`${count} confirmée(s)`};
 }
@@ -1107,27 +1115,154 @@ function _confirmCP(b){
     <div style="text-align:center;margin-top:20px;color:#D4AF37;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></div>`)});
 }
 
-// ── Stages ────────────────────────────────────────────────────
-function _confirmStage(b){
-  if (!b.email) return;
-  const isAtt=b.typeConfirmation==='attente';
-  const dates=(b.inscriptionsParDate||[]).map(d=>`<div style="background:#0f0d00;border:1px solid #3a2d00;border-radius:8px;padding:12px;margin-bottom:8px;"><strong style="color:#D4AF37;">📅 ${d.dateLabel}</strong><br/><span style="color:#e8c84a;">À régler sur place : ${d.prixInscrit+(d.prixPartenaire||0)} €</span></div>`).join('');
-  MailApp.sendEmail({to:b.email,replyTo:EMAIL_CONTACT,
-    subject:NOM_ECOLE+(isAtt?' — Demande de stage reçue':' — Stage confirmé !'),
-    htmlBody:_emailWrap(isAtt?'Liste d\'attente':'Inscription confirmée',`
-    <p style="font-size:15px;margin-bottom:14px;">Bonjour <strong style="color:#D4AF37;">${b.prenom}</strong>,</p>
-    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:14px;">${isAtt?'Demande en liste d\'attente — confirmation dès que possible.':'Vos inscriptions sont confirmées.'}</p>
-    ${dates}
-    <div style="background:#0f0d00;border:1px solid #3a2d00;border-radius:8px;padding:12px;margin-top:8px;font-size:13px;color:#a08050;">📍 <strong style="color:#D4AF37;">Centre Kim Kan</strong> — 64 rue Orfila, M° Gambetta · 💵 Paiement sur place</div>
-    <div style="text-align:center;margin-top:18px;color:#D4AF37;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></div>`)});
+// ── Stages — helpers email ────────────────────────────────────
+function _stageParseSlots(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  return raw.toString().split(',').map(s=>s.trim()).filter(Boolean);
+}
+function _stageInfoSlot(id) {
+  const type = (id||'').split('-').slice(3).join('-');
+  const map = {
+    technique: {label:'Cours de technique', h:'14h\u202f\u2013\u202f15h'},
+    stage1:    {label:'Stage',              h:'15h\u202f\u2013\u202f16h30'},
+    stage2:    {label:'Stage',              h:'16h30\u202f\u2013\u202f18h'},
+  };
+  return map[type] || {label:type||id, h:''};
+}
+function _emailStageWrap(icon, label, lColor, barBg, bodyHtml) {
+  return '<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#0d0d0d;color:#f0f0f0;">'
+    +'<div style="background:#111111;padding:28px 24px 22px;text-align:center;border-bottom:3px solid #D4AF37;">'
+    +'<div style="font-size:24px;font-weight:300;letter-spacing:8px;color:#D4AF37;margin-bottom:6px;">TANGO &amp; VOUS</div>'
+    +'<div style="font-size:10px;letter-spacing:4px;color:#777;text-transform:uppercase;">Le Regard Se Pose</div>'
+    +'</div>'
+    +'<div style="background:'+barBg+';padding:13px 24px;text-align:center;">'
+    +'<span style="font-size:18px;vertical-align:middle;">'+icon+'</span>'
+    +'<span style="color:'+lColor+';font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;vertical-align:middle;margin-left:8px;">'+label+'</span>'
+    +'</div>'
+    +'<div style="padding:28px 24px;">'+bodyHtml+'</div>'
+    +'<div style="background:#0a0800;padding:16px 24px;border-top:1px solid #2a2000;text-align:center;font-size:11px;color:#555;line-height:1.9;">'
+    +NOM_ECOLE+' · Le Regard Se Pose<br/>'
+    +'<a href="'+URL_SITE+'" style="color:#777;text-decoration:none;">'+URL_SITE+'</a>'
+    +' &nbsp;·&nbsp; <a href="mailto:'+EMAIL_CONTACT+'" style="color:#777;text-decoration:none;">'+EMAIL_CONTACT+'</a>'
+    +'</div></div>';
+}
+function _stageRecapBox(inscriptions, prenom, pNom, totalLabel, total) {
+  const slRow = id => {
+    const inf = _stageInfoSlot(id);
+    return '<div style="padding:3px 0 3px 12px;font-size:12px;color:#ddd;">▸ '+inf.label
+      +(inf.h?' <span style="color:#e8a0a0;font-size:11px;">'+inf.h+'</span>':'')+'</div>';
+  };
+  const lines = (inscriptions||[]).map((d,i,arr)=>{
+    const dl  = d.dateLabel||DATES_STAGES_LABELS[d.date]||d.date;
+    const th  = STAGES_THEMES[d.date] ? ' <span style="color:#e8a0a0;font-size:11px;">— '+STAGES_THEMES[d.date]+'</span>' : '';
+    const sl  = _stageParseSlots(d.stagesInscrit);
+    const sep = i<arr.length-1 ? 'border-bottom:1px solid #8b3a3a;padding-bottom:14px;margin-bottom:14px;' : '';
+    let h = '<div style="'+sep+'"><div style="color:#D4AF37;font-size:13px;font-weight:700;margin-bottom:8px;">📅 '+dl+th+'</div>';
+    if (prenom) {
+      h += '<div style="font-size:12px;color:#fff;font-weight:600;margin-bottom:4px;">👤 '+prenom+'</div>'
+        + sl.map(slRow).join('')
+        + (d.prixInscrit ? '<div style="font-size:12px;color:#ffd4d4;text-align:right;margin-top:4px;">Montant : '+d.prixInscrit+' €</div>' : '');
+    }
+    if (pNom && d.prixPartenaire) {
+      h += '<div style="font-size:12px;color:#fff;font-weight:600;margin:10px 0 4px;">👤 '+pNom+'</div>'
+        + sl.map(slRow).join('')
+        + '<div style="font-size:12px;color:#ffd4d4;text-align:right;margin-top:4px;">Montant : '+d.prixPartenaire+' €</div>';
+    }
+    return h+'</div>';
+  }).join('');
+  const totRow = total!=null
+    ? '<table style="width:100%;border-collapse:collapse;margin-top:14px;padding-top:12px;border-top:1px solid #8b3a3a;">'
+      +'<tr><td style="font-size:13px;color:#e8a0a0;">'+totalLabel+'</td>'
+      +'<td style="font-size:15px;font-weight:700;color:#D4AF37;text-align:right;">'+total+' €</td></tr></table>'
+    : '';
+  return '<div style="background:#6b1a1a;border-radius:10px;padding:18px 20px;margin:16px 0;">'
+    +'<div style="font-size:10px;color:#e8a0a0;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #8b3a3a;">Récapitulatif</div>'
+    +lines+totRow+'</div>';
 }
 
-function _tplConfirmAttenteStage(prenom,date){
-  return _emailWrap('Stage confirmé !',`
-    <p style="font-size:15px;margin-bottom:14px;">Bonjour <strong style="color:#D4AF37;">${prenom}</strong>,</p>
-    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:14px;">Votre inscription au stage du <strong style="color:#D4AF37;">${DATES_STAGES_LABELS[date]||date}</strong> est confirmée !</p>
-    <div style="background:#0f0d00;border:1px solid #3a2d00;border-radius:8px;padding:12px;font-size:13px;color:#a08050;">📍 <strong style="color:#D4AF37;">Centre Kim Kan</strong> — 64 rue Orfila, M° Gambetta · 💵 Paiement sur place</div>
-    <div style="text-align:center;margin-top:18px;color:#D4AF37;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></div>`);
+// ── Stages — emails ───────────────────────────────────────────
+function _emailStageConfirme(b) {
+  if (!b.email) return;
+  const pNom  = (b.pPrenom&&b.pNom) ? (b.pPrenom+' '+b.pNom).trim() : '';
+  const total = b.totalGlobal!=null ? b.totalGlobal
+    : (b.inscriptionsParDate||[]).reduce((s,d)=>s+(+d.prixInscrit||0)+(+d.prixPartenaire||0),0);
+  const recap = _stageRecapBox(b.inscriptionsParDate, b.prenom, pNom, 'Total à régler sur place', total);
+  const html  = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+b.prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Votre inscription au stage est <strong style="color:#81c784;">confirmée</strong>. Nous avons hâte de vous retrouver sur la piste !</p>'
+    +recap
+    +'<div style="background:#1a1a1a;border:1px solid #2f2f2f;border-radius:10px;padding:14px 16px;margin:16px 0;font-size:12px;color:#aaa;line-height:1.9;">'
+    +'📍 <strong style="color:#D4AF37;">Centre Kim Kan</strong> — 64 rue Orfila, Paris 20ᵉ<br/>'
+    +'🚇 Métro <strong style="color:#ccc;">Gambetta</strong> (lignes 3 &amp; 3bis)<br/>'
+    +'💵 Règlement sur place le jour du stage</div>'
+    +'<div style="text-align:center;margin:22px 0 10px;">'
+    +'<a href="'+URL_SITE+'" style="display:inline-block;background:#D4AF37;color:#000;padding:14px 34px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;">Je confirme ma présence</a>'
+    +'</div>'
+    +'<div style="text-align:center;">'
+    +'<a href="mailto:'+EMAIL_CONTACT+'?subject=Modification%20inscription%20stage" style="font-size:12px;color:#777;text-decoration:underline;">Modifier mon inscription</a>'
+    +'</div>'
+    +'<p style="text-align:center;font-size:14px;color:#D4AF37;margin:24px 0 0;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></p>';
+  MailApp.sendEmail({to:b.email, replyTo:EMAIL_CONTACT,
+    subject:NOM_ECOLE+' — Votre stage est confirmé !',
+    htmlBody:_emailStageWrap('✅','Inscription confirmée','#81c784','#0a1200',html)});
+}
+
+function _emailStageAttente(b) {
+  if (!b.email) return;
+  const pNom  = (b.pPrenom&&b.pNom) ? (b.pPrenom+' '+b.pNom).trim() : '';
+  const total = b.totalGlobal!=null ? b.totalGlobal
+    : (b.inscriptionsParDate||[]).reduce((s,d)=>s+(+d.prixInscrit||0)+(+d.prixPartenaire||0),0);
+  const recap = _stageRecapBox(b.inscriptionsParDate, b.prenom, pNom, 'Montant si confirmé', total);
+  const html  = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+b.prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 16px;">Votre demande d\'inscription au stage a bien été reçue. <strong style="color:#e8c84a;">Vous êtes actuellement en liste d\'attente</strong> et nous vous confirmerons dès que possible.</p>'
+    +'<div style="background:#1a1400;border:1px solid #3a2d00;border-radius:10px;padding:14px 16px;margin:0 0 16px;font-size:12px;color:#ccc;line-height:1.9;">'
+    +'<div style="font-size:10px;color:#e8c84a;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Pourquoi une liste d\'attente ?</div>'
+    +'Nos stages accueillent des couples guideur&nbsp;/&nbsp;guidée. Pour assurer la meilleure expérience, nous veillons à l\'équilibre des rôles. Vous serez confirmé(e) dès qu\'une place correspondant à votre rôle est disponible.'
+    +'</div>'
+    +recap
+    +'<div style="text-align:center;margin:20px 0 0;">'
+    +'<a href="mailto:'+EMAIL_CONTACT+'?subject=Question%20liste%20d%27attente%20stage" style="display:inline-block;background:transparent;color:#D4AF37;padding:12px 28px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border:1px solid #D4AF37;">Nous contacter</a>'
+    +'</div>'
+    +'<p style="text-align:center;font-size:14px;color:#D4AF37;margin:24px 0 0;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></p>';
+  MailApp.sendEmail({to:b.email, replyTo:EMAIL_CONTACT,
+    subject:NOM_ECOLE+' — Demande de stage reçue',
+    htmlBody:_emailStageWrap('⏳','Liste d\'attente','#e8c84a','#1a1400',html)});
+}
+
+function _emailStageConfirmationTardive(prenom, email, date, slotsRaw, pNom, prixInscrit, prixPartenaire) {
+  if (!email) return;
+  const dateLabel = DATES_STAGES_LABELS[date]||date;
+  const total     = (+prixInscrit||0)+(+prixPartenaire||0);
+  const inscriptions = [{
+    date, dateLabel, stagesInscrit:slotsRaw,
+    prixInscrit:+prixInscrit||0,
+    prixPartenaire:pNom ? +prixPartenaire||0 : 0,
+  }];
+  const recap = _stageRecapBox(inscriptions, prenom, pNom||'', 'Total à régler sur place', total||null);
+  const html  = '<p style="font-size:17px;margin:0 0 4px;color:#D4AF37;font-weight:700;">🎉 Bonne nouvelle !</p>'
+    +'<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Vous étiez en liste d\'attente pour le stage du <strong style="color:#D4AF37;">'+dateLabel+'</strong> — une place vient de se libérer pour vous. Votre inscription est maintenant <strong style="color:#81c784;">confirmée</strong> !</p>'
+    +recap
+    +'<div style="background:#1a1a1a;border:1px solid #2f2f2f;border-radius:10px;padding:14px 16px;margin:16px 0;font-size:12px;color:#aaa;line-height:1.9;">'
+    +'📍 <strong style="color:#D4AF37;">Centre Kim Kan</strong> — 64 rue Orfila, Paris 20ᵉ<br/>'
+    +'🚇 Métro <strong style="color:#ccc;">Gambetta</strong> (lignes 3 &amp; 3bis)<br/>'
+    +'💵 Règlement sur place le jour du stage</div>'
+    +'<div style="text-align:center;margin:22px 0 10px;">'
+    +'<a href="'+URL_SITE+'" style="display:inline-block;background:#D4AF37;color:#000;padding:14px 34px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;">Je confirme ma présence</a>'
+    +'</div>'
+    +'<div style="text-align:center;">'
+    +'<a href="mailto:'+EMAIL_CONTACT+'?subject=Modification%20inscription%20stage" style="font-size:12px;color:#777;text-decoration:underline;">Modifier mon inscription</a>'
+    +'</div>'
+    +'<p style="text-align:center;font-size:14px;color:#D4AF37;margin:24px 0 0;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></p>';
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject:NOM_ECOLE+' — Votre stage est confirmé !',
+    htmlBody:_emailStageWrap('🎉','Confirmation','#D4AF37','#1a1000',html)});
+}
+
+function _confirmStage(b) {
+  if (!b.email) return;
+  if (b.typeConfirmation==='attente') _emailStageAttente(b);
+  else _emailStageConfirme(b);
 }
 
 // ── Cours d'essai ─────────────────────────────────────────────
