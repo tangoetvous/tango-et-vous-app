@@ -76,8 +76,37 @@ const STAGES_THEMES = {
   '2026-05-22':'', '2026-06-19':'',
 };
 
+// ── Signature emails ───────────────────────────────────────────
+const SIG_HTML = '<p style="text-align:center;font-size:14px;color:#D4AF37;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong>Florencia Garcia &amp; Jérémy Braitbart</strong><br/><span style="font-size:11px;color:#888;">Tango &amp; Vous</span></p>';
+
+// ── Lieux cours (≠ stages) ─────────────────────────────────────
+const LIEUX_COURS = {
+  paris:    {nom:'Espace Danse Studio', adresse:'24 villa Riberolle, Paris 20e',
+             transport:'M° Alexandre Dumas (L2)',
+             mapsUrl:'https://maps.google.com/?q=24+villa+Riberolle+75020+Paris'},
+  vincennes:{nom:'Espace Sorano', adresse:'16 rue Charles Pathé, 94300 Vincennes',
+             transport:'RER A — Vincennes (pl. Pierre Sémard)',
+             mapsUrl:'https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes'},
+};
+
+// ── Livrets d'information (saison / niveau / ville) ────────────
+const LIVRETS = {
+  '2025-2026': {
+    'debutant-paris':         'https://drive.google.com/file/d/1j9qbT7ecRok676pPiZjPBXR9qsCfWuSX/view?usp=sharing',
+    'intermediaire-paris':    'https://drive.google.com/file/d/1BRT6-d-qqhfi5gVZzQJt3lGUjepsckR4/view?usp=sharing',
+    'debutant-vincennes':     'https://drive.google.com/file/d/1Si_SMSRb7qoeBpJpHjJHkft8dOLVRaGH/view?usp=sharing',
+    'intermediaire-vincennes':'https://drive.google.com/file/d/1EmZhaBY0U5X2O_HkWGE-tZGluzDPuGCH/view?usp=sharing',
+  },
+  '2026-2027': {
+    'debutant-paris':         'https://drive.google.com/file/d/1cc9b5i1jG9yFUH6CzOv_fl5ivzbtuvuC/view?usp=sharing',
+    'intermediaire-paris':    'https://drive.google.com/file/d/100EdXEX3K1qhBjzdVmWe2nFKx5K6g5vB/view?usp=sharing',
+    'debutant-vincennes':     'https://drive.google.com/file/d/1cBGVsYLT6r-Hp5bZAwfe1b8jeHWuRLLx/view?usp=sharing',
+    'intermediaire-vincennes':'https://drive.google.com/file/d/1tLTGgPy_nagkP_OZIoG_M2Kr-MFZ4K67/view?usp=sharing',
+  },
+};
+
 const CAPACITE_ESSAI    = 16;  // max inscriptions par créneau d'essai
-const LIEUX_ESSAI_LABEL = {paris:'Paris — Centre Kim Kan',vincennes:'Vincennes'};
+const LIEUX_ESSAI_LABEL = {paris:'Paris — Espace Danse Studio',vincennes:'Vincennes — Espace Sorano'};
 
 // ── Dernier cours Paris de la saison (à mettre à jour chaque année) ──
 // J+1 de cette date → email cartes restantes envoyé automatiquement
@@ -109,7 +138,7 @@ function doGet(e) {
       +'<h2>Présence confirmée !</h2>'
       +'<p>Merci, votre présence au cours d\'essai est bien enregistrée.</p>'
       +'<p>À très bientôt sur la piste !</p>'
-      +'<p class="sig">Marc &amp; Eva — Tango &amp; Vous</p>'
+      +'<p class="sig">Florencia Garcia &amp; Jérémy Braitbart — Tango &amp; Vous</p>'
       +'</div></body></html>'
     );
   }
@@ -708,11 +737,11 @@ function envoyerEmailsEssaiJ1(body) {
   (presents||[]).forEach(p=>{ if (!p.email) return;
     MailApp.sendEmail({to:p.email,replyTo:EMAIL_CONTACT,
       subject:NOM_ECOLE+' — Suite à votre cours d\'essai',
-      htmlBody:_tplEssaiPresent(p,df,nl,vl,ui)}); ps++; });
+      htmlBody:_tplEssaiPresent(p,date,df,nl,vl,ui)}); ps++; });
   (absents||[]).forEach(p=>{ if (!p.email) return;
     MailApp.sendEmail({to:p.email,replyTo:EMAIL_CONTACT,
       subject:NOM_ECOLE+' — Votre cours d\'essai du '+df,
-      htmlBody:_tplEssaiAbsent(p,df,nl,vl,ue)}); as++; });
+      htmlBody:_tplEssaiAbsent(p,date,df,nl,vl,ue)}); as++; });
   return {ok:true,presentsSent:ps,absentsSent:as};
 }
 
@@ -781,9 +810,9 @@ function traiterInscriptionEssai(body) {
 
   // Emails élève (et partenaire)
   const fn = enAttente ? _emailEssaiAttente : _emailEssaiConfirme;
-  try { fn(prenom, email, dateLbl, horLbl, lieuLbl); } catch(e) {}
+  try { fn(prenom, email, dateLbl, horLbl, lieuLbl, dateNorm, niveau); } catch(e) {}
   if ((avecPart||'')==='avec' && partEmail) {
-    try { fn(partPrenom||prenom, partEmail, dateLbl, horLbl, lieuLbl); } catch(e) {}
+    try { fn(partPrenom||prenom, partEmail, dateLbl, horLbl, lieuLbl, dateNorm, niveau); } catch(e) {}
   }
 
   // Notification admin
@@ -1064,7 +1093,7 @@ function _emailBienvenueActivation(nom,email,niveau){
         <span style="color:#888;font-size:12px;">Vous pouvez aussi simplement utiliser l'application depuis votre navigateur sans l'installer.</span>
       </div>
     </div>
-    <div style="text-align:center;margin-top:22px;font-size:15px;color:#D4AF37;letter-spacing:2px;">À très bientôt sur la piste !<br/><strong>Florencia &amp; Jérémy</strong></div>`)});
+    '+SIG_HTML+``)});
 }
 
 // ── Notification admin — nouvel élève en attente ──────────────
@@ -1112,7 +1141,7 @@ function _confirmCP(b){
       ${_row('Objectif(s)',b.objectifs)}
     </table>
     <p style="font-size:12px;color:#888;margin-top:14px;">Joignez-nous sur <a href="tel:+33661727998" style="color:#D4AF37;">06 61 72 79 98</a> ou <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a>.</p>
-    <div style="text-align:center;margin-top:20px;color:#D4AF37;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></div>`)});
+    '+SIG_HTML+``)});
 }
 
 // ── Stages — helpers email ────────────────────────────────────
@@ -1201,7 +1230,7 @@ function _emailStageConfirme(b) {
     +'<div style="text-align:center;">'
     +'<a href="mailto:'+EMAIL_CONTACT+'?subject=Modification%20inscription%20stage" style="font-size:12px;color:#777;text-decoration:underline;">Modifier mon inscription</a>'
     +'</div>'
-    +'<p style="text-align:center;font-size:14px;color:#D4AF37;margin:24px 0 0;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></p>';
+    +''+SIG_HTML;
   MailApp.sendEmail({to:b.email, replyTo:EMAIL_CONTACT,
     subject:NOM_ECOLE+' — Votre stage est confirmé !',
     htmlBody:_emailStageWrap('✅','Inscription confirmée','#81c784','#0a1200',html)});
@@ -1223,7 +1252,7 @@ function _emailStageAttente(b) {
     +'<div style="text-align:center;margin:20px 0 0;">'
     +'<a href="mailto:'+EMAIL_CONTACT+'?subject=Question%20liste%20d%27attente%20stage" style="display:inline-block;background:transparent;color:#D4AF37;padding:12px 28px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border:1px solid #D4AF37;">Nous contacter</a>'
     +'</div>'
-    +'<p style="text-align:center;font-size:14px;color:#D4AF37;margin:24px 0 0;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></p>';
+    +''+SIG_HTML;
   MailApp.sendEmail({to:b.email, replyTo:EMAIL_CONTACT,
     subject:NOM_ECOLE+' — Demande de stage reçue',
     htmlBody:_emailStageWrap('⏳','Liste d\'attente','#e8c84a','#1a1400',html)});
@@ -1253,7 +1282,7 @@ function _emailStageConfirmationTardive(prenom, email, date, slotsRaw, pNom, pri
     +'<div style="text-align:center;">'
     +'<a href="mailto:'+EMAIL_CONTACT+'?subject=Modification%20inscription%20stage" style="font-size:12px;color:#777;text-decoration:underline;">Modifier mon inscription</a>'
     +'</div>'
-    +'<p style="text-align:center;font-size:14px;color:#D4AF37;margin:24px 0 0;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></p>';
+    +''+SIG_HTML;
   MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
     subject:NOM_ECOLE+' — Votre stage est confirmé !',
     htmlBody:_emailStageWrap('🎉','Confirmation','#D4AF37','#1a1000',html)});
@@ -1266,103 +1295,112 @@ function _confirmStage(b) {
 }
 
 // ── Cours d'essai ─────────────────────────────────────────────
-function _tplEssaiPresent(p,date,niv,ville,ui){
-  return _emailWrap('Suite à votre cours d\'essai',`
-    <p style="font-size:15px;margin-bottom:14px;">Bonjour <strong style="color:#D4AF37;">${p.prenom}</strong>,</p>
-    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:14px;">Plaisir de vous avoir accueilli pour votre cours d'essai <strong>${niv}</strong> — ${ville}.</p>
-    <div style="background:#0f0d00;border:2px solid #3a2d00;border-radius:10px;padding:16px;margin-bottom:16px;font-size:13px;color:#ccc;line-height:2;">
-      <strong style="color:#D4AF37;">1.</strong> Remplir le formulaire d'inscription<br/>
-      <strong style="color:#D4AF37;">2.</strong> Choisir ville, niveau, formule<br/>
-      <strong style="color:#D4AF37;">3.</strong> Finaliser sur AssoConnect<br/><br/>
-      Forfait Paris : 490€ · Vincennes : 435€ · Carte 10 cours : 170€
-    </div>
-    <a href="${ui}" style="display:block;background:#D4AF37;color:#000;text-align:center;padding:14px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;margin-bottom:16px;">S'inscrire aux cours réguliers</a>
-    <div style="text-align:center;color:#D4AF37;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></div>`);
+// ── Cours d'essai — helpers ────────────────────────────────────
+function _saisonCourante(dateStr) {
+  const d = dateStr ? new Date(dateStr+'T00:00:00') : new Date();
+  const y = d.getFullYear(), m = d.getMonth()+1;
+  const sy = m >= 9 ? y : y-1;
+  return sy+'-'+(sy+1);
 }
-
-function _tplEssaiAbsent(p,date,niv,ville,ue){
-  return _emailWrap('Votre cours d\'essai du '+date,`
-    <p style="font-size:15px;margin-bottom:14px;">Bonjour <strong style="color:#D4AF37;">${p.prenom}</strong>,</p>
-    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:14px;">Nous vous attendions pour votre cours d'essai <strong>${niv}</strong> — ${ville}, mais vous n'avez pas pu venir. Pas d'inquiétude !</p>
-    <a href="${ue}" style="display:block;background:#D4AF37;color:#000;text-align:center;padding:14px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;margin-bottom:16px;">S'inscrire à un cours d'essai</a>
-    <div style="text-align:center;color:#D4AF37;">À très bientôt !<br/><strong>Florencia &amp; Jérémy</strong></div>`);
+function _livretUrl(niveau, ville, dateStr) {
+  const saison = _saisonCourante(dateStr);
+  const niv = (niveau||'').toLowerCase().includes('deb') ? 'debutant' : 'intermediaire';
+  const v   = (ville||'').toLowerCase().includes('vinc') ? 'vincennes' : 'paris';
+  return (LIVRETS[saison]||LIVRETS['2025-2026']||{})[niv+'-'+v] || '';
+}
+function _tarifEssai(niveau, dateStr) {
+  const isDebutant = (niveau||'').toLowerCase().includes('deb');
+  if (!isDebutant) return '15 €';
+  const d = dateStr ? new Date(dateStr+'T00:00:00') : new Date();
+  return d.getMonth() === 8 ? 'Gratuit' : '15 €'; // getMonth() 8 = septembre
+}
+function _emailEssaiInfoBox(dateFormatee, horaire, lieu, dateRaw, niveau) {
+  const lieuKey = (lieu||'').toLowerCase().includes('vinc') ? 'vincennes' : 'paris';
+  const lInfo   = LIEUX_COURS[lieuKey] || LIEUX_COURS.paris;
+  const tarif   = _tarifEssai(niveau, dateRaw);
+  return '<div style="background:#0d1a2e;border-radius:10px;padding:18px 20px;margin:16px 0;border:1px solid #1e3a5f;">'
+    +'<div style="font-size:10px;color:#7ab4ff;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #1e3a5f;">Votre cours d\'essai</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+    +'<tr><td style="padding:7px 0;color:#888;width:32%;vertical-align:top;">📅 Date</td><td style="color:#f0f0f0;font-weight:600;">'+dateFormatee+'</td></tr>'
+    +(horaire?'<tr><td style="padding:7px 0;color:#888;vertical-align:top;">🕐 Heure</td><td style="color:#f0f0f0;font-weight:600;">'+horaire+'</td></tr>':'')
+    +'<tr><td style="padding:7px 0;color:#888;vertical-align:top;">📍 Lieu</td><td style="color:#f0f0f0;font-weight:600;">'
+      +lInfo.nom+'<br/><span style="color:#888;font-size:12px;font-weight:400;">'+lInfo.adresse+'</span><br/>'
+      +'<span style="color:#888;font-size:12px;font-weight:400;">'+lInfo.transport+'</span><br/>'
+      +'<a href="'+lInfo.mapsUrl+'" style="color:#7ab4ff;font-size:12px;text-decoration:none;">🗺 Voir sur Google Maps</a>'
+      +'</td></tr>'
+    +'<tr><td style="padding:7px 0;color:#888;">💶 Tarif</td><td style="color:'+(tarif==='Gratuit'?'#81c784':'#f0f0f0')+';font-weight:700;">'+tarif+'</td></tr>'
+    +'</table></div>';
 }
 
 // E15 — Confirmation inscription cours d'essai
-function _emailEssaiConfirme(prenom, email, date, horaire, lieu) {
-  const jourSem = (date||'').split(' ')[0]; // ex: "jeudi"
-  // Lien de confirmation de présence (1 clic depuis l'email)
+function _emailEssaiConfirme(prenom, email, dateFormatee, horaire, lieu, dateRaw, niveau) {
   let confirmUrl = '';
   try {
     const baseUrl = ScriptApp.getService().getUrl();
-    // date raw format yyyy-MM-dd pour l'URL (on prend la date telle que passée si c'est une date courte)
-    const dateParam = date.replace(/[^0-9\-]/g,'').slice(0,10) || date;
-    confirmUrl = baseUrl + '?action=confirmerPresenceEssai&email=' + encodeURIComponent(email) + '&date=' + dateParam;
+    const dp = (dateRaw||'').slice(0,10);
+    if (dp) confirmUrl = baseUrl+'?action=confirmerPresenceEssai&email='+encodeURIComponent(email)+'&date='+dp;
   } catch(e) {}
-  const btnConfirm = confirmUrl
-    ? `<div style="text-align:center;margin:20px 0;">
-        <a href="${confirmUrl}" style="display:inline-block;background:#D4AF37;color:#000;text-decoration:none;padding:14px 28px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.5px;">
-          ✓ Je confirme ma présence
-        </a>
-        <p style="font-size:11px;color:#666;margin-top:8px;">Cliquez pour confirmer que vous serez bien présent(e).</p>
-       </div>`
-    : '';
+  const infoBox   = _emailEssaiInfoBox(dateFormatee, horaire, lieu, dateRaw, niveau);
+  const livretUrl = _livretUrl(niveau, lieu, dateRaw);
+  const html = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Votre cours d\'essai est <strong style="color:#81c784;">confirmé</strong>. Nous avons hâte de vous accueillir sur la piste !</p>'
+    +infoBox
+    +(livretUrl?'<div style="text-align:center;margin:16px 0;"><a href="'+livretUrl+'" style="display:inline-block;color:#7ab4ff;padding:12px 24px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border:1px solid #7ab4ff;">📖 Télécharger le livret d\'information</a></div>':'')
+    +'<div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:16px;margin:16px 0;">'
+    +'<div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Pour votre cours d\'essai</div>'
+    +'<div style="font-size:13px;color:#ccc;line-height:2.2;">'
+    +'✓ <strong style="color:#f0f0f0;">Arrivez 5 minutes en avance</strong> — pour vous changer et commencer détendu(e).<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Chaussures à semelles lisses</strong> — cuir ou daim, ou des chaussettes pour un premier cours.<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Tenue confortable</strong> — permettant de bouger librement.<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Pas de partenaire fixe</strong> — nous pratiquons la rotation, venez seul(e) ou à deux.<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Pas d\'expérience requise</strong> — le cours repart de zéro à chaque séance.'
+    +'</div></div>'
+    +(confirmUrl?'<div style="text-align:center;margin:22px 0 6px;"><a href="'+confirmUrl+'" style="display:inline-block;background:#D4AF37;color:#000;padding:14px 34px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;">✓ Je confirme ma présence</a></div>':'')
+    +'<p style="font-size:11px;color:#555;text-align:center;margin:8px 0 16px;">Au-delà d\'un cours d\'essai, une inscription régulière est nécessaire pour participer.</p>'
+    +'<p style="font-size:12px;color:#666;text-align:center;margin:0 0 20px;">Une question ? <a href="mailto:'+EMAIL_CONTACT+'" style="color:#D4AF37;">'+EMAIL_CONTACT+'</a></p>'
+    +SIG_HTML;
   MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
-    subject: NOM_ECOLE+' — Cours d\'essai confirmé — à '+jourSem+' !',
-    htmlBody: _emailWrap('Cours d\'essai confirmé',`
-    <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">Bonjour <strong style="color:#D4AF37;">${prenom}</strong> !</p>
-    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:18px;">
-      Nous sommes ravis de vous accueillir pour votre premier cours de tango argentin !
-    </p>
-    <div style="background:#0f0d00;border:2px solid #3a2d00;border-radius:10px;padding:16px;margin-bottom:18px;">
-      <div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #3a2d00;">Votre cours d'essai</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        ${_row('Date',date||'—')}
-        ${_row('Heure',horaire||'—')}
-        ${_row('Lieu',lieu||'—')}
-        ${_row('Durée','1h30')}
-        ${_row('Tarif','<span style="color:#81c784;font-weight:700;">Essai offert</span>')}
-      </table>
-    </div>
-    ${btnConfirm}
-    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:12px;">Ce qu'il faut savoir</div>
-    <div style="font-size:13px;color:#ccc;line-height:2.1;">
-      ✓ <strong style="color:#f0f0f0;">Arrivez 5 minutes en avance</strong> — pour vous changer et commencer détendu(e).<br/>
-      ✓ <strong style="color:#f0f0f0;">Chaussures à semelles lisses</strong> — cuir ou daim idéalement. Des chaussettes conviennent pour un premier cours.<br/>
-      ✓ <strong style="color:#f0f0f0;">Tenue confortable</strong> — permettant de bouger librement.<br/>
-      ✓ <strong style="color:#f0f0f0;">Pas de partenaire fixe</strong> — nous pratiquons la rotation. Venez seul(e) ou à deux.<br/>
-      ✓ <strong style="color:#f0f0f0;">Pas d'expérience requise</strong> — le cours débutant part de zéro.
-    </div>
-    <hr style="border:none;border-top:1px solid #2a2a2a;margin:18px 0;"/>
-    <p style="font-size:12px;color:#666;line-height:1.8;">
-      Une question ? Répondez à cet email ou écrivez à <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a>.<br/>
-      Empêchement de dernière minute ? Merci de nous prévenir.
-    </p>
-    <div style="text-align:center;margin-top:20px;color:#D4AF37;">À très bientôt sur la piste !<br/><strong>Marc &amp; Eva</strong></div>`)});
+    subject:NOM_ECOLE+' — Cours d\'essai confirmé !',
+    htmlBody:_emailStageWrap('🎓','Cours d\'essai confirmé','#7ab4ff','#0a1020',html)});
 }
 
-// E15b — Liste d'attente cours d'essai (créneau complet)
-function _emailEssaiAttente(prenom, email, date, horaire, lieu) {
+// E15b — Liste d'attente cours d'essai
+function _emailEssaiAttente(prenom, email, dateFormatee, horaire, lieu, dateRaw, niveau) {
+  const infoBox = _emailEssaiInfoBox(dateFormatee, horaire, lieu, dateRaw, niveau);
+  const html = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 16px;">Votre demande est bien enregistrée. <strong style="color:#e8c84a;">Le créneau que vous avez choisi est complet</strong> — vous êtes en liste d\'attente.</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Nous vous contacterons dès qu\'une place se libère ou pour vous proposer un autre créneau.</p>'
+    +infoBox
+    +'<div style="text-align:center;margin:20px 0;"><a href="mailto:'+EMAIL_CONTACT+'?subject=Cours%20d%27essai%20—%20liste%20d%27attente" style="display:inline-block;background:transparent;color:#D4AF37;padding:12px 28px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border:1px solid #D4AF37;">Nous contacter</a></div>'
+    +SIG_HTML;
   MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
-    subject: NOM_ECOLE+' — Cours d\'essai : vous êtes sur liste d\'attente',
-    htmlBody: _emailWrap('Liste d\'attente — Cours d\'essai',`
-    <p style="font-size:15px;color:#f0f0f0;margin-bottom:14px;">Bonjour <strong style="color:#D4AF37;">${prenom}</strong>,</p>
-    <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:18px;">
-      Le créneau que vous avez choisi est complet. Votre demande est bien enregistrée en liste d'attente —
-      nous vous contacterons dès qu'une place se libère ou pour vous proposer un autre créneau.
-    </p>
-    <div style="background:#0f0d00;border:2px solid #3a2d00;border-radius:10px;padding:16px;margin-bottom:18px;">
-      <div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #3a2d00;">Créneau demandé</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        ${_row('Date',date||'—')}
-        ${_row('Heure',horaire||'—')}
-        ${_row('Lieu',lieu||'—')}
-      </table>
-    </div>
-    <p style="font-size:12px;color:#888;line-height:1.8;">
-      Des questions ? Contactez-nous à <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a> — nous trouverons une solution ensemble.
-    </p>
-    <div style="text-align:center;margin-top:20px;color:#D4AF37;">À très bientôt !<br/><strong>Marc &amp; Eva</strong></div>`)});
+    subject:NOM_ECOLE+' — Cours d\'essai : liste d\'attente',
+    htmlBody:_emailStageWrap('⏳','Liste d\'attente','#e8c84a','#1a1400',html)});
+}
+
+// J+1a — Lendemain essai : élève présent
+function _tplEssaiPresent(p, dateRaw, dateFormatee, niveauLabel, villeLabel, urlInscription) {
+  const livretUrl = _livretUrl(niveauLabel, villeLabel, dateRaw);
+  const html = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+p.prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 16px;">C\'est avec plaisir que nous vous avons accueilli(e) lors de votre cours d\'essai <strong style="color:#f0f0f0;">'+niveauLabel+'</strong> — <strong style="color:#f0f0f0;">'+villeLabel+'</strong>.</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Nous espérons vous avoir donné l\'envie de continuer ! Pour rejoindre nos cours réguliers, il vous suffit de faire une demande d\'inscription.</p>'
+    +'<div style="text-align:center;margin:22px 0 12px;"><a href="'+urlInscription+'" style="display:inline-block;background:#D4AF37;color:#000;padding:14px 34px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;">Rejoindre les cours réguliers</a></div>'
+    +(livretUrl?'<div style="text-align:center;margin:0 0 20px;"><a href="'+livretUrl+'" style="font-size:12px;color:#7ab4ff;text-decoration:underline;">📖 Consulter le livret '+niveauLabel+' — '+villeLabel+'</a></div>':'')
+    +'<p style="font-size:11px;color:#555;text-align:center;margin:0 0 20px;">Les cours ont lieu chaque semaine de septembre à juin. Au-delà d\'un cours d\'essai, une inscription régulière est nécessaire pour participer.</p>'
+    +'<p style="font-size:12px;color:#666;text-align:center;margin:0 0 20px;">Une question ? <a href="mailto:'+EMAIL_CONTACT+'" style="color:#D4AF37;">'+EMAIL_CONTACT+'</a></p>'
+    +SIG_HTML;
+  return _emailStageWrap('🎉','À bientôt sur la piste !','#D4AF37','#1a1000',html);
+}
+
+// J+1b — Lendemain essai : élève absent
+function _tplEssaiAbsent(p, dateRaw, dateFormatee, niveauLabel, villeLabel, urlEssai) {
+  const html = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+p.prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 16px;">Nous vous attendions pour votre cours d\'essai <strong style="color:#f0f0f0;">'+niveauLabel+'</strong> — <strong style="color:#f0f0f0;">'+villeLabel+'</strong>, mais vous n\'avez pas pu venir ce soir.</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Pas d\'inquiétude — votre cours d\'essai reste valable. Inscrivez-vous à un prochain créneau quand vous voulez.</p>'
+    +'<div style="text-align:center;margin:22px 0;"><a href="'+urlEssai+'" style="display:inline-block;background:#D4AF37;color:#000;padding:14px 34px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;">M\'inscrire à un cours d\'essai</a></div>'
+    +'<p style="font-size:12px;color:#666;text-align:center;margin:0 0 20px;">Une question ? <a href="mailto:'+EMAIL_CONTACT+'" style="color:#D4AF37;">'+EMAIL_CONTACT+'</a></p>'
+    +SIG_HTML;
+  return _emailStageWrap('📅','On vous attend bientôt !','#8bb8e8','#091520',html);
 }
 
 // ================================================================
@@ -1794,7 +1832,7 @@ function _emailCarteFinSaison(prenom, email, restants, expAff, urlInscription, i
       Une question ? Écrivez-nous à
       <a href="mailto:${EMAIL_CONTACT}" style="color:#D4AF37;">${EMAIL_CONTACT}</a><br/>
       À très bientôt sur la piste !<br/>
-      <strong style="color:#888;">Marc &amp; Eva — Tango &amp; Vous</strong>
+      <strong style="color:#888;">Florencia Garcia &amp; Jérémy Braitbart — Tango &amp; Vous</strong>
     </p>`),
   });
 }
