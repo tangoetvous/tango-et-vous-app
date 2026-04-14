@@ -841,8 +841,10 @@
         for (let si=0;si<n;si++) slots.push({heure:hor[sDb[si]]+'\u2013'+hor[sFn[si]], titre:_thLbl(sNames[si]||'','Stage '+(si+1))});
         const startH = hasTech ? hor.tech_deb : hor.s1_deb;
         const endH   = hor['s'+n+'_fin'] || hor.s2_fin;
+        const _sNom = (s.adresse && s.adresse.nom) ? s.adresse.nom : LST_NOM;
+        const _sRue = (s.adresse && s.adresse.rue) ? s.adresse.rue : LST_RUE;
         events.push({date:s.date, subtype:'stage', type:'stage', titre:'Stage de Tango',
-          heure:startH+'\u2013'+endH, lieu:lieuSt, slots});
+          heure:startH+'\u2013'+endH, lieu:_sNom+', '+_sRue, slots});
       });
     }
     if (filter === 'tous' || filter === 'milonga') {

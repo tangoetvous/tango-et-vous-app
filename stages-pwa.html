@@ -647,7 +647,7 @@ function saisonCourante() {
 }
 
 // ── Construction d'une entrée de date à partir des données admin ─
-function buildDateEntry(st, globalHor) {
+function buildDateEntry(st, globalHor, globalAdr) {
   var def=DEFAULTS_HORAIRES_STAGES, stHor=st.horaires||{};
   function hor(k){ return stHor[k]||globalHor[k]||def[k]||''; }
   var n=st.nStages||2, items=[];
@@ -657,7 +657,9 @@ function buildDateEntry(st, globalHor) {
   if(n>=1) items.push({id:st.date+'-stage1',horaire:hor('s1_deb')+'–'+hor('s1_fin'),theme:(st.themes&&st.themes[0])||'',type:'stage1'});
   if(n>=2) items.push({id:st.date+'-stage2',horaire:hor('s2_deb')+'–'+hor('s2_fin'),theme:(st.themes&&st.themes[1])||'',type:'stage2'});
   var dateTarifs = st.tarifs ? Object.assign({},TARIFS_STAGES,st.tarifs) : null;
-  return {date:st.date, label:st.label, nom:st.nom||STAGE_NOM_DEFAUT, stages:items, tarifs:dateTarifs};
+  // Adresse : per-date override ou global ou null (fallback aux constantes par défaut)
+  var adresse = st.adresse && (st.adresse.nom || st.adresse.rue) ? st.adresse : (globalAdr || null);
+  return {date:st.date, label:st.label, nom:st.nom||STAGE_NOM_DEFAUT, stages:items, tarifs:dateTarifs, adresse:adresse};
 }
 
 // ── Chargement des données depuis localStorage ──────────────────
@@ -676,13 +678,13 @@ function chargerDonnees() {
     if(raw){
       var saved=JSON.parse(raw);
       var sSai=saved.saison||sai;
-      var globalHor={};
-      try{ var ph=localStorage.getItem('tev_params_stages_'+sSai); if(ph) globalHor=(JSON.parse(ph).horaires)||{}; }catch(e){}
+      var globalHor={}, globalAdr={};
+      try{ var ph=localStorage.getItem('tev_params_stages_'+sSai); if(ph){ var pph=JSON.parse(ph); globalHor=pph.horaires||{}; globalAdr=pph.adresse||{}; } }catch(e){}
       // Tarifs de la saison du stage (peut être différente si saison admin ≠ saison courante)
       try{ var pt=localStorage.getItem('tev_params_stages_'+sSai); if(pt){ var ppt=JSON.parse(pt); if(ppt.tarifs&&Object.keys(ppt.tarifs).length) TARIFS_STAGES=Object.assign({},TARIFS_STAGES_DEFAUT,ppt.tarifs); } }catch(e){}
       // Afficher toutes les dates de la saison courante (y compris passées)
       var stages=(saved.stages||[]).filter(function(st){return st.date>=saiStart&&st.date<=saiEnd;}).sort(function(a,b){return a.date<b.date?-1:1;});
-      if(stages.length){ DATES_STAGES=stages.map(function(st){return buildDateEntry(st,globalHor);}); return; }
+      if(stages.length){ DATES_STAGES=stages.map(function(st){return buildDateEntry(st,globalHor,globalAdr);}); return; }
     }
   } catch(e){}
   // Fallback statique — toutes les dates de la saison courante
@@ -1118,6 +1120,11 @@ function afficherConfirmation(data){
   data.inscriptionsParDate.forEach(function(d){
     datesHtml+='<div class="conf-date-bloc">';
     datesHtml+='<strong>📅 '+d.dateLabel+'</strong><br>';
+    // Adresse spécifique si différente de la valeur par défaut
+    var _de=DATES_STAGES.find(function(s){return s.date===d.date;});
+    if(_de&&_de.adresse&&_de.adresse.nom&&_de.adresse.nom!==_confNom){
+      datesHtml+='<div style="font-size:12px;color:#aaa;margin:3px 0 0;">📍 '+_de.adresse.nom+(_de.adresse.rue?', '+_de.adresse.rue:'')+(_de.adresse.transport?' · '+_de.adresse.transport:'')+'</div>';
+    }
 
     // Section inscrit
     datesHtml+='<div style="margin-top:8px;padding:8px 0;border-top:1px solid rgba(212,175,55,0.3);">';
@@ -1143,9 +1150,14 @@ function afficherConfirmation(data){
     datesHtml+='<div class="conf-total">Total à régler sur place le '+d.dateLabel+' : '+(d.prixInscrit+(avecPart && d.prixPartenaire ? d.prixPartenaire : 0))+' €</div>';
     datesHtml+='</div>';
   });
+  // Adresse par défaut depuis les params
+  var _confSai=saisonCourante();
+  var _confAdr={nom:'Centre Kim Kan',rue:'64 rue Orfila, Paris 20e',transport:'M° Gambetta (L3)'};
+  try{var _cp=localStorage.getItem('tev_params_stages_'+_confSai);if(_cp){var _cpp=JSON.parse(_cp);if(_cpp.adresse&&(_cpp.adresse.nom||_cpp.adresse.rue))_confAdr=Object.assign({},_confAdr,_cpp.adresse);}}catch(e){}
+  var _confNom=_confAdr.nom||'Centre Kim Kan', _confRue=_confAdr.rue||'64 rue Orfila, Paris 20e', _confTPT=_confAdr.transport||'M° Gambetta (L3)';
   // Footer EN PREMIER : lieu + email, centré
   document.getElementById('conf-footer').innerHTML=
-    '📍 <strong>Centre Kim Kan</strong> — 64 rue Orfila, M° Gambetta, Paris 20e<br>'+
+    '📍 <strong>'+_confNom+'</strong> — '+_confRue+', '+_confTPT+'<br>'+
     '💵 Paiement sur place le jour du stage<br><br>'+
     '<em>Un email de confirmation par date vous a été envoyé à <strong>'+data.email+'</strong>. Merci d\'en confirmer la bonne réception.</em>';
 

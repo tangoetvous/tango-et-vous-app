@@ -1802,8 +1802,9 @@ function sauverDatesStages(sai) {
 // ================================================================
 var saisonParametres = null;       // saison sélectionnée dans l'onglet Paramètres
 var accordionParams  = {};         // {type-section: bool}  true=ouvert
-var stageHorairesOpen = {};       // {date: bool}  true=horaires par date ouverts
-var stageTarifsOpen   = {};       // {date: bool}  true=tarifs par date ouverts
+var stageHorairesOpen  = {};       // {date: bool}  true=horaires par date ouverts
+var stageTarifsOpen    = {};       // {date: bool}  true=tarifs par date ouverts
+var stageAdresseOpen   = {};       // {date: bool}  true=adresse par date ouverte
 var milongaAccordion  = {};       // {mil-idx-section: bool}  true=ouvert
 
 var STAGE_NOM_DEFAUT = 'Stages avec Florencia Garcia et Jérémy Braitbart';
@@ -1833,6 +1834,7 @@ var DEFAULTS_ADRESSES = {
   paris:    {nom:'Espace Danse Studio', rue:'24 villa Riberolle, Paris 20e',          gps:'48.8568,2.3960', transport:'M° Alexandre Dumas (L2)'},
   vincennes:{nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)'},
   yoga:     {nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)'},
+  stages:   {nom:'Centre Kim Kan',      rue:'64 rue Orfila, Paris 20e',               gps:'48.8616,2.3970', transport:'M° Gambetta (L3)'},
 };
 var DEFAULTS_HORAIRES = {
   paris:    {deb:'20h30', deb_fin:'21h45', int:'21h45', int_fin:'23h00'},
@@ -2164,10 +2166,8 @@ function _renderParamCard(type, sai) {
   // Section Tarifs
   h += _renderAccordSection(type, 'tarifs', '💰 Tarifs', _renderSecTarifsContent(type, sai));
 
-  // Section Adresse (sauf Stages)
-  if (type !== 'stages') {
-    h += _renderAccordSection(type, 'adresse', '📍 Adresse et accès', _renderSecAdresseContent(type, sai));
-  }
+  // Section Adresse (tous les types)
+  h += _renderAccordSection(type, 'adresse', '📍 Adresse et accès', _renderSecAdresseContent(type, sai));
 
   // Section Horaires (tous les types)
   h += _renderAccordSection(type, 'horaires', '⏰ Horaires', _renderSecHorairesContent(type, sai));
@@ -2636,6 +2636,21 @@ function _renderSecDatesContent(type, sai) {
         +'</button>';
       if (tarOpen) {
         h += _renderDateTarifsForm(st, sai);
+      }
+      h += '</div>';
+
+      // ── Adresse par date ─────────────────────────────────
+      var adrOpen = !!stageAdresseOpen[st.date];
+      var hasAdrOverride = !!(st.adresse && (st.adresse.nom || st.adresse.rue));
+      h += '<div style="border-top:1px solid var(--border);">'
+        +'<button data-action="toggle-adresse-date" data-date="'+st.date+'"'
+        +' style="width:100%;display:flex;align-items:center;justify-content:space-between;'
+        +'background:none;border:none;cursor:pointer;padding:7px 12px;font-size:12px;color:var(--dim);">'
+        +'<span>📍 Adresse'+(hasAdrOverride?' <span style="color:var(--gold);font-size:10px;">● personnalisée</span>':'')+'</span>'
+        +'<span style="font-size:10px;">'+(adrOpen?'▲':'▼')+'</span>'
+        +'</button>';
+      if (adrOpen) {
+        h += _renderDateAdresseForm(st, sai);
       }
       h += '</div>'
         +'</div></div>';  // ferme body + card
@@ -3156,6 +3171,71 @@ function resetTarifsDate(date, sai) {
   STAGES[idx] = st;
   sauverStagesLocal(sai);
   afficherToast('✓ Tarifs réinitialisés');
+  renderTab();
+}
+
+// ── Rendu du formulaire d'adresse par date ───────────────────
+function _renderDateAdresseForm(st, sai) {
+  var globalAdr = _loadParam('stages', sai, 'adresse');
+  var def = DEFAULTS_ADRESSES.stages || {};
+  function defVal(k) { return globalAdr[k] || def[k] || ''; }
+  var dateAdr = st.adresse || {};
+  function val(k) { return dateAdr[k] || defVal(k); }
+  var did = st.date.replace(/-/g,'');
+  var iS = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);'
+         +'border-radius:5px;padding:5px 8px;font-size:12px;';
+  function field(label, k) {
+    return '<div style="margin-bottom:6px;">'
+      +'<span style="font-size:11px;color:var(--dim);display:block;margin-bottom:2px;">'+label+'</span>'
+      +'<input id="pa-'+did+'-'+k+'" type="text" value="'+val(k).replace(/"/g,'&quot;')+'" style="'+iS+'"></div>';
+  }
+  var hasOverride = !!(st.adresse && (st.adresse.nom || st.adresse.rue));
+  return '<div style="padding:10px 12px;background:var(--bg);border-top:1px solid var(--border);">'
+    +'<div class="box-info" style="font-size:11px;margin-bottom:10px;">Laissez vide pour utiliser l\'adresse par défaut des stages.</div>'
+    +field('Nom de la salle', 'nom')
+    +field('Adresse complète', 'rue')
+    +field('Coordonnées GPS (lat,lng)', 'gps')
+    +field('Transport le plus proche', 'transport')
+    +'<div class="btn-row" style="margin-top:6px;">'
+    +(hasOverride
+      ? '<button data-action="reset-adresse-date" data-date="'+st.date+'" data-saison="'+sai+'"'
+        +' class="btn btn-ghost" style="font-size:11px;">↺ Défauts</button>'
+      : '')
+    +'<button data-action="sauver-adresse-date" data-date="'+st.date+'" data-saison="'+sai+'"'
+    +' class="btn btn-gold" style="font-size:11px;flex:2;">💾 Enregistrer adresse</button>'
+    +'</div></div>';
+}
+
+// Sauvegarde l'adresse personnalisée d'une date de stage
+function sauverAdresseDate(date, sai) {
+  var idx = STAGES.findIndex(function(s){return s.date===date;});
+  if (idx<0) return;
+  var st = _migrateStageItem(STAGES[idx]);
+  var did = date.replace(/-/g,'');
+  var nom       = (gel('pa-'+did+'-nom')||{}).value||'';
+  var rue       = (gel('pa-'+did+'-rue')||{}).value||'';
+  var gps       = (gel('pa-'+did+'-gps')||{}).value||'';
+  var transport = (gel('pa-'+did+'-transport')||{}).value||'';
+  if (nom || rue || gps || transport) {
+    st.adresse = {nom:nom, rue:rue, gps:gps, transport:transport};
+  } else {
+    delete st.adresse;
+  }
+  STAGES[idx] = st;
+  sauverStagesLocal(sai);
+  afficherToast('✓ Adresse enregistrée');
+  renderTab();
+}
+
+// Réinitialise l'adresse d'une date de stage aux défauts
+function resetAdresseDate(date, sai) {
+  var idx = STAGES.findIndex(function(s){return s.date===date;});
+  if (idx<0) return;
+  var st = _migrateStageItem(STAGES[idx]);
+  delete st.adresse;
+  STAGES[idx] = st;
+  sauverStagesLocal(sai);
+  afficherToast('✓ Adresse réinitialisée');
   renderTab();
 }
 
@@ -3800,6 +3880,16 @@ function handleAction(action, btn) {
       break;
     case 'reset-horaires-date':
       resetHorairesDate(btn.dataset.date||'', btn.dataset.saison||saisonCourante());
+      break;
+    case 'toggle-adresse-date':
+      stageAdresseOpen[btn.dataset.date||''] = !stageAdresseOpen[btn.dataset.date||''];
+      renderTab();
+      break;
+    case 'sauver-adresse-date':
+      sauverAdresseDate(btn.dataset.date||'', btn.dataset.saison||saisonCourante());
+      break;
+    case 'reset-adresse-date':
+      resetAdresseDate(btn.dataset.date||'', btn.dataset.saison||saisonCourante());
       break;
     case 'suppr-date-param':
       supprimerDateParam(btn.dataset.type||'paris', btn.dataset.date||'');
