@@ -1476,8 +1476,8 @@
   // Mise à jour temps réel : si l'admin change un Paramètre dans un autre onglet, on recharge
   window.addEventListener('storage', function(e) {
     if (!e.key) return;
-    // Ignorer le cache plan (géocodage) pour ne pas boucler
-    if (e.key.startsWith('tev_') && !e.key.startsWith('tev_plan_')) {
+    // Ignorer le cache plan (géocodage) et la file de notifications admin pour ne pas boucler
+    if (e.key.startsWith('tev_') && !e.key.startsWith('tev_plan_') && e.key !== 'tev_pending_inscriptions') {
       location.reload();
     }
   });
