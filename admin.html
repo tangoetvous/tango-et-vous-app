@@ -1764,6 +1764,9 @@ function sauverDatesStages(sai) {
 var saisonParametres = null;       // saison sélectionnée dans l'onglet Paramètres
 var accordionParams  = {};         // {type-section: bool}  true=ouvert
 var stageHorairesOpen = {};       // {date: bool}  true=horaires par date ouverts
+var stageTarifsOpen   = {};       // {date: bool}  true=tarifs par date ouverts
+
+var STAGE_NOM_DEFAUT = 'Stages avec Florencia Garcia et Jérémy Braitbart';
 
 function saisonPrecedente() {
   var s=saisonCourante().split('-'), n=parseInt(s[0]); return (n-1)+'-'+n;
@@ -2361,6 +2364,15 @@ function _renderSecDatesContent(type, sai) {
         +'</div>'
         // Body
         +'<div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;">'
+        // Nom du stage
+        +'<div style="display:flex;align-items:center;gap:8px;">'
+        +'<span style="font-size:12px;color:var(--dim);width:100px;flex-shrink:0;">Nom</span>'
+        +'<input id="stage-nom-'+did+'" type="text"'
+        +' value="'+(st.nom||'').replace(/"/g,'&quot;')+'"'
+        +' placeholder="'+STAGE_NOM_DEFAUT+'"'
+        +' style="flex:1;background:var(--s3);color:var(--text);border:1px solid var(--border);'
+        +'border-radius:5px;padding:5px 8px;font-size:12px;">'
+        +'</div>'
         // Technique toggle
         +'<div style="display:flex;align-items:center;gap:10px;">'
         +'<span style="font-size:12px;color:var(--dim);width:100px;">Technique</span>'
@@ -2395,7 +2407,7 @@ function _renderSecDatesContent(type, sai) {
         // Bouton sauver thèmes
         +'<div style="text-align:right;margin-bottom:4px;">'
         +'<button data-action="sauver-themes-stage" data-date="'+st.date+'" data-saison="'+sai+'"'
-        +' class="btn btn-gold" style="font-size:11px;">💾 Enregistrer les thèmes</button>'
+        +' class="btn btn-gold" style="font-size:11px;">💾 Enregistrer nom & thèmes</button>'
         +'</div>';
 
       // ── Horaires par date ────────────────────────────────
@@ -2410,6 +2422,21 @@ function _renderSecDatesContent(type, sai) {
         +'</button>';
       if (horOpen) {
         h += _renderDateHorairesForm(st, sai);
+      }
+      h += '</div>';
+
+      // ── Tarifs par date ──────────────────────────────────
+      var tarOpen = !!stageTarifsOpen[st.date];
+      var hasTarOverride = !!(st.tarifs && Object.keys(st.tarifs).length);
+      h += '<div style="border-top:1px solid var(--border);">'
+        +'<button data-action="toggle-tarifs-date" data-date="'+st.date+'"'
+        +' style="width:100%;display:flex;align-items:center;justify-content:space-between;'
+        +'background:none;border:none;cursor:pointer;padding:7px 12px;font-size:12px;color:var(--dim);">'
+        +'<span>💰 Tarifs'+(hasTarOverride?' <span style="color:var(--gold);font-size:10px;">● personnalisés</span>':'')+'</span>'
+        +'<span style="font-size:10px;">'+(tarOpen?'▲':'▼')+'</span>'
+        +'</button>';
+      if (tarOpen) {
+        h += _renderDateTarifsForm(st, sai);
       }
       h += '</div>'
         +'</div></div>';  // ferme body + card
@@ -2696,11 +2723,15 @@ function setStageN(date, n, sai) {
   renderTab();
 }
 
-// Sauvegarde les thèmes d'une date de stage
+// Sauvegarde le nom + les thèmes d'une date de stage
 function sauverThemesStage(date, sai) {
   var idx = STAGES.findIndex(function(s){return s.date===date;});
   if (idx<0) return;
   var st = _migrateStageItem(STAGES[idx]);
+  // Nom
+  var nomInp = gel('stage-nom-'+date.replace(/-/g,''));
+  if (nomInp) st.nom = nomInp.value.trim() || '';
+  // Thèmes
   var n = st.nStages || 2;
   if (!st.themes) st.themes = [];
   for (var i=0; i<n; i++) {
@@ -2709,7 +2740,7 @@ function sauverThemesStage(date, sai) {
   }
   STAGES[idx] = st;
   sauverStagesLocal(sai);
-  afficherToast('✓ Thèmes enregistrés');
+  afficherToast('✓ Nom & thèmes enregistrés');
   renderTab();
 }
 
@@ -2805,6 +2836,78 @@ function resetHorairesDate(date, sai) {
   STAGES[idx] = st;
   sauverStagesLocal(sai);
   afficherToast('✓ Horaires réinitialisés');
+  renderTab();
+}
+
+// ── Rendu du formulaire de tarifs par date ────────────────────
+function _renderDateTarifsForm(st, sai) {
+  var globalTarifs = _loadParam('stages', sai, 'tarifs');
+  function defVal(k) { return globalTarifs[k]!==undefined ? globalTarifs[k] : (TARIFS_DEFAUT[k]||0); }
+  var dateTarifs = st.tarifs || {};
+  function val(k) { return dateTarifs[k]!==undefined ? dateTarifs[k] : defVal(k); }
+  var did = st.date.replace(/-/g,'');
+  var n = st.nStages || 2;
+  var hasTech = st.technique !== false;
+  var iS = 'width:58px;text-align:right;background:var(--s3);color:var(--text);'
+          +'border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;';
+  function row(k, lbl) {
+    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+      +'<span style="font-size:11px;color:var(--dim);flex:1;">'+lbl+'</span>'
+      +'<input id="pt-'+did+'-'+k+'" type="number" min="0" value="'+val(k)+'" style="'+iS+'"> €'
+      +'</div>';
+  }
+  var rows = '';
+  if (hasTech) rows += row('stage_technique', 'Technique (1h)');
+  for (var i=1; i<=n; i++) rows += row('stage_'+i, i+' stage'+(i>1?'s':''));
+  if (hasTech && n >= 2) {
+    for (var j=2; j<=n; j++) rows += row('stage_'+j+'_tech', j+' stages + Technique');
+  }
+  var hasOverride = !!(st.tarifs && Object.keys(st.tarifs).length);
+  return '<div style="padding:10px 12px;background:var(--bg);border-top:1px solid var(--border);">'
+    +rows
+    +'<div class="btn-row" style="margin-top:6px;">'
+    +(hasOverride
+      ? '<button data-action="reset-tarifs-date" data-date="'+st.date+'" data-saison="'+sai+'"'
+        +' class="btn btn-ghost" style="font-size:11px;">↺ Défauts</button>'
+      : '')
+    +'<button data-action="sauver-tarifs-date" data-date="'+st.date+'" data-saison="'+sai+'"'
+    +' class="btn btn-gold" style="font-size:11px;flex:2;">💾 Enregistrer tarifs</button>'
+    +'</div></div>';
+}
+
+// Sauvegarde les tarifs personnalisés d'une date de stage
+function sauverTarifsDate(date, sai) {
+  var idx = STAGES.findIndex(function(s){return s.date===date;});
+  if (idx<0) return;
+  var st = _migrateStageItem(STAGES[idx]);
+  var did = date.replace(/-/g,'');
+  var n = st.nStages || 2;
+  var hasTech = st.technique !== false;
+  var keys = [];
+  if (hasTech) keys.push('stage_technique');
+  for (var i=1; i<=n; i++) keys.push('stage_'+i);
+  if (hasTech && n>=2) for (var j=2; j<=n; j++) keys.push('stage_'+j+'_tech');
+  var tarifs = {};
+  keys.forEach(function(k) {
+    var el = gel('pt-'+did+'-'+k);
+    if (el) { var v = parseFloat(el.value); if (!isNaN(v) && v>=0) tarifs[k]=v; }
+  });
+  st.tarifs = tarifs;
+  STAGES[idx] = st;
+  sauverStagesLocal(sai);
+  afficherToast('✓ Tarifs enregistrés');
+  renderTab();
+}
+
+// Réinitialise les tarifs d'une date aux défauts globaux
+function resetTarifsDate(date, sai) {
+  var idx = STAGES.findIndex(function(s){return s.date===date;});
+  if (idx<0) return;
+  var st = _migrateStageItem(STAGES[idx]);
+  delete st.tarifs;
+  STAGES[idx] = st;
+  sauverStagesLocal(sai);
+  afficherToast('✓ Tarifs réinitialisés');
   renderTab();
 }
 
@@ -3408,6 +3511,16 @@ function handleAction(action, btn) {
     case 'toggle-horaires-date':
       stageHorairesOpen[btn.dataset.date||''] = !stageHorairesOpen[btn.dataset.date||''];
       renderTab();
+      break;
+    case 'toggle-tarifs-date':
+      stageTarifsOpen[btn.dataset.date||''] = !stageTarifsOpen[btn.dataset.date||''];
+      renderTab();
+      break;
+    case 'sauver-tarifs-date':
+      sauverTarifsDate(btn.dataset.date||'', btn.dataset.saison||saisonCourante());
+      break;
+    case 'reset-tarifs-date':
+      resetTarifsDate(btn.dataset.date||'', btn.dataset.saison||saisonCourante());
       break;
     case 'sauver-horaires-date':
       sauverHorairesDate(btn.dataset.date||'', btn.dataset.saison||saisonCourante());
