@@ -659,7 +659,17 @@
     const coursArr = (ville === 'vincennes') ? COURS_VINCENNES : COURS_PARIS;
     const prochainCours = coursArr.find(d => d >= todayStr) || null;
     const prochainStage = STAGES_DATA.find(s => s.date >= todayStr) || null;
-    const prochaineMilonga = MILONGAS_DATA.find(d => d >= todayStr) || null;
+    // Prochaine milonga : objet avec nom + horaire si MILONGAS_OBJ dispo, sinon date brute
+    const _nextMilEvt = MILONGAS_OBJ
+      ? MILONGAS_OBJ.flatMap(m => (m.dates||[]).map(d => ({
+          date: d.date,
+          nom: m.nom,
+          hdeb: d.horaire_debut || m.horaire_debut || '17h30',
+          hfin: d.horaire_fin  || m.horaire_fin  || '23h30',
+          color: m.color || '#ff6b9d'
+        }))).sort((a,b) => a.date.localeCompare(b.date)).find(x => x.date >= todayStr) || null
+      : null;
+    const prochaineMilonga = _nextMilEvt ? _nextMilEvt.date : (MILONGAS_DATA.find(d => d >= todayStr) || null);
 
     h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px;text-align:center;">📅 Prochains rendez-vous</div>';
     h += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">';
@@ -683,13 +693,18 @@
         + '</div></div>';
     }
 
-    // Prochaine milonga — rose
+    // Prochaine milonga — couleur dynamique
     if (prochaineMilonga) {
-      h += '<div style="background:rgba(255,107,157,0.07);border:1px solid rgba(255,107,157,0.25);border-left:4px solid #ff6b9d;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:14px;">'
-        + '<span style="font-size:24px;line-height:1;">💃</span>'
-        + '<div><div style="font-size:15px;font-weight:600;color:#ff6b9d;margin-bottom:3px;">Prochaine milonga</div>'
+      const _mc  = (_nextMilEvt && _nextMilEvt.color) || '#ff6b9d';
+      const _mn  = (_nextMilEvt && _nextMilEvt.nom)   || 'La Dolce Vita';
+      const _mh  = _nextMilEvt ? _nextMilEvt.hdeb+'\u2013'+_nextMilEvt.hfin : '17h30\u201323h30';
+      const _mcR = _mc.replace(/^#/,'');
+      const _r   = parseInt(_mcR.slice(0,2),16), _g = parseInt(_mcR.slice(2,4),16), _b = parseInt(_mcR.slice(4,6),16);
+      h += '<div style="background:rgba('+_r+','+_g+','+_b+',0.07);border:1px solid rgba('+_r+','+_g+','+_b+',0.25);border-left:4px solid '+_mc+';border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:14px;">'
+        + '<span style="font-size:24px;line-height:1;">\uD83D\uDC83</span>'
+        + '<div><div style="font-size:15px;font-weight:600;color:'+_mc+';margin-bottom:3px;">Prochaine milonga</div>'
         + '<div style="font-size:20px;font-weight:500;color:#fff;">' + fmtLong(prochaineMilonga) + '</div>'
-        + '<div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:2px;">La Dolce Vita · 17h30–23h30</div>'
+        + '<div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:2px;">'+_mn+' \u00b7 '+_mh+'</div>'
         + '</div></div>';
     }
 
@@ -747,7 +762,17 @@
       });
     } catch(e) { return STAGES_DATA_FB; }
   })();
-  const MILONGAS_DATA = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
+  const MILONGAS_DATA_FB = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
+  const MILONGAS_OBJ = (function() {
+    try {
+      var r = JSON.parse(localStorage.getItem('tev_milongas')||'null');
+      return (r && r.milongas && r.milongas.length) ? r.milongas : null;
+    } catch(e) { return null; }
+  })();
+  // Tableau plat de toutes les dates (pour prochaineMilonga dans Accueil)
+  const MILONGAS_DATA = MILONGAS_OBJ
+    ? MILONGAS_OBJ.flatMap(m => (m.dates||[]).map(d => d.date)).sort()
+    : MILONGAS_DATA_FB;
   // Yoga — mardis à l'Espace Sorano Vincennes (Yin 10h30, Hatha 11h30)
   const COURS_YOGA = [
     '2025-09-09','2025-09-16','2025-09-23','2025-09-30','2025-10-07','2025-10-14',
@@ -810,9 +835,24 @@
       });
     }
     if (filter === 'tous' || filter === 'milonga') {
-      MILONGAS_DATA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
-        events.push({date:d, subtype:'milonga', type:'milonga', titre:'Milonga La Dolce Vita', heure:'17h30\u201323h30', lieu:'Centre Re-Corps \u2014 16A bd de Reuilly, Paris 12e \u00b7 M\u00b0 Dugommier (L6)'});
-      });
+      if (MILONGAS_OBJ) {
+        MILONGAS_OBJ.forEach(mil => {
+          (mil.dates||[]).filter(d => d.date >= todayStr && d.date <= maxStr).forEach(d => {
+            const hdeb = d.horaire_debut || mil.horaire_debut || '17h30';
+            const hfin = d.horaire_fin  || mil.horaire_fin  || '23h30';
+            events.push({date:d.date, subtype:'milonga', type:'milonga',
+              titre: mil.nom,
+              heure: hdeb+'\u2013'+hfin,
+              lieu:  mil.lieu.nom+' \u2014 '+mil.lieu.rue+' \u00b7 '+mil.lieu.transport,
+              color: mil.color || COLOR_MILONGA
+            });
+          });
+        });
+      } else {
+        MILONGAS_DATA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
+          events.push({date:d, subtype:'milonga', type:'milonga', titre:'Milonga La Dolce Vita', heure:'17h30\u201323h30', lieu:'Centre Re-Corps \u2014 16A bd de Reuilly, Paris 12e \u00b7 M\u00b0 Dugommier (L6)'});
+        });
+      }
     }
     if (filter === 'tous' || filter === 'yoga') {
       COURS_YOGA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
@@ -887,7 +927,7 @@
         html += `<div class="agenda-month-header">${cap(MOIS_LONG[d.getMonth()])} ${d.getFullYear()}</div>`;
         lastMonth = monthKey;
       }
-      const color = getEventColor(e.subtype);
+      const color = e.color || getEventColor(e.subtype);
       const lbl   = getEventLabel(e.subtype);
       const isStage = e.subtype === 'stage';
       html += `<div class="event-item${isStage ? ' event-stage' : ''}"${isStage ? ` onclick="gotoStageInscription('${e.date}')" title="Cliquer pour s'inscrire"` : ''}>
@@ -2679,19 +2719,45 @@ if('serviceWorker' in navigator){
       color: '#a78bfa',
       mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apY.rue || '16 rue Charles Pathé 94300 Vincennes')
     },
-    {
-      id: 'milonga',
-      label: 'Milonga La Dolce Vita',
-      name: 'Centre Re-Corps',
-      addr: '16A bd de Reuilly, Paris 12e',
-      geocodeQuery: '16 boulevard de Reuilly, 75012 Paris',
-      sub: '17h30\u201323h30 \u00b7 M\u00b0 Dugommier (L6)',
-      lat: 48.8465, lng: 2.3870,
-      metro: { geocodeQuery: 'station m\u00e9tro Dugommier Paris', lat: 48.83914, lng: 2.38997, name: 'M\u00b0 Dugommier (L6)' },
-      color: '#e040a0',
-      mapsUrl: 'https://maps.google.com/?q=16+boulevard+de+Reuilly+75012+Paris'
-    }
   ];
+  // Ajout dynamique des entrées milonga depuis tev_milongas
+  (function() {
+    var MILONGAS_FB = [
+      { id:'milonga-dolce-vita', label:'Milonga La Dolce Vita', nom:'La Dolce Vita',
+        lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)'},
+        color:'#e040a0', horaire_debut:'17h30', horaire_fin:'23h30' },
+      { id:'milonga-colectivo', label:'Milonga Le Colectivo', nom:'Le Colectivo',
+        lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.8720,2.3891', transport:'M\u00b0 Jourdain (L11)'},
+        color:'#ff6b9d', horaire_debut:'20h30', horaire_fin:'2h' }
+    ];
+    var milSrc = MILONGAS_FB;
+    try {
+      var r = JSON.parse(localStorage.getItem('tev_milongas')||'null');
+      if (r && r.milongas && r.milongas.length) milSrc = r.milongas.map(function(m,i){ return Object.assign({id:'milonga-'+m.id, label:'Milonga '+m.nom, nom:m.nom}, m); });
+    } catch(e){}
+    milSrc.forEach(function(mil) {
+      var gps = (mil.lieu||{}).gps||'';
+      var pts = gps.split(',');
+      var lat = pts[0] ? parseFloat(pts[0]) : 0;
+      var lng = pts[1] ? parseFloat(pts[1]) : 0;
+      var rue = (mil.lieu||{}).rue||'';
+      var tpt = (mil.lieu||{}).transport||'';
+      LIEUX.push({
+        id: mil.id,
+        label: mil.label||mil.nom,
+        name: (mil.lieu||{}).nom||mil.nom,
+        addr: rue,
+        geocodeQuery: rue,
+        sub: (mil.horaire_debut||'17h30')+'\u2013'+(mil.horaire_fin||'23h30')+' \u00b7 '+tpt,
+        lat: lat||0, lng: lng||0,
+        metro: { geocodeQuery: tpt, lat: 0, lng: 0, name: tpt },
+        color: mil.color||'#e040a0',
+        mapsUrl: gps
+          ? 'https://maps.google.com/?q='+encodeURIComponent(gps)
+          : 'https://maps.google.com/?q='+encodeURIComponent(rue)
+      });
+    });
+  })();
 
   // Cache localStorage : évite de re-géocoder à chaque visite
   var CACHE_KEY = 'tev_plan_coords_v6';
