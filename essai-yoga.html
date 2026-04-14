@@ -83,7 +83,8 @@ select option{background:var(--s2);}
   <div class="info-box">
     🧘 Cours de yoga le mardi matin à l'<b id="yoga-adr-court">Espace Sorano, Vincennes</b><br/>
     Yin Yoga <b id="info-hr-yin">10h30</b> · Hatha Yoga <b id="info-hr-hatha">11h30</b><br/>
-    Les <b>2 premiers cours de septembre</b> sont <b>gratuits</b>.
+    Profitez d'un <b>cours d'Essai Gratuit</b> lors des 2 premiers cours de septembre.<br/>
+    Un seul cours d'essai possible par année scolaire.
   </div>
 
   <div class="field">
@@ -349,7 +350,9 @@ function updatePrix() {
   const unitaire = getYogaEssaiPrix();
   const isForfait = coursSelectionne === 'forfait';
   zone.style.display = 'block';
-  if (gratuit) {
+  if (gratuit && isForfait) {
+    zone.innerHTML = '<div class="tarif-badge tarif-paye">🎁 1 cours offert + 💶 1 cours payant : <b>0€ + '+unitaire+'€ = '+unitaire+'€</b></div>';
+  } else if (gratuit) {
     zone.innerHTML = '<div class="tarif-badge tarif-gratuit">🎁 Ce cours d\'essai est <b>gratuit</b></div>';
   } else if (isForfait) {
     zone.innerHTML = '<div class="tarif-badge tarif-paye">💶 Forfait (2 cours) : <b>2 × '+unitaire+'€ = '+(unitaire*2)+'€</b></div>';
@@ -411,11 +414,17 @@ function soumettre() {
     document.getElementById('form-zone').style.display = 'none';
     const unitaire = getYogaEssaiPrix();
     const isForfait = (data.cours === 'forfait');
-    const montant = isForfait ? unitaire * 2 : unitaire;
-    const montantStr = isForfait ? '2 × '+unitaire+'€ = '+montant+'€' : montant+'€';
-    document.getElementById('s-tarif-line').innerHTML = gratuit
-      ? '<span class="s-ico">🎁</span><span>Ce cours d\'essai est <b>gratuit</b>. Bienvenue !</span>'
-      : '<span class="s-ico">💶</span><span>Paiement sur place en espèces ('+montantStr+').</span>';
+    let tarifLineHtml;
+    if (gratuit && isForfait) {
+      tarifLineHtml = '<span class="s-ico">💶</span><span>1 cours offert + 1 cours payant. Paiement sur place en espèces (<b>'+unitaire+'€</b>).</span>';
+    } else if (gratuit) {
+      tarifLineHtml = '<span class="s-ico">🎁</span><span>Ce cours d\'essai est <b>gratuit</b>. Bienvenue !</span>';
+    } else if (isForfait) {
+      tarifLineHtml = '<span class="s-ico">💶</span><span>Paiement sur place en espèces (<b>2 × '+unitaire+'€ = '+(unitaire*2)+'€</b>).</span>';
+    } else {
+      tarifLineHtml = '<span class="s-ico">💶</span><span>Paiement sur place en espèces (<b>'+unitaire+'€</b>).</span>';
+    }
+    document.getElementById('s-tarif-line').innerHTML = tarifLineHtml;
     document.getElementById('recap-yoga').innerHTML = recapHtml;
     document.getElementById('success-yoga').style.display = 'block';
     window.scrollTo(0,0);
