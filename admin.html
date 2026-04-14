@@ -1756,6 +1756,46 @@ function sauverDatesStages(sai) {
   afficherToast('✓ '+stages.length+' stages '+sai+' enregistrés');
   renderTab();
 }
+// ================================================================
+// TAB PARAMÈTRES — state & helpers
+// ================================================================
+var saisonParametres = null;       // saison sélectionnée dans l'onglet Paramètres
+var accordionParams  = {};         // {type-section: bool}  true=ouvert
+
+function saisonPrecedente() {
+  var s=saisonCourante().split('-'), n=parseInt(s[0]); return (n-1)+'-'+n;
+}
+// Stockage par type et saison (sai=null → données non saisonnières, ex. adresses)
+function _loadParam(type, sai, section) {
+  var raw={};
+  try { raw=JSON.parse(localStorage.getItem('tev_params_'+type+(sai?'_'+sai:''))||'{}'); } catch(e){}
+  return section ? (raw[section]||{}) : raw;
+}
+function _saveParam(type, sai, section, value) {
+  var key='tev_params_'+type+(sai?'_'+sai:'');
+  var raw={};
+  try { raw=JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){}
+  raw[section]=value;
+  try { localStorage.setItem(key,JSON.stringify(raw)); } catch(e){}
+}
+function _iAccord(type, section) {
+  var k=type+'-'+section;
+  return k in accordionParams ? accordionParams[k] : (section==='tarifs');
+}
+
+var DEFAULTS_ADRESSES = {
+  paris:    {nom:'Espace Danse Studio', rue:'24 villa Riberolle, Paris 20e',          gps:'48.8568,2.3960', transport:'M° Alexandre Dumas (L2)'},
+  vincennes:{nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)'},
+  yoga:     {nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)'},
+};
+var DEFAULTS_HORAIRES = {
+  paris:    {deb:'20h30', int:'21h45'},
+  vincennes:{deb:'19h30', int:'21h00'},
+  yoga:     {yin:'10h30', hatha:'11h30'},
+};
+
+// ================================================================
+// (ancienne fonction conservée pour compatibilité interne)
 function renderTarifs() {
   var stored = null;
   try { stored = JSON.parse(localStorage.getItem('tev_tarifs')||'null'); } catch(e){}
@@ -1956,6 +1996,49 @@ function renderTarifs() {
   return h;
 }
 
+// ================================================================
+// TAB PARAMÈTRES — nouvelle fonction principale
+// ================================================================
+function renderParametres() {
+  if (!saisonParametres) saisonParametres = saisonActive();
+  var sai = saisonParametres;
+  var sc  = saisonCourante();
+  var saisons = [saisonPrecedente(), sc, saisonSuivante()];
+  var saiLabels = {};
+  saiLabels[saisonPrecedente()] = 'Saison passée';
+  saiLabels[sc]                 = 'Saison actuelle';
+  saiLabels[saisonSuivante()]   = 'Saison prochaine';
+
+  // ── Sélecteur de saison ────────────────────────────────────
+  var h = '<div style="margin-bottom:20px;">'
+    + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:10px;">Saison</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+  saisons.forEach(function(s) {
+    var act  = s === sai;
+    var icon = s < sc ? '↩ ' : s > sc ? '→ ' : '● ';
+    h += '<button data-action="changer-saison-params" data-saison="' + s + '"'
+       + ' class="btn ' + (act ? 'btn-gold' : 'btn-ghost') + '"'
+       + ' style="flex:1;min-width:110px;font-size:12px;padding:8px 6px;">'
+       + icon + s
+       + '<br><span style="font-size:10px;font-weight:normal;opacity:.75;">' + saiLabels[s] + '</span>'
+       + '</button>';
+  });
+  h += '</div>';
+
+  // Bannière saison passée
+  if (sai < sc) {
+    h += '<div class="box-info" style="margin-top:12px;font-size:12px;">🔒 Saison '
+       + sai + ' archivée — consultation uniquement</div>';
+  }
+  h += '</div>';
+
+  // ── Contenu (sera enrichi étape par étape) ─────────────────
+  // Pour l'instant on réutilise le rendu existant des tarifs
+  h += renderTarifs();
+
+  return h;
+}
+
 // Polling Apps Script pour nouveaux essais Wix (toutes les 60s, hors démo)
 var _essaiPollTimer = null;
 function demarrerPollEssais() {
@@ -2124,7 +2207,7 @@ function renderTab() {
     else if (currentTab==='yoga')         html=renderYoga();
     else if (currentTab==='agenda')       html=renderAgenda();
     else if (currentTab==='publications') html=renderPublications();
-    else if (currentTab==='tarifs')       html=renderTarifs();
+    else if (currentTab==='tarifs')       html=renderParametres();
     if(isSaisonPassee()){
       var banner='<div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--warn-text);display:flex;align-items:center;gap:8px;">🔒 Saison '+saisonActive()+' archivée — consultation uniquement</div>';
       html='<div class="saison-archivee">'+banner+html+'</div>';
@@ -2435,6 +2518,10 @@ function handleAction(action, btn) {
       break;
     case 'ajouter-dates-lot':
       ajouterDatesLot();
+      break;
+    case 'changer-saison-params':
+      saisonParametres = btn.dataset.saison || saisonActive();
+      renderTab();
       break;
     case 'sauver-tarifs':
       sauverTarifs(btn);
