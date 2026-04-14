@@ -5471,14 +5471,14 @@ function getEventsForDate(dateStr) {
   if (agendaCats.paris && COURS_PARIS.indexOf(dateStr) >= 0) {
     var _hP = _loadParam('paris', sai, 'horaires');
     var _dP = DEFAULTS_HORAIRES.paris;
-    evts.push({cat:'cours-paris', titre:'Débutant — Paris',          heure:_hP.deb||_dP.deb});
-    evts.push({cat:'cours-paris', titre:'Intermédiaire — Paris',     heure:_hP.int||_dP.int});
+    evts.push({cat:'cours-paris', titre:'Paris \u2014 Tango \u2014 D\u00e9butant',         heure:_hP.deb||_dP.deb});
+    evts.push({cat:'cours-paris', titre:'Paris \u2014 Tango \u2014 Interm\u00e9diaire',   heure:_hP.int||_dP.int});
   }
   if (agendaCats.vincennes && COURS_VINCENNES.indexOf(dateStr) >= 0) {
     var _hV = _loadParam('vincennes', sai, 'horaires');
     var _dV = DEFAULTS_HORAIRES.vincennes;
-    evts.push({cat:'cours-vinc', titre:'Débutant — Vincennes',       heure:_hV.deb||_dV.deb});
-    evts.push({cat:'cours-vinc', titre:'Intermédiaire — Vincennes',  heure:_hV.int||_dV.int});
+    evts.push({cat:'cours-vinc', titre:'Vincennes \u2014 Tango \u2014 D\u00e9butant',      heure:_hV.deb||_dV.deb});
+    evts.push({cat:'cours-vinc', titre:'Vincennes \u2014 Tango \u2014 Interm\u00e9diaire',heure:_hV.int||_dV.int});
   }
   if (agendaCats.stage) {
     var _stRaw=STAGES.find(function(s){return s.date===dateStr;});
@@ -5557,18 +5557,14 @@ function renderAgendaCalendrier() {
   };
   var debut=new Date(todayStr+'T00:00:00');
   var finDate=new Date(debut); finDate.setMonth(finDate.getMonth()+12);
-  var d=new Date(debut), hasEvents=false, currentMoisAff=-1;
+  var d=new Date(debut), hasEvents=false;
   while(d<=finDate){
     var ds=toISO(d), evts=getEventsForDate(ds);
     var modifsDuJour = agendaModifs.filter(function(m){ return m.date===ds; });
     if(evts.length || modifsDuJour.length){
       hasEvents=true;
-      // En-tête de mois
-      if(d.getMonth()!==currentMoisAff){
-        currentMoisAff=d.getMonth();
-        h+='<div style="font-family:var(--font-d);font-size:18px;font-weight:300;color:var(--dim);letter-spacing:3px;padding:16px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px;">'+MOIS_FR[d.getMonth()]+' '+d.getFullYear()+'</div>';
-      }
-      h+='<div class="agenda-day-hdr"><div class="agenda-day-num" style="'+(ds===todayStr?'color:var(--gold)':'')+'">'+d.getDate()+'</div><div class="agenda-day-lbl">'+DOW_LONG[d.getDay()]+'</div>'+(ds===todayStr?'<span class="pill pill-gold" style="font-size:8px;">Aujourd\'hui</span>':'')+'</div>';
+      var _dateLbl = DOW_LONG[d.getDay()]+' '+d.getDate()+' '+MOIS_FR[d.getMonth()].toLowerCase();
+      h+='<div class="agenda-day-hdr"><div class="agenda-day-lbl" style="font-size:14px;font-weight:600;'+(ds===todayStr?'color:var(--gold)':'color:var(--text)')+'">'+_dateLbl+'</div>'+(ds===todayStr?'<span class="pill pill-gold" style="font-size:8px;">Aujourd\'hui</span>':'')+'</div>';
       evts.forEach(function(e){h+='<div class="agenda-event ae-'+e.cat+'"><div><div class="ae-titre">'+(e.heure&&e.heure!=='—'?e.heure+' \u2014 ':'')+e.titre+'</div><div class="ae-sub">'+(e.sub||EVT_SUB_AG[e.cat]||'')+'</div></div></div>';});
       modifsDuJour.forEach(function(m){
         var label = {annule:'🚫 Annulé', reporte:'📅 Reporté', modif:'✏️ Modifié', note:'📌 Note'}[m.action]||m.action;
