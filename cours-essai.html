@@ -459,10 +459,21 @@ let DATES = {
   }
 };
 
-const HORAIRES = {
-  Paris:     {"Débutant":"20h30","Intermédiaire & Avancé":"21h45"},
-  Vincennes: {"Débutant":"19h30","Intermédiaire & Avancé":"21h00"}
-};
+// Horaires — lus depuis les Paramètres admin (localStorage), fallback sur valeurs par défaut
+var HORAIRES = (function() {
+  function sai() {
+    var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1;
+    return m>=9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y);
+  }
+  function loadHor(type) {
+    try { var p=JSON.parse(localStorage.getItem('tev_params_'+type+'_'+sai())||'{}'); return p.horaires||{}; } catch(e) { return {}; }
+  }
+  var hP=loadHor('paris'), hV=loadHor('vincennes');
+  return {
+    Paris:     {"Débutant": hP.deb||"20h30", "Intermédiaire & Avancé": hP.int||"21h45"},
+    Vincennes: {"Débutant": hV.deb||"19h30", "Intermédiaire & Avancé": hV.int||"21h00"}
+  };
+})();
 
 const JOURS_FR = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
 const MOIS_FR  = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];

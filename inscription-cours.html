@@ -265,12 +265,26 @@ const T = (function() {
 // ================================================================
 // DONNÉES
 // ================================================================
-const CI = {
-  paris:     { debutant:     { jour:'Jeudi soir',  h:'20h30', lieu:'Espace Danse Studio',  adr:'24 villa Riberolle, Paris 20e' },
-               intermediaire:{ jour:'Jeudi soir',  h:'21h45', lieu:'Espace Danse Studio',  adr:'24 villa Riberolle, Paris 20e' } },
-  vincennes: { debutant:     { jour:'Lundi soir',  h:'19h30', lieu:'Espace Sorano',         adr:'16 rue Charles Pathé, Vincennes' },
-               intermediaire:{ jour:'Lundi soir',  h:'21h00', lieu:'Espace Sorano',         adr:'16 rue Charles Pathé, Vincennes' } },
-};
+// Infos cours — horaires et lieux lus depuis les Paramètres admin (localStorage)
+// puis fallback sur les valeurs par défaut
+var CI = (function() {
+  function sai() {
+    var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1;
+    return m>=9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y);
+  }
+  function loadP(type) {
+    try { return JSON.parse(localStorage.getItem('tev_params_'+type+'_'+sai())||'{}'); } catch(e) { return {}; }
+  }
+  var pP=loadP('paris'), pV=loadP('vincennes');
+  var hP=pP.horaires||{}, hV=pV.horaires||{};
+  var aP=pP.adresse||{},  aV=pV.adresse||{};
+  return {
+    paris:     { debutant:     { jour:'Jeudi soir',  h:hP.deb||'20h30', lieu:aP.nom||'Espace Danse Studio',  adr:aP.rue||'24 villa Riberolle, Paris 20e' },
+                 intermediaire:{ jour:'Jeudi soir',  h:hP.int||'21h45', lieu:aP.nom||'Espace Danse Studio',  adr:aP.rue||'24 villa Riberolle, Paris 20e' } },
+    vincennes: { debutant:     { jour:'Lundi soir',  h:hV.deb||'19h30', lieu:aV.nom||'Espace Sorano',        adr:aV.rue||'16 rue Charles Pathé, Vincennes' },
+                 intermediaire:{ jour:'Lundi soir',  h:hV.int||'21h00', lieu:aV.nom||'Espace Sorano',        adr:aV.rue||'16 rue Charles Pathé, Vincennes' } },
+  };
+})();
 const NIV_LBL = { debutant:'Débutant', intermediaire:'Intermédiaire & Avancé' };
 const ROLE_LBL = { 'guideur':'Guideur·se', 'guidee':'Guidé·e', 'double':'Double rôle' };
 
