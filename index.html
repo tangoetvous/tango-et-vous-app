@@ -835,19 +835,14 @@
         const hor = Object.assign({}, HST, s.horaires||{});
         const hasTech = s.technique !== false;
         const n = s.nStages || 2;
-        if (hasTech) {
-          events.push({date:s.date, subtype:'stage', type:'stage',
-            titre: _thLbl(s.tech||'', 'Technique Leader & Follower'),
-            heure: hor.tech_deb+'\u2013'+hor.tech_fin, lieu:lieuSt});
-        }
-        const sNames = [s.s1, s.s2, s.s3, s.s4];
-        const sDb = ['s1_deb','s2_deb','s3_deb','s4_deb'];
-        const sFn = ['s1_fin','s2_fin','s3_fin','s4_fin'];
-        for (let si = 0; si < n; si++) {
-          events.push({date:s.date, subtype:'stage', type:'stage',
-            titre: _thLbl(sNames[si]||'', 'Stage '+(si+1)),
-            heure: hor[sDb[si]]+'\u2013'+hor[sFn[si]], lieu:lieuSt});
-        }
+        const slots = [];
+        if (hasTech) slots.push({heure:hor.tech_deb+'\u2013'+hor.tech_fin, titre:_thLbl(s.tech||'','Technique Leader & Follower')});
+        const sNames=[s.s1,s.s2,s.s3,s.s4], sDb=['s1_deb','s2_deb','s3_deb','s4_deb'], sFn=['s1_fin','s2_fin','s3_fin','s4_fin'];
+        for (let si=0;si<n;si++) slots.push({heure:hor[sDb[si]]+'\u2013'+hor[sFn[si]], titre:_thLbl(sNames[si]||'','Stage '+(si+1))});
+        const startH = hasTech ? hor.tech_deb : hor.s1_deb;
+        const endH   = hor['s'+n+'_fin'] || hor.s2_fin;
+        events.push({date:s.date, subtype:'stage', type:'stage', titre:'Stage de Tango',
+          heure:startH+'\u2013'+endH, lieu:lieuSt, slots});
       });
     }
     if (filter === 'tous' || filter === 'milonga') {
@@ -946,16 +941,20 @@
       const color = e.color || getEventColor(e.subtype);
       const lbl   = getEventLabel(e.subtype);
       const isStage = e.subtype === 'stage';
+      const subContent = (isStage && e.slots && e.slots.length)
+        ? e.slots.map(sl => `<div class="event-slot-row"><span class="event-slot-hr">${sl.heure}</span>${sl.titre}</div>`).join('')
+          + (e.lieu ? `<div class="event-slot-lieu">${e.lieu}</div>` : '')
+        : `<div class="event-sub">${e.heure}${e.lieu ? ' \u00b7 ' + e.lieu : ''}</div>`;
       html += `<div class="event-item${isStage ? ' event-stage' : ''}"${isStage ? ` onclick="gotoStageInscription('${e.date}')" title="Cliquer pour s'inscrire"` : ''}>
         <div class="event-date-col">
           <div class="event-day">${d.getDate()}</div>
           <div class="event-month-lbl">${MOIS_COURT[d.getMonth()]}</div>
         </div>
-        <div class="event-type-bar" style="background:${color}"></div>
+        <div class="event-type-bar${isStage ? ' event-type-bar-stretch' : ''}" style="background:${color}"></div>
         <div class="event-info">
           <div class="event-type-lbl" style="color:${color}">${lbl}${isStage ? ' <span style="font-size:9px;opacity:.7;">→ S\'inscrire</span>' : ''}</div>
           <div class="event-title">${e.titre}</div>
-          <div class="event-sub">${e.heure}${e.lieu ? ' \u00b7 ' + e.lieu : ''}</div>
+          ${subContent}
         </div>
       </div>`;
     });
@@ -1978,8 +1977,12 @@ a{color:var(--gold);text-decoration:none;}
 .event-type-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:2px;}
 .event-title{font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .event-sub{font-size:13px;color:var(--gold);margin-top:2px;font-weight:500;}
-.event-item.event-stage{cursor:pointer;}
+.event-item.event-stage{cursor:pointer;align-items:flex-start;}
 .event-item.event-stage:hover{background:rgba(212,175,55,.06);}
+.event-type-bar-stretch{align-self:stretch;height:auto!important;}
+.event-slot-row{font-size:12px;color:var(--text-dim);margin-top:3px;line-height:1.5;}
+.event-slot-hr{font-size:11px;color:var(--gold);font-weight:600;margin-right:6px;font-family:var(--font-body);}
+.event-slot-lieu{font-size:11px;color:var(--text-faint);margin-top:5px;}
 
 /* ================================================================
    STAGES
