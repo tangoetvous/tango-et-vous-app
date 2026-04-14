@@ -2066,6 +2066,11 @@ function _renderParamCard(type, sai) {
     h += _renderAccordSection(type, 'adresse', '📍 Adresse et accès', _renderSecAdresseContent(type, sai));
   }
 
+  // Section Horaires (sauf Stages)
+  if (type !== 'stages') {
+    h += _renderAccordSection(type, 'horaires', '⏰ Horaires', _renderSecHorairesContent(type, sai));
+  }
+
   return h+'</div>';
 }
 
@@ -2207,6 +2212,65 @@ function sauverAdresseType(type, sai) {
   };
   _saveParam(type, sai, 'adresse', data);
   afficherToast('✓ Adresse '+type+' '+sai+' enregistrée');
+  renderTab();
+}
+
+// ── Contenu : Horaires ───────────────────────────────────────
+function _renderSecHorairesContent(type, sai) {
+  var def = DEFAULTS_HORAIRES[type]||{};
+  var d   = _loadParam(type, sai, 'horaires');
+  function val(k) { return d[k]||def[k]||''; }
+  var iS = 'width:90px;background:var(--s3);color:var(--text);border:1px solid var(--border);'
+         + 'border-radius:6px;padding:6px 8px;font-size:14px;font-weight:600;text-align:center;';
+  var rows = '';
+  if (type === 'yoga') {
+    rows = '<tr>'
+      +'<td style="padding:7px 8px;font-size:12px;color:var(--text);">🌙 Yin Yoga</td>'
+      +'<td style="padding:5px 8px;"><input id="pm-'+type+'-h-yin" type="text"'
+      +' value="'+val('yin')+'" placeholder="10h30" style="'+iS+'"></td></tr>'
+      +'<tr>'
+      +'<td style="padding:7px 8px;font-size:12px;color:var(--text);">☀️ Hatha Yoga</td>'
+      +'<td style="padding:5px 8px;"><input id="pm-'+type+'-h-hatha" type="text"'
+      +' value="'+val('hatha')+'" placeholder="11h30" style="'+iS+'"></td></tr>';
+  } else {
+    rows = '<tr>'
+      +'<td style="padding:7px 8px;font-size:12px;color:var(--text);">Débutant</td>'
+      +'<td style="padding:5px 8px;"><input id="pm-'+type+'-h-deb" type="text"'
+      +' value="'+val('deb')+'" placeholder="20h30" style="'+iS+'"></td></tr>'
+      +'<tr>'
+      +'<td style="padding:7px 8px;font-size:12px;color:var(--text);">Intermédiaire &amp; Avancé</td>'
+      +'<td style="padding:5px 8px;"><input id="pm-'+type+'-h-int" type="text"'
+      +' value="'+val('int')+'" placeholder="21h45" style="'+iS+'"></td></tr>';
+  }
+  return '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
+    +'Saison <strong>'+sai+'</strong></div>'
+    +'<table style="border-collapse:collapse;margin-bottom:12px;">'
+    +'<thead><tr>'
+    +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;'
+    +'letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Cours</th>'
+    +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;'
+    +'letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Heure de début</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<div class="btn-row">'
+    +'<button class="btn btn-ghost" data-action="reset-horaires-type"'
+    +' data-type="'+type+'" data-saison="'+sai+'" style="font-size:12px;">↺ Défauts</button>'
+    +'<button class="btn btn-gold" data-action="sauver-horaires-type"'
+    +' data-type="'+type+'" data-saison="'+sai+'" style="flex:2;font-size:12px;">💾 Enregistrer</button>'
+    +'</div>';
+}
+
+// Sauvegarde les horaires d'un type pour une saison donnée
+function sauverHorairesType(type, sai) {
+  var data = {};
+  if (type === 'yoga') {
+    data.yin   = (gel('pm-'+type+'-h-yin')||{}).value||'';
+    data.hatha = (gel('pm-'+type+'-h-hatha')||{}).value||'';
+  } else {
+    data.deb = (gel('pm-'+type+'-h-deb')||{}).value||'';
+    data.int = (gel('pm-'+type+'-h-int')||{}).value||'';
+  }
+  _saveParam(type, sai, 'horaires', data);
+  afficherToast('✓ Horaires '+type+' '+sai+' enregistrés');
   renderTab();
 }
 
@@ -2732,6 +2796,17 @@ function handleAction(action, btn) {
       break;
     case 'sauver-adresse-type':
       sauverAdresseType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
+      break;
+    case 'sauver-horaires-type':
+      sauverHorairesType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
+      break;
+    case 'reset-horaires-type':
+      (function(){
+        var tp=btn.dataset.type, si=btn.dataset.saison;
+        _saveParam(tp, si, 'horaires', {});
+        afficherToast('Horaires réinitialisés.');
+        renderTab();
+      })();
       break;
     case 'reset-tarifs-type':
       (function(){
