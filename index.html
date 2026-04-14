@@ -34,6 +34,30 @@
   // ================================================================
   const IS_DEMO = FIREBASE_CONFIG.apiKey === 'VOTRE_API_KEY' || APPS_SCRIPT_URL.includes('VOTRE_DEPLOYMENT');
 
+  // ================================================================
+  // PARAMÈTRES DYNAMIQUES (admin.html → localStorage → index.html)
+  // ================================================================
+  function _sai() { var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); }
+  function _lp(t) { try{return JSON.parse(localStorage.getItem('tev_params_'+t+'_'+_sai())||'{}');}catch(e){return{};} }
+  const _pP=_lp('paris'), _pV=_lp('vincennes'), _pYo=_lp('yoga'), _pSt=_lp('stages');
+  const _hP=_pP.horaires||{}, _hV=_pV.horaires||{}, _hY=_pYo.horaires||{};
+  const _aP=_pP.adresse||{}, _aV=_pV.adresse||{}, _aY=_pYo.adresse||{}, _aSt=_pSt.adresse||{}, _tSt=_pSt.tarifs||{};
+  // Horaires cours
+  const HP_DEB=_hP.deb||'20h30', HP_INT=_hP.int||'21h45';
+  const HV_DEB=_hV.deb||'19h30', HV_INT=_hV.int||'21h00';
+  const HY_YIN=_hY.yin||'10h30', HY_YIN_FIN=_hY.yin_fin||'11h30';
+  const HY_HTH=_hY.hatha||'11h30', HY_HTH_FIN=_hY.hatha_fin||'12h30';
+  // Lieux
+  const LP_NOM=_aP.nom||'Espace Danse Studio', LP_RUE=_aP.rue||'24 villa Riberolle, Paris 20e', LP_TPT=_aP.transport||'M\u00b0 Alexandre Dumas (L2)';
+  const LV_NOM=_aV.nom||'Espace Sorano', LV_RUE=_aV.rue||'16 rue Charles Path\u00e9, 94300 Vincennes', LV_TPT=_aV.transport||'RER A \u2014 Vincennes (pl. Pierre S\u00e9mard)';
+  const LY_NOM=_aY.nom||'Espace Sorano', LY_RUE=_aY.rue||'16 rue Charles Path\u00e9, 94300 Vincennes', LY_TPT=_aY.transport||'RER A Ch\u00e2teau de Vincennes';
+  const LST_NOM=_aSt.nom||'Centre Kim Kan', LST_RUE=_aSt.rue||'64 rue Orfila, Paris 20e', LST_TPT=_aSt.transport||'M\u00b0 Gambetta (L3)';
+  // Horaires stages (globaux)
+  const _hSt=_pSt.horaires||{};
+  const HST={tech_deb:_hSt.tech_deb||'14h',tech_fin:_hSt.tech_fin||'15h',s1_deb:_hSt.s1_deb||'15h',s1_fin:_hSt.s1_fin||'16h30',s2_deb:_hSt.s2_deb||'16h30',s2_fin:_hSt.s2_fin||'18h',s3_deb:_hSt.s3_deb||'11h30',s3_fin:_hSt.s3_fin||'13h',s4_deb:_hSt.s4_deb||'10h',s4_fin:_hSt.s4_fin||'11h30'};
+  // Tarifs stages (globaux)
+  const TAR_TECH=_tSt.stage_technique||20, TAR_STG=_tSt.stage_1||25;
+
   const DEMO_DATA = {
     eleve: { id: 'E001', nom: 'Marie Dupont', niveau: 'Débutant', email: 'marie@ex.com' },
     carte: {
@@ -462,7 +486,7 @@
       if (prochain) {
         const d = new Date(prochain + 'T00:00:00');
         const gratuit = estEssaiYogaGratuitIndex(prochain);
-        const lieu = 'Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes · RER A Château de Vincennes';
+        const lieu = LY_NOM+' \u2014 '+LY_RUE+' \u00b7 '+LY_TPT;
         const badge = gratuit ? ' · <span style="font-size:10px;">🎁 Essai gratuit</span>' : '';
         prochainsEl.innerHTML = `<div class="event-item">
           <div class="event-date-col">
@@ -472,7 +496,7 @@
           <div class="event-type-bar" style="background:#a78bfa"></div>
           <div class="event-info">
             <div class="event-type-lbl" style="color:#a78bfa">Yoga${badge}</div>
-            <div class="event-title">🌙 Yin Yoga — 10h30</div>
+            <div class="event-title">\uD83C\uDF19 Yin Yoga \u2014 ${HY_YIN}</div>
             <div class="event-sub">${lieu}</div>
           </div>
         </div>
@@ -484,7 +508,7 @@
           <div class="event-type-bar" style="background:#a78bfa"></div>
           <div class="event-info">
             <div class="event-type-lbl" style="color:#a78bfa">Yoga</div>
-            <div class="event-title">☀️ Hatha Yoga — 11h30</div>
+            <div class="event-title">\u2600\uFE0F Hatha Yoga \u2014 ${HY_HTH}</div>
             <div class="event-sub">${lieu}</div>
           </div>
         </div>`;
@@ -500,7 +524,7 @@
       const inscrit = (eleveData.coursYoga || []).some(x => x.email === email);
       if (inscrit) {
         const cx = (eleveData.coursYoga || []).find(x => x.email === email);
-        const coursLbl = {yin:'Yin Yoga 10h30', hatha:'Hatha Yoga 11h30', forfait:'Yin Yoga+Hatha Yoga 10h30–12h30'}[cx.cours] || cx.cours;
+        const coursLbl = {yin:'Yin Yoga '+HY_YIN, hatha:'Hatha Yoga '+HY_HTH, forfait:'Yin Yoga + Hatha Yoga '+HY_YIN+'\u2013'+HY_HTH_FIN}[cx.cours] || cx.cours;
         statutEl.innerHTML = `<div class="contact-card" style="cursor:default;margin-bottom:14px;border-left:4px solid #a78bfa;">
           <div class="contact-icon-wrap" style="font-size:28px;">✅</div>
           <div class="contact-info">
@@ -566,11 +590,11 @@
     const niveauLbl = niveau.includes('interm') ? 'Intermédiaire' : 'Débutant';
     let coursName, coursJour, coursHeure;
     if (ville === 'vincennes') {
-      coursName = 'Vincennes — ' + niveauLbl; coursJour = 'Lundi';
-      coursHeure = niveau.includes('interm') ? '21h00 — 22h30' : '19h30 — 21h00';
+      coursName = 'Vincennes \u2014 ' + niveauLbl; coursJour = 'Lundi';
+      coursHeure = niveau.includes('interm') ? HV_INT : HV_DEB;
     } else {
-      coursName = 'Paris — ' + niveauLbl; coursJour = 'Jeudi';
-      coursHeure = niveau.includes('interm') ? '21h45 — 23h00' : '20h30 — 21h45';
+      coursName = 'Paris \u2014 ' + niveauLbl; coursJour = 'Jeudi';
+      coursHeure = niveau.includes('interm') ? HP_INT : HP_DEB;
     }
     const emailEleve = eleve.email || '';
     const yogaInscrit = (eleveData.coursYoga || []).find(x => x.email === emailEleve);
@@ -582,7 +606,7 @@
       + '<div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(212,175,55,0.12) 0%,transparent 70%);pointer-events:none;"></div>'
       + '<div style="font-family:var(--font-display,serif);font-size:26px;font-weight:300;color:var(--gold);letter-spacing:1px;margin-bottom:4px;position:relative;">Bonjour, ' + prenom + ' 🩷</div>'
       + '<div style="font-size:13px;color:rgba(255,255,255,0.85);line-height:1.6;position:relative;">' + coursName + ' · ' + coursJour + ' ' + coursHeure
-      + (yogaInscrit ? '<br><span style="color:rgba(255,255,255,0.7);font-size:14px;">' + ({yin:'🌙 Yin Yoga · Mardi 10h30', hatha:'☀️ Hatha Yoga · Mardi 11h30', forfait:'🌙☀️ Yin + Hatha Yoga · Mardi'}[yogaInscrit.cours] || '') + '</span>' : '')
+      + (yogaInscrit ? '<br><span style="color:rgba(255,255,255,0.7);font-size:14px;">' + ({yin:'\uD83C\uDF19 Yin Yoga \u00b7 Mardi '+HY_YIN, hatha:'\u2600\uFE0F Hatha Yoga \u00b7 Mardi '+HY_HTH, forfait:'\uD83C\uDF19\u2600\uFE0F Yin + Hatha Yoga \u00b7 Mardi '+HY_YIN}[yogaInscrit.cours] || '') + '</span>' : '')
       + '</div>'
       + '</div>';
 
@@ -695,21 +719,34 @@
   // ================================================================
   const COURS_PARIS = ['2026-04-02','2026-04-09','2026-04-16','2026-04-23','2026-05-07','2026-05-21','2026-05-28','2026-06-04','2026-06-11','2026-06-18','2026-06-25','2026-09-03','2026-09-10','2026-09-17','2026-09-24','2026-10-01','2026-10-08','2026-10-15','2026-10-22','2026-11-05','2026-11-12','2026-11-19','2026-11-26','2026-12-03','2026-12-10','2026-12-17','2027-01-07','2027-01-14','2027-01-21','2027-01-28','2027-02-04','2027-02-18','2027-02-25','2027-03-04','2027-03-11','2027-03-18','2027-03-25','2027-04-01','2027-04-15','2027-04-22','2027-04-29','2027-05-13','2027-05-20','2027-05-27','2027-06-03','2027-06-10','2027-06-17','2027-06-24'];
   const COURS_VINCENNES = ['2026-04-13','2026-05-04','2026-05-11','2026-05-18','2026-06-01','2026-06-08','2026-06-15','2026-06-29','2026-09-07','2026-09-14','2026-09-21','2026-09-28','2026-10-05','2026-10-12','2026-11-02','2026-11-09','2026-11-16','2026-11-23','2026-11-30','2026-12-07','2026-12-14','2027-01-04','2027-01-11','2027-01-18','2027-01-25','2027-02-01','2027-02-22','2027-03-01','2027-03-08','2027-03-15','2027-03-22','2027-04-19','2027-04-26','2027-05-03','2027-05-10','2027-05-24','2027-05-31','2027-06-07','2027-06-14','2027-06-21'];
-  const STAGES_DATA = [
-    {date:'2026-04-11',label:'Sam. 11 Avr 2026',s1:'Milonga',s2:'Lapiz & Enrosque'},
-    {date:'2026-05-30',label:'Sam. 30 Mai 2026',s1:'',s2:''},
-    {date:'2026-06-20',label:'Sam. 20 Juin 2026',s1:'',s2:''},
-    {date:'2026-09-19',label:'Sam. 19 Sep 2026',s1:'À venir',s2:'À venir'},
-    {date:'2026-10-03',label:'Sam. 3 Oct 2026',s1:'À venir',s2:'À venir'},
-    {date:'2026-11-07',label:'Sam. 7 Nov 2026',s1:'À venir',s2:'À venir'},
-    {date:'2026-12-05',label:'Sam. 5 Déc 2026',s1:'À venir',s2:'À venir'},
-    {date:'2027-01-30',label:'Sam. 30 Jan 2027',s1:'À venir',s2:'À venir'},
-    {date:'2027-02-27',label:'Sam. 27 Fév 2027',s1:'À venir',s2:'À venir'},
-    {date:'2027-03-13',label:'Sam. 13 Mar 2027',s1:'À venir',s2:'À venir'},
-    {date:'2027-04-24',label:'Sam. 24 Avr 2027',s1:'À venir',s2:'À venir'},
-    {date:'2027-05-22',label:'Sam. 22 Mai 2027',s1:'À venir',s2:'À venir'},
-    {date:'2027-06-19',label:'Sam. 19 Juin 2027',s1:'À venir',s2:'À venir'}
+  const STAGES_DATA_FB = [
+    {date:'2026-04-11',label:'Sam. 11 Avr 2026',nom:'',technique:true,nStages:2,s1:'Milonga',s2:'Lapiz \u0026 Enrosque',s3:'',s4:''},
+    {date:'2026-05-30',label:'Sam. 30 Mai 2026',nom:'',technique:true,nStages:2,s1:'',s2:'',s3:'',s4:''},
+    {date:'2026-06-20',label:'Sam. 20 Juin 2026',nom:'',technique:true,nStages:2,s1:'',s2:'',s3:'',s4:''},
+    {date:'2026-09-19',label:'Sam. 19 Sep 2026',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''},
+    {date:'2026-10-03',label:'Sam. 3 Oct 2026',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''},
+    {date:'2026-11-07',label:'Sam. 7 Nov 2026',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''},
+    {date:'2026-12-05',label:'Sam. 5 D\u00e9c 2026',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''},
+    {date:'2027-01-30',label:'Sam. 30 Jan 2027',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''},
+    {date:'2027-02-27',label:'Sam. 27 F\u00e9v 2027',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''},
+    {date:'2027-03-13',label:'Sam. 13 Mar 2027',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''},
+    {date:'2027-04-24',label:'Sam. 24 Avr 2027',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''},
+    {date:'2027-05-22',label:'Sam. 22 Mai 2027',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''},
+    {date:'2027-06-19',label:'Sam. 19 Juin 2027',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''}
   ];
+  const STAGES_DATA = (function() {
+    try {
+      var raw = JSON.parse(localStorage.getItem('tev_dates_stages')||'{}');
+      var arr = raw.stages||[];
+      if (!arr.length) return STAGES_DATA_FB;
+      return arr.map(function(s) {
+        var th = s.themes||[];
+        return { date:s.date||'', label:s.label||'', nom:s.nom||'', technique:s.technique!==false,
+                 nStages:s.nStages||2, s1:th[0]||'', s2:th[1]||'', s3:th[2]||'', s4:th[3]||'',
+                 horaires:s.horaires||null, tarifs:s.tarifs||null };
+      });
+    } catch(e) { return STAGES_DATA_FB; }
+  })();
   const MILONGAS_DATA = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
   // Yoga — mardis à l'Espace Sorano Vincennes (Yin 10h30, Hatha 11h30)
   const COURS_YOGA = [
@@ -743,34 +780,44 @@
     const todayStr = today.toISOString().split('T')[0];
     const maxStr = maxDate.toISOString().split('T')[0];
     const events = [];
+    const lieuP  = LP_NOM+' \u2014 '+LP_RUE+' \u00b7 '+LP_TPT;
+    const lieuV  = LV_NOM+' \u2014 '+LV_RUE+' \u00b7 '+LV_TPT;
+    const lieuY  = LY_NOM+' \u2014 '+LY_RUE+' \u00b7 '+LY_TPT;
+    const lieuSt = LST_NOM+', '+LST_RUE;
 
     if (filter === 'tous' || filter === 'paris') {
       COURS_PARIS.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
-        events.push({date:d, subtype:'paris', type:'cours', titre:'Cours D\u00e9butant — Paris', heure:'20h30', lieu:'Espace Danse Studio \u2014 24 villa Riberolle, Paris 20e \u00b7 M\u00b0 Alexandre Dumas (L2)'});
-        events.push({date:d, subtype:'paris', type:'cours', titre:'Cours Interm\u00e9diaire & Avanc\u00e9 — Paris', heure:'21h45', lieu:'Espace Danse Studio \u2014 24 villa Riberolle, Paris 20e \u00b7 M\u00b0 Alexandre Dumas (L2)'});
+        events.push({date:d, subtype:'paris', type:'cours', titre:'Cours D\u00e9butant \u2014 Paris', heure:HP_DEB, lieu:lieuP});
+        events.push({date:d, subtype:'paris', type:'cours', titre:'Cours Interm\u00e9diaire & Avanc\u00e9 \u2014 Paris', heure:HP_INT, lieu:lieuP});
       });
     }
     if (filter === 'tous' || filter === 'vincennes') {
       COURS_VINCENNES.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
-        events.push({date:d, subtype:'vincennes', type:'cours', titre:'Cours D\u00e9butant — Vincennes', heure:'19h30', lieu:'Espace Sorano \u2014 16 rue Charles Path\u00e9, 94300 Vincennes \u00b7 RER A / M\u00b0 Ch\u00e2teau de Vincennes (L1)'});
-        events.push({date:d, subtype:'vincennes', type:'cours', titre:'Cours Interm\u00e9diaire & Avanc\u00e9 — Vincennes', heure:'21h00', lieu:'Espace Sorano \u2014 16 rue Charles Path\u00e9, 94300 Vincennes \u00b7 RER A / M\u00b0 Ch\u00e2teau de Vincennes (L1)'});
+        events.push({date:d, subtype:'vincennes', type:'cours', titre:'Cours D\u00e9butant \u2014 Vincennes', heure:HV_DEB, lieu:lieuV});
+        events.push({date:d, subtype:'vincennes', type:'cours', titre:'Cours Interm\u00e9diaire & Avanc\u00e9 \u2014 Vincennes', heure:HV_INT, lieu:lieuV});
       });
     }
     if (filter === 'tous' || filter === 'stage') {
       STAGES_DATA.filter(s => s.date >= todayStr && s.date <= maxStr).forEach(s => {
-        const label = s.s1 ? `${s.s1}${s.s2 ? ' · ' + s.s2 : ''}` : 'Stage de Tango';
-        events.push({date:s.date, subtype:'stage', type:'stage', titre:'Stage de Tango' + (s.s1 ? ' — ' + s.s1 : ''), heure:'14h–18h', lieu:'Centre Kim Kan, 64 rue Orfila, Paris 20e'});
+        const hor = Object.assign({}, HST, s.horaires||{});
+        const hasTech = s.technique !== false;
+        const n = s.nStages || 2;
+        const startH = hasTech ? hor.tech_deb : hor.s1_deb;
+        const finKeys = ['tech_fin','s1_fin','s2_fin','s3_fin','s4_fin'];
+        const endH = hasTech ? hor['s'+n+'_fin'] || hor.s2_fin : hor['s'+n+'_fin'] || hor.s1_fin;
+        const hRange = startH+'\u2013'+endH;
+        events.push({date:s.date, subtype:'stage', type:'stage', titre:'Stage de Tango'+(s.s1?' \u2014 '+s.s1:''), heure:hRange, lieu:lieuSt});
       });
     }
     if (filter === 'tous' || filter === 'milonga') {
       MILONGAS_DATA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
-        events.push({date:d, subtype:'milonga', type:'milonga', titre:'Milonga La Dolce Vita', heure:'17h30–23h30', lieu:'Centre Re-Corps \u2014 16A bd de Reuilly, Paris 12e \u00b7 M\u00b0 Dugommier (L6)'});
+        events.push({date:d, subtype:'milonga', type:'milonga', titre:'Milonga La Dolce Vita', heure:'17h30\u201323h30', lieu:'Centre Re-Corps \u2014 16A bd de Reuilly, Paris 12e \u00b7 M\u00b0 Dugommier (L6)'});
       });
     }
     if (filter === 'tous' || filter === 'yoga') {
       COURS_YOGA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
-        events.push({date:d, subtype:'yoga', type:'cours', titre:'🌙 Yin Yoga', heure:'10h30', lieu:'Espace Sorano \u2014 16 rue Charles Path\u00e9, 94300 Vincennes \u00b7 RER A Ch\u00e2teau de Vincennes'});
-        events.push({date:d, subtype:'yoga', type:'cours', titre:'☀️ Hatha Yoga', heure:'11h30', lieu:'Espace Sorano \u2014 16 rue Charles Path\u00e9, 94300 Vincennes \u00b7 RER A Ch\u00e2teau de Vincennes'});
+        events.push({date:d, subtype:'yoga', type:'cours', titre:'\uD83C\uDF19 Yin Yoga', heure:HY_YIN, lieu:lieuY});
+        events.push({date:d, subtype:'yoga', type:'cours', titre:'\u2600\uFE0F Hatha Yoga', heure:HY_HTH, lieu:lieuY});
       });
     }
     events.sort((a,b) => a.date.localeCompare(b.date) || (a.heure||'').localeCompare(b.heure||''));
@@ -884,14 +931,24 @@
     </div>`;
 
     // Accordéon
+    const _hasThm = t => t && t !== '\u00c0 venir';
+    const _thLbl  = (t, prefix) => prefix + (_hasThm(t) ? ' \u2014 ' + t : (t === '\u00c0 venir' ? ' \u2014 th\u00e8me \u00e0 venir' : ''));
+    const _tarVal = (tar, key) => tar[key] != null ? tar[key] : (key === 'stage_technique' ? TAR_TECH : TAR_STG);
     all.forEach(s => {
       const d = new Date(s.date + 'T00:00:00');
       const df = d.getDate() + '\u00a0' + MOIS_LONG[d.getMonth()] + '\u00a0' + d.getFullYear();
       const isPast = s.date < todayStr;
-      const hasTheme = t => t && t !== '\u00c0 venir';
-      const slot1 = 'Technique Leader &amp; Follower' + (hasTheme(s.tech) ? ' \u2014 ' + s.tech : '');
-      const slot2 = 'Stage 1' + (hasTheme(s.s1) ? ' \u2014 ' + s.s1 : (s.s1 === '\u00c0 venir' ? ' \u2014 th\u00e8me \u00e0 venir' : ''));
-      const slot3 = 'Stage 2' + (hasTheme(s.s2) ? ' \u2014 ' + s.s2 : (s.s2 === '\u00c0 venir' ? ' \u2014 th\u00e8me \u00e0 venir' : ''));
+      const hor = Object.assign({}, HST, s.horaires||{});
+      const tar = s.tarifs||{};
+      const hasTech = s.technique !== false;
+      const n = s.nStages || 2;
+      const slotsArr = [];
+      if (hasTech) slotsArr.push({ nom:_thLbl(s.tech||'','Technique Leader &amp; Follower'), heure:hor.tech_deb+'\u2013'+hor.tech_fin, tarif:_tarVal(tar,'stage_technique')+'\u20ac' });
+      const sNames=[s.s1,s.s2,s.s3,s.s4], sDb=['s1_deb','s2_deb','s3_deb','s4_deb'], sFn=['s1_fin','s2_fin','s3_fin','s4_fin'], sTk=['stage_1','stage_2','stage_3','stage_4'];
+      for (let si=0; si<n; si++) slotsArr.push({ nom:_thLbl(sNames[si]||'','Stage '+(si+1)), heure:hor[sDb[si]]+'\u2013'+hor[sFn[si]], tarif:_tarVal(tar,sTk[si])+'\u20ac' });
+      const firstH = slotsArr.length ? slotsArr[0].heure.split('\u2013')[0] : '';
+      const lastH  = slotsArr.length ? slotsArr[slotsArr.length-1].heure.split('\u2013')[1] : '';
+      const slotsHtml = slotsArr.map(sl => `<div class="acc-atelier"><span class="acc-slot-name">${sl.nom}</span><span class="acc-slot-heure">${sl.heure}</span><span class="acc-slot-tarif">${sl.tarif}</span></div>`).join('');
 
       html += `<div class="acc-item${isPast ? ' acc-past' : ''}" data-date="${s.date}">
         <div class="acc-header">
@@ -902,24 +959,9 @@
           <span class="acc-arrow">\u203a</span>
         </div>
         <div class="acc-body">
-          <div class="acc-sub-loc">14h\u201318h\u00a0\u00b7\u00a0Centre Kim Kan, 64 rue Orfila, Paris 20e</div>
-          <div class="acc-ateliers">
-            <div class="acc-atelier">
-              <span class="acc-slot-name">${slot1}</span>
-              <span class="acc-slot-heure">14h\u201315h</span>
-              <span class="acc-slot-tarif">20\u20ac</span>
-            </div>
-            <div class="acc-atelier">
-              <span class="acc-slot-name">${slot2}</span>
-              <span class="acc-slot-heure">15h\u201316h30</span>
-              <span class="acc-slot-tarif">25\u20ac</span>
-            </div>
-            <div class="acc-atelier">
-              <span class="acc-slot-name">${slot3}</span>
-              <span class="acc-slot-heure">16h30\u201318h</span>
-              <span class="acc-slot-tarif">25\u20ac</span>
-            </div>
-          </div>
+          ${s.nom ? '<div style="font-size:12px;color:#a08050;font-style:italic;margin-bottom:8px;">'+s.nom+'</div>' : ''}
+          <div class="acc-sub-loc">${firstH}\u2013${lastH}\u00a0\u00b7\u00a0${LST_NOM}, ${LST_RUE}</div>
+          <div class="acc-ateliers">${slotsHtml}</div>
         </div>
       </div>`;
     });
@@ -1374,6 +1416,15 @@
     if (mpSelf) mpSelf.addEventListener('click', e => { if (e.target === mpSelf) fermerModalPointerSelf(); });
 
     setTimeout(initAuth, 400);
+  });
+
+  // Mise à jour temps réel : si l'admin change un Paramètre dans un autre onglet, on recharge
+  window.addEventListener('storage', function(e) {
+    if (!e.key) return;
+    // Ignorer le cache plan (géocodage) pour ne pas boucler
+    if (e.key.startsWith('tev_') && !e.key.startsWith('tev_plan_')) {
+      location.reload();
+    }
   });
 </script>
 
@@ -2573,55 +2624,60 @@ if('serviceWorker' in navigator){
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 (function() {
+  // Paramètres dynamiques depuis admin.html
+  function _saiPl() { var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); }
+  function _lpPl(t) { try{return JSON.parse(localStorage.getItem('tev_params_'+t+'_'+_saiPl())||'{}');}catch(e){return{};} }
+  var _ypY=_lpPl('yoga'); var _apP=_lpPl('paris').adresse||{}, _apV=_lpPl('vincennes').adresse||{};
+  var _apY=_ypY.adresse||{}, _hYpl=_ypY.horaires||{}, _apSt=_lpPl('stages').adresse||{};
   // Coordonnées exactes vérifiées (OSM) + géocodage Nominatim en arrière-plan pour affinage
   var LIEUX = [
     {
       id: 'paris',
       label: 'Cours Paris',
-      name: 'Espace Danse Studio',
-      addr: '24 villa Riberolle, Paris 20e',
-      geocodeQuery: '24 villa Riberolle, 75020 Paris',
-      sub: 'Jeudi soir \u00b7 M\u00b0 Alexandre Dumas (L2)',
+      name: _apP.nom || 'Espace Danse Studio',
+      addr: _apP.rue || '24 villa Riberolle, Paris 20e',
+      geocodeQuery: _apP.rue || '24 villa Riberolle, 75020 Paris',
+      sub: 'Jeudi soir \u00b7 ' + (_apP.transport || 'M\u00b0 Alexandre Dumas (L2)'),
       lat: 48.8534, lng: 2.3991,
-      metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas Paris', lat: 48.85644, lng: 2.39443, name: 'M\u00b0 Alexandre Dumas (L2)' },
+      metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas Paris', lat: 48.85644, lng: 2.39443, name: _apP.transport || 'M\u00b0 Alexandre Dumas (L2)' },
       color: '#60b0ff',
-      mapsUrl: 'https://maps.google.com/?q=24+villa+Riberolle+75020+Paris'
+      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apP.rue || '24 villa Riberolle 75020 Paris')
     },
     {
       id: 'vincennes',
       label: 'Cours Vincennes',
-      name: 'Espace Sorano',
-      addr: '16 rue Charles Path\u00e9, Vincennes',
-      geocodeQuery: '16 rue Charles Path\u00e9, 94300 Vincennes',
-      sub: 'Lundi soir \u00b7 RER A Vincennes (pl. Pierre S\u00e9mard)',
+      name: _apV.nom || 'Espace Sorano',
+      addr: _apV.rue || '16 rue Charles Path\u00e9, Vincennes',
+      geocodeQuery: _apV.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
+      sub: 'Lundi soir \u00b7 ' + (_apV.transport || 'RER A Vincennes (pl. Pierre S\u00e9mard)'),
       lat: 48.8480, lng: 2.4413,
-      metro: { geocodeQuery: 'gare RER Vincennes place Pierre S\u00e9mard', lat: 48.8478, lng: 2.4342, name: 'RER A \u2014 Vincennes' },
+      metro: { geocodeQuery: 'gare RER Vincennes place Pierre S\u00e9mard', lat: 48.8478, lng: 2.4342, name: _apV.transport || 'RER A \u2014 Vincennes' },
       color: '#40d8c0',
-      mapsUrl: 'https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes'
+      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apV.rue || '16 rue Charles Pathé 94300 Vincennes')
     },
     {
       id: 'stage',
       label: 'Stages',
-      name: 'Centre Kim Kan',
-      addr: '64 rue Orfila, Paris 20e',
-      geocodeQuery: '64 rue Orfila, 75020 Paris',
-      sub: 'Samedi \u00b7 M\u00b0 Gambetta (L3)',
+      name: _apSt.nom || 'Centre Kim Kan',
+      addr: _apSt.rue || '64 rue Orfila, Paris 20e',
+      geocodeQuery: _apSt.rue || '64 rue Orfila, 75020 Paris',
+      sub: 'Samedi \u00b7 ' + (_apSt.transport || 'M\u00b0 Gambetta (L3)'),
       lat: 48.8671, lng: 2.3977,
-      metro: { geocodeQuery: 'station m\u00e9tro Gambetta Paris', lat: 48.86515, lng: 2.39868, name: 'M\u00b0 Gambetta (L3)' },
+      metro: { geocodeQuery: 'station m\u00e9tro Gambetta Paris', lat: 48.86515, lng: 2.39868, name: _apSt.transport || 'M\u00b0 Gambetta (L3)' },
       color: '#D4AF37',
-      mapsUrl: 'https://maps.google.com/?q=64+rue+Orfila+75020+Paris'
+      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apSt.rue || '64 rue Orfila 75020 Paris')
     },
     {
       id: 'yoga',
-      label: '🧘 Yoga',
-      name: 'Espace Sorano — Yoga',
-      addr: '16 rue Charles Pathé, 94300 Vincennes',
-      geocodeQuery: '16 rue Charles Pathé, 94300 Vincennes',
-      sub: 'Mardi matin · Yin 10h30 / Hatha 11h30 · RER A Château de Vincennes',
+      label: '\uD83E\uDDD8 Yoga',
+      name: (_apY.nom || 'Espace Sorano') + ' \u2014 Yoga',
+      addr: _apY.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
+      geocodeQuery: _apY.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
+      sub: 'Mardi matin \u00b7 Yin '+(_hYpl.yin||'10h30')+' / Hatha '+(_hYpl.hatha||'11h30')+' \u00b7 '+(_apY.transport||'RER A Ch\u00e2teau de Vincennes'),
       lat: 48.8482, lng: 2.4416,
-      metro: { geocodeQuery: 'gare RER Vincennes place Pierre Sémard', lat: 48.8478, lng: 2.4342, name: 'RER A — Vincennes' },
+      metro: { geocodeQuery: 'gare RER Vincennes place Pierre S\u00e9mard', lat: 48.8478, lng: 2.4342, name: _apY.transport || 'RER A \u2014 Vincennes' },
       color: '#a78bfa',
-      mapsUrl: 'https://maps.google.com/?q=16+rue+Charles+Path%C3%A9+94300+Vincennes'
+      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apY.rue || '16 rue Charles Pathé 94300 Vincennes')
     },
     {
       id: 'milonga',
