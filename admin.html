@@ -2063,7 +2063,7 @@ function _renderParamCard(type, sai) {
 
   // Section Adresse (sauf Stages)
   if (type !== 'stages') {
-    h += _renderAccordSection(type, 'adresse', '📍 Adresse et accès', _renderSecAdresseContent(type));
+    h += _renderAccordSection(type, 'adresse', '📍 Adresse et accès', _renderSecAdresseContent(type, sai));
   }
 
   return h+'</div>';
@@ -2162,9 +2162,9 @@ function _renderSecTarifsContent(type, sai) {
 }
 
 // ── Contenu : Adresse ────────────────────────────────────────
-function _renderSecAdresseContent(type) {
+function _renderSecAdresseContent(type, sai) {
   var def = DEFAULTS_ADRESSES[type]||{};
-  var d   = _loadParam(type, null, 'adresse'); // non saisonnier
+  var d   = _loadParam(type, sai, 'adresse'); // rattaché à la saison
   function val(k) { return ((d[k]||def[k])||'').replace(/"/g,'&quot;'); }
   var iS = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);'
          + 'border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;';
@@ -2193,20 +2193,20 @@ function _renderSecAdresseContent(type) {
     + mapsPreview
     +'<div class="btn-row">'
     +'<button class="btn btn-gold" data-action="sauver-adresse-type"'
-    +' data-type="'+type+'" style="font-size:12px;">💾 Enregistrer adresse</button>'
+    +' data-type="'+type+'" data-saison="'+sai+'" style="font-size:12px;">💾 Enregistrer adresse</button>'
     +'</div>';
 }
 
-// Sauvegarde l'adresse d'un type (non saisonnier)
-function sauverAdresseType(type) {
+// Sauvegarde l'adresse d'un type pour une saison donnée
+function sauverAdresseType(type, sai) {
   var data = {
     nom:       (gel('pm-'+type+'-adr-nom')||{}).value||'',
     rue:       (gel('pm-'+type+'-adr-rue')||{}).value||'',
     gps:       (gel('pm-'+type+'-adr-gps')||{}).value||'',
     transport: (gel('pm-'+type+'-adr-transport')||{}).value||'',
   };
-  _saveParam(type, null, 'adresse', data);
-  afficherToast('✓ Adresse '+type+' enregistrée');
+  _saveParam(type, sai, 'adresse', data);
+  afficherToast('✓ Adresse '+type+' '+sai+' enregistrée');
   renderTab();
 }
 
@@ -2731,7 +2731,7 @@ function handleAction(action, btn) {
       sauverTarifsType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
       break;
     case 'sauver-adresse-type':
-      sauverAdresseType(btn.dataset.type||'paris');
+      sauverAdresseType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
       break;
     case 'reset-tarifs-type':
       (function(){
