@@ -244,9 +244,12 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
   <div class="tarifs-grid">
     <div class="tarif-ligne"><span>Technique 1h</span><span class="prix">20 €</span></div>
     <div class="tarif-ligne"><span>1 Stage</span><span class="prix">25 €</span></div>
-    <div class="tarif-ligne"><span>Technique + 1 Stage</span><span class="prix">45 €</span></div>
     <div class="tarif-ligne"><span>2 Stages</span><span class="prix">45 €</span></div>
-    <div class="tarif-ligne"><span>Technique + 2 Stages</span><span class="prix">60 €</span></div>
+    <div class="tarif-ligne"><span>3 Stages</span><span class="prix">65 €</span></div>
+    <div class="tarif-ligne"><span>4 Stages</span><span class="prix">85 €</span></div>
+    <div class="tarif-ligne"><span>2 Stages + Technique</span><span class="prix">60 €</span></div>
+    <div class="tarif-ligne"><span>3 Stages + Technique</span><span class="prix">75 €</span></div>
+    <div class="tarif-ligne"><span>4 Stages + Technique</span><span class="prix">95 €</span></div>
   </div>
   <div class="paiement-note">💵 Le paiement s'effectue sur place le jour du stage.</div>
 </div>
@@ -658,20 +661,15 @@ function getStagesParDate(map, date) {
   return r;
 }
 function calculerPrixParDate(map, date) {
-  var t=false,s1=false,s2=false;
+  var t=false, ns=0;
   map.forEach(function(v){
     if(v.date!==date) return;
     if(v.type==='technique') t=true;
-    if(v.type==='stage1')    s1=true;
-    if(v.type==='stage2')    s2=true;
+    else if(/^stage\d/.test(v.type)) ns++;
   });
-  if(t&&s1&&s2) return 60;
-  if(t&&s1) return 45;
-  if(t&&s2) return 45;
-  if(s1&&s2) return 45;
-  if(t) return 20;
-  if(s1||s2) return 25;
-  return 0;
+  if(ns===0) return t ? 20 : 0;
+  if(!t) { if(ns===1) return 25; if(ns===2) return 45; if(ns===3) return 65; return 85; }
+  /* avec technique */   if(ns===1) return 45; if(ns===2) return 60; if(ns===3) return 75; return 95;
 }
 function getHoraireParDate(map, date) {
   var t=false,s1=false,s2=false;

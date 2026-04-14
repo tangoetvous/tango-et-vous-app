@@ -1201,8 +1201,10 @@ var TARIFS_DEFAUT = {
   yoga_essai:15,          // cours d'essai (gratuit les 2 premiers mardis de septembre)
   yoga_forfait_1cours:250, // forfait annuel 1 cours (Yin ou Hatha)
   yoga_forfait_2cours:430, // forfait annuel 2 cours (Yin + Hatha)
-  // Stages — tarifs par créneau
-  stage_technique:20, stage_1seance:25, stage_2seances:45, stage_3seances:60
+  // Stages — tarifs
+  stage_technique:20,
+  stage_1:25, stage_2:45, stage_3:65, stage_4:85,
+  stage_2_tech:60, stage_3_tech:75, stage_4_tech:95
 };
 var TARIFS = Object.assign({}, TARIFS_DEFAUT);
 
@@ -1789,9 +1791,9 @@ var DEFAULTS_ADRESSES = {
   yoga:     {nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)'},
 };
 var DEFAULTS_HORAIRES = {
-  paris:    {deb:'20h30', int:'21h45'},
-  vincennes:{deb:'19h30', int:'21h00'},
-  yoga:     {yin:'10h30', hatha:'11h30'},
+  paris:    {deb:'20h30', deb_fin:'21h45', int:'21h45', int_fin:'23h00'},
+  vincennes:{deb:'19h30', deb_fin:'21h00', int:'21h00', int_fin:'22h30'},
+  yoga:     {yin:'10h30', yin_fin:'11h45', hatha:'11h45', hatha_fin:'13h00'},
 };
 
 // ================================================================
@@ -2156,11 +2158,17 @@ function _renderSecTarifsContent(type, sai) {
       +row('Forfait annuel — 1 cours (Yin ou Hatha)','yoga_forfait_1cours',null)
       +row('Forfait annuel — 2 cours (Yin + Hatha)','yoga_forfait_2cours',null);
   } else if (type==='stages') {
-    body = hd('Par créneau')
-      +row('Initiation technique seule','stage_technique',null)
-      +row('1 séance (S1 ou S2)','stage_1seance',null)
-      +row('2 créneaux','stage_2seances',null)
-      +row('Pack complet (3 créneaux)','stage_3seances',null);
+    body = hd('Technique seule')
+      +row('Technique (1h)','stage_technique',null)
+      +hd('Stages uniquement')
+      +row('1 stage','stage_1',null)
+      +row('2 stages','stage_2',null)
+      +row('3 stages','stage_3',null)
+      +row('4 stages','stage_4',null)
+      +hd('Stages + Technique')
+      +row('2 stages + Technique','stage_2_tech',null)
+      +row('3 stages + Technique','stage_3_tech',null)
+      +row('4 stages + Technique','stage_4_tech',null);
   }
   return '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
     +'Saison <strong>'+sai+'</strong> — Tarif réduit : −26 ans / étudiants / demandeurs d\'emploi</div>'
@@ -2233,36 +2241,44 @@ function _renderSecHorairesContent(type, sai) {
   var def = DEFAULTS_HORAIRES[type]||{};
   var d   = _loadParam(type, sai, 'horaires');
   function val(k) { return d[k]||def[k]||''; }
-  var iS = 'width:90px;background:var(--s3);color:var(--text);border:1px solid var(--border);'
-         + 'border-radius:6px;padding:6px 8px;font-size:14px;font-weight:600;text-align:center;';
+  var iS = 'width:72px;background:var(--s3);color:var(--text);border:1px solid var(--border);'
+         + 'border-radius:6px;padding:6px 8px;font-size:13px;font-weight:600;text-align:center;';
+  var sep = '<td style="padding:5px 3px;font-size:12px;color:var(--dim);">→</td>';
+  var td  = 'style="padding:5px 6px;"';
   var rows = '';
   if (type === 'yoga') {
     rows = '<tr>'
       +'<td style="padding:7px 8px;font-size:12px;color:var(--text);">🌙 Yin Yoga</td>'
-      +'<td style="padding:5px 8px;"><input id="pm-'+type+'-h-yin" type="text"'
-      +' value="'+val('yin')+'" placeholder="10h30" style="'+iS+'"></td></tr>'
+      +'<td '+td+'><input id="pm-'+type+'-h-yin"     type="text" value="'+val('yin')+'"     placeholder="10h30" style="'+iS+'"></td>'
+      +sep
+      +'<td '+td+'><input id="pm-'+type+'-h-yin_fin" type="text" value="'+val('yin_fin')+'" placeholder="11h45" style="'+iS+'"></td></tr>'
       +'<tr>'
       +'<td style="padding:7px 8px;font-size:12px;color:var(--text);">☀️ Hatha Yoga</td>'
-      +'<td style="padding:5px 8px;"><input id="pm-'+type+'-h-hatha" type="text"'
-      +' value="'+val('hatha')+'" placeholder="11h30" style="'+iS+'"></td></tr>';
+      +'<td '+td+'><input id="pm-'+type+'-h-hatha"     type="text" value="'+val('hatha')+'"     placeholder="11h45" style="'+iS+'"></td>'
+      +sep
+      +'<td '+td+'><input id="pm-'+type+'-h-hatha_fin" type="text" value="'+val('hatha_fin')+'" placeholder="13h00" style="'+iS+'"></td></tr>';
   } else {
     rows = '<tr>'
       +'<td style="padding:7px 8px;font-size:12px;color:var(--text);">Débutant</td>'
-      +'<td style="padding:5px 8px;"><input id="pm-'+type+'-h-deb" type="text"'
-      +' value="'+val('deb')+'" placeholder="20h30" style="'+iS+'"></td></tr>'
+      +'<td '+td+'><input id="pm-'+type+'-h-deb"     type="text" value="'+val('deb')+'"     placeholder="20h30" style="'+iS+'"></td>'
+      +sep
+      +'<td '+td+'><input id="pm-'+type+'-h-deb_fin" type="text" value="'+val('deb_fin')+'" placeholder="21h45" style="'+iS+'"></td></tr>'
       +'<tr>'
       +'<td style="padding:7px 8px;font-size:12px;color:var(--text);">Intermédiaire &amp; Avancé</td>'
-      +'<td style="padding:5px 8px;"><input id="pm-'+type+'-h-int" type="text"'
-      +' value="'+val('int')+'" placeholder="21h45" style="'+iS+'"></td></tr>';
+      +'<td '+td+'><input id="pm-'+type+'-h-int"     type="text" value="'+val('int')+'"     placeholder="21h45" style="'+iS+'"></td>'
+      +sep
+      +'<td '+td+'><input id="pm-'+type+'-h-int_fin" type="text" value="'+val('int_fin')+'" placeholder="23h00" style="'+iS+'"></td></tr>';
   }
+  var thS = 'text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;'
+           +'letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);';
   return '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
     +'Saison <strong>'+sai+'</strong></div>'
     +'<table style="border-collapse:collapse;margin-bottom:12px;">'
     +'<thead><tr>'
-    +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;'
-    +'letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Cours</th>'
-    +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;'
-    +'letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Heure de début</th>'
+    +'<th style="'+thS+'">Cours</th>'
+    +'<th style="'+thS+'">Début</th>'
+    +'<th style="'+thS+'"></th>'
+    +'<th style="'+thS+'">Fin</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
     +'<div class="btn-row">'
     +'<button class="btn btn-ghost" data-action="reset-horaires-type"'
@@ -2406,9 +2422,14 @@ function supprimerDateParam(type, date) {
 
 // ── Contenu : Livret d'information ───────────────────────────
 function _renderSecLivretContent(type, sai) {
-  var saved  = _loadParam(type, sai, 'livret');   // {url, titre}
-  var url    = saved.url   || '';
-  var titre  = saved.titre || '';
+  var saved = _loadParam(type, sai, 'livret');
+  var url   = saved.url || '';
+  var autoTitreMap = {
+    paris:     'Tango Paris',
+    vincennes: 'Tango Vincennes',
+    yoga:      'Yoga Vincennes',
+  };
+  var autoTitre = 'Livret d\'information — ' + (autoTitreMap[type]||type) + ' ' + sai;
   var inputStyle = 'width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);'
                  + 'border-radius:6px;font-size:13px;background:var(--card);color:var(--text);';
   var h = '<div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">';
@@ -2420,7 +2441,7 @@ function _renderSecLivretContent(type, sai) {
        + '<span style="font-size:20px;">📄</span>'
        + '<div style="flex:1;min-width:0;">'
        + '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
-       + (titre || 'Livret d\'information')+'</div>'
+       + autoTitre+'</div>'
        + '<div style="font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+url+'</div>'
        + '</div>'
        + '<a href="'+url+'" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" style="font-size:11px;white-space:nowrap;">Ouvrir</a>'
@@ -2429,12 +2450,8 @@ function _renderSecLivretContent(type, sai) {
        + '</div>';
   }
 
-  h += '<div>'
-     + '<label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px;">Titre affiché (optionnel)</label>'
-     + '<input id="pm-livret-titre-'+type+'" type="text" style="'+inputStyle+'"'
-     + ' placeholder="ex : Livret tango Paris 2025-2026"'
-     + ' value="'+titre.replace(/"/g,'&quot;')+'">'
-     + '</div>'
+  h += '<div style="font-size:11px;color:var(--dim);padding:2px 0;">'
+     + 'Titre généré automatiquement : <em>'+autoTitre+'</em></div>'
      + '<div>'
      + '<label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px;">URL du livret (lien Google Drive, PDF…)</label>'
      + '<input id="pm-livret-url-'+type+'" type="url" style="'+inputStyle+'"'
@@ -2452,9 +2469,8 @@ function _renderSecLivretContent(type, sai) {
 
 // Sauvegarde le livret d'un type/saison dans localStorage
 function sauverLivretType(type, sai) {
-  var url   = ((gel('pm-livret-url-'+type)||{}).value||'').trim();
-  var titre = ((gel('pm-livret-titre-'+type)||{}).value||'').trim();
-  _saveParam(type, sai, 'livret', {url:url, titre:titre});
+  var url = ((gel('pm-livret-url-'+type)||{}).value||'').trim();
+  _saveParam(type, sai, 'livret', url ? {url:url} : {});
   afficherToast(url ? '✓ Livret enregistré' : '✓ Livret effacé');
   renderTab();
 }
@@ -2531,12 +2547,17 @@ function sauverAssoconnectType(type, sai) {
 // Sauvegarde les horaires d'un type pour une saison donnée
 function sauverHorairesType(type, sai) {
   var data = {};
+  function g(id) { return (gel(id)||{}).value||''; }
   if (type === 'yoga') {
-    data.yin   = (gel('pm-'+type+'-h-yin')||{}).value||'';
-    data.hatha = (gel('pm-'+type+'-h-hatha')||{}).value||'';
+    data.yin       = g('pm-'+type+'-h-yin');
+    data.yin_fin   = g('pm-'+type+'-h-yin_fin');
+    data.hatha     = g('pm-'+type+'-h-hatha');
+    data.hatha_fin = g('pm-'+type+'-h-hatha_fin');
   } else {
-    data.deb = (gel('pm-'+type+'-h-deb')||{}).value||'';
-    data.int = (gel('pm-'+type+'-h-int')||{}).value||'';
+    data.deb     = g('pm-'+type+'-h-deb');
+    data.deb_fin = g('pm-'+type+'-h-deb_fin');
+    data.int     = g('pm-'+type+'-h-int');
+    data.int_fin = g('pm-'+type+'-h-int_fin');
   }
   _saveParam(type, sai, 'horaires', data);
   afficherToast('✓ Horaires '+type+' '+sai+' enregistrés');
@@ -2552,7 +2573,7 @@ function sauverTarifsType(type, sai) {
     vincennes:['forfait_vincennes','forfait_vincennes_reduit',
                'sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16'],
     yoga:     ['yoga_essai','yoga_forfait_1cours','yoga_forfait_2cours'],
-    stages:   ['stage_technique','stage_1seance','stage_2seances','stage_3seances'],
+    stages:   ['stage_technique','stage_1','stage_2','stage_3','stage_4','stage_2_tech','stage_3_tech','stage_4_tech'],
   };
   var keys = KEYS[type]||[], data = {}, ok = true;
   keys.forEach(function(k) {
