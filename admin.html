@@ -1508,6 +1508,12 @@ function _appliquerCoursInscription(d) {
     }
   }
   sousOngletCoursTango = statut==='demande' ? 'attente_validation' : 'valide';
+  // Si inscription déclenchée depuis l'onglet Élèves, revenir à la liste appropriée
+  if (currentTab === 'eleves-tango' && sousOngletEleves === 'inscrire') {
+    var ville0 = (d.c1&&d.c1.ville)||'paris';
+    var niv0   = (d.c1&&d.c1.niveau)||'debutant';
+    sousOngletEleves = (ville0==='vincennes'?'vincennes':'paris') + '-' + (niv0==='intermediaire'?'int':'deb');
+  }
 }
 
 function _appliquerEssaiInscription(d) {
@@ -4035,7 +4041,11 @@ function renderElevesTango() {
     var dot=(c.fullGui||c.fullGde)&&!noLimitsTangoToday()?' 🔴':'';
     h+='<button class="sub-tab'+(sousOngletEleves===o.id?' active':'')+'" data-sous-el="'+o.id+'">'+o.lbl+' ('+n+')'+dot+'</button>';
   });
+  h+='<button class="sub-tab'+(sousOngletEleves==='inscrire'?' active':'')+'" data-sous-el="inscrire">✏️ Inscrire</button>';
   h+='</div>';
+  if (sousOngletEleves === 'inscrire') {
+    return h + renderFormulairePreinscriptionAdmin();
+  }
   h+='<div style="margin-bottom:10px;"><input type="search" id="rech-eleve" value="'+rechercheEleve.replace(/"/g,'&quot;')+'" placeholder="🔍 Rechercher parmi tous les cours..." oninput="majRechercheEleve(this.value)" style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;" autocomplete="off"></div>';
   h+='<div id="eleves-resultats">'+_elevesResultatsHTML(inscrits)+'</div>';
   return h;
