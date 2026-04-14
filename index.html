@@ -829,15 +829,25 @@
       });
     }
     if (filter === 'tous' || filter === 'stage') {
+      const _hasThm = t => t && t !== '\u00c0 venir';
+      const _thLbl  = (t, prefix) => prefix + (_hasThm(t) ? ' \u2014 ' + t : (t === '\u00c0 venir' ? ' \u2014 th\u00e8me \u00e0 venir' : ''));
       STAGES_DATA.filter(s => s.date >= todayStr && s.date <= maxStr).forEach(s => {
         const hor = Object.assign({}, HST, s.horaires||{});
         const hasTech = s.technique !== false;
         const n = s.nStages || 2;
-        const startH = hasTech ? hor.tech_deb : hor.s1_deb;
-        const finKeys = ['tech_fin','s1_fin','s2_fin','s3_fin','s4_fin'];
-        const endH = hasTech ? hor['s'+n+'_fin'] || hor.s2_fin : hor['s'+n+'_fin'] || hor.s1_fin;
-        const hRange = startH+'\u2013'+endH;
-        events.push({date:s.date, subtype:'stage', type:'stage', titre:'Stage de Tango'+(s.s1?' \u2014 '+s.s1:''), heure:hRange, lieu:lieuSt});
+        if (hasTech) {
+          events.push({date:s.date, subtype:'stage', type:'stage',
+            titre: _thLbl(s.tech||'', 'Technique Leader & Follower'),
+            heure: hor.tech_deb+'\u2013'+hor.tech_fin, lieu:lieuSt});
+        }
+        const sNames = [s.s1, s.s2, s.s3, s.s4];
+        const sDb = ['s1_deb','s2_deb','s3_deb','s4_deb'];
+        const sFn = ['s1_fin','s2_fin','s3_fin','s4_fin'];
+        for (let si = 0; si < n; si++) {
+          events.push({date:s.date, subtype:'stage', type:'stage',
+            titre: _thLbl(sNames[si]||'', 'Stage '+(si+1)),
+            heure: hor[sDb[si]]+'\u2013'+hor[sFn[si]], lieu:lieuSt});
+        }
       });
     }
     if (filter === 'tous' || filter === 'milonga') {
