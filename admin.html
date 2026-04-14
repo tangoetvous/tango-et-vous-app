@@ -5466,12 +5466,57 @@ function relanceSorano(email, nom, btn) {
 // TAB AGENDA
 // ================================================================
 function getEventsForDate(dateStr) {
-  var evts=[];
-  if(agendaCats.paris&&COURS_PARIS.indexOf(dateStr)>=0){evts.push({cat:'cours-paris',titre:'Débutant — Paris',heure:'20h30'});evts.push({cat:'cours-paris',titre:'Intermédiaire — Paris',heure:'21h45'});}
-  if(agendaCats.vincennes&&COURS_VINCENNES.indexOf(dateStr)>=0){evts.push({cat:'cours-vinc',titre:'Débutant — Vincennes',heure:'19h30'});evts.push({cat:'cours-vinc',titre:'Intermédiaire — Vincennes',heure:'21h00'});}
-  if(agendaCats.stage){var _stRaw=STAGES.find(function(s){return s.date===dateStr;});if(_stRaw){var _st=_migrateStageItem(_stRaw);var _hor=_loadParam('stages',saisonActive(),'horaires');var _def=DEFAULTS_HORAIRES.stages||{};var _dHor=_st.horaires||{};function _hv(k){return _dHor[k]||_hor[k]||_def[k]||'';}var _n=_st.nStages||2;var _sk=['s1','s2','s3','s4'];var _ord=[];for(var _j=_n-1;_j>=2;_j--)_ord.push(_sk[_j]);if(_st.technique!==false)_ord.push('tech');for(var _j2=0;_j2<Math.min(_n,2);_j2++)_ord.push(_sk[_j2]);_ord.forEach(function(_k){var _lbl=_k==='tech'?'Technique Leader & Follower':(_st.themes&&_st.themes[parseInt(_k.slice(1))-1])||('Stage '+_k.slice(1));evts.push({cat:'stage',titre:_lbl,heure:_hv(_k+'_deb')+(_hv(_k+'_fin')?'–'+_hv(_k+'_fin'):'')});});}}
-  if(agendaCats.milonga&&MILONGAS.indexOf(dateStr)>=0)evts.push({cat:'milonga',titre:'Milonga La Dolce Vita',heure:'17h30–23h30'});
-  if(agendaCats.yoga&&COURS_YOGA.indexOf(dateStr)>=0){evts.push({cat:'cours-yoga',titre:'Yin Yoga',heure:'10h30'});evts.push({cat:'cours-yoga',titre:'Hatha Yoga',heure:'11h30'});}
+  var evts = [];
+  var sai = saisonActive();
+  if (agendaCats.paris && COURS_PARIS.indexOf(dateStr) >= 0) {
+    var _hP = _loadParam('paris', sai, 'horaires');
+    var _dP = DEFAULTS_HORAIRES.paris;
+    evts.push({cat:'cours-paris', titre:'Débutant — Paris',          heure:_hP.deb||_dP.deb});
+    evts.push({cat:'cours-paris', titre:'Intermédiaire — Paris',     heure:_hP.int||_dP.int});
+  }
+  if (agendaCats.vincennes && COURS_VINCENNES.indexOf(dateStr) >= 0) {
+    var _hV = _loadParam('vincennes', sai, 'horaires');
+    var _dV = DEFAULTS_HORAIRES.vincennes;
+    evts.push({cat:'cours-vinc', titre:'Débutant — Vincennes',       heure:_hV.deb||_dV.deb});
+    evts.push({cat:'cours-vinc', titre:'Intermédiaire — Vincennes',  heure:_hV.int||_dV.int});
+  }
+  if (agendaCats.stage) {
+    var _stRaw=STAGES.find(function(s){return s.date===dateStr;});
+    if (_stRaw) {
+      var _st=_migrateStageItem(_stRaw);
+      var _hor=_loadParam('stages',sai,'horaires');
+      var _def=DEFAULTS_HORAIRES.stages||{};
+      var _dHor=_st.horaires||{};
+      function _hv(k){return _dHor[k]||_hor[k]||_def[k]||'';}
+      var _n=_st.nStages||2;
+      var _sk=['s1','s2','s3','s4'];
+      var _ord=[];
+      for(var _j=_n-1;_j>=2;_j--)_ord.push(_sk[_j]);
+      if(_st.technique!==false)_ord.push('tech');
+      for(var _j2=0;_j2<Math.min(_n,2);_j2++)_ord.push(_sk[_j2]);
+      _ord.forEach(function(_k){
+        var _lbl=_k==='tech'?'Technique Leader & Follower':(_st.themes&&_st.themes[parseInt(_k.slice(1))-1])||('Stage '+_k.slice(1));
+        evts.push({cat:'stage',titre:_lbl,heure:_hv(_k+'_deb')+(_hv(_k+'_fin')?'\u2013'+_hv(_k+'_fin'):'')});
+      });
+    }
+  }
+  if (agendaCats.milonga) {
+    (MILONGAS||[]).forEach(function(mil) {
+      if ((mil.dates||[]).some(function(d){return d.date===dateStr;})) {
+        var hdeb = mil.horaire_debut||'17h30';
+        var hfin = mil.horaire_fin||'23h30';
+        var lieu = mil.lieu||{};
+        evts.push({cat:'milonga', titre:mil.nom, heure:hdeb+'\u2013'+hfin,
+          sub:(lieu.nom?lieu.nom+' \u2014 ':'')+lieu.rue+(lieu.transport?' \u00b7 '+lieu.transport:'')});
+      }
+    });
+  }
+  if (agendaCats.yoga && COURS_YOGA.indexOf(dateStr) >= 0) {
+    var _hY = _loadParam('yoga', sai, 'horaires');
+    var _dY = DEFAULTS_HORAIRES.yoga;
+    evts.push({cat:'cours-yoga', titre:'Yin Yoga',   heure:_hY.yin  ||_dY.yin});
+    evts.push({cat:'cours-yoga', titre:'Hatha Yoga', heure:_hY.hatha||_dY.hatha});
+  }
   return evts;
 }
 function renderAgenda() {
@@ -5494,6 +5539,22 @@ function renderAgendaCalendrier() {
     +'</div>';
   // Vue liste 12 mois glissants à partir d'aujourd'hui
   var todayStr=today();
+  // Adresses dynamiques depuis Paramètres
+  var _saiAg = saisonActive();
+  var _aP = _loadParam('paris',     _saiAg, 'adresse');
+  var _aV = _loadParam('vincennes', _saiAg, 'adresse');
+  var _aSt= _loadParam('stages',    _saiAg, 'adresse');
+  var _aY = _loadParam('yoga',      _saiAg, 'adresse');
+  var _dAP = DEFAULTS_ADRESSES.paris;
+  var _dAV = DEFAULTS_ADRESSES.vincennes;
+  var _dAY = DEFAULTS_ADRESSES.yoga;
+  function _fmtAddr(a, dA) { return (a.nom||dA.nom)+' \u2014 '+(a.rue||dA.rue)+' \u00b7 '+(a.transport||dA.transport); }
+  var EVT_SUB_AG = {
+    'cours-paris': _fmtAddr(_aP, _dAP),
+    'cours-vinc':  _fmtAddr(_aV, _dAV),
+    'stage':       (_aSt.nom||'Centre Kim Kan')+', '+(_aSt.rue||'64 rue Orfila, Paris 20e'),
+    'cours-yoga':  _fmtAddr(_aY, _dAY)
+  };
   var debut=new Date(todayStr+'T00:00:00');
   var finDate=new Date(debut); finDate.setMonth(finDate.getMonth()+12);
   var d=new Date(debut), hasEvents=false, currentMoisAff=-1;
@@ -5508,8 +5569,7 @@ function renderAgendaCalendrier() {
         h+='<div style="font-family:var(--font-d);font-size:18px;font-weight:300;color:var(--dim);letter-spacing:3px;padding:16px 0 6px;border-bottom:1px solid var(--border);margin-bottom:8px;">'+MOIS_FR[d.getMonth()]+' '+d.getFullYear()+'</div>';
       }
       h+='<div class="agenda-day-hdr"><div class="agenda-day-num" style="'+(ds===todayStr?'color:var(--gold)':'')+'">'+d.getDate()+'</div><div class="agenda-day-lbl">'+DOW_LONG[d.getDay()]+'</div>'+(ds===todayStr?'<span class="pill pill-gold" style="font-size:8px;">Aujourd\'hui</span>':'')+'</div>';
-      var EVT_SUB={'cours-paris':'Espace Danse Studio \u2014 24 villa Riberolle, Paris 20e \u00b7 M\u00b0 Alexandre Dumas (L2)','cours-vinc':'Espace Sorano \u2014 16 rue Charles Path\u00e9, 94300 Vincennes \u00b7 RER A / M\u00b0 Ch\u00e2teau de Vincennes ou B\u00e9rault (L1)',stage:'Centre Kim Kan, 64 rue Orfila, Paris 20e',milonga:'Centre Re-Corps \u2014 16A bd de Reuilly, Paris 12e \u00b7 M\u00b0 Dugommier (L6)','cours-yoga':'Espace Sorano \u2014 16 rue Charles Path\u00e9, 94300 Vincennes \u00b7 RER A Ch\u00e2teau de Vincennes'};
-      evts.forEach(function(e){h+='<div class="agenda-event ae-'+e.cat+'"><div><div class="ae-titre">'+(e.heure!=='—'?e.heure+' — ':'')+e.titre+'</div><div class="ae-sub">'+(EVT_SUB[e.cat]||'')+'</div></div></div>';});
+      evts.forEach(function(e){h+='<div class="agenda-event ae-'+e.cat+'"><div><div class="ae-titre">'+(e.heure&&e.heure!=='—'?e.heure+' \u2014 ':'')+e.titre+'</div><div class="ae-sub">'+(e.sub||EVT_SUB_AG[e.cat]||'')+'</div></div></div>';});
       modifsDuJour.forEach(function(m){
         var label = {annule:'🚫 Annulé', reporte:'📅 Reporté', modif:'✏️ Modifié', note:'📌 Note'}[m.action]||m.action;
         h += '<div style="font-size:11px;padding:4px 10px;margin:2px 0;border-radius:4px;background:var(--warn-bg);border:1px solid var(--warn);color:var(--warn-text);">'
