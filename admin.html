@@ -1712,6 +1712,8 @@ function chargerDatesYogaStages() {
       STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
     }
   } catch(e){}
+  // Synchronise localStorage pour index.html
+  saveCoursDatesLocal();
 }
 
 var MILONGAS_DEFAULTS = [
@@ -3278,6 +3280,7 @@ async function chargerDonnees() {
       var dc = await rc.json();
       if (Array.isArray(dc.paris)     && dc.paris.length)     COURS_PARIS     = dc.paris;
       if (Array.isArray(dc.vincennes) && dc.vincennes.length) COURS_VINCENNES = dc.vincennes;
+      saveCoursDatesLocal(); // sync localStorage pour index.html
     } catch(ex) { /* conserver les valeurs hardcodées si erreur */ }
     renderTab();
   } catch(e) { console.error('Erreur:', e.message); }
@@ -3285,9 +3288,20 @@ async function chargerDonnees() {
 
 // Persiste les tableaux COURS_PARIS / COURS_VINCENNES dans Apps Script
 function saveCoursDatesRemote() {
+  saveCoursDatesLocal();
   if (IS_DEMO || !adminData._email) return;
   postAS({action:'saveCoursDates', email:adminData._email,
           paris:COURS_PARIS, vincennes:COURS_VINCENNES}).catch(function(){});
+}
+
+// Persiste les 3 tableaux de dates dans localStorage pour index.html
+function saveCoursDatesLocal() {
+  try {
+    localStorage.setItem('tev_cours_dates', JSON.stringify({
+      paris: COURS_PARIS, vincennes: COURS_VINCENNES, yoga: COURS_YOGA,
+      modifie: today()
+    }));
+  } catch(e) {}
 }
 
 // ================================================================
