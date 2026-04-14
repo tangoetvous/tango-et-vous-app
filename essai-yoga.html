@@ -76,12 +76,12 @@ select option{background:var(--s2);}
 
 <div class="hdr">
   <div class="hdr-logo">TANGO &amp; VOUS</div>
-  <div class="hdr-sub">Cours d'essai Yoga — Espace Sorano, Vincennes</div>
+  <div class="hdr-sub" id="yoga-hdr-sub">Cours d'essai Yoga — Espace Sorano, Vincennes</div>
 </div>
 
 <div class="body" id="form-zone">
   <div class="info-box">
-    🧘 Cours de yoga le mardi matin à l'<b>Espace Sorano, Vincennes</b><br/>
+    🧘 Cours de yoga le mardi matin à l'<b id="yoga-adr-court">Espace Sorano, Vincennes</b><br/>
     Yin Yoga <b id="info-hr-yin">10h30</b> · Hatha Yoga <b id="info-hr-hatha">11h30</b><br/>
     Les <b>2 premiers cours de septembre</b> sont <b>gratuits</b>.
   </div>
@@ -96,7 +96,7 @@ select option{background:var(--s2);}
         Hatha Yoga<br/><span class="bc-hr" id="hr-hatha">11h30</span>
       </button>
       <button type="button" class="btn-choix" data-cours="forfait" onclick="selectCours(this)">
-        Yin Yoga+Hatha Yoga<br/><span class="bc-hr" id="hr-forfait">10h30–13h00</span>
+        Yin Yoga + Hatha Yoga<br/><span class="bc-hr" id="hr-forfait">10h30–12h30</span>
       </button>
     </div>
   </div>
@@ -139,7 +139,7 @@ select option{background:var(--s2);}
   <div class="s-title">PRÉSENCE CONFIRMÉE !</div>
   <div class="s-card">
     <div class="s-line"><span class="s-ico">🧘</span><span id="cp-recap"></span></div>
-    <div class="s-line"><span class="s-ico">📍</span><span>Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes</span></div>
+    <div class="s-line"><span class="s-ico">📍</span><span id="yoga-adr-cp">Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes</span></div>
   </div>
   <div class="s-sig">À très bientôt sur le tapis !<br/><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
 </div>
@@ -151,7 +151,7 @@ select option{background:var(--s2);}
   <div class="s-card">
     <div class="s-line"><span class="s-ico">📧</span><span>Vous allez recevoir un email de confirmation.</span></div>
     <div class="s-line" id="s-tarif-line"></div>
-    <div class="s-line"><span class="s-ico">📍</span><span>Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes (RER A, Château de Vincennes)</span></div>
+    <div class="s-line"><span class="s-ico">📍</span><span id="yoga-adr-success">Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes (RER A, Château de Vincennes)</span></div>
   </div>
   <div id="recap-yoga"></div>
   <div class="s-sig">À très bientôt sur le tapis !<br/><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
@@ -192,13 +192,24 @@ function getSaisonCourante() {
   const d = new Date(), m = d.getMonth()+1, y = d.getFullYear();
   return (m>=9?y:y-1)+'-'+(m>=9?y+1:y);
 }
-// Horaires yoga — lus depuis les Paramètres admin, fallback sur valeurs par défaut
+// Horaires et adresse yoga — lus depuis les Paramètres admin, fallback sur valeurs par défaut
+var ADRESSE_YOGA = (function() {
+  try {
+    var p = JSON.parse(localStorage.getItem('tev_params_yoga_'+getSaisonCourante())||'{}');
+    var a = p.adresse || {};
+    return {
+      nom:       a.nom       || 'Espace Sorano',
+      rue:       a.rue       || '16 rue Charles Pathé, 94300 Vincennes',
+      transport: a.transport || 'RER A — Vincennes (pl. Pierre Sémard)'
+    };
+  } catch(e) { return { nom:'Espace Sorano', rue:'16 rue Charles Pathé, 94300 Vincennes', transport:'RER A — Vincennes (pl. Pierre Sémard)' }; }
+})();
 var HORAIRES_YOGA = (function() {
   try {
     var p = JSON.parse(localStorage.getItem('tev_params_yoga_'+getSaisonCourante())||'{}');
     var h = p.horaires || {};
-    return { yin:h.yin||'10h30', yin_fin:h.yin_fin||'11h45', hatha:h.hatha||'11h30', hatha_fin:h.hatha_fin||'13h00' };
-  } catch(e) { return { yin:'10h30', yin_fin:'11h45', hatha:'11h30', hatha_fin:'13h00' }; }
+    return { yin:h.yin||'10h30', yin_fin:h.yin_fin||'11h30', hatha:h.hatha||'11h30', hatha_fin:h.hatha_fin||'12h30' };
+  } catch(e) { return { yin:'10h30', yin_fin:'11h30', hatha:'11h30', hatha_fin:'12h30' }; }
 })();
 function getYogaLien() {
   try {
@@ -287,13 +298,17 @@ function init() {
     }
   }
 
-  // Appliquer les horaires dynamiques dans le DOM
+  // Appliquer les horaires et l'adresse dynamiques dans le DOM
   var el;
-  el = document.getElementById('hr-yin');       if(el) el.textContent = HORAIRES_YOGA.yin;
-  el = document.getElementById('hr-hatha');     if(el) el.textContent = HORAIRES_YOGA.hatha;
-  el = document.getElementById('hr-forfait');   if(el) el.textContent = HORAIRES_YOGA.yin+'–'+HORAIRES_YOGA.hatha_fin;
-  el = document.getElementById('info-hr-yin');  if(el) el.textContent = HORAIRES_YOGA.yin;
-  el = document.getElementById('info-hr-hatha');if(el) el.textContent = HORAIRES_YOGA.hatha;
+  el = document.getElementById('hr-yin');        if(el) el.textContent = HORAIRES_YOGA.yin;
+  el = document.getElementById('hr-hatha');      if(el) el.textContent = HORAIRES_YOGA.hatha;
+  el = document.getElementById('hr-forfait');    if(el) el.textContent = HORAIRES_YOGA.yin+'–'+HORAIRES_YOGA.hatha_fin;
+  el = document.getElementById('info-hr-yin');   if(el) el.textContent = HORAIRES_YOGA.yin;
+  el = document.getElementById('info-hr-hatha'); if(el) el.textContent = HORAIRES_YOGA.hatha;
+  el = document.getElementById('yoga-hdr-sub');  if(el) el.textContent = 'Cours d\'essai Yoga — '+ADRESSE_YOGA.nom;
+  el = document.getElementById('yoga-adr-court');if(el) el.textContent = ADRESSE_YOGA.nom;
+  el = document.getElementById('yoga-adr-cp');   if(el) el.textContent = ADRESSE_YOGA.nom+' — '+ADRESSE_YOGA.rue;
+  el = document.getElementById('yoga-adr-success');if(el) el.textContent = ADRESSE_YOGA.nom+' — '+ADRESSE_YOGA.rue+' ('+ADRESSE_YOGA.transport+')';
 
   const sel = document.getElementById('sel-date');
   const today = todayISO();
@@ -384,7 +399,7 @@ function soumettre() {
   }
 
   // Construire récap
-  const coursLbl = {yin:'Yin Yoga '+HORAIRES_YOGA.yin, hatha:'Hatha Yoga '+HORAIRES_YOGA.hatha, forfait:'Yin Yoga+Hatha Yoga '+HORAIRES_YOGA.yin+'–'+HORAIRES_YOGA.hatha_fin}[coursSelectionne]||coursSelectionne;
+  const coursLbl = {yin:'Yin Yoga '+HORAIRES_YOGA.yin, hatha:'Hatha Yoga '+HORAIRES_YOGA.hatha, forfait:'Yin Yoga + Hatha Yoga '+HORAIRES_YOGA.yin+'–'+HORAIRES_YOGA.hatha_fin}[coursSelectionne]||coursSelectionne;
   const recapHtml = `<div class="s-card">
     <div class="s-line"><span class="s-ico">🧘</span><span><b>${coursLbl}</b></span></div>
     <div class="s-line"><span class="s-ico">📅</span><span>${fmtDate(date)}</span></div>
