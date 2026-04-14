@@ -4044,7 +4044,7 @@ function renderElevesTango() {
   h+='<button class="sub-tab'+(sousOngletEleves==='inscrire'?' active':'')+'" data-sous-el="inscrire">✏️ Inscrire</button>';
   h+='</div>';
   if (sousOngletEleves === 'inscrire') {
-    return h + renderFormulairePreinscriptionAdmin();
+    return h + renderFormulaireInscriptionDirecteAdmin();
   }
   h+='<div style="margin-bottom:10px;"><input type="search" id="rech-eleve" value="'+rechercheEleve.replace(/"/g,'&quot;')+'" placeholder="🔍 Rechercher parmi tous les cours..." oninput="majRechercheEleve(this.value)" style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;" autocomplete="off"></div>';
   h+='<div id="eleves-resultats">'+_elevesResultatsHTML(inscrits)+'</div>';
@@ -6525,6 +6525,137 @@ function renderFormulairePreinscriptionAdmin() {
     +'<iframe src="inscription-cours.html?admin=1&mode=preinscription" style="border:none;width:100%;height:900px;border-radius:8px;" title="Formulaire pré-inscription"></iframe>'
     +'</div>';
 }
+
+function renderFormulaireInscriptionDirecteAdmin() {
+  var COURS_OPT = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
+  var PAI_OPT = Object.entries(PAI_LBL).map(function(kv){ return '<option value="'+kv[0]+'">'+kv[1]+'</option>'; }).join('');
+  return '<div class="card" style="margin:0 0 16px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:16px;">✏️ Inscription directe</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    +'<div class="field" style="margin:0;"><label>Prénom *</label><input type="text" id="di-prenom" autocomplete="given-name"/></div>'
+    +'<div class="field" style="margin:0;"><label>Nom *</label><input type="text" id="di-nom" autocomplete="family-name"/></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    +'<div class="field" style="margin:0;"><label>Email *</label><input type="email" id="di-email" autocapitalize="none"/></div>'
+    +'<div class="field" style="margin:0;"><label>Téléphone</label><input type="tel" id="di-tel"/></div>'
+    +'</div>'
+    +'<div class="field"><label>Cours *</label><select id="di-cours">'
+    +COURS_OPT.map(function(c){ return '<option>'+c+'</option>'; }).join('')
+    +'</select></div>'
+    +'<div class="field"><label>Rôle *</label>'
+    +'<div style="display:flex;gap:12px;padding:4px 0;">'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="di-role" value="guideur" checked/> Guideur</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="di-role" value="guidee"/> Guidée</label>'
+    +'</div></div>'
+    +'<div class="field"><label>Partenaire ?</label>'
+    +'<div style="display:flex;gap:12px;padding:4px 0;">'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="di-part" value="solo" checked onchange="diTogglePart(this)"/> Solo</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="di-part" value="avec" onchange="diTogglePart(this)"/> Avec partenaire</label>'
+    +'</div></div>'
+    +'<div id="di-part-zone" style="display:none;background:var(--s2);border-radius:8px;padding:12px;margin-bottom:10px;">'
+    +'<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;">Partenaire</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    +'<div class="field" style="margin:0;"><label>Prénom *</label><input type="text" id="di-p-prenom"/></div>'
+    +'<div class="field" style="margin:0;"><label>Nom *</label><input type="text" id="di-p-nom"/></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    +'<div class="field" style="margin:0;"><label>Email</label><input type="email" id="di-p-email" autocapitalize="none"/></div>'
+    +'<div class="field" style="margin:0;"><label>Téléphone</label><input type="tel" id="di-p-tel"/></div>'
+    +'</div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    +'<div class="field" style="margin:0;"><label>Formule *</label>'
+    +'<div style="display:flex;flex-direction:column;gap:6px;padding:4px 0;">'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="di-formule" value="carte10" checked onchange="diSyncFormulePart()"/> Carte 10</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="di-formule" value="forfait" onchange="diSyncFormulePart()"/> Forfait</label>'
+    +'</div></div>'
+    +'<div class="field" id="di-formule-part-zone" style="margin:0;display:none;"><label>Formule partenaire</label>'
+    +'<div style="display:flex;flex-direction:column;gap:6px;padding:4px 0;">'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="di-formule-p" value="carte10" checked/> Carte 10</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="di-formule-p" value="forfait"/> Forfait</label>'
+    +'</div></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
+    +'<div class="field" style="margin:0;"><label>Paiement *</label><select id="di-paie">'+PAI_OPT+'</select></div>'
+    +'<div class="field" id="di-paie-part-zone" style="margin:0;display:none;"><label>Paiement partenaire</label><select id="di-paie-p">'+PAI_OPT+'</select></div>'
+    +'</div>'
+    +'<div id="di-err" style="display:none;background:#1a0000;border-left:3px solid var(--danger);padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#ff6b6b;margin-bottom:10px;"></div>'
+    +'<div id="di-ok"  style="display:none;background:#001a00;border-left:3px solid #4ade80;padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#4ade80;margin-bottom:10px;">✓ Élève inscrit·e !</div>'
+    +'<button class="btn btn-gold" style="width:100%;" onclick="soumettreInscriptionDirecte()">✓ Inscrire</button>'
+    +'</div>';
+}
+window.diTogglePart = function(radio) {
+  var avec = radio.value === 'avec';
+  var z = gel('di-part-zone'); if(z) z.style.display = avec ? 'block' : 'none';
+  var fp = gel('di-formule-part-zone'); if(fp) fp.style.display = avec ? 'block' : 'none';
+  var pp = gel('di-paie-part-zone'); if(pp) pp.style.display = avec ? 'block' : 'none';
+};
+window.diSyncFormulePart = function() {
+  var f = document.querySelector('input[name="di-formule"]:checked');
+  if (!f) return;
+  var rp = document.querySelector('input[name="di-formule-p"][value="'+f.value+'"]');
+  if (rp) rp.checked = true;
+};
+window.soumettreInscriptionDirecte = function() {
+  var prenom  = ((gel('di-prenom')||{}).value||'').trim();
+  var nom     = ((gel('di-nom')||{}).value||'').trim();
+  var email   = ((gel('di-email')||{}).value||'').trim().toLowerCase();
+  var tel     = ((gel('di-tel')||{}).value||'').trim();
+  var cours   = ((gel('di-cours')||{}).value||'');
+  var roleEl  = document.querySelector('input[name="di-role"]:checked');
+  var role    = roleEl ? roleEl.value : 'guidee';
+  var avecEl  = document.querySelector('input[name="di-part"]:checked');
+  var avec    = avecEl && avecEl.value === 'avec';
+  var pPrenom = avec ? ((gel('di-p-prenom')||{}).value||'').trim() : '';
+  var pNom    = avec ? ((gel('di-p-nom')||{}).value||'').trim() : '';
+  var pEmail  = avec ? ((gel('di-p-email')||{}).value||'').trim().toLowerCase() : '';
+  var pTel    = avec ? ((gel('di-p-tel')||{}).value||'').trim() : '';
+  var formEl  = document.querySelector('input[name="di-formule"]:checked');
+  var formule = formEl ? formEl.value : 'carte10';
+  var formPEl = document.querySelector('input[name="di-formule-p"]:checked');
+  var formulePart = formPEl ? formPEl.value : formule;
+  var paie    = ((gel('di-paie')||{}).value||'cb1x');
+  var paiePart= avec ? ((gel('di-paie-p')||{}).value||paie) : paie;
+  var err = gel('di-err'), ok = gel('di-ok');
+  if(err) err.style.display='none'; if(ok) ok.style.display='none';
+  if (!prenom||!nom||!email) { if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';} return; }
+  if (avec && (!pPrenom||!pNom)) { if(err){err.textContent='Prénom et nom du partenaire sont requis.';err.style.display='block';} return; }
+  var ville  = cours.toLowerCase().indexOf('vincennes')>=0 ? 'vincennes' : 'paris';
+  var niveau = cours.toLowerCase().indexOf('inter')>=0 ? 'intermediaire' : 'debutant';
+  var niveauLbl = niveau==='debutant' ? 'Débutant' : 'Intermédiaire';
+  var roleP  = role==='guideur' ? 'guidee' : 'guideur';
+  var partNom = avec ? (pPrenom+' '+pNom).trim() : '';
+  var sai = saisonPourNouvelleEntree();
+  var ts  = Date.now();
+  var idP = 'CT'+(ts+1), idC = 'CT'+ts;
+  var montant  = formule==='carte10'   ? (TARIFS.carte10||0)   : (ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0;
+  var montantP = formulePart==='carte10'? (TARIFS.carte10||0)  : (ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0;
+  if(!adminData.coursTango) adminData.coursTango=[];
+  // Inscrit
+  var existing = adminData.coursTango.find(function(e){return e.email===email;});
+  if(existing){ existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.cours=cours;existing.ville=ville;existing.niveau=niveau;existing.partenaire=partNom;existing.emailPartenaire=pEmail;if(tel)existing.tel=tel; }
+  else { adminData.coursTango.push({id:idC,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',partenaire:partNom,emailPartenaire:pEmail,type:formule,paiement:paie,montant:montant,dateInscription:today(),saison:sai}); }
+  // Partenaire
+  if(avec){
+    var existingP=adminData.coursTango.find(function(e){return pEmail&&e.email===pEmail;});
+    if(existingP){existingP.statut='inscrit';existingP.type=formulePart;existingP.paiement=paiePart;existingP.montant=montantP;existingP.cours=cours;existingP.ville=ville;existingP.niveau=niveau;existingP.partenaire=prenom+' '+nom;existingP.emailPartenaire=email;if(pTel)existingP.tel=pTel;}
+    else{adminData.coursTango.push({id:idP,prenom:pPrenom,nom:pNom,email:pEmail,tel:pTel,role:roleP,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',partenaire:prenom+' '+nom,emailPartenaire:email,type:formulePart,paiement:paiePart,montant:montantP,dateInscription:today(),saison:sai});}
+  }
+  // Cartes 10 — inscrit
+  if(formule==='carte10' && !adminData.cartes.find(function(c){return c.email===email;})){
+    adminData.cartes.push({id:'C'+ts,nom:prenom+' '+nom,prenom:prenom,niveau:niveauLbl,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville,datesCours:[],partenaire:partNom,emailPartenaire:pEmail,saison:sai});
+    recalcStats();
+  }
+  // Cartes 10 — partenaire
+  if(avec && formulePart==='carte10' && !adminData.cartes.find(function(c){return pEmail&&c.email===pEmail;})){
+    adminData.cartes.push({id:'C'+(ts+1),nom:pPrenom+' '+pNom,prenom:pPrenom,niveau:niveauLbl,email:pEmail,tel:pTel,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville,datesCours:[],partenaire:prenom+' '+nom,emailPartenaire:email,saison:sai});
+    recalcStats();
+  }
+  if(ok) ok.style.display='block';
+  setTimeout(function(){
+    sousOngletEleves = (ville==='vincennes'?'vincennes':'paris') + '-' + (niveau==='intermediaire'?'int':'deb');
+    renderTab();
+  }, 1000);
+};
 
 function soumettreDemande() {
   var prenom  =((gel('fd-prenom')||{}).value||'').trim();
