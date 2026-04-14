@@ -129,6 +129,7 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
 .accordion-item.has-selection .accordion-header { background: #1f1a00; }
 .accordion-header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .accordion-date { font-size: 15px; font-weight: bold; color: #D4AF37; }
+.accordion-nom  { font-size: 12px; color: #a08050; margin-top: 2px; font-style: italic; }
 .accordion-badge { background: #D4AF37; color: #000; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 20px; display: none; }
 .accordion-item.has-selection .accordion-badge { display: inline-block; }
 .accordion-arrow { font-size: 13px; color: #7a6030; transition: transform .25s; flex-shrink: 0; }
@@ -152,6 +153,8 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
 .type-technique { background: #2a2000; color: #D4AF37; border: 1px solid #5a4000; }
 .type-stage1    { background: #0a1a00; color: #7adf7a; border: 1px solid #2a5000; }
 .type-stage2    { background: #0a0a20; color: #7aaaff; border: 1px solid #1a2a50; }
+.type-stage3    { background: #200800; color: #ff9a4a; border: 1px solid #5a2a00; }
+.type-stage4    { background: #0d0020; color: #c47aff; border: 1px solid #3a1a50; }
 
 /* NOTE ACCORDÉON */
 .note-stages { font-size: 15px; color: #c8a84a; margin-bottom: 14px; line-height: 1.5; }
@@ -240,18 +243,20 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
 
 <!-- TARIFS -->
 <div class="tarifs-bloc">
-  <div class="tarifs-titre">Tarifs par personne</div>
-  <div class="tarifs-grid">
-    <div class="tarif-ligne"><span>Technique 1h</span><span class="prix">20 €</span></div>
-    <div class="tarif-ligne"><span>1 Stage</span><span class="prix">25 €</span></div>
-    <div class="tarif-ligne"><span>2 Stages</span><span class="prix">45 €</span></div>
-    <div class="tarif-ligne"><span>3 Stages</span><span class="prix">65 €</span></div>
-    <div class="tarif-ligne"><span>4 Stages</span><span class="prix">85 €</span></div>
-    <div class="tarif-ligne"><span>2 Stages + Technique</span><span class="prix">60 €</span></div>
-    <div class="tarif-ligne"><span>3 Stages + Technique</span><span class="prix">75 €</span></div>
-    <div class="tarif-ligne"><span>4 Stages + Technique</span><span class="prix">95 €</span></div>
+  <div id="tarifs-bloc-content">
+    <div class="tarifs-titre">Tarifs par personne</div>
+    <div class="tarifs-grid">
+      <div class="tarif-ligne"><span>Technique 1h</span><span class="prix">20 €</span></div>
+      <div class="tarif-ligne"><span>1 Stage</span><span class="prix">25 €</span></div>
+      <div class="tarif-ligne"><span>2 Stages</span><span class="prix">45 €</span></div>
+      <div class="tarif-ligne"><span>3 Stages</span><span class="prix">65 €</span></div>
+      <div class="tarif-ligne"><span>4 Stages</span><span class="prix">85 €</span></div>
+      <div class="tarif-ligne"><span>2 Stages + Technique</span><span class="prix">60 €</span></div>
+      <div class="tarif-ligne"><span>3 Stages + Technique</span><span class="prix">75 €</span></div>
+      <div class="tarif-ligne"><span>4 Stages + Technique</span><span class="prix">95 €</span></div>
+    </div>
+    <div class="paiement-note">💵 Le paiement s'effectue sur place le jour du stage.</div>
   </div>
-  <div class="paiement-note">💵 Le paiement s'effectue sur place le jour du stage.</div>
 </div>
 
 <!-- INDICATEUR -->
@@ -580,62 +585,112 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
 const APPS_SCRIPT_URL = 'REMPLACER_PAR_TON_URL_APPS_SCRIPT';
 const IS_DEMO = APPS_SCRIPT_URL.includes('REMPLACER');
 
-// ── Données ─────────────────────────────────────────────────────
-const DATES_STAGES = [
-  { date:'2025-09-19', label:'Vendredi 19 Septembre 2025', stages:[
-    { id:'2025-09-19-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2025-09-19-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
-    { id:'2025-09-19-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+// ── Constantes ──────────────────────────────────────────────────
+const STAGE_NOM_DEFAUT = 'Stages avec Florencia Garcia et Jérémy Braitbart';
+
+const DEFAULTS_HORAIRES_STAGES = {
+  tech_deb:'14h', tech_fin:'15h',
+  s1_deb:'15h',   s1_fin:'16h30',
+  s2_deb:'16h30', s2_fin:'18h',
+  s3_deb:'11h30', s3_fin:'13h',
+  s4_deb:'10h',   s4_fin:'11h30',
+};
+
+const TARIFS_STAGES_DEFAUT = {
+  stage_technique:20, stage_1:25, stage_2:45, stage_3:65, stage_4:85,
+  stage_2_tech:60, stage_3_tech:75, stage_4_tech:95
+};
+
+// ── Données dynamiques (chargées depuis localStorage ou fallback) ─
+var TARIFS_STAGES = Object.assign({}, TARIFS_STAGES_DEFAUT);
+var DATES_STAGES  = [];
+
+// Fallback statique utilisé si localStorage vide
+const DATES_STAGES_FALLBACK = [
+  { date:'2026-04-11', label:'Sam. 11 Avr 2026',  nom:STAGE_NOM_DEFAUT, stages:[
+    { id:'2026-04-11-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2026-04-11-stage1',    horaire:'15h–16h30', theme:'',                            type:'stage1' },
+    { id:'2026-04-11-stage2',    horaire:'16h30–18h', theme:'',                            type:'stage2' }
   ]},
-  { date:'2025-10-03', label:'Vendredi 3 Octobre 2025', stages:[
-    { id:'2025-10-03-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2025-10-03-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
-    { id:'2025-10-03-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
+  { date:'2026-05-30', label:'Sam. 30 Mai 2026',  nom:STAGE_NOM_DEFAUT, stages:[
+    { id:'2026-05-30-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
+    { id:'2026-05-30-stage1',    horaire:'15h–16h30', theme:'',                            type:'stage1' },
+    { id:'2026-05-30-stage2',    horaire:'16h30–18h', theme:'',                            type:'stage2' }
   ]},
-  { date:'2025-11-07', label:'Vendredi 7 Novembre 2025', stages:[
-    { id:'2025-11-07-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2025-11-07-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
-    { id:'2025-11-07-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
-  ]},
-  { date:'2025-12-05', label:'Vendredi 5 Décembre 2025', stages:[
-    { id:'2025-12-05-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2025-12-05-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
-    { id:'2025-12-05-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
-  ]},
-  { date:'2026-01-30', label:'Vendredi 30 Janvier 2026', stages:[
-    { id:'2026-01-30-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2026-01-30-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
-    { id:'2026-01-30-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
-  ]},
-  { date:'2026-02-27', label:'Vendredi 27 Février 2026', stages:[
-    { id:'2026-02-27-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2026-02-27-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
-    { id:'2026-02-27-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
-  ]},
-  { date:'2026-03-13', label:'Vendredi 13 Mars 2026', stages:[
-    { id:'2026-03-13-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2026-03-13-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
-    { id:'2026-03-13-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
-  ]},
-  { date:'2026-04-24', label:'Vendredi 24 Avril 2026', stages:[
-    { id:'2026-04-24-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2026-04-24-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
-    { id:'2026-04-24-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
-  ]},
-  { date:'2026-05-22', label:'Vendredi 22 Mai 2026', stages:[
-    { id:'2026-05-22-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2026-05-22-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
-    { id:'2026-05-22-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
-  ]},
-  { date:'2026-06-19', label:'Vendredi 19 Juin 2026', stages:[
-    { id:'2026-06-19-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2026-06-19-stage1',    horaire:'15h–16h30', theme:'Thème à venir',               type:'stage1' },
-    { id:'2026-06-19-stage2',    horaire:'16h30–18h', theme:'Thème à venir',               type:'stage2' }
-  ]}
 ];
 
-const TYPE_LABEL = { technique:'Technique', stage1:'Stage 1 — Tous niveaux', stage2:'Stage 2 — Intermédiaire+' };
-const TYPE_CLASS  = { technique:'type-technique', stage1:'type-stage1', stage2:'type-stage2' };
+const TYPE_LABEL = {
+  technique:'Technique',
+  stage1:'Stage 1', stage2:'Stage 2', stage3:'Stage 3', stage4:'Stage 4'
+};
+const TYPE_CLASS = {
+  technique:'type-technique',
+  stage1:'type-stage1', stage2:'type-stage2', stage3:'type-stage3', stage4:'type-stage4'
+};
+
+// ── Saison courante ─────────────────────────────────────────────
+function saisonCourante() {
+  var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1;
+  return m>=9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y);
+}
+
+// ── Construction d'une entrée de date à partir des données admin ─
+function buildDateEntry(st, globalHor) {
+  var def=DEFAULTS_HORAIRES_STAGES, stHor=st.horaires||{};
+  function hor(k){ return stHor[k]||globalHor[k]||def[k]||''; }
+  var n=st.nStages||2, items=[];
+  if(n>=4) items.push({id:st.date+'-stage4',horaire:hor('s4_deb')+'–'+hor('s4_fin'),theme:(st.themes&&st.themes[3])||'',type:'stage4'});
+  if(n>=3) items.push({id:st.date+'-stage3',horaire:hor('s3_deb')+'–'+hor('s3_fin'),theme:(st.themes&&st.themes[2])||'',type:'stage3'});
+  if(st.technique!==false) items.push({id:st.date+'-technique',horaire:hor('tech_deb')+'–'+hor('tech_fin'),theme:'Technique Leader & Follower',type:'technique'});
+  if(n>=1) items.push({id:st.date+'-stage1',horaire:hor('s1_deb')+'–'+hor('s1_fin'),theme:(st.themes&&st.themes[0])||'',type:'stage1'});
+  if(n>=2) items.push({id:st.date+'-stage2',horaire:hor('s2_deb')+'–'+hor('s2_fin'),theme:(st.themes&&st.themes[1])||'',type:'stage2'});
+  var dateTarifs = st.tarifs ? Object.assign({},TARIFS_STAGES,st.tarifs) : null;
+  return {date:st.date, label:st.label, nom:st.nom||STAGE_NOM_DEFAUT, stages:items, tarifs:dateTarifs};
+}
+
+// ── Chargement des données depuis localStorage ──────────────────
+function chargerDonnees() {
+  var sai=saisonCourante();
+  // Tarifs globaux de la saison
+  try {
+    var pr=localStorage.getItem('tev_params_stages_'+sai);
+    if(pr){ var pp=JSON.parse(pr); if(pp.tarifs&&Object.keys(pp.tarifs).length) TARIFS_STAGES=Object.assign({},TARIFS_STAGES_DEFAUT,pp.tarifs); }
+  } catch(e){}
+  // Dates
+  try {
+    var raw=localStorage.getItem('tev_dates_stages');
+    if(raw){
+      var saved=JSON.parse(raw);
+      var today=new Date().toISOString().slice(0,10);
+      var sSai=saved.saison||sai;
+      var globalHor={};
+      try{ var ph=localStorage.getItem('tev_params_stages_'+sSai); if(ph) globalHor=(JSON.parse(ph).horaires)||{}; }catch(e){}
+      // Tarifs de la saison du stage (peut être différente si saison admin ≠ saison courante)
+      try{ var pt=localStorage.getItem('tev_params_stages_'+sSai); if(pt){ var ppt=JSON.parse(pt); if(ppt.tarifs&&Object.keys(ppt.tarifs).length) TARIFS_STAGES=Object.assign({},TARIFS_STAGES_DEFAUT,ppt.tarifs); } }catch(e){}
+      var stages=(saved.stages||[]).filter(function(st){return st.date>=today;}).sort(function(a,b){return a.date<b.date?-1:1;});
+      if(stages.length){ DATES_STAGES=stages.map(function(st){return buildDateEntry(st,globalHor);}); return; }
+    }
+  } catch(e){}
+  // Fallback statique
+  var today2=new Date().toISOString().slice(0,10);
+  DATES_STAGES=DATES_STAGES_FALLBACK.filter(function(d){return d.date>=today2;});
+}
+
+// ── Rendu dynamique du bloc tarifs ─────────────────────────────
+function renderTarifsBloc() {
+  var t=TARIFS_STAGES;
+  var lines=[];
+  lines.push('<div class="tarif-ligne"><span>Technique 1h</span><span class="prix">'+(t.stage_technique||20)+' €</span></div>');
+  lines.push('<div class="tarif-ligne"><span>1 Stage</span><span class="prix">'+(t.stage_1||25)+' €</span></div>');
+  lines.push('<div class="tarif-ligne"><span>2 Stages</span><span class="prix">'+(t.stage_2||45)+' €</span></div>');
+  if(t.stage_3) lines.push('<div class="tarif-ligne"><span>3 Stages</span><span class="prix">'+t.stage_3+' €</span></div>');
+  if(t.stage_4) lines.push('<div class="tarif-ligne"><span>4 Stages</span><span class="prix">'+t.stage_4+' €</span></div>');
+  lines.push('<div class="tarif-ligne"><span>2 Stages + Technique</span><span class="prix">'+(t.stage_2_tech||60)+' €</span></div>');
+  if(t.stage_3_tech) lines.push('<div class="tarif-ligne"><span>3 Stages + Technique</span><span class="prix">'+t.stage_3_tech+' €</span></div>');
+  if(t.stage_4_tech) lines.push('<div class="tarif-ligne"><span>4 Stages + Technique</span><span class="prix">'+t.stage_4_tech+' €</span></div>');
+  var el=document.getElementById('tarifs-bloc-content');
+  if(el) el.innerHTML='<div class="tarifs-titre">Tarifs par personne</div><div class="tarifs-grid">'+lines.join('')+'</div><div class="paiement-note">💵 Le paiement s\'effectue sur place le jour du stage.</div>';
+}
 
 // ── État ─────────────────────────────────────────────────────────
 const state = {
@@ -667,22 +722,24 @@ function calculerPrixParDate(map, date) {
     if(v.type==='technique') t=true;
     else if(/^stage\d/.test(v.type)) ns++;
   });
-  if(ns===0) return t ? 20 : 0;
-  if(!t) { if(ns===1) return 25; if(ns===2) return 45; if(ns===3) return 65; return 85; }
-  /* avec technique */   if(ns===1) return 45; if(ns===2) return 60; if(ns===3) return 75; return 95;
+  var di=DATES_STAGES.find(function(d){return d.date===date;});
+  var tr=(di&&di.tarifs) ? di.tarifs : TARIFS_STAGES;
+  if(ns===0) return t ? (tr.stage_technique||20) : 0;
+  if(ns===1) {
+    if(!t) return tr.stage_1||25;
+    return (tr.stage_technique||20)+(tr.stage_1||25); // pas de forfait 1+tech
+  }
+  if(!t) return tr['stage_'+ns]||(ns===2?45:ns===3?65:85);
+  return tr['stage_'+ns+'_tech']||((tr['stage_'+ns]||0)+(tr.stage_technique||20));
 }
 function getHoraireParDate(map, date) {
-  var t=false,s1=false,s2=false;
-  map.forEach(function(v){
-    if(v.date!==date) return;
-    if(v.type==='technique') t=true;
-    if(v.type==='stage1')    s1=true;
-    if(v.type==='stage2')    s2=true;
-  });
-  if(!t&&!s1&&!s2) return '';
-  var debut = t?'14h':(s1?'15h':'16h30');
-  var fin   = s2?'18h':(s1?'16h30':'15h');
-  return debut+'–'+fin;
+  var stages=[];
+  map.forEach(function(v){ if(v.date===date) stages.push(v); });
+  if(!stages.length) return '';
+  stages.sort(function(a,b){ return a.horaire.localeCompare(b.horaire); });
+  var debut=stages[0].horaire.split('–')[0]||stages[0].horaire;
+  var fin=(stages[stages.length-1].horaire.split('–')[1]||'').trim();
+  return fin ? debut+'–'+fin : debut;
 }
 function tagRole(role) {
   if(role==='Guideur(se)') return '<span class="role-tag tag-guideur">Guideur(se)</span>';
@@ -708,7 +765,10 @@ function construireAccordeon(containerId, groupe) {
     header.className = 'accordion-header';
     header.innerHTML =
       '<div class="accordion-header-left">'+
-        '<span class="accordion-date">'+dateInfo.label+'</span>'+
+        '<div>'+
+          '<div class="accordion-date">'+dateInfo.label+'</div>'+
+          '<div class="accordion-nom">'+dateInfo.nom+'</div>'+
+        '</div>'+
         '<span class="accordion-badge" id="badge-'+groupe+'-'+dateInfo.date+'">0 sélectionné</span>'+
       '</div>'+
       '<span class="accordion-arrow">▼</span>';
@@ -727,7 +787,7 @@ function construireAccordeon(containerId, groupe) {
         '<div class="stage-row-info">'+
           '<div class="stage-row-horaire">'+s.horaire+'</div>'+
           '<div class="stage-row-theme">'+s.theme+'</div>'+
-          '<span class="stage-row-type '+TYPE_CLASS[s.type]+'">'+TYPE_LABEL[s.type]+'</span>'+
+          '<span class="stage-row-type '+(TYPE_CLASS[s.type]||'type-stage1')+'">'+(TYPE_LABEL[s.type]||s.type)+'</span>'+
         '</div>';
 
       row.addEventListener('click', function(){
@@ -1100,6 +1160,8 @@ function recommencer(){
 
 // ── Init ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function(){
+  chargerDonnees();
+  renderTarifsBloc();
   construireAccordeon('accordionInscrit','inscrit');
   construireAccordeon('accordionPartenaire','partenaire');
 

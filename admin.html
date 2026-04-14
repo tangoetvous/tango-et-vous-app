@@ -1416,6 +1416,11 @@ gel('modal-contact').addEventListener('click', function(e){
 // RÉCEPTION DES INSCRIPTIONS (iframe postMessage + cross-tab localStorage)
 // ================================================================
 function _normRole(r) { return (r||'').toLowerCase().indexOf('guideur') >= 0 ? 'guideur' : 'guidee'; }
+function slotLabel(s) {
+  if(s==='technique') return 'Technique';
+  var m=s.match(/^stage(\d+)$/); if(m) return 'Stage '+m[1];
+  return s;
+}
 
 function _appliquerStageInscription(d) {
   if (!d || !d.inscriptionsParDate) return;
@@ -4920,7 +4925,7 @@ function renderStages() {
       h+='<div class="section-hdr">Guidées en attente</div>';
       att.filter(function(i){return i.role==='guidee';}).forEach(function(i){
         h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+(i.prenom+' '+i.nom).replace(/"/g,'&quot;')+'" data-email="'+(i.email||'')+'" data-tel="'+(i.tel||'')+'" data-ctx="stage">'+i.prenom+' '+i.nom+'</div>'
-          +'<div class="card-sub">'+(i.slots||[]).join(', ')+'</div>'+partenaireTag(i.partenaire,'guidee')+'</div>'
+          +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(', ')+'</div>'+partenaireTag(i.partenaire,'guidee')+'</div>'
           +'<span class="pill pill-warn">Attente</span></div>'
           +'<div class="btn-row"><button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Confirmer</button></div></div>';
       });
@@ -4936,7 +4941,7 @@ function renderStages() {
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
       h+='<div class="point-row"><div style="flex:1;"><div class="point-nom" style="display:flex;align-items:center;gap:6px;">'+i.prenom+' '+i.nom
         +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span></div>'
-        +'<div class="point-sub">'+(i.slots||[]).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
+        +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
         +'<div style="display:flex;gap:6px;">'
         +'<button class="btn-point btn-pres'+(i.present===true?' on':'')+'" data-action="pointer-stage-pres" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✓</button>'
         +'<button class="btn-point btn-abs'+(i.present===false?' on':'')+'" data-action="pointer-stage-abs" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✗</button>'
@@ -4958,7 +4963,7 @@ function renderStages() {
         +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
         +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'
         +i.prenom+' '+i.nom+'</div>'
-        +'<div class="card-sub">'+(i.slots||[]).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
         +'<div class="card-sub">'+(i.montant||0)+'€</div>'
         +'</div>'
         +(i.attente?'<span class="pill pill-warn">attente</span>':'')
@@ -4979,7 +4984,7 @@ function renderStages() {
         +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
         +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'
         +i.prenom+' '+i.nom+'</div>'
-        +'<div class="card-sub">'+(i.slots||[]).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
         +'<div class="card-sub">'+(i.montant||0)+'€</div>'
         +'</div></div></div>';
     });
@@ -5002,7 +5007,7 @@ function renderStages() {
           +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'
           +i.prenom+' '+i.nom+'</div>'
-          +'<div class="card-sub">'+(i.slots||[]).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+          +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
           +'<div class="card-sub">'+(i.montant||0)+'€</div>'
           +'</div><span class="pill pill-warn">attente</span></div>'
           +'<div class="btn-row"><button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button></div>'
@@ -5031,7 +5036,7 @@ function renderStages() {
         +'<div style="flex:1;min-width:0;">'
         +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+i.prenom+' '+i.nom
         +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
-        +'<div class="point-sub">'+(i.slots||[]).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
         +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓</button>'
@@ -5056,7 +5061,7 @@ function renderStages() {
         +'<div style="flex:1;min-width:0;">'
         +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
         +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
-        +'<div class="point-sub">'+(i.slots||[]).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
         +'<button class="btn-point" style="font-size:10px;padding:2px 5px;" data-action="stage-move-up" data-date="'+filtreStage+'" data-idx="'+origIdx+'">▲</button>'
@@ -5073,7 +5078,7 @@ function renderStages() {
         +'<div style="flex:1;min-width:0;">'
         +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
         +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
-        +'<div class="point-sub">'+(i.slots||[]).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
         +(i.email?btnEmail(i.email,i.prenom+' '+i.nom):'')
