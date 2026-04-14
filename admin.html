@@ -1877,7 +1877,7 @@ function renderTarifs() {
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Le Regard Se Pose</b> — Requise pour tous les forfaits annuels et Cartes de 10 cours.'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Adhésion Sorano</b> — Demandé par l\'Espace Sorano. Uniquement pour les Cours à Vincennes. Son Tarif est en fonction de votre âge et votre lieu de résidence. Réglée directement à Sorano via le lien <a href="https://urls.fr/i3KQ7b" target="_blank" style="color:var(--gold);">https://urls.fr/i3KQ7b</a>'
     +'<br><b style="color:var(--text);margin-top:6px;display:block;">Yoga — essai</b> — Gratuit les 2 premiers mardis de septembre. Tarif ci-dessus les mardis suivants (Yin, Hatha ou Forfait = 2× le tarif).'
-    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Stages</b> — Tarifs calculés selon le nombre de créneaux choisis. Paiement sur place en espèces ou en ligne via AssoConnect.'
+    +'<br><b style="color:var(--text);margin-top:6px;display:block;">Stages</b> — Tarifs calculés selon le nombre de créneaux choisis. Paiement sur place en espèces le jour du stage.'
     +'</div>'
     +'</div>';
 
@@ -2077,6 +2077,11 @@ function _renderParamCard(type, sai) {
   // Section Livret (sauf Stages)
   if (type !== 'stages') {
     h += _renderAccordSection(type, 'livret', '📄 Livret d\'information', _renderSecLivretContent(type, sai));
+  }
+
+  // Section Liens AssoConnect (sauf Stages)
+  if (type !== 'stages') {
+    h += _renderAccordSection(type, 'assoconnect', '🔗 Liens AssoConnect', _renderSecAssoconnectContent(type, sai));
   }
 
   return h+'</div>';
@@ -2460,6 +2465,68 @@ function supprimerLivretParam(type, sai) {
   afficherToast('✓ Livret supprimé');
   renderTab();
 }
+
+// ── Contenu : Liens AssoConnect ───────────────────────────────
+function _renderSecAssoconnectContent(type, sai) {
+  var stored = {};
+  try { stored = JSON.parse(localStorage.getItem('tev_liens_assoconnect')||'{}'); } catch(e){}
+  var vals = Object.assign({}, LIENS_ASSOCONNECT_DEFAUT[sai]||{}, stored[sai]||{});
+  var inputStyle = 'width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);'
+                 + 'border-radius:6px;font-size:12px;background:var(--card);color:var(--text);';
+  var h = '<div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">';
+
+  if (type === 'yoga') {
+    h += '<div>'
+       + '<label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px;">Inscription yoga</label>'
+       + '<input id="pm-asso-yoga-yoga" type="url" style="'+inputStyle+'" autocapitalize="none"'
+       + ' placeholder="https://le-regard-se-pose.assoconnect.com/collect/..."'
+       + ' value="'+(vals.yoga||'').replace(/"/g,'&quot;')+'">'
+       + '</div>';
+  } else {
+    // Paris et Vincennes partagent le même formulaire AssoConnect
+    h += '<div style="font-size:11px;color:var(--dim);background:var(--bg);border:1px solid var(--border);'
+       + 'border-radius:6px;padding:8px 10px;line-height:1.5;">'
+       + 'ℹ️ Paris et Vincennes utilisent le même formulaire d\'inscription AssoConnect. '
+       + 'Modifier ici met à jour les deux cours.'
+       + '</div>';
+    h += '<div>'
+       + '<label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px;">Inscription tango (formulaire cours)</label>'
+       + '<input id="pm-asso-'+type+'-cours" type="url" style="'+inputStyle+'" autocapitalize="none"'
+       + ' placeholder="https://le-regard-se-pose.assoconnect.com/collect/..."'
+       + ' value="'+(vals.cours||'').replace(/"/g,'&quot;')+'">'
+       + '</div>'
+       + '<div>'
+       + '<label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px;">Renouvellement carte (10/20 cours)</label>'
+       + '<input id="pm-asso-'+type+'-renouv" type="url" style="'+inputStyle+'" autocapitalize="none"'
+       + ' placeholder="https://le-regard-se-pose.assoconnect.com/collect/..."'
+       + ' value="'+(vals.renouv||'').replace(/"/g,'&quot;')+'">'
+       + '</div>';
+  }
+
+  h += '<div class="btn-row" style="margin-top:2px;">'
+     + '<button class="btn btn-gold" data-action="sauver-assoconnect-type" data-type="'+type+'" data-saison="'+sai+'"'
+     + ' style="font-size:12px;">✓ Enregistrer les liens</button>'
+     + '</div>'
+     + '</div>';
+  return h;
+}
+
+// Sauvegarde les liens AssoConnect d'un type/saison (merge avec l'existant)
+function sauverAssoconnectType(type, sai) {
+  var stored = {};
+  try { stored = JSON.parse(localStorage.getItem('tev_liens_assoconnect')||'{}'); } catch(e){}
+  var current = Object.assign({}, stored[sai]||{});
+  if (type === 'yoga') {
+    current.yoga = ((gel('pm-asso-yoga-yoga')||{}).value||'').trim();
+  } else {
+    current.cours  = ((gel('pm-asso-'+type+'-cours')||{}).value||'').trim();
+    current.renouv = ((gel('pm-asso-'+type+'-renouv')||{}).value||'').trim();
+  }
+  sauverLiensAssoconnect(sai, current);
+  afficherToast('✓ Liens AssoConnect enregistrés');
+  renderTab();
+}
+
 
 // Sauvegarde les horaires d'un type pour une saison donnée
 function sauverHorairesType(type, sai) {
@@ -3044,6 +3111,9 @@ function handleAction(action, btn) {
       break;
     case 'suppr-livret-param':
       supprimerLivretParam(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
+      break;
+    case 'sauver-assoconnect-type':
+      sauverAssoconnectType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
       break;
     case 'sauver-liens':
       (function() {
