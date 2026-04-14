@@ -2040,7 +2040,7 @@ function renderParametres() {
   return h;
 }
 
-// ── Carte d'un cours (header pliable + tarifs) ──────────────
+// ── Carte d'un cours (header fixe + sections accordion) ─────
 function _renderParamCard(type, sai) {
   var cfg = {
     paris:    {icon:'🕺', label:'Tango Paris',     sub:'Cours du jeudi — Espace Danse Studio'},
@@ -2049,7 +2049,43 @@ function _renderParamCard(type, sai) {
     stages:   {icon:'🎭', label:'Stages',          sub:''},
   }[type];
 
-  // Charger tarifs : nouveau stockage → ancien tev_tarifs → défauts
+  // Header fixe (non cliquable)
+  var h = '<div class="card" style="margin-bottom:14px;padding:0;">'
+    +'<div style="padding:13px 16px;display:flex;align-items:center;gap:10px;'
+    +'border-bottom:1px solid var(--border);">'
+    +'<span style="font-size:20px;">'+cfg.icon+'</span>'
+    +'<div><div style="font-size:14px;font-weight:700;color:var(--text);">'+cfg.label+'</div>'
+    +(cfg.sub?'<div style="font-size:11px;color:var(--dim);">'+cfg.sub+'</div>':'')
+    +'</div></div>';
+
+  // Section Tarifs
+  h += _renderAccordSection(type, 'tarifs', '💰 Tarifs', _renderSecTarifsContent(type, sai));
+
+  // Section Adresse (sauf Stages)
+  if (type !== 'stages') {
+    h += _renderAccordSection(type, 'adresse', '📍 Adresse et accès', _renderSecAdresseContent(type));
+  }
+
+  return h+'</div>';
+}
+
+// ── Wrapper accordion générique ──────────────────────────────
+function _renderAccordSection(type, section, label, content) {
+  var open = _iAccord(type, section);
+  return '<div>'
+    +'<button data-action="toggle-accord-param" data-type="'+type+'" data-section="'+section+'"'
+    +' style="width:100%;background:none;border:none;border-top:1px solid var(--border);'
+    +'padding:11px 16px;display:flex;align-items:center;justify-content:space-between;'
+    +'cursor:pointer;text-align:left;">'
+    +'<span style="font-size:12px;font-weight:600;color:var(--text);">'+label+'</span>'
+    +'<span style="font-size:10px;color:var(--dim);">'+(open?'▲':'▼')+'</span>'
+    +'</button>'
+    +(open?'<div style="padding:4px 16px 16px;">'+content+'</div>':'')
+    +'</div>';
+}
+
+// ── Contenu : Tarifs ─────────────────────────────────────────
+function _renderSecTarifsContent(type, sai) {
   var t = _loadParam(type, sai, 'tarifs');
   if (!Object.keys(t).length) {
     try {
@@ -2057,7 +2093,6 @@ function _renderParamCard(type, sai) {
       t = (old&&old.tarifs) ? Object.assign({},TARIFS_DEFAUT,old.tarifs) : Object.assign({},TARIFS_DEFAUT);
     } catch(e) { t = Object.assign({},TARIFS_DEFAUT); }
   }
-
   function inp(k) {
     var v = t[k]!==undefined ? t[k] : (TARIFS_DEFAUT[k]||0);
     return '<div style="display:flex;align-items:center;gap:4px;">'
@@ -2078,7 +2113,6 @@ function _renderParamCard(type, sai) {
     return '<tr><td colspan="3" style="padding:10px 8px 4px;font-size:10px;'
       +'text-transform:uppercase;letter-spacing:2px;color:var(--gold);">'+lbl+'</td></tr>';
   }
-
   var body = '';
   if (type==='paris') {
     body = hd('Inscriptions')
@@ -2110,38 +2144,70 @@ function _renderParamCard(type, sai) {
       +row('2 créneaux','stage_2seances',null)
       +row('Pack complet (3 créneaux)','stage_3seances',null);
   }
+  return '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
+    +'Saison <strong>'+sai+'</strong> — Tarif réduit : −26 ans / étudiants / demandeurs d\'emploi</div>'
+    +'<div style="overflow-x:auto;margin-bottom:12px;">'
+    +'<table style="width:100%;border-collapse:collapse;">'
+    +'<thead><tr>'
+    +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Formule</th>'
+    +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Normal</th>'
+    +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Réduit</th>'
+    +'</tr></thead><tbody>'+body+'</tbody></table></div>'
+    +'<div class="btn-row">'
+    +'<button class="btn btn-ghost" data-action="reset-tarifs-type"'
+    +' data-type="'+type+'" data-saison="'+sai+'" style="font-size:12px;">↺ Défauts</button>'
+    +'<button class="btn btn-gold" data-action="sauver-tarifs-type"'
+    +' data-type="'+type+'" data-saison="'+sai+'" style="flex:2;font-size:12px;">💾 Enregistrer</button>'
+    +'</div>';
+}
 
-  var open = _iAccord(type, 'tarifs');
-  var h = '<div class="card" style="margin-bottom:14px;padding:0;">'
-    +'<button data-action="toggle-accord-param" data-type="'+type+'" data-section="tarifs"'
-    +' style="width:100%;background:none;border:none;padding:13px 16px;display:flex;'
-    +'align-items:center;justify-content:space-between;cursor:pointer;text-align:left;">'
-    +'<div style="display:flex;align-items:center;gap:10px;">'
-    +'<span style="font-size:18px;">'+cfg.icon+'</span>'
-    +'<div><div style="font-size:13px;font-weight:700;color:var(--text);">'+cfg.label+'</div>'
-    +(cfg.sub?'<div style="font-size:11px;color:var(--dim);">'+cfg.sub+'</div>':'')
-    +'</div></div>'
-    +'<span style="font-size:11px;color:var(--dim);">'+(open?'▲':'▼')+'</span>'
-    +'</button>';
-
-  if (open) {
-    h += '<div style="padding:0 16px 16px;border-top:1px solid var(--border);">'
-      +'<div class="box-info" style="font-size:11px;margin-bottom:10px;">Saison <strong>'+sai+'</strong> — Tarif réduit : −26 ans / étudiants / demandeurs d\'emploi</div>'
-      +'<div style="overflow-x:auto;margin-bottom:12px;">'
-      +'<table style="width:100%;border-collapse:collapse;">'
-      +'<thead><tr>'
-      +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Formule</th>'
-      +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Normal</th>'
-      +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Réduit</th>'
-      +'</tr></thead><tbody>'+body+'</tbody></table></div>'
-      +'<div class="btn-row">'
-      +'<button class="btn btn-ghost" data-action="reset-tarifs-type"'
-      +' data-type="'+type+'" data-saison="'+sai+'" style="font-size:12px;">↺ Défauts</button>'
-      +'<button class="btn btn-gold" data-action="sauver-tarifs-type"'
-      +' data-type="'+type+'" data-saison="'+sai+'" style="flex:2;font-size:12px;">💾 Enregistrer</button>'
-      +'</div></div>';
+// ── Contenu : Adresse ────────────────────────────────────────
+function _renderSecAdresseContent(type) {
+  var def = DEFAULTS_ADRESSES[type]||{};
+  var d   = _loadParam(type, null, 'adresse'); // non saisonnier
+  function val(k) { return ((d[k]||def[k])||'').replace(/"/g,'&quot;'); }
+  var iS = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);'
+         + 'border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;';
+  function field(label, id, type2, placeholder) {
+    return '<div style="margin-bottom:8px;">'
+      +'<label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">'+label+'</label>'
+      +'<input id="'+id+'" type="'+(type2||'text')+'" value="'+val(id.split('-').pop())+'"'
+      +' placeholder="'+placeholder+'" style="'+iS+'"></div>';
   }
-  return h+'</div>';
+  // Lien Google Maps calculé à partir des coordonnées GPS sauvegardées
+  var gps = d.gps || def.gps || '';
+  var mapsHref = gps
+    ? 'https://maps.google.com/?q='+encodeURIComponent(gps)
+    : 'https://maps.google.com/?q='+encodeURIComponent((d.rue||def.rue||''));
+  var mapsPreview = gps
+    ? '<a href="'+mapsHref+'" target="_blank" class="btn btn-ghost"'
+      +' style="font-size:11px;text-decoration:none;margin-bottom:10px;display:inline-block;">'
+      +'🗺 Voir sur Google Maps</a>'
+    : '';
+  return '<div style="margin-bottom:4px;">'
+    + field('Nom de la salle', 'pm-'+type+'-adr-nom', 'text', 'ex : Espace Danse Studio')
+    + field('Adresse complète', 'pm-'+type+'-adr-rue', 'text', 'ex : 24 villa Riberolle, Paris 20e')
+    + field('Coordonnées GPS (lat,lng)', 'pm-'+type+'-adr-gps', 'text', 'ex : 48.8568,2.3960')
+    + field('Transport le plus proche', 'pm-'+type+'-adr-transport', 'text', 'ex : M° Alexandre Dumas (L2)')
+    + '</div>'
+    + mapsPreview
+    +'<div class="btn-row">'
+    +'<button class="btn btn-gold" data-action="sauver-adresse-type"'
+    +' data-type="'+type+'" style="font-size:12px;">💾 Enregistrer adresse</button>'
+    +'</div>';
+}
+
+// Sauvegarde l'adresse d'un type (non saisonnier)
+function sauverAdresseType(type) {
+  var data = {
+    nom:       (gel('pm-'+type+'-adr-nom')||{}).value||'',
+    rue:       (gel('pm-'+type+'-adr-rue')||{}).value||'',
+    gps:       (gel('pm-'+type+'-adr-gps')||{}).value||'',
+    transport: (gel('pm-'+type+'-adr-transport')||{}).value||'',
+  };
+  _saveParam(type, null, 'adresse', data);
+  afficherToast('✓ Adresse '+type+' enregistrée');
+  renderTab();
 }
 
 // Enregistre les tarifs d'un type/saison dans localStorage + TARIFS global
@@ -2663,6 +2729,9 @@ function handleAction(action, btn) {
       break;
     case 'sauver-tarifs-type':
       sauverTarifsType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
+      break;
+    case 'sauver-adresse-type':
+      sauverAdresseType(btn.dataset.type||'paris');
       break;
     case 'reset-tarifs-type':
       (function(){
