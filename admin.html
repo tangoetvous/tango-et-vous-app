@@ -2071,6 +2071,9 @@ function _renderParamCard(type, sai) {
     h += _renderAccordSection(type, 'horaires', '⏰ Horaires', _renderSecHorairesContent(type, sai));
   }
 
+  // Section Dates (tous les types)
+  h += _renderAccordSection(type, 'dates', '📅 Dates', _renderSecDatesContent(type, sai));
+
   return h+'</div>';
 }
 
@@ -2257,6 +2260,138 @@ function _renderSecHorairesContent(type, sai) {
     +'<button class="btn btn-gold" data-action="sauver-horaires-type"'
     +' data-type="'+type+'" data-saison="'+sai+'" style="flex:2;font-size:12px;">💾 Enregistrer</button>'
     +'</div>';
+}
+
+// ── Contenu : Dates ──────────────────────────────────────────
+function _renderSecDatesContent(type, sai) {
+  var y1 = parseInt(sai.split('-')[0]);
+  var debut = y1+'-09-01', fin = (y1+1)+'-08-31';
+  var tod = today();
+  var inputStyle = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);'
+    +'border:1px solid var(--border);border-radius:6px;padding:6px 8px;'
+    +'font-size:12px;font-family:monospace;resize:vertical;';
+
+  // ── Yoga : textarea complète (le save remplace tout) ─────
+  if (type === 'yoga') {
+    var yogaDates = COURS_YOGA.filter(function(d){return d>=debut&&d<=fin;});
+    var fut = yogaDates.filter(function(d){return d>=tod;}).length;
+    return '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
+      +'<strong>'+yogaDates.length+'</strong> date'+(yogaDates.length!==1?'s':'')+' — '
+      +'<span style="color:var(--ok-text);">'+fut+' à venir</span></div>'
+      +'<div style="font-size:11px;color:var(--dim);margin-bottom:4px;">'
+      +'Une date par ligne. Les 2 premiers mardis de septembre sont automatiquement gratuits.</div>'
+      +'<textarea id="dates-yoga-'+sai+'" rows="8" style="'+inputStyle+'">'
+      +yogaDates.join('\n')+'</textarea>'
+      +'<div class="btn-row" style="margin-top:10px;">'
+      +'<button class="btn btn-gold" data-action="sauver-dates-yoga" data-saison="'+sai+'"'
+      +' style="font-size:12px;">💾 Enregistrer dates yoga</button></div>';
+  }
+
+  // ── Stages : textarea avec format YYYY-MM-DD | S1 | S2 ──
+  if (type === 'stages') {
+    var stagesData = STAGES.filter(function(s){return s.date>=debut&&s.date<=fin;});
+    var textVal = stagesData.map(function(s){
+      return s.date+(s.s1?' | '+s.s1+(s.s2?' | '+s.s2:''):'');
+    }).join('\n');
+    return '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
+      +'<strong>'+stagesData.length+'</strong> stage'+(stagesData.length!==1?'s':'')+' en '+sai+'</div>'
+      +'<div style="font-size:11px;color:var(--dim);margin-bottom:4px;">'
+      +'Format : <code>YYYY-MM-DD | Thème S1 | Thème S2</code> (thèmes facultatifs)</div>'
+      +'<textarea id="dates-stages-'+sai+'" rows="6" style="'+inputStyle+'">'
+      +textVal+'</textarea>'
+      +'<div class="btn-row" style="margin-top:10px;">'
+      +'<button class="btn btn-gold" data-action="sauver-dates-stages" data-saison="'+sai+'"'
+      +' style="font-size:12px;">💾 Enregistrer dates stages</button></div>';
+  }
+
+  // ── Paris / Vincennes : liste + ajout en lot ─────────────
+  var arr = type==='paris' ? COURS_PARIS : COURS_VINCENNES;
+  var saiDates = arr.filter(function(d){return d>=debut&&d<=fin;});
+  var futur = saiDates.filter(function(d){return d>=tod;});
+  var passe = saiDates.filter(function(d){return d<tod;});
+
+  var listHtml = '<div style="max-height:220px;overflow-y:auto;margin-bottom:12px;'
+    +'border:1px solid var(--border);border-radius:6px;">';
+  if (saiDates.length) {
+    saiDates.forEach(function(d) {
+      var past = d < tod;
+      listHtml += '<div style="display:flex;align-items:center;justify-content:space-between;'
+        +'padding:5px 10px;border-bottom:1px solid var(--border);">'
+        +'<span style="font-size:12px;'+(past?'color:var(--dim)':'color:var(--text)')+';">'
+        +fmtDate(d)+'</span>'
+        +'<button data-action="suppr-date-param" data-type="'+type+'" data-date="'+d+'"'
+        +' style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;'
+        +'font-size:13px;padding:2px 6px;" title="Supprimer cette date">✕</button>'
+        +'</div>';
+    });
+  } else {
+    listHtml += '<div style="padding:12px;font-size:12px;color:var(--dim);text-align:center;">'
+      +'Aucune date pour '+sai+'</div>';
+  }
+  listHtml += '</div>';
+
+  return '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
+    +'<strong>'+saiDates.length+'</strong> date'+(saiDates.length!==1?'s':'')+' en '+sai
+    +' — <span style="color:var(--ok-text);">'+futur.length+' à venir</span>'
+    +' / <span style="color:var(--dim);">'+passe.length+' passée'+(passe.length>1?'s':'')+'</span>'
+    +'</div>'
+    + listHtml
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:4px;">'
+    +'Ajouter des dates — une par ligne (JJ/MM/AAAA ou AAAA-MM-JJ) :</div>'
+    +'<textarea id="pm-lot-dates-'+type+'" rows="4" style="'+inputStyle+'"'
+    +' placeholder="09/04/2026&#10;16/04/2026&#10;23/04/2026"></textarea>'
+    +'<div class="btn-row" style="margin-top:10px;">'
+    +'<button class="btn btn-gold" data-action="ajouter-dates-params" data-type="'+type+'"'
+    +' style="font-size:12px;">+ Ajouter ces dates</button>'
+    +'</div>';
+}
+
+// Ajout en lot de dates Paris/Vincennes depuis l'onglet Paramètres
+function ajouterDatesParams(type) {
+  var raw = ((gel('pm-lot-dates-'+type)||{}).value||'').trim();
+  if (!raw) { afficherToast('⚠️ Aucune date saisie'); return; }
+  var lines = raw.split(/\n/).map(function(l){return l.trim();}).filter(Boolean);
+  var added = 0;
+  lines.forEach(function(line) {
+    var m1 = line.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    var m2 = line.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    var d = '';
+    if (m1) d = m1[3]+'-'+(m1[2].length<2?'0':'')+m1[2]+'-'+(m1[1].length<2?'0':'')+m1[1];
+    else if (m2) d = line;
+    if (!d || isNaN(new Date(d+'T12:00:00').getTime())) return;
+    if (type==='paris' && COURS_PARIS.indexOf(d)<0) {
+      COURS_PARIS.push(d); COURS_PARIS.sort(); added++;
+    } else if (type==='vincennes' && COURS_VINCENNES.indexOf(d)<0) {
+      COURS_VINCENNES.push(d); COURS_VINCENNES.sort(); added++;
+    }
+  });
+  if (added > 0) saveCoursDatesRemote();
+  afficherToast(added>0 ? '✓ '+added+' date'+(added>1?'s':'')+' ajoutée'+(added>1?'s':'') : '⚠️ Aucune date valide');
+  renderTab();
+}
+
+// Suppression d'une date unitaire
+function supprimerDateParam(type, date) {
+  if (type==='paris') {
+    COURS_PARIS = COURS_PARIS.filter(function(d){return d!==date;});
+    saveCoursDatesRemote();
+  } else if (type==='vincennes') {
+    COURS_VINCENNES = COURS_VINCENNES.filter(function(d){return d!==date;});
+    saveCoursDatesRemote();
+  } else if (type==='yoga') {
+    COURS_YOGA = COURS_YOGA.filter(function(d){return d!==date;});
+    // re-sauvegarder yoga
+    var sai = saisonParametres || saisonCourante();
+    var y1 = parseInt(sai.split('-')[0]);
+    var debut = y1+'-09-01', fin = (y1+1)+'-08-31';
+    var remaining = COURS_YOGA.filter(function(d){return d>=debut&&d<=fin;});
+    try { localStorage.setItem('tev_dates_yoga', JSON.stringify({saison:sai, dates:remaining, modifie:today()})); } catch(e){}
+  } else if (type==='stages') {
+    STAGES = STAGES.filter(function(s){return s.date!==date;});
+    if (adminData.stages && adminData.stages[date]) delete adminData.stages[date];
+  }
+  afficherToast('✓ Date supprimée');
+  renderTab();
 }
 
 // Sauvegarde les horaires d'un type pour une saison donnée
@@ -2830,6 +2965,12 @@ function handleAction(action, btn) {
       break;
     case 'sauver-dates-stages':
       sauverDatesStages(btn.dataset.saison||saisonSuivante());
+      break;
+    case 'ajouter-dates-params':
+      ajouterDatesParams(btn.dataset.type||'paris');
+      break;
+    case 'suppr-date-param':
+      supprimerDateParam(btn.dataset.type||'paris', btn.dataset.date||'');
       break;
     case 'sauver-liens':
       (function() {
