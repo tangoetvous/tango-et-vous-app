@@ -2503,61 +2503,75 @@ function supprimerDateParam(type, date) {
 // ── Contenu : Livret d'information ───────────────────────────
 function _renderSecLivretContent(type, sai) {
   var saved = _loadParam(type, sai, 'livret');
-  var url   = saved.url || '';
-  var autoTitreMap = {
-    paris:     'Tango Paris',
-    vincennes: 'Tango Vincennes',
-    yoga:      'Yoga Vincennes',
-  };
-  var autoTitre = 'Livret d\'information — ' + (autoTitreMap[type]||type) + ' ' + sai;
+
+  // Définition des 2 sous-livrets par type
+  var courseLabel = type === 'paris' ? 'Tango Paris' : type === 'vincennes' ? 'Tango Vincennes' : 'Yoga Vincennes';
+  var subLivrets = type === 'yoga'
+    ? [{key:'url_yin',   label:'🌙 Yin Yoga',            titre:'Livret d\'information — Yin Yoga Vincennes '   +sai},
+       {key:'url_hatha', label:'☀️ Hatha Yoga',           titre:'Livret d\'information — Hatha Yoga Vincennes ' +sai}]
+    : [{key:'url_deb',   label:'Débutant',                titre:'Livret d\'information — '+courseLabel+' Débutant '              +sai},
+       {key:'url_int',   label:'Intermédiaire & Avancé',  titre:'Livret d\'information — '+courseLabel+' Intermédiaire & Avancé '+sai}];
+
   var inputStyle = 'width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);'
-                 + 'border-radius:6px;font-size:13px;background:var(--card);color:var(--text);';
-  var h = '<div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">';
+                 + 'border-radius:6px;font-size:12px;background:var(--card);color:var(--text);';
+  var h = '<div style="padding:14px 16px;display:flex;flex-direction:column;gap:14px;">';
 
-  // Aperçu si URL déjà enregistrée
-  if (url) {
-    h += '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;'
-       + 'padding:10px 14px;display:flex;align-items:center;gap:10px;">'
-       + '<span style="font-size:20px;">📄</span>'
-       + '<div style="flex:1;min-width:0;">'
-       + '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
-       + autoTitre+'</div>'
-       + '<div style="font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+url+'</div>'
-       + '</div>'
-       + '<a href="'+url+'" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" style="font-size:11px;white-space:nowrap;">Ouvrir</a>'
-       + '<button class="btn btn-sm" style="font-size:11px;color:#e53935;border-color:#e53935;background:transparent;white-space:nowrap;"'
-       + ' data-action="suppr-livret-param" data-type="'+type+'" data-saison="'+sai+'">Supprimer</button>'
-       + '</div>';
-  }
+  subLivrets.forEach(function(sl) {
+    var url = saved[sl.key] || '';
+    h += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">'
+       // Sous-header
+       +'<div style="padding:7px 12px;background:var(--s3);border-bottom:1px solid var(--border);'
+       +'font-size:12px;font-weight:700;color:var(--text);">'+sl.label+'</div>'
+       +'<div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;">';
 
-  h += '<div style="font-size:11px;color:var(--dim);padding:2px 0;">'
-     + 'Titre généré automatiquement : <em>'+autoTitre+'</em></div>'
-     + '<div>'
-     + '<label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px;">URL du livret (lien Google Drive, PDF…)</label>'
-     + '<input id="pm-livret-url-'+type+'" type="url" style="'+inputStyle+'"'
-     + ' placeholder="https://drive.google.com/file/d/…/view"'
-     + ' value="'+url.replace(/"/g,'&quot;')+'">'
-     + '</div>'
-     + '<div class="btn-row" style="margin-top:2px;">'
+    // Aperçu si URL présente
+    if (url) {
+      h += '<div style="display:flex;align-items:center;gap:8px;background:var(--bg);'
+         + 'border:1px solid var(--border);border-radius:6px;padding:8px 10px;">'
+         + '<span style="font-size:16px;">📄</span>'
+         + '<div style="flex:1;min-width:0;font-size:11px;color:var(--dim);'
+         + 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+url+'</div>'
+         + '<a href="'+url+'" target="_blank" rel="noopener" class="btn btn-sm btn-secondary"'
+         + ' style="font-size:11px;white-space:nowrap;">Ouvrir</a>'
+         + '<button class="btn btn-sm" style="font-size:11px;color:#e53935;border-color:#e53935;'
+         + 'background:transparent;white-space:nowrap;" data-action="suppr-livret-param"'
+         + ' data-type="'+type+'" data-saison="'+sai+'" data-key="'+sl.key+'">✕</button>'
+         + '</div>';
+    }
+
+    h += '<div style="font-size:11px;color:var(--dim);">Titre : <em>'+sl.titre+'</em></div>'
+       + '<input id="pm-livret-'+sl.key+'-'+type+'" type="url" style="'+inputStyle+'"'
+       + ' placeholder="https://drive.google.com/file/d/…/view"'
+       + ' value="'+(url).replace(/"/g,'&quot;')+'" autocapitalize="none">'
+       + '</div></div>';
+  });
+
+  h += '<div class="btn-row">'
      + '<button class="btn btn-gold" data-action="sauver-livret-type" data-type="'+type+'" data-saison="'+sai+'"'
-     + ' style="font-size:12px;">✓ Enregistrer le livret</button>'
+     + ' style="font-size:12px;">✓ Enregistrer les livrets</button>'
+     + '</div>'
      + '</div>';
-
-  h += '</div>';
   return h;
 }
 
-// Sauvegarde le livret d'un type/saison dans localStorage
+// Sauvegarde les 2 livrets d'un type/saison dans localStorage
 function sauverLivretType(type, sai) {
-  var url = ((gel('pm-livret-url-'+type)||{}).value||'').trim();
-  _saveParam(type, sai, 'livret', url ? {url:url} : {});
-  afficherToast(url ? '✓ Livret enregistré' : '✓ Livret effacé');
+  var saved = _loadParam(type, sai, 'livret');
+  var keys = type === 'yoga' ? ['url_yin','url_hatha'] : ['url_deb','url_int'];
+  keys.forEach(function(k) {
+    var v = ((gel('pm-livret-'+k+'-'+type)||{}).value||'').trim();
+    if (v) saved[k] = v; else delete saved[k];
+  });
+  _saveParam(type, sai, 'livret', saved);
+  afficherToast('✓ Livrets enregistrés');
   renderTab();
 }
 
-// Suppression du livret
-function supprimerLivretParam(type, sai) {
-  _saveParam(type, sai, 'livret', {});
+// Suppression d'un livret (un sous-livret précis via data-key, ou tous si key absent)
+function supprimerLivretParam(type, sai, key) {
+  var saved = _loadParam(type, sai, 'livret');
+  if (key) delete saved[key]; else saved = {};
+  _saveParam(type, sai, 'livret', saved);
   afficherToast('✓ Livret supprimé');
   renderTab();
 }
@@ -3306,7 +3320,7 @@ function handleAction(action, btn) {
       sauverLivretType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
       break;
     case 'suppr-livret-param':
-      supprimerLivretParam(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
+      supprimerLivretParam(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante(), btn.dataset.key||'');
       break;
     case 'sauver-assoconnect-type':
       sauverAssoconnectType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
