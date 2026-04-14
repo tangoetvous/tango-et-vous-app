@@ -1451,6 +1451,7 @@ function _appliquerStageInscription(d) {
     filtreStage     = d.inscriptionsParDate[0].date;
     filtreStageSlot = 'technique';
   }
+  syncStageInscritsToLocal();
 }
 
 function _lblCours(ville, niveau) {
@@ -3417,6 +3418,7 @@ async function chargerDonnees() {
       saveCoursDatesLocal(); // sync localStorage pour index.html
     } catch(ex) { /* conserver les valeurs hardcodées si erreur */ }
     renderTab();
+    syncStageInscritsToLocal();
   } catch(e) { console.error('Erreur:', e.message); }
 }
 
@@ -3435,6 +3437,26 @@ function saveCoursDatesLocal() {
       paris: COURS_PARIS, vincennes: COURS_VINCENNES, yoga: COURS_YOGA,
       modifie: today()
     }));
+  } catch(e) {}
+}
+
+// Synchro inscriptions stages → localStorage pour index.html (par email)
+function syncStageInscritsToLocal() {
+  try {
+    var map = {};
+    var stages = adminData.stages || {};
+    Object.keys(stages).forEach(function(date) {
+      var st = stages[date];
+      var label = st.label || date;
+      (st.inscrits || []).forEach(function(ins) {
+        if (ins.attente) return;
+        var email = (ins.email || '').toLowerCase().trim();
+        if (!email) return;
+        if (!map[email]) map[email] = [];
+        map[email].push({date: date, label: label, slots: ins.slots || []});
+      });
+    });
+    localStorage.setItem('tev_stages_inscrits', JSON.stringify(map));
   } catch(e) {}
 }
 
@@ -5530,6 +5552,7 @@ function annulerStageInscrit(date, idx, slot, btn) {
       // Recalculer le montant avec la bonne grille tarifaire
       person.montant=calcMontantStage(personSlots);
     }
+    syncStageInscritsToLocal();
     renderTab(); return;
   }
   postAS({action:'annulerStageInscrit',date:date,idx:idx,slot:slot}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
@@ -5698,9 +5721,16 @@ function getEventsForDate(dateStr) {
       for(var _j=_n-1;_j>=2;_j--)_ord.push(_sk[_j]);
       if(_st.technique!==false)_ord.push('tech');
       for(var _j2=0;_j2<Math.min(_n,2);_j2++)_ord.push(_sk[_j2]);
+      var _stAdr=_st.adresse||{};
+      var _globAdr=_loadParam('stages',sai,'adresse')||{};
+      var _defAdr=DEFAULTS_ADRESSES.stages||{};
+      var _aNom=(_stAdr.nom)||(_globAdr.nom)||(_defAdr.nom)||'';
+      var _aRue=(_stAdr.rue)||(_globAdr.rue)||(_defAdr.rue)||'';
+      var _aTpt=(_stAdr.transport)||(_globAdr.transport)||(_defAdr.transport)||'';
+      var _subSt=(_aNom?_aNom+' \u2014 ':'')+_aRue+(_aTpt?' \u00b7 '+_aTpt:'');
       _ord.forEach(function(_k){
         var _lbl=_k==='tech'?'Technique Leader & Follower':(_st.themes&&_st.themes[parseInt(_k.slice(1))-1])||('Stage '+_k.slice(1));
-        evts.push({cat:'stage',titre:_lbl,heure:_hv(_k+'_deb')+(_hv(_k+'_fin')?'\u2013'+_hv(_k+'_fin'):'')});
+        evts.push({cat:'stage',titre:_lbl,heure:_hv(_k+'_deb')+(_hv(_k+'_fin')?'\u2013'+_hv(_k+'_fin'):''),sub:_subSt||undefined});
       });
     }
   }

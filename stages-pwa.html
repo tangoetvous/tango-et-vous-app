@@ -830,6 +830,20 @@ function construireAccordeon(containerId, groupe) {
     });
 
     body.appendChild(stagesDiv);
+
+    // Adresse du jour (si renseignée)
+    if (dateInfo.adresse && (dateInfo.adresse.nom || dateInfo.adresse.rue)) {
+      var adrDiv = document.createElement('div');
+      adrDiv.style.cssText = 'margin-top:10px;padding:10px 14px;background:rgba(255,255,255,0.04);border-radius:8px;border-left:3px solid var(--gold);font-size:13px;color:rgba(255,255,255,0.6);line-height:1.5;';
+      var _aNom = dateInfo.adresse.nom || '';
+      var _aRue = dateInfo.adresse.rue || '';
+      var _aTpt = dateInfo.adresse.transport || '';
+      adrDiv.innerHTML = '📍 <strong style="color:rgba(255,255,255,0.85);">' + _aNom + '</strong>'
+        + (_aRue ? ' — ' + _aRue : '')
+        + (_aTpt ? '<br><span style="font-size:12px;color:rgba(255,255,255,0.45);">' + _aTpt + '</span>' : '');
+      body.appendChild(adrDiv);
+    }
+
     item.appendChild(header);
     item.appendChild(body);
     container.appendChild(item);

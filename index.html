@@ -711,16 +711,39 @@
     h += '</div>';
 
     // ── Rappel stages réservés ─────────────────────────────────
-    const stagesInscrits = (eleveData.stagesInscrits || eleveData.stagesReserves || []).filter(s => (s.date||s.dateStage||'') >= todayStr);
+    let stagesInscrits = (eleveData.stagesInscrits || eleveData.stagesReserves || []).filter(s => (s.date||s.dateStage||'') >= todayStr);
+    // Fallback : inscriptions écrites par admin.html dans tev_stages_inscrits
+    if (!stagesInscrits.length && emailEleve) {
+      try {
+        const _lsMap = JSON.parse(localStorage.getItem('tev_stages_inscrits')||'{}');
+        const _lsArr = _lsMap[(emailEleve).toLowerCase().trim()] || [];
+        stagesInscrits = _lsArr.filter(s => (s.date||'') >= todayStr);
+      } catch(e) {}
+    }
     if (stagesInscrits.length > 0) {
       h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px;text-align:center;">📝 Mes stages réservés</div>';
+      const _today0 = new Date(todayStr + 'T00:00:00');
       stagesInscrits.forEach(s => {
-        const dsi = new Date((s.date || s.dateStage || '') + 'T00:00:00');
+        const _dateStr = s.date || s.dateStage || '';
+        const dsi = new Date(_dateStr + 'T00:00:00');
         const lbl = cap(JOURS_LONG[dsi.getDay()]) + ' ' + dsi.getDate() + ' ' + MOIS_LOC[dsi.getMonth()] + ' ' + dsi.getFullYear();
+        const _daysLeft = Math.round((dsi - _today0) / 86400000);
+        const _ctdwn = _daysLeft === 0 ? "Aujourd'hui !" : _daysLeft === 1 ? 'Demain !' : 'Dans ' + _daysLeft + ' jour' + (_daysLeft > 1 ? 's' : '');
+        // Adresse : priorité adresse du jour, puis adresse globale (LST_*)
+        const _sd = STAGES_DATA.find(x => x.date === _dateStr);
+        const _sAdr = (_sd && _sd.adresse && (_sd.adresse.nom || _sd.adresse.rue)) ? _sd.adresse : null;
+        const _aNom = (_sAdr && _sAdr.nom) ? _sAdr.nom : LST_NOM;
+        const _aRue = (_sAdr && _sAdr.rue) ? _sAdr.rue : LST_RUE;
+        const _aTpt = (_sAdr && _sAdr.transport) ? _sAdr.transport : LST_TPT;
+        const _adrStr = _aNom + ' \u2014 ' + _aRue + (_aTpt ? ' \u00b7 ' + _aTpt : '');
         h += '<div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.3);border-left:4px solid var(--gold);border-radius:12px;padding:16px 18px;margin-bottom:10px;">'
-          + '<div style="font-size:16px;font-weight:500;color:#fff;margin-bottom:8px;">📅 ' + lbl + '</div>';
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+          + '<div style="font-size:16px;font-weight:500;color:#fff;">📅 ' + lbl + '</div>'
+          + '<div style="font-size:12px;font-weight:600;color:var(--gold);background:rgba(212,175,55,0.15);border-radius:20px;padding:3px 10px;white-space:nowrap;">' + _ctdwn + '</div>'
+          + '</div>';
         const ateliers = s.ateliers || s.slots || [];
         ateliers.forEach(a => { h += '<div style="font-size:13px;color:rgba(255,255,255,0.6);">· ' + a + '</div>'; });
+        h += '<div style="font-size:12px;color:rgba(255,255,255,0.38);margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07);">📍 ' + _adrStr + '</div>';
         h += '</div>';
       });
     }
@@ -764,7 +787,7 @@
         var th = s.themes||[];
         return { date:s.date||'', label:s.label||'', nom:s.nom||'', technique:s.technique!==false,
                  nStages:s.nStages||2, s1:th[0]||'', s2:th[1]||'', s3:th[2]||'', s4:th[3]||'',
-                 horaires:s.horaires||null, tarifs:s.tarifs||null };
+                 horaires:s.horaires||null, tarifs:s.tarifs||null, adresse:s.adresse||null };
       });
     } catch(e) { return STAGES_DATA_FB; }
   })();
