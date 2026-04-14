@@ -2074,6 +2074,11 @@ function _renderParamCard(type, sai) {
   // Section Dates (tous les types)
   h += _renderAccordSection(type, 'dates', '📅 Dates', _renderSecDatesContent(type, sai));
 
+  // Section Livret (sauf Stages)
+  if (type !== 'stages') {
+    h += _renderAccordSection(type, 'livret', '📄 Livret d\'information', _renderSecLivretContent(type, sai));
+  }
+
   return h+'</div>';
 }
 
@@ -2391,6 +2396,68 @@ function supprimerDateParam(type, date) {
     if (adminData.stages && adminData.stages[date]) delete adminData.stages[date];
   }
   afficherToast('✓ Date supprimée');
+  renderTab();
+}
+
+// ── Contenu : Livret d'information ───────────────────────────
+function _renderSecLivretContent(type, sai) {
+  var saved  = _loadParam(type, sai, 'livret');   // {url, titre}
+  var url    = saved.url   || '';
+  var titre  = saved.titre || '';
+  var inputStyle = 'width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);'
+                 + 'border-radius:6px;font-size:13px;background:var(--card);color:var(--text);';
+  var h = '<div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">';
+
+  // Aperçu si URL déjà enregistrée
+  if (url) {
+    h += '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;'
+       + 'padding:10px 14px;display:flex;align-items:center;gap:10px;">'
+       + '<span style="font-size:20px;">📄</span>'
+       + '<div style="flex:1;min-width:0;">'
+       + '<div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+       + (titre || 'Livret d\'information')+'</div>'
+       + '<div style="font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+url+'</div>'
+       + '</div>'
+       + '<a href="'+url+'" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" style="font-size:11px;white-space:nowrap;">Ouvrir</a>'
+       + '<button class="btn btn-sm" style="font-size:11px;color:#e53935;border-color:#e53935;background:transparent;white-space:nowrap;"'
+       + ' data-action="suppr-livret-param" data-type="'+type+'" data-saison="'+sai+'">Supprimer</button>'
+       + '</div>';
+  }
+
+  h += '<div>'
+     + '<label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px;">Titre affiché (optionnel)</label>'
+     + '<input id="pm-livret-titre-'+type+'" type="text" style="'+inputStyle+'"'
+     + ' placeholder="ex : Livret tango Paris 2025-2026"'
+     + ' value="'+titre.replace(/"/g,'&quot;')+'">'
+     + '</div>'
+     + '<div>'
+     + '<label style="font-size:12px;color:var(--dim);display:block;margin-bottom:4px;">URL du livret (lien Google Drive, PDF…)</label>'
+     + '<input id="pm-livret-url-'+type+'" type="url" style="'+inputStyle+'"'
+     + ' placeholder="https://drive.google.com/file/d/…/view"'
+     + ' value="'+url.replace(/"/g,'&quot;')+'">'
+     + '</div>'
+     + '<div class="btn-row" style="margin-top:2px;">'
+     + '<button class="btn btn-gold" data-action="sauver-livret-type" data-type="'+type+'" data-saison="'+sai+'"'
+     + ' style="font-size:12px;">✓ Enregistrer le livret</button>'
+     + '</div>';
+
+  h += '</div>';
+  return h;
+}
+
+// Sauvegarde le livret d'un type/saison dans localStorage
+function sauverLivretType(type, sai) {
+  var url   = ((gel('pm-livret-url-'+type)||{}).value||'').trim();
+  var titre = ((gel('pm-livret-titre-'+type)||{}).value||'').trim();
+  _saveParam(type, sai, 'livret', {url:url, titre:titre});
+  afficherToast(url ? '✓ Livret enregistré' : '✓ Livret effacé');
+  renderTab();
+}
+
+// Suppression du livret
+function supprimerLivretParam(type, sai) {
+  _saveParam(type, sai, 'livret', {});
+  afficherToast('✓ Livret supprimé');
   renderTab();
 }
 
@@ -2971,6 +3038,12 @@ function handleAction(action, btn) {
       break;
     case 'suppr-date-param':
       supprimerDateParam(btn.dataset.type||'paris', btn.dataset.date||'');
+      break;
+    case 'sauver-livret-type':
+      sauverLivretType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
+      break;
+    case 'suppr-livret-param':
+      supprimerLivretParam(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
       break;
     case 'sauver-liens':
       (function() {
