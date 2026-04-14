@@ -402,19 +402,19 @@ function estEssaiYogaGratuit(dateStr) {
   return idx >= 0 && idx < 2;
 }
 var STAGES = [
-  {date:'2026-04-11',label:'Sam. 11 Avr 2026',s1:'Milonga',s2:'Lapiz & Enrosque'},
-  {date:'2026-05-30',label:'Sam. 30 Mai 2026',s1:'',s2:''},
-  {date:'2026-06-20',label:'Sam. 20 Juin 2026',s1:'',s2:''},
-  {date:'2026-09-19',label:'Sam. 19 Sep 2026',s1:'À venir',s2:'À venir'},
-  {date:'2026-10-03',label:'Sam. 3 Oct 2026',s1:'À venir',s2:'À venir'},
-  {date:'2026-11-07',label:'Sam. 7 Nov 2026',s1:'À venir',s2:'À venir'},
-  {date:'2026-12-05',label:'Sam. 5 Déc 2026',s1:'À venir',s2:'À venir'},
-  {date:'2027-01-30',label:'Sam. 30 Jan 2027',s1:'À venir',s2:'À venir'},
-  {date:'2027-02-27',label:'Sam. 27 Fév 2027',s1:'À venir',s2:'À venir'},
-  {date:'2027-03-13',label:'Sam. 13 Mar 2027',s1:'À venir',s2:'À venir'},
-  {date:'2027-04-24',label:'Sam. 24 Avr 2027',s1:'À venir',s2:'À venir'},
-  {date:'2027-05-22',label:'Sam. 22 Mai 2027',s1:'À venir',s2:'À venir'},
-  {date:'2027-06-19',label:'Sam. 19 Juin 2027',s1:'À venir',s2:'À venir'}
+  {date:'2026-04-11',label:'Sam. 11 Avr 2026',technique:true,nStages:2,themes:['Milonga','Lapiz & Enrosque']},
+  {date:'2026-05-30',label:'Sam. 30 Mai 2026', technique:true,nStages:2,themes:['','']},
+  {date:'2026-06-20',label:'Sam. 20 Juin 2026',technique:true,nStages:2,themes:['','']},
+  {date:'2026-09-19',label:'Sam. 19 Sep 2026', technique:true,nStages:2,themes:['À venir','À venir']},
+  {date:'2026-10-03',label:'Sam. 3 Oct 2026',  technique:true,nStages:2,themes:['À venir','À venir']},
+  {date:'2026-11-07',label:'Sam. 7 Nov 2026',  technique:true,nStages:2,themes:['À venir','À venir']},
+  {date:'2026-12-05',label:'Sam. 5 Déc 2026',  technique:true,nStages:2,themes:['À venir','À venir']},
+  {date:'2027-01-30',label:'Sam. 30 Jan 2027', technique:true,nStages:2,themes:['À venir','À venir']},
+  {date:'2027-02-27',label:'Sam. 27 Fév 2027', technique:true,nStages:2,themes:['À venir','À venir']},
+  {date:'2027-03-13',label:'Sam. 13 Mar 2027', technique:true,nStages:2,themes:['À venir','À venir']},
+  {date:'2027-04-24',label:'Sam. 24 Avr 2027', technique:true,nStages:2,themes:['À venir','À venir']},
+  {date:'2027-05-22',label:'Sam. 22 Mai 2027', technique:true,nStages:2,themes:['À venir','À venir']},
+  {date:'2027-06-19',label:'Sam. 19 Juin 2027',technique:true,nStages:2,themes:['À venir','À venir']}
 ];
 var MILONGAS = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
 var SANS_COURS_PARIS = ['2026-04-30','2026-05-14','2026-07-02','2026-07-09','2026-07-16','2026-07-23','2026-07-30','2026-08-06','2026-08-13','2026-08-20','2026-08-27','2026-10-29','2026-12-24','2026-12-31','2027-02-11','2027-04-08','2027-05-06'];
@@ -1702,7 +1702,7 @@ function chargerDatesYogaStages() {
       STAGES = STAGES.filter(function(s){ return s.date<debut||s.date>fin; });
       // Ajouter les stages stockés
       storedStages.stages.forEach(function(st){
-        if (!STAGES.find(function(s){return s.date===st.date;})) STAGES.push(st);
+        if (!STAGES.find(function(s){return s.date===st.date;})) STAGES.push(_migrateStageItem(st));
       });
       STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
     }
@@ -1794,6 +1794,13 @@ var DEFAULTS_HORAIRES = {
   paris:    {deb:'20h30', deb_fin:'21h45', int:'21h45', int_fin:'23h00'},
   vincennes:{deb:'19h30', deb_fin:'21h00', int:'21h00', int_fin:'22h30'},
   yoga:     {yin:'10h30', yin_fin:'11h45', hatha:'11h45', hatha_fin:'13h00'},
+  stages:   {
+    tech_deb:'14h00', tech_fin:'15h15',
+    s1_deb:'15h30',   s1_fin:'17h30',
+    s2_deb:'18h00',   s2_fin:'20h00',
+    s3_deb:'20h30',   s3_fin:'22h30',
+    s4_deb:'20h30',   s4_fin:'22h30',
+  },
 };
 
 // ================================================================
@@ -2068,10 +2075,8 @@ function _renderParamCard(type, sai) {
     h += _renderAccordSection(type, 'adresse', '📍 Adresse et accès', _renderSecAdresseContent(type, sai));
   }
 
-  // Section Horaires (sauf Stages)
-  if (type !== 'stages') {
-    h += _renderAccordSection(type, 'horaires', '⏰ Horaires', _renderSecHorairesContent(type, sai));
-  }
+  // Section Horaires (tous les types)
+  h += _renderAccordSection(type, 'horaires', '⏰ Horaires', _renderSecHorairesContent(type, sai));
 
   // Section Dates (tous les types)
   h += _renderAccordSection(type, 'dates', '📅 Dates', _renderSecDatesContent(type, sai));
@@ -2246,7 +2251,24 @@ function _renderSecHorairesContent(type, sai) {
   var sep = '<td style="padding:5px 3px;font-size:12px;color:var(--dim);">→</td>';
   var td  = 'style="padding:5px 6px;"';
   var rows = '';
-  if (type === 'yoga') {
+  if (type === 'stages') {
+    var slots = [
+      {k:'tech', lbl:'Technique'},
+      {k:'s1',   lbl:'Créneau 1'},
+      {k:'s2',   lbl:'Créneau 2'},
+      {k:'s3',   lbl:'Créneau 3'},
+      {k:'s4',   lbl:'Créneau 4'},
+    ];
+    slots.forEach(function(sl) {
+      rows += '<tr>'
+        +'<td style="padding:7px 8px;font-size:12px;color:var(--text);">'+sl.lbl+'</td>'
+        +'<td '+td+'><input id="pm-'+type+'-h-'+sl.k+'_deb" type="text"'
+        +' value="'+val(sl.k+'_deb')+'" placeholder="14h00" style="'+iS+'"></td>'
+        +sep
+        +'<td '+td+'><input id="pm-'+type+'-h-'+sl.k+'_fin" type="text"'
+        +' value="'+val(sl.k+'_fin')+'" placeholder="15h15" style="'+iS+'"></td></tr>';
+    });
+  } else if (type === 'yoga') {
     rows = '<tr>'
       +'<td style="padding:7px 8px;font-size:12px;color:var(--text);">🌙 Yin Yoga</td>'
       +'<td '+td+'><input id="pm-'+type+'-h-yin"     type="text" value="'+val('yin')+'"     placeholder="10h30" style="'+iS+'"></td>'
@@ -2313,21 +2335,79 @@ function _renderSecDatesContent(type, sai) {
       +' style="font-size:12px;">💾 Enregistrer dates yoga</button></div>';
   }
 
-  // ── Stages : textarea avec format YYYY-MM-DD | S1 | S2 ──
+  // ── Stages : cartes par date ─────────────────────────────
   if (type === 'stages') {
-    var stagesData = STAGES.filter(function(s){return s.date>=debut&&s.date<=fin;});
-    var textVal = stagesData.map(function(s){
-      return s.date+(s.s1?' | '+s.s1+(s.s2?' | '+s.s2:''):'');
-    }).join('\n');
-    return '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
-      +'<strong>'+stagesData.length+'</strong> stage'+(stagesData.length!==1?'s':'')+' en '+sai+'</div>'
-      +'<div style="font-size:11px;color:var(--dim);margin-bottom:4px;">'
-      +'Format : <code>YYYY-MM-DD | Thème S1 | Thème S2</code> (thèmes facultatifs)</div>'
-      +'<textarea id="dates-stages-'+sai+'" rows="6" style="'+inputStyle+'">'
-      +textVal+'</textarea>'
-      +'<div class="btn-row" style="margin-top:10px;">'
-      +'<button class="btn btn-gold" data-action="sauver-dates-stages" data-saison="'+sai+'"'
-      +' style="font-size:12px;">💾 Enregistrer dates stages</button></div>';
+    var stagesData = STAGES.filter(function(s){return s.date>=debut&&s.date<=fin;})
+                           .map(_migrateStageItem);
+    var sKeys = ['S1','S2','S3','S4'];
+    var btnN = 'display:inline-flex;align-items:center;justify-content:center;'
+              +'width:34px;height:28px;border-radius:5px;font-size:12px;font-weight:700;cursor:pointer;'
+              +'border:1px solid var(--border);transition:background .15s,color .15s;';
+    var h = '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
+      +'<strong>'+stagesData.length+'</strong> stage'+(stagesData.length!==1?'s':'')+' en '+sai+'</div>';
+
+    stagesData.forEach(function(st) {
+      var did = st.date.replace(/-/g,'');
+      var n = st.nStages || 2;
+      // Card
+      h += '<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden;">'
+        // Header
+        +'<div style="display:flex;align-items:center;justify-content:space-between;'
+        +'padding:8px 12px;background:var(--s3);border-bottom:1px solid var(--border);">'
+        +'<span style="font-size:13px;font-weight:600;color:var(--gold);">'+st.label+'</span>'
+        +'<button data-action="suppr-date-param" data-type="stages" data-date="'+st.date+'"'
+        +' style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;font-size:14px;padding:0 4px;" title="Supprimer">✕</button>'
+        +'</div>'
+        // Body
+        +'<div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;">'
+        // Technique toggle
+        +'<div style="display:flex;align-items:center;gap:10px;">'
+        +'<span style="font-size:12px;color:var(--dim);width:100px;">Technique</span>'
+        +'<button data-action="toggle-stage-tech" data-date="'+st.date+'" data-saison="'+sai+'"'
+        +' style="'+btnN+'background:'+(st.technique?'var(--gold)':'var(--card)')
+        +';color:'+(st.technique?'#000':'var(--dim)')+';">'
+        +(st.technique?'✓ Oui':'Non')+'</button>'
+        +'</div>'
+        // Nombre de créneaux
+        +'<div style="display:flex;align-items:center;gap:10px;">'
+        +'<span style="font-size:12px;color:var(--dim);width:100px;">Créneaux</span>'
+        +'<div style="display:flex;gap:4px;">';
+      [1,2,3,4].forEach(function(nb) {
+        var active = nb === n;
+        h += '<button data-action="set-stage-n" data-date="'+st.date+'" data-n="'+nb+'" data-saison="'+sai+'"'
+          +' style="'+btnN+'background:'+(active?'var(--gold)':'var(--card)')
+          +';color:'+(active?'#000':'var(--text)')+';">'+nb+'</button>';
+      });
+      h += '</div></div>'
+        // Thèmes par créneau
+        +'<div style="display:flex;flex-direction:column;gap:5px;">';
+      for (var i=0; i<n; i++) {
+        h += '<div style="display:flex;align-items:center;gap:8px;">'
+          +'<span style="font-size:11px;color:var(--dim);width:100px;flex-shrink:0;">'+sKeys[i]+'</span>'
+          +'<input id="stage-theme-'+did+'-'+i+'" type="text"'
+          +' value="'+(st.themes&&st.themes[i]?st.themes[i].replace(/"/g,'&quot;'):'')+'"'
+          +' placeholder="Thème (optionnel)"'
+          +' style="flex:1;background:var(--s3);color:var(--text);border:1px solid var(--border);'
+          +'border-radius:5px;padding:5px 8px;font-size:12px;"></div>';
+      }
+      h += '</div>'
+        // Bouton sauver thèmes
+        +'<div style="text-align:right;">'
+        +'<button data-action="sauver-themes-stage" data-date="'+st.date+'" data-saison="'+sai+'"'
+        +' class="btn btn-gold" style="font-size:11px;">💾 Enregistrer les thèmes</button>'
+        +'</div>'
+        +'</div></div>';
+    });
+
+    // Ajouter une date
+    h += '<div style="display:flex;align-items:center;gap:8px;margin-top:4px;">'
+      +'<input type="date" id="pm-new-stage-date"'
+      +' style="flex:1;background:var(--s3);color:var(--text);border:1px solid var(--border);'
+      +'border-radius:6px;padding:6px 8px;font-size:12px;">'
+      +'<button class="btn btn-gold" data-action="ajouter-date-stage" data-saison="'+sai+'"'
+      +' style="font-size:12px;white-space:nowrap;">+ Ajouter</button>'
+      +'</div>';
+    return h;
   }
 
   // ── Paris / Vincennes : liste + ajout en lot ─────────────
@@ -2544,11 +2624,94 @@ function sauverAssoconnectType(type, sai) {
 }
 
 
+// ── Stages helpers ────────────────────────────────────────────
+// Normalise un item STAGES vers le nouveau format
+function _migrateStageItem(st) {
+  if (st && st.nStages !== undefined) return st;
+  var n = (st.s1 ? 1 : 0) + (st.s2 ? 1 : 0) || 2;
+  return {date:st.date, label:st.label||st.date, technique:true, nStages:n,
+          themes:[st.s1||'', st.s2||''].slice(0, n)};
+}
+
+// Persiste les stages de la saison dans localStorage
+function sauverStagesLocal(sai) {
+  var y1 = parseInt(sai.split('-')[0]);
+  var debut = y1+'-09-01', fin = (y1+1)+'-08-31';
+  var saiStages = STAGES.filter(function(s){return s.date>=debut&&s.date<=fin;});
+  try { localStorage.setItem('tev_dates_stages', JSON.stringify({saison:sai, stages:saiStages, modifie:today()})); } catch(e){}
+}
+
+// Bascule Technique pour une date de stage
+function toggleStageTech(date, sai) {
+  var idx = STAGES.findIndex(function(s){return s.date===date;});
+  if (idx<0) return;
+  var st = _migrateStageItem(STAGES[idx]);
+  st.technique = !st.technique;
+  STAGES[idx] = st;
+  sauverStagesLocal(sai);
+  renderTab();
+}
+
+// Définit le nombre de créneaux pour une date de stage
+function setStageN(date, n, sai) {
+  var idx = STAGES.findIndex(function(s){return s.date===date;});
+  if (idx<0) return;
+  var st = _migrateStageItem(STAGES[idx]);
+  st.nStages = n;
+  if (!st.themes) st.themes = [];
+  while (st.themes.length < n) st.themes.push('');
+  st.themes = st.themes.slice(0, n);
+  STAGES[idx] = st;
+  sauverStagesLocal(sai);
+  renderTab();
+}
+
+// Sauvegarde les thèmes d'une date de stage
+function sauverThemesStage(date, sai) {
+  var idx = STAGES.findIndex(function(s){return s.date===date;});
+  if (idx<0) return;
+  var st = _migrateStageItem(STAGES[idx]);
+  var n = st.nStages || 2;
+  if (!st.themes) st.themes = [];
+  for (var i=0; i<n; i++) {
+    var inp = gel('stage-theme-'+date.replace(/-/g,'')+'-'+i);
+    if (inp) st.themes[i] = inp.value.trim();
+  }
+  STAGES[idx] = st;
+  sauverStagesLocal(sai);
+  afficherToast('✓ Thèmes enregistrés');
+  renderTab();
+}
+
+// Ajoute une nouvelle date de stage
+function ajouterDateStage(sai) {
+  var inp = gel('pm-new-stage-date');
+  if (!inp || !inp.value) { afficherToast('⚠️ Choisir une date'); return; }
+  var d = inp.value;
+  if (STAGES.find(function(s){return s.date===d;})) { afficherToast('⚠️ Date déjà présente'); return; }
+  var dd = new Date(d+'T12:00:00');
+  var jours=['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'];
+  var mois=['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+  var lbl = jours[dd.getDay()]+' '+dd.getDate()+' '+mois[dd.getMonth()]+' '+dd.getFullYear();
+  STAGES.push({date:d, label:lbl, technique:true, nStages:2, themes:['','']});
+  STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
+  if (!adminData.stages) adminData.stages = {};
+  if (!adminData.stages[d]) adminData.stages[d] = {label:lbl, inscrits:[]};
+  sauverStagesLocal(sai);
+  afficherToast('✓ Date ajoutée');
+  renderTab();
+}
+
 // Sauvegarde les horaires d'un type pour une saison donnée
 function sauverHorairesType(type, sai) {
   var data = {};
   function g(id) { return (gel(id)||{}).value||''; }
-  if (type === 'yoga') {
+  if (type === 'stages') {
+    ['tech','s1','s2','s3','s4'].forEach(function(k) {
+      data[k+'_deb'] = g('pm-stages-h-'+k+'_deb');
+      data[k+'_fin'] = g('pm-stages-h-'+k+'_fin');
+    });
+  } else if (type === 'yoga') {
     data.yin       = g('pm-'+type+'-h-yin');
     data.yin_fin   = g('pm-'+type+'-h-yin_fin');
     data.hatha     = g('pm-'+type+'-h-hatha');
@@ -3123,6 +3286,18 @@ function handleAction(action, btn) {
       break;
     case 'ajouter-dates-params':
       ajouterDatesParams(btn.dataset.type||'paris');
+      break;
+    case 'toggle-stage-tech':
+      toggleStageTech(btn.dataset.date||'', btn.dataset.saison||saisonCourante());
+      break;
+    case 'set-stage-n':
+      setStageN(btn.dataset.date||'', parseInt(btn.dataset.n||'2'), btn.dataset.saison||saisonCourante());
+      break;
+    case 'sauver-themes-stage':
+      sauverThemesStage(btn.dataset.date||'', btn.dataset.saison||saisonCourante());
+      break;
+    case 'ajouter-date-stage':
+      ajouterDateStage(btn.dataset.saison||saisonCourante());
       break;
     case 'suppr-date-param':
       supprimerDateParam(btn.dataset.type||'paris', btn.dataset.date||'');
@@ -4842,7 +5017,7 @@ function getEventsForDate(dateStr) {
   var evts=[];
   if(agendaCats.paris&&COURS_PARIS.indexOf(dateStr)>=0){evts.push({cat:'cours-paris',titre:'Débutant — Paris',heure:'20h30'});evts.push({cat:'cours-paris',titre:'Intermédiaire — Paris',heure:'21h45'});}
   if(agendaCats.vincennes&&COURS_VINCENNES.indexOf(dateStr)>=0){evts.push({cat:'cours-vinc',titre:'Débutant — Vincennes',heure:'19h30'});evts.push({cat:'cours-vinc',titre:'Intermédiaire — Vincennes',heure:'21h00'});}
-  if(agendaCats.stage){var st=STAGES.find(function(s){return s.date===dateStr;});if(st){evts.push({cat:'stage',titre:'Technique Leader & Follower',heure:'14h00'});if(st.s1)evts.push({cat:'stage',titre:st.s1,heure:'15h00'});if(st.s2)evts.push({cat:'stage',titre:st.s2,heure:'16h30'});}}
+  if(agendaCats.stage){var _stRaw=STAGES.find(function(s){return s.date===dateStr;});if(_stRaw){var _st=_migrateStageItem(_stRaw);var _hor=_loadParam('stages',saisonActive(),'horaires');var _def=DEFAULTS_HORAIRES.stages||{};function _hv(k){return _hor[k]||_def[k]||'';}if(_st.technique!==false){var _th=_hv('tech_deb')+(_hv('tech_fin')?'–'+_hv('tech_fin'):'');evts.push({cat:'stage',titre:'Technique Leader & Follower',heure:_th});}var _sk=['s1','s2','s3','s4'];for(var _i=0;_i<(_st.nStages||2);_i++){var _skk=_sk[_i];var _thm=(_st.themes&&_st.themes[_i])||('Stage '+(_i+1));var _sh=_hv(_skk+'_deb')+(_hv(_skk+'_fin')?'–'+_hv(_skk+'_fin'):'');evts.push({cat:'stage',titre:_thm,heure:_sh});}}}
   if(agendaCats.milonga&&MILONGAS.indexOf(dateStr)>=0)evts.push({cat:'milonga',titre:'Milonga La Dolce Vita',heure:'17h30–23h30'});
   if(agendaCats.yoga&&COURS_YOGA.indexOf(dateStr)>=0){evts.push({cat:'cours-yoga',titre:'Yin Yoga',heure:'10h30'});evts.push({cat:'cours-yoga',titre:'Hatha Yoga',heure:'11h30'});}
   return evts;
@@ -5027,7 +5202,8 @@ function _mutateAgendaArray(type, action, date, newDate) {
     } else if (type === 'stage' && !STAGES.find(function(s){return s.date===newDate;})) {
       var dd = new Date(newDate+'T12:00:00');
       var lbl = (stageOldData&&stageOldData.label)||('Sam. '+dd.getDate()+'/'+(dd.getMonth()+1)+'/'+dd.getFullYear());
-      STAGES.push({date:newDate, label:lbl, s1:stageOldData?stageOldData.s1:'', s2:stageOldData?stageOldData.s2:''});
+      var _old=stageOldData||{};
+      STAGES.push({date:newDate,label:lbl,technique:_old.technique!==false,nStages:_old.nStages||2,themes:(_old.themes||[_old.s1||'',_old.s2||'']).slice()});
       STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
       if (!adminData.stages) adminData.stages = {};
       if (!adminData.stages[newDate]) adminData.stages[newDate] = {label:lbl, inscrits:[]};
@@ -5050,7 +5226,7 @@ function _undoMutateAgendaArray(m) {
     } else if (m.type === 'stage' && !STAGES.find(function(s){return s.date===m.date;})) {
       var dd = new Date(m.date+'T12:00:00');
       var lbl = 'Sam. '+dd.getDate()+'/'+(dd.getMonth()+1)+'/'+dd.getFullYear();
-      STAGES.push({date:m.date, label:lbl, s1:'', s2:''});
+      STAGES.push({date:m.date,label:lbl,technique:true,nStages:2,themes:['','']});
       STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
       if (!adminData.stages) adminData.stages = {};
       if (!adminData.stages[m.date]) adminData.stages[m.date] = {label:lbl, inscrits:[]};
@@ -5135,7 +5311,7 @@ function ajouterDatesLot() {
     } else if (type==='stage' && !STAGES.find(function(s){return s.date===d;})) {
       var dd = new Date(d+'T12:00:00');
       var lbl = label || ('Sam. '+dd.getDate()+'/'+(dd.getMonth()+1)+'/'+dd.getFullYear());
-      STAGES.push({date:d, label:lbl, s1:s1, s2:s2});
+      STAGES.push({date:d,label:lbl,technique:true,nStages:2,themes:[s1||'',s2||'']});
       STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
       if (!adminData.stages) adminData.stages = {};
       if (!adminData.stages[d]) adminData.stages[d] = {label:lbl, inscrits:[]};
