@@ -1780,7 +1780,7 @@ function _saveParam(type, sai, section, value) {
 }
 function _iAccord(type, section) {
   var k=type+'-'+section;
-  return k in accordionParams ? accordionParams[k] : (section==='tarifs');
+  return k in accordionParams ? accordionParams[k] : false; // fermé par défaut
 }
 
 var DEFAULTS_ADRESSES = {
@@ -2032,11 +2032,142 @@ function renderParametres() {
   }
   h += '</div>';
 
-  // ── Contenu (sera enrichi étape par étape) ─────────────────
-  // Pour l'instant on réutilise le rendu existant des tarifs
-  h += renderTarifs();
+  // ── Cartes cours ───────────────────────────────────────────
+  ['paris','vincennes','yoga','stages'].forEach(function(type) {
+    h += _renderParamCard(type, sai);
+  });
 
   return h;
+}
+
+// ── Carte d'un cours (header pliable + tarifs) ──────────────
+function _renderParamCard(type, sai) {
+  var cfg = {
+    paris:    {icon:'🕺', label:'Tango Paris',     sub:'Cours du jeudi — Espace Danse Studio'},
+    vincennes:{icon:'💃', label:'Tango Vincennes', sub:'Cours du lundi — Espace Sorano'},
+    yoga:     {icon:'🧘', label:'Yoga',            sub:'Cours du mardi — Espace Sorano'},
+    stages:   {icon:'🎭', label:'Stages',          sub:''},
+  }[type];
+
+  // Charger tarifs : nouveau stockage → ancien tev_tarifs → défauts
+  var t = _loadParam(type, sai, 'tarifs');
+  if (!Object.keys(t).length) {
+    try {
+      var old = JSON.parse(localStorage.getItem('tev_tarifs')||'null');
+      t = (old&&old.tarifs) ? Object.assign({},TARIFS_DEFAUT,old.tarifs) : Object.assign({},TARIFS_DEFAUT);
+    } catch(e) { t = Object.assign({},TARIFS_DEFAUT); }
+  }
+
+  function inp(k) {
+    var v = t[k]!==undefined ? t[k] : (TARIFS_DEFAUT[k]||0);
+    return '<div style="display:flex;align-items:center;gap:4px;">'
+      +'<input type="number" id="pm-'+type+'-t-'+k+'" value="'+v+'" min="0"'
+      +' style="width:68px;text-align:right;background:var(--s3);color:var(--text);'
+      +'border:1px solid var(--border);border-radius:5px;padding:4px 6px;font-size:12px;">'
+      +' <span style="font-size:11px;color:var(--dim);">€</span></div>';
+  }
+  function row(lbl,kN,kR) {
+    return '<tr>'
+      +'<td style="padding:5px 8px;font-size:12px;color:var(--text);">'+lbl+'</td>'
+      +'<td style="padding:3px 6px;">'+inp(kN)+'</td>'
+      +(kR?'<td style="padding:3px 6px;">'+inp(kR)+'</td>'
+          :'<td style="padding:3px 6px;font-size:11px;color:var(--dim);">—</td>')
+      +'</tr>';
+  }
+  function hd(lbl) {
+    return '<tr><td colspan="3" style="padding:10px 8px 4px;font-size:10px;'
+      +'text-transform:uppercase;letter-spacing:2px;color:var(--gold);">'+lbl+'</td></tr>';
+  }
+
+  var body = '';
+  if (type==='paris') {
+    body = hd('Inscriptions')
+      +row('Carte 10 cours — 1ère inscription (incl. LRP)','carte10','carte10_reduit')
+      +row('Carte 10 cours — Renouvellement','carte10_renouv','carte10_renouv_reduit')
+      +row('Cours à l\'unité','unitaire_paris','unitaire_paris_reduit')
+      +hd('Forfaits annuels')
+      +row('Forfait annuel Paris','forfait_paris','forfait_paris_reduit')
+      +row('Forfait 2 cours (toutes combinaisons)','forfait_2cours','forfait_2cours_reduit')
+      +hd('Adhésion')
+      +row('Adhésion Le Regard Se Pose (LRP)','adhesion_lrp',null);
+  } else if (type==='vincennes') {
+    body = hd('Forfait annuel')
+      +row('Forfait annuel Vincennes','forfait_vincennes','forfait_vincennes_reduit')
+      +hd('Adhésion Sorano (réglée directement à Sorano)')
+      +row('Vincennois — 16 ans et +','sorano_vinc',null)
+      +row('Vincennois — moins de 16 ans','sorano_vinc_m16',null)
+      +row('Extérieur — 16 ans et +','sorano_ext',null)
+      +row('Extérieur — moins de 16 ans','sorano_ext_m16',null);
+  } else if (type==='yoga') {
+    body = hd('Yoga — Espace Sorano, Vincennes')
+      +row('Cours d\'essai','yoga_essai',null)
+      +row('Forfait annuel — 1 cours (Yin ou Hatha)','yoga_forfait_1cours',null)
+      +row('Forfait annuel — 2 cours (Yin + Hatha)','yoga_forfait_2cours',null);
+  } else if (type==='stages') {
+    body = hd('Par créneau')
+      +row('Initiation technique seule','stage_technique',null)
+      +row('1 séance (S1 ou S2)','stage_1seance',null)
+      +row('2 créneaux','stage_2seances',null)
+      +row('Pack complet (3 créneaux)','stage_3seances',null);
+  }
+
+  var open = _iAccord(type, 'tarifs');
+  var h = '<div class="card" style="margin-bottom:14px;padding:0;">'
+    +'<button data-action="toggle-accord-param" data-type="'+type+'" data-section="tarifs"'
+    +' style="width:100%;background:none;border:none;padding:13px 16px;display:flex;'
+    +'align-items:center;justify-content:space-between;cursor:pointer;text-align:left;">'
+    +'<div style="display:flex;align-items:center;gap:10px;">'
+    +'<span style="font-size:18px;">'+cfg.icon+'</span>'
+    +'<div><div style="font-size:13px;font-weight:700;color:var(--text);">'+cfg.label+'</div>'
+    +(cfg.sub?'<div style="font-size:11px;color:var(--dim);">'+cfg.sub+'</div>':'')
+    +'</div></div>'
+    +'<span style="font-size:11px;color:var(--dim);">'+(open?'▲':'▼')+'</span>'
+    +'</button>';
+
+  if (open) {
+    h += '<div style="padding:0 16px 16px;border-top:1px solid var(--border);">'
+      +'<div class="box-info" style="font-size:11px;margin-bottom:10px;">Saison <strong>'+sai+'</strong> — Tarif réduit : −26 ans / étudiants / demandeurs d\'emploi</div>'
+      +'<div style="overflow-x:auto;margin-bottom:12px;">'
+      +'<table style="width:100%;border-collapse:collapse;">'
+      +'<thead><tr>'
+      +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Formule</th>'
+      +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Normal</th>'
+      +'<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);border-bottom:1px solid var(--border);">Réduit</th>'
+      +'</tr></thead><tbody>'+body+'</tbody></table></div>'
+      +'<div class="btn-row">'
+      +'<button class="btn btn-ghost" data-action="reset-tarifs-type"'
+      +' data-type="'+type+'" data-saison="'+sai+'" style="font-size:12px;">↺ Défauts</button>'
+      +'<button class="btn btn-gold" data-action="sauver-tarifs-type"'
+      +' data-type="'+type+'" data-saison="'+sai+'" style="flex:2;font-size:12px;">💾 Enregistrer</button>'
+      +'</div></div>';
+  }
+  return h+'</div>';
+}
+
+// Enregistre les tarifs d'un type/saison dans localStorage + TARIFS global
+function sauverTarifsType(type, sai) {
+  var KEYS = {
+    paris:    ['carte10','carte10_reduit','carte10_renouv','carte10_renouv_reduit',
+               'unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit',
+               'forfait_2cours','forfait_2cours_reduit','adhesion_lrp'],
+    vincennes:['forfait_vincennes','forfait_vincennes_reduit',
+               'sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16'],
+    yoga:     ['yoga_essai','yoga_forfait_1cours','yoga_forfait_2cours'],
+    stages:   ['stage_technique','stage_1seance','stage_2seances','stage_3seances'],
+  };
+  var keys = KEYS[type]||[], data = {}, ok = true;
+  keys.forEach(function(k) {
+    var inp = gel('pm-'+type+'-t-'+k);
+    if (!inp) return;
+    var v = parseFloat(inp.value);
+    if (isNaN(v)||v<0) { ok=false; inp.style.borderColor='red'; }
+    else { data[k]=v; inp.style.borderColor=''; }
+  });
+  if (!ok) { afficherToast('⚠️ Corriger les valeurs en rouge'); return; }
+  _saveParam(type, sai, 'tarifs', data);
+  Object.assign(TARIFS, data);
+  afficherToast('✓ Tarifs '+type+' '+sai+' enregistrés');
+  renderTab();
 }
 
 // Polling Apps Script pour nouveaux essais Wix (toutes les 60s, hors démo)
@@ -2520,8 +2651,29 @@ function handleAction(action, btn) {
       ajouterDatesLot();
       break;
     case 'changer-saison-params':
-      saisonParametres = btn.dataset.saison || saisonActive();
+      saisonParametres = btn.dataset.saison || saisonCourante();
       renderTab();
+      break;
+    case 'toggle-accord-param':
+      (function(){
+        var k = btn.dataset.type+'-'+btn.dataset.section;
+        accordionParams[k] = !_iAccord(btn.dataset.type, btn.dataset.section);
+        renderTab();
+      })();
+      break;
+    case 'sauver-tarifs-type':
+      sauverTarifsType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
+      break;
+    case 'reset-tarifs-type':
+      (function(){
+        var tp=btn.dataset.type, si=btn.dataset.saison;
+        ouvrirModalConfirm('Réinitialiser les tarifs '+tp+' avec les valeurs par défaut ?', function(){
+          _saveParam(tp, si, 'tarifs', {});
+          Object.assign(TARIFS, TARIFS_DEFAUT);
+          afficherToast('Tarifs réinitialisés.');
+          renderTab();
+        });
+      })();
       break;
     case 'sauver-tarifs':
       sauverTarifs(btn);
