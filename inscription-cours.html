@@ -385,6 +385,15 @@ function isWaitlist() {
 
 function soranoCot(vinc, age) {
   if(!vinc||!age) return null;
+  // Lire depuis tev_adhesion_sorano (Paramètres) en priorité
+  try {
+    var _sor = JSON.parse(localStorage.getItem('tev_adhesion_sorano')||'null');
+    if (_sor) {
+      if (vinc==='oui') return age==='m16' ? _sor.m16_vinc : _sor.p16_vinc;
+      return age==='m16' ? _sor.m16_ext : _sor.p16_ext;
+    }
+  } catch(e) {}
+  // Fallback tev_tarifs
   return vinc==='oui' ? (age==='m16'?T.sorano_vinc_m16:T.sorano_vinc) : (age==='m16'?T.sorano_ext_m16:T.sorano_ext);
 }
 

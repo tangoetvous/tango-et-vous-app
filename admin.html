@@ -1902,11 +1902,18 @@ function renderTarifs() {
     +row('2×Paris · 2×Vincennes · Paris+Vincennes','forfait_2cours','forfait_2cours_reduit')
     +section('Adhésions')
     +row('Adhésion Le Regard Se Pose','adhesion_lrp',null)
-    +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Adhésion Sorano <span style="font-style:italic;">(à régler directement à Sorano — cours Vincennes uniquement)</span></td></tr>'
-    +row('Vincennois — 16 ans et +','sorano_vinc',null)
-    +row('Vincennois — moins de 16 ans','sorano_vinc_m16',null)
-    +row('Extérieur — 16 ans et +','sorano_ext',null)
-    +row('Extérieur — moins de 16 ans','sorano_ext_m16',null)
+    +(function() {
+      var _sor = chargerAdhesionSorano();
+      function _rowRo(lbl, val) {
+        return '<tr><td style="padding:6px 10px;color:var(--text);">'+lbl+'</td>'
+          +'<td colspan="2" style="padding:6px 10px;color:var(--dim);font-size:12px;font-style:italic;">'+val+' € — <a href="#" onclick="switchTab(\'tarifs\');return false;" style="color:var(--gold);">Modifier dans Param\u00e8tres</a></td></tr>';
+      }
+      return '<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Adh\u00e9sion Sorano <span style="font-style:italic;">(\u00e0 r\u00e9gler directement \u00e0 Sorano \u2014 cours Vincennes uniquement)</span></td></tr>'
+        +_rowRo('Plus de 16 ans \u2014 r\u00e9sident\u00b7e \u00e0 Vincennes',    _sor.p16_vinc)
+        +_rowRo('Plus de 16 ans \u2014 non r\u00e9sident\u00b7e \u00e0 Vincennes', _sor.p16_ext)
+        +_rowRo('Moins de 16 ans \u2014 r\u00e9sident\u00b7e \u00e0 Vincennes',    _sor.m16_vinc)
+        +_rowRo('Moins de 16 ans \u2014 non r\u00e9sident\u00b7e \u00e0 Vincennes',_sor.m16_ext);
+    })()
     +section('Yoga (Espace Sorano Vincennes)')
     +'<tr><td colspan="3" style="padding:6px 10px 2px;font-size:11px;color:var(--dim);">Cours d\'essai — gratuit les 2 premiers mardis de septembre, <b>'+t.yoga_essai+'€</b> les suivants.</td></tr>'
     +row('Cours d\'essai (Yin ou Hatha)','yoga_essai',null)
@@ -2093,7 +2100,41 @@ function renderParametres() {
   });
   h += '</div>';
 
+  // ── Section Adhésion Sorano ──────────────────────────────
+  h += _renderAdhesionSoranoSection();
+
   return h;
+}
+
+var ADHESION_SORANO_DEFAUT = { m16_vinc:26, m16_ext:35, p16_vinc:36, p16_ext:45 };
+function chargerAdhesionSorano() {
+  try { var r=JSON.parse(localStorage.getItem('tev_adhesion_sorano')||'null'); return r||ADHESION_SORANO_DEFAUT; }
+  catch(e) { return ADHESION_SORANO_DEFAUT; }
+}
+function _renderAdhesionSoranoSection() {
+  var sor = chargerAdhesionSorano();
+  var iS = 'width:72px;text-align:right;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;';
+  function champ(id, lbl, val) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
+      +'<span style="font-size:13px;color:var(--text);">'+lbl+'</span>'
+      +'<div style="display:flex;align-items:center;gap:5px;">'
+      +'<input type="number" id="sor-'+id+'" min="0" value="'+val+'" style="'+iS+'">'
+      +'<span style="color:var(--dim);font-size:12px;">€</span>'
+      +'</div></div>';
+  }
+  return '<div style="margin-top:24px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Adhésion Sorano</div>'
+    +'<div class="card">'
+    +'<div class="box-info" style="margin-bottom:14px;font-size:12px;">Réglée directement à Sorano — cours Vincennes uniquement. Tarif selon âge et résidence.</div>'
+    +champ('m16-vinc',  'Moins de 16 ans \u2014 r\u00e9sident\u00b7e \u00e0 Vincennes',     sor.m16_vinc)
+    +champ('m16-ext',   'Moins de 16 ans \u2014 non r\u00e9sident\u00b7e \u00e0 Vincennes',  sor.m16_ext)
+    +champ('p16-vinc',  'Plus de 16 ans \u2014 r\u00e9sident\u00b7e \u00e0 Vincennes',       sor.p16_vinc)
+    +champ('p16-ext',   'Plus de 16 ans \u2014 non r\u00e9sident\u00b7e \u00e0 Vincennes',   sor.p16_ext)
+    +'<div class="btn-row" style="margin-top:14px;">'
+    +'<button class="btn btn-gold" data-action="sauver-adhesion-sorano" style="font-size:12px;">\uD83D\uDCBE Enregistrer</button>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
 }
 
 // ── Carte d'un cours (header fixe + sections accordion) ─────
@@ -2301,11 +2342,18 @@ function _renderSecTarifsContent(type, sai) {
   } else if (type==='vincennes') {
     body = hd('Forfait annuel')
       +row('Forfait annuel Vincennes','forfait_vincennes','forfait_vincennes_reduit')
-      +hd('Adhésion Sorano (réglée directement à Sorano)')
-      +row('Vincennois — 16 ans et +','sorano_vinc',null)
-      +row('Vincennois — moins de 16 ans','sorano_vinc_m16',null)
-      +row('Extérieur — 16 ans et +','sorano_ext',null)
-      +row('Extérieur — moins de 16 ans','sorano_ext_m16',null);
+      +hd('Adh\u00e9sion Sorano (r\u00e9gl\u00e9e directement \u00e0 Sorano)')
+      +(function() {
+        var _sor = chargerAdhesionSorano();
+        function _rro(lbl, val) {
+          return '<tr><td style="padding:6px 10px;color:var(--text);">'+lbl+'</td>'
+            +'<td colspan="2" style="padding:6px 10px;color:var(--dim);font-size:12px;font-style:italic;">'+val+' € \u2014 <a href="#" onclick="switchTab(\'tarifs\');return false;" style="color:var(--gold);">Modifier dans Param\u00e8tres</a></td></tr>';
+        }
+        return _rro('Plus de 16 ans \u2014 r\u00e9sident\u00b7e \u00e0 Vincennes',    _sor.p16_vinc)
+          +_rro('Plus de 16 ans \u2014 non r\u00e9sident\u00b7e \u00e0 Vincennes', _sor.p16_ext)
+          +_rro('Moins de 16 ans \u2014 r\u00e9sident\u00b7e \u00e0 Vincennes',    _sor.m16_vinc)
+          +_rro('Moins de 16 ans \u2014 non r\u00e9sident\u00b7e \u00e0 Vincennes',_sor.m16_ext);
+      })()
   } else if (type==='yoga') {
     body = hd('Yoga — Espace Sorano, Vincennes')
       +row('Cours d\'essai','yoga_essai',null)
@@ -3813,6 +3861,18 @@ function handleAction(action, btn) {
       break;
     case 'toggle-interet':
       toggleInteret(btn.dataset.date||'', btn.dataset.email||'', btn);
+      break;
+    case 'sauver-adhesion-sorano':
+      (function() {
+        var sor = {
+          m16_vinc: parseFloat((gel('sor-m16-vinc')||{}).value)||0,
+          m16_ext:  parseFloat((gel('sor-m16-ext') ||{}).value)||0,
+          p16_vinc: parseFloat((gel('sor-p16-vinc')||{}).value)||0,
+          p16_ext:  parseFloat((gel('sor-p16-ext') ||{}).value)||0
+        };
+        try { localStorage.setItem('tev_adhesion_sorano', JSON.stringify(sor)); } catch(e){}
+        afficherToast('\u2713 Adh\u00e9sion Sorano enregistr\u00e9e');
+      })();
       break;
   }
 }
