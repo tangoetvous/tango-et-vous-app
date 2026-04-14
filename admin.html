@@ -1763,6 +1763,7 @@ function sauverDatesStages(sai) {
 // ================================================================
 var saisonParametres = null;       // saison sélectionnée dans l'onglet Paramètres
 var accordionParams  = {};         // {type-section: bool}  true=ouvert
+var stageHorairesOpen = {};       // {date: bool}  true=horaires par date ouverts
 
 function saisonPrecedente() {
   var s=saisonCourante().split('-'), n=parseInt(s[0]); return (n-1)+'-'+n;
@@ -1795,11 +1796,11 @@ var DEFAULTS_HORAIRES = {
   vincennes:{deb:'19h30', deb_fin:'21h00', int:'21h00', int_fin:'22h30'},
   yoga:     {yin:'10h30', yin_fin:'11h45', hatha:'11h45', hatha_fin:'13h00'},
   stages:   {
-    tech_deb:'14h00', tech_fin:'15h15',
-    s1_deb:'15h30',   s1_fin:'17h30',
-    s2_deb:'18h00',   s2_fin:'20h00',
-    s3_deb:'20h30',   s3_fin:'22h30',
-    s4_deb:'20h30',   s4_fin:'22h30',
+    tech_deb:'14h',   tech_fin:'15h',
+    s1_deb:'15h',     s1_fin:'16h30',
+    s2_deb:'16h30',   s2_fin:'18h',
+    s3_deb:'11h30',   s3_fin:'13h',
+    s4_deb:'10h',     s4_fin:'11h30',
   },
 };
 
@@ -2392,11 +2393,26 @@ function _renderSecDatesContent(type, sai) {
       }
       h += '</div>'
         // Bouton sauver thèmes
-        +'<div style="text-align:right;">'
+        +'<div style="text-align:right;margin-bottom:4px;">'
         +'<button data-action="sauver-themes-stage" data-date="'+st.date+'" data-saison="'+sai+'"'
         +' class="btn btn-gold" style="font-size:11px;">💾 Enregistrer les thèmes</button>'
-        +'</div>'
-        +'</div></div>';
+        +'</div>';
+
+      // ── Horaires par date ────────────────────────────────
+      var horOpen = !!stageHorairesOpen[st.date];
+      var hasOverride = !!(st.horaires && Object.keys(st.horaires).length);
+      h += '<div style="border-top:1px solid var(--border);">'
+        +'<button data-action="toggle-horaires-date" data-date="'+st.date+'"'
+        +' style="width:100%;display:flex;align-items:center;justify-content:space-between;'
+        +'background:none;border:none;cursor:pointer;padding:7px 12px;font-size:12px;color:var(--dim);">'
+        +'<span>⏰ Horaires'+(hasOverride?' <span style="color:var(--gold);font-size:10px;">● personnalisés</span>':'')+'</span>'
+        +'<span style="font-size:10px;">'+(horOpen?'▲':'▼')+'</span>'
+        +'</button>';
+      if (horOpen) {
+        h += _renderDateHorairesForm(st, sai);
+      }
+      h += '</div>'
+        +'</div></div>';  // ferme body + card
     });
 
     // Ajouter une date
@@ -2713,6 +2729,82 @@ function ajouterDateStage(sai) {
   if (!adminData.stages[d]) adminData.stages[d] = {label:lbl, inscrits:[]};
   sauverStagesLocal(sai);
   afficherToast('✓ Date ajoutée');
+  renderTab();
+}
+
+// ── Rendu du formulaire d'horaires par date ───────────────────
+function _renderDateHorairesForm(st, sai) {
+  var globalHor = _loadParam('stages', sai, 'horaires');
+  var def = DEFAULTS_HORAIRES.stages || {};
+  function defVal(k) { return globalHor[k] || def[k] || ''; }
+  var dateHor = st.horaires || {};
+  function val(k) { return dateHor[k] || defVal(k); }
+  var did = st.date.replace(/-/g,'');
+  var iS = 'width:62px;background:var(--s3);color:var(--text);border:1px solid var(--border);'
+          +'border-radius:5px;padding:5px 7px;font-size:12px;font-weight:600;text-align:center;';
+  var sep = '<span style="font-size:11px;color:var(--dim);padding:0 2px;">→</span>';
+  var n = st.nStages || 2;
+  var sKeys = ['s1','s2','s3','s4'];
+  var sLabels = ['Créneau 1','Créneau 2','Créneau 3','Créneau 4'];
+  function row(k, lbl) {
+    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">'
+      +'<span style="font-size:11px;color:var(--dim);width:88px;flex-shrink:0;">'+lbl+'</span>'
+      +'<input id="ph-'+did+'-'+k+'_deb" type="text" value="'+val(k+'_deb')+'" style="'+iS+'">'
+      +sep
+      +'<input id="ph-'+did+'-'+k+'_fin" type="text" value="'+val(k+'_fin')+'" style="'+iS+'">'
+      +'</div>';
+  }
+  var rows = '';
+  // Ordre chronologique naturel : S4 → S3 → Technique → S1 → S2
+  var slotOrder = [];
+  for (var i = n-1; i >= 2; i--) slotOrder.push({k:sKeys[i], lbl:sLabels[i]});
+  if (st.technique !== false) slotOrder.push({k:'tech', lbl:'Technique'});
+  for (var j = 0; j < Math.min(n, 2); j++) slotOrder.push({k:sKeys[j], lbl:sLabels[j]});
+  slotOrder.forEach(function(sl){ rows += row(sl.k, sl.lbl); });
+  var hasOverride = !!(st.horaires && Object.keys(st.horaires).length);
+  return '<div style="padding:10px 12px;background:var(--bg);border-top:1px solid var(--border);">'
+    +rows
+    +'<div class="btn-row" style="margin-top:6px;">'
+    +(hasOverride
+      ? '<button data-action="reset-horaires-date" data-date="'+st.date+'" data-saison="'+sai+'"'
+        +' class="btn btn-ghost" style="font-size:11px;">↺ Défauts</button>'
+      : '')
+    +'<button data-action="sauver-horaires-date" data-date="'+st.date+'" data-saison="'+sai+'"'
+    +' class="btn btn-gold" style="font-size:11px;flex:2;">💾 Enregistrer horaires</button>'
+    +'</div></div>';
+}
+
+// Sauvegarde les horaires personnalisés d'une date de stage
+function sauverHorairesDate(date, sai) {
+  var idx = STAGES.findIndex(function(s){return s.date===date;});
+  if (idx<0) return;
+  var st = _migrateStageItem(STAGES[idx]);
+  if (!st.horaires) st.horaires = {};
+  var did = date.replace(/-/g,'');
+  var n = st.nStages || 2;
+  var keys = [];
+  if (st.technique !== false) keys.push('tech');
+  ['s1','s2','s3','s4'].slice(0,n).forEach(function(k){keys.push(k);});
+  keys.forEach(function(k) {
+    var dEl = gel('ph-'+did+'-'+k+'_deb'), fEl = gel('ph-'+did+'-'+k+'_fin');
+    if (dEl) st.horaires[k+'_deb'] = dEl.value.trim();
+    if (fEl) st.horaires[k+'_fin'] = fEl.value.trim();
+  });
+  STAGES[idx] = st;
+  sauverStagesLocal(sai);
+  afficherToast('✓ Horaires enregistrés');
+  renderTab();
+}
+
+// Réinitialise les horaires d'une date aux défauts globaux
+function resetHorairesDate(date, sai) {
+  var idx = STAGES.findIndex(function(s){return s.date===date;});
+  if (idx<0) return;
+  var st = _migrateStageItem(STAGES[idx]);
+  delete st.horaires;
+  STAGES[idx] = st;
+  sauverStagesLocal(sai);
+  afficherToast('✓ Horaires réinitialisés');
   renderTab();
 }
 
@@ -3312,6 +3404,16 @@ function handleAction(action, btn) {
       break;
     case 'ajouter-date-stage':
       ajouterDateStage(btn.dataset.saison||saisonCourante());
+      break;
+    case 'toggle-horaires-date':
+      stageHorairesOpen[btn.dataset.date||''] = !stageHorairesOpen[btn.dataset.date||''];
+      renderTab();
+      break;
+    case 'sauver-horaires-date':
+      sauverHorairesDate(btn.dataset.date||'', btn.dataset.saison||saisonCourante());
+      break;
+    case 'reset-horaires-date':
+      resetHorairesDate(btn.dataset.date||'', btn.dataset.saison||saisonCourante());
       break;
     case 'suppr-date-param':
       supprimerDateParam(btn.dataset.type||'paris', btn.dataset.date||'');
@@ -5031,7 +5133,7 @@ function getEventsForDate(dateStr) {
   var evts=[];
   if(agendaCats.paris&&COURS_PARIS.indexOf(dateStr)>=0){evts.push({cat:'cours-paris',titre:'Débutant — Paris',heure:'20h30'});evts.push({cat:'cours-paris',titre:'Intermédiaire — Paris',heure:'21h45'});}
   if(agendaCats.vincennes&&COURS_VINCENNES.indexOf(dateStr)>=0){evts.push({cat:'cours-vinc',titre:'Débutant — Vincennes',heure:'19h30'});evts.push({cat:'cours-vinc',titre:'Intermédiaire — Vincennes',heure:'21h00'});}
-  if(agendaCats.stage){var _stRaw=STAGES.find(function(s){return s.date===dateStr;});if(_stRaw){var _st=_migrateStageItem(_stRaw);var _hor=_loadParam('stages',saisonActive(),'horaires');var _def=DEFAULTS_HORAIRES.stages||{};function _hv(k){return _hor[k]||_def[k]||'';}if(_st.technique!==false){var _th=_hv('tech_deb')+(_hv('tech_fin')?'–'+_hv('tech_fin'):'');evts.push({cat:'stage',titre:'Technique Leader & Follower',heure:_th});}var _sk=['s1','s2','s3','s4'];for(var _i=0;_i<(_st.nStages||2);_i++){var _skk=_sk[_i];var _thm=(_st.themes&&_st.themes[_i])||('Stage '+(_i+1));var _sh=_hv(_skk+'_deb')+(_hv(_skk+'_fin')?'–'+_hv(_skk+'_fin'):'');evts.push({cat:'stage',titre:_thm,heure:_sh});}}}
+  if(agendaCats.stage){var _stRaw=STAGES.find(function(s){return s.date===dateStr;});if(_stRaw){var _st=_migrateStageItem(_stRaw);var _hor=_loadParam('stages',saisonActive(),'horaires');var _def=DEFAULTS_HORAIRES.stages||{};var _dHor=_st.horaires||{};function _hv(k){return _dHor[k]||_hor[k]||_def[k]||'';}var _n=_st.nStages||2;var _sk=['s1','s2','s3','s4'];var _ord=[];for(var _j=_n-1;_j>=2;_j--)_ord.push(_sk[_j]);if(_st.technique!==false)_ord.push('tech');for(var _j2=0;_j2<Math.min(_n,2);_j2++)_ord.push(_sk[_j2]);_ord.forEach(function(_k){var _lbl=_k==='tech'?'Technique Leader & Follower':(_st.themes&&_st.themes[parseInt(_k.slice(1))-1])||('Stage '+_k.slice(1));evts.push({cat:'stage',titre:_lbl,heure:_hv(_k+'_deb')+(_hv(_k+'_fin')?'–'+_hv(_k+'_fin'):'')});});}}
   if(agendaCats.milonga&&MILONGAS.indexOf(dateStr)>=0)evts.push({cat:'milonga',titre:'Milonga La Dolce Vita',heure:'17h30–23h30'});
   if(agendaCats.yoga&&COURS_YOGA.indexOf(dateStr)>=0){evts.push({cat:'cours-yoga',titre:'Yin Yoga',heure:'10h30'});evts.push({cat:'cours-yoga',titre:'Hatha Yoga',heure:'11h30'});}
   return evts;
