@@ -3642,6 +3642,18 @@ function handleAction(action, btn) {
         annulerStageInscrit(btn.dataset.date, parseInt(btn.dataset.idx), btn.dataset.slot||'', btn);
       });
       break;
+    case 'suppr-cours-inscr':
+      (function(id){ ouvrirModalConfirm('Supprimer cette inscription ?', function(){ supprimerCoursInscr(id); }); })(btn.dataset.id);
+      break;
+    case 'suppr-essai-inscr':
+      (function(em,dt){ ouvrirModalConfirm('Supprimer cet essai ?', function(){ supprimerEssaiInscr(em,dt); }); })(btn.dataset.email, btn.dataset.date);
+      break;
+    case 'suppr-yoga-inscr':
+      (function(em,dt){ ouvrirModalConfirm('Supprimer cet essai yoga ?', function(){ supprimerYogaEssaiInscr(em,dt); }); })(btn.dataset.email, btn.dataset.date);
+      break;
+    case 'suppr-sorano-inscr':
+      (function(id){ ouvrirModalConfirm('Supprimer cette inscription (cours + Sorano) ?', function(){ supprimerSoranoInscr(id); }); })(btn.dataset.id);
+      break;
     case 'stage-move-up':
       stageMoveInsrit(btn.dataset.date, parseInt(btn.dataset.idx), -1); break;
     case 'stage-move-down':
@@ -4421,6 +4433,7 @@ function renderEssai() {
           +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
           +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="email-attente" data-email="'+e.email+'" data-date="'+grp.date+'" data-niveau="'+grp.niveau+'" data-role="'+e.role+'">✉️</button>'
           +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓ Valider</button>'
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" title="Supprimer">✕</button>'
           +'</div></div>';
       });
       var isPastAtt = grp.date < todayStr;
@@ -4488,6 +4501,7 @@ function renderEssai() {
           +'<button class="btn-heart'+(e.interesse?' on':'')+'" data-action="toggle-interet" data-date="'+grp.date+'" data-email="'+e.email+'" title="Intérêt">'+(e.interesse?'❤️':'🤍')+'</button>'
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'">✗</button>'
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" title="Supprimer">✕</button>'
           +'</div></div>';
       });
       // ── Élèves inscrits présents ──
@@ -4615,6 +4629,7 @@ function renderEssai() {
               ?'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+date+'">✓ Valider</button>'
               :'<span class="pill pill-ok" style="font-size:8px;">Validé.e</span>')
             +btnEmail(e.email,e.prenom+' '+e.nom)
+            +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+date+'" title="Supprimer">✕</button>'
             +'</div></div>';
         });
       }
@@ -5367,6 +5382,35 @@ function renderStages() {
   return h;
 }
 
+// ── Suppression d'inscriptions ────────────────────────────────
+function supprimerCoursInscr(id) {
+  if (!adminData.coursTango) return;
+  adminData.coursTango = adminData.coursTango.filter(function(e){ return e.id !== id; });
+  renderTab();
+}
+function supprimerEssaiInscr(email, date) {
+  if (!adminData.essai) return;
+  adminData.essai = adminData.essai.filter(function(e){ return !(e.email===email && e.date===date); });
+  renderTab();
+}
+function supprimerYogaEssaiInscr(email, date) {
+  if (!adminData.essaiYoga) return;
+  adminData.essaiYoga = adminData.essaiYoga.filter(function(e){ return !(e.email===email && e.date===date); });
+  renderTab();
+}
+function supprimerSoranoInscr(id) {
+  var done = false;
+  if (adminData.coursTango) {
+    var lenBefore = adminData.coursTango.length;
+    adminData.coursTango = adminData.coursTango.filter(function(e){ return e.id !== id; });
+    done = adminData.coursTango.length < lenBefore;
+  }
+  if (!done && adminData.coursYoga) {
+    adminData.coursYoga = adminData.coursYoga.filter(function(e){ return e.id !== id; });
+  }
+  renderTab();
+}
+
 function annulerStageInscrit(date, idx, slot, btn) {
   btn.disabled=true;
   if(IS_DEMO){
@@ -5479,9 +5523,9 @@ function renderSorano() {
   function cardRow(s){
     var nomQ=s.nom.replace(/"/g,'&quot;');
     if(s.paiementSorano){
-      return '<div class="card hl-ok"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button></div></div>';
+      return '<div class="card hl-ok"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button><button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
     }
-    return '<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+nomQ+'" data-id="'+s.id+'">✉️ Relance</button></div></div>';
+    return '<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+nomQ+'" data-id="'+s.id+'">✉️ Relance</button><button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
   }
   var groups=[
     {lbl:'Tango Vincennes Débutants',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return ct.statut==='inscrit'&&ct.ville==='vincennes'&&ct.niveau==='debutant'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email]};}).sort(alpha)},
@@ -6125,6 +6169,7 @@ function renderYogaEssai() {
           +btnEmail(e.email,e.prenom+' '+e.nom)
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-yoga-inscr" data-date="'+date+'" data-email="'+e.email+'" title="Supprimer">✕</button>'
           +'</div></div>';
       }
       var subHdrStyle = 'font-size:11px;font-weight:700;color:#a78bfa;padding:8px 0 4px;margin-top:4px;border-top:1px solid rgba(167,139,250,0.2);';
@@ -6345,6 +6390,7 @@ function ficheEleve(e) {
   if(e.email){
     h += '<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;" title="Envoyer un email">✉️</a>';
   }
+  h += '<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-cours-inscr" data-id="'+e.id+'" title="Supprimer">✕</button>';
   h += '</div></div>';
   return h;
 }
