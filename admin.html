@@ -1713,6 +1713,32 @@ function chargerDatesYogaStages() {
     }
   } catch(e){}
 }
+
+var MILONGAS_DEFAULTS = [
+  { id:'dolce-vita', nom:'La Dolce Vita',
+    lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)'},
+    color:'#e040a0', horaire_debut:'17h30', horaire_fin:'23h30', dates:[] },
+  { id:'colectivo', nom:'Le Colectivo',
+    lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.8720,2.3891', transport:'M\u00b0 Jourdain (L11)'},
+    color:'#ff6b9d', horaire_debut:'20h30', horaire_fin:'2h', dates:[] }
+];
+var MILONGAS = null;
+function chargerMilongas() {
+  try {
+    var raw = JSON.parse(localStorage.getItem('tev_milongas')||'null');
+    if (raw && raw.milongas && raw.milongas.length) {
+      MILONGAS = raw.milongas;
+    } else {
+      MILONGAS = MILONGAS_DEFAULTS.map(function(m){return JSON.parse(JSON.stringify(m));});
+    }
+  } catch(e) {
+    MILONGAS = MILONGAS_DEFAULTS.map(function(m){return JSON.parse(JSON.stringify(m));});
+  }
+}
+function sauverMilongas() {
+  try { localStorage.setItem('tev_milongas', JSON.stringify({milongas:MILONGAS, modifie:today()})); } catch(e){}
+}
+
 function _parseDateLine(line) {
   var m1 = line.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
   var m2 = line.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -1770,6 +1796,7 @@ var saisonParametres = null;       // saison sélectionnée dans l'onglet Param�
 var accordionParams  = {};         // {type-section: bool}  true=ouvert
 var stageHorairesOpen = {};       // {date: bool}  true=horaires par date ouverts
 var stageTarifsOpen   = {};       // {date: bool}  true=tarifs par date ouverts
+var milongaAccordion  = {};       // {mil-idx-section: bool}  true=ouvert
 
 var STAGE_NOM_DEFAUT = 'Stages avec Florencia Garcia et Jérémy Braitbart';
 
@@ -2055,6 +2082,15 @@ function renderParametres() {
     h += _renderParamCard(type, sai);
   });
 
+  // ── Section Milongas ───────────────────────────────────────
+  if (!MILONGAS) chargerMilongas();
+  h += '<div style="margin-top:24px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Milongas</div>';
+  MILONGAS.forEach(function(mil, idx) {
+    h += _renderMilongaCard(mil, idx);
+  });
+  h += '</div>';
+
   return h;
 }
 
@@ -2116,6 +2152,108 @@ function _renderAccordSection(type, section, label, content) {
     +'</button>'
     +(open?'<div style="padding:4px 16px 16px;">'+content+'</div>':'')
     +'</div>';
+}
+
+// ── Milonga : carte + accordions ─────────────────────────────
+function _renderMilongaCard(mil, idx) {
+  var infoOpen  = !!milongaAccordion['mil-'+idx+'-info'];
+  var datesOpen = !!milongaAccordion['mil-'+idx+'-dates'];
+  var h = '<div class="card" style="margin-bottom:14px;padding:0;">'
+    +'<div style="padding:13px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);">'
+    +'<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:'+mil.color+';flex-shrink:0;"></span>'
+    +'<div><div style="font-size:14px;font-weight:700;color:var(--text);">'+mil.nom+'</div>'
+    +'<div style="font-size:11px;color:var(--dim);">'+mil.lieu.nom+' — '+mil.lieu.rue+'</div>'
+    +'</div></div>';
+  h += _renderMilAccord(idx, 'info',  '\ud83d\udccd Informations & horaires', infoOpen,  _renderMilongaInfoContent(mil, idx));
+  h += _renderMilAccord(idx, 'dates', '\ud83d\udcc5 Dates ('+mil.dates.length+')',      datesOpen, _renderMilongaDatesContent(mil, idx));
+  return h+'</div>';
+}
+function _renderMilAccord(idx, section, label, open, content) {
+  return '<div>'
+    +'<button data-action="toggle-accord-mil" data-idx="'+idx+'" data-section="'+section+'"'
+    +' style="width:100%;background:none;border:none;border-top:1px solid var(--border);'
+    +'padding:11px 16px;display:flex;align-items:center;justify-content:space-between;'
+    +'cursor:pointer;text-align:left;">'
+    +'<span style="font-size:12px;font-weight:600;color:var(--text);">'+label+'</span>'
+    +'<span style="font-size:10px;color:var(--dim);">'+(open?'▲':'▼')+'</span>'
+    +'</button>'
+    +(open?'<div style="padding:4px 16px 16px;">'+content+'</div>':'')
+    +'</div>';
+}
+function _renderMilongaInfoContent(mil, idx) {
+  var iS = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);'
+         + 'border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;';
+  var tS = 'width:72px;background:var(--s3);color:var(--text);border:1px solid var(--border);'
+          +'border-radius:6px;padding:6px 8px;font-size:13px;font-weight:600;text-align:center;';
+  function field(label, id, value, placeholder) {
+    return '<div style="margin-bottom:8px;">'
+      +'<label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">'+label+'</label>'
+      +'<input id="'+id+'" type="text" value="'+(value||'').replace(/"/g,'&quot;')+'"'
+      +' placeholder="'+placeholder+'" style="'+iS+'"></div>';
+  }
+  var gps = mil.lieu.gps||'';
+  var mapsHref = gps
+    ? 'https://maps.google.com/?q='+encodeURIComponent(gps)
+    : 'https://maps.google.com/?q='+encodeURIComponent(mil.lieu.rue||'');
+  var mapsPreview = gps
+    ? '<a href="'+mapsHref+'" target="_blank" class="btn btn-ghost"'
+      +' style="font-size:11px;text-decoration:none;margin-bottom:10px;display:inline-block;">'
+      +'\ud83d\uddfa Voir sur Google Maps</a>'
+    : '';
+  return field('Nom de la milonga', 'mil-nom-'+idx, mil.nom, 'ex : La Dolce Vita')
+    + field('Salle', 'mil-lieu-nom-'+idx, mil.lieu.nom, 'ex : Centre Re-Corps')
+    + field('Adresse', 'mil-lieu-rue-'+idx, mil.lieu.rue, 'ex : 16A boulevard de Reuilly, Paris 12e')
+    + field('Coordonn\u00e9es GPS (lat,lng)', 'mil-lieu-gps-'+idx, mil.lieu.gps, 'ex : 48.8465,2.3870')
+    + field('Transport le plus proche', 'mil-lieu-transport-'+idx, mil.lieu.transport, 'ex : M\u00b0 Dugommier (L6)')
+    + mapsPreview
+    + '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-end;flex-wrap:wrap;">'
+    + '<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Horaire d\u00e9but (d\u00e9faut)</label>'
+    + '<input id="mil-hdeb-'+idx+'" type="text" value="'+(mil.horaire_debut||'').replace(/"/g,'&quot;')+'" placeholder="17h30" style="'+tS+'"></div>'
+    + '<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Horaire fin (d\u00e9faut)</label>'
+    + '<input id="mil-hfin-'+idx+'" type="text" value="'+(mil.horaire_fin||'').replace(/"/g,'&quot;')+'" placeholder="23h30" style="'+tS+'"></div>'
+    + '<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Couleur</label>'
+    + '<input id="mil-color-'+idx+'" type="color" value="'+(mil.color||'#e040a0')+'"'
+    + ' style="width:40px;height:36px;border:1px solid var(--border);border-radius:6px;padding:2px;cursor:pointer;background:var(--s3);"></div>'
+    + '</div>'
+    + '<div class="btn-row">'
+    + '<button class="btn btn-gold" data-action="sauver-milonga-info" data-idx="'+idx+'"'
+    + ' style="font-size:12px;">\ud83d\udcbe Enregistrer</button>'
+    + '</div>';
+}
+function _renderMilongaDatesContent(mil, idx) {
+  var tod = today();
+  var dates = (mil.dates||[]).slice().sort(function(a,b){return a.date.localeCompare(b.date);});
+  var fut = dates.filter(function(d){return d.date>=tod;}).length;
+  var inputStyle = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);'
+    +'border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-family:monospace;';
+  var h = '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
+    +'<strong>'+dates.length+'</strong> date'+(dates.length!==1?'s':'')+' \u2014 '
+    +'<span style="color:var(--ok-text);">'+fut+' \u00e0 venir</span></div>';
+  if (dates.length) {
+    h += '<div style="margin-bottom:12px;">';
+    dates.forEach(function(d) {
+      var past = d.date < tod;
+      var hasOvr = !!(d.horaire_debut || d.horaire_fin);
+      h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;'+(past?'opacity:0.5;':'')+'">'
+        +'<span style="font-size:12px;color:var(--text);flex:1;">'+(d.label||fmtDate(d.date))+'</span>';
+      if (hasOvr) {
+        h += '<span style="font-size:10px;color:var(--gold);">'
+          +(d.horaire_debut||mil.horaire_debut)+'\u2013'+(d.horaire_fin||mil.horaire_fin)+'</span>';
+      }
+      h += '<button data-action="suppr-date-milonga" data-idx="'+idx+'" data-date="'+d.date+'"'
+        +' style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;font-size:13px;padding:0 4px;" title="Supprimer">\u2715</button>'
+        +'</div>';
+    });
+    h += '</div>';
+  }
+  h += '<div style="font-size:11px;color:var(--dim);margin-bottom:4px;">Ajouter des dates (une par ligne, format JJ/MM/AAAA)</div>'
+    +'<textarea id="mil-newdates-'+idx+'" rows="4" style="'+inputStyle+'resize:vertical;"'
+    +' placeholder="12/04/2026\n03/05/2026\n..."></textarea>'
+    +'<div class="btn-row" style="margin-top:8px;">'
+    +'<button class="btn btn-gold" data-action="ajouter-dates-milonga" data-idx="'+idx+'"'
+    +' style="font-size:12px;">\u2795 Ajouter ces dates</button>'
+    +'</div>';
+  return h;
 }
 
 // ── Contenu : Tarifs ─────────────────────────────────────────
@@ -2685,6 +2823,55 @@ function sauverAssoconnectType(type, sai) {
   renderTab();
 }
 
+// ── Milongas helpers ─────────────────────────────────────────
+function sauverMilongaInfo(idx) {
+  if (!MILONGAS || !MILONGAS[idx]) return;
+  var mil = MILONGAS[idx];
+  mil.nom = (gel('mil-nom-'+idx)||{}).value || mil.nom;
+  mil.lieu.nom = (gel('mil-lieu-nom-'+idx)||{}).value || mil.lieu.nom;
+  mil.lieu.rue = (gel('mil-lieu-rue-'+idx)||{}).value || mil.lieu.rue;
+  mil.lieu.gps = (gel('mil-lieu-gps-'+idx)||{}).value || '';
+  mil.lieu.transport = (gel('mil-lieu-transport-'+idx)||{}).value || mil.lieu.transport;
+  mil.horaire_debut = (gel('mil-hdeb-'+idx)||{}).value || mil.horaire_debut;
+  mil.horaire_fin   = (gel('mil-hfin-'+idx)||{}).value || mil.horaire_fin;
+  mil.color = (gel('mil-color-'+idx)||{}).value || mil.color;
+  sauverMilongas();
+  afficherToast('\u2713 Milonga ' + mil.nom + ' enregistr\u00e9e');
+  renderTab();
+}
+function ajouterDatesMilonga(idx) {
+  if (!MILONGAS || !MILONGAS[idx]) return;
+  var mil = MILONGAS[idx];
+  var raw = ((gel('mil-newdates-'+idx)||{}).value||'').trim();
+  var lines = raw.split(/\n/).map(function(l){return l.trim().replace(/#.*/,'').trim();}).filter(Boolean);
+  var added = 0;
+  lines.forEach(function(line) {
+    var d = _parseDateLine(line);
+    if (!d || isNaN(new Date(d+'T12:00:00').getTime())) return;
+    if (mil.dates.find(function(x){return x.date===d;})) return;
+    var dd = new Date(d+'T12:00:00');
+    var jours = ['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'];
+    var label = jours[dd.getDay()]+' '+dd.getDate()+' '+MOIS_FR[dd.getMonth()].slice(0,3)+' '+dd.getFullYear();
+    mil.dates.push({date:d, label:label});
+    added++;
+  });
+  if (!added) { afficherToast('\u26a0\ufe0f Aucune date valide'); return; }
+  mil.dates.sort(function(a,b){return a.date.localeCompare(b.date);});
+  sauverMilongas();
+  afficherToast('\u2713 ' + added + ' date' + (added>1?'s':'') + ' ajout\u00e9e' + (added>1?'s':'') + ' \u00e0 ' + mil.nom);
+  renderTab();
+}
+function supprimerDateMilonga(idx, date) {
+  if (!MILONGAS || !MILONGAS[idx]) return;
+  var mil = MILONGAS[idx];
+  var before = mil.dates.length;
+  mil.dates = mil.dates.filter(function(d){return d.date!==date;});
+  if (mil.dates.length < before) {
+    sauverMilongas();
+    afficherToast('\u2713 Date supprim\u00e9e');
+    renderTab();
+  }
+}
 
 // ── Stages helpers ────────────────────────────────────────────
 // Normalise un item STAGES vers le nouveau format
@@ -3059,6 +3246,7 @@ function demarrerApp(email) {
   chargerTarifs();
   chargerLivrets();
   chargerDatesYogaStages();
+  chargerMilongas();
   gel('login-screen').style.display='none';
   gel('app').style.display='block';
   updateSaisonSelect();
@@ -3535,6 +3723,22 @@ function handleAction(action, btn) {
       break;
     case 'suppr-date-param':
       supprimerDateParam(btn.dataset.type||'paris', btn.dataset.date||'');
+      break;
+    case 'toggle-accord-mil':
+      (function(){
+        var k = 'mil-'+(btn.dataset.idx||'0')+'-'+(btn.dataset.section||'');
+        milongaAccordion[k] = !milongaAccordion[k];
+        renderTab();
+      })();
+      break;
+    case 'sauver-milonga-info':
+      sauverMilongaInfo(parseInt(btn.dataset.idx)||0);
+      break;
+    case 'ajouter-dates-milonga':
+      ajouterDatesMilonga(parseInt(btn.dataset.idx)||0);
+      break;
+    case 'suppr-date-milonga':
+      supprimerDateMilonga(parseInt(btn.dataset.idx)||0, btn.dataset.date||'');
       break;
     case 'sauver-livret-type':
       sauverLivretType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
