@@ -906,6 +906,7 @@ function listeSaisons() {
 function changerSaisonVue(val) {
   saisonVue = val||null;
   var sel=gel('hdr-saison'); if(sel) sel.value=val||'';
+  chargerMilongas(saisonActive()); // recharge milongas pour la saison visée
   renderTab();
 }
 function updateSaisonSelect() {
@@ -5833,6 +5834,7 @@ function renderAgenda() {
 
 function renderAgendaCalendrier() {
   var _saiCal = saisonActive();
+  chargerMilongas(_saiCal); // garantit que MILONGAS correspond à la saison affichée
   var _saiStart = _saiCal.split('-')[0] + '-09-01';
   var _saiEnd   = _saiCal.split('-')[1] + '-08-31';
   var todayStr=today();
