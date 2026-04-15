@@ -1024,7 +1024,7 @@
       return;
     }
 
-    let html = '', lastMonth = '';
+    let html = '', lastMonth = '', lastDate = '';
     events.forEach(e => {
       const d = new Date(e.date + 'T00:00:00');
       const monthKey = d.getMonth() + '-' + d.getFullYear();
@@ -1033,6 +1033,8 @@
         html += `<div class="agenda-month-header">${cap(MOIS_LONG[d.getMonth()])} ${d.getFullYear()}</div>`;
         lastMonth = monthKey;
       }
+      const sameDate = e.date === lastDate;
+      lastDate = e.date;
       const color = e.color || getEventColor(e.subtype);
       const lbl   = getEventLabel(e.subtype);
       const isStage = e.subtype === 'stage';
@@ -1050,7 +1052,7 @@
         milBtn = '<div style="margin-top:5px;"><button class="btn-mil-agenda" data-date="'+e.date+'" data-mid="'+(e.milId||'')+'" data-mn="'+_mSafeNom+'" data-coming="'+(_mComing?'1':'')+'" style="padding:4px 10px;font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;border-radius:5px;border:1.5px solid '+color+';cursor:pointer;background:'+(_mComing?color:'transparent')+';color:'+(_mComing?'#000':color)+';">'+(_mComing?'J\'y vais\u00a0!':'Je pense venir')+'</button></div>';
       }
       html += `<div class="event-item${isStage ? ' event-stage' : ''}"${isStage ? ` onclick="gotoStageInscription('${e.date}')" title="Cliquer pour s'inscrire"` : ''}>
-        <div class="event-date-col">
+        <div class="event-date-col"${sameDate ? ' style="visibility:hidden;"' : ''}>
           <div class="event-day">${d.getDate()}</div>
           <div class="event-month-lbl">${MOIS_COURT[d.getMonth()]}</div>
         </div>
