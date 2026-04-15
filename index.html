@@ -59,7 +59,7 @@
   const TAR_TECH=_tSt.stage_technique||20, TAR_STG=_tSt.stage_1||25;
 
   const DEMO_DATA = {
-    eleve: { id: 'E001', nom: 'Marie Dupont', niveau: 'Débutant', email: 'marie@ex.com' },
+    eleve: { id: 'E001', prenom: 'Marie', nom: 'Dupont', niveau: 'Débutant', email: 'marie@ex.com', tel: '06 12 34 56 78' },
     carte: {
       type: 'carte10', // 'carte10' ou 'forfait'
       coursUtilises: 7, coursRestants: 3,
@@ -782,6 +782,50 @@
       });
     }
 
+    // ── Milongas confirmées ────────────────────────────────────
+    const _milPres = _loadMilPresences().filter(p =>
+      (p.email || '').toLowerCase() === (emailEleve || '').toLowerCase() && p.date >= todayStr
+    );
+    if (_milPres.length) {
+      _milPres.sort((a,b) => a.date.localeCompare(b.date));
+      h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px;text-align:center;">🎶 Mes prochaines milongas</div>';
+      const _today0 = new Date(todayStr + 'T00:00:00');
+      _milPres.forEach(p => {
+        let _mColor = '#e040a0';
+        if (MILONGAS_OBJ) {
+          const _mObj = MILONGAS_OBJ.find(m => m.id === p.milongaId);
+          if (_mObj) _mColor = _mObj.color || '#e040a0';
+        }
+        const _mCr = _mColor.replace(/^#/,'');
+        const _mr = parseInt(_mCr.slice(0,2),16), _mg = parseInt(_mCr.slice(2,4),16), _mb = parseInt(_mCr.slice(4,6),16);
+        const dmp = new Date(p.date + 'T00:00:00');
+        const _dLeft = Math.round((dmp - _today0) / 86400000);
+        const _ctdwn = _dLeft === 0 ? "Aujourd'hui\u00a0!" : _dLeft === 1 ? 'Demain\u00a0!' : 'Dans\u00a0' + _dLeft + '\u00a0jour' + (_dLeft > 1 ? 's' : '');
+        const _mlbl = cap(JOURS_LONG[dmp.getDay()]) + ' ' + dmp.getDate() + ' ' + MOIS_LOC[dmp.getMonth()] + ' ' + dmp.getFullYear();
+        const _mNomSafe = (p.milongaNom || 'Milonga').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const _mIdSafe  = (p.milongaId  || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const _mDateSafe = p.date.replace(/'/g,"\\'");
+        h += '<div style="background:rgba('+_mr+','+_mg+','+_mb+',0.07);border:1px solid rgba('+_mr+','+_mg+','+_mb+',0.25);border-left:4px solid '+_mColor+';border-radius:12px;padding:16px 18px;margin-bottom:10px;">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;">'
+          +   '<div>'
+          +     '<div style="font-size:15px;font-weight:700;color:'+_mColor+';margin-bottom:2px;">🎶 '+(p.milongaNom||'Milonga')+'</div>'
+          +     '<div style="font-size:14px;font-weight:500;color:#fff;">'+_mlbl+'</div>'
+          +   '</div>'
+          +   '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">'
+          +     '<span style="font-size:11px;font-weight:700;color:'+_mColor+';background:rgba('+_mr+','+_mg+','+_mb+',0.18);border-radius:20px;padding:3px 10px;white-space:nowrap;">'+_ctdwn+'</span>'
+          +     '<span style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;background:'+_mColor+';color:#000;border-radius:20px;padding:3px 10px;white-space:nowrap;">✓\u00a0Je viens</span>'
+          +   '</div>'
+          + '</div>'
+          + '<div style="padding-top:8px;border-top:1px solid rgba('+_mr+','+_mg+','+_mb+',0.15);">'
+          +   '<button onclick="_milCancelAcc(\''+_mDateSafe+'\',\''+_mIdSafe+'\',\''+_mNomSafe+'\')" '
+          +     'style="padding:4px 12px;font-size:11px;font-weight:600;border-radius:20px;border:1px solid rgba(255,255,255,0.18);background:transparent;color:rgba(255,255,255,0.42);cursor:pointer;">'
+          +     'Annuler ma venue'
+          +   '</button>'
+          + '</div>'
+          + '</div>';
+      });
+    }
+
     h += '</div>'; // padding
     pane.innerHTML = h;
   }
@@ -1011,9 +1055,9 @@
       if (isMilonga) {
         const _mPresences = _loadMilPresences();
         const _mEmailLow = (eleveData.eleve.email || '').toLowerCase().trim();
-        const _mComing = _mEmailLow && _mPresences.some(p => p.date === e.date && (p.email||'').toLowerCase() === _mEmailLow);
+        const _mComing = !!(_mEmailLow && _mPresences.some(p => p.date === e.date && (p.email||'').toLowerCase() === _mEmailLow));
         const _mSafeNom = (e.milNom || e.titre).replace(/"/g, '&quot;');
-        milBtn = `<div style="margin-top:5px;"><button class="btn-mil-agenda" data-date="${e.date}" data-mid="${e.milId||''}" data-mn="${_mSafeNom}" style="padding:4px 10px;font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;border-radius:5px;border:1.5px solid ${color};cursor:pointer;background:${_mComing ? color : 'transparent'};color:${_mComing ? '#000' : color};">${_mComing ? '\u2713\u00a0Je viens' : 'Je pense venir'}</button></div>`;
+        milBtn = '<div style="margin-top:5px;"><button class="btn-mil-agenda" data-date="'+e.date+'" data-mid="'+(e.milId||'')+'" data-mn="'+_mSafeNom+'" data-coming="'+(_mComing?'1':'')+'" style="padding:4px 10px;font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;border-radius:5px;border:1.5px solid '+color+';cursor:pointer;background:'+(_mComing?color:'transparent')+';color:'+(_mComing?'#000':color)+';">'+(_mComing?'\u2713\u00a0Je viens':'Je pense venir')+'</button></div>';
       }
       html += `<div class="event-item${isStage ? ' event-stage' : ''}"${isStage ? ` onclick="gotoStageInscription('${e.date}')" title="Cliquer pour s'inscrire"` : ''}>
         <div class="event-date-col">
@@ -1032,8 +1076,13 @@
     document.querySelectorAll('#agenda-list .btn-mil-agenda').forEach(btn => {
       btn.addEventListener('click', function(ev) {
         ev.stopPropagation();
-        const _going = btn.style.background && btn.style.background !== 'transparent' && btn.style.background !== '';
-        _toggleMilPresence(btn.dataset.date, btn.dataset.mid, btn.dataset.mn, eleveData.eleve || {}, !_going);
+        const _going = btn.dataset.coming === '1';
+        const _nowGoing = !_going;
+        _toggleMilPresence(btn.dataset.date, btn.dataset.mid, btn.dataset.mn, eleveData.eleve || {}, _nowGoing);
+        if (_nowGoing) {
+          const _d2 = new Date(btn.dataset.date + 'T00:00:00');
+          _showInAppNotif('\u2705 Noté\u00a0! Votre venue à ' + (btn.dataset.mn || 'la milonga') + ' le ' + _d2.getDate() + '\u00a0' + MOIS_LONG[_d2.getMonth()] + ' est enregistrée.');
+        }
         renderAgendaList(filter);
       });
     });
@@ -1199,6 +1248,26 @@
     _saveMilPresences(list);
   }
 
+  // Fonctions globales milonga (inline onclick — robustes après innerHTML)
+  window._milJeViens = function(date, milId, milNom) {
+    _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, true);
+    const _d = new Date(date + 'T00:00:00');
+    const _df = _d.getDate() + '\u00a0' + MOIS_LONG[_d.getMonth()];
+    _showInAppNotif('\u2705 Noté\u00a0! Votre venue à ' + (milNom || 'la milonga') + ' le ' + _df + ' est enregistrée.');
+    renderMilonga();
+    if (currentTab === 'accueil') renderAccueil();
+  };
+  window._milAnnuler = function(date, milId, milNom) {
+    _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, false);
+    renderMilonga();
+    if (currentTab === 'accueil') renderAccueil();
+  };
+  window._milCancelAcc = function(date, milId, milNom) {
+    _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, false);
+    renderAccueil();
+    if (currentTab === 'milonga') renderMilonga();
+  };
+
   function renderMilonga() {
     const todayStr = new Date().toISOString().slice(0,10);
     const elv = eleveData.eleve || {};
@@ -1245,42 +1314,42 @@
         .concat(others.map(p => p.prenom + (p.nom ? '\u00a0' + p.nom.charAt(0) + '.' : '')))
         .join(', ');
 
-      html += `<div class="card" style="margin-bottom:12px;border-left:3px solid ${C};">
-        <div style="font-size:18px;font-weight:800;color:${C};margin-bottom:8px;letter-spacing:.3px;">🎶 ${mil.nom}</div>
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;color:var(--text);">📅 ${df}</div>
-            <div style="font-size:12px;color:var(--dim);margin-top:2px;">⏱ ${mil.horaire_debut||'17h30'}\u2013${mil.horaire_fin||'23h30'}</div>
-            <div style="font-size:12px;color:var(--dim);margin-top:2px;">📍 ${mil.lieu.nom} \u2014 ${mil.lieu.rue}</div>
-          </div>
-          <button class="btn-mil-tog" data-date="${item.date}" data-mid="${mil.id}" data-mn="${mil.nom.replace(/"/g,'&quot;')}"
-            style="padding:8px 14px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:6px;border:2px solid ${C};cursor:pointer;white-space:nowrap;transition:all .2s;background:${isComing ? C : 'transparent'};color:${isComing ? '#000' : C};">
-            ${isComing ? '✓\u00a0Je viens' : 'Je pense venir'}
-          </button>
-        </div>
-        <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;">
-          ${presForDate.length
-            ? `<span style="color:var(--dim);">${presForDate.length} personne${presForDate.length > 1 ? 's prévoient' : ' prévoit'} de venir :</span> <span style="color:var(--text);">${nameList}</span>`
-            : `<span style="color:var(--dim);font-style:italic;">Personne n'a encore indiqué sa venue — soyez le premier !</span>`}
-        </div>
-      </div>`;
+      const _mns = mil.nom.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+      const _mids = (mil.id||'').replace(/'/g,"\\'");
+      const _mdates = item.date;
+      const _lieu = (mil.lieu && mil.lieu.nom) ? mil.lieu.nom + ' \u2014 ' + mil.lieu.rue : '';
+      html += '<div style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-left:3px solid '+C+';border-radius:10px;padding:14px 14px 12px;">'
+        + '<div style="font-size:18px;font-weight:800;color:'+C+';margin-bottom:8px;letter-spacing:.3px;">🎶 '+mil.nom+'</div>'
+        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">'
+        +   '<div style="flex:1;min-width:0;">'
+        +     '<div style="font-size:13px;color:var(--text);">📅 '+df+'</div>'
+        +     '<div style="font-size:12px;color:var(--dim);margin-top:2px;">⏱ '+(mil.horaire_debut||'17h30')+'\u2013'+(mil.horaire_fin||'23h30')+'</div>'
+        +     (_lieu ? '<div style="font-size:12px;color:var(--dim);margin-top:2px;">📍 '+_lieu+'</div>' : '')
+        +   '</div>'
+        +   (isComing
+              ? '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">'
+                + '<span style="display:inline-block;padding:5px 11px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;border-radius:20px;background:'+C+';color:#000;white-space:nowrap;">✓\u00a0Je viens</span>'
+                + '<button onclick="_milAnnuler(\''+_mdates+'\',\''+_mids+'\',\''+_mns+'\')" style="padding:3px 9px;font-size:10px;font-weight:600;border-radius:20px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;background:transparent;color:rgba(255,255,255,0.42);">Annuler</button>'
+                + '</div>'
+              : '<button onclick="_milJeViens(\''+_mdates+'\',\''+_mids+'\',\''+_mns+'\')" style="flex-shrink:0;padding:8px 14px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:6px;border:2px solid '+C+';cursor:pointer;white-space:nowrap;background:transparent;color:'+C+';">Je pense venir</button>')
+        + '</div>'
+        + '<div style="padding-top:10px;border-top:1px solid var(--border);">'
+        +   '<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:6px;">Qui sera là ?</div>'
+        +   (presForDate.length
+              ? '<div style="font-size:13px;color:var(--text);line-height:1.6;">'
+                + presForDate.map(p => {
+                    const isMe = (p.email||'').toLowerCase() === emailLow;
+                    return isMe
+                      ? '<strong style="color:'+C+'">Vous</strong>'
+                      : (p.prenom || '') + (p.nom ? '\u00a0' + p.nom.charAt(0) + '.' : '');
+                  }).join(' &middot; ')
+                + '</div>'
+              : '<div style="font-size:12px;color:var(--dim);font-style:italic;">Personne n\'a encore indiqué sa venue — soyez le premier\u00a0!</div>')
+        + '</div>'
+        + '</div>';
     });
 
     $('milonga-pane').innerHTML = html;
-
-    document.querySelectorAll('#milonga-pane .btn-mil-tog').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const isComing = btn.style.background && btn.style.background !== 'transparent' && btn.style.background !== '';
-        const nowComing = !isComing;
-        _toggleMilPresence(btn.dataset.date, btn.dataset.mid, btn.dataset.mn, eleveData.eleve || {}, nowComing);
-        if (nowComing) {
-          const d = new Date(btn.dataset.date + 'T00:00:00');
-          const df = d.getDate() + '\u00a0' + MOIS_LONG[d.getMonth()];
-          _showInAppNotif('\u2705 Noté\u00a0! Votre venue à ' + (btn.dataset.mn || 'la milonga') + ' le ' + df + ' est enregistrée.');
-        }
-        renderMilonga();
-      });
-    });
   }
 
   // ================================================================
