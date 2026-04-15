@@ -4319,7 +4319,9 @@ function renderRepertoire() {
 
 function renderElevesTango() {
   var sai = saisonActive();
-  var inscrits = (adminData.coursTango||[]).filter(function(e){return e.statut==='inscrit'&&(e.saison||saisonCourante())===sai;});
+  var tous = (adminData.coursTango||[]).filter(function(e){return (e.saison||saisonCourante())===sai;});
+  var inscrits = tous.filter(function(e){return e.statut==='inscrit';});
+  var supprimes = tous.filter(function(e){return e.statut==='supprimé';});
   var ONGLETS = [
     {id:'paris-deb',     lbl:'Paris Débutants',          ville:'paris',     niv:'debutant'},
     {id:'paris-int',     lbl:'Paris Intermédiaires',      ville:'paris',     niv:'intermediaire'},
@@ -4339,7 +4341,7 @@ function renderElevesTango() {
     return h + renderFormulaireInscriptionDirecteAdmin();
   }
   h+='<div style="margin-bottom:10px;"><input type="search" id="rech-eleve" value="'+rechercheEleve.replace(/"/g,'&quot;')+'" placeholder="🔍 Rechercher parmi tous les cours..." oninput="majRechercheEleve(this.value)" style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;" autocomplete="off"></div>';
-  h+='<div id="eleves-resultats">'+_elevesResultatsHTML(inscrits)+'</div>';
+  h+='<div id="eleves-resultats">'+_elevesResultatsHTML(inscrits,supprimes)+'</div>';
   return h;
 }
 function _elevesOnglets() {
@@ -4350,24 +4352,35 @@ function _elevesOnglets() {
     {id:'vincennes-int', ville:'vincennes', niv:'intermediaire'}
   ];
 }
-function _elevesResultatsHTML(inscrits) {
+function _elevesResultatsHTML(inscrits, supprimes) {
+  supprimes = supprimes || [];
   var q=rechercheEleve.toLowerCase().trim();
   if(q) {
     var resultats=inscrits.filter(function(e){
       return (e.prenom+' '+e.nom+' '+(e.partenaire||'')+' '+(e.email||'')).toLowerCase().indexOf(q)>=0;
     });
-    if(!resultats.length) return '<div class="empty-state">Aucun élève trouvé pour « '+rechercheEleve+' ».</div>';
-    var r='<div style="font-size:11px;color:var(--dim);padding:4px 0 10px;">'+resultats.length+' résultat'+(resultats.length>1?'s':'')+' dans tous les cours</div>';
+    var resultatsSupp=supprimes.filter(function(e){
+      return (e.prenom+' '+e.nom+' '+(e.partenaire||'')+' '+(e.email||'')).toLowerCase().indexOf(q)>=0;
+    });
+    var total=resultats.length+resultatsSupp.length;
+    if(!total) return '<div class="empty-state">Aucun élève trouvé pour « '+rechercheEleve+' ».</div>';
+    var r='<div style="font-size:11px;color:var(--dim);padding:4px 0 10px;">'+total+' résultat'+(total>1?'s':'')+' dans tous les cours</div>';
     resultats.sort(function(a,b){return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);});
     resultats.forEach(function(e){
       r+='<div style="font-size:10px;color:var(--dim);padding:6px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'+e.cours+'</div>';
       r+=ficheEleveInscrit(e,'');
+    });
+    resultatsSupp.sort(function(a,b){return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);});
+    resultatsSupp.forEach(function(e){
+      r+='<div style="font-size:10px;color:var(--dim);padding:6px 0 2px;border-top:1px solid var(--border);margin-top:4px;opacity:.5;">'+e.cours+' — archivé·e</div>';
+      r+=ficheEleveInscrit(e,'',true);
     });
     return r;
   }
   var ong=_elevesOnglets().find(function(o){return o.id===sousOngletEleves;});
   if(!ong) return '';
   var liste=inscrits.filter(function(e){return e.ville===ong.ville&&e.niveau===ong.niv;});
+  var listeSupp=supprimes.filter(function(e){return e.ville===ong.ville&&e.niveau===ong.niv;});
   var cap=capaciteCours(ong.ville,ong.niv);
   var noLimEl=noLimitsTangoToday();
   function capCol(n,max){return n>=max?'#ff6b6b':n>=Math.round(max*0.85)?'#ffaa44':'#4ade80';}
@@ -4379,7 +4392,7 @@ function _elevesResultatsHTML(inscrits) {
        +'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gde,cap.maxGde)+';">👩 '+cap.gde+' / '+cap.maxGde+' guidées</span>'
        +(cap.fullGui||cap.fullGde?'<span style="font-size:11px;font-weight:700;color:#ff6b6b;border:1px solid #ff6b6b;border-radius:4px;padding:1px 6px;">COMPLET</span>':''))
     +'</div>';
-  if(!liste.length) return r+'<div class="empty-state">Aucun élève inscrit dans ce cours.</div>';
+  if(!liste.length&&!listeSupp.length) return r+'<div class="empty-state">Aucun élève inscrit dans ce cours.</div>';
   var used={}, couples=[], soloGui=[], soloGde=[];
   liste.forEach(function(e){
     if(used[e.email]) return;
@@ -4404,14 +4417,19 @@ function _elevesResultatsHTML(inscrits) {
       if(si<soloGde.length) r+=ficheEleveInscrit(soloGde[si],'');
     }
   }
+  if(listeSupp.length){
+    r+='<div class="section-hdr" style="opacity:.5;border-top:1px dashed var(--border);margin-top:10px;padding-top:8px;">Archivé·e·s ('+listeSupp.length+')</div>';
+    listeSupp.forEach(function(e){r+=ficheEleveInscrit(e,'border-top:1px solid var(--border);',true);});
+  }
   return r;
 }
-function ficheEleveInscrit(e, borderStyle) {
+function ficheEleveInscrit(e, borderStyle, grise) {
   var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
   var roleLbl=e.role==='guideur'?'Guideur':'Guidée';
   var typeLbl={forfait:'Forfait',carte10:'Carte 10',unitaire:'À l\'unité'}[e.type]||e.type||'';
   var paiLbl=PAI_LBL[e.paiement]||e.paiement||'';
-  return '<div class="point-row" style="'+(borderStyle||'')+'flex-wrap:wrap;align-items:center;gap:5px;padding:8px 0;">'
+  var griseStyle=grise?'opacity:.38;filter:grayscale(1);':'';
+  return '<div class="point-row" style="'+(borderStyle||'')+griseStyle+'flex-wrap:wrap;align-items:center;gap:5px;padding:8px 0;">'
     +'<div style="flex:1;min-width:160px;">'
     +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+'</div>'
     +(e.partenaire?'<div class="point-sub">♥ '+e.partenaire+'</div>':'')
@@ -4467,7 +4485,7 @@ function supprimerEleve(id) {
   var h='<div class="modal-titre" style="color:#ff6b6b;">🗑 Supprimer l\'élève</div>'
     +'<div style="font-size:14px;font-weight:600;margin-bottom:8px;">'+e.prenom+' '+e.nom+'</div>'
     +'<div style="font-size:12px;color:var(--dim);margin-bottom:18px;">'+e.cours+'</div>'
-    +'<div style="font-size:12px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:10px;margin-bottom:16px;color:#ff6b6b;">Cette action est irréversible. L\'élève sera retiré·e de la liste.</div>'
+    +'<div style="font-size:12px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:10px;margin-bottom:16px;color:#ff6b6b;">L\'élève sera archivé·e et apparaîtra en grisé en bas de la liste.</div>'
     +'<div class="btn-row">'
     +'<button class="btn" style="flex:2;background:#ff6b6b;color:#fff;" onclick="confirmerSupprimerEleve(\''+id+'\')">🗑 Confirmer la suppression</button>'
     +'<button class="btn btn-ghost" data-action="fermer-contact">Annuler</button>'
@@ -4479,21 +4497,20 @@ function confirmerSupprimerEleve(id) {
   var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
   if(!e){fermerContact();return;}
   var nom=e.prenom+' '+e.nom;
-  var email=e.email;
-  adminData.coursTango=(adminData.coursTango||[]).filter(function(x){return x.id!==id;});
-  adminData.cartes=(adminData.cartes||[]).filter(function(x){return x.email!==email;});
+  e.statut='supprimé';
   fermerContact();
-  afficherToast('🗑 '+nom+' supprimé·e');
-  if(IS_DEMO){recalcStats();renderTab();}
-  else{postAS({action:'supprimerEleve',id:id,email:email}).then(function(){chargerDonnees();}).catch(function(){chargerDonnees();});}
+  afficherToast('🗑 '+nom+' archivé·e');
+  renderTab();
 }
 function majRechercheEleve(val) {
   rechercheEleve = val;
   var zone = gel('eleves-resultats');
   if (!zone) return;
   var sai = saisonActive();
-  var inscrits = (adminData.coursTango||[]).filter(function(e){return e.statut==='inscrit'&&(e.saison||saisonCourante())===sai;});
-  zone.innerHTML = _elevesResultatsHTML(inscrits);
+  var tous = (adminData.coursTango||[]).filter(function(e){return (e.saison||saisonCourante())===sai;});
+  var inscrits = tous.filter(function(e){return e.statut==='inscrit';});
+  var supprimes = tous.filter(function(e){return e.statut==='supprimé';});
+  zone.innerHTML = _elevesResultatsHTML(inscrits,supprimes);
 }
 function basculerRole(id) {
   var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
