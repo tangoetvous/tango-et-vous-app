@@ -708,31 +708,34 @@
     h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#e05252;font-weight:700;margin-bottom:10px;">📅 Prochains rendez-vous</div>';
     h += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">';
 
-    // Prochain cours — 1 ligne
+    // Prochain cours — 1 ligne avec horaire
     h += '<div style="background:rgba(96,176,255,0.07);border:1px solid rgba(96,176,255,0.2);border-left:3px solid #60b0ff;border-radius:8px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
       + '<span style="font-size:10px;font-weight:700;color:#60b0ff;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">PROCHAIN COURS</span>'
-      + '<span style="font-size:13px;font-weight:600;color:#fff;text-align:right;">' + (prochainCours ? fmtLong(prochainCours) : 'Aucun à venir') + '</span>'
+      + '<span style="font-size:13px;font-weight:600;color:#fff;text-align:right;">' + (prochainCours ? fmtLong(prochainCours) + ' \u00b7 ' + coursHeure.toUpperCase() : 'Aucun à venir') + '</span>'
       + '</div>';
 
-    // Prochain stage — 1-2 lignes
+    // Prochain stage — 1-2 lignes avec horaire et thème en majuscule
     if (prochainStage) {
       const ds = new Date(prochainStage.date + 'T00:00:00');
       const stageLbl = (cap(JOURS_LONG[ds.getDay()]) + ' ' + ds.getDate() + ' ' + MOIS_LOC[ds.getMonth()]).toUpperCase();
-      const thème = prochainStage.s1 ? prochainStage.s1 + (prochainStage.s2 ? ' · ' + prochainStage.s2 : '') : '';
+      const _psDebut = prochainStage.technique ? HST.tech_deb : HST.s1_deb;
+      const _psFin = ({1:HST.s1_fin,2:HST.s2_fin,3:HST.s3_fin,4:HST.s4_fin}[prochainStage.nStages||2]) || HST.s2_fin;
+      const _psH = (_psDebut + '\u2013' + _psFin).toUpperCase();
+      const thème = prochainStage.s1 ? (prochainStage.s1 + (prochainStage.s2 ? ' \u00b7 ' + prochainStage.s2 : '')).toUpperCase() : '';
       h += '<div style="background:rgba(181,123,238,0.07);border:1px solid rgba(181,123,238,0.2);border-left:3px solid #b57bee;border-radius:8px;padding:9px 12px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
         + '<span style="font-size:10px;font-weight:700;color:#b57bee;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">PROCHAIN STAGE</span>'
-        + '<span style="font-size:13px;font-weight:600;color:#fff;text-align:right;">' + stageLbl + '</span>'
+        + '<span style="font-size:13px;font-weight:600;color:#fff;text-align:right;">' + stageLbl + ' \u00b7 ' + _psH + '</span>'
         + '</div>'
         + (thème ? '<div style="font-size:12px;color:#fff;margin-top:3px;text-align:right;">' + thème + '</div>' : '')
         + '</div>';
     }
 
-    // Prochaine milonga — 1-2 lignes
+    // Prochaine milonga — 1-2 lignes avec horaire
     if (prochaineMilonga) {
       const _mc  = (_nextMilEvt && _nextMilEvt.color) || '#ff8c00';
       const _mn  = (_nextMilEvt && _nextMilEvt.nom)   || 'La Dolce Vita';
-      const _mh  = _nextMilEvt ? _nextMilEvt.hdeb+'\u2013'+_nextMilEvt.hfin : '17h30\u201323h30';
+      const _mh  = (_nextMilEvt ? _nextMilEvt.hdeb+'\u2013'+_nextMilEvt.hfin : '17h30\u201323h30').toUpperCase();
       const _mcR = _mc.replace(/^#/,'');
       const _r   = parseInt(_mcR.slice(0,2),16), _g = parseInt(_mcR.slice(2,4),16), _b = parseInt(_mcR.slice(4,6),16);
       h += '<div style="background:rgba('+_r+','+_g+','+_b+',0.07);border:1px solid rgba('+_r+','+_g+','+_b+',0.2);border-left:3px solid '+_mc+';border-radius:8px;padding:9px 12px;">'
@@ -766,10 +769,14 @@
         const _daysLeft = Math.round((dsi - _today0) / 86400000);
         const _ctdwn = _daysLeft === 0 ? "Aujourd'hui\u00a0!" : _daysLeft === 1 ? 'Demain\u00a0!' : 'Dans\u00a0' + _daysLeft + '\u00a0j';
         const ateliers = s.ateliers || s.slots || [];
-        const _theme = ateliers.join(' \u00b7 ');
+        const _theme = ateliers.length ? ateliers.join(' \u00b7 ').toUpperCase() : '';
+        const _sdRef = STAGES_DATA.find(x => x.date === _dateStr);
+        const _sDebut = _sdRef ? (_sdRef.technique ? HST.tech_deb : HST.s1_deb) : HST.tech_deb;
+        const _sFin = ({1:HST.s1_fin,2:HST.s2_fin,3:HST.s3_fin,4:HST.s4_fin}[(_sdRef&&_sdRef.nStages)||2]) || HST.s2_fin;
+        const _sHoraire = (_sDebut + '\u2013' + _sFin).toUpperCase();
         h += '<div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.25);border-left:3px solid var(--gold);border-radius:8px;padding:9px 12px;margin-bottom:6px;">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-          + '<span style="font-size:13px;font-weight:600;color:#fff;">' + lbl + '</span>'
+          + '<span style="font-size:13px;font-weight:600;color:#fff;">' + lbl + ' \u00b7 ' + _sHoraire + '</span>'
           + '<span style="font-size:11px;font-weight:700;color:var(--gold);background:rgba(212,175,55,0.15);border-radius:20px;padding:2px 9px;white-space:nowrap;">' + _ctdwn + '</span>'
           + '</div>'
           + (_theme ? '<div style="font-size:12px;color:#fff;margin-top:3px;">' + _theme + '</div>' : '')
@@ -787,10 +794,17 @@
       const _today0 = new Date(todayStr + 'T00:00:00');
       _milPres.forEach(p => {
         let _mColor = '#ff8c00';
+        let _mhDebut = '17h30', _mhFin = '23h30';
         if (MILONGAS_OBJ) {
           const _mObj = MILONGAS_OBJ.find(m => m.id === p.milongaId);
-          if (_mObj) _mColor = _mObj.color || '#ff8c00';
+          if (_mObj) {
+            _mColor = _mObj.color || '#ff8c00';
+            const _mDE = (_mObj.dates||[]).find(d => d.date === p.date);
+            _mhDebut = (_mDE && _mDE.horaire_debut) || _mObj.horaire_debut || '17h30';
+            _mhFin   = (_mDE && _mDE.horaire_fin)   || _mObj.horaire_fin   || '23h30';
+          }
         }
+        const _mHoraire = (_mhDebut + '\u2013' + _mhFin).toUpperCase();
         const _mCr = _mColor.replace(/^#/,'');
         const _mr = parseInt(_mCr.slice(0,2),16), _mg = parseInt(_mCr.slice(2,4),16), _mb = parseInt(_mCr.slice(4,6),16);
         const dmp = new Date(p.date + 'T00:00:00');
@@ -804,7 +818,6 @@
           + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
           +   '<div style="min-width:0;">'
           +     '<span style="font-size:12px;font-weight:700;color:'+_mColor+';">'+(p.milongaNom||'Milonga')+'</span>'
-          +     '<span style="font-size:13px;color:#fff;margin-left:6px;">'+_mlbl+'</span>'
           +   '</div>'
           +   '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">'
           +     '<span style="font-size:10px;font-weight:700;color:'+_mColor+';background:rgba('+_mr+','+_mg+','+_mb+',0.18);border-radius:20px;padding:2px 7px;white-space:nowrap;">'+_ctdwn+'</span>'
@@ -812,6 +825,7 @@
           +     '<button onclick="_milCancelAcc(\''+_mDateSafe+'\',\''+_mIdSafe+'\',\''+_mNomSafe+'\')" style="padding:2px 7px;font-size:10px;font-weight:600;border-radius:20px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:rgba(255,255,255,0.7);cursor:pointer;white-space:nowrap;">✕</button>'
           +   '</div>'
           + '</div>'
+          + '<div style="font-size:12px;color:#fff;margin-top:3px;">'+_mlbl+' \u00b7 '+_mHoraire+'</div>'
           + '</div>';
       });
     }
