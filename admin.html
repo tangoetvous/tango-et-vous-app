@@ -5906,13 +5906,18 @@ function getEventsForDate(dateStr) {
   return evts;
 }
 // ── Onglet WhatsApp — QR codes ────────────────────────────────
-function _driveImgUrl(url) {
+function _driveFileId(url) {
   if (!url) return '';
   var m = url.match(/\/file\/d\/([^/?&#]+)/);
-  if (m) return 'https://drive.google.com/uc?export=view&id=' + m[1];
+  if (m) return m[1];
   m = url.match(/[?&]id=([^&]+)/);
-  if (m) return 'https://drive.google.com/uc?export=view&id=' + m[1];
-  return url;
+  if (m) return m[1];
+  return '';
+}
+function _driveImgUrl(url) {
+  var id = _driveFileId(url);
+  if (id) return 'https://drive.google.com/thumbnail?id=' + id + '&sz=w400';
+  return url; // URL directe passée telle quelle
 }
 function renderWhatsapp() {
   var sai = saisonActive();
@@ -5932,12 +5937,18 @@ function renderWhatsapp() {
   h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">';
   cours.forEach(function(c) {
     var v = d[c.key] || {};
-    var imgUrl = _driveImgUrl(v.qr || '');
+    var imgUrl = v.qr ? _driveImgUrl(v.qr) : '';
+    var driveLink = (v.qr||'').replace(/"/g,'&quot;');
     h += '<div class="card" style="text-align:center;padding:18px 14px;">';
     h += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:14px;">'+c.label+'</div>';
     if (imgUrl) {
-      h += '<img src="'+imgUrl.replace(/"/g,'&quot;')+'" alt="QR '+c.key+'" style="max-width:180px;width:100%;border-radius:8px;border:1px solid var(--border);" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\';">';
-      h += '<div style="display:none;font-size:11px;color:var(--dim);padding:8px 0;">Impossible de charger l\'image.<br>V\u00e9rifiez le lien dans Param\u00e8tres.</div>';
+      h += '<img src="'+imgUrl.replace(/"/g,'&quot;')+'" alt="QR '+c.key+'"'
+        +' style="max-width:180px;width:100%;border-radius:8px;border:1px solid var(--border);"'
+        +' onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\';">';
+      h += '<div style="display:none;flex-direction:column;align-items:center;gap:8px;padding:10px 0;">'
+        +'<div style="font-size:11px;color:var(--dim);">Aper\u00e7u non disponible</div>'
+        +(driveLink?'<a href="'+driveLink+'" target="_blank" rel="noopener" style="font-size:12px;color:var(--gold);text-decoration:none;">\uD83D\uDCC2 Ouvrir le QR dans Drive</a>':'')
+        +'</div>';
     } else {
       h += '<div style="font-size:11px;color:var(--dim);padding:16px 0;">Pas de QR code configur\u00e9.</div>';
     }
