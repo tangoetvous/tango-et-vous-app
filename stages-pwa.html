@@ -706,6 +706,28 @@ function renderTarifsBloc() {
   if(el) el.innerHTML='<div class="tarifs-titre">Tarifs par personne</div><div class="tarifs-grid">'+lines.join('')+'</div><div class="paiement-note">💵 Le paiement s\'effectue sur place le jour du stage.</div><div style="margin-top:10px;font-size:12px;color:#7a6030;font-style:italic;line-height:1.5;">Ces tarifs peuvent varier pour les Stages sp\u00e9ciaux et pour les cours avant les milongas.</div>';
 }
 
+// ── Préremplissage coordonnées ──────────────────────────────────
+function prefillFromParams(p) {
+  if (!p) return;
+  var v = function(id, val) { var el = document.getElementById(id); if (el && val) { el.value = val; el.classList.remove('invalid'); } };
+  v('prenom',    p.get('prenom') || '');
+  v('nom',       p.get('nom')    || '');
+  v('email',     p.get('email')  || '');
+  v('telephone', p.get('tel')    || '');
+}
+
+// Écoute postMessage depuis le parent (admin.html sélectionne un élève)
+window.addEventListener('message', function(ev) {
+  if (!ev.data || ev.data.type !== 'fillForm') return;
+  var d = ev.data.data || {};
+  var p = new URLSearchParams();
+  if (d.prenom) p.set('prenom', d.prenom);
+  if (d.nom)    p.set('nom',    d.nom);
+  if (d.email)  p.set('email',  d.email);
+  if (d.tel)    p.set('tel',    d.tel);
+  prefillFromParams(p);
+});
+
 // ── Auto-resize iframe ──────────────────────────────────────────
 function autoResizeIframe() {
   try {
@@ -1233,6 +1255,9 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('btnRetour').addEventListener('click', allerEtape1);
   document.getElementById('btnSubmit').addEventListener('click', soumettre);
 
+  // Préremplissage depuis les paramètres URL (interface élève)
+  prefillFromParams(new URLSearchParams(window.location.search));
+
   // Redimensionner l'iframe parente après le chargement initial
   autoResizeIframe();
 
@@ -1272,9 +1297,16 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 // Mise à jour en temps réel si les Paramètres changent dans un autre onglet
+// Exclure tev_pending_inscriptions et tev_stages_inscrits pour ne pas recharger
+// la page et effacer la confirmation après une inscription
 window.addEventListener('storage', function(e) {
   if (!e.key) return;
-  if (e.key.startsWith('tev_')) { location.reload(); }
+  if (e.key.startsWith('tev_')
+      && !e.key.startsWith('tev_plan_')
+      && e.key !== 'tev_pending_inscriptions'
+      && e.key !== 'tev_stages_inscrits') {
+    location.reload();
+  }
 });
 </script>
 </body>

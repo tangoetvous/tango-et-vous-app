@@ -307,6 +307,22 @@ let S = freshState();
   }
 })();
 
+// Préremplissage via postMessage depuis le parent (interface élève)
+window.addEventListener('message', function(ev) {
+  if (!ev.data || ev.data.type !== 'fillForm') return;
+  var d = ev.data.data || {};
+  if (d.prenom) S.prenom = d.prenom;
+  if (d.nom)    S.nom    = d.nom;
+  if (d.email)  S.email  = d.email;
+  if (d.tel)    S.tel    = d.tel;
+  // Mettre à jour les champs si l'étape 'qui' est déjà rendue
+  ['pre:prenom','nom:nom','eml:email','tel:tel'].forEach(function(pair) {
+    var parts = pair.split(':');
+    var el = document.getElementById('i-'+parts[0]);
+    if (el && d[parts[1]]) el.value = d[parts[1]];
+  });
+});
+
 // ================================================================
 // STEPS CONFIG
 // ================================================================

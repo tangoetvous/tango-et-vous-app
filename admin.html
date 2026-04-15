@@ -3573,6 +3573,20 @@ function bindTabEvents(el) {
   el.addEventListener('change', function(ev) {
     var sel = ev.target.closest('[data-change-vp]');
     if (sel && sel.id==='vp-eleve-select') prefillVP(sel.value);
+    // Préremplissage élève dans formulaire stage (admin sélectionne un élève)
+    if (ev.target.id === 'admin-stage-student-sel') {
+      var _selVal = ev.target.value;
+      if (_selVal) {
+        try {
+          var _selStud = JSON.parse(decodeURIComponent(_selVal));
+          var _stIframe = document.getElementById('admin-stage-iframe');
+          if (_stIframe && _stIframe.contentWindow) {
+            _stIframe.contentWindow.postMessage({type:'fillForm', data:_selStud}, '*');
+          }
+        } catch(_e) {}
+      }
+      return;
+    }
     // Toggle bloc partenaire dans formulaire stage
     if (ev.target.name==='si-sit') {
       var bloc = el.querySelector('#si-part-bloc');
@@ -5515,8 +5529,32 @@ function stageMoveInsrit(date, idx, dir) {
 }
 
 function renderFormulaireStageAdmin() {
+  // Construire la liste des élèves (dédupliquée par email, triée alphabétiquement)
+  var _studs = [];
+  var _seen = {};
+  (adminData.coursTango || []).forEach(function(e) {
+    var em = (e.email || '').toLowerCase().trim();
+    if (!em || _seen[em]) return;
+    _seen[em] = true;
+    _studs.push({prenom: e.prenom || '', nom: e.nom || '', email: e.email || '', tel: e.tel || ''});
+  });
+  _studs.sort(function(a, b) { return (a.prenom+' '+a.nom).localeCompare(b.prenom+' '+b.nom, 'fr'); });
+
+  var selHtml = '';
+  if (_studs.length) {
+    selHtml = '<div style="padding:10px 14px;display:flex;align-items:center;gap:10px;background:var(--section-bg);border-bottom:1px solid var(--border);">'
+      +'<label style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);white-space:nowrap;">Élève :</label>'
+      +'<select id="admin-stage-student-sel" style="background:var(--card-bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;font-size:13px;border-radius:4px;flex:1;max-width:400px;">'
+      +'<option value="">— Sélectionner pour préremplir —</option>'
+      +_studs.map(function(s){
+        return '<option value="'+encodeURIComponent(JSON.stringify(s))+'">'+s.prenom+' '+s.nom+(s.email?' ('+s.email+')':'')+'</option>';
+      }).join('')
+      +'</select></div>';
+  }
+
   return '<div style="margin:-14px;">'
-    +'<iframe src="stages-pwa.html" style="border:none;width:100%;height:850px;border-radius:8px;" title="Formulaire inscription stage"></iframe>'
+    +selHtml
+    +'<iframe id="admin-stage-iframe" src="stages-pwa.html" style="border:none;width:100%;height:850px;border-radius:8px;" title="Formulaire inscription stage"></iframe>'
     +'</div>';
 }
 

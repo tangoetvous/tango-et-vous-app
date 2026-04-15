@@ -431,7 +431,25 @@
     if (tab === 'actu')   renderActu();
     if (tab === 'contact') renderContact();
     if (tab === 'carte-lieux') {} // static content
-    if (tab === 'cours-particuliers') {} // iframe, chargement statique
+    if (tab === 'cours-particuliers') {
+      // Envoyer les coords de l'élève via postMessage à l'iframe cours-particuliers
+      const _cpIframe = document.querySelector('#cours-particuliers-pane iframe');
+      if (_cpIframe) {
+        const _cpElv = eleveData.eleve || {};
+        const _cpNomParts = (_cpElv.nom || '').trim().split(' ');
+        const _cpPren = _cpElv.prenom || (_cpNomParts.length > 1 ? _cpNomParts[0] : _cpElv.nom || '');
+        const _cpNomFam = _cpElv.prenom ? (_cpElv.nom || '') : (_cpNomParts.length > 1 ? _cpNomParts.slice(1).join(' ') : '');
+        const _cpMsg = { type:'fillForm', data:{ prenom:_cpPren, nom:_cpNomFam, email:_cpElv.email||'', tel:_cpElv.tel||'' }};
+        // Attendre que l'iframe soit chargée avant d'envoyer
+        if (_cpIframe.contentDocument && _cpIframe.contentDocument.readyState === 'complete') {
+          try { _cpIframe.contentWindow.postMessage(_cpMsg, '*'); } catch(e) {}
+        } else {
+          _cpIframe.addEventListener('load', function() {
+            try { _cpIframe.contentWindow.postMessage(_cpMsg, '*'); } catch(e) {}
+          }, { once: true });
+        }
+      }
+    }
     if (tab === 'preinscription') renderPreinscription();
     if (tab === 'yoga') renderYogaPane();
     window.scrollTo(0, 0);
@@ -1090,9 +1108,19 @@
       </div>`;
     });
 
-    // iframe formulaire stages-pwa.html (identique à l'admin)
+    // iframe formulaire stages-pwa.html — pré-remplie avec les coords de l'élève
+    const _elvSt = eleveData.eleve || {};
+    const _elvNomParts = (_elvSt.nom || '').trim().split(' ');
+    const _elvPren  = _elvSt.prenom || (_elvNomParts.length > 1 ? _elvNomParts[0] : _elvSt.nom || '');
+    const _elvNomFam = _elvSt.prenom ? (_elvSt.nom || '') : (_elvNomParts.length > 1 ? _elvNomParts.slice(1).join(' ') : '');
+    const _stP = new URLSearchParams();
+    if (_elvPren)   _stP.set('prenom', _elvPren);
+    if (_elvNomFam) _stP.set('nom',    _elvNomFam);
+    if (_elvSt.email) _stP.set('email', _elvSt.email);
+    if (_elvSt.tel)   _stP.set('tel',   _elvSt.tel);
+    const _stSrc = 'stages-pwa.html' + (_stP.toString() ? '?' + _stP.toString() : '');
     html += `<div id="stage-iframe-wrap" style="margin:0 20px 16px;display:none;">
-      <iframe id="stages-pwa-iframe" src="stages-pwa.html" style="border:none;width:100%;height:860px;border-radius:8px;" title="Inscription aux stages de tango"></iframe>
+      <iframe id="stages-pwa-iframe" src="${_stSrc}" style="border:none;width:100%;height:860px;border-radius:8px;" title="Inscription aux stages de tango"></iframe>
     </div>`;
 
     $('stages-list').innerHTML = html;
