@@ -634,6 +634,12 @@ function saisonCourante() {
   var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1;
   return m>=9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y);
 }
+// Juillet-août : afficher la saison suivante dans le formulaire
+function saisonPourFormulaire() {
+  var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1;
+  if (m===7||m===8) return y+'-'+(y+1);
+  return saisonCourante();
+}
 
 // ── Construction d'une entrée de date à partir des données admin ─
 function buildDateEntry(st, globalHor, globalAdr) {
@@ -653,9 +659,9 @@ function buildDateEntry(st, globalHor, globalAdr) {
 
 // ── Chargement des données depuis localStorage ──────────────────
 function chargerDonnees() {
-  var sai=saisonCourante();
+  var sai=saisonPourFormulaire(); // saison suivante en juil-août, courante sinon
   var saiStart=sai.slice(0,4)+'-09-01';
-  var saiEnd  =sai.slice(5) +'-08-31';
+  var saiEnd  =sai.slice(5) +'-06-30'; // fin de saison = 30 juin
 
   // Paramètres globaux de la saison (horaires, tarifs, adresse)
   var globalHor={}, globalAdr={};
@@ -1201,8 +1207,8 @@ function afficherConfirmation(data){
     datesHtml+='<div class="conf-total">Total à régler sur place le '+d.dateLabel+' : '+(d.prixInscrit+(avecPart && d.prixPartenaire ? d.prixPartenaire : 0))+' €</div>';
     datesHtml+='</div>';
   });
-  // Adresse par défaut depuis les params
-  var _confSai=saisonCourante();
+  // Adresse par défaut depuis les params (même saison que le formulaire)
+  var _confSai=saisonPourFormulaire();
   var _confAdr={nom:'Centre Kim Kan',rue:'64 rue Orfila, Paris 20e',transport:'M° Gambetta (L3)'};
   try{var _cp=localStorage.getItem('tev_params_stages_'+_confSai);if(_cp){var _cpp=JSON.parse(_cp);if(_cpp.adresse&&(_cpp.adresse.nom||_cpp.adresse.rue))_confAdr=Object.assign({},_confAdr,_cpp.adresse);}}catch(e){}
   var _confNom=_confAdr.nom||'Centre Kim Kan', _confRue=_confAdr.rue||'64 rue Orfila, Paris 20e', _confTPT=_confAdr.transport||'M° Gambetta (L3)';
