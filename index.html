@@ -700,7 +700,7 @@
           nom: m.nom,
           hdeb: d.horaire_debut || m.horaire_debut || '17h30',
           hfin: d.horaire_fin  || m.horaire_fin  || '23h30',
-          color: m.color || '#4dd0e1'
+          color: m.color || '#ff8c00'
         }))).sort((a,b) => a.date.localeCompare(b.date)).find(x => x.date >= todayStr) || null
       : null;
     const prochaineMilonga = _nextMilEvt ? _nextMilEvt.date : (MILONGAS_DATA.find(d => d >= todayStr) || null);
@@ -729,7 +729,7 @@
 
     // Prochaine milonga — couleur dynamique
     if (prochaineMilonga) {
-      const _mc  = (_nextMilEvt && _nextMilEvt.color) || '#4dd0e1';
+      const _mc  = (_nextMilEvt && _nextMilEvt.color) || '#ff8c00';
       const _mn  = (_nextMilEvt && _nextMilEvt.nom)   || 'La Dolce Vita';
       const _mh  = _nextMilEvt ? _nextMilEvt.hdeb+'\u2013'+_nextMilEvt.hfin : '17h30\u201323h30';
       const _mcR = _mc.replace(/^#/,'');
@@ -791,10 +791,10 @@
       h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px;text-align:center;">🎶 Mes prochaines milongas</div>';
       const _today0 = new Date(todayStr + 'T00:00:00');
       _milPres.forEach(p => {
-        let _mColor = '#e040a0';
+        let _mColor = '#ff8c00';
         if (MILONGAS_OBJ) {
           const _mObj = MILONGAS_OBJ.find(m => m.id === p.milongaId);
-          if (_mObj) _mColor = _mObj.color || '#e040a0';
+          if (_mObj) _mColor = _mObj.color || '#ff8c00';
         }
         const _mCr = _mColor.replace(/^#/,'');
         const _mr = parseInt(_mCr.slice(0,2),16), _mg = parseInt(_mCr.slice(2,4),16), _mb = parseInt(_mCr.slice(4,6),16);
@@ -903,7 +903,7 @@
   const COLOR_PARIS   = '#60b0ff';
   const COLOR_VINC    = '#40d8c0';
   const COLOR_STAGE   = '#D4AF37';
-  const COLOR_MILONGA = '#e040a0';
+  const COLOR_MILONGA = '#ff8c00';
   const COLOR_YOGA    = '#a78bfa'; // violet
 
   function buildAllEvents(filter) {
@@ -1284,7 +1284,7 @@
       });
     } else {
       MILONGAS_DATA.filter(d => d >= todayStr).forEach(d => {
-        upcoming.push({ date:d, mil:{ id:'dolce-vita', nom:'La Dolce Vita', color:'#e040a0',
+        upcoming.push({ date:d, mil:{ id:'dolce-vita', nom:'La Dolce Vita', color:'#ff8c00',
           horaire_debut:'17h30', horaire_fin:'23h30',
           lieu:{ nom:'Centre Re-Corps', rue:'16A bd de Reuilly, Paris 12e', transport:'M° Dugommier (L6)' } }});
       });
@@ -1306,7 +1306,7 @@
       const d = new Date(item.date + 'T00:00:00');
       const df = d.getDate() + '\u00a0' + MOIS_LONG[d.getMonth()] + '\u00a0' + d.getFullYear();
       const mil = item.mil;
-      const C = mil.color || '#e040a0';
+      const C = mil.color || '#ff8c00';
       const isComing = presences.some(p => p.date === item.date && (p.email || '').toLowerCase() === emailLow);
       const presForDate = presences.filter(p => p.date === item.date);
       const others = presForDate.filter(p => (p.email || '').toLowerCase() !== emailLow);
@@ -3098,7 +3098,7 @@ if('serviceWorker' in navigator){
     var MILONGAS_FB = [
       { id:'milonga-dolce-vita', label:'Milonga La Dolce Vita', nom:'La Dolce Vita',
         lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)'},
-        color:'#e040a0', horaire_debut:'17h30', horaire_fin:'23h30' },
+        color:'#ff8c00', horaire_debut:'17h30', horaire_fin:'23h30' },
       { id:'milonga-colectivo', label:'Milonga Le Colectivo', nom:'Le Colectivo',
         lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)'},
         color:'#4dd0e1', horaire_debut:'20h30', horaire_fin:'2h' }
@@ -3124,7 +3124,7 @@ if('serviceWorker' in navigator){
         sub: (mil.horaire_debut||'17h30')+'\u2013'+(mil.horaire_fin||'23h30')+' \u00b7 '+tpt,
         lat: lat||0, lng: lng||0,
         metro: { geocodeQuery: tpt, lat: 0, lng: 0, name: tpt },
-        color: mil.color||'#e040a0',
+        color: mil.color||'#ff8c00',
         mapsUrl: gps
           ? 'https://maps.google.com/?q='+encodeURIComponent(gps)
           : 'https://maps.google.com/?q='+encodeURIComponent(rue)
