@@ -134,8 +134,8 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
 .accordion-item.has-selection .accordion-badge { display: inline-block; }
 .accordion-arrow { font-size: 13px; color: #7a6030; transition: transform .25s; flex-shrink: 0; }
 .accordion-item.open .accordion-arrow { transform: rotate(180deg); }
-.accordion-body { max-height: 0; overflow: hidden; transition: max-height .3s ease; background: #141414; }
-.accordion-item.open .accordion-body { max-height: 400px; }
+.accordion-body { max-height: 0; overflow: hidden; transition: max-height .35s ease; background: #141414; }
+.accordion-item.open .accordion-body { max-height: 1400px; }
 .accordion-stages { display: flex; flex-direction: column; }
 /* Dates passées */
 .accordion-item.past { border-color: #2a2a2a; opacity: .55; }
@@ -705,6 +705,19 @@ function renderTarifsBloc() {
   if(el) el.innerHTML='<div class="tarifs-titre">Tarifs par personne</div><div class="tarifs-grid">'+lines.join('')+'</div><div class="paiement-note">💵 Le paiement s\'effectue sur place le jour du stage.</div>';
 }
 
+// ── Auto-resize iframe ──────────────────────────────────────────
+function autoResizeIframe() {
+  try {
+    if (window.self === window.top) return; // Pas dans un iframe
+  } catch(e) {}
+  // Petit délai pour laisser les transitions CSS se terminer
+  setTimeout(function() {
+    try {
+      window.parent.postMessage({ type: 'iframeResize', height: document.body.scrollHeight }, '*');
+    } catch(e) {}
+  }, 380);
+}
+
 // ── État ─────────────────────────────────────────────────────────
 const state = {
   stagesInscrit:    new Map(),
@@ -790,8 +803,8 @@ function construireAccordeon(containerId, groupe) {
         badgeHtml+
       '</div>'+
       '<span class="accordion-arrow">▼</span>';
-    if (!isPast) header.addEventListener('click', function(){ item.classList.toggle('open'); });
-    else         header.addEventListener('click', function(){ item.classList.toggle('open'); });
+    if (!isPast) header.addEventListener('click', function(){ item.classList.toggle('open'); autoResizeIframe(); });
+    else         header.addEventListener('click', function(){ item.classList.toggle('open'); autoResizeIframe(); });
 
     var body = document.createElement('div');
     body.className = 'accordion-body';
@@ -928,6 +941,7 @@ function majRecaps() {
   });
 
   container.innerHTML = html;
+  autoResizeIframe();
 }
 
 // ── Note parité ──────────────────────────────────────────────────
@@ -1002,6 +1016,7 @@ function allerEtape2(){
   document.getElementById('etape1').classList.remove('active');
   document.getElementById('etape2').classList.add('active');
   window.scrollTo(0,0);
+  autoResizeIframe();
 }
 
 function allerEtape1(){
@@ -1010,6 +1025,7 @@ function allerEtape1(){
   document.getElementById('etape2').classList.remove('active');
   document.getElementById('etape1').classList.add('active');
   window.scrollTo(0,0);
+  autoResizeIframe();
 }
 
 // ── Soumission ───────────────────────────────────────────────────
@@ -1176,6 +1192,7 @@ function afficherConfirmation(data){
   document.getElementById('conf-dates').innerHTML=datesHtml;
 
   window.scrollTo(0,0);
+  autoResizeIframe();
 }
 
 // ── Recommencer ──────────────────────────────────────────────────
@@ -1201,6 +1218,7 @@ function recommencer(){
   document.getElementById('ind-1').classList.add('active'); document.getElementById('ind-1').classList.remove('done');
   document.getElementById('ind-2').classList.remove('active');
   window.scrollTo(0,0);
+  autoResizeIframe();
 }
 
 // ── Init ─────────────────────────────────────────────────────────
@@ -1213,6 +1231,9 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('btnContinuer').addEventListener('click', allerEtape2);
   document.getElementById('btnRetour').addEventListener('click', allerEtape1);
   document.getElementById('btnSubmit').addEventListener('click', soumettre);
+
+  // Redimensionner l'iframe parente après le chargement initial
+  autoResizeIframe();
 
   // Rôle (boutons illustrés)
   document.querySelectorAll('#roleGroup .illu-item').forEach(function(el){

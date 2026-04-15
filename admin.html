@@ -557,7 +557,7 @@ var DEMO_DATA = {
     {id:'IC010',nom:'Inès Blanc',      email:'ines@ex.com',    cours:'Paris — Jeudi — Intermédiaire',     type:'carte10', paiement:'cb3x',   montant:170,date:'2026-09-05',ville:'paris'}
   ],
   stages: {
-    '2026-04-24': {label:'Vendredi 24 Avril 2026', inscrits:[
+    '2026-04-11': {label:'Sam. 11 Avr 2026', inscrits:[
       {prenom:'Marie',      nom:'Dupont',      role:'guidee', slots:['technique','stage1'],        present:null,montant:45, attente:false,partenaire:'Jean Dupont',       emailPartenaire:'jean@ex.com',    email:'marie@ex.com'},
       {prenom:'Jean',       nom:'Dupont',      role:'guideur',slots:['technique','stage1'],        present:null,montant:45, attente:false,partenaire:'Marie Dupont',      emailPartenaire:'marie@ex.com',   email:'jean@ex.com'},
       {prenom:'Thomas',     nom:'Bernard',     role:'guideur',slots:['stage1','stage2'],           present:null,montant:45, attente:false,partenaire:'',                  emailPartenaire:'',               email:'thomas@ex.com'},
@@ -570,7 +570,7 @@ var DEMO_DATA = {
       {prenom:'Ana',        nom:'García',      role:'guidee', slots:['technique'],                 present:null,montant:20, attente:true, partenaire:'Carlos García',      emailPartenaire:'carlos@ex.com',  email:'ana@ex.com'},
       {prenom:'Carlos',     nom:'García',      role:'guideur',slots:['technique'],                 present:null,montant:20, attente:false,partenaire:'Ana García',         emailPartenaire:'ana@ex.com',     email:'carlos@ex.com'}
     ]},
-    '2026-05-22': {label:'Vendredi 22 Mai 2026', inscrits:[
+    '2026-05-30': {label:'Sam. 30 Mai 2026', inscrits:[
       {prenom:'Clara',      nom:'Leroy',       role:'guidee', slots:['stage2'],                    present:null,montant:25, attente:false,partenaire:'Pierre Leroy',      emailPartenaire:'pierre@ex.com',  email:'clara@ex.com'},
       {prenom:'Pierre',     nom:'Leroy',       role:'guideur',slots:['stage2'],                    present:null,montant:25, attente:false,partenaire:'Clara Leroy',       emailPartenaire:'clara@ex.com',   email:'pierre@ex.com'},
       {prenom:'Fatou',      nom:'Diallo',      role:'guidee', slots:['technique','stage1'],         present:null,montant:45, attente:false,partenaire:'Sébastien Vidal',   emailPartenaire:'seb@ex.com',     email:'fatou@ex.com'},
@@ -5304,26 +5304,44 @@ function renderStages() {
   var st=stages[filtreStage], ins=st.inscrits||[];
   h+='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:10px;">'+(st.label||fmtDate(filtreStage))+'</div>';
 
-  // Sous-onglets créneaux
-  var slots=[
-    {id:'technique',lbl:'14h — Technique', color:'var(--gold)'},
-    {id:'stage1',   lbl:'15h — Stage 1',   color:'var(--info-text)'},
-    {id:'stage2',   lbl:'16h30 — Stage 2', color:'var(--guidee-text)'},
-    {id:'pointage', lbl:'✓ Pointage',      color:'var(--ok-text)'},
-    {id:'demandes', lbl:'Demandes',         color:'var(--warn-text)'},
-    {id:'valides',  lbl:'Validés',          color:'var(--ok-text)'},
-    {id:'attente',  lbl:'Attente',          color:'var(--gold)'},
-    {id:'inscrire', lbl:'✏️ Inscrire',     color:'var(--dim)'}
-  ];
+  // Trouver l'entrée STAGES pour la date active → créneaux dynamiques
+  var _stRawEntry=STAGES.find(function(s){return s.date===filtreStage;})||{technique:true,nStages:2,themes:[]};
+  var _stEntry=_migrateStageItem(_stRawEntry);
+  var _nStages=_stEntry.nStages||2;
+  var _avecTech=_stEntry.technique!==false;
+
+  // Charger les horaires depuis les Paramètres
+  var _hor=_loadParam('stages',saiStage,'horaires');
+  var _def=DEFAULTS_HORAIRES.stages||{};
+  function _hv(k){return (_hor[k]||_def[k]||'');}
+  var _slotHoraire={
+    technique: _hv('tech_deb')+(_hv('tech_fin')?'\u2013'+_hv('tech_fin'):''),
+    stage1:    _hv('s1_deb')+(_hv('s1_fin')  ?'\u2013'+_hv('s1_fin')  :''),
+    stage2:    _hv('s2_deb')+(_hv('s2_fin')  ?'\u2013'+_hv('s2_fin')  :''),
+    stage3:    _hv('s3_deb')+(_hv('s3_fin')  ?'\u2013'+_hv('s3_fin')  :''),
+    stage4:    _hv('s4_deb')+(_hv('s4_fin')  ?'\u2013'+_hv('s4_fin')  :'')
+  };
+
+  // Construire la liste dynamique des créneaux
+  var _dynSlots=[];
+  if(_avecTech) _dynSlots.push({id:'technique',lbl:'Technique'});
+  for(var _si=1;_si<=_nStages;_si++) _dynSlots.push({id:'stage'+_si,lbl:'Stage '+_si});
+
+  // Valider / réinitialiser filtreStageSlot
+  var _validSlotIds=_dynSlots.map(function(s){return s.id;}).concat(['pointage','inscrire']);
+  if(!filtreStageSlot||_validSlotIds.indexOf(filtreStageSlot)<0)
+    filtreStageSlot=_dynSlots.length?_dynSlots[0].id:'pointage';
+
+  // Sous-onglets créneaux + Pointage + Inscrire
   h+='<div class="sub-tabs">';
-  slots.forEach(function(sl){
-    var active=filtreStageSlot===sl.id;
-    h+='<button class="sub-tab'+(active?' active':'')+'" data-action="filt-stage-slot" data-slot="'+sl.id+'">'+sl.lbl+'</button>';
+  _dynSlots.forEach(function(sl){
+    h+='<button class="sub-tab'+(filtreStageSlot===sl.id?' active':'')+'" data-action="filt-stage-slot" data-slot="'+sl.id+'">'+sl.lbl+'</button>';
   });
+  h+='<button class="sub-tab'+(filtreStageSlot==='pointage'?' active':'')+'" data-action="filt-stage-slot" data-slot="pointage">✓ Pointage</button>';
+  h+='<button class="sub-tab'+(filtreStageSlot==='inscrire'?' active':'')+'" data-action="filt-stage-slot" data-slot="inscrire">✏️ Inscrire</button>';
   h+='</div>';
 
   if(filtreStageSlot==='pointage'){
-    // Vue pointage existante avec stats recette
     var conf=ins.filter(function(i){return !i.attente;});
     var att=ins.filter(function(i){return i.attente;});
     var pres=conf.filter(function(i){return i.present===true;});
@@ -5346,7 +5364,6 @@ function renderStages() {
       });
     }
     h+='<div class="section-hdr">Pointage présences</div>';
-    // Interleave guideurs/guidées pour lisibilité parité
     var confGui=conf.filter(function(i){return i.role==='guideur';});
     var confGde=conf.filter(function(i){return i.role==='guidee';});
     var confAlt=[]; var pml=Math.max(confGui.length,confGde.length);
@@ -5369,77 +5386,24 @@ function renderStages() {
     return h + renderFormulaireStageAdmin();
   }
 
-  if(filtreStageSlot==='demandes'){
-    // Vue demandes : tous les inscrits (attente et non-attente)
-    if(!ins.length) return h+'<div class="empty-state">Aucune demande.</div>';
-    ins.forEach(function(i){
-      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-      h+='<div class="card'+(i.attente?' hl-warn':'')+'"><div class="card-top"><div>'
-        +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
-        +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'
-        +i.prenom+' '+i.nom+'</div>'
-        +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
-        +'<div class="card-sub">'+(i.montant||0)+'€</div>'
-        +'</div>'
-        +(i.attente?'<span class="pill pill-warn">attente</span>':'')
-        +'</div>'
-        +(i.attente?'<div class="btn-row"><button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button></div>':'')
-        +'</div>';
-    });
-    return h;
-  }
-
-  if(filtreStageSlot==='valides'){
-    // Vue validés : seulement non-attente
-    var valides=ins.filter(function(i){return !i.attente;});
-    if(!valides.length) return h+'<div class="empty-state">Aucun inscrit validé.</div>';
-    valides.forEach(function(i){
-      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-      h+='<div class="card"><div class="card-top"><div>'
-        +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
-        +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'
-        +i.prenom+' '+i.nom+'</div>'
-        +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
-        +'<div class="card-sub">'+(i.montant||0)+'€</div>'
-        +'</div></div></div>';
-    });
-    return h;
-  }
-
-  if(filtreStageSlot==='attente'){
-    // Vue attente : seulement attente===true, groupé par créneau
-    var attenteIns=ins.filter(function(i){return i.attente===true;});
-    if(!attenteIns.length) return h+'<div class="empty-state">Aucun inscrit en attente.</div>';
-    var attSlotIds=['technique','stage1','stage2'];
-    var attSlotLbls={technique:'Technique',stage1:'Stage 1',stage2:'Stage 2'};
-    attSlotIds.forEach(function(sid){
-      var forSlot=attenteIns.filter(function(i){return i.slots&&i.slots.indexOf(sid)>=0;});
-      if(!forSlot.length) return;
-      h+='<div class="section-hdr">'+attSlotLbls[sid]+'</div>';
-      forSlot.forEach(function(i){
-        var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-        h+='<div class="card hl-warn"><div class="card-top"><div>'
-          +'<div class="card-nom" style="display:flex;align-items:center;gap:6px;">'
-          +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'
-          +i.prenom+' '+i.nom+'</div>'
-          +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
-          +'<div class="card-sub">'+(i.montant||0)+'€</div>'
-          +'</div><span class="pill pill-warn">attente</span></div>'
-          +'<div class="btn-row"><button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button></div>'
-          +'</div>';
-      });
-    });
-    return h;
-  }
-
-  // Vue par créneau (technique / stage1 / stage2) — une ligne par personne
+  // Vue par créneau dynamique (technique / stage1 … stage4)
   var slotId = filtreStageSlot;
   var insSlot = ins.filter(function(i){ return !i.attente && i.slots && i.slots.indexOf(slotId)>=0; });
   var attSlot = ins.filter(function(i){ return i.attente && i.slots && i.slots.indexOf(slotId)>=0; });
-  var slotInfo = {technique:{lbl:'Technique Leader &amp; Follower',heure:'14h – 15h'},stage1:{lbl:'Stage 1',heure:'15h – 16h30'},stage2:{lbl:'Stage 2',heure:'16h30 – 18h'}};
-  var info = slotInfo[slotId]||{lbl:slotId,heure:''};
-  h+='<div class="card" style="margin-bottom:12px;"><div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">'+info.heure+'</div>'
-    +'<div style="font-size:16px;font-weight:600;color:var(--text);">'+info.lbl+'</div>'
+
+  // Libellé et horaire du créneau
+  var _slotNom;
+  if(slotId==='technique'){
+    _slotNom='Technique Leader &amp; Follower';
+  } else {
+    var _sNum=parseInt((slotId.match(/\d+$/)||['1'])[0]);
+    var _theme=(_stEntry.themes&&_stEntry.themes[_sNum-1])||'';
+    _slotNom='Stage '+_sNum+(_theme?' \u2014 '+_theme:'');
+  }
+  var _slotHor=_slotHoraire[slotId]||'';
+
+  h+='<div class="card" style="margin-bottom:12px;"><div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">'+_slotHor+'</div>'
+    +'<div style="font-size:16px;font-weight:600;color:var(--text);">'+_slotNom+'</div>'
     +'<div class="card-sub">'+insSlot.length+' inscrits'+(attSlot.length?' · '+attSlot.length+' en attente':'')+'</div></div>';
 
   if(attSlot.length){
@@ -5463,44 +5427,27 @@ function renderStages() {
   if(!insSlot.length) return h+'<div class="empty-state">Aucun inscrit à ce créneau.</div>';
   h+='<div class="section-hdr">Inscrits ('+insSlot.length+')</div>';
 
-  // Pour stage1 et stage2 : interleave guideurs/guidées + boutons up/down
-  if(slotId==='stage1'||slotId==='stage2'){
-    var insGui=insSlot.filter(function(i){return i.role==='guideur';});
-    var insGde=insSlot.filter(function(i){return i.role==='guidee';});
-    var insAlt=[]; var ail=Math.max(insGui.length,insGde.length);
-    for(var ai=0;ai<ail;ai++){if(ai<insGui.length)insAlt.push(insGui[ai]);if(ai<insGde.length)insAlt.push(insGde[ai]);}
-    insAlt.forEach(function(i){
-      var origIdx=ins.indexOf(i);
-      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-      h+='<div class="point-row">'
-        +'<div style="flex:1;min-width:0;">'
-        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
-        +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
-        +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
-        +'</div>'
-        +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
-        +'<button class="btn-point" style="font-size:10px;padding:2px 5px;" data-action="stage-move-up" data-date="'+filtreStage+'" data-idx="'+origIdx+'">▲</button>'
-        +'<button class="btn-point" style="font-size:10px;padding:2px 5px;" data-action="stage-move-down" data-date="'+filtreStage+'" data-idx="'+origIdx+'">▼</button>'
-        +(i.email?btnEmail(i.email,i.prenom+' '+i.nom):'')
-        +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="'+slotId+'">✕</button>'
-        +'</div></div>';
-    });
-  } else {
-    insSlot.forEach(function(i){
-      var origIdx = ins.indexOf(i);
-      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-      h+='<div class="point-row">'
-        +'<div style="flex:1;min-width:0;">'
-        +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
-        +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
-        +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
-        +'</div>'
-        +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-        +(i.email?btnEmail(i.email,i.prenom+' '+i.nom):'')
-        +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="'+slotId+'">✕</button>'
-        +'</div></div>';
-    });
-  }
+  // Interleave guideurs/guidées + boutons up/down pour tous les créneaux
+  var insGui=insSlot.filter(function(i){return i.role==='guideur';});
+  var insGde=insSlot.filter(function(i){return i.role==='guidee';});
+  var insAlt=[]; var ail=Math.max(insGui.length,insGde.length);
+  for(var ai=0;ai<ail;ai++){if(ai<insGui.length)insAlt.push(insGui[ai]);if(ai<insGde.length)insAlt.push(insGde[ai]);}
+  insAlt.forEach(function(i){
+    var origIdx=ins.indexOf(i);
+    var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+    h+='<div class="point-row">'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
+      +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
+      +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
+      +'<button class="btn-point" style="font-size:10px;padding:2px 5px;" data-action="stage-move-up" data-date="'+filtreStage+'" data-idx="'+origIdx+'">▲</button>'
+      +'<button class="btn-point" style="font-size:10px;padding:2px 5px;" data-action="stage-move-down" data-date="'+filtreStage+'" data-idx="'+origIdx+'">▼</button>'
+      +(i.email?btnEmail(i.email,i.prenom+' '+i.nom):'')
+      +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="'+slotId+'">✕</button>'
+      +'</div></div>';
+  });
   return h;
 }
 
