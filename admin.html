@@ -3582,6 +3582,26 @@ function bindTabEvents(el) {
   el.addEventListener('change', function(ev) {
     var sel = ev.target.closest('[data-change-vp]');
     if (sel && sel.id==='vp-eleve-select') prefillVP(sel.value);
+    // Préremplissage élève dans formulaire milonga
+    if (ev.target.id === 'mil-add-eleve') {
+      var _mv = ev.target.value;
+      var _mp = document.getElementById('mil-add-prenom');
+      var _mn2 = document.getElementById('mil-add-nom');
+      var _me = document.getElementById('mil-add-email');
+      if (_mv) {
+        try {
+          var _ms = JSON.parse(decodeURIComponent(_mv));
+          if (_mp) _mp.value = _ms.prenom || '';
+          if (_mn2) _mn2.value = _ms.nom   || '';
+          if (_me)  _me.value  = _ms.email || '';
+        } catch(_e) {}
+      } else {
+        if (_mp) _mp.value = '';
+        if (_mn2) _mn2.value = '';
+        if (_me)  _me.value  = '';
+      }
+      return;
+    }
     // Préremplissage élève dans formulaire stage (admin sélectionne un élève)
     if (ev.target.id === 'admin-stage-student-sel') {
       var _selVal = ev.target.value;
@@ -6164,10 +6184,30 @@ function renderMilongaPresences() {
   }).join('');
   if (!dateOpts) dateOpts = '<option value="">Aucune date future configurée</option>';
 
+  // Build student list from coursTango
+  var _milStuds = [];
+  var _milStudSeen = {};
+  (adminData.coursTango || []).forEach(function(e) {
+    var em = (e.email || '').toLowerCase().trim();
+    if (!em || _milStudSeen[em]) return;
+    _milStudSeen[em] = true;
+    _milStuds.push({ prenom: e.prenom || '', nom: e.nom || '', email: e.email || '' });
+  });
+  _milStuds.sort(function(a, b) {
+    return ((a.prenom||'')+' '+(a.nom||'')).localeCompare((b.prenom||'')+' '+(b.nom||''), 'fr');
+  });
+
+  var studOpts = '<option value="">— Sélectionner un élève (optionnel) —</option>'
+    + _milStuds.map(function(s) {
+        var label = (s.prenom ? s.prenom + ' ' : '') + s.nom;
+        return '<option value="'+encodeURIComponent(JSON.stringify(s))+'">'+escHtml(label)+'</option>';
+      }).join('');
+
   h += '<div class="card" style="margin-bottom:18px;">';
   h += '<div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">Ajouter manuellement</div>';
   h += '<div style="display:grid;gap:8px;">';
   h += '<select id="mil-add-date" style="padding:7px 10px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;">'+dateOpts+'</select>';
+  h += '<select id="mil-add-eleve" style="padding:7px 10px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;">'+studOpts+'</select>';
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
   h += '<input id="mil-add-prenom" type="text" placeholder="Prénom" style="padding:7px 10px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;">';
   h += '<input id="mil-add-nom" type="text" placeholder="Nom" style="padding:7px 10px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;">';
