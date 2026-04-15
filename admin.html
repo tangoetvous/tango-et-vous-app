@@ -308,6 +308,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <button class="tab-btn" data-tab="essai">🎯 Essai Tango</button>
     <button class="tab-btn" data-tab="cartes">🎴 Cartes 10</button>
     <button class="tab-btn" data-tab="stages">💃 Stages</button>
+    <button class="tab-btn" data-tab="milonga">🎶 Milonga</button>
     <button class="tab-btn" data-tab="sorano">🏛 Sorano</button>
     <button class="tab-btn" data-tab="yoga">🧘 Yoga</button>
     <button class="tab-btn" data-tab="agenda">📅 Agenda</button>
@@ -3494,6 +3495,7 @@ function renderTab() {
     else if (currentTab==='agenda')       html=renderAgenda();
     else if (currentTab==='publications') html=renderPublications();
     else if (currentTab==='tarifs')       html=renderParametres();
+    else if (currentTab==='milonga')      html=renderMilongaPresences();
     if(isSaisonPassee()){
       var banner='<div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--warn-text);display:flex;align-items:center;gap:8px;">🔒 Saison '+saisonActive()+' archivée — consultation uniquement</div>';
       html='<div class="saison-archivee">'+banner+html+'</div>';
@@ -3945,6 +3947,52 @@ function handleAction(action, btn) {
       break;
     case 'suppr-date-milonga':
       supprimerDateMilonga(parseInt(btn.dataset.idx)||0, btn.dataset.date||'');
+      break;
+    case 'add-mil-presence':
+      (function() {
+        var dateEl   = document.getElementById('mil-add-date');
+        var prenomEl = document.getElementById('mil-add-prenom');
+        var nomEl    = document.getElementById('mil-add-nom');
+        var emailEl  = document.getElementById('mil-add-email');
+        var date  = dateEl  ? dateEl.value.trim()   : '';
+        var prenom= prenomEl? prenomEl.value.trim()  : '';
+        var nom   = nomEl   ? nomEl.value.trim()     : '';
+        var email = emailEl ? emailEl.value.trim().toLowerCase() : '';
+        if (!date || (!prenom && !nom && !email)) {
+          afficherToast('Remplissez au moins la date et un champ identité.', true);
+          return;
+        }
+        var list = _loadMilPresencesAdmin();
+        var emailLow = email;
+        // Trouver le nom de la milonga
+        var milNom = '';
+        (MILONGAS || []).forEach(function(mil) {
+          (mil.dates || []).forEach(function(d) { if (d.date === date) milNom = mil.nom; });
+        });
+        // Éviter doublon par date+email
+        if (emailLow) list = list.filter(function(p) {
+          return !(p.date === date && (p.email||'').toLowerCase() === emailLow);
+        });
+        list.push({ date:date, milongaId:'', milongaNom:milNom, email:email, prenom:prenom, nom:nom, ts:Date.now() });
+        _saveMilPresencesAdmin(list);
+        if (prenomEl) prenomEl.value = '';
+        if (nomEl)    nomEl.value = '';
+        if (emailEl)  emailEl.value = '';
+        afficherToast('✓ Présence ajoutée');
+        renderTab();
+      })();
+      break;
+    case 'suppr-mil-presence':
+      (function() {
+        var date  = btn.dataset.date  || '';
+        var email = (btn.dataset.email || '').toLowerCase();
+        var list  = _loadMilPresencesAdmin();
+        list = list.filter(function(p) {
+          return !(p.date === date && (p.email||'').toLowerCase() === email);
+        });
+        _saveMilPresencesAdmin(list);
+        renderTab();
+      })();
       break;
     case 'sauver-livret-type':
       sauverLivretType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
@@ -6055,6 +6103,103 @@ function ajouterDatesLot() {
 // TAB PUBLICATIONS
 // ================================================================
 var CAT_ICON = {actu:'📰',article:'📝',event:'🎉',media:'🎬',video:'🎬',stage:'💃',milonga:'🎶'};
+
+// ================================================================
+// MILONGA PRESENCES
+// ================================================================
+function _loadMilPresencesAdmin() {
+  try { return JSON.parse(localStorage.getItem('tev_milonga_presences') || '[]') || []; } catch(e) { return []; }
+}
+function _saveMilPresencesAdmin(list) {
+  try { localStorage.setItem('tev_milonga_presences', JSON.stringify(list)); } catch(e) {}
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderMilongaPresences() {
+  var presences = _loadMilPresencesAdmin();
+  var todayStr = today();
+
+  // Collect all future milonga dates from MILONGAS
+  var allDates = [];
+  var dateToMil = {};
+  (MILONGAS || []).forEach(function(mil) {
+    (mil.dates || []).forEach(function(d) {
+      if (d.date >= todayStr && !dateToMil[d.date]) {
+        allDates.push(d.date);
+        dateToMil[d.date] = mil.nom;
+      }
+    });
+  });
+  allDates.sort();
+
+  // Group presences by date
+  var byDate = {};
+  presences.forEach(function(p) {
+    if (!byDate[p.date]) byDate[p.date] = [];
+    byDate[p.date].push(p);
+  });
+
+  // Merge: show all dates that have presences OR are upcoming
+  var datesWithPresences = Object.keys(byDate).filter(function(d) { return d >= todayStr; });
+  var allShown = allDates.slice();
+  datesWithPresences.forEach(function(d) {
+    if (allShown.indexOf(d) < 0) allShown.push(d);
+  });
+  allShown.sort();
+
+  var h = '<h3 style="margin:0 0 14px;font-size:16px;color:var(--gold);">🎶 Présences aux milongas</h3>';
+
+  // Add form
+  var dateOpts = allDates.map(function(d) {
+    return '<option value="'+d+'">'+fmtDate(d)+(dateToMil[d]?' — '+dateToMil[d]:'')+'</option>';
+  }).join('');
+  if (!dateOpts) dateOpts = '<option value="">Aucune date future configurée</option>';
+
+  h += '<div class="card" style="margin-bottom:18px;">';
+  h += '<div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">Ajouter manuellement</div>';
+  h += '<div style="display:grid;gap:8px;">';
+  h += '<select id="mil-add-date" style="padding:7px 10px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;">'+dateOpts+'</select>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+  h += '<input id="mil-add-prenom" type="text" placeholder="Prénom" style="padding:7px 10px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;">';
+  h += '<input id="mil-add-nom" type="text" placeholder="Nom" style="padding:7px 10px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;">';
+  h += '</div>';
+  h += '<input id="mil-add-email" type="email" placeholder="Email" style="padding:7px 10px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:13px;">';
+  h += '<button class="btn btn-gold" data-action="add-mil-presence" style="width:100%;">+ Ajouter</button>';
+  h += '</div></div>';
+
+  if (!allShown.length && !datesWithPresences.length) {
+    h += '<div class="empty-state">Aucune présence enregistrée.</div>';
+    return h;
+  }
+
+  allShown.forEach(function(date) {
+    var list = byDate[date] || [];
+    var milNom = dateToMil[date] || (list.length ? list[0].milongaNom || '' : '');
+    h += '<div class="card" style="margin-bottom:12px;">';
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
+    h += '<div>';
+    h += '<div style="font-size:14px;font-weight:700;color:#e040a0;">'+fmtDate(date)+'</div>';
+    if (milNom) h += '<div style="font-size:11px;color:var(--dim);">'+milNom+'</div>';
+    h += '</div>';
+    h += '<span style="font-size:12px;color:var(--dim);">'+list.length+' personne'+(list.length > 1 ? 's' : '')+'</span>';
+    h += '</div>';
+    if (list.length) {
+      list.forEach(function(p) {
+        h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border);font-size:13px;">';
+        h += '<span>'+escHtml(p.prenom)+' '+escHtml(p.nom)+(p.email?'<span style="color:var(--dim);font-size:11px;margin-left:6px;">'+escHtml(p.email)+'</span>':'')+'</span>';
+        h += '<button class="btn btn-sm" data-action="suppr-mil-presence" data-date="'+date+'" data-email="'+escHtml(p.email||'')+'" style="padding:2px 8px;font-size:10px;border-color:#e04040;color:#e04040;">✕</button>';
+        h += '</div>';
+      });
+    } else {
+      h += '<div style="font-size:12px;color:var(--dim);font-style:italic;">Aucune présence encore.</div>';
+    }
+    h += '</div>';
+  });
+
+  return h;
+}
 
 function renderPublications() {
   var pubs=adminData.publications||[];

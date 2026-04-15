@@ -428,6 +428,7 @@
     if (tab === 'accueil') renderAccueil();
     if (tab === 'agenda') renderAgenda('tous');
     if (tab === 'stages') renderStages();
+    if (tab === 'milonga') renderMilonga();
     if (tab === 'actu')   renderActu();
     if (tab === 'contact') renderContact();
     if (tab === 'carte-lieux') {} // static content
@@ -897,7 +898,7 @@
             const hdeb = d.horaire_debut || mil.horaire_debut || '17h30';
             const hfin = d.horaire_fin  || mil.horaire_fin  || '23h30';
             events.push({date:d.date, subtype:'milonga', type:'milonga',
-              titre: mil.nom,
+              titre: mil.nom, milId: mil.id, milNom: mil.nom,
               heure: hdeb+'\u2013'+hfin,
               lieu:  mil.lieu.nom+' \u2014 '+mil.lieu.rue+' \u00b7 '+mil.lieu.transport,
               color: mil.color || COLOR_MILONGA
@@ -906,7 +907,7 @@
         });
       } else {
         MILONGAS_DATA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
-          events.push({date:d, subtype:'milonga', type:'milonga', titre:'Milonga La Dolce Vita', heure:'17h30\u201323h30', lieu:'Centre Re-Corps \u2014 16A bd de Reuilly, Paris 12e \u00b7 M\u00b0 Dugommier (L6)'});
+          events.push({date:d, subtype:'milonga', type:'milonga', titre:'Milonga La Dolce Vita', milId:'dolce-vita', milNom:'La Dolce Vita', heure:'17h30\u201323h30', lieu:'Centre Re-Corps \u2014 16A bd de Reuilly, Paris 12e \u00b7 M\u00b0 Dugommier (L6)'});
         });
       }
     }
@@ -986,10 +987,19 @@
       const color = e.color || getEventColor(e.subtype);
       const lbl   = getEventLabel(e.subtype);
       const isStage = e.subtype === 'stage';
+      const isMilonga = e.subtype === 'milonga';
       const subContent = (isStage && e.slots && e.slots.length)
         ? e.slots.map(sl => `<div class="event-slot-row"><span class="event-slot-hr">${sl.heure}</span>${sl.titre}</div>`).join('')
           + (e.lieu ? `<div class="event-slot-lieu">${e.lieu}</div>` : '')
         : `<div class="event-sub">${e.heure}${e.lieu ? ' \u00b7 ' + e.lieu : ''}</div>`;
+      let milBtn = '';
+      if (isMilonga) {
+        const _mPresences = _loadMilPresences();
+        const _mEmailLow = (eleveData.eleve.email || '').toLowerCase().trim();
+        const _mComing = _mEmailLow && _mPresences.some(p => p.date === e.date && (p.email||'').toLowerCase() === _mEmailLow);
+        const _mSafeNom = (e.milNom || e.titre).replace(/"/g, '&quot;');
+        milBtn = `<div style="margin-top:5px;"><button class="btn-mil-agenda" data-date="${e.date}" data-mid="${e.milId||''}" data-mn="${_mSafeNom}" style="padding:4px 10px;font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;border-radius:5px;border:1.5px solid ${color};cursor:pointer;background:${_mComing ? color : 'transparent'};color:${_mComing ? '#000' : color};">${_mComing ? '\u2713\u00a0Je viens' : 'Je pense venir'}</button></div>`;
+      }
       html += `<div class="event-item${isStage ? ' event-stage' : ''}"${isStage ? ` onclick="gotoStageInscription('${e.date}')" title="Cliquer pour s'inscrire"` : ''}>
         <div class="event-date-col">
           <div class="event-day">${d.getDate()}</div>
@@ -999,11 +1009,19 @@
         <div class="event-info">
           <div class="event-type-lbl" style="color:${color}">${lbl}${isStage ? ' <span style="font-size:9px;opacity:.7;">→ S\'inscrire</span>' : ''}</div>
           <div class="event-title">${e.titre}</div>
-          ${subContent}
+          ${subContent}${milBtn}
         </div>
       </div>`;
     });
     $('agenda-list').innerHTML = html;
+    document.querySelectorAll('#agenda-list .btn-mil-agenda').forEach(btn => {
+      btn.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        const _going = btn.style.background && btn.style.background !== 'transparent' && btn.style.background !== '';
+        _toggleMilPresence(btn.dataset.date, btn.dataset.mid, btn.dataset.mn, eleveData.eleve || {}, !_going);
+        renderAgendaList(filter);
+      });
+    });
   }
 
   // ================================================================
@@ -1140,6 +1158,106 @@
       const wrap = $('stage-iframe-wrap');
       wrap.style.display = 'block';
       wrap.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  }
+
+  // ================================================================
+  // MILONGA — helpers + render
+  // ================================================================
+  function _loadMilPresences() {
+    try { return JSON.parse(localStorage.getItem('tev_milonga_presences') || '[]') || []; } catch(e) { return []; }
+  }
+  function _saveMilPresences(list) {
+    try { localStorage.setItem('tev_milonga_presences', JSON.stringify(list)); } catch(e) {}
+  }
+  function _toggleMilPresence(date, milId, milNom, elv, present) {
+    var list = _loadMilPresences();
+    var emailLow = (elv.email || '').toLowerCase().trim();
+    list = list.filter(function(p) { return !(p.date === date && (p.email || '').toLowerCase() === emailLow); });
+    if (present) {
+      var nomParts = (elv.nom || '').trim().split(' ');
+      var pren = elv.prenom || (nomParts.length > 1 ? nomParts[0] : elv.nom || '');
+      var nomFam = elv.prenom ? elv.nom : (nomParts.length > 1 ? nomParts.slice(1).join(' ') : '');
+      list.push({ date, milongaId:milId, milongaNom:milNom, email:elv.email||'', prenom:pren, nom:nomFam, ts:Date.now() });
+    }
+    _saveMilPresences(list);
+  }
+
+  function renderMilonga() {
+    const todayStr = new Date().toISOString().slice(0,10);
+    const elv = eleveData.eleve || {};
+    const emailLow = (elv.email || '').toLowerCase().trim();
+    const presences = _loadMilPresences();
+
+    // Dates à venir depuis MILONGAS_OBJ ou fallback dates brutes
+    const upcoming = [];
+    if (MILONGAS_OBJ) {
+      MILONGAS_OBJ.forEach(mil => {
+        (mil.dates || []).forEach(d => {
+          if (d.date >= todayStr) upcoming.push({ date:d.date, mil });
+        });
+      });
+    } else {
+      MILONGAS_DATA.filter(d => d >= todayStr).forEach(d => {
+        upcoming.push({ date:d, mil:{ id:'dolce-vita', nom:'La Dolce Vita', color:'#e040a0',
+          horaire_debut:'17h30', horaire_fin:'23h30',
+          lieu:{ nom:'Centre Re-Corps', rue:'16A bd de Reuilly, Paris 12e', transport:'M° Dugommier (L6)' } }});
+      });
+    }
+    upcoming.sort((a,b) => a.date.localeCompare(b.date));
+    // Limiter aux 8 prochaines
+    const shown = upcoming.slice(0, 8);
+
+    let html = '<div class="tab-section-title">Milongas à venir</div>';
+    html += '<p style="font-size:13px;color:var(--dim);margin:0 16px 16px;line-height:1.6;">Indiquez les milongas auxquelles vous pensez venir — vous pourrez voir qui sera là !</p>';
+
+    if (!shown.length) {
+      html += '<p class="empty-msg">Aucune milonga programmée pour le moment.</p>';
+      $('milonga-pane').innerHTML = html;
+      return;
+    }
+
+    shown.forEach(item => {
+      const d = new Date(item.date + 'T00:00:00');
+      const df = d.getDate() + '\u00a0' + MOIS_LONG[d.getMonth()] + '\u00a0' + d.getFullYear();
+      const mil = item.mil;
+      const C = mil.color || '#e040a0';
+      const isComing = presences.some(p => p.date === item.date && (p.email || '').toLowerCase() === emailLow);
+      const presForDate = presences.filter(p => p.date === item.date);
+      const others = presForDate.filter(p => (p.email || '').toLowerCase() !== emailLow);
+      const nameList = (isComing ? ['<strong style="color:' + C + '">Vous</strong>'] : [])
+        .concat(others.map(p => p.prenom + (p.nom ? '\u00a0' + p.nom.charAt(0) + '.' : '')))
+        .join(', ');
+
+      html += `<div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:700;color:${C};margin-bottom:3px;">🎶 ${mil.nom}</div>
+            <div style="font-size:13px;color:var(--text);">📅 ${df}</div>
+            <div style="font-size:12px;color:var(--dim);margin-top:2px;">⏱ ${mil.horaire_debut||'17h30'}\u2013${mil.horaire_fin||'23h30'}</div>
+            <div style="font-size:12px;color:var(--dim);margin-top:2px;">📍 ${mil.lieu.nom} \u2014 ${mil.lieu.rue}</div>
+          </div>
+          <button class="btn-mil-tog" data-date="${item.date}" data-mid="${mil.id}" data-mn="${mil.nom.replace(/"/g,'&quot;')}"
+            style="padding:8px 14px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:6px;border:2px solid ${C};cursor:pointer;white-space:nowrap;transition:all .2s;background:${isComing ? C : 'transparent'};color:${isComing ? '#000' : C};">
+            ${isComing ? '✓\u00a0Je viens' : 'Je pense venir'}
+          </button>
+        </div>
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;">
+          ${presForDate.length
+            ? `<span style="color:var(--dim);">${presForDate.length} personne${presForDate.length > 1 ? 's prévoient' : ' prévoit'} de venir :</span> <span style="color:var(--text);">${nameList}</span>`
+            : `<span style="color:var(--dim);font-style:italic;">Personne n'a encore indiqué sa venue — soyez le premier !</span>`}
+        </div>
+      </div>`;
+    });
+
+    $('milonga-pane').innerHTML = html;
+
+    document.querySelectorAll('#milonga-pane .btn-mil-tog').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const isComing = btn.style.background && btn.style.background !== 'transparent' && btn.style.background !== '';
+        _toggleMilPresence(btn.dataset.date, btn.dataset.mid, btn.dataset.mn, eleveData.eleve || {}, !isComing);
+        renderMilonga();
+      });
     });
   }
 
@@ -1582,7 +1700,7 @@
   window.addEventListener('storage', function(e) {
     if (!e.key) return;
     // Ignorer le cache plan (géocodage), la file de notifications admin et la synchro inscrits stages pour ne pas boucler
-    if (e.key.startsWith('tev_') && !e.key.startsWith('tev_plan_') && e.key !== 'tev_pending_inscriptions' && e.key !== 'tev_stages_inscrits') {
+    if (e.key.startsWith('tev_') && !e.key.startsWith('tev_plan_') && e.key !== 'tev_pending_inscriptions' && e.key !== 'tev_stages_inscrits' && e.key !== 'tev_milonga_presences') {
       location.reload();
     }
   });
@@ -2454,6 +2572,10 @@ a{color:var(--gold);text-decoration:none;}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M19 10l2 2-2 2"/></svg>
       Stages
     </button>
+    <button class="nav-btn" id="nav-milonga" data-tab="milonga">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      Milonga
+    </button>
     <button class="nav-btn" id="nav-cours-particuliers" data-tab="cours-particuliers">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
       Cours&nbsp;part.
@@ -2584,6 +2706,9 @@ a{color:var(--gold);text-decoration:none;}
     <div id="agenda-filters" class="agenda-filters"></div>
     <div id="agenda-list"></div>
   </div>
+
+  <!-- ── ONGLET MILONGA ────────────────────────────────────── -->
+  <div class="tab-pane" id="milonga-pane"></div>
 
   <!-- ── ONGLET STAGES ─────────────────────────────────────── -->
   <div class="tab-pane" id="stages-pane">
