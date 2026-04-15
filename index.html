@@ -862,8 +862,16 @@
   ];
   const STAGES_DATA = (function() {
     try {
-      var raw = JSON.parse(localStorage.getItem('tev_dates_stages')||'{}');
-      var arr = raw.stages||[];
+      var arr = [];
+      for (var i=0; i<localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('tev_dates_stages_')===0) {
+          try { var r = JSON.parse(localStorage.getItem(k)||'null'); if (r && r.stages) arr = arr.concat(r.stages); } catch(e){}
+        }
+      }
+      if (!arr.length) {
+        try { var legacy = JSON.parse(localStorage.getItem('tev_dates_stages')||'{}'); if (legacy.stages) arr = legacy.stages; } catch(e){}
+      }
       if (!arr.length) return STAGES_DATA_FB;
       return arr.map(function(s) {
         var th = s.themes||[];

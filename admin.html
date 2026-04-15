@@ -1700,33 +1700,54 @@ function resetTarifs() {
   afficherToast('Tarifs réinitialisés.');
 }
 function chargerDatesYogaStages() {
+  // Migration : ancien format mono-saison → nouveau format par saison
   try {
-    var storedYoga = JSON.parse(localStorage.getItem('tev_dates_yoga')||'null');
-    if (storedYoga && storedYoga.saison && storedYoga.dates) {
-      var sai = storedYoga.saison;
-      var p = sai.split('-'), y1 = parseInt(p[0]);
-      var debut = (y1)+'-09-01', fin = (y1+1)+'-08-31';
-      // Retirer les dates existantes pour cette saison
-      COURS_YOGA = COURS_YOGA.filter(function(d){ return d<debut||d>fin; });
-      // Ajouter les dates stockées
-      storedYoga.dates.forEach(function(d){ if(COURS_YOGA.indexOf(d)<0) COURS_YOGA.push(d); });
-      COURS_YOGA.sort();
+    var oldYoga = JSON.parse(localStorage.getItem('tev_dates_yoga')||'null');
+    if (oldYoga && oldYoga.saison && oldYoga.dates) {
+      var k1='tev_dates_yoga_'+oldYoga.saison;
+      if (!localStorage.getItem(k1)) localStorage.setItem(k1, JSON.stringify(oldYoga));
+      localStorage.removeItem('tev_dates_yoga');
     }
   } catch(e){}
   try {
-    var storedStages = JSON.parse(localStorage.getItem('tev_dates_stages')||'null');
-    if (storedStages && storedStages.saison && storedStages.stages) {
-      var sai = storedStages.saison;
-      var p = sai.split('-'), y1 = parseInt(p[0]);
-      var debut = (y1)+'-09-01', fin = (y1+1)+'-08-31';
-      // Retirer les stages existants pour cette saison
-      STAGES = STAGES.filter(function(s){ return s.date<debut||s.date>fin; });
-      // Ajouter les stages stockés
-      storedStages.stages.forEach(function(st){
-        if (!STAGES.find(function(s){return s.date===st.date;})) STAGES.push(_migrateStageItem(st));
-      });
-      STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
+    var oldStages = JSON.parse(localStorage.getItem('tev_dates_stages')||'null');
+    if (oldStages && oldStages.saison && oldStages.stages) {
+      var k2='tev_dates_stages_'+oldStages.saison;
+      if (!localStorage.getItem(k2)) localStorage.setItem(k2, JSON.stringify(oldStages));
+      localStorage.removeItem('tev_dates_stages');
     }
+  } catch(e){}
+  // Charge toutes les saisons stockées
+  try {
+    for (var i=0; i<localStorage.length; i++) {
+      var key = localStorage.key(i);
+      if (!key) continue;
+      if (key.indexOf('tev_dates_yoga_')===0) {
+        try {
+          var sy = JSON.parse(localStorage.getItem(key)||'null');
+          if (sy && sy.saison && sy.dates) {
+            var y1 = parseInt(sy.saison.split('-')[0]);
+            var debut = y1+'-09-01', fin = (y1+1)+'-08-31';
+            COURS_YOGA = COURS_YOGA.filter(function(d){ return d<debut||d>fin; });
+            sy.dates.forEach(function(d){ if(COURS_YOGA.indexOf(d)<0) COURS_YOGA.push(d); });
+          }
+        } catch(e){}
+      } else if (key.indexOf('tev_dates_stages_')===0) {
+        try {
+          var ss = JSON.parse(localStorage.getItem(key)||'null');
+          if (ss && ss.saison && ss.stages) {
+            var y2 = parseInt(ss.saison.split('-')[0]);
+            var debut2 = y2+'-09-01', fin2 = (y2+1)+'-08-31';
+            STAGES = STAGES.filter(function(s){ return s.date<debut2||s.date>fin2; });
+            ss.stages.forEach(function(st){
+              if (!STAGES.find(function(s){return s.date===st.date;})) STAGES.push(_migrateStageItem(st));
+            });
+          }
+        } catch(e){}
+      }
+    }
+    COURS_YOGA.sort();
+    STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
   } catch(e){}
   // Synchronise localStorage pour index.html
   saveCoursDatesLocal();
@@ -1776,7 +1797,7 @@ function sauverDatesYoga(sai) {
   });
   dates.sort();
   if (!dates.length) { afficherToast('⚠️ Aucune date valide'); return; }
-  try { localStorage.setItem('tev_dates_yoga', JSON.stringify({saison:sai, dates:dates, modifie:today()})); } catch(e){}
+  try { localStorage.setItem('tev_dates_yoga_'+sai, JSON.stringify({saison:sai, dates:dates, modifie:today()})); } catch(e){}
   chargerDatesYogaStages();
   afficherToast('✓ '+dates.length+' dates yoga '+sai+' enregistrées');
   renderTab();
@@ -1798,7 +1819,7 @@ function sauverDatesStages(sai) {
   });
   stages.sort(function(a,b){return a.date.localeCompare(b.date);});
   if (!stages.length) { afficherToast('⚠️ Aucune date valide'); return; }
-  try { localStorage.setItem('tev_dates_stages', JSON.stringify({saison:sai, stages:stages, modifie:today()})); } catch(e){}
+  try { localStorage.setItem('tev_dates_stages_'+sai, JSON.stringify({saison:sai, stages:stages, modifie:today()})); } catch(e){}
   chargerDatesYogaStages();
   // Synchroniser adminData.stages
   stages.forEach(function(st){
@@ -1999,13 +2020,13 @@ function renderTarifs() {
   var liensSaved = !!(liensStored[prochSai]);
   // Dates yoga pour la prochaine saison
   var storedDatesYoga = null;
-  try { storedDatesYoga = JSON.parse(localStorage.getItem('tev_dates_yoga')||'null'); } catch(ex){}
+  try { storedDatesYoga = JSON.parse(localStorage.getItem('tev_dates_yoga_'+prochSai)||'null'); } catch(ex){}
   var yogaSaisonOk = storedDatesYoga && storedDatesYoga.saison === prochSai;
   var yogaDatesProch = yogaSaisonOk ? storedDatesYoga.dates : (COURS_YOGA||[]).filter(function(d){return d>=(prochY1+'-09-01')&&d<=((prochY1+1)+'-08-31');});
   var yogaTextareaVal = yogaDatesProch.join('\n');
   // Dates stages pour la prochaine saison
   var storedDatesStages = null;
-  try { storedDatesStages = JSON.parse(localStorage.getItem('tev_dates_stages')||'null'); } catch(ex){}
+  try { storedDatesStages = JSON.parse(localStorage.getItem('tev_dates_stages_'+prochSai)||'null'); } catch(ex){}
   var stagesSaisonOk = storedDatesStages && storedDatesStages.saison === prochSai;
   var stagesProch = stagesSaisonOk ? storedDatesStages.stages : (STAGES||[]).filter(function(s){return s.date>=(prochY1+'-09-01')&&s.date<=((prochY1+1)+'-08-31');});
   var stagesTextareaVal = stagesProch.map(function(s){return s.date+(s.s1?(' | '+s.s1+(s.s2?' | '+s.s2:'')):'');}).join('\n');
@@ -2760,7 +2781,7 @@ function supprimerDateParam(type, date) {
     var y1 = parseInt(sai.split('-')[0]);
     var debut = y1+'-09-01', fin = (y1+1)+'-08-31';
     var remaining = COURS_YOGA.filter(function(d){return d>=debut&&d<=fin;});
-    try { localStorage.setItem('tev_dates_yoga', JSON.stringify({saison:sai, dates:remaining, modifie:today()})); } catch(e){}
+    try { localStorage.setItem('tev_dates_yoga_'+sai, JSON.stringify({saison:sai, dates:remaining, modifie:today()})); } catch(e){}
   } else if (type==='stages') {
     STAGES = STAGES.filter(function(s){return s.date!==date;});
     if (adminData.stages && adminData.stages[date]) delete adminData.stages[date];
@@ -2973,7 +2994,7 @@ function sauverStagesLocal(sai) {
   var y1 = parseInt(sai.split('-')[0]);
   var debut = y1+'-09-01', fin = (y1+1)+'-08-31';
   var saiStages = STAGES.filter(function(s){return s.date>=debut&&s.date<=fin;});
-  try { localStorage.setItem('tev_dates_stages', JSON.stringify({saison:sai, stages:saiStages, modifie:today()})); } catch(e){}
+  try { localStorage.setItem('tev_dates_stages_'+sai, JSON.stringify({saison:sai, stages:saiStages, modifie:today()})); } catch(e){}
 }
 
 // Bascule Technique pour une date de stage
