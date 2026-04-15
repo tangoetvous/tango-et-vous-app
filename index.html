@@ -1245,10 +1245,10 @@
         .concat(others.map(p => p.prenom + (p.nom ? '\u00a0' + p.nom.charAt(0) + '.' : '')))
         .join(', ');
 
-      html += `<div class="card" style="margin-bottom:12px;">
+      html += `<div class="card" style="margin-bottom:12px;border-left:3px solid ${C};">
+        <div style="font-size:18px;font-weight:800;color:${C};margin-bottom:8px;letter-spacing:.3px;">🎶 ${mil.nom}</div>
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
           <div style="flex:1;min-width:0;">
-            <div style="font-size:14px;font-weight:700;color:${C};margin-bottom:3px;">🎶 ${mil.nom}</div>
             <div style="font-size:13px;color:var(--text);">📅 ${df}</div>
             <div style="font-size:12px;color:var(--dim);margin-top:2px;">⏱ ${mil.horaire_debut||'17h30'}\u2013${mil.horaire_fin||'23h30'}</div>
             <div style="font-size:12px;color:var(--dim);margin-top:2px;">📍 ${mil.lieu.nom} \u2014 ${mil.lieu.rue}</div>
@@ -1271,7 +1271,13 @@
     document.querySelectorAll('#milonga-pane .btn-mil-tog').forEach(btn => {
       btn.addEventListener('click', () => {
         const isComing = btn.style.background && btn.style.background !== 'transparent' && btn.style.background !== '';
-        _toggleMilPresence(btn.dataset.date, btn.dataset.mid, btn.dataset.mn, eleveData.eleve || {}, !isComing);
+        const nowComing = !isComing;
+        _toggleMilPresence(btn.dataset.date, btn.dataset.mid, btn.dataset.mn, eleveData.eleve || {}, nowComing);
+        if (nowComing) {
+          const d = new Date(btn.dataset.date + 'T00:00:00');
+          const df = d.getDate() + '\u00a0' + MOIS_LONG[d.getMonth()];
+          _showInAppNotif('\u2705 Noté\u00a0! Votre venue à ' + (btn.dataset.mn || 'la milonga') + ' le ' + df + ' est enregistrée.');
+        }
         renderMilonga();
       });
     });
