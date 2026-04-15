@@ -312,6 +312,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <button class="tab-btn" data-tab="yoga">🧘 Yoga</button>
     <button class="tab-btn" data-tab="agenda">📅 Agenda</button>
     <button class="tab-btn" data-tab="publications">📝 Publis</button>
+    <button class="tab-btn" data-tab="whatsapp">💬 WA</button>
     <button class="tab-btn" data-tab="tarifs">⚙️</button>
   </div>
   <div class="content" id="tab-content"><div class="spinner"></div></div>
@@ -2146,10 +2147,44 @@ function renderParametres() {
   });
   h += '</div>';
 
+  // ── Section WhatsApp ────────────────────────────────────
+  h += _renderWhatsappParamSection(sai);
+
   // ── Section Adhésion Sorano ──────────────────────────────
   h += _renderAdhesionSoranoSection();
 
   return h;
+}
+
+// ── Section WhatsApp dans Paramètres ─────────────────────────
+function _renderWhatsappParamSection(sai) {
+  var d = _loadParam('whatsapp', sai, 'liens') || {};
+  var iS = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;';
+  function field(id, lbl, val, ph) {
+    return '<div style="margin-bottom:8px;">'
+      +'<label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">'+lbl+'</label>'
+      +'<input id="'+id+'" type="url" value="'+(val||'').replace(/"/g,'&quot;')+'" placeholder="'+ph+'" style="'+iS+'"></div>';
+  }
+  function cours(key, label) {
+    var v = d[key] || {};
+    return '<div style="margin-bottom:16px;">'
+      +'<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;">'+label+'</div>'
+      +field('wa-lien-'+key, 'Lien WhatsApp (invitation au groupe)', v.lien||'', 'https://chat.whatsapp.com/\u2026')
+      +field('wa-qr-'+key,   'Lien Google Drive du QR Code', v.qr||'', 'https://drive.google.com/file/d/\u2026')
+      +'</div>';
+  }
+  return '<div style="margin-top:24px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">WhatsApp</div>'
+    +'<div class="card">'
+    +cours('paris-deb', '\uD83D\uDD7A Paris \u2014 D\u00e9butant')
+    +cours('paris-int', '\uD83D\uDD7A Paris \u2014 Interm\u00e9diaire &amp; Avanc\u00e9')
+    +cours('vinc-deb',  '\uD83D\uDC83 Vincennes \u2014 D\u00e9butant')
+    +cours('vinc-int',  '\uD83D\uDC83 Vincennes \u2014 Interm\u00e9diaire &amp; Avanc\u00e9')
+    +'<div class="btn-row" style="margin-top:6px;">'
+    +'<button class="btn btn-gold" data-action="sauver-whatsapp-liens" data-saison="'+sai+'" style="font-size:12px;">\uD83D\uDCBE Enregistrer</button>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
 }
 
 var ADHESION_SORANO_DEFAUT = { m16_vinc:26, m16_ext:35, p16_vinc:36, p16_ext:45 };
@@ -3533,6 +3568,7 @@ function renderTab() {
     else if (currentTab==='yoga')         html=renderYoga();
     else if (currentTab==='agenda')       html=renderAgenda();
     else if (currentTab==='publications') html=renderPublications();
+    else if (currentTab==='whatsapp')     html=renderWhatsapp();
     else if (currentTab==='tarifs')       html=renderParametres();
     else if (currentTab==='milonga')      html=renderMilongaPresences();
     if(isSaisonPassee()){
@@ -4115,6 +4151,26 @@ function handleAction(action, btn) {
       break;
     case 'toggle-interet':
       toggleInteret(btn.dataset.date||'', btn.dataset.email||'', btn);
+      break;
+    case 'sauver-whatsapp-liens':
+      (function() {
+        var sai = btn.dataset.saison || saisonParametres || saisonCourante();
+        function gv(id) { return (gel(id)||{}).value || ''; }
+        var data = {
+          'paris-deb': {lien: gv('wa-lien-paris-deb'), qr: gv('wa-qr-paris-deb')},
+          'paris-int': {lien: gv('wa-lien-paris-int'), qr: gv('wa-qr-paris-int')},
+          'vinc-deb':  {lien: gv('wa-lien-vinc-deb'),  qr: gv('wa-qr-vinc-deb')},
+          'vinc-int':  {lien: gv('wa-lien-vinc-int'),  qr: gv('wa-qr-vinc-int')}
+        };
+        _saveParam('whatsapp', sai, 'liens', data);
+        afficherToast('\u2713 Liens WhatsApp enregistr\u00e9s');
+        renderTab();
+      })();
+      break;
+    case 'go-to-params':
+      currentTab = 'tarifs';
+      document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab==='tarifs'); });
+      renderTab();
       break;
     case 'sauver-adhesion-sorano':
       (function() {
@@ -5848,6 +5904,50 @@ function getEventsForDate(dateStr) {
     evts.push({cat:'cours-yoga', titre:'Hatha Yoga', heure:_hY.hatha||_dY.hatha});
   }
   return evts;
+}
+// ── Onglet WhatsApp — QR codes ────────────────────────────────
+function _driveImgUrl(url) {
+  if (!url) return '';
+  var m = url.match(/\/file\/d\/([^/?&#]+)/);
+  if (m) return 'https://drive.google.com/uc?export=view&id=' + m[1];
+  m = url.match(/[?&]id=([^&]+)/);
+  if (m) return 'https://drive.google.com/uc?export=view&id=' + m[1];
+  return url;
+}
+function renderWhatsapp() {
+  var sai = saisonActive();
+  var d = _loadParam('whatsapp', sai, 'liens') || {};
+  var cours = [
+    {key:'paris-deb', label:'\uD83D\uDD7A Paris \u2014 D\u00e9butant'},
+    {key:'paris-int', label:'\uD83D\uDD7A Paris \u2014 Interm\u00e9diaire &amp; Avanc\u00e9'},
+    {key:'vinc-deb',  label:'\uD83D\uDC83 Vincennes \u2014 D\u00e9butant'},
+    {key:'vinc-int',  label:'\uD83D\uDC83 Vincennes \u2014 Interm\u00e9diaire &amp; Avanc\u00e9'}
+  ];
+  var h = '<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:20px;">WhatsApp \u2014 QR Codes</div>';
+  var hasAny = cours.some(function(c){ var v=d[c.key]||{}; return v.lien||v.qr; });
+  if (!hasAny) {
+    h += '<div class="empty-state">Aucun lien WhatsApp configur\u00e9.<br><button class="btn btn-ghost" style="margin-top:10px;" data-action="go-to-params">\u2699\uFE0F Configurer dans Param\u00e8tres</button></div>';
+    return h;
+  }
+  h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">';
+  cours.forEach(function(c) {
+    var v = d[c.key] || {};
+    var imgUrl = _driveImgUrl(v.qr || '');
+    h += '<div class="card" style="text-align:center;padding:18px 14px;">';
+    h += '<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:14px;">'+c.label+'</div>';
+    if (imgUrl) {
+      h += '<img src="'+imgUrl.replace(/"/g,'&quot;')+'" alt="QR '+c.key+'" style="max-width:180px;width:100%;border-radius:8px;border:1px solid var(--border);" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\';">';
+      h += '<div style="display:none;font-size:11px;color:var(--dim);padding:8px 0;">Impossible de charger l\'image.<br>V\u00e9rifiez le lien dans Param\u00e8tres.</div>';
+    } else {
+      h += '<div style="font-size:11px;color:var(--dim);padding:16px 0;">Pas de QR code configur\u00e9.</div>';
+    }
+    if (v.lien) {
+      h += '<a href="'+v.lien.replace(/"/g,'&quot;')+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:12px;padding:6px 14px;background:#25d366;color:#fff;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;">💬 Rejoindre</a>';
+    }
+    h += '</div>';
+  });
+  h += '</div>';
+  return h;
 }
 function renderAgenda() {
   var h = '<div class="sub-tabs">'
