@@ -4477,11 +4477,15 @@ function supprimerEleve(id) {
 }
 function confirmerSupprimerEleve(id) {
   var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
-  var nom=e?(e.prenom+' '+e.nom):'';
+  if(!e){fermerContact();return;}
+  var nom=e.prenom+' '+e.nom;
+  var email=e.email;
   adminData.coursTango=(adminData.coursTango||[]).filter(function(x){return x.id!==id;});
+  adminData.cartes=(adminData.cartes||[]).filter(function(x){return x.email!==email;});
   fermerContact();
   afficherToast('🗑 '+nom+' supprimé·e');
-  renderTab();
+  if(IS_DEMO){recalcStats();renderTab();}
+  else{postAS({action:'supprimerEleve',id:id,email:email}).then(function(){chargerDonnees();}).catch(function(){chargerDonnees();});}
 }
 function majRechercheEleve(val) {
   rechercheEleve = val;
