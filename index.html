@@ -1790,8 +1790,14 @@
   // Mise à jour temps réel : si l'admin change un Paramètre dans un autre onglet, on recharge
   window.addEventListener('storage', function(e) {
     if (!e.key) return;
+    // Mise à jour temps réel des présences milonga (sans rechargement)
+    if (e.key === 'tev_milonga_presences') {
+      if (currentTab === 'milonga') renderMilonga();
+      if (currentTab === 'accueil') renderAccueil();
+      return;
+    }
     // Ignorer le cache plan (géocodage), la file de notifications admin et la synchro inscrits stages pour ne pas boucler
-    if (e.key.startsWith('tev_') && !e.key.startsWith('tev_plan_') && e.key !== 'tev_pending_inscriptions' && e.key !== 'tev_stages_inscrits' && e.key !== 'tev_milonga_presences') {
+    if (e.key.startsWith('tev_') && !e.key.startsWith('tev_plan_') && e.key !== 'tev_pending_inscriptions' && e.key !== 'tev_stages_inscrits') {
       location.reload();
     }
   });
