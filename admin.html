@@ -5829,7 +5829,10 @@ function renderAgenda() {
 }
 
 function renderAgendaCalendrier() {
-  var h='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:12px;">Agenda — 12 prochains mois</div>'
+  var _saiCal = saisonActive();
+  var _saiStart = _saiCal.split('-')[0] + '-09-01';
+  var _saiEnd   = _saiCal.split('-')[1] + '-06-30';
+  var h='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:12px;">Agenda — Saison '+_saiCal+'</div>'
     +'<div class="cat-pills">'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.paris?'#122840':'transparent')+';border-color:'+(agendaCats.paris?'#60b0ff':'var(--border)')+';color:'+(agendaCats.paris?'#60b0ff':'var(--dim)')+';" data-cat-ag="paris">🎓 Paris</button>'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.vincennes?'#102828':'transparent')+';border-color:'+(agendaCats.vincennes?'#40d8c0':'var(--border)')+';color:'+(agendaCats.vincennes?'#40d8c0':'var(--dim)')+';" data-cat-ag="vincennes">🎓 Vincennes</button>'
@@ -5837,10 +5840,10 @@ function renderAgendaCalendrier() {
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.milonga?'#1a0800':'transparent')+';border-color:'+(agendaCats.milonga?'#ff8c00':'var(--border)')+';color:'+(agendaCats.milonga?'#ff8c00':'var(--dim)')+';" data-cat-ag="milonga">🎶 Milongas</button>'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.yoga?'#1a1230':'transparent')+';border-color:'+(agendaCats.yoga?'#a78bfa':'var(--border)')+';color:'+(agendaCats.yoga?'#a78bfa':'var(--dim)')+';" data-cat-ag="yoga">🧘 Yoga</button>'
     +'</div>';
-  // Vue liste 12 mois glissants à partir d'aujourd'hui
+  // Vue liste bornée à la saison active (1er sept → 30 juin)
   var todayStr=today();
   // Adresses dynamiques depuis Paramètres
-  var _saiAg = saisonActive();
+  var _saiAg = _saiCal;
   var _aP = _loadParam('paris',     _saiAg, 'adresse');
   var _aV = _loadParam('vincennes', _saiAg, 'adresse');
   var _aSt= _loadParam('stages',    _saiAg, 'adresse');
@@ -5855,8 +5858,8 @@ function renderAgendaCalendrier() {
     'stage':       (_aSt.nom||'Centre Kim Kan')+', '+(_aSt.rue||'64 rue Orfila, Paris 20e'),
     'cours-yoga':  _fmtAddr(_aY, _dAY)
   };
-  var debut=new Date(todayStr+'T00:00:00');
-  var finDate=new Date(debut); finDate.setMonth(finDate.getMonth()+12);
+  var debut=new Date(_saiStart+'T00:00:00');
+  var finDate=new Date(_saiEnd+'T00:00:00');
   var d=new Date(debut), hasEvents=false;
   while(d<=finDate){
     var ds=toISO(d), evts=getEventsForDate(ds);
@@ -5877,7 +5880,7 @@ function renderAgendaCalendrier() {
     }
     d.setDate(d.getDate()+1);
   }
-  if(!hasEvents)h+='<div class="empty-state">Aucun événement sur les 12 prochains mois.</div>';
+  if(!hasEvents)h+='<div class="empty-state">Aucun événement pour la saison '+_saiCal+'.</div>';
   return h;
 }
 
