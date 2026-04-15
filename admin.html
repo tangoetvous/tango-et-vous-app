@@ -1736,7 +1736,7 @@ var MILONGAS_DEFAULTS = [
     color:'#e040a0', horaire_debut:'17h30', horaire_fin:'23h30', dates:[] },
   { id:'colectivo', nom:'Le Colectivo',
     lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)'},
-    color:'#ff6b9d', horaire_debut:'20h30', horaire_fin:'2h', dates:[] }
+    color:'#4dd0e1', horaire_debut:'20h30', horaire_fin:'2h', dates:[] }
 ];
 var MILONGAS = null;
 function chargerMilongas() {
@@ -6150,11 +6150,13 @@ function renderMilongaPresences() {
   // Collect all future milonga dates from MILONGAS
   var allDates = [];
   var dateToMil = {};
+  var dateToColor = {};
   (MILONGAS || []).forEach(function(mil) {
     (mil.dates || []).forEach(function(d) {
       if (d.date >= todayStr && !dateToMil[d.date]) {
         allDates.push(d.date);
         dateToMil[d.date] = mil.nom;
+        dateToColor[d.date] = mil.color || '#e040a0';
       }
     });
   });
@@ -6223,11 +6225,12 @@ function renderMilongaPresences() {
   allShown.forEach(function(date) {
     var list = byDate[date] || [];
     var milNom = dateToMil[date] || (list.length ? list[0].milongaNom || '' : '');
-    h += '<div class="card" style="margin-bottom:12px;">';
+    var milColor = dateToColor[date] || (milNom && milNom.indexOf('Colectivo') >= 0 ? '#4dd0e1' : '#e040a0');
+    h += '<div class="card" style="margin-bottom:12px;border-left:3px solid '+milColor+';">';
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
     h += '<div>';
-    h += '<div style="font-size:14px;font-weight:700;color:#e040a0;">'+fmtDate(date)+'</div>';
-    if (milNom) h += '<div style="font-size:11px;color:var(--dim);">'+milNom+'</div>';
+    h += '<div style="font-size:14px;font-weight:700;color:'+milColor+';">'+fmtDate(date)+'</div>';
+    if (milNom) h += '<div style="font-size:12px;font-weight:600;color:'+milColor+';opacity:.8;">'+escHtml(milNom)+'</div>';
     h += '</div>';
     h += '<span style="font-size:12px;color:var(--dim);">'+list.length+' personne'+(list.length > 1 ? 's' : '')+'</span>';
     h += '</div>';
