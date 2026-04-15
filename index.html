@@ -440,7 +440,7 @@
         const _cpNomParts = (_cpElv.nom || '').trim().split(' ');
         const _cpPren = _cpElv.prenom || (_cpNomParts.length > 1 ? _cpNomParts[0] : _cpElv.nom || '');
         const _cpNomFam = _cpElv.prenom ? (_cpElv.nom || '') : (_cpNomParts.length > 1 ? _cpNomParts.slice(1).join(' ') : '');
-        const _cpMsg = { type:'fillForm', data:{ prenom:_cpPren, nom:_cpNomFam, email:_cpElv.email||'', tel:_cpElv.tel||'' }};
+        const _cpMsg = { type:'fillForm', data:{ prenom:_cpPren, nom:_cpNomFam, email:_cpElv.email||'', tel:_cpElv.tel||_cpElv.telephone||'' }};
         // Attendre que l'iframe soit chargée avant d'envoyer
         if (_cpIframe.contentDocument && _cpIframe.contentDocument.readyState === 'complete') {
           try { _cpIframe.contentWindow.postMessage(_cpMsg, '*'); } catch(e) {}
@@ -478,13 +478,16 @@
       return;
     }
     const eleve = eleveData.eleve || {};
+    const _piNomParts = (eleve.nom || '').trim().split(' ');
+    const _piPren = eleve.prenom || (_piNomParts.length > 1 ? _piNomParts[0] : eleve.nom || '');
+    const _piNom  = eleve.prenom ? (eleve.nom || '') : (_piNomParts.length > 1 ? _piNomParts.slice(1).join(' ') : '');
     const params = new URLSearchParams({
       pwa: '1',
       mode: 'preinscription',
-      prenom: eleve.prenom || '',
-      nom: eleve.nom || '',
+      prenom: _piPren,
+      nom: _piNom,
       email: eleve.email || '',
-      tel: eleve.tel || ''
+      tel: eleve.tel || eleve.telephone || ''
     });
     const iframeSrc = 'inscription-cours.html?' + params.toString();
     pane.innerHTML = `<div style="margin:-14px;">
@@ -566,7 +569,19 @@
     const open = container.style.display === 'block';
     if (!open) {
       container.style.display = 'block';
-      if (!iframe.src || iframe.src === window.location.href) iframe.src = 'essai-yoga.html';
+      if (!iframe.src || iframe.src === window.location.href) {
+        const _yElv = eleveData && eleveData.eleve || {};
+        const _yNomParts = (_yElv.nom || '').trim().split(' ');
+        const _yPren = _yElv.prenom || (_yNomParts.length > 1 ? _yNomParts[0] : _yElv.nom || '');
+        const _yNom  = _yElv.prenom ? (_yElv.nom || '') : (_yNomParts.length > 1 ? _yNomParts.slice(1).join(' ') : '');
+        const _yP = new URLSearchParams();
+        if (_yPren) _yP.set('prenom', _yPren);
+        if (_yNom)  _yP.set('nom', _yNom);
+        if (_yElv.email) _yP.set('email', _yElv.email);
+        const _yTel = _yElv.tel || _yElv.telephone || '';
+        if (_yTel) _yP.set('tel', _yTel);
+        iframe.src = 'essai-yoga.html' + (_yP.toString() ? '?' + _yP.toString() : '');
+      }
       btn.textContent = '✕ Fermer le formulaire';
       btn.style.background = '#6b46c1';
       container.scrollIntoView({behavior:'smooth', block:'start'});
@@ -1135,7 +1150,8 @@
     if (_elvPren)   _stP.set('prenom', _elvPren);
     if (_elvNomFam) _stP.set('nom',    _elvNomFam);
     if (_elvSt.email) _stP.set('email', _elvSt.email);
-    if (_elvSt.tel)   _stP.set('tel',   _elvSt.tel);
+    const _elvTel = _elvSt.tel || _elvSt.telephone || '';
+    if (_elvTel) _stP.set('tel', _elvTel);
     const _stSrc = 'stages-pwa.html' + (_stP.toString() ? '?' + _stP.toString() : '');
     html += `<div id="stage-iframe-wrap" style="margin:0 20px 16px;display:none;">
       <iframe id="stages-pwa-iframe" src="${_stSrc}" style="border:none;width:100%;height:860px;border-radius:8px;" title="Inscription aux stages de tango"></iframe>

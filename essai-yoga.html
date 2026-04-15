@@ -321,14 +321,27 @@ function init() {
     opt.textContent = fmtDate(d) + (gratuit ? ' — Gratuit' : ' — '+getYogaEssaiPrix()+'€');
     sel.appendChild(opt);
   });
-  // Préremplir depuis localStorage (élève connecté)
+  // Préremplir depuis les paramètres URL (quand ouvert depuis l'interface élève)
+  (function() {
+    var p = new URLSearchParams(window.location.search);
+    var fv = function(id, val) { if (val) { var el = document.getElementById(id); if (el) el.value = val; } };
+    fv('inp-prenom', p.get('prenom'));
+    fv('inp-nom',    p.get('nom'));
+    fv('inp-email',  p.get('email'));
+    fv('inp-tel',    p.get('tel'));
+  })();
+  // Préremplir depuis localStorage en fallback (élève connecté via tev_user)
   try {
-    const pwa = JSON.parse(localStorage.getItem('tev_user')||'null');
-    if (pwa) {
-      if (pwa.prenom) document.getElementById('inp-prenom').value = pwa.prenom;
-      if (pwa.nom)    document.getElementById('inp-nom').value    = pwa.nom;
-      if (pwa.email)  document.getElementById('inp-email').value  = pwa.email;
-      if (pwa.tel)    document.getElementById('inp-tel').value    = pwa.tel;
+    var p2 = new URLSearchParams(window.location.search);
+    var hasUrlParams = p2.get('prenom') || p2.get('email');
+    if (!hasUrlParams) {
+      const pwa = JSON.parse(localStorage.getItem('tev_user')||'null');
+      if (pwa) {
+        if (pwa.prenom) document.getElementById('inp-prenom').value = pwa.prenom;
+        if (pwa.nom)    document.getElementById('inp-nom').value    = pwa.nom;
+        if (pwa.email)  document.getElementById('inp-email').value  = pwa.email;
+        if (pwa.tel)    document.getElementById('inp-tel').value    = pwa.tel;
+      }
     }
   } catch(e){}
 }
