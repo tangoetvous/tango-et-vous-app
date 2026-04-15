@@ -872,7 +872,7 @@
   const MILONGAS_DATA_FB = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
   const MILONGAS_OBJ = (function() {
     try {
-      var r = JSON.parse(localStorage.getItem('tev_milongas')||'null');
+      var r = JSON.parse(localStorage.getItem('tev_milongas_'+_sai())||'null');
       return (r && r.milongas && r.milongas.length) ? r.milongas : null;
     } catch(e) { return null; }
   })();
@@ -3105,7 +3105,7 @@ if('serviceWorker' in navigator){
     ];
     var milSrc = MILONGAS_FB;
     try {
-      var r = JSON.parse(localStorage.getItem('tev_milongas')||'null');
+      var r = JSON.parse(localStorage.getItem('tev_milongas_'+_sai())||'null');
       if (r && r.milongas && r.milongas.length) milSrc = r.milongas.map(function(m,i){ return Object.assign({id:'milonga-'+m.id, label:'Milonga '+m.nom, nom:m.nom}, m); });
     } catch(e){}
     milSrc.forEach(function(mil) {

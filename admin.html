@@ -1739,9 +1739,10 @@ var MILONGAS_DEFAULTS = [
     color:'#4dd0e1', horaire_debut:'20h30', horaire_fin:'2h', dates:[] }
 ];
 var MILONGAS = null;
-function chargerMilongas() {
+function chargerMilongas(sai) {
+  var key = 'tev_milongas_' + (sai || saisonParametres || saisonCourante());
   try {
-    var raw = JSON.parse(localStorage.getItem('tev_milongas')||'null');
+    var raw = JSON.parse(localStorage.getItem(key)||'null');
     if (raw && raw.milongas && raw.milongas.length) {
       MILONGAS = raw.milongas;
     } else {
@@ -1752,7 +1753,8 @@ function chargerMilongas() {
   }
 }
 function sauverMilongas() {
-  try { localStorage.setItem('tev_milongas', JSON.stringify({milongas:MILONGAS, modifie:today()})); } catch(e){}
+  var key = 'tev_milongas_' + (saisonParametres || saisonCourante());
+  try { localStorage.setItem(key, JSON.stringify({milongas:MILONGAS, modifie:today()})); } catch(e){}
 }
 
 function _parseDateLine(line) {
@@ -2108,7 +2110,7 @@ function renderParametres() {
   });
 
   // ── Section Milongas ───────────────────────────────────────
-  if (!MILONGAS) chargerMilongas();
+  chargerMilongas(sai); // recharger pour la saison affichée
   h += '<div style="margin-top:24px;">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Milongas</div>';
   MILONGAS.forEach(function(mil, idx) {
@@ -3861,6 +3863,7 @@ function handleAction(action, btn) {
       break;
     case 'changer-saison-params':
       saisonParametres = btn.dataset.saison || saisonCourante();
+      chargerMilongas(saisonParametres);
       renderTab();
       break;
     case 'toggle-accord-param':
@@ -6144,6 +6147,7 @@ function escHtml(s) {
 }
 
 function renderMilongaPresences() {
+  chargerMilongas(saisonActive()); // données milonga de la saison vue
   var presences = _loadMilPresencesAdmin();
   var todayStr = today();
 
