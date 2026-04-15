@@ -997,6 +997,33 @@
     const nom   = eleveData.eleve.nom;
     const email = eleveData.eleve.email;
 
+    // Tarifs dynamiques depuis les paramètres admin
+    const _tStFrais = _lp('stages').tarifs || {};
+    const t = {
+      tech:      _tStFrais.stage_technique  || 20,
+      s1:        _tStFrais.stage_1           || 25,
+      s2:        _tStFrais.stage_2           || 45,
+      s3:        _tStFrais.stage_3           || 65,
+      s4:        _tStFrais.stage_4           || 85,
+      s2t:       _tStFrais.stage_2_tech      || 60,
+      s3t:       _tStFrais.stage_3_tech      || 75,
+      s4t:       _tStFrais.stage_4_tech      || 95,
+    };
+    const _tarifsBloc = $('stages-tarifs-bloc');
+    if (_tarifsBloc) {
+      const _ti = (lbl, prix) => `<div class="stages-tarif-item"><span class="stages-tarif-label">${lbl}</span><span class="stages-tarif-price">${prix}€</span></div>`;
+      _tarifsBloc.innerHTML =
+        _ti('Technique Leader &amp; Follower · 1h', t.tech) +
+        _ti('1 Stage', t.s1) +
+        _ti('2 Stages', t.s2) +
+        (t.s3 ? _ti('3 Stages', t.s3) : '') +
+        (t.s4 ? _ti('4 Stages', t.s4) : '') +
+        _ti('2 Stages + Technique', t.s2t) +
+        (t.s3 ? _ti('3 Stages + Technique', t.s3t) : '') +
+        (t.s4 ? _ti('4 Stages + Technique', t.s4t) : '') +
+        `<div style="grid-column:1/-1;margin-top:6px;font-size:11px;color:rgba(212,175,55,0.45);font-style:italic;line-height:1.5;">Ces tarifs peuvent varier pour les Stages spéciaux et pour les cours avant les milongas.</div>`;
+    }
+
     if (!STAGES_DATA.length) {
       $('stages-list').innerHTML = '<p class="empty-msg">Aucun stage programm\u00e9 pour le moment.</p>';
       return;
@@ -2533,7 +2560,7 @@ a{color:var(--gold);text-decoration:none;}
   <!-- ── ONGLET STAGES ─────────────────────────────────────── -->
   <div class="tab-pane" id="stages-pane">
     <div class="tab-section-title">Prochains stages</div>
-    <div class="stages-tarifs">
+    <div class="stages-tarifs" id="stages-tarifs-bloc">
       <div class="stages-tarif-item">
         <span class="stages-tarif-label">Technique Leader &amp; Follower · 1h</span>
         <span class="stages-tarif-price">20€</span>
