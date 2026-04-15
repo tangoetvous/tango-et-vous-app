@@ -612,23 +612,11 @@ const TARIFS_STAGES_DEFAUT = {
 var TARIFS_STAGES = Object.assign({}, TARIFS_STAGES_DEFAUT);
 var DATES_STAGES  = [];
 
-// Fallback statique utilisé si localStorage vide
-const DATES_STAGES_FALLBACK = [
-  { date:'2026-04-11', label:'Sam. 11 Avr 2026',  nom:STAGE_NOM_DEFAUT, stages:[
-    { id:'2026-04-11-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2026-04-11-stage1',    horaire:'15h–16h30', theme:'Milonga',                     type:'stage1' },
-    { id:'2026-04-11-stage2',    horaire:'16h30–18h', theme:'Lapiz & Enrosque',            type:'stage2' }
-  ]},
-  { date:'2026-05-30', label:'Sam. 30 Mai 2026',  nom:STAGE_NOM_DEFAUT, stages:[
-    { id:'2026-05-30-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2026-05-30-stage1',    horaire:'15h–16h30', theme:'',                            type:'stage1' },
-    { id:'2026-05-30-stage2',    horaire:'16h30–18h', theme:'',                            type:'stage2' }
-  ]},
-  { date:'2026-06-20', label:'Sam. 20 Juin 2026', nom:STAGE_NOM_DEFAUT, stages:[
-    { id:'2026-06-20-technique', horaire:'14h–15h',   theme:'Technique Leader & Follower', type:'technique' },
-    { id:'2026-06-20-stage1',    horaire:'15h–16h30', theme:'',                            type:'stage1' },
-    { id:'2026-06-20-stage2',    horaire:'16h30–18h', theme:'',                            type:'stage2' }
-  ]},
+// ── Données statiques de fallback (format brut, comme STAGES admin) ─
+const DATES_STAGES_RAW = [
+  { date:'2026-04-11', label:'Sam. 11 Avr 2026',  technique:true, nStages:2, themes:['Milonga','Lapiz \u0026 Enrosque'] },
+  { date:'2026-05-30', label:'Sam. 30 Mai 2026',  technique:true, nStages:2, themes:['',''] },
+  { date:'2026-06-20', label:'Sam. 20 Juin 2026', technique:true, nStages:2, themes:['',''] },
 ];
 
 const TYPE_LABEL = {
@@ -667,28 +655,38 @@ function chargerDonnees() {
   var sai=saisonCourante();
   var saiStart=sai.slice(0,4)+'-09-01';
   var saiEnd  =sai.slice(5) +'-08-31';
-  // Tarifs globaux de la saison
+
+  // Paramètres globaux de la saison (horaires, tarifs, adresse)
+  var globalHor={}, globalAdr={};
   try {
     var pr=localStorage.getItem('tev_params_stages_'+sai);
-    if(pr){ var pp=JSON.parse(pr); if(pp.tarifs&&Object.keys(pp.tarifs).length) TARIFS_STAGES=Object.assign({},TARIFS_STAGES_DEFAUT,pp.tarifs); }
+    if(pr){
+      var pp=JSON.parse(pr);
+      if(pp.tarifs&&Object.keys(pp.tarifs).length) TARIFS_STAGES=Object.assign({},TARIFS_STAGES_DEFAUT,pp.tarifs);
+      globalHor=pp.horaires||{};
+      globalAdr=pp.adresse||{};
+    }
   } catch(e){}
-  // Dates
+
+  // Dates depuis localStorage (si disponibles)
   try {
     var raw=localStorage.getItem('tev_dates_stages');
     if(raw){
       var saved=JSON.parse(raw);
       var sSai=saved.saison||sai;
-      var globalHor={}, globalAdr={};
-      try{ var ph=localStorage.getItem('tev_params_stages_'+sSai); if(ph){ var pph=JSON.parse(ph); globalHor=pph.horaires||{}; globalAdr=pph.adresse||{}; } }catch(e){}
-      // Tarifs de la saison du stage (peut être différente si saison admin ≠ saison courante)
-      try{ var pt=localStorage.getItem('tev_params_stages_'+sSai); if(pt){ var ppt=JSON.parse(pt); if(ppt.tarifs&&Object.keys(ppt.tarifs).length) TARIFS_STAGES=Object.assign({},TARIFS_STAGES_DEFAUT,ppt.tarifs); } }catch(e){}
-      // Afficher toutes les dates de la saison courante (y compris passées)
+      // Si les stages viennent d'une autre saison, charger ses paramètres spécifiques
+      if(sSai!==sai){
+        try{ var ph=localStorage.getItem('tev_params_stages_'+sSai); if(ph){ var pph=JSON.parse(ph); globalHor=pph.horaires||globalHor; globalAdr=pph.adresse||globalAdr; if(pph.tarifs&&Object.keys(pph.tarifs).length) TARIFS_STAGES=Object.assign({},TARIFS_STAGES_DEFAUT,pph.tarifs); } }catch(e){}
+      }
       var stages=(saved.stages||[]).filter(function(st){return st.date>=saiStart&&st.date<=saiEnd;}).sort(function(a,b){return a.date<b.date?-1:1;});
       if(stages.length){ DATES_STAGES=stages.map(function(st){return buildDateEntry(st,globalHor,globalAdr);}); return; }
     }
   } catch(e){}
-  // Fallback statique — toutes les dates de la saison courante
-  DATES_STAGES=DATES_STAGES_FALLBACK.filter(function(d){return d.date>=saiStart&&d.date<=saiEnd;});
+
+  // Fallback — applique aussi les paramètres globaux (horaires, adresse)
+  DATES_STAGES=DATES_STAGES_RAW.filter(function(st){return st.date>=saiStart&&st.date<=saiEnd;})
+    .sort(function(a,b){return a.date<b.date?-1:1;})
+    .map(function(st){return buildDateEntry(st,globalHor,globalAdr);});
 }
 
 // ── Rendu dynamique du bloc tarifs ─────────────────────────────

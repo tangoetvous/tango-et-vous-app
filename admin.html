@@ -5727,10 +5727,11 @@ function getEventsForDate(dateStr) {
       var _aNom=(_stAdr.nom)||(_globAdr.nom)||(_defAdr.nom)||'';
       var _aRue=(_stAdr.rue)||(_globAdr.rue)||(_defAdr.rue)||'';
       var _aTpt=(_stAdr.transport)||(_globAdr.transport)||(_defAdr.transport)||'';
-      var _subSt=(_aNom?_aNom+' \u2014 ':'')+_aRue+(_aTpt?' \u00b7 '+_aTpt:'');
+      var _stageNom=_st.nom||STAGE_NOM_DEFAUT;
+      var _subSt=_stageNom+(_aNom?' \u00b7 '+_aNom+(_aRue?' \u2014 '+_aRue:''):(_aRue?' \u00b7 '+_aRue:''))+(_aTpt?' \u00b7 '+_aTpt:'');
       _ord.forEach(function(_k){
         var _lbl=_k==='tech'?'Technique Leader & Follower':(_st.themes&&_st.themes[parseInt(_k.slice(1))-1])||('Stage '+_k.slice(1));
-        evts.push({cat:'stage',titre:_lbl,heure:_hv(_k+'_deb')+(_hv(_k+'_fin')?'\u2013'+_hv(_k+'_fin'):''),sub:_subSt||undefined});
+        evts.push({cat:'stage',titre:_lbl,heure:_hv(_k+'_deb')+(_hv(_k+'_fin')?'\u2013'+_hv(_k+'_fin'):''),sub:_subSt});
       });
     }
   }

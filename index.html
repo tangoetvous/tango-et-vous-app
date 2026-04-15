@@ -862,11 +862,13 @@
         if (hasTech) slots.push({heure:hor.tech_deb+'\u2013'+hor.tech_fin, titre:_thLbl(s.tech||'','Technique Leader & Follower')});
         const sNames=[s.s1,s.s2,s.s3,s.s4], sDb=['s1_deb','s2_deb','s3_deb','s4_deb'], sFn=['s1_fin','s2_fin','s3_fin','s4_fin'];
         for (let si=0;si<n;si++) slots.push({heure:hor[sDb[si]]+'\u2013'+hor[sFn[si]], titre:_thLbl(sNames[si]||'','Stage '+(si+1))});
-        const startH = hasTech ? hor.tech_deb : hor.s1_deb;
-        const endH   = hor['s'+n+'_fin'] || hor.s2_fin;
+        // Trier par heure de début (ordre chronologique)
+        slots.sort((a,b) => a.heure.localeCompare(b.heure));
+        const startH = slots.length ? slots[0].heure.split('\u2013')[0] : hor.tech_deb;
+        const endH   = slots.length ? (slots[slots.length-1].heure.split('\u2013')[1] || '') : hor.s2_fin;
         const _sNom = (s.adresse && s.adresse.nom) ? s.adresse.nom : LST_NOM;
         const _sRue = (s.adresse && s.adresse.rue) ? s.adresse.rue : LST_RUE;
-        events.push({date:s.date, subtype:'stage', type:'stage', titre:'Stage de Tango',
+        events.push({date:s.date, subtype:'stage', type:'stage', titre:s.nom || 'Stage de Tango',
           heure:startH+'\u2013'+endH, lieu:_sNom+', '+_sRue, slots});
       });
     }
@@ -1000,10 +1002,18 @@
       return;
     }
 
-    // Trier : à venir d'abord, passés ensuite
-    const future = STAGES_DATA.filter(s => s.date >= todayStr);
-    const past   = STAGES_DATA.filter(s => s.date <  todayStr).reverse();
+    // Trier : à venir en ordre croissant, passés en ordre décroissant
+    const future = STAGES_DATA.filter(s => s.date >= todayStr).sort((a,b) => a.date < b.date ? -1 : 1);
+    const past   = STAGES_DATA.filter(s => s.date <  todayStr).sort((a,b) => a.date < b.date ? 1 : -1);
     const all    = [...future, ...past];
+
+    // Adresse fraîche depuis localStorage (pour refléter les changements admin sans reload)
+    const _stAdrFrais = _lp('stages').adresse || {};
+    const _stLocNom = _stAdrFrais.nom || 'Centre Kim Kan';
+    const _stLocRue = _stAdrFrais.rue || '64 rue Orfila, Paris 20e';
+    const _stLocTpt = _stAdrFrais.transport || 'M\u00b0 Gambetta (L3)';
+
+    const STAGE_NOM_DEF = 'Stages avec Florencia Garcia et J\u00e9r\u00e9my Braitbart';
 
     // Bouton unique en haut
     let html = `<div class="stages-top">
@@ -1026,21 +1036,28 @@
       if (hasTech) slotsArr.push({ nom:_thLbl(s.tech||'','Technique Leader &amp; Follower'), heure:hor.tech_deb+'\u2013'+hor.tech_fin, tarif:_tarVal(tar,'stage_technique')+'\u20ac' });
       const sNames=[s.s1,s.s2,s.s3,s.s4], sDb=['s1_deb','s2_deb','s3_deb','s4_deb'], sFn=['s1_fin','s2_fin','s3_fin','s4_fin'], sTk=['stage_1','stage_2','stage_3','stage_4'];
       for (let si=0; si<n; si++) slotsArr.push({ nom:_thLbl(sNames[si]||'','Stage '+(si+1)), heure:hor[sDb[si]]+'\u2013'+hor[sFn[si]], tarif:_tarVal(tar,sTk[si])+'\u20ac' });
+      // Trier par heure de début (ordre chronologique)
+      slotsArr.sort((a,b) => a.heure.localeCompare(b.heure));
       const firstH = slotsArr.length ? slotsArr[0].heure.split('\u2013')[0] : '';
-      const lastH  = slotsArr.length ? slotsArr[slotsArr.length-1].heure.split('\u2013')[1] : '';
+      const lastH  = slotsArr.length ? (slotsArr[slotsArr.length-1].heure.split('\u2013')[1] || '') : '';
       const slotsHtml = slotsArr.map(sl => `<div class="acc-atelier"><span class="acc-slot-name">${sl.nom}</span><span class="acc-slot-heure">${sl.heure}</span><span class="acc-slot-tarif">${sl.tarif}</span></div>`).join('');
+      // Adresse : override par date sinon adresse globale fraîche
+      const _adrNom = (s.adresse && s.adresse.nom) ? s.adresse.nom : _stLocNom;
+      const _adrRue = (s.adresse && s.adresse.rue) ? s.adresse.rue : _stLocRue;
+      const _adrTpt = (s.adresse && s.adresse.transport) ? s.adresse.transport : _stLocTpt;
+      const stageTitre = s.nom || STAGE_NOM_DEF;
 
       html += `<div class="acc-item${isPast ? ' acc-past' : ''}" data-date="${s.date}">
         <div class="acc-header">
           <div class="acc-header-left">
             <span class="acc-date-label">📅 ${df}</span>
+            <span class="acc-stage-nom">${stageTitre}</span>
             ${isPast ? '<span class="acc-badge-past">Pass\u00e9</span>' : ''}
           </div>
           <span class="acc-arrow">\u203a</span>
         </div>
         <div class="acc-body">
-          ${s.nom ? '<div style="font-size:12px;color:#a08050;font-style:italic;margin-bottom:8px;">'+s.nom+'</div>' : ''}
-          <div class="acc-sub-loc">${firstH}\u2013${lastH}\u00a0\u00b7\u00a0${LST_NOM}, ${LST_RUE}</div>
+          <div class="acc-sub-loc">${firstH}\u2013${lastH}\u00a0\u00b7\u00a0${_adrNom}, ${_adrRue}${_adrTpt ? '\u00a0\u00b7\u00a0'+_adrTpt : ''}</div>
           <div class="acc-ateliers">${slotsHtml}</div>
         </div>
       </div>`;
@@ -2033,8 +2050,9 @@ a{color:var(--gold);text-decoration:none;}
   background:#1a1500;transition:background .15s;
 }
 .acc-header:hover{background:#221c00;}
-.acc-header-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
+.acc-header-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap;}
 .acc-date-label{font-size:14px;font-weight:600;color:var(--gold);}
+.acc-stage-nom{font-size:11px;color:rgba(212,175,55,0.55);font-style:italic;flex-basis:100%;margin-top:1px;}
 .acc-badge-past{
   font-size:9px;letter-spacing:1px;text-transform:uppercase;
   background:var(--surface2);color:var(--text-faint);
