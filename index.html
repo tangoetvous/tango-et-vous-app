@@ -563,12 +563,15 @@
   }
 
   function renderWhatsapp() {
-    const wa = _lp('whatsapp');
-    const liens = wa.liens || {};
+    // Lecture directe (plus robuste que _lp dans ce contexte module)
+    const saiWa = (function(){ var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); })();
+    let waData = {};
+    try { waData = JSON.parse(localStorage.getItem('tev_params_whatsapp_' + saiWa) || '{}'); } catch(e) {}
+    const liens = waData.liens || {};
     const cours = [
-      {key:'paris-deb', label:'Paris \u2014 D\u00e9butant',                     icon:'🕺', color:'#60b0ff'},
-      {key:'paris-int', label:'Paris \u2014 Interm\u00e9diaire &amp; Avanc\u00e9', icon:'🕺', color:'#60b0ff'},
-      {key:'vinc-deb',  label:'Vincennes \u2014 D\u00e9butant',                icon:'💃', color:'#40d8c0'},
+      {key:'paris-deb', label:'Paris \u2014 D\u00e9butant',                         icon:'🕺', color:'#60b0ff'},
+      {key:'paris-int', label:'Paris \u2014 Interm\u00e9diaire &amp; Avanc\u00e9',   icon:'🕺', color:'#60b0ff'},
+      {key:'vinc-deb',  label:'Vincennes \u2014 D\u00e9butant',                     icon:'💃', color:'#40d8c0'},
       {key:'vinc-int',  label:'Vincennes \u2014 Interm\u00e9diaire &amp; Avanc\u00e9', icon:'💃', color:'#40d8c0'}
     ];
     const pane = $('whatsapp-pane');
@@ -577,14 +580,20 @@
     h += '<div style="padding:0 2px;font-size:13px;color:var(--text-dim);margin-bottom:18px;">Rejoignez le groupe WhatsApp de votre cours pour rester inform\u00e9\u00b7e des actualit\u00e9s et annonces.</div>';
     cours.forEach(c => {
       const v = liens[c.key] || {};
-      const hasLink = !!(v.lien && v.lien.trim());
-      h += '<div class="contact-card" style="cursor:'+(hasLink?'pointer':'default')+';margin-bottom:10px;"'
-        +(hasLink ? ' onclick="window.open(\''+v.lien.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')+'\',\'_blank\')" tabindex="0"' : '')+'>';
+      const hasLink  = !!(v.lien && v.lien.trim());
+      const hasDrive = !!(v.qr  && v.qr.trim());
+      const actionUrl = hasLink ? v.lien.trim() : (hasDrive ? v.qr.trim() : '');
+      const clickable = hasLink || hasDrive;
+      const safeUrl = actionUrl.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+      h += '<div class="contact-card" style="cursor:'+(clickable?'pointer':'default')+';margin-bottom:10px;"'
+        +(clickable ? ' onclick="window.open(\''+safeUrl+'\',\'_blank\')" tabindex="0"' : '')+'>';
       h += '<div class="contact-icon-wrap" style="font-size:22px;background:#1a2e1f;">💬</div>';
       h += '<div class="contact-info">';
       h += '<div class="contact-label" style="color:'+c.color+';">'+c.icon+' '+c.label+'</div>';
       if (hasLink) {
         h += '<div class="contact-val" style="color:#25d366;">Rejoindre le groupe \u2197</div>';
+      } else if (hasDrive) {
+        h += '<div class="contact-val" style="color:#25d366;">Voir le QR code \u2197</div>';
       } else {
         h += '<div class="contact-val" style="color:var(--text-dim);font-style:italic;">Lien non encore disponible</div>';
       }
