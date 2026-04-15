@@ -614,7 +614,7 @@
     function fmtLong(str) {
       if (!str) return '';
       const d = new Date(str + 'T00:00:00');
-      return cap(JOURS_LONG[d.getDay()]) + ' ' + d.getDate() + ' ' + MOIS_LOC[d.getMonth()];
+      return (cap(JOURS_LONG[d.getDay()]) + ' ' + d.getDate() + ' ' + MOIS_LOC[d.getMonth()]).toUpperCase();
     }
     function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
 
@@ -717,7 +717,7 @@
     // Prochain stage — 1-2 lignes
     if (prochainStage) {
       const ds = new Date(prochainStage.date + 'T00:00:00');
-      const stageLbl = cap(JOURS_LONG[ds.getDay()]) + ' ' + ds.getDate() + ' ' + MOIS_LOC[ds.getMonth()];
+      const stageLbl = (cap(JOURS_LONG[ds.getDay()]) + ' ' + ds.getDate() + ' ' + MOIS_LOC[ds.getMonth()]).toUpperCase();
       const thème = prochainStage.s1 ? prochainStage.s1 + (prochainStage.s2 ? ' · ' + prochainStage.s2 : '') : '';
       h += '<div style="background:rgba(181,123,238,0.07);border:1px solid rgba(181,123,238,0.2);border-left:3px solid #b57bee;border-radius:8px;padding:9px 12px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
@@ -762,7 +762,7 @@
       stagesInscrits.forEach(s => {
         const _dateStr = s.date || s.dateStage || '';
         const dsi = new Date(_dateStr + 'T00:00:00');
-        const lbl = cap(JOURS_LONG[dsi.getDay()]) + ' ' + dsi.getDate() + ' ' + MOIS_LOC[dsi.getMonth()];
+        const lbl = (cap(JOURS_LONG[dsi.getDay()]) + ' ' + dsi.getDate() + ' ' + MOIS_LOC[dsi.getMonth()]).toUpperCase();
         const _daysLeft = Math.round((dsi - _today0) / 86400000);
         const _ctdwn = _daysLeft === 0 ? "Aujourd'hui\u00a0!" : _daysLeft === 1 ? 'Demain\u00a0!' : 'Dans\u00a0' + _daysLeft + '\u00a0j';
         const ateliers = s.ateliers || s.slots || [];
@@ -796,7 +796,7 @@
         const dmp = new Date(p.date + 'T00:00:00');
         const _dLeft = Math.round((dmp - _today0) / 86400000);
         const _ctdwn = _dLeft === 0 ? "Auj.\u00a0!" : _dLeft === 1 ? 'Demain\u00a0!' : 'Dans\u00a0' + _dLeft + '\u00a0j';
-        const _mlbl = cap(JOURS_LONG[dmp.getDay()]) + ' ' + dmp.getDate() + ' ' + MOIS_LOC[dmp.getMonth()];
+        const _mlbl = (cap(JOURS_LONG[dmp.getDay()]) + ' ' + dmp.getDate() + ' ' + MOIS_LOC[dmp.getMonth()]).toUpperCase();
         const _mNomSafe = (p.milongaNom || 'Milonga').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         const _mIdSafe  = (p.milongaId  || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         const _mDateSafe = p.date.replace(/'/g,"\\'");
