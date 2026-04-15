@@ -5836,7 +5836,7 @@ function getEventsForDate(dateStr) {
         var hdeb = mil.horaire_debut||'17h30';
         var hfin = mil.horaire_fin||'23h30';
         var lieu = mil.lieu||{};
-        evts.push({cat:'milonga', titre:mil.nom, heure:hdeb+'\u2013'+hfin,
+        evts.push({cat:'milonga', titre:mil.nom, heure:hdeb+'\u2013'+hfin, color:mil.color||'#ff8c00',
           sub:(lieu.nom?lieu.nom+' \u2014 ':'')+lieu.rue+(lieu.transport?' \u00b7 '+lieu.transport:'')});
       }
     });
@@ -5904,7 +5904,10 @@ function renderAgendaCalendrier() {
       hasEvents=true;
       var _dateLbl = DOW_LONG[d.getDay()]+' '+d.getDate()+' '+MOIS_FR[d.getMonth()].toLowerCase();
       h+='<div class="agenda-day-hdr"><div class="agenda-day-lbl" style="font-size:14px;font-weight:600;'+(ds===todayStr?'color:var(--gold)':'color:var(--text)')+'">'+_dateLbl+'</div>'+(ds===todayStr?'<span class="pill pill-gold" style="font-size:8px;">Aujourd\'hui</span>':'')+'</div>';
-      evts.forEach(function(e){h+='<div class="agenda-event ae-'+e.cat+'"><div><div class="ae-titre">'+(e.heure&&e.heure!=='—'?e.heure+' \u2014 ':'')+e.titre+'</div><div class="ae-sub">'+(e.sub||EVT_SUB_AG[e.cat]||'')+'</div></div></div>';});
+      evts.forEach(function(e){
+        var _milStyle = (e.cat==='milonga' && e.color) ? ' style="border-color:'+e.color+';color:'+e.color+';"' : '';
+        h+='<div class="agenda-event ae-'+e.cat+'"'+_milStyle+'><div><div class="ae-titre">'+(e.heure&&e.heure!=='—'?e.heure+' \u2014 ':'')+e.titre+'</div><div class="ae-sub">'+(e.sub||EVT_SUB_AG[e.cat]||'')+'</div></div></div>';
+      });
       modifsDuJour.forEach(function(m){
         var label = {annule:'🚫 Annulé', reporte:'📅 Reporté', modif:'✏️ Modifié', note:'📌 Note'}[m.action]||m.action;
         h += '<div style="font-size:11px;padding:4px 10px;margin:2px 0;border-radius:4px;background:var(--warn-bg);border:1px solid var(--warn);color:var(--warn-text);">'
