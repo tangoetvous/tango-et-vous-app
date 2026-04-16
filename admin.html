@@ -30,7 +30,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .btn-logout{background:transparent;border:1px solid var(--border);color:var(--dim);padding:5px 10px;border-radius:6px;font-size:11px;}
 .main-tabs{display:flex;align-items:center;justify-content:space-between;background:var(--s1);border-bottom:1px solid var(--border);position:sticky;top:49px;z-index:29;padding:0 12px;height:44px;}
 .admin-active-lbl{font-size:13px;font-weight:700;letter-spacing:1px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
-.admin-menu-btn{background:none;border:1px solid rgba(255,255,255,.2);color:var(--text);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;font-family:var(--font-b);flex-shrink:0;}
+.admin-menu-btn{background:none;border:1px solid rgba(255,255,255,.2);color:var(--text);font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px 14px;border-radius:6px;cursor:pointer;white-space:nowrap;font-family:var(--font-b);flex-shrink:0;}
 .admin-nav-overlay{position:fixed;inset:0;background:#0a0a0a;z-index:200;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);}
 .admin-nav-overlay.open{transform:translateX(0);}
 .admin-nav-overlay-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
@@ -39,8 +39,8 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .tab-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-width:78px;max-width:108px;flex:1;background:none;border:none;color:#888;font-size:10px;font-weight:700;letter-spacing:.5px;cursor:pointer;padding:14px 4px;text-align:center;line-height:1.3;text-transform:uppercase;white-space:normal;transition:background .15s;border-radius:12px;font-family:var(--font-b);}
 .tab-btn.active{background:rgba(255,255,255,.08);color:var(--text);}
 .tab-btn:active{background:rgba(255,255,255,.12);}
-.tab-icon{font-size:26px;line-height:1;}
-.tab-label{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.tab-icon{font-size:30px;line-height:1;}
+.tab-label{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
 .content{padding:12px;max-width:660px;margin:0 auto;padding-bottom:80px;}
 .disc-msg-wrap{margin-bottom:12px;}
 .disc-msg-wrap.mine{text-align:right;}
@@ -4429,6 +4429,25 @@ window.repOuvrirGmail = function() {
     if(!document.hidden) afficherToast('⚠️ App Gmail non trouvée — installez Gmail ou copiez les adresses');
   }, 1000);
 };
+// ================================================================
+// RECHERCHE TRANSVERSALE
+// ================================================================
+function _tevSearchBar() {
+  return '<div style="margin-bottom:10px;">'
+    +'<input type="search" placeholder="🔍 Rechercher un élève…" oninput="tevFilter(this)" autocomplete="off"'
+    +' style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;">'
+    +'</div>';
+}
+function tevFilter(inp) {
+  var q=(inp.value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var scope=inp.parentElement&&inp.parentElement.parentElement;
+  if(!scope)return;
+  scope.querySelectorAll('[data-snom]').forEach(function(el){
+    var n=(el.dataset.snom||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    el.style.display=(!q||n.indexOf(q)>=0)?'':'none';
+  });
+}
+
 function renderRepertoire() {
   var sai = saisonActive();
   var h = '';
@@ -4456,6 +4475,7 @@ function renderRepertoire() {
     +'<button class="btn btn-gold" onclick="repOuvrirGmail()">✉️ Ouvrir Gmail</button>'
     +'</div></div>';
   // ── Listes par groupe ──
+  h += _tevSearchBar();
   REP_GROUPES.forEach(function(g) {
     var liste = repSort(repDedup(repGetListeByGroupe(g.id,sai)));
     h += '<div style="margin-bottom:20px;">'
@@ -4468,7 +4488,7 @@ function renderRepertoire() {
     } else {
       liste.forEach(function(e) {
         var tel = e.tel||'';
-        h += '<div class="point-row">'
+        h += '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',tel,'ct')+'</div>'
           +'<div class="point-sub">'+(tel||'<span style="color:var(--dim);font-style:italic;">pas de tél.</span>')+'</div>'
@@ -4831,6 +4851,7 @@ function renderEssai() {
     +'</div>'
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" data-action="rafraichir-essais">&#8635; Rafraîchir</button>':'')
     +'</div>';
+  if(filtreEssai!=='inscrire') h+=_tevSearchBar();
   // Trier : date ASC, puis niveau (debutant avant intermediaire), puis rôle
   liste.sort(function(a,b){
     if(a.date!==b.date)return a.date.localeCompare(b.date);
@@ -4982,7 +5003,7 @@ function renderEssai() {
         if(ctStatut==='inscrit') pastille='<span class="pill pill-ok" style="font-size:8px;padding:1px 5px;">Inscrit</span>';
         else if(ctStatut==='valide'||ctStatut==='attente_paiement') pastille='<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">att. paiem.</span>';
         else if(ctStatut==='demande') pastille='<span style="display:inline-block;background:#FFD600;color:#003399;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;border:2px solid #003399;white-space:nowrap;">DEM</span>';
-        body += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
+        body += '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · avec '+e.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
           +(e.presenceConfirmee===true?'<span class="pill pill-ok" style="font-size:8px;">✓Conf.</span>':'')
@@ -5001,7 +5022,7 @@ function renderEssai() {
       for(var ei=0;ei<eal;ei++){if(ei<eGui.length)eAlt.push(eGui[ei]);if(ei<eGde.length)eAlt.push(eGde[ei]);}
       eAlt.forEach(function(c) {
         var rcls=c.role==='guideur'?'pill-guideur':'pill-guidee';
-        body += '<div class="point-row"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(c.prenom+' '+c.nom,c.email||'',c.tel||'','ct')+'</div>'
+        body += '<div class="point-row" data-snom="'+(c.nom+' '+c.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(c.prenom+' '+c.nom,c.email||'',c.tel||'','ct')+'</div>'
           +'<div class="point-sub">'+(c.ville||'')+(c.partenaire?' · avec '+c.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
           +'<span class="pill pill-ok" style="font-size:8px;">Inscrit</span>'
@@ -5441,7 +5462,7 @@ function renderCartes() {
     if(ca!==cb)return ca.localeCompare(cb,'fr');
     return (a.nom||'').localeCompare(b.nom||'','fr');
   });
-  var h='', lastCours=null;
+  var h=_tevSearchBar(), lastCours=null;
   h += '<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Un élève peut pointer deux fois le même jour (cours débutant + intermédiaire).</div>';
   cartes.forEach(function(c){
     // En-tête de groupe par cours (ville + niveau normalisé)
@@ -5477,8 +5498,7 @@ function renderCartes() {
     var payePill=payeOk
       ?'<span class="pill pill-ok" style="font-size:8px;cursor:pointer;" data-action="toggle-carte-paye" data-id="'+c.id+'">✓ Payé</span>'
       :'<span class="pill pill-warn" style="font-size:8px;cursor:pointer;" data-action="toggle-carte-paye" data-id="'+c.id+'">Non payé</span>';
-    h+='<div class="point-row" style="align-items:flex-start;padding:10px 12px;'+(fini||bient?'border-left:3px solid var(--warn-text);':'border-left:3px solid var(--border);')+'">'
-      +'<div style="flex:1;min-width:0;">'
+    h+='<div class="point-row" data-snom="'+c.nom.toLowerCase().replace(/"/g,'&quot;')+'" style="display:block;padding:10px 12px;'+(fini||bient?'border-left:3px solid var(--warn-text);':'border-left:3px solid var(--border);')+'">'
       +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">'
       +'<span class="point-nom nom-clickable" style="font-size:13px;" data-action="open-contact" data-nom="'+c.nom.replace(/"/g,'&quot;')+'" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-tel="" data-ctx="carte">'+c.nom+'</span>'
       +'<span class="pill '+sCls+'" style="font-size:8px;">'+sLbl+'</span>'
@@ -5486,10 +5506,8 @@ function renderCartes() {
       +payePill
       +'</div>'
       +'<div class="point-sub" style="font-size:10px;">'+nbUtil+'/'+totalSlots+' cours · '+expTxt+'</div>'
-
       +miniDots
-      +'</div>'
-      +'<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;margin-left:8px;">'
+      +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">'
       +(fini?'':'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer</button>')
       +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="qr-carte" data-id="'+c.id+'" data-nom="'+c.nom+'" data-cours="'+(c.cours||'').replace(/"/g,'&quot;')+'">📱 QR</button>'
       +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="renouveler-carte" data-id="'+c.id+'" data-nom="'+c.nom+'">↻ Renouveler</button>'
@@ -5710,6 +5728,7 @@ function renderStages() {
   h+='</div>';
 
   if(filtreStageSlot==='pointage'){
+    h+=_tevSearchBar();
     var conf=ins.filter(function(i){return !i.attente;});
     var att=ins.filter(function(i){return i.attente;});
     var pres=conf.filter(function(i){return i.present===true;});
@@ -5725,7 +5744,7 @@ function renderStages() {
     if(att.filter(function(i){return i.role==='guidee';}).length){
       h+='<div class="section-hdr">Guidées en attente</div>';
       att.filter(function(i){return i.role==='guidee';}).forEach(function(i){
-        h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+(i.prenom+' '+i.nom).replace(/"/g,'&quot;')+'" data-email="'+(i.email||'')+'" data-tel="'+(i.tel||'')+'" data-ctx="stage">'+i.prenom+' '+i.nom+'</div>'
+        h+='<div class="card hl-warn" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+(i.prenom+' '+i.nom).replace(/"/g,'&quot;')+'" data-email="'+(i.email||'')+'" data-tel="'+(i.tel||'')+'" data-ctx="stage">'+i.prenom+' '+i.nom+'</div>'
           +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(', ')+'</div>'+partenaireTag(i.partenaire,'guidee')+'</div>'
           +'<span class="pill pill-warn">Attente</span></div>'
           +'<div class="btn-row"><button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Confirmer</button></div></div>';
@@ -5739,7 +5758,7 @@ function renderStages() {
     confAlt.forEach(function(i){
       var origIdx=ins.indexOf(i);
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-      h+='<div class="point-row"><div style="flex:1;"><div class="point-nom" style="display:flex;align-items:center;gap:6px;">'+i.prenom+' '+i.nom
+      h+='<div class="point-row" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;"><div class="point-nom" style="display:flex;align-items:center;gap:6px;">'+i.prenom+' '+i.nom
         +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span></div>'
         +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
         +'<div style="display:flex;gap:6px;">'
@@ -5984,10 +6003,11 @@ function renderSorano() {
   function alpha(a,b){return (a.nom+' '+a.prenom).localeCompare(b.nom+' '+b.prenom,'fr');}
   function cardRow(s){
     var nomQ=s.nom.replace(/"/g,'&quot;');
+    var snomQ=s.nom.toLowerCase().replace(/"/g,'&quot;');
     if(s.paiementSorano){
-      return '<div class="card hl-ok"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button><button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
+      return '<div class="card hl-ok" data-snom="'+snomQ+'"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button><button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
     }
-    return '<div class="card hl-warn"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+nomQ+'" data-id="'+s.id+'">✉️ Relance</button><button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
+    return '<div class="card hl-warn" data-snom="'+snomQ+'"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+nomQ+'" data-id="'+s.id+'">✉️ Relance</button><button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
   }
   var groups=[
     {lbl:'Tango Vincennes Débutants',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return ct.statut==='inscrit'&&ct.ville==='vincennes'&&ct.niveau==='debutant'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email]};}).sort(alpha)},
@@ -6000,6 +6020,7 @@ function renderSorano() {
   var totalPaye=allDedup.filter(function(s){return s.paiementSorano;}).length;
   var totalNonPaye=allDedup.length-totalPaye;
   var h='<div class="stats-row stats-3"><div class="stat"><div class="stat-n n-gold">'+allDedup.length+'</div><div class="stat-l">Total</div></div><div class="stat"><div class="stat-n n-ok">'+totalPaye+'</div><div class="stat-l">Réglé</div></div><div class="stat"><div class="stat-n n-warn">'+totalNonPaye+'</div><div class="stat-l">En attente</div></div></div>';
+  h+=_tevSearchBar();
   groups.forEach(function(g){
     h+='<div class="section-hdr" style="color:'+g.color+'">'+g.lbl+' ('+g.list.length+')</div>';
     if(!g.list.length){h+='<div style="color:var(--dim);font-size:12px;padding:8px 0 12px;">Aucun élève inscrit</div>';return;}
@@ -7043,6 +7064,7 @@ function renderCoursTango() {
 
   if(!liste.length) return h+'<div class="empty-state">Aucun élève dans cette catégorie.</div>';
 
+  h+=_tevSearchBar();
   liste = liste.slice().sort(function(a,b){
     if(a.cours!==b.cours)return(a.cours||'').localeCompare(b.cours||'');
     return(a.nom||'').localeCompare(b.nom||'');
@@ -7066,7 +7088,7 @@ function ficheEleve(e) {
   var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
   var roleLbl = e.role==='guideur'?'Guideur':'Guidée';
 
-  var h = '<div class="point-row" style="flex-wrap:wrap;align-items:flex-start;gap:6px;padding:9px 0;">'
+  var h = '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'" style="flex-wrap:wrap;align-items:flex-start;gap:6px;padding:9px 0;">'
     +'<div style="flex:1;min-width:160px;">'
     +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+'</div>'
     +(e.partenaire?'<div class="point-sub">♥ '+e.partenaire+'</div>':'')
