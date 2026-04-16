@@ -2011,12 +2011,18 @@
   window.openPub = function(id) {
     const p = (window._pubs || []).find(x => x.id === id);
     if (!p) return;
-    $('pub-modal-cat').textContent  = p.cat || '';
+    $('pub-modal-cat').textContent   = p.cat || '';
     $('pub-modal-titre').textContent = p.titre || '';
     $('pub-modal-date').textContent  = formatDate(p.dateProgrammee || p.date || '');
     $('pub-modal-body').textContent  = p.contenu || p.extrait || '';
+    const imgEl = $('pub-modal-img');
+    if (imgEl) {
+      if (p.image) { imgEl.src = p.image; imgEl.style.display = 'block'; }
+      else { imgEl.src = ''; imgEl.style.display = 'none'; }
+    }
     $('pub-modal').classList.add('open');
     $('pub-modal-backdrop').classList.add('open');
+    $('pub-modal').scrollTop = 0;
   };
 
   window.closePubModal = function() {
@@ -2864,25 +2870,32 @@ a{color:var(--gold);text-decoration:none;}
 }
 .pub-modal-backdrop.open{display:block;}
 .pub-modal{
-  display:none;position:fixed;left:16px;right:16px;
-  top:50%;transform:translateY(-50%);
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius);padding:24px 20px 20px;
-  z-index:301;max-height:80vh;overflow-y:auto;
+  display:none;position:fixed;inset:0;
+  background:var(--surface);
+  z-index:301;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
 }
-.pub-modal.open{display:block;}
+.pub-modal.open{display:flex;flex-direction:column;}
+.pub-modal-header{
+  position:sticky;top:0;z-index:2;
+  display:flex;justify-content:flex-end;
+  padding:10px 14px;background:var(--surface);
+}
 .pub-modal-close{
-  position:absolute;top:12px;right:14px;
-  background:none;border:none;color:var(--text-faint);
-  font-size:18px;cursor:pointer;line-height:1;
+  background:rgba(0,0,0,.45);border:none;color:#fff;
+  font-size:20px;cursor:pointer;line-height:1;
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
 }
+.pub-modal-img{width:100%;max-height:55vw;object-fit:cover;display:block;flex-shrink:0;}
+.pub-modal-inner{padding:20px 18px 36px;flex:1;}
 .pub-modal-cat{
   font-size:9px;letter-spacing:2px;text-transform:uppercase;
   color:var(--gold);font-weight:700;margin-bottom:8px;
 }
-.pub-modal-titre{font-size:17px;font-weight:700;color:var(--text);line-height:1.35;margin-bottom:6px;}
+.pub-modal-titre{font-size:20px;font-weight:700;color:var(--text);line-height:1.35;margin-bottom:6px;}
 .pub-modal-date{font-size:11px;color:var(--text-faint);margin-bottom:16px;}
-.pub-modal-body{font-size:14px;color:var(--text-dim);line-height:1.7;}
+.pub-modal-body{font-size:15px;color:var(--text-dim);line-height:1.75;white-space:pre-wrap;}
 .pub-card{cursor:pointer;transition:border-color .2s;}
 .pub-card:hover{border-color:var(--gold);}
 
@@ -3657,11 +3670,16 @@ a{color:var(--gold);text-decoration:none;}
   <!-- ── PUBLICATION MODAL ──────────────────────────────────── -->
   <div id="pub-modal-backdrop" class="pub-modal-backdrop"></div>
   <div id="pub-modal" class="pub-modal" role="dialog" aria-modal="true">
-    <button class="pub-modal-close" id="pub-modal-close-btn">✕</button>
-    <div class="pub-modal-cat" id="pub-modal-cat"></div>
-    <div class="pub-modal-titre" id="pub-modal-titre"></div>
-    <div class="pub-modal-date" id="pub-modal-date"></div>
-    <div class="pub-modal-body" id="pub-modal-body"></div>
+    <div class="pub-modal-header">
+      <button class="pub-modal-close" id="pub-modal-close-btn">✕</button>
+    </div>
+    <img id="pub-modal-img" class="pub-modal-img" src="" alt="" style="display:none;margin-top:-46px;">
+    <div class="pub-modal-inner">
+      <div class="pub-modal-cat" id="pub-modal-cat"></div>
+      <div class="pub-modal-titre" id="pub-modal-titre"></div>
+      <div class="pub-modal-date" id="pub-modal-date"></div>
+      <div class="pub-modal-body" id="pub-modal-body"></div>
+    </div>
   </div>
 
 </div><!-- /screen-dashboard -->
