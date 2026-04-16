@@ -5700,6 +5700,7 @@ function sauvegarderEditCarte() {
   c.datesCours = dates;
   c.datePremierCours = dates[0] || c.datePremierCours || '';
   if(c.datePremierCours && !c.expiration) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris');
+  _broadcastAdminSync('carteUpdate', {email:c.email, utilises:c.utilises, restants:c.restants, datesCours:c.datesCours, datePremierCours:c.datePremierCours, expiration:c.expiration});
   if(!IS_DEMO) postAS({action:'modifierDatesCarte', eleveId:c.id, utilises:n, datesCours:dates}).catch(function(){});
   fermerModalEditCarte();
   renderTab();
