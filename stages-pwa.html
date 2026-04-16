@@ -1127,10 +1127,10 @@ async function soumettre(){
     var isIframeDemo = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
     if (isIframeDemo) {
       try { window.parent.postMessage(msgDemo, '*'); } catch(e){}
+    } else {
+      try { var pd=JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]'); pd.push(msgDemo); localStorage.setItem('tev_pending_inscriptions',JSON.stringify(pd)); } catch(e){}
+      try { if(window.BroadcastChannel){ var bcd=new BroadcastChannel('tev_inscriptions'); bcd.postMessage(msgDemo); bcd.close(); } } catch(e){}
     }
-    // Toujours broadcaster pour que admin.html (autre onglet) puisse recevoir
-    try { var pd=JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]'); pd.push(msgDemo); localStorage.setItem('tev_pending_inscriptions',JSON.stringify(pd)); } catch(e){}
-    try { if(window.BroadcastChannel){ var bcd=new BroadcastChannel('tev_inscriptions'); bcd.postMessage(msgDemo); bcd.close(); } } catch(e){}
     return;
   }
 
@@ -1146,14 +1146,14 @@ async function soumettre(){
     var isIframe = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
     if (isIframe) {
       try { window.parent.postMessage(msg, '*'); } catch(e){}
+    } else {
+      try {
+        var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
+        pending.push(msg);
+        localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+      } catch(e){}
+      try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
     }
-    // Toujours broadcaster pour que admin.html (autre onglet) puisse recevoir
-    try {
-      var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
-      pending.push(msg);
-      localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
-    } catch(e){}
-    try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
   } catch(err){
     btn.disabled=false; btn.textContent="Je m'inscris";
     document.getElementById('err-global-2').textContent='Une erreur est survenue. Veuillez réessayer ou nous contacter à tangoetvous@gmail.com';

@@ -868,14 +868,15 @@ function finalize() {
   const isIframe = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
   if (isIframe) {
     try { window.parent.postMessage(msg, '*'); } catch(e) {}
+  } else {
+    // Hors iframe : stocker en localStorage (repris au login admin) + BroadcastChannel (admin ouvert dans un autre onglet)
+    try {
+      const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
+      pending.push(msg);
+      localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+    } catch(e) {}
+    try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e) {}
   }
-  // Toujours broadcaster pour que admin.html (autre onglet) puisse recevoir
-  try {
-    const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
-    pending.push(msg);
-    localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
-  } catch(e) {}
-  try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e) {}
 }
 
 function buildRecapFinal(incl2) {
