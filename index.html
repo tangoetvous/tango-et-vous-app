@@ -2015,10 +2015,22 @@
     $('pub-modal-titre').textContent = p.titre || '';
     $('pub-modal-date').textContent  = formatDate(p.dateProgrammee || p.date || '');
     $('pub-modal-body').textContent  = p.contenu || p.extrait || '';
-    const imgEl = $('pub-modal-img');
-    if (imgEl) {
-      if (p.image) { imgEl.src = p.image; imgEl.style.display = 'block'; }
-      else { imgEl.src = ''; imgEl.style.display = 'none'; }
+    const media = $('pub-modal-media');
+    if (media) {
+      media.className = 'pub-modal-media';
+      media.innerHTML = '';
+      if (p.video) {
+        const wrap = document.createElement('div');
+        wrap.className = 'pub-modal-video-wrap';
+        const fr = document.createElement('iframe');
+        fr.src = p.video; fr.allowFullscreen = true;
+        fr.allow = 'accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture';
+        wrap.appendChild(fr); media.appendChild(wrap);
+      } else if (p.image) {
+        const img = document.createElement('img');
+        img.src = p.image; img.alt = p.titre || '';
+        media.appendChild(img);
+      }
     }
     $('pub-modal').classList.add('open');
     $('pub-modal-backdrop').classList.add('open');
@@ -2887,8 +2899,11 @@ a{color:var(--gold);text-decoration:none;}
   width:36px;height:36px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
 }
-.pub-modal-img{width:100%;max-height:55vw;object-fit:cover;display:block;flex-shrink:0;}
-.pub-modal-inner{padding:20px 18px 36px;flex:1;}
+.pub-modal-inner{padding:20px 18px 24px;}
+.pub-modal-media{width:100%;padding-bottom:24px;}
+.pub-modal-media img{width:100%;height:auto;display:block;}
+.pub-modal-video-wrap{position:relative;width:100%;padding-top:56.25%;}
+.pub-modal-video-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}
 .pub-modal-cat{
   font-size:9px;letter-spacing:2px;text-transform:uppercase;
   color:var(--gold);font-weight:700;margin-bottom:8px;
@@ -3673,13 +3688,13 @@ a{color:var(--gold);text-decoration:none;}
     <div class="pub-modal-header">
       <button class="pub-modal-close" id="pub-modal-close-btn">✕</button>
     </div>
-    <img id="pub-modal-img" class="pub-modal-img" src="" alt="" style="display:none;margin-top:-46px;">
     <div class="pub-modal-inner">
       <div class="pub-modal-cat" id="pub-modal-cat"></div>
       <div class="pub-modal-titre" id="pub-modal-titre"></div>
       <div class="pub-modal-date" id="pub-modal-date"></div>
       <div class="pub-modal-body" id="pub-modal-body"></div>
     </div>
+    <div id="pub-modal-media"></div>
   </div>
 
 </div><!-- /screen-dashboard -->

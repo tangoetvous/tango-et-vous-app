@@ -280,13 +280,13 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   <div style="position:sticky;top:0;z-index:2;display:flex;justify-content:flex-end;padding:10px 14px;background:var(--s1);">
     <button id="pub-view-close" style="background:rgba(255,255,255,.1);border:none;color:var(--text);font-size:20px;cursor:pointer;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;">✕</button>
   </div>
-  <div id="pv-img" style="margin-top:-46px;"></div>
-  <div style="padding:20px 18px 36px;">
+  <div style="padding:4px 18px 20px;">
     <div id="pv-cat" style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:6px;"></div>
     <div id="pv-titre" style="font-size:20px;font-weight:700;color:var(--text);line-height:1.35;margin-bottom:4px;"></div>
     <div id="pv-date" style="font-size:11px;color:var(--dim);margin-bottom:16px;"></div>
     <div id="pv-body" style="font-size:15px;color:var(--text);line-height:1.75;white-space:pre-wrap;"></div>
   </div>
+  <div id="pv-img" style="width:100%;padding-bottom:24px;"></div>
 </div>
 
 <!-- Modal fiche contact élève -->
@@ -6820,7 +6820,22 @@ function voirPub(idx) {
   gel('pv-cat').textContent=(icon+' '+p.cat).toUpperCase();
   gel('pv-titre').textContent=p.titre||'';
   gel('pv-date').textContent=dateStr;
-  (function(){var el=gel('pv-img');el.innerHTML='';if(p.image){var i=document.createElement('img');i.src=p.image;i.style.cssText='width:100%;max-height:55vw;object-fit:cover;display:block;';i.loading='lazy';el.appendChild(i);}})();
+  (function(){
+    var el=gel('pv-img'); el.innerHTML='';
+    if(p.video){
+      var wrap=document.createElement('div');
+      wrap.style.cssText='position:relative;width:100%;padding-top:56.25%;';
+      var fr=document.createElement('iframe');
+      fr.src=p.video; fr.allowFullscreen=true;
+      fr.allow='accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture';
+      fr.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:none;';
+      wrap.appendChild(fr); el.appendChild(wrap);
+    } else if(p.image){
+      var i=document.createElement('img');
+      i.src=p.image; i.style.cssText='width:100%;height:auto;display:block;'; i.loading='lazy';
+      el.appendChild(i);
+    }
+  })();
   gel('pv-body').textContent=p.contenu||p.extrait||'';
   var m=gel('pub-view-modal');m.style.display='flex';m.scrollTop=0;
 }
