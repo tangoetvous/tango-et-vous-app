@@ -356,6 +356,9 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   <div class="content" id="tab-content"><div class="spinner"></div></div>
 </div>
 
+<!-- Firebase Messaging (notifications push discussions) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <script>
 // ================================================================
 // CONFIG
@@ -363,6 +366,14 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
 var ADMIN_EMAILS    = ['tangoetvous@gmail.com','florencia@tangoetvous.com','jeremy@tangoetvous.com'];
 var URL_PWA              = 'https://tangoetvous.github.io/tango-et-vous-app';
+// ⚙️  Clé VAPID — Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
+var VAPID_KEY_ADMIN = 'VOTRE_VAPID_KEY';
+var FIREBASE_CONFIG_ADMIN = {
+  apiKey: "AIzaSyD-STk_VpUIe6mjOh7kX9bsaOE8OvPNEcs",
+  authDomain: "tango-et-vous.firebaseapp.com", projectId: "tango-et-vous",
+  storageBucket: "tango-et-vous.firebasestorage.app",
+  messagingSenderId: "778867090916", appId: "1:778867090916:web:697fab0815e79f336493f1"
+};
 
 // ── Liens AssoConnect par saison (mis à jour chaque année avant le 1er mai) ──
 var LIENS_ASSOCONNECT_DEFAUT = {
@@ -3509,6 +3520,30 @@ function demarrerApp(email) {
   traiterInscriptionsEnAttente();
   renderTab();
   demarrerPollEssais();
+  if (!IS_DEMO) _initPushAdmin(email);
+}
+function _initPushAdmin(email) {
+  if (!('Notification' in window) || Notification.permission === 'denied') return;
+  if (VAPID_KEY_ADMIN === 'VOTRE_VAPID_KEY') return; // non configuré
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+  Notification.requestPermission().then(function(perm) {
+    if (perm !== 'granted') return;
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG_ADMIN);
+      var msg = firebase.messaging();
+      navigator.serviceWorker.ready.then(function(swReg) {
+        msg.getToken({ vapidKey: VAPID_KEY_ADMIN, serviceWorkerRegistration: swReg })
+          .then(function(token) {
+            if (token) postAS({ action:'saveFcmToken', token:token, email:email, groupes:[], app:'admin' }).catch(function(){});
+          }).catch(function(){});
+        msg.onMessage(function(payload) {
+          var n = payload.notification || {};
+          afficherToast((n.title||'Tango & Vous') + (n.body ? ' — ' + n.body : ''));
+          if (currentTab === 'discussions') { chargerDiscussions(function(){ renderDiscussions(); }); }
+        });
+      });
+    } catch(e) {}
+  });
 }
 // Event listener sélecteur de saison dans le header
 document.addEventListener('DOMContentLoaded', function() {

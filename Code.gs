@@ -28,6 +28,7 @@ const SHEET_COURS_TANGO   = 'Cours Tango';     // inscriptions régulières
 const SHEET_AGENDA_MODIFS = 'Agenda Modifs';   // modifications/annulations d'occurrences
 const SHEET_DISCUSSIONS   = 'Discussions';
 const SHEET_DISC_MESSAGES = 'Discussion_Messages';
+const SHEET_FCM_TOKENS    = 'FCM_Tokens';
 
 // ── Lignes de départ ──────────────────────────────────────────
 const ELEVES_START_ROW    = 5;
@@ -244,6 +245,7 @@ function doPost(e) {
       case 'postDiscussionMessage':       r = postDiscussionMessage(b); break;
       case 'closeDiscussion':             r = closeDiscussion(b); break;
       case 'deleteDiscussion':            r = deleteDiscussion(b); break;
+      case 'saveFcmToken':               r = saveFcmToken(b); break;
       default:                            r = {error:'Action POST inconnue : '+a};
     }
     out.setContent(JSON.stringify(r));
@@ -1994,7 +1996,67 @@ function createDiscussion(body) {
   const id = 'disc_' + Utilities.formatDate(new Date(),'Europe/Paris','yyyyMMddHHmmss');
   const dateNow = new Date().toISOString();
   s.appendRow([id, titre, Array.isArray(groupes)?groupes.join(','):'', createur_email||'', createur_nom||'', 'ouvert', dateNow]);
+  // Notification push aux participants concernés
+  try {
+    const sFcm = ss.getSheetByName(SHEET_FCM_TOKENS);
+    if (sFcm && sFcm.getLastRow() >= 2) {
+      const fcmData = sFcm.getRange(2,1,sFcm.getLastRow()-1,3).getValues();
+      const tokens = fcmData.filter(r => {
+        if (!r[1]) return false;
+        if (!Array.isArray(groupes) || !groupes.length) return true;
+        const userGroupes = (r[2]||'').toString().split(',').filter(Boolean);
+        return !userGroupes.length || groupes.some(g => userGroupes.includes(g));
+      }).map(r => r[1].toString());
+      if (tokens.length) _sendFcmPush(tokens, '💬 Nouvelle discussion', titre);
+    }
+  } catch(e) {}
   return {ok:true, id:id, date:dateNow};
+}
+
+function saveFcmToken(body) {
+  const token = (body.token||'').toString().trim();
+  const email = (body.email||'').toString().trim().toLowerCase();
+  if (!token) return {ok:false, error:'token requis'};
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let s = ss.getSheetByName(SHEET_FCM_TOKENS);
+  if (!s) {
+    s = ss.insertSheet(SHEET_FCM_TOKENS);
+    s.appendRow(['email','token','groupes','app','updated_at']);
+    s.getRange(1,1,1,5).setBackground('#D4AF37').setFontColor('#000').setFontWeight('bold');
+    s.setFrozenRows(1);
+  }
+  const lr = s.getLastRow();
+  if (lr >= 2) {
+    const data = s.getRange(2,1,lr-1,2).getValues();
+    for (let i=0; i<data.length; i++) {
+      if ((data[i][0]||'').toString().toLowerCase()===email || (data[i][1]||'').toString()===token) {
+        s.getRange(i+2,1,1,5).setValues([[email, token,
+          Array.isArray(body.groupes)?body.groupes.join(','):'',
+          body.app||'eleve', new Date().toISOString()]]);
+        return {ok:true};
+      }
+    }
+  }
+  s.appendRow([email, token, Array.isArray(body.groupes)?body.groupes.join(','):'', body.app||'eleve', new Date().toISOString()]);
+  return {ok:true};
+}
+
+function _sendFcmPush(tokens, title, body) {
+  if (!tokens || !tokens.length) return;
+  const serverKey = PropertiesService.getScriptProperties().getProperty('FCM_SERVER_KEY');
+  if (!serverKey) return; // clé non configurée — voir DEPLOIEMENT.md
+  try {
+    UrlFetchApp.fetch('https://fcm.googleapis.com/fcm/send', {
+      method: 'post', contentType: 'application/json',
+      headers: { 'Authorization': 'key=' + serverKey },
+      payload: JSON.stringify({
+        registration_ids: tokens,
+        notification: { title, body, icon: '/icon-192.png' },
+        webpush: { notification: { icon: '/icon-192.png', badge: '/icon-192.png' } }
+      }),
+      muteHttpExceptions: true
+    });
+  } catch(e) {}
 }
 
 function getDiscussionMessages(p) {

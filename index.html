@@ -13,6 +13,7 @@
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js';
 
   // ================================================================
   // ⚙️  CONFIGURATION — À remplacer avec tes valeurs Firebase
@@ -28,6 +29,8 @@
 
   // ⚙️  URL de ton Apps Script déployé (Web App)
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
+  // ⚙️  Clé VAPID — Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
+  const VAPID_KEY = 'VOTRE_VAPID_KEY';
 
   // ================================================================
   // DEMO MODE — active si les configs sont vides
@@ -106,9 +109,10 @@
   // INIT FIREBASE
   // ================================================================
   let auth = null;
+  let _fbApp = null;
   if (!IS_DEMO) {
-    const app = initializeApp(FIREBASE_CONFIG);
-    auth = getAuth(app);
+    _fbApp = initializeApp(FIREBASE_CONFIG);
+    auth = getAuth(_fbApp);
   }
 
   // ================================================================
@@ -282,6 +286,7 @@
       renderDashboard();
       showScreen('screen-dashboard');
       _initAdminSync();
+      _initPush();
     } catch(e) {
       // Erreur API : élève introuvable ou erreur serveur
       $('notfound-icon').textContent = '🔍';
@@ -469,7 +474,7 @@
     if (tab === 'whatsapp') renderWhatsapp();
     if (tab === 'avis') renderAvis();
     if (tab === 'discussions') renderDiscussions();
-    if (tab !== 'discussions') _discStopPoll();
+    if (tab !== 'discussions') { _discStopPoll(); if (_discView === 'new') _discView = 'list'; }
     window.scrollTo(0, 0);
   };
 
@@ -516,6 +521,7 @@
   // DISCUSSIONS
   // ================================================================
   let _discDiscList    = null;
+  let _discView        = 'list'; // 'list' | 'new' | 'chat'
   let _discCurrentId   = null;
   let _discCurrentTitle = '';
   let _discMsgs        = [];
@@ -560,7 +566,8 @@
     const pane = $('discussions-pane');
     if (!pane) return;
 
-    if (_discCurrentId) { _renderDiscChatView(pane); return; }
+    if (_discView === 'new') { _renderDiscFormEleve(pane); return; }
+    if (_discView === 'chat' && _discCurrentId) { _renderDiscChatView(pane); return; }
 
     pane.innerHTML = '<div style="display:flex;justify-content:center;padding:40px 0;"><div class="spinner"></div></div>';
 
@@ -575,10 +582,12 @@
     try { localStorage.setItem('tev_disc_last_seen', new Date().toISOString()); } catch(e) {}
 
     const discs = _discDiscList || [];
-    let h = '<div class="tab-section-title">\uD83D\uDCAC Discussions</div><div style="padding:0 16px 24px;">';
+    let h = '<div class="tab-section-title" style="display:flex;align-items:center;justify-content:space-between;padding-right:16px;">\uD83D\uDCAC Discussions'
+      + '<button id="disc-new-btn" style="background:none;border:1px solid var(--gold,#d4af37);color:var(--gold,#d4af37);font-size:12px;font-weight:700;padding:5px 13px;border-radius:20px;cursor:pointer;letter-spacing:.5px;white-space:nowrap;">+ Nouvelle</button>'
+      + '</div><div style="padding:0 16px 24px;">';
 
     if (!discs.length) {
-      h += '<div style="text-align:center;padding:40px 20px;color:var(--text-dim,#888);font-size:14px;line-height:1.7;">Aucune discussion ouverte pour le moment.<br/><span style="font-size:12px;color:var(--text-faint,#555);">Florencia ou Jérémy ouvriront bientôt un nouveau sujet d\'échange.</span></div>';
+      h += '<div style="text-align:center;padding:40px 20px;color:var(--text-dim,#888);font-size:14px;line-height:1.7;">Aucune discussion ouverte pour le moment.<br/><span style="font-size:12px;color:var(--text-faint,#555);">Appuyez sur "+ Nouvelle" pour en ouvrir une.</span></div>';
     } else {
       discs.forEach(disc => {
         const grp = (disc.groupes||[]).map(_discGroupLabel).join(', ') || 'Tous les groupes';
@@ -599,10 +608,13 @@
       el.addEventListener('click', () => {
         _discCurrentId = el.dataset.discOpen;
         _discCurrentTitle = el.dataset.discTitle;
+        _discView = 'chat';
         _discMsgs = [];
         _renderDiscChatView(pane);
       });
     });
+    const newBtn = $('disc-new-btn');
+    if (newBtn) newBtn.addEventListener('click', () => { _discView = 'new'; renderDiscussions(); });
   }
 
   function _renderDiscChatView(pane) {
@@ -627,6 +639,7 @@
       _discStopPoll();
       _discCurrentId = null;
       _discCurrentTitle = '';
+      _discView = 'list';
       renderDiscussions();
     });
 
@@ -704,6 +717,112 @@
 
   function _discStopPoll() {
     if (_discPollTO) { clearTimeout(_discPollTO); _discPollTO = null; }
+  }
+
+  // ── Formulaire création de discussion (élève) ─────────────────
+  function _renderDiscFormEleve(pane) {
+    if (!pane) pane = $('discussions-pane');
+    if (!pane) return;
+    const mesGroupes = _discGetMonGroupe();
+    const groupes = [
+      ['paris-debutants',        'Paris Débutants'],
+      ['paris-intermediaires',   'Paris Intermédiaires'],
+      ['vincennes-debutants',    'Vincennes Débutants'],
+      ['vincennes-intermediaires','Vincennes Intermédiaires']
+    ];
+    const cbHtml = groupes.map(([val, lbl]) =>
+      `<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:9px;cursor:pointer;">`
+      +`<input type="checkbox" value="${val}" class="disc-eleve-grp-cb"${mesGroupes.includes(val)?' checked':''}> ${lbl}</label>`
+    ).join('');
+    pane.innerHTML =
+      `<div style="padding:16px;">`
+      +`<button id="disc-form-back" style="background:none;border:none;color:var(--gold,#d4af37);font-size:15px;cursor:pointer;padding:0;margin-bottom:14px;">← Retour</button>`
+      +`<div style="background:var(--s2,#141414);border-radius:14px;padding:20px;">`
+      +`<div style="font-size:16px;font-weight:700;margin-bottom:16px;">💬 Nouvelle discussion</div>`
+      +`<div style="margin-bottom:14px;">`
+      +`<label style="font-size:12px;color:var(--text-dim,#888);margin-bottom:6px;display:block;">Titre *</label>`
+      +`<input id="disc-form-titre" type="text" placeholder="Ex : Covoiturage pour le stage…" autocomplete="off"`
+      +` style="width:100%;box-sizing:border-box;font-size:14px;background:var(--s1,#0f0f0f);border:1px solid var(--border,#333);color:var(--text,#f0f0f0);padding:10px 14px;border-radius:10px;outline:none;"/>`
+      +`</div>`
+      +`<div style="margin-bottom:14px;">`
+      +`<label style="font-size:12px;color:var(--text-dim,#888);margin-bottom:8px;display:block;">Groupes invités</label>`
+      +cbHtml
+      +`<div style="font-size:11px;color:var(--text-faint,#555);margin-top:4px;line-height:1.5;">ℹ️ Votre groupe est coché par défaut. Si aucun groupe n'est sélectionné, tout le monde peut voir la discussion.</div>`
+      +`</div>`
+      +`<div id="disc-form-err" style="color:#f87171;font-size:12px;display:none;margin-bottom:10px;"></div>`
+      +`<div style="display:flex;gap:10px;">`
+      +`<button id="disc-form-cancel" style="flex:1;padding:12px;background:var(--s1,#0f0f0f);border:1px solid var(--border,#333);color:var(--text-dim,#888);border-radius:10px;font-size:14px;cursor:pointer;">Annuler</button>`
+      +`<button id="disc-form-submit" style="flex:2;padding:12px;background:var(--gold,#d4af37);border:none;color:#000;font-weight:700;border-radius:10px;font-size:14px;cursor:pointer;">Ouvrir la discussion</button>`
+      +`</div>`
+      +`</div></div>`;
+
+    const goBack = () => { _discView = 'list'; renderDiscussions(); };
+    $('disc-form-back').addEventListener('click', goBack);
+    $('disc-form-cancel').addEventListener('click', goBack);
+    $('disc-form-submit').addEventListener('click', async () => {
+      const titre = $('disc-form-titre').value.trim();
+      const errEl = $('disc-form-err');
+      errEl.style.display = 'none';
+      if (!titre) { errEl.textContent = 'Le titre est requis.'; errEl.style.display = 'block'; return; }
+      const groupesSel = [...document.querySelectorAll('.disc-eleve-grp-cb:checked')].map(cb => cb.value);
+      const btn = $('disc-form-submit');
+      btn.disabled = true; btn.textContent = '…';
+      const elv = (eleveData && eleveData.eleve) || {};
+      const nomComplet = elv.nom || elv.email || 'Élève';
+      if (IS_DEMO) {
+        const fakeId = 'disc_demo_' + Date.now();
+        if (!_discDiscList) _discDiscList = [];
+        _discDiscList.unshift({ id:fakeId, titre, groupes:groupesSel, createur_email:elv.email||'', createur_nom:nomComplet, statut:'ouvert', date:new Date().toISOString() });
+        _discCurrentId = fakeId; _discCurrentTitle = titre; _discView = 'chat'; _discMsgs = [];
+        renderDiscussions(); return;
+      }
+      try {
+        const r = await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify({
+          action:'createDiscussion', titre, groupes:groupesSel,
+          createur_email:elv.email||'', createur_nom:nomComplet
+        })});
+        const d = await r.json();
+        if (d.ok) {
+          _discDiscList = null;
+          _discCurrentId = d.id; _discCurrentTitle = titre; _discView = 'chat'; _discMsgs = [];
+          renderDiscussions();
+        } else {
+          errEl.textContent = 'Erreur lors de la création.'; errEl.style.display = 'block';
+          btn.disabled = false; btn.textContent = 'Ouvrir la discussion';
+        }
+      } catch(e) {
+        errEl.textContent = 'Erreur réseau.'; errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Ouvrir la discussion';
+      }
+    });
+    setTimeout(() => { const t = $('disc-form-titre'); if (t) t.focus(); }, 100);
+  }
+
+  // ── Notifications push (Firebase Cloud Messaging) ─────────────
+  async function _initPush() {
+    if (!_fbApp || !('Notification' in window) || Notification.permission === 'denied') return;
+    if (VAPID_KEY === 'VOTRE_VAPID_KEY') return; // non configuré
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+      const swReg = await navigator.serviceWorker.ready;
+      const messaging = getMessaging(_fbApp);
+      const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+      if (token) {
+        const groupes = _discGetMonGroupe();
+        fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify({
+          action:'saveFcmToken', token,
+          email:(eleveData&&eleveData.eleve&&eleveData.eleve.email)||'',
+          groupes, app:'eleve'
+        })}).catch(()=>{});
+      }
+      onMessage(messaging, payload => {
+        const n = payload.notification || {};
+        _showInAppNotif((n.title||'Tango & Vous') + (n.body ? ' — ' + n.body : ''));
+        _discDiscList = null;
+        if (currentTab === 'discussions' && _discView === 'list') renderDiscussions();
+      });
+    } catch(e) { /* permission refusée ou navigateur non supporté */ }
   }
 
   // ================================================================

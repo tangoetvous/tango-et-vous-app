@@ -182,7 +182,38 @@ n'est pas utilisée, laisser tel quel — cela n'affecte pas le reste.
 
 ---
 
-## Étape 7 — Liens AssoConnect (mise à jour annuelle)
+## Étape 7 — Notifications push (Firebase Cloud Messaging)
+
+Les discussions envoient une notification sur le téléphone (même app fermée)
+à chaque nouvelle discussion ouverte. Deux clés sont nécessaires.
+
+### 7a. Clé VAPID (client → inscription push)
+
+1. Firebase Console → Projet `tango-et-vous` → Project Settings → Cloud Messaging
+2. Section « Web configuration » → **Generate key pair** (ou copier si déjà créée)
+3. Remplacer `VOTRE_VAPID_KEY` dans **deux fichiers** :
+   - `index.html` : `const VAPID_KEY = 'VOTRE_VAPID_KEY';`
+   - `admin.html` : `var VAPID_KEY_ADMIN = 'VOTRE_VAPID_KEY';`
+
+### 7b. Clé serveur FCM (Apps Script → envoi push)
+
+1. Firebase Console → Project Settings → Cloud Messaging → **Server key** (section « Cloud Messaging API (Legacy) »)
+   - Si l'API legacy n'est pas visible : Google Cloud Console → API & Services → Enable « Firebase Cloud Messaging API »
+2. Dans l'éditeur Apps Script → Paramètres du projet → Variables de Script → Ajouter :
+   - Nom : `FCM_SERVER_KEY`
+   - Valeur : la clé serveur copiée à l'étape 1
+
+> Sans cette clé, l'envoi de push échoue silencieusement — les discussions
+> fonctionnent normalement, mais sans notification côté serveur.
+
+### 7c. Autoriser le domaine dans Firebase
+
+Firebase Console → Authentication → Settings → Domaines autorisés →
+Ajouter `tangoetvous.github.io` (si pas déjà fait à l'étape 5).
+
+---
+
+## Étape 8 — Liens AssoConnect (mise à jour annuelle)
 
 Dans `admin.html`, le dictionnaire `LIENS_ASSOCONNECT_DEFAUT` contient les
 liens de paiement par saison. **Avant le 1er mai** de chaque année, ajouter
@@ -230,9 +261,12 @@ Après avoir renseigné `APPS_SCRIPT_URL` (étape 3d), vérifier que
 | Fichier       | Variable                  | Valeur à remplacer          |
 |---------------|---------------------------|-----------------------------|
 | `index.html`  | `APPS_SCRIPT_URL`         | URL Apps Script déployé     |
+| `index.html`  | `VAPID_KEY`               | Clé VAPID Firebase          |
 | `admin.html`  | `APPS_SCRIPT_URL`         | URL Apps Script déployé     |
+| `admin.html`  | `VAPID_KEY_ADMIN`         | Clé VAPID Firebase          |
 | `admin.html`  | `CLOUDINARY_NAME`         | Nom du cloud Cloudinary     |
 | `Code.gs`     | `URL_PWA`                 | `https://tangoetvous.github.io/tango-et-vous-app` |
+| Apps Script   | Script Property `FCM_SERVER_KEY` | Clé serveur FCM       |
 
 > `FIREBASE_CONFIG` dans `index.html` et `ADMIN_EMAILS` / `EMAIL_CONTACT`
 > dans Code.gs semblent déjà avoir les bonnes valeurs de production.
