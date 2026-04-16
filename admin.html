@@ -7123,9 +7123,11 @@ function changerStatutCoursTango(id, statut, btn) {
 function prefillVP(id) {
   var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
   if(!e)return;
-  var telEl=gel('vp-tel'), emailEl=gel('vp-email');
+  var telEl=gel('vp-tel'), emailEl=gel('vp-email'), paiEl=gel('vp-paiement'), dateEl=gel('vp-date-paiement');
   if(telEl)telEl.value=e.tel||'';
   if(emailEl)emailEl.value=e.email||'';
+  if(paiEl)paiEl.value=e.paiement||'';
+  if(dateEl)dateEl.value=e.datePaiement||today();
 }
 
 function ouvrirValiderPaiement(id) {
@@ -7153,6 +7155,10 @@ function renderValiderPaiement() {
     +'<div class="field"><label>Téléphone</label><input type="tel" id="vp-tel" placeholder="06 XX XX XX XX"/></div>'
     +'<div class="field"><label>Email</label><input type="email" id="vp-email" autocapitalize="none"/></div>'
     +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div class="field"><label>Moyen de paiement</label><select id="vp-paiement"><option value="">— Sélectionner —</option><option value="cb1x">CB 1×</option><option value="cb3x">CB 3×</option><option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="virement1x">Virement 1×</option><option value="virement3x">Virement 3×</option></select></div>'
+    +'<div class="field"><label>Date 1er paiement</label><input type="date" id="vp-date-paiement"/></div>'
+    +'</div>'
     +'<div style="margin-bottom:10px;">'
     +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">Carte de 10 cours</div>'
     +'<div style="display:flex;gap:8px;">'
@@ -7175,6 +7181,8 @@ function soumettreValiderPaiement(force) {
   var carte10=carte10El?carte10El.value:'non';
   var tel=(gel('vp-tel')||{}).value||'';
   var email=(gel('vp-email')||{}).value||'';
+  var paiement=(gel('vp-paiement')||{}).value||'';
+  var datePaiement=(gel('vp-date-paiement')||{}).value||today();
   var err=gel('vp-err'), ok=gel('vp-ok');
   if(err)err.style.display='none'; if(ok)ok.style.display='none';
   if(!id){if(err){err.textContent='Sélectionnez un élève.';err.style.display='block';}return;}
@@ -7196,10 +7204,12 @@ function soumettreValiderPaiement(force) {
     }
     if(e){
       e.statut='inscrit';
-      e.paiement='';
+      e.type=carte10==='oui'?'carte10':'forfait';
+      e.paiement=paiement;
+      e.datePaiement=datePaiement;
       if(tel)e.tel=tel; if(email)e.email=email;
       if(!adminData.inscriptionsCours)adminData.inscriptionsCours=[];
-      adminData.inscriptionsCours.push({id:'IC'+Date.now(),nom:e.prenom+' '+e.nom,email:e.email,cours:e.cours,type:carte10==='oui'?'carte10':'forfait',paiement:'',montant:0,date:today(),ville:e.ville||'paris'});
+      adminData.inscriptionsCours.push({id:'IC'+Date.now(),nom:e.prenom+' '+e.nom,email:e.email,cours:e.cours,type:e.type,paiement:paiement,montant:0,date:datePaiement,ville:e.ville||'paris'});
       if(carte10==='oui'&&!adminData.cartes.find(function(c){return c.email===e.email;})){
         adminData.cartes.push({id:e.id,nom:e.prenom+' '+e.nom,niveau:e.niveau,email:e.email,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Active',source:'inscription',ville:e.ville||'paris',datesCours:[],partenaire:e.partenaire||'',paye:true});
         recalcStats();
@@ -7209,7 +7219,7 @@ function soumettreValiderPaiement(force) {
     setTimeout(function(){switchTab('eleves-tango');},1500);
     return;
   }
-  postAS({action:'validerPaiementCoursTango',id:id,carte10:carte10,tel:tel,email:email}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+  postAS({action:'validerPaiementCoursTango',id:id,carte10:carte10,tel:tel,email:email,paiement:paiement,datePaiement:datePaiement}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
 }
 
 function renderFormulaireDemandeAdmin() {
