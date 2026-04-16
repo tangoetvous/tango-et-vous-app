@@ -219,6 +219,21 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   </div>
 </div>
 
+<!-- Modal édition cours carte de 10 -->
+<div class="modal-overlay" id="modal-edit-carte">
+  <div class="modal-box" style="max-height:80vh;overflow-y:auto;">
+    <div class="modal-titre">✏️ Modifier les cours — <span id="modal-ec-nom"></span></div>
+    <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:8px;display:block;">Cours pris sur la carte (0–10)</label>
+    <input type="number" id="modal-ec-utilises" min="0" max="10" class="modal-input" style="margin-top:6px;width:90px;" oninput="updateModalEcDates()"/>
+    <div style="font-size:11px;color:var(--dim);margin-top:8px;">Dates de chaque cours :</div>
+    <div id="modal-ec-dates" style="margin-top:6px;display:flex;flex-direction:column;gap:6px;"></div>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="modal-cancel" id="modal-ec-cancel">Annuler</button>
+      <button class="modal-ok" id="modal-ec-ok">✓ Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal renouvellement carte -->
 <div class="modal-overlay" id="modal-renouveler">
   <div class="modal-box">
@@ -865,6 +880,7 @@ var currentTab        = 'eleves-tango';
 var adminData         = {};
 var filtreEleve       = 'attente';
 var filtreEssai       = 'dates';
+var cartesSubTab      = 'pointage';
 var filtreStage       = '';
 var filtreStageSlot   = 'technique';  // sous-onglet stage : technique|stage1|stage2|pointage
 var sousOngletCours   = 'demandes';
@@ -1462,6 +1478,9 @@ gel('modal-date-ok').addEventListener('click', confirmerModalDate);
 gel('modal-pointer-cancel').addEventListener('click', fermerModalPointer);
 gel('modal-pointer-ok').addEventListener('click', confirmerModalPointer);
 gel('modal-pointer').addEventListener('click', function(e){if(e.target===this)fermerModalPointer();});
+gel('modal-ec-cancel').addEventListener('click', fermerModalEditCarte);
+gel('modal-ec-ok').addEventListener('click', sauvegarderEditCarte);
+gel('modal-edit-carte').addEventListener('click', function(e){if(e.target===this)fermerModalEditCarte();});
 gel('modal-confirm-cancel').addEventListener('click', fermerModalConfirm);
 gel('modal-confirm-ok').addEventListener('click', confirmerModalConfirm);
 gel('modal-ren-cancel').addEventListener('click', fermerModalRenouveler);
@@ -3913,6 +3932,23 @@ function handleAction(action, btn) {
     case 'pointer-cours':
       (function(){ var c=adminData.cartes.find(function(x){return x.id===id;}); ouvrirModalPointer(c?c.nom:'',function(date,nb){ pointerCoursAction(id,date,nb,btn); }); })();
       break;
+    case 'pointer-cours-1':
+      (function(){
+        var c=adminData.cartes.find(function(x){return x.id===id;});
+        if(!c)return;
+        var todayDate=today();
+        var dejaPointe=(c.datesCours||[]).filter(function(d){return d===todayDate;}).length;
+        if(dejaPointe>=2){afficherToast('2 pointages maximum par jour');return;}
+        pointerCoursAction(id,todayDate,dejaPointe+1,btn);
+      })();
+      break;
+    case 'cartes-subtab':
+      cartesSubTab=btn.dataset.tab||'pointage';
+      renderTab();
+      break;
+    case 'edit-carte-dates':
+      (function(){ var c=adminData.cartes.find(function(x){return x.id===id;}); ouvrirModalEditCarte(c); })();
+      break;
     case 'renouveler-carte':
       ouvrirModalRenouveler(id, btn.dataset.nom||'');
       break;
@@ -5418,66 +5454,102 @@ function renderReportSection(sai, cartes) {
   });
   return h;
 }
-function renderCartes() {
+function _buildCartesData() {
   var sai = saisonActive();
-  // Période de report : 1er juillet au 31 août (ou démo)
-  var todayD = today();
-  var yyyyCur = todayD.slice(0,4);
-  var reportFrom = yyyyCur+'-07-01', reportUntil = yyyyCur+'-08-31';
-  var isReportPeriod = IS_DEMO || (todayD>=reportFrom && todayD<=reportUntil);
-
-  // Inclure les élèves avec carte10 validée même sans cours pointé encore
-  // + les cartes reportées sur cette saison depuis la saison précédente
   var cartesEleves = (adminData.cartes||[]).filter(function(c){
     var carteS = c.saison || saisonCourante();
-    return carteS===sai && (c.utilises>0||c.restants>0||c.datePremierCours);
+    return carteS===sai && (c.utilises>0||c.restants>0||c.datePremierCours||c.statut==='Nouvelle carte');
   });
-  // Initialiser paye si absent : inscription = payé, essai = non payé par défaut
-  cartesEleves.forEach(function(c){
-    if(c.paye===undefined)c.paye=(c.source==='inscription');
-  });
-  // Ajouter aussi les inscriptions avec carte10 validées (restants=10, pas encore pointés)
+  cartesEleves.forEach(function(c){ if(c.paye===undefined)c.paye=(c.source==='inscription'); });
   var emailsCartes = {};
   cartesEleves.forEach(function(c){ emailsCartes[c.email]=true; });
   (adminData.coursTango||[]).filter(function(ct){
     return ct.statut==='inscrit' && ct.type && ct.type.indexOf('carte')>=0 && !emailsCartes[ct.email] && (ct.saison||saisonCourante())===sai;
   }).forEach(function(ct){
     var newCarte = {
-      id: ct.id, nom: ct.prenom+' '+ct.nom, niveau: ct.niveau,
-      email: ct.email, statutEleve:'Actif', utilises:0, restants:10,
+      id:ct.id, nom:ct.prenom+' '+ct.nom, niveau:ct.niveau,
+      email:ct.email, statutEleve:'Actif', utilises:0, restants:10,
       datePremierCours:'', expiration:'', statut:'Nouvelle carte',
-      source:'inscription', ville: ct.ville, datesCours:[], partenaire:ct.partenaire||'',
-      paye:true
+      source:'inscription', ville:ct.ville, datesCours:[], partenaire:ct.partenaire||'', paye:true
     };
     cartesEleves.push(newCarte);
-    // Aussi pousser dans adminData.cartes pour que pointer/renouveler fonctionnent
     if(!adminData.cartes)adminData.cartes=[];
     adminData.cartes.push(newCarte);
     emailsCartes[ct.email]=true;
   });
-  var cartes = cartesEleves;
-  if(!cartes.length)return'<div class="empty-state">Aucune carte de 10 cours.<br>Inscrivez un élève avec "Carte de 10 cours" dans l\'onglet Cours.</div>';
-  var now=new Date(); now.setHours(0,0,0,0);
-  // Normaliser le niveau pour unifier les casses (debutant → Débutant, intermediaire → Intermédiaire)
-  var NIVEAUX_LABELS = {'debutant':'Débutant','débutant':'Débutant','intermediaire':'Intermédiaire','intermédiaire':'Intermédiaire','avance':'Avancé','avancé':'Avancé'};
-  function normNiveauCartes(n){ return n ? (NIVEAUX_LABELS[n.toLowerCase()]||n) : '—'; }
-  function coursKey(c){ return (c.ville==='vincennes'?'Vincennes':'Paris')+' — '+normNiveauCartes(c.niveau); }
-  // Trier par groupe (Paris/Vincennes + niveau), puis par nom alphabétique
-  cartes.sort(function(a,b){
-    var ca=coursKey(a);
-    var cb=coursKey(b);
+  var NIVEAUX_LABELS={'debutant':'Débutant','débutant':'Débutant','intermediaire':'Intermédiaire','intermédiaire':'Intermédiaire','avance':'Avancé','avancé':'Avancé'};
+  function normNiv(n){return n?(NIVEAUX_LABELS[n.toLowerCase()]||n):'—';}
+  function coursKey(c){return(c.ville==='vincennes'?'Vincennes':'Paris')+' — '+normNiv(c.niveau);}
+  cartesEleves.sort(function(a,b){
+    var ca=coursKey(a),cb=coursKey(b);
     if(ca!==cb)return ca.localeCompare(cb,'fr');
-    return (a.nom||'').localeCompare(b.nom||'','fr');
+    return(a.nom||'').localeCompare(b.nom||'','fr');
   });
-  var h=_tevSearchBar(), lastCours=null;
-  h += '<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Un élève peut pointer deux fois le même jour (cours débutant + intermédiaire).</div>';
+  var now=new Date(); now.setHours(0,0,0,0);
+  var todayD=today();
+  var yyyyCur=todayD.slice(0,4);
+  var isReportPeriod=IS_DEMO||(todayD>=yyyyCur+'-07-01'&&todayD<=yyyyCur+'-08-31');
+  return {cartes:cartesEleves, normNiv:normNiv, coursKey:coursKey, now:now, todayD:todayD, isReportPeriod:isReportPeriod};
+}
+function renderCartes() {
+  var d=_buildCartesData();
+  var cartes=d.cartes;
+  if(!cartes.length)return'<div class="empty-state">Aucune carte de 10 cours.<br>Inscrivez un élève avec "Carte de 10 cours" dans l\'onglet Cours.</div>';
+  // Sous-onglets
+  var h='<div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;">'
+    +'<button class="btn" data-action="cartes-subtab" data-tab="pointage" style="flex:1;border-radius:8px 8px 0 0;border-bottom:none;font-size:13px;padding:8px 0;'+(cartesSubTab==='pointage'?'background:var(--gold);color:#1a1a1a;font-weight:700;':'background:var(--s3);color:var(--dim);')+'">'
+    +'✅ Pointage</button>'
+    +'<button class="btn" data-action="cartes-subtab" data-tab="details" style="flex:1;border-radius:8px 8px 0 0;border-bottom:none;font-size:13px;padding:8px 0;'+(cartesSubTab==='details'?'background:var(--gold);color:#1a1a1a;font-weight:700;':'background:var(--s3);color:var(--dim);')+'">'
+    +'🔍 Détails</button>'
+    +'</div>';
+  if(cartesSubTab==='pointage') h+=renderCartesPointage(d);
+  else h+=renderCartesDetails(d);
+  return h;
+}
+function renderCartesPointage(d) {
+  var cartes=d.cartes, coursKey=d.coursKey, now=d.now;
+  var h=_tevSearchBar();
+  h+='<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Cliquez "Pointer" pour enregistrer le cours d\'aujourd\'hui. Max 2 par jour.</div>';
+  var lastCours=null;
   cartes.forEach(function(c){
-    // En-tête de groupe par cours (ville + niveau normalisé)
-    var coursLbl = coursKey(c);
-    if(coursLbl!==lastCours){
-      lastCours=coursLbl;
-      h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>';
-    }
+    var coursLbl=coursKey(c);
+    if(coursLbl!==lastCours){ lastCours=coursLbl; h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>'; }
+    var nbUtil=c.utilises||0;
+    var totalSlots=c.isReport?(c.classesReportees||c.restants||10):10;
+    var expAff=c.expiration;
+    if(!expAff&&c.datePremierCours)expAff=calcExpiration(c.datePremierCours,c.ville||'paris');
+    var exp=expAff?new Date(expAff+'T00:00:00'):null;
+    var days=exp?Math.ceil((exp-now)/86400000):null;
+    var fini=nbUtil>=totalSlots||(days!==null&&days<0);
+    var bient=!fini&&days!==null&&days<14;
+    var sCls=fini?'pill-err':bient?'pill-warn':'pill-ok';
+    var sLbl=fini?'À renouveler':bient?'Expire dans '+days+'j':'Active';
+    var todayDate=today();
+    var dejaPointe=(c.datesCours||[]).filter(function(dd){return dd===todayDate;}).length;
+    var pteBtn=fini
+      ?'<span style="font-size:10px;color:var(--dim);">—</span>'
+      :dejaPointe>=2
+        ?'<span class="pill pill-ok" style="font-size:10px;">✓ Pointé ×2</span>'
+        :dejaPointe===1
+          ?'<button class="btn btn-gold" style="padding:4px 10px;font-size:11px;" data-action="pointer-cours-1" data-id="'+c.id+'">+ Pointer ×2</button>'
+          :'<button class="btn btn-gold" style="padding:4px 10px;font-size:11px;" data-action="pointer-cours-1" data-id="'+c.id+'">+ Pointer</button>';
+    h+='<div class="point-row" data-snom="'+c.nom.toLowerCase().replace(/"/g,'&quot;')+'" style="display:flex;align-items:center;gap:8px;padding:8px 12px;flex-wrap:nowrap;">'
+      +'<span class="point-nom nom-clickable" style="flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" data-action="open-contact" data-nom="'+c.nom.replace(/"/g,'&quot;')+'" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-tel="" data-ctx="carte">'+c.nom+'</span>'
+      +'<span style="font-size:12px;color:var(--text);white-space:nowrap;">'+nbUtil+'/'+totalSlots+'</span>'
+      +'<span class="pill '+sCls+'" style="font-size:9px;white-space:nowrap;">'+sLbl+'</span>'
+      +pteBtn
+      +'</div>';
+  });
+  return h;
+}
+function renderCartesDetails(d) {
+  var cartes=d.cartes, coursKey=d.coursKey, now=d.now, isReportPeriod=d.isReportPeriod;
+  var h=_tevSearchBar();
+  h+='<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Un élève peut pointer deux fois le même jour (cours débutant + intermédiaire).</div>';
+  var lastCours=null;
+  cartes.forEach(function(c){
+    var coursLbl=coursKey(c);
+    if(coursLbl!==lastCours){ lastCours=coursLbl; h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>'; }
     var nbUtil=c.utilises||0, datesCours=c.datesCours||[];
     var totalSlots=c.isReport?(c.classesReportees||c.restants||10):10;
     var expAff=c.expiration;
@@ -5488,7 +5560,6 @@ function renderCartes() {
     var bient=!fini&&days!==null&&days<14;
     var sLbl=fini?'À renouveler':bient?'Expire dans '+days+'j':'Active';
     var sCls=fini?'pill-err':bient?'pill-warn':'pill-ok';
-    // Mini ronds dorés avec dates en blanc
     var miniDots='<div style="display:flex;gap:5px;margin:8px 0;flex-wrap:wrap;align-items:flex-start;">';
     for(var i=0;i<totalSlots;i++){
       var ds=datesCours[i]||null;
@@ -5516,6 +5587,7 @@ function renderCartes() {
       +miniDots
       +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">'
       +(fini?'':'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer</button>')
+      +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="edit-carte-dates" data-id="'+c.id+'">✏️ Modifier</button>'
       +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="qr-carte" data-id="'+c.id+'" data-nom="'+c.nom+'" data-cours="'+(c.cours||'').replace(/"/g,'&quot;')+'">📱 QR</button>'
       +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="renouveler-carte" data-id="'+c.id+'" data-nom="'+c.nom+'">↻ Renouveler</button>'
       +(isReportPeriod&&!fini&&!c.isReport&&(c.restants||0)>0?'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="reporter-carte" data-id="'+c.id+'">↩ Reporter</button>':'')
@@ -5575,6 +5647,61 @@ function toggleCartePaye(id) {
   // If now paid, restore coursTango inscrit status
   if(c.paye){var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='attente_paiement';});if(cte)cte.statut='inscrit';}
   if(!IS_DEMO)postAS({action:'toggleCartePaye',eleveId:id,paye:c.paye}).catch(function(){});
+  renderTab();
+}
+var _editCarteId = null;
+function ouvrirModalEditCarte(c) {
+  if(!c)return;
+  _editCarteId = c.id;
+  gel('modal-ec-nom').textContent = c.nom || '';
+  var nbUtil = c.utilises || 0;
+  gel('modal-ec-utilises').value = nbUtil;
+  _renderModalEcDates(c.datesCours || [], nbUtil);
+  gel('modal-edit-carte').classList.add('vis');
+}
+function fermerModalEditCarte() {
+  gel('modal-edit-carte').classList.remove('vis');
+  _editCarteId = null;
+}
+function _renderModalEcDates(existingDates, count) {
+  var container = gel('modal-ec-dates');
+  container.innerHTML = '';
+  for(var i=0; i<count; i++){
+    var inp = document.createElement('input');
+    inp.type = 'date';
+    inp.className = 'modal-input';
+    inp.style.cssText = 'margin:0;font-size:12px;padding:6px 8px;';
+    inp.value = existingDates[i] || '';
+    container.appendChild(inp);
+  }
+}
+function updateModalEcDates() {
+  var c = (adminData.cartes||[]).find(function(x){return x.id===_editCarteId;});
+  var existing = c ? (c.datesCours||[]) : [];
+  // Read currently entered dates before regenerating
+  var current = [];
+  var inputs = gel('modal-ec-dates').querySelectorAll('input[type=date]');
+  inputs.forEach(function(inp){ current.push(inp.value); });
+  var n = Math.max(0, Math.min(10, parseInt(gel('modal-ec-utilises').value)||0));
+  _renderModalEcDates(current.length ? current : existing, n);
+}
+function sauvegarderEditCarte() {
+  var c = (adminData.cartes||[]).find(function(x){return x.id===_editCarteId;});
+  if(!c){fermerModalEditCarte();return;}
+  var n = Math.max(0, Math.min(10, parseInt(gel('modal-ec-utilises').value)||0));
+  var dates = [];
+  gel('modal-ec-dates').querySelectorAll('input[type=date]').forEach(function(inp){
+    if(inp.value) dates.push(inp.value);
+  });
+  // Sort dates chronologically
+  dates.sort();
+  c.utilises = n;
+  c.restants = Math.max(0, 10 - n);
+  c.datesCours = dates;
+  c.datePremierCours = dates[0] || c.datePremierCours || '';
+  if(c.datePremierCours && !c.expiration) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris');
+  if(!IS_DEMO) postAS({action:'modifierDatesCarte', eleveId:c.id, utilises:n, datesCours:dates}).catch(function(){});
+  fermerModalEditCarte();
   renderTab();
 }
 function reporterCarteJs(id, btn) {
