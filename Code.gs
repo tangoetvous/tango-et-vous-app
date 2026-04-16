@@ -59,7 +59,7 @@ const ADMIN_EMAILS = [
 ];
 
 // ── URLs ──────────────────────────────────────────────────────
-const URL_PWA     = 'https://USERNAME.github.io/tango-et-vous-app';
+const URL_PWA     = 'https://tangoetvous.github.io/tango-et-vous-app';
 const EMAIL_CONTACT = 'tangoetvous@gmail.com';
 const NOM_ECOLE     = 'Tango & Vous';
 const URL_SITE      = 'https://www.tangoetvous.com';
