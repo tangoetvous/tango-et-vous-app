@@ -6890,10 +6890,24 @@ function ajouterDateProg() {
 }
 function uploadMedia(input) {
   var file=input.files[0]; if(!file)return;
-  var prog=gel('ul-prog'); if(prog)prog.style.display='block';
-  if(!CLOUDINARY_NAME||CLOUDINARY_NAME==='VOTRE_CLOUD_NAME'){if(prog)prog.style.display='none';return;}
+  var prog=gel('ul-prog'); if(prog){prog.style.display='block';prog.style.color='var(--gold)';prog.textContent='⏳ Upload en cours…';}
+  if(!CLOUDINARY_NAME||CLOUDINARY_NAME==='VOTRE_CLOUD_NAME'){if(prog){prog.textContent='❌ Cloud name non configuré';prog.style.color='#e53935';}return;}
   var fd=new FormData(); fd.append('file',file); fd.append('upload_preset','tango_uploads');
-  fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_NAME+'/auto/upload',{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(d){if(d.secure_url){var img=gel('ed-image');if(img)img.value=d.secure_url;}}).catch(function(e){console.error('Upload:',e);}).finally(function(){if(prog)prog.style.display='none';});
+  fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_NAME+'/auto/upload',{method:'POST',body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.secure_url){
+        var img=gel('ed-image'); if(img)img.value=d.secure_url;
+        var zone=gel('upload-zone');
+        if(zone)zone.innerHTML='<img src="'+_escAttr(d.secure_url)+'" style="max-height:80px;border-radius:4px;display:block;margin:0 auto 8px;"/><div style="font-size:12px;color:var(--dim);">📸 Changer l\'image</div>';
+        if(prog){prog.textContent='✅ Upload réussi';prog.style.color='#4caf50';}
+      } else {
+        var msg=d.error&&d.error.message?d.error.message:'Échec upload';
+        if(prog){prog.textContent='❌ '+msg;prog.style.color='#e53935';}
+      }
+    })
+    .catch(function(e){if(prog){prog.textContent='❌ Erreur réseau';prog.style.color='#e53935';}})
+    .finally(function(){setTimeout(function(){if(prog)prog.style.display='none';},3000);});
 }
 function savePub(existingId) {
   var titre=(gel('ed-titre')||{}).value||''; var cat=(gel('ed-cat')||{}).value||'actu';
