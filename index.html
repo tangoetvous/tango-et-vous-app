@@ -569,12 +569,18 @@
 
     pane.innerHTML = '<div style="display:flex;justify-content:center;padding:40px 0;"><div class="spinner"></div></div>';
 
-    try {
-      const r = await fetch(`${APPS_SCRIPT_URL}?action=getDiscussions`);
-      const d = await r.json();
-      _discDiscList = (d.discussions || []).filter(disc => disc.statut === 'ouvert' && _discPeutVoir(disc));
-    } catch(e) {
-      _discDiscList = _discDiscList || [];
+    if (IS_DEMO) {
+      try { const stored = JSON.parse(localStorage.getItem('tev_demo_discussions')||'[]');
+            _discDiscList = stored.filter(disc => disc.statut === 'ouvert' && _discPeutVoir(disc)); }
+      catch(e) { _discDiscList = []; }
+    } else {
+      try {
+        const r = await fetch(`${APPS_SCRIPT_URL}?action=getDiscussions`);
+        const d = await r.json();
+        _discDiscList = (d.discussions || []).filter(disc => disc.statut === 'ouvert' && _discPeutVoir(disc));
+      } catch(e) {
+        _discDiscList = _discDiscList || [];
+      }
     }
 
     try { localStorage.setItem('tev_disc_last_seen', new Date().toISOString()); } catch(e) {}
@@ -650,8 +656,13 @@
       inp.value = '';
       const elv = (eleveData && eleveData.eleve) || {};
       const nomComplet = elv.nom || elv.email || 'Élève';
-      _discMsgs.push({id:'tmp'+Date.now(), discussion_id:_discCurrentId, auteur_email:elv.email||'', auteur_nom:nomComplet, message:msg, date:new Date().toISOString()});
+      const newMsg = {id:'tmp'+Date.now(), discussion_id:_discCurrentId, auteur_email:elv.email||'', auteur_nom:nomComplet, message:msg, date:new Date().toISOString()};
+      _discMsgs.push(newMsg);
       _discRenderMsgs();
+      if (IS_DEMO) {
+        try { const m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]'); m.push(newMsg); localStorage.setItem('tev_demo_msgs_'+_discCurrentId, JSON.stringify(m)); } catch(e) {}
+        return;
+      }
       fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
         action:'postDiscussionMessage', discussion_id:_discCurrentId,
         auteur_email:elv.email||'', auteur_nom:nomComplet, message:msg
@@ -692,6 +703,10 @@
 
   function _discLoadMessages() {
     if (!_discCurrentId) return;
+    if (IS_DEMO) {
+      try { const m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]'); _discMsgs=m; _discRenderMsgs(); } catch(e) {}
+      return;
+    }
     fetch(`${APPS_SCRIPT_URL}?action=getDiscussionMessages&id=${encodeURIComponent(_discCurrentId)}`)
       .then(r => r.json())
       .then(d => { if (d && d.messages) { _discMsgs = d.messages; _discRenderMsgs(); } })
@@ -702,6 +717,11 @@
     _discStopPoll();
     function doPoll() {
       if (currentTab !== 'discussions' || !_discCurrentId) return;
+      if (IS_DEMO) {
+        try { const m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]'); if(m.length!==_discMsgs.length){_discMsgs=m;_discRenderMsgs();} } catch(e) {}
+        _discPollTO = setTimeout(doPoll, 3000);
+        return;
+      }
       fetch(`${APPS_SCRIPT_URL}?action=getDiscussionMessages&id=${encodeURIComponent(_discCurrentId)}`)
         .then(r => r.json())
         .then(d => {
@@ -710,7 +730,7 @@
         })
         .catch(() => { _discPollTO = setTimeout(doPoll, 20000); });
     }
-    _discPollTO = setTimeout(doPoll, 15000);
+    _discPollTO = setTimeout(doPoll, 3000);
   }
 
   function _discStopPoll() {
@@ -769,9 +789,12 @@
       const nomComplet = elv.nom || elv.email || 'Élève';
       if (IS_DEMO) {
         const fakeId = 'disc_demo_' + Date.now();
+        const newDisc = { id:fakeId, titre, groupes:groupesSel, createur_email:elv.email||'', createur_nom:nomComplet, statut:'ouvert', date:new Date().toISOString() };
+        try { const dd=JSON.parse(localStorage.getItem('tev_demo_discussions')||'[]'); dd.unshift(newDisc); localStorage.setItem('tev_demo_discussions', JSON.stringify(dd)); } catch(e) {}
         if (!_discDiscList) _discDiscList = [];
-        _discDiscList.unshift({ id:fakeId, titre, groupes:groupesSel, createur_email:elv.email||'', createur_nom:nomComplet, statut:'ouvert', date:new Date().toISOString() });
+        _discDiscList.unshift(newDisc);
         _discCurrentId = fakeId; _discCurrentTitle = titre; _discView = 'chat'; _discMsgs = [];
+        try { const bc=new BroadcastChannel('tev_admin_sync'); bc.postMessage({type:'newDiscussion',data:{titre,id:fakeId}}); bc.close(); } catch(e) {}
         renderDiscussions(); return;
       }
       try {

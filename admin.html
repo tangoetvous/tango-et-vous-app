@@ -4110,6 +4110,18 @@ function handleAction(action, btn) {
         var creatBtn=document.querySelector('[data-action="creer-discussion"]');
         if(creatBtn) creatBtn.disabled=true;
         var nom=adminData._email&&adminData._email.includes('florencia')?'Florencia':adminData._email&&adminData._email.includes('jeremy')?'Jérémy':'Admin';
+        if (IS_DEMO) {
+          var fakeId='disc_'+Date.now(), dateNow=new Date().toISOString();
+          var newDisc={id:fakeId,titre:titre,groupes:groupes,createur_email:adminData._email||'',createur_nom:nom,statut:'ouvert',date:dateNow};
+          try{var dd=JSON.parse(localStorage.getItem('tev_demo_discussions')||'[]');dd.unshift(newDisc);localStorage.setItem('tev_demo_discussions',JSON.stringify(dd));}catch(e){}
+          if(!adminData.discussions) adminData.discussions=[];
+          adminData.discussions.unshift(newDisc);
+          try{var bc=new BroadcastChannel('tev_admin_sync');bc.postMessage({type:'newDiscussion',data:{titre:titre,id:fakeId}});bc.close();}catch(e){}
+          afficherToast('\uD83D\uDCAC Discussion ouverte\u00a0!');
+          _discCurrentId=fakeId; _discCurrentTitle=titre; _discCurrentStatut='ouvert'; _discMsgs=[];
+          _discView='chat'; renderTab();
+          return;
+        }
         postAS({action:'createDiscussion',titre:titre,groupes:groupes,createur_email:adminData._email||'',createur_nom:nom})
           .then(function(r){
             if(r.error) throw new Error(r.error);
@@ -7413,6 +7425,11 @@ if (IS_DEMO) gel('login-email').value = 'tangoetvous@gmail.com';
 // DISCUSSIONS (ADMIN)
 // ================================================================
 function chargerDiscussions(callback) {
+  if (IS_DEMO) {
+    try { adminData.discussions = JSON.parse(localStorage.getItem('tev_demo_discussions')||'[]'); } catch(e) { adminData.discussions=[]; }
+    if (callback) callback();
+    return;
+  }
   fetch(APPS_SCRIPT_URL + '?action=getDiscussions')
     .then(function(r){ return r.json(); })
     .then(function(d){ adminData.discussions = d.discussions||[]; if(callback) callback(); })
@@ -7471,10 +7488,10 @@ function _renderDiscFormHtml() {
     +'<div class="card-nom" style="margin-bottom:14px;">💬 Nouvelle discussion</div>'
     +'<div class="field"><label>Titre *</label><input type="text" id="disc-titre" class="input" placeholder="Ex : Organisation spectacle, Questions technique…" /></div>'
     +'<div class="field"><label>Groupes invités</label><div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;font-size:13px;">'
-    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" value="paris-debutants" class="disc-grp-cb"> Paris Débutants</label>'
-    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" value="paris-intermediaires" class="disc-grp-cb"> Paris Intermédiaires</label>'
-    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" value="vincennes-debutants" class="disc-grp-cb"> Vincennes Débutants</label>'
-    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" value="vincennes-intermediaires" class="disc-grp-cb"> Vincennes Intermédiaires</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;font-size:13px;"><input type="checkbox" value="paris-debutants" class="disc-grp-cb"> Paris Débutants</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;font-size:13px;"><input type="checkbox" value="paris-intermediaires" class="disc-grp-cb"> Paris Intermédiaires</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;font-size:13px;"><input type="checkbox" value="vincennes-debutants" class="disc-grp-cb"> Vincennes Débutants</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;font-size:13px;"><input type="checkbox" value="vincennes-intermediaires" class="disc-grp-cb"> Vincennes Intermédiaires</label>'
     +'</div></div>'
     +'<div style="font-size:11px;color:var(--dim);margin:-4px 0 14px;padding:8px 11px;background:var(--s2);border-radius:8px;line-height:1.5;">ℹ️ Florencia et Jérémy sont automatiquement inclus dans toutes les discussions. Si aucun groupe n\'est coché, tous les élèves sont invités.</div>'
     +'<div class="btn-row">'
@@ -7529,6 +7546,10 @@ function _discRenderMsgs() {
 
 function _discLoadMessages() {
   if(!_discCurrentId) return;
+  if(IS_DEMO){
+    try{var m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]');_discMsgs=m;_discRenderMsgs();}catch(e){}
+    return;
+  }
   fetch(APPS_SCRIPT_URL+'?action=getDiscussionMessages&id='+encodeURIComponent(_discCurrentId))
     .then(function(r){return r.json();})
     .then(function(d){ if(d&&d.messages){_discMsgs=d.messages;_discRenderMsgs();} })
@@ -7539,6 +7560,11 @@ function _discStartPoll() {
   _discStopPoll();
   function doPoll(){
     if(currentTab!=='discussions'||!_discCurrentId||_discView!=='chat') return;
+    if(IS_DEMO){
+      try{var m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]');if(m.length!==_discMsgs.length){_discMsgs=m;_discRenderMsgs();}}catch(e){}
+      _discPollTO=setTimeout(doPoll,3000);
+      return;
+    }
     fetch(APPS_SCRIPT_URL+'?action=getDiscussionMessages&id='+encodeURIComponent(_discCurrentId))
       .then(function(r){return r.json();})
       .then(function(d){
@@ -7547,7 +7573,7 @@ function _discStartPoll() {
       })
       .catch(function(){ _discPollTO=setTimeout(doPoll,20000); });
   }
-  _discPollTO=setTimeout(doPoll,15000);
+  _discPollTO=setTimeout(doPoll,3000);
 }
 
 function _discStopPoll() { if(_discPollTO){ clearTimeout(_discPollTO); _discPollTO=null; } }
@@ -7559,11 +7585,15 @@ function _discEnvoyerMsg() {
   if(btn) btn.disabled=true;
   inp.value='';
   var nom=adminData._email&&adminData._email.includes('florencia')?'Florencia':adminData._email&&adminData._email.includes('jeremy')?'Jérémy':'Admin';
-  _discMsgs.push({id:'tmp'+Date.now(),discussion_id:_discCurrentId,auteur_email:adminData._email||'',auteur_nom:nom,message:msg,date:new Date().toISOString()});
+  var newMsg={id:'tmp'+Date.now(),discussion_id:_discCurrentId,auteur_email:adminData._email||'',auteur_nom:nom,message:msg,date:new Date().toISOString()};
+  _discMsgs.push(newMsg);
   _discRenderMsgs();
-  postAS({action:'postDiscussionMessage',discussion_id:_discCurrentId,auteur_email:adminData._email||'',auteur_nom:nom,message:msg})
-    .then(function(){ if(btn) btn.disabled=false; })
-    .catch(function(){ if(btn) btn.disabled=false; });
+  if(btn) btn.disabled=false;
+  if(IS_DEMO){
+    try{var m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]');m.push(newMsg);localStorage.setItem('tev_demo_msgs_'+_discCurrentId,JSON.stringify(m));}catch(e){}
+    return;
+  }
+  postAS({action:'postDiscussionMessage',discussion_id:_discCurrentId,auteur_email:adminData._email||'',auteur_nom:nom,message:msg}).catch(function(){});
 }
 </script>
 </body>
