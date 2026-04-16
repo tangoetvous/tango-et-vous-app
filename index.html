@@ -453,7 +453,7 @@
     if (tab === 'milonga') renderMilonga();
     if (tab === 'actu')   renderActu();
     if (tab === 'contact') renderContact();
-    if (tab === 'carte-lieux') { setTimeout(function(){ if(typeof initPlan==='function') initPlan(); }, 60); }
+    if (tab === 'carte-lieux') { setTimeout(function(){ if(window._initPlan) window._initPlan(); }, 60); }
     if (tab === 'cours-particuliers') {
       // Envoyer les coords de l'élève via postMessage à l'iframe cours-particuliers
       const _cpIframe = document.querySelector('#cours-particuliers-pane iframe');
@@ -3918,14 +3918,8 @@ if('serviceWorker' in navigator){
     affinerCoordsEnBackground(LIEUX);
   }
 
-  document.addEventListener('DOMContentLoaded', function() {
-    var navBtn = document.getElementById('nav-carte-lieux');
-    if (navBtn) {
-      navBtn.addEventListener('click', function() {
-        setTimeout(initPlan, 60);
-      });
-    }
-  });
+  // Exposer initPlan globalement pour que switchTab() puisse l'appeler
+  window._initPlan = initPlan;
 })();
 
 </script>
