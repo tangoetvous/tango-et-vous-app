@@ -1178,7 +1178,15 @@
       h += '</div></div>';
       h += dots;
       if (carte.dateExpiration) h += '<div style="font-size:13px;color:#fff;margin-top:4px;">Expiration : ' + formatDate(carte.dateExpiration) + '</div>';
-      h += '</div></div>';
+      h += '</div>';
+      // Boutons pointer + renouveler
+      const _renewUrl = (function(){
+        var DEFAULTS = {'2025-2026':'https://le-regard-se-pose.assoconnect.com/collect/description/524239-j-renouvellement-de-carte-de-10-ou-20-cours-2025-2026','2026-2027':'https://le-regard-se-pose.assoconnect.com/collect/description/696013-j-renouvellement-de-carte-de-10-ou-20-cours-2026-2027'};
+        try { var s=JSON.parse(localStorage.getItem('tev_liens_assoconnect')||'{}'); var sai=_sai(); return(s[sai]&&s[sai].renouv)||DEFAULTS[sai]||DEFAULTS['2026-2027']; } catch(e){ return DEFAULTS['2026-2027']; }
+      })();
+      h += '<button onclick="ouvrirModalPointerSelf()" style="width:100%;background:var(--gold);color:#1a1a1a;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;margin:12px 0 8px;font-family:inherit;">✓ Je pointe ma présence</button>';
+      h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+      h += '</div>';
     } else if (carte && carte.type === 'forfait') {
       h += '<div style="margin-top:20px;margin-bottom:20px;">';
       h += '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#fff;margin-bottom:12px;text-align:center;">🎫 Mon inscription</div>';
@@ -2120,6 +2128,7 @@
       }
       _showNotifDot('carte', '\uD83D\uDD14 Votre carte : ' + (d.utilises||0) + '/10 cours utilisés, ' + (d.restants||0) + ' restants');
       if (currentTab === 'carte') renderDashboard();
+      if (currentTab === 'accueil') renderAccueil();
     }
 
     if (msg.type === 'tarifsUpdate') {
