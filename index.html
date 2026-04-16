@@ -1999,12 +1999,24 @@
     // Store pubs globally so openPub can find them
     window._pubs = pubs;
 
+    const _esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const _thumb = p => {
+      if (p.image) return `<img class="pub-card-img" src="${_esc(p.image)}" alt="" loading="lazy">`;
+      if (p.video) {
+        const vid = (p.video.split('/embed/')[1]||'').split('?')[0];
+        if (vid) return `<img class="pub-card-img" src="https://img.youtube.com/vi/${_esc(vid)}/mqdefault.jpg" alt="" loading="lazy">`;
+      }
+      return '';
+    };
     container.innerHTML = pubs.map(p => `
-      <div class="pub-card" data-pub-id="${p.id}" style="cursor:pointer;">
-        ${p.cat ? `<div class="pub-cat">${p.cat}</div>` : ''}
-        <div class="pub-titre">${p.titre}</div>
-        ${p.extrait ? `<div class="pub-extrait">${p.extrait}</div>` : ''}
-        <div class="pub-date">${formatDate(p.dateProgrammee || p.date || '')}</div>
+      <div class="pub-card" data-pub-id="${_esc(p.id)}" style="cursor:pointer;">
+        ${_thumb(p)}
+        <div class="pub-card-body">
+          ${p.cat ? `<div class="pub-cat">${_esc(p.cat)}</div>` : ''}
+          <div class="pub-titre">${_esc(p.titre)}</div>
+          ${p.extrait ? `<div class="pub-extrait">${_esc(p.extrait)}</div>` : ''}
+          <div class="pub-date">${formatDate(p.dateProgrammee || p.date || '')}</div>
+        </div>
       </div>`).join('');
   }
 
@@ -3051,16 +3063,18 @@ a{color:var(--gold);text-decoration:none;}
    ================================================================ */
 .pub-card{
   margin:12px 20px;background:#ffffff;
-  border:1px solid #ddd;border-radius:var(--radius);padding:18px;
-  box-shadow:0 2px 8px rgba(0,0,0,.15);
+  border:1px solid #ddd;border-radius:var(--radius);
+  box-shadow:0 2px 8px rgba(0,0,0,.15);overflow:hidden;
 }
+.pub-card-img{width:100%;height:180px;object-fit:cover;display:block;}
+.pub-card-body{padding:14px 18px 16px;}
 .pub-cat{
   font-size:9px;letter-spacing:2px;text-transform:uppercase;
   color:#6b1a1a;font-weight:700;margin-bottom:6px;
 }
-.pub-titre{font-size:17px;color:#111;margin-bottom:8px;line-height:1.4;font-weight:700;}
-.pub-extrait{font-size:14px;color:#444;line-height:1.7;}
-.pub-date{font-size:12px;color:#888;margin-top:10px;}
+.pub-titre{font-size:16px;color:#111;margin-bottom:6px;line-height:1.4;font-weight:700;}
+.pub-extrait{font-size:13px;color:#555;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.pub-date{font-size:11px;color:#888;margin-top:8px;}
 
 /* ================================================================
    CONTACT
