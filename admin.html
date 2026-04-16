@@ -1474,6 +1474,7 @@ gel('modal-contact').addEventListener('click', function(e){
 // RÉCEPTION DES INSCRIPTIONS (iframe postMessage + cross-tab localStorage)
 // ================================================================
 function _normRole(r) { return (r||'').toLowerCase().indexOf('guideur') >= 0 ? 'guideur' : 'guidee'; }
+function _normNiveau(n) { var s=(n||'').toLowerCase().trim(); return (s.indexOf('interm')>=0||s.indexOf('avan')>=0) ? 'intermediaire' : 'debutant'; }
 function slotLabel(s) {
   if(s==='technique') return 'Technique';
   var m=s.match(/^stage(\d+)$/); if(m) return 'Stage '+m[1];
@@ -1588,7 +1589,7 @@ function _appliquerEssaiInscription(d) {
   var existe = adminData.essai.some(function(e){ return e.email===d.email && e.date===date; });
   if (!existe) {
     adminData.essai.push({
-      date:date, ville:d.ville||'paris', niveau:d.niveau||'debutant',
+      date:date, ville:d.ville||'paris', niveau:_normNiveau(d.niveau),
       prenom:d.prenom, nom:d.nom, email:d.email||'', role:_normRole(d.role),
       statut:statut, present:null,
       partenaire:partNom, emailPartenaire:partEmail
@@ -1602,7 +1603,7 @@ function _appliquerEssaiInscription(d) {
     var existeP = adminData.essai.some(function(e){ return e.email===pEmail && e.date===date && pEmail; });
     if (!existeP) {
       adminData.essai.push({
-        date:date, ville:d.ville||'paris', niveau:d.niveau||'debutant',
+        date:date, ville:d.ville||'paris', niveau:_normNiveau(d.niveau),
         prenom:pPrenom, nom:pNom, email:pEmail, role:pRole,
         statut:'confirme', present:null,
         partenaire:(d.prenom+' '+d.nom).trim(), emailPartenaire:d.email||''
