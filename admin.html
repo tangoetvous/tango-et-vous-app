@@ -303,24 +303,35 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <div class="hdr-logo">TANGO &amp; VOUS</div>
     <div style="display:flex;align-items:center;gap:8px;">
       <select id="hdr-saison" style="background:var(--s2);color:var(--gold);border:1px solid var(--gold-border);border-radius:6px;font-size:11px;font-weight:700;padding:3px 6px;cursor:pointer;" title="Saison affichée"></select>
-      <button data-tab="tarifs" title="Paramètres" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:16px;line-height:1;opacity:.75;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'" onclick="currentTab='tarifs';document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('active',b.dataset.tab==='tarifs')});renderTab();">⚙️</button>
+      <button data-tab="tarifs" title="Paramètres" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:16px;line-height:1;opacity:.75;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'" onclick="switchTab('tarifs')">⚙️</button>
       <span class="hdr-badge">ADMIN</span>
       <button class="btn-logout" id="btn-logout">Déco.</button>
     </div>
   </div>
   <div class="main-tabs" id="main-tabs">
-    <button class="tab-btn active" data-tab="eleves-tango">👥 Élèves</button>
-    <button class="tab-btn" data-tab="repertoire">📋 Répertoire</button>
-    <button class="tab-btn" data-tab="cours-tango">🎓 Inscr Tango</button>
-    <button class="tab-btn" data-tab="essai">🎯 Essai Tango</button>
-    <button class="tab-btn" data-tab="cartes">🎴 Cartes 10</button>
-    <button class="tab-btn" data-tab="stages">💃 Stages</button>
-    <button class="tab-btn" data-tab="milonga">🎶 Milonga</button>
-    <button class="tab-btn" data-tab="sorano">🏛 Sorano</button>
-    <button class="tab-btn" data-tab="yoga">🧘 Yoga</button>
-    <button class="tab-btn" data-tab="agenda">📅 Agenda</button>
-    <button class="tab-btn" data-tab="publications">📝 Publis</button>
-    <button class="tab-btn" data-tab="whatsapp">💬 WA</button>
+    <span class="admin-active-lbl" id="admin-active-lbl">👥 Élèves tango</span>
+    <button class="admin-menu-btn" onclick="toggleAdminNav()">☰ Menu</button>
+  </div>
+  <div class="admin-nav-overlay" id="admin-nav-overlay">
+    <div class="admin-nav-overlay-hdr">
+      <span style="font-family:var(--font-d);font-size:16px;font-weight:300;letter-spacing:4px;color:var(--gold);">TANGO &amp; VOUS</span>
+      <button onclick="toggleAdminNav()" style="background:none;border:1px solid rgba(255,255,255,.2);color:var(--dim);font-size:16px;padding:5px 11px;border-radius:6px;cursor:pointer;">✕</button>
+    </div>
+    <div class="admin-nav-overlay-list">
+      <button class="tab-btn active" data-tab="eleves-tango" style="color:#60b0ff">👥 Élèves tango</button>
+      <button class="tab-btn" data-tab="repertoire" style="color:#4ade80">📋 Répertoire</button>
+      <button class="tab-btn" data-tab="cours-tango" style="color:#c084fc">🎓 Inscriptions Tango</button>
+      <button class="tab-btn" data-tab="essai" style="color:#fb923c">🎯 Séances d'essai</button>
+      <button class="tab-btn" data-tab="cartes" style="color:#f59e0b">🎴 Cartes 10</button>
+      <button class="tab-btn" data-tab="stages" style="color:#f472b6">💃 Stages</button>
+      <button class="tab-btn" data-tab="milonga" style="color:#ff8c00">🎶 Milonga</button>
+      <button class="tab-btn" data-tab="sorano" style="color:#2dd4bf">🏛 Sorano</button>
+      <button class="tab-btn" data-tab="yoga" style="color:#a78bfa">🧘 Yoga</button>
+      <button class="tab-btn" data-tab="agenda" style="color:#38bdf8">📅 Agenda</button>
+      <button class="tab-btn" data-tab="publications" style="color:#fbbf24">📝 Publications</button>
+      <button class="tab-btn" data-tab="whatsapp" style="color:#25d366">💬 WhatsApp</button>
+      <button class="tab-btn" data-tab="tarifs" style="color:#e2e8f0">⚙️ Paramètres</button>
+    </div>
   </div>
   <div class="content" id="tab-content"><div class="spinner"></div></div>
 </div>
@@ -3550,7 +3561,25 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(function(b) {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
+  // Update label + close overlay
+  var _lbl = gel('admin-active-lbl');
+  if (_lbl) {
+    var _LABELS = {
+      'eleves-tango':'👥 Élèves tango','repertoire':'📋 Répertoire',
+      'cours-tango':'🎓 Inscriptions Tango','essai':'🎯 Séances d\'essai',
+      'cartes':'🎴 Cartes 10','stages':'💃 Stages','milonga':'🎶 Milonga',
+      'sorano':'🏛 Sorano','yoga':'🧘 Yoga','agenda':'📅 Agenda',
+      'publications':'📝 Publications','whatsapp':'💬 WhatsApp','tarifs':'⚙️ Paramètres'
+    };
+    _lbl.textContent = _LABELS[tab] || tab;
+  }
+  var _ov = gel('admin-nav-overlay');
+  if (_ov) _ov.classList.remove('open');
   renderTab();
+}
+function toggleAdminNav() {
+  var ov = gel('admin-nav-overlay');
+  if (ov) ov.classList.toggle('open');
 }
 function renderTab() {
   // Sauvegarder la position de scroll avant de remplacer le contenu
@@ -4175,9 +4204,7 @@ function handleAction(action, btn) {
       })();
       break;
     case 'go-to-params':
-      currentTab = 'tarifs';
-      document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab==='tarifs'); });
-      renderTab();
+      switchTab('tarifs');
       break;
     case 'sauver-adhesion-sorano':
       (function() {
