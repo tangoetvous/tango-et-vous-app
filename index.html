@@ -969,12 +969,28 @@
     let waData = {};
     try { waData = JSON.parse(localStorage.getItem('tev_params_whatsapp_' + saiWa) || '{}'); } catch(e) {}
     const liens = waData.liens || {};
-    const cours = [
+    const allCours = [
       {key:'paris-deb', label:'Paris \u2014 D\u00e9butant',                         icon:'🕺', color:'#60b0ff'},
       {key:'paris-int', label:'Paris \u2014 Interm\u00e9diaire &amp; Avanc\u00e9',   icon:'🕺', color:'#60b0ff'},
       {key:'vinc-deb',  label:'Vincennes \u2014 D\u00e9butant',                     icon:'💃', color:'#40d8c0'},
       {key:'vinc-int',  label:'Vincennes \u2014 Interm\u00e9diaire &amp; Avanc\u00e9', icon:'💃', color:'#40d8c0'}
     ];
+    // Filtrer selon le cours de l'élève connecté
+    const elv = (eleveData && eleveData.eleve) || {};
+    const vil = (elv.ville || '').toLowerCase();
+    const niv = (elv.niveau || '').toLowerCase();
+    let cours = allCours;
+    if (vil || niv) {
+      const isVinc = vil === 'vincennes';
+      const isDeb  = niv && !niv.includes('interm') && !niv.includes('avan');
+      const isInt  = niv.includes('interm') || niv.includes('avan');
+      cours = allCours.filter(c => {
+        const matchVille = !vil || (isVinc ? c.key.startsWith('vinc') : c.key.startsWith('paris'));
+        const matchNiv   = !niv || (isDeb ? c.key.endsWith('-deb') : isInt ? c.key.endsWith('-int') : true);
+        return matchVille && matchNiv;
+      });
+      if (!cours.length) cours = allCours; // fallback si détection échoue
+    }
     const pane = $('whatsapp-pane');
     if (!pane) return;
     let h = '<div class="tab-section-title">💬 WhatsApp</div>';
