@@ -468,6 +468,8 @@
     if (tab === 'yoga') renderYogaPane();
     if (tab === 'whatsapp') renderWhatsapp();
     if (tab === 'avis') renderAvis();
+    if (tab === 'discussions') renderDiscussions();
+    if (tab !== 'discussions') _discStopPoll();
     window.scrollTo(0, 0);
   };
 
@@ -508,6 +510,200 @@
     pane.innerHTML = `<div style="margin:-14px;">
       <iframe src="${iframeSrc}" style="border:none;width:100%;height:900px;border-radius:8px;" title="Formulaire pr\u00e9-inscription cours"></iframe>
     </div>`;
+  }
+
+  // ================================================================
+  // DISCUSSIONS
+  // ================================================================
+  let _discDiscList    = null;
+  let _discCurrentId   = null;
+  let _discCurrentTitle = '';
+  let _discMsgs        = [];
+  let _discPollTO      = null;
+
+  function _discGetMonGroupe() {
+    if (!eleveData || !eleveData.eleve) return [];
+    const ville = (eleveData.eleve.ville || '').toLowerCase();
+    const niveau = (eleveData.eleve.niveau || '').toLowerCase();
+    const isDebutant = !niveau.includes('interm') && !niveau.includes('avan');
+    const g = [];
+    if (ville === 'paris'     &&  isDebutant) g.push('paris-debutants');
+    if (ville === 'paris'     && !isDebutant) g.push('paris-intermediaires');
+    if (ville === 'vincennes' &&  isDebutant) g.push('vincennes-debutants');
+    if (ville === 'vincennes' && !isDebutant) g.push('vincennes-intermediaires');
+    return g;
+  }
+
+  function _discPeutVoir(disc) {
+    if (!disc.groupes || !disc.groupes.length) return true;
+    const mes = _discGetMonGroupe();
+    if (!mes.length) return true;
+    return mes.some(g => disc.groupes.includes(g));
+  }
+
+  function _discGroupLabel(g) {
+    const labels = {'paris-debutants':'Paris Débutants','paris-intermediaires':'Paris Intermédiaires','vincennes-debutants':'Vincennes Débutants','vincennes-intermediaires':'Vincennes Intermédiaires'};
+    return labels[g] || g;
+  }
+
+  function _discRelDate(iso) {
+    try {
+      const d = new Date(iso), diff = Math.floor((Date.now()-d)/86400000);
+      if (diff === 0) return "aujourd'hui";
+      if (diff === 1) return 'hier';
+      if (diff < 7) return `il y a ${diff} j`;
+      return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+    } catch(e) { return ''; }
+  }
+
+  async function renderDiscussions() {
+    const pane = $('discussions-pane');
+    if (!pane) return;
+
+    if (_discCurrentId) { _renderDiscChatView(pane); return; }
+
+    pane.innerHTML = '<div style="display:flex;justify-content:center;padding:40px 0;"><div class="spinner"></div></div>';
+
+    try {
+      const r = await fetch(`${APPS_SCRIPT_URL}?action=getDiscussions`);
+      const d = await r.json();
+      _discDiscList = (d.discussions || []).filter(disc => disc.statut === 'ouvert' && _discPeutVoir(disc));
+    } catch(e) {
+      _discDiscList = _discDiscList || [];
+    }
+
+    try { localStorage.setItem('tev_disc_last_seen', new Date().toISOString()); } catch(e) {}
+
+    const discs = _discDiscList || [];
+    let h = '<div class="tab-section-title">\uD83D\uDCAC Discussions</div><div style="padding:0 16px 24px;">';
+
+    if (!discs.length) {
+      h += '<div style="text-align:center;padding:40px 20px;color:var(--text-dim,#888);font-size:14px;line-height:1.7;">Aucune discussion ouverte pour le moment.<br/><span style="font-size:12px;color:var(--text-faint,#555);">Florencia ou Jérémy ouvriront bientôt un nouveau sujet d\'échange.</span></div>';
+    } else {
+      discs.forEach(disc => {
+        const grp = (disc.groupes||[]).map(_discGroupLabel).join(', ') || 'Tous les groupes';
+        const dt  = disc.date ? _discRelDate(disc.date) : '';
+        const titreEsc = disc.titre.replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const createurEsc = (disc.createur_nom||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        h += `<div class="disc-card" data-disc-open="${disc.id}" data-disc-title="${titreEsc}" style="cursor:pointer;">`
+          + `<div style="font-size:15px;font-weight:700;color:var(--text,#f0f0f0);margin-bottom:6px;">\uD83D\uDCAC ${titreEsc}</div>`
+          + `<div style="font-size:11px;color:var(--text-dim,#888);margin-bottom:10px;">\uD83D\uDC65 ${grp}${createurEsc?' · '+createurEsc:''}${dt?' · '+dt:''}</div>`
+          + `<div style="text-align:right;"><span style="font-size:12px;font-weight:700;color:var(--gold,#d4af37);letter-spacing:.5px;">Participer →</span></div>`
+          + `</div>`;
+      });
+    }
+    h += '</div>';
+    pane.innerHTML = h;
+
+    pane.querySelectorAll('[data-disc-open]').forEach(el => {
+      el.addEventListener('click', () => {
+        _discCurrentId = el.dataset.discOpen;
+        _discCurrentTitle = el.dataset.discTitle;
+        _discMsgs = [];
+        _renderDiscChatView(pane);
+      });
+    });
+  }
+
+  function _renderDiscChatView(pane) {
+    if (!pane) pane = $('discussions-pane');
+    if (!pane) return;
+    const titre = (_discCurrentTitle||'Discussion').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    pane.innerHTML =
+      `<div style="position:sticky;top:49px;z-index:10;background:var(--bg,#0a0a0a);padding:10px 16px;border-bottom:1px solid var(--border,#222);display:flex;align-items:center;gap:10px;">`
+      + `<button style="background:none;border:none;color:var(--gold,#d4af37);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;" id="disc-back-btn" aria-label="Retour">←</button>`
+      + `<span style="font-size:14px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${titre}</span>`
+      + `</div>`
+      + `<div id="disc-msgs-container" style="padding:14px 16px 100px;min-height:300px;">`
+      + `<div style="text-align:center;padding:30px 0;"><div class="spinner"></div></div>`
+      + `</div>`
+      + `<div style="position:fixed;bottom:0;left:0;right:0;background:var(--bg,#0a0a0a);padding:10px 16px 14px;border-top:1px solid var(--border,#222);display:flex;gap:8px;z-index:11;">`
+      + `<input id="disc-msg-input" type="text" placeholder="Votre message…" style="flex:1;font-size:14px;background:var(--s2,#1a1a1a);border:1px solid var(--border,#333);color:var(--text,#f0f0f0);padding:10px 14px;border-radius:22px;outline:none;" />`
+      + `<button id="disc-send-btn" style="background:var(--gold,#d4af37);border:none;color:#000;font-weight:700;padding:0 18px;border-radius:22px;cursor:pointer;font-size:18px;">↑</button>`
+      + `</div>`;
+
+    const backBtn = $('disc-back-btn');
+    if (backBtn) backBtn.addEventListener('click', () => {
+      _discStopPoll();
+      _discCurrentId = null;
+      _discCurrentTitle = '';
+      renderDiscussions();
+    });
+
+    const sendBtn = $('disc-send-btn');
+    const inp = $('disc-msg-input');
+    function sendMsg() {
+      if (!inp) return;
+      const msg = inp.value.trim();
+      if (!msg || !_discCurrentId) return;
+      inp.value = '';
+      const elv = (eleveData && eleveData.eleve) || {};
+      const nomComplet = elv.nom || elv.email || 'Élève';
+      _discMsgs.push({id:'tmp'+Date.now(), discussion_id:_discCurrentId, auteur_email:elv.email||'', auteur_nom:nomComplet, message:msg, date:new Date().toISOString()});
+      _discRenderMsgs();
+      fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
+        action:'postDiscussionMessage', discussion_id:_discCurrentId,
+        auteur_email:elv.email||'', auteur_nom:nomComplet, message:msg
+      })}).catch(() => {});
+    }
+    if (sendBtn) sendBtn.addEventListener('click', sendMsg);
+    if (inp) inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); sendMsg(); } });
+
+    _discLoadMessages();
+    _discStartPoll();
+  }
+
+  function _discRenderMsgs() {
+    const c = $('disc-msgs-container');
+    if (!c) return;
+    if (!_discMsgs.length) {
+      c.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-dim,#888);font-size:13px;">Soyez le premier à écrire&nbsp;!</div>';
+      return;
+    }
+    const myEmail = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
+    let h = '';
+    _discMsgs.forEach(m => {
+      const isMine = (m.auteur_email||'').toLowerCase() === myEmail;
+      const d = m.date ? new Date(m.date) : null;
+      const t = d ? d.getHours()+':'+(('0'+d.getMinutes()).slice(-2)) : '';
+      const name = isMine ? 'Vous' : (m.auteur_nom||m.auteur_email||'?');
+      const nameEsc = name.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const msgEsc = (m.message||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+      h += `<div class="disc-msg-wrap ${isMine?'mine':'other'}">`
+        + `<div class="disc-msg-meta">${nameEsc}${t?' · '+t:''}</div>`
+        + `<div class="disc-msg-bubble">${msgEsc}</div>`
+        + `</div>`;
+    });
+    const atBottom = c.scrollHeight - c.scrollTop - c.clientHeight < 100;
+    c.innerHTML = h;
+    if (atBottom) c.scrollTop = c.scrollHeight;
+  }
+
+  function _discLoadMessages() {
+    if (!_discCurrentId) return;
+    fetch(`${APPS_SCRIPT_URL}?action=getDiscussionMessages&id=${encodeURIComponent(_discCurrentId)}`)
+      .then(r => r.json())
+      .then(d => { if (d && d.messages) { _discMsgs = d.messages; _discRenderMsgs(); } })
+      .catch(() => {});
+  }
+
+  function _discStartPoll() {
+    _discStopPoll();
+    function doPoll() {
+      if (currentTab !== 'discussions' || !_discCurrentId) return;
+      fetch(`${APPS_SCRIPT_URL}?action=getDiscussionMessages&id=${encodeURIComponent(_discCurrentId)}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d && d.messages && d.messages.length !== _discMsgs.length) { _discMsgs = d.messages; _discRenderMsgs(); }
+          _discPollTO = setTimeout(doPoll, 15000);
+        })
+        .catch(() => { _discPollTO = setTimeout(doPoll, 20000); });
+    }
+    _discPollTO = setTimeout(doPoll, 15000);
+  }
+
+  function _discStopPoll() {
+    if (_discPollTO) { clearTimeout(_discPollTO); _discPollTO = null; }
   }
 
   // ================================================================
@@ -613,7 +809,7 @@
       h += '<div class="nav-row">';
       row.forEach(id => {
         const d = _NAV_DEFS[id]; if (!d) return;
-        h += `<button class="nav-btn${currentTab===id?' active':''}" data-tab="${id}" style="color:${d.color}">${d.svg}<span>${d.label}</span></button>`;
+        h += `<button class="nav-btn${currentTab===id?' active':''}" id="nav-${id}" data-tab="${id}" style="color:${d.color}">${d.svg}<span>${d.label}</span></button>`;
       });
       h += '</div>';
     });
@@ -1773,6 +1969,13 @@
       // Mettre à jour tev_tarifs_actifs pour que inscription-cours.html en bénéficie
       try { localStorage.setItem('tev_tarifs_actifs', JSON.stringify(msg.data)); } catch(e) {}
     }
+
+    if (msg.type === 'newDiscussion') {
+      const d = msg.data || {};
+      _showInAppNotif('\uD83D\uDCAC Nouvelle discussion : ' + (d.titre || ''));
+      _discDiscList = null; // invalider le cache
+      if (currentTab === 'discussions') renderDiscussions();
+    }
   }
 
   function _initAdminSync() {
@@ -2404,6 +2607,14 @@ a{color:var(--gold);text-decoration:none;}
 .notif-dot{position:absolute;top:2px;right:8px;width:7px;height:7px;background:var(--gold);border-radius:50%;border:1.5px solid var(--bg);}
 .notif-banner{position:fixed;top:86px;left:50%;transform:translateX(-50%) translateY(-80px);z-index:999;background:#1a1500;border:1px solid var(--gold);color:var(--gold);font-size:12px;font-weight:600;padding:10px 16px;border-radius:24px;box-shadow:0 4px 20px rgba(0,0,0,.5);white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis;transition:transform .3s ease,opacity .3s ease;opacity:0;pointer-events:none;}
 .notif-banner.visible{transform:translateX(-50%) translateY(0);opacity:1;}
+.disc-msg-wrap{margin-bottom:12px;}
+.disc-msg-wrap.mine{text-align:right;}
+.disc-msg-meta{font-size:10px;color:var(--text-faint,#666);margin-bottom:3px;}
+.disc-msg-bubble{display:inline-block;max-width:78%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;word-break:break-word;white-space:pre-wrap;text-align:left;}
+.disc-msg-wrap.mine .disc-msg-bubble{background:var(--gold,#d4af37);color:#000;border-bottom-right-radius:3px;}
+.disc-msg-wrap.other .disc-msg-bubble{background:var(--s2,#1a1a1a);color:var(--text,#f0f0f0);border-bottom-left-radius:3px;}
+.disc-card{background:var(--s2,#141414);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.06);}
+.disc-card:active{background:var(--s1,#0f0f0f);}
 .nav-link{color:var(--text-faint);}
 .nav-link:hover{color:var(--gold);}
 /* publication modal */
@@ -3198,6 +3409,9 @@ a{color:var(--gold);text-decoration:none;}
 
   <!-- ── ONGLET AVIS ──────────────────────────────────────── -->
   <div class="tab-pane" id="avis-pane"></div>
+
+  <!-- ── ONGLET DISCUSSIONS ───────────────────────────────── -->
+  <div class="tab-pane" id="discussions-pane"></div>
 
   <!-- ── PUBLICATION MODAL ──────────────────────────────────── -->
   <div id="pub-modal-backdrop" class="pub-modal-backdrop"></div>

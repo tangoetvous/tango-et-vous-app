@@ -26,6 +26,8 @@ const SHEET_PUBLICATIONS  = 'Publications';
 const SHEET_AGENDA        = 'Agenda';
 const SHEET_COURS_TANGO   = 'Cours Tango';     // inscriptions régulières
 const SHEET_AGENDA_MODIFS = 'Agenda Modifs';   // modifications/annulations d'occurrences
+const SHEET_DISCUSSIONS   = 'Discussions';
+const SHEET_DISC_MESSAGES = 'Discussion_Messages';
 
 // ── Lignes de départ ──────────────────────────────────────────
 const ELEVES_START_ROW    = 5;
@@ -187,8 +189,10 @@ function doGet(e) {
       case 'getPublications': r = getPublications(); break;
       case 'getAgendaExtra':  r = getAgendaExtra(); break;
       case 'getCoursDates':   r = getCoursDates(); break;
-      case 'getInscrits':     r = getInscrits(p); break;
-      default:                r = {error:'Action GET inconnue : '+a};
+      case 'getInscrits':             r = getInscrits(p); break;
+      case 'getDiscussions':          r = getDiscussions(); break;
+      case 'getDiscussionMessages':   r = getDiscussionMessages(p); break;
+      default:                        r = {error:'Action GET inconnue : '+a};
     }
     out.setContent(JSON.stringify(r));
   } catch(err) { out.setContent(JSON.stringify({error:err.message})); }
@@ -235,7 +239,12 @@ function doPost(e) {
       case 'saveCoursDates':              r = saveCoursDates(b); break;
       // ── Pointage QR code (depuis pointer.html) ────────────────
       case 'pointageQR':                  r = ajouterPresenceManuelle(b); break;
-      default:                       r = {error:'Action POST inconnue : '+a};
+      // ── Discussions ───────────────────────────────────────────
+      case 'createDiscussion':            r = createDiscussion(b); break;
+      case 'postDiscussionMessage':       r = postDiscussionMessage(b); break;
+      case 'closeDiscussion':             r = closeDiscussion(b); break;
+      case 'deleteDiscussion':            r = deleteDiscussion(b); break;
+      default:                            r = {error:'Action POST inconnue : '+a};
     }
     out.setContent(JSON.stringify(r));
   } catch(err) { out.setContent(JSON.stringify({error:err.message})); }
@@ -1937,6 +1946,150 @@ function _emailCarteFinSaison(prenom, email, restants, expAff, urlInscription, i
       <strong style="color:#888;">Florencia Garcia &amp; Jérémy Braitbart — Tango &amp; Vous</strong>
     </p>`),
   });
+}
+
+// ================================================================
+// DISCUSSIONS
+// ================================================================
+function _ensureDiscSheets(ss) {
+  if (!ss.getSheetByName(SHEET_DISCUSSIONS)) {
+    const s = ss.insertSheet(SHEET_DISCUSSIONS);
+    s.appendRow(['id','titre','groupes','createur_email','createur_nom','statut','date_creation']);
+    s.getRange(1,1,1,7).setBackground('#D4AF37').setFontColor('#000').setFontWeight('bold');
+    s.setFrozenRows(1);
+  }
+  if (!ss.getSheetByName(SHEET_DISC_MESSAGES)) {
+    const s = ss.insertSheet(SHEET_DISC_MESSAGES);
+    s.appendRow(['id','discussion_id','auteur_email','auteur_nom','message','date']);
+    s.getRange(1,1,1,6).setBackground('#D4AF37').setFontColor('#000').setFontWeight('bold');
+    s.setFrozenRows(1);
+  }
+}
+
+function getDiscussions() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  _ensureDiscSheets(ss);
+  const s = ss.getSheetByName(SHEET_DISCUSSIONS);
+  const lr = s.getLastRow();
+  if (lr < 2) return {discussions:[]};
+  return {
+    discussions: s.getRange(2,1,lr-1,7).getValues()
+      .filter(r => r[0])
+      .map(r => ({
+        id: r[0], titre: r[1],
+        groupes: r[2] ? r[2].toString().split(',').filter(Boolean) : [],
+        createur_email: r[3], createur_nom: r[4],
+        statut: r[5] || 'ouvert',
+        date: r[6] instanceof Date ? r[6].toISOString() : (r[6]||'')
+      }))
+  };
+}
+
+function createDiscussion(body) {
+  const {titre, groupes, createur_email, createur_nom} = body;
+  if (!titre) throw new Error('titre requis');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  _ensureDiscSheets(ss);
+  const s = ss.getSheetByName(SHEET_DISCUSSIONS);
+  const id = 'disc_' + Utilities.formatDate(new Date(),'Europe/Paris','yyyyMMddHHmmss');
+  const dateNow = new Date().toISOString();
+  s.appendRow([id, titre, Array.isArray(groupes)?groupes.join(','):'', createur_email||'', createur_nom||'', 'ouvert', dateNow]);
+  try { _notifNouvelleDiscussion(ss, titre, groupes||[], createur_nom||'Tango & Vous'); } catch(e) {}
+  return {ok:true, id:id, date:dateNow};
+}
+
+function _notifNouvelleDiscussion(ss, titre, groupes, createurNom) {
+  const notified = new Set(ADMIN_EMAILS);
+  const sCT = ss.getSheetByName(SHEET_COURS_TANGO);
+  if (sCT && sCT.getLastRow() >= 2) {
+    sCT.getRange(2,1,sCT.getLastRow()-1,17).getValues().forEach(r => {
+      const email  = (r[3]||'').toString().trim().toLowerCase();
+      const ville  = (r[8]||'').toString().trim().toLowerCase();
+      const niveau = (r[6]||'').toString().trim().toLowerCase();
+      const statut = (r[9]||'').toString().trim().toLowerCase();
+      if (!email || statut === 'supprimé') return;
+      const isDebutant = !niveau.includes('interm') && !niveau.includes('avan');
+      let g = '';
+      if (ville === 'paris'     && isDebutant)  g = 'paris-debutants';
+      else if (ville === 'paris')               g = 'paris-intermediaires';
+      else if (ville === 'vincennes' && isDebutant) g = 'vincennes-debutants';
+      else if (ville === 'vincennes')           g = 'vincennes-intermediaires';
+      if (!groupes.length || groupes.includes(g)) notified.add(email);
+    });
+  }
+  const subject = `💬 Nouvelle discussion : ${titre}`;
+  const htmlBody = _emailWrap('Nouvelle discussion',
+    `<p style="font-size:14px;color:#ccc;line-height:1.8;margin-bottom:16px;"><strong style="color:#D4AF37;">${createurNom}</strong> a ouvert une nouvelle discussion :</p>`
+    +`<p style="font-size:17px;font-weight:700;color:#f0f0f0;margin-bottom:20px;">"${titre}"</p>`
+    +`<p style="font-size:13px;color:#aaa;margin-bottom:20px;">Connectez-vous à l'application Tango &amp; Vous pour y participer si vous le souhaitez.</p>`
+    +`<div style="text-align:center;margin:24px 0;"><a href="${URL_PWA}" style="display:inline-block;background:#D4AF37;color:#000;padding:12px 28px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;">Ouvrir l'application</a></div>`
+  );
+  notified.forEach(email => { try { MailApp.sendEmail({to:email, subject, htmlBody, noReply:true}); } catch(e) {} });
+}
+
+function getDiscussionMessages(p) {
+  const discId = p.id || p.discussion_id;
+  if (!discId) throw new Error('id requis');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  _ensureDiscSheets(ss);
+  const s = ss.getSheetByName(SHEET_DISC_MESSAGES);
+  const lr = s.getLastRow();
+  if (lr < 2) return {messages:[]};
+  return {
+    messages: s.getRange(2,1,lr-1,6).getValues()
+      .filter(r => r[0] && r[1] === discId)
+      .map(r => ({
+        id: r[0], discussion_id: r[1],
+        auteur_email: r[2], auteur_nom: r[3],
+        message: r[4],
+        date: r[5] instanceof Date ? r[5].toISOString() : (r[5]||'')
+      }))
+  };
+}
+
+function postDiscussionMessage(body) {
+  const {discussion_id, auteur_email, auteur_nom, message} = body;
+  if (!discussion_id || !message) throw new Error('discussion_id et message requis');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  _ensureDiscSheets(ss);
+  const s = ss.getSheetByName(SHEET_DISC_MESSAGES);
+  const id = 'msg_'+Utilities.formatDate(new Date(),'Europe/Paris','yyyyMMddHHmmss')+'_'+Math.floor(Math.random()*9999);
+  const dateNow = new Date().toISOString();
+  s.appendRow([id, discussion_id, auteur_email||'', auteur_nom||'', message, dateNow]);
+  return {ok:true, id:id, date:dateNow};
+}
+
+function closeDiscussion(body) {
+  if (!body.id) throw new Error('id requis');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  _ensureDiscSheets(ss);
+  const s = ss.getSheetByName(SHEET_DISCUSSIONS);
+  const lr = s.getLastRow();
+  if (lr < 2) return {error:'Discussion non trouvée'};
+  const ids = s.getRange(2,1,lr-1,1).getValues();
+  for (let i = 0; i < ids.length; i++) {
+    if (ids[i][0] === body.id) { s.getRange(i+2,6).setValue('fermé'); return {ok:true}; }
+  }
+  return {error:'Discussion non trouvée'};
+}
+
+function deleteDiscussion(body) {
+  if (!body.id) throw new Error('id requis');
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  _ensureDiscSheets(ss);
+  // Supprimer messages (de bas en haut)
+  const sm = ss.getSheetByName(SHEET_DISC_MESSAGES);
+  if (sm && sm.getLastRow() >= 2) {
+    const rows = sm.getRange(2,1,sm.getLastRow()-1,2).getValues();
+    for (let i = rows.length-1; i >= 0; i--) { if (rows[i][1] === body.id) sm.deleteRow(i+2); }
+  }
+  // Supprimer discussion
+  const s = ss.getSheetByName(SHEET_DISCUSSIONS);
+  if (s && s.getLastRow() >= 2) {
+    const ids = s.getRange(2,1,s.getLastRow()-1,1).getValues();
+    for (let i = ids.length-1; i >= 0; i--) { if (ids[i][0] === body.id) { s.deleteRow(i+2); return {ok:true}; } }
+  }
+  return {error:'Discussion non trouvée'};
 }
 
 // ================================================================
