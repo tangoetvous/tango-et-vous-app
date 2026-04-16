@@ -1994,37 +1994,7 @@ function createDiscussion(body) {
   const id = 'disc_' + Utilities.formatDate(new Date(),'Europe/Paris','yyyyMMddHHmmss');
   const dateNow = new Date().toISOString();
   s.appendRow([id, titre, Array.isArray(groupes)?groupes.join(','):'', createur_email||'', createur_nom||'', 'ouvert', dateNow]);
-  try { _notifNouvelleDiscussion(ss, titre, groupes||[], createur_nom||'Tango & Vous'); } catch(e) {}
   return {ok:true, id:id, date:dateNow};
-}
-
-function _notifNouvelleDiscussion(ss, titre, groupes, createurNom) {
-  const notified = new Set(ADMIN_EMAILS);
-  const sCT = ss.getSheetByName(SHEET_COURS_TANGO);
-  if (sCT && sCT.getLastRow() >= 2) {
-    sCT.getRange(2,1,sCT.getLastRow()-1,17).getValues().forEach(r => {
-      const email  = (r[3]||'').toString().trim().toLowerCase();
-      const ville  = (r[8]||'').toString().trim().toLowerCase();
-      const niveau = (r[6]||'').toString().trim().toLowerCase();
-      const statut = (r[9]||'').toString().trim().toLowerCase();
-      if (!email || statut === 'supprimé') return;
-      const isDebutant = !niveau.includes('interm') && !niveau.includes('avan');
-      let g = '';
-      if (ville === 'paris'     && isDebutant)  g = 'paris-debutants';
-      else if (ville === 'paris')               g = 'paris-intermediaires';
-      else if (ville === 'vincennes' && isDebutant) g = 'vincennes-debutants';
-      else if (ville === 'vincennes')           g = 'vincennes-intermediaires';
-      if (!groupes.length || groupes.includes(g)) notified.add(email);
-    });
-  }
-  const subject = `💬 Nouvelle discussion : ${titre}`;
-  const htmlBody = _emailWrap('Nouvelle discussion',
-    `<p style="font-size:14px;color:#ccc;line-height:1.8;margin-bottom:16px;"><strong style="color:#D4AF37;">${createurNom}</strong> a ouvert une nouvelle discussion :</p>`
-    +`<p style="font-size:17px;font-weight:700;color:#f0f0f0;margin-bottom:20px;">"${titre}"</p>`
-    +`<p style="font-size:13px;color:#aaa;margin-bottom:20px;">Connectez-vous à l'application Tango &amp; Vous pour y participer si vous le souhaitez.</p>`
-    +`<div style="text-align:center;margin:24px 0;"><a href="${URL_PWA}" style="display:inline-block;background:#D4AF37;color:#000;padding:12px 28px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;">Ouvrir l'application</a></div>`
-  );
-  notified.forEach(email => { try { MailApp.sendEmail({to:email, subject, htmlBody, noReply:true}); } catch(e) {} });
 }
 
 function getDiscussionMessages(p) {
