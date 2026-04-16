@@ -309,7 +309,7 @@
     const { eleve, carte, presences } = eleveData;
 
     // Header
-    $('dash-prenom').textContent = eleve.nom.split(' ')[0];
+    $('dash-prenom').textContent = eleve.prenom || (eleve.nom || '').split(' ')[0] || '';
     $('dash-id').textContent = eleve.id;
     $('dash-niveau').textContent = eleve.niveau;
 
@@ -448,6 +448,7 @@
     const _navOv = $('nav-overlay');
     if (_navOv) _navOv.classList.remove('open');
     if (tab === 'accueil') renderAccueil();
+    if (tab === 'carte') renderDashboard();
     if (tab === 'agenda') renderAgenda('tous');
     if (tab === 'stages') renderStages();
     if (tab === 'milonga') renderMilonga();
