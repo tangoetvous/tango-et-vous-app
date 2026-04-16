@@ -2332,6 +2332,55 @@
       var fr = document.getElementById('stages-pwa-iframe');
       if (fr && ev.data.height) fr.style.height = (ev.data.height + 40) + 'px';
     }
+    if (ev.data && ev.data.type === 'stageInscription') {
+      var d = ev.data.data;
+      if (!d || !d.inscriptionsParDate) return;
+      // 1. Mettre à jour eleveData en mémoire pour que renderAccueil() voie le stage
+      if (eleveData) {
+        if (!eleveData.stagesInscrits) eleveData.stagesInscrits = [];
+        d.inscriptionsParDate.forEach(function(ip) {
+          var dateStage = ip.date;
+          if (!dateStage) return;
+          var already = eleveData.stagesInscrits.find(function(s){ return (s.date||s.dateStage) === dateStage; });
+          if (!already) {
+            var ateliers = (ip.stagesDetail||[]).map(function(s){ return s.type || s; });
+            eleveData.stagesInscrits.push({ date: dateStage, ateliers: ateliers });
+          }
+        });
+      }
+      // 2. Persister dans tev_stages_inscrits (format attendu par renderAccueil fallback)
+      try {
+        var email = (d.email || (eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase().trim();
+        if (email) {
+          var map = JSON.parse(localStorage.getItem('tev_stages_inscrits') || '{}');
+          if (!map[email]) map[email] = [];
+          d.inscriptionsParDate.forEach(function(ip) {
+            if (!ip.date) return;
+            var exists = map[email].find(function(s){ return s.date === ip.date; });
+            if (!exists) {
+              var slots = (ip.stagesDetail||[]).map(function(s){ return s.type || s; });
+              map[email].push({ date: ip.date, label: ip.dateLabel || ip.date, slots: slots });
+            }
+          });
+          localStorage.setItem('tev_stages_inscrits', JSON.stringify(map));
+        }
+      } catch(_e) {}
+      // 3. Transmettre à admin.html (BroadcastChannel + pending inscriptions)
+      try {
+        var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
+        pending.push(ev.data);
+        localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+      } catch(_e) {}
+      try {
+        if (window.BroadcastChannel) {
+          var bc = new BroadcastChannel('tev_inscriptions');
+          bc.postMessage(ev.data);
+          bc.close();
+        }
+      } catch(_e) {}
+      // 4. Mettre à jour l'affichage
+      if (currentTab === 'accueil') renderAccueil();
+    }
   });
 
   // Mise à jour temps réel : si l'admin change un Paramètre dans un autre onglet, on recharge
