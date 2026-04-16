@@ -734,6 +734,7 @@ function prefillFromParams(p) {
 
 // Écoute postMessage depuis le parent (admin.html sélectionne un élève)
 window.addEventListener('message', function(ev) {
+  if (ev.origin && ev.origin !== 'null' && ev.origin !== window.location.origin) return;
   if (!ev.data || ev.data.type !== 'fillForm') return;
   var d = ev.data.data || {};
   var p = new URLSearchParams();

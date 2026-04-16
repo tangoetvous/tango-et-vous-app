@@ -2329,6 +2329,7 @@
 
   // Redimensionnement automatique de l'iframe stages-pwa.html
   window.addEventListener('message', function(ev) {
+    if (ev.origin && ev.origin !== 'null' && ev.origin !== window.location.origin) return;
     if (ev.data && ev.data.type === 'iframeResize') {
       var fr = document.getElementById('stages-pwa-iframe');
       if (fr && ev.data.height) fr.style.height = (ev.data.height + 40) + 'px';
