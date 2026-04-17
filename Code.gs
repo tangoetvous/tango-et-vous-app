@@ -12,6 +12,7 @@
 // ================================================================
 //  DÉCLENCHEURS (Apps Script → Déclencheurs) :
 //    • declencheurEmailsEssai      → Quotidien 9h-10h
+//    • declencheurRappelJ7Essai    → Quotidien 9h-10h (rappel J-7 + email E4)
 //    • declencheurNouvelleS        → Annuel · 1er septembre · 8h-9h
 //    • declencheurCartesFinSaison  → Quotidien · 8h-9h (actif toute l'année)
 // ================================================================
@@ -108,7 +109,10 @@ const LIVRETS = {
   },
 };
 
-const CAPACITE_ESSAI    = 16;  // max inscriptions par créneau d'essai
+// Capacités par rôle pour les cours d'essai
+const CAPACITE_GUIDEURS    = 22;  // max guideurs (solo ou couple) par créneau
+const CAPACITE_GUIDEES_PART = 22; // max guidées AVEC partenaire par créneau
+// Guidées SANS partenaire → toujours liste d'attente (E2), pas de limite à vérifier
 const LIEUX_ESSAI_LABEL = {paris:'Paris — Espace Danse Studio',vincennes:'Vincennes — Espace Sorano'};
 
 // ── Dates des cours par défaut (source de vérité initiale) ────
@@ -157,27 +161,19 @@ function doGet(e) {
   // ── Confirmation de présence via lien email (retourne une page HTML) ──────
   if (a === 'confirmerPresenceEssai') {
     try { confirmerPresenceEssai({email:p.email||'',date:p.date||''}); } catch(err) {}
-    return HtmlService.createHtmlOutput(
-      '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>'
-      +'<meta name="viewport" content="width=device-width,initial-scale=1"/>'
-      +'<title>Présence confirmée — Tango &amp; Vous</title>'
-      +'<style>body{margin:0;font-family:Arial,sans-serif;background:#0a0a0a;color:#f0f0f0;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;}'
-      +'.box{max-width:360px;padding:40px 24px;}'
-      +'.logo{font-size:22px;letter-spacing:6px;color:#D4AF37;font-weight:300;margin-bottom:24px;}'
-      +'.check{font-size:56px;margin-bottom:16px;}'
-      +'h2{color:#81c784;margin:0 0 14px;}'
-      +'p{color:#aaa;line-height:1.8;font-size:14px;margin:0 0 10px;}'
-      +'.sig{color:#666;font-size:12px;margin-top:24px;}'
-      +'</style></head><body>'
-      +'<div class="box">'
-      +'<div class="logo">TANGO &amp; VOUS</div>'
-      +'<div class="check">✓</div>'
-      +'<h2>Présence confirmée !</h2>'
-      +'<p>Merci, votre présence au cours d\'essai est bien enregistrée.</p>'
-      +'<p>À très bientôt sur la piste !</p>'
-      +'<p class="sig">Florencia Garcia &amp; Jérémy Braitbart — Tango &amp; Vous</p>'
-      +'</div></body></html>'
-    );
+    return HtmlService.createHtmlOutput(_pageReponseEssai('✓','Présence confirmée !','#81c784',
+      'Merci, votre présence au cours d\'essai est bien enregistrée. À très bientôt sur la piste !'));
+  }
+  if (a === 'repondreEssaiJ7') {
+    const act = (p.reponse||p.action_rep||'').toLowerCase();
+    const msgs = {
+      confirmer:{ico:'✓',titre:'Présence confirmée !',col:'#81c784',txt:'Merci, votre présence est confirmée. À très bientôt sur la piste !'},
+      annuler:  {ico:'✕',titre:'Inscription annulée',col:'#ef9a9a',txt:'Votre inscription a bien été annulée. Vous pouvez vous réinscrire à un autre créneau quand vous voulez.'},
+      reporter: {ico:'📅',titre:'Report demandé',col:'#e8c84a',txt:'Votre demande de report est bien prise en compte. Nous allons vous recontacter pour trouver une nouvelle date.'},
+    };
+    const m = msgs[act]||msgs.confirmer;
+    try { repondreEssaiJ7({email:p.email||'',date:p.date||'',action:act||'confirmer'}); } catch(err) {}
+    return HtmlService.createHtmlOutput(_pageReponseEssai(m.ico,m.titre,m.col,m.txt));
   }
   const out = ContentService.createTextOutput();
   out.setMimeType(ContentService.MimeType.JSON);
@@ -217,6 +213,7 @@ function doPost(e) {
       case 'envoyerEmailsEssaiJ1':        r = envoyerEmailsEssaiJ1(b); break;
       case 'validerGuideeEssai':          r = validerGuideeEssai(b); break;
       case 'confirmerPresenceEssai':      r = confirmerPresenceEssai(b); break;
+      case 'repondreEssaiJ7':             r = repondreEssaiJ7(b); break;
       case 'reservationCP':               r = traiterReservationCP(b); break;
       case 'updateStatutCP':              r = updateStatutCP(b); break;
       case 'inscriptionStage':            r = traiterInscriptionStage(b); break;
@@ -812,6 +809,31 @@ function declencheurEmailsEssai() {
   Object.values(grp).forEach(g=>{ if(g.presents.length+g.absents.length>0) envoyerEmailsEssaiJ1(g); });
 }
 
+// Déclencheur quotidien : envoie E4 (rappel J-7) aux inscrits avec statut='inscrit' dont le cours est dans 7 jours
+function declencheurRappelJ7Essai() {
+  const dans7j = new Date(); dans7j.setDate(dans7j.getDate()+7);
+  const cible  = _fmtDate(dans7j);
+  const ss     = SpreadsheetApp.getActiveSpreadsheet();
+  const s      = ss.getSheetByName(SHEET_ESSAI);
+  if (!s||s.getLastRow()<2) return;
+  const data = s.getRange(2,1,s.getLastRow()-1,13).getValues();
+  data.filter(r=>r[0]).forEach(r => {
+    if (_fmtDate(r[7]) !== cible) return;
+    const statut = (r[10]||'').toString().toLowerCase();
+    if (statut !== 'inscrit') return; // seulement les confirmés (E1), pas attente
+    const presConf = r[12]===true||r[12]==='TRUE'; // déjà confirmé via email
+    if (presConf) return;
+    const prenom = r[1]||''; const email = (r[3]||'').toString().trim();
+    if (!email) return;
+    const lieu   = LIEUX_ESSAI_LABEL[r[5]||'']||(r[5]||'');
+    const niveau = r[6]||'';
+    const dateRaw = _fmtDate(r[7]);
+    const dateLbl = _fmtDateFrLong(dateRaw);
+    const horaire = r[9]||'';
+    try { _emailEssaiE4(prenom, email, dateLbl, horaire||niveau, lieu, dateRaw, niveau); } catch(e) {}
+  });
+}
+
 // ── Inscription cours d'essai (depuis cours-essai.html) ──────
 function traiterInscriptionEssai(body) {
   const {prenom,nom,email,tel,lieu,date,niveau,horaire,role,niveauEleve,
@@ -828,25 +850,63 @@ function traiterInscriptionEssai(body) {
     const parts = date.split('/'); dateNorm = parts[2]+'-'+parts[1]+'-'+parts[0];
   }
 
-  // Vérifier capacité du créneau
+  // Compter inscrits confirmés par rôle pour ce créneau
   const lr = s.getLastRow();
-  let inscritCount = 0;
+  let nbGuideurs = 0, nbGuideesAvecPart = 0;
   if (lr >= 2) {
     s.getRange(2,1,lr-1,11).getValues().forEach(r => {
-      if (_fmtDate(r[7])===dateNorm && (r[5]||'')===(lieu||'') &&
-          (r[6]||'')===(niveau||'') && (r[10]||'inscrit').toLowerCase()==='inscrit')
-        inscritCount++;
+      const memeDate   = _fmtDate(r[7]) === dateNorm;
+      const memeLieu   = (r[5]||'') === (lieu||'');
+      const memeNiveau = (r[6]||'') === (niveau||'');
+      const statut     = (r[10]||'inscrit').toLowerCase();
+      if (!memeDate || !memeLieu || !memeNiveau) return;
+      if (statut !== 'inscrit' && statut !== 'confirme') return;
+      const roleR = (r[8]||'').toLowerCase();
+      if (roleR === 'guideur') nbGuideurs++;
+      else if (roleR === 'guidee') nbGuideesAvecPart++; // seules les guidées confirmées sont "avec partenaire"
     });
   }
-  const enAttente = inscritCount >= CAPACITE_ESSAI;
-  const statut    = enAttente ? 'attente' : 'inscrit';
+
+  // Déterminer le scénario d'email selon rôle, partenaire et délai
+  const estCouple = (avecPart||'') === 'avec';
+  const estGuidee = (role||'').toLowerCase() === 'guidee';
+  const estGuideur = (role||'').toLowerCase() === 'guideur';
+
+  // Guidée sans partenaire → E2 : toujours liste d'attente
+  const guideesSansPart = estGuidee && !estCouple;
+
+  // Vérifier si la capacité est atteinte pour le rôle concerné
+  let placePleine = false;
+  if (estGuideur || estCouple) {
+    if (nbGuideurs >= CAPACITE_GUIDEURS) placePleine = true;
+    if (estCouple && nbGuideesAvecPart >= CAPACITE_GUIDEES_PART) placePleine = true;
+  }
+
+  // Délai avant le cours (en jours)
+  const dateEssai = new Date(dateNorm);
+  const aujourdhui = new Date();
+  aujourdhui.setHours(0,0,0,0);
+  const joursAvant = Math.floor((dateEssai - aujourdhui) / 86400000);
+  const moinsDe7j = joursAvant < 7;
+
+  // Déterminer statut et type d'email
+  let statut, typeEmail;
+  if (guideesSansPart) {
+    statut = 'attente'; typeEmail = 'E2';
+  } else if (placePleine) {
+    statut = 'attente'; typeEmail = 'E5';
+  } else if (moinsDe7j) {
+    statut = 'inscrit'; typeEmail = 'E6';
+  } else {
+    statut = 'inscrit'; typeEmail = 'E1';
+  }
 
   // Sauvegarder inscription principale
   s.appendRow([now,prenom||'',nom||'',email||'',tel||'',lieu||'',niveau||'',
     dateNorm,role||'',niveauEleve||'',statut,'']);
 
-  // Sauvegarder partenaire
-  if ((avecPart||'')==='avec' && partEmail) {
+  // Sauvegarder partenaire (couple uniquement)
+  if (estCouple && partEmail) {
     s.appendRow([now,partPrenom||'',partNom||'',partEmail,'',lieu||'',niveau||'',
       dateNorm,partRole||'','',statut,'']);
   }
@@ -856,31 +916,44 @@ function traiterInscriptionEssai(body) {
   const lieuLbl = LIEUX_ESSAI_LABEL[lieu||''] || (lieu||'');
   const horLbl  = horaire||'';
 
-  // Emails élève (et partenaire)
-  const fn = enAttente ? _emailEssaiAttente : _emailEssaiConfirme;
-  try { fn(prenom, email, dateLbl, horLbl, lieuLbl, dateNorm, niveau); } catch(e) {}
-  if ((avecPart||'')==='avec' && partEmail) {
-    try { fn(partPrenom||prenom, partEmail, dateLbl, horLbl, lieuLbl, dateNorm, niveau); } catch(e) {}
-  }
+  // Envoyer l'email selon le scénario
+  try {
+    if (typeEmail === 'E2') {
+      _emailEssaiE2(prenom, email, dateLbl, horLbl, lieuLbl, dateNorm, niveau);
+    } else if (typeEmail === 'E5') {
+      _emailEssaiE5(prenom, email, dateLbl, horLbl, lieuLbl, dateNorm, niveau);
+    } else if (typeEmail === 'E6') {
+      _emailEssaiE6(prenom, email, dateLbl, horLbl, lieuLbl, dateNorm, niveau);
+      if (estCouple && partEmail) {
+        _emailEssaiE6(partPrenom||prenom, partEmail, dateLbl, horLbl, lieuLbl, dateNorm, niveau);
+      }
+    } else { // E1
+      _emailEssaiE1(prenom, email, dateLbl, horLbl, lieuLbl, dateNorm, niveau);
+      if (estCouple && partEmail) {
+        _emailEssaiE1(partPrenom||prenom, partEmail, dateLbl, horLbl, lieuLbl, dateNorm, niveau);
+      }
+    }
+  } catch(e) {}
 
   // Notification admin
   try {
-    const tag = enAttente ? ' [LISTE D\'ATTENTE]' : '';
+    const tagMap = {E1:'',E2:' [ATTENTE — guidée solo]',E5:' [LISTE D\'ATTENTE — complet]',E6:' [CONFIRMÉ <7j]'};
+    const tag = tagMap[typeEmail]||'';
     ADMIN_EMAILS.forEach(a => MailApp.sendEmail({
       to:a, subject:NOM_ECOLE+' — Essai'+tag+' : '+prenom+' '+nom,
-      htmlBody:_emailWrap('Nouvel essai'+tag,`
-        <p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:14px;">
-          ${enAttente?'<strong style="color:#ffaa44;">⚠ Liste d\'attente ('+inscritCount+'/'+CAPACITE_ESSAI+')</strong><br/>':''}
-          Demande de <strong style="color:#D4AF37;">${prenom} ${nom}</strong>.
-        </p>
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          ${_row('Email','<a href="mailto:'+email+'" style="color:#D4AF37;">'+email+'</a>')}
-          ${tel?_row('Tél','<a href="tel:'+tel+'" style="color:#D4AF37;">'+tel+'</a>'):''}
-          ${_row('Date',dateLbl)}${_row('Horaire',horLbl)}${_row('Lieu',lieuLbl)}
-          ${_row('Niveau',niveau||'—')}${_row('Rôle',role||'—')}
-          ${(avecPart==='avec'&&partEmail)?_row('Partenaire',(partPrenom||'')+' '+(partNom||'')+' ('+partEmail+')'):''}
-          ${remarque?_row('Remarque',remarque):''}
-        </table>`)
+      htmlBody:_emailWrap('Nouvel essai'+tag,
+        '<p style="font-size:13px;color:#ccc;line-height:1.8;margin-bottom:14px;">'
+        +(statut==='attente'?'<strong style="color:#ffaa44;">⚠ '+typeEmail+' — '+
+          (typeEmail==='E2'?'Guidée sans partenaire (attente systématique)':'Créneau complet')+'</strong><br/>':'')
+        +'Demande de <strong style="color:#D4AF37;">'+prenom+' '+nom+'</strong>.</p>'
+        +'<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+        +_row('Email','<a href="mailto:'+email+'" style="color:#D4AF37;">'+email+'</a>')
+        +(tel?_row('Tél','<a href="tel:'+tel+'" style="color:#D4AF37;">'+tel+'</a>'):'')
+        +_row('Date',dateLbl)+_row('Horaire',horLbl)+_row('Lieu',lieuLbl)
+        +_row('Niveau',niveau||'—')+_row('Rôle',role||'—')
+        +(estCouple&&partEmail?_row('Partenaire',(partPrenom||'')+' '+(partNom||'')+' ('+partEmail+')'):'')
+        +(remarque?_row('Remarque',remarque):'')
+        +'</table>')
     }));
   } catch(e) {}
 
@@ -888,7 +961,49 @@ function traiterInscriptionEssai(body) {
   try { creerEleve({nom:prenom+' '+nom,email,niveau:niveauEleve||niveau||'',
     source:'cours_essai',notes:'Essai du '+dateNorm}); } catch(e) {}
 
-  return {ok:true, statut};
+  return {ok:true, statut, typeEmail};
+}
+
+// ── Réponse à l'email E4 (J-7) : confirmer / annuler / reporter ──
+function repondreEssaiJ7(body) {
+  const {email, date, action} = body;
+  if (!email||!date||!action) return {ok:false, error:'email, date et action requis'};
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s  = _getSheet(ss, SHEET_ESSAI);
+  const lr = s.getLastRow();
+  if (lr < 2) return {ok:true};
+  const data = s.getRange(2,1,lr-1,13).getValues();
+  let prenom='', lieu='', niveau='', horaire='';
+  data.forEach((r,i) => {
+    if ((r[3]||'').toString().trim().toLowerCase()===email.toLowerCase() && _fmtDate(r[7])===date) {
+      if (action==='confirmer') {
+        s.getRange(i+2,11).setValue('confirme');
+        s.getRange(i+2,13).setValue(true);
+      } else if (action==='annuler') {
+        s.getRange(i+2,11).setValue('annule');
+      }
+      if (!prenom) { prenom=r[1]||''; lieu=r[5]||''; niveau=r[6]||''; }
+    }
+  });
+  if (action==='reporter' && prenom) {
+    // Annuler l'inscription puis notifier admin pour replanifier
+    data.forEach((r,i) => {
+      if ((r[3]||'').toString().trim().toLowerCase()===email.toLowerCase() && _fmtDate(r[7])===date) {
+        s.getRange(i+2,11).setValue('annule');
+      }
+    });
+    try {
+      const lieuLbl = LIEUX_ESSAI_LABEL[lieu]||lieu;
+      ADMIN_EMAILS.forEach(a => MailApp.sendEmail({to:a,
+        subject:NOM_ECOLE+' — Essai reporté : '+prenom,
+        htmlBody:_emailWrap('Essai reporté',
+          '<p style="font-size:13px;color:#ccc;">'+prenom+' a demandé à reporter son cours d\'essai (<em>'+
+          _fmtDateFrLong(date)+'</em> — '+lieuLbl+').</p>'
+          +'<p style="font-size:13px;color:#ccc;">Merci de le/la recontacter pour convenir d\'une nouvelle date.</p>'
+          +'<p style="margin-top:14px;"><a href="mailto:'+email+'" style="color:#D4AF37;">'+email+'</a></p>')}));
+    } catch(e) {}
+  }
+  return {ok:true, action};
 }
 
 // ================================================================
@@ -1099,6 +1214,27 @@ function _genId(s){const lr=s.getLastRow();if(lr<ELEVES_START_ROW)return'E001';c
 // ================================================================
 // EMAILS — WRAPPER
 // ================================================================
+function _pageReponseEssai(ico, titre, couleur, texte) {
+  return '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>'
+    +'<meta name="viewport" content="width=device-width,initial-scale=1"/>'
+    +'<title>'+titre+' — Tango &amp; Vous</title>'
+    +'<style>body{margin:0;font-family:Arial,sans-serif;background:#0a0a0a;color:#f0f0f0;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;}'
+    +'.box{max-width:380px;padding:40px 24px;}'
+    +'.logo{font-size:22px;letter-spacing:6px;color:#D4AF37;font-weight:300;margin-bottom:24px;}'
+    +'.ico{font-size:56px;margin-bottom:16px;}'
+    +'h2{margin:0 0 14px;color:'+couleur+';}'
+    +'p{color:#aaa;line-height:1.8;font-size:14px;margin:0 0 10px;}'
+    +'.sig{color:#666;font-size:12px;margin-top:24px;}'
+    +'</style></head><body>'
+    +'<div class="box">'
+    +'<div class="logo">TANGO &amp; VOUS</div>'
+    +'<div class="ico">'+ico+'</div>'
+    +'<h2>'+titre+'</h2>'
+    +'<p>'+texte+'</p>'
+    +'<p class="sig">Florencia Garcia &amp; Jérémy Braitbart — Tango &amp; Vous</p>'
+    +'</div></body></html>';
+}
+
 function _emailWrap(t,c){return`<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:560px;margin:0 auto;background:#0a0a0a;color:#f0f0f0;"><div style="background:#000;border-bottom:3px solid #D4AF37;padding:18px 24px;text-align:center;"><div style="font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">${NOM_ECOLE.toUpperCase()}</div><div style="font-size:10px;letter-spacing:3px;color:#888;margin-top:4px;">${t}</div></div><div style="padding:22px;">${c}</div><div style="padding:12px 24px;border-top:1px solid #222;font-size:11px;color:#444;text-align:center;line-height:1.7;">${NOM_ECOLE} · Le Regard Se Pose · <a href="${URL_SITE}" style="color:#888;">${URL_SITE}</a></div></div>`;}
 function _row(k,v){return`<tr style="border-bottom:1px solid #222;"><td style="padding:8px 0;color:#888;width:38%;vertical-align:top;">${k}</td><td style="padding:8px 0;color:#e8c84a;font-weight:600;">${v}</td></tr>`;}
 
@@ -1378,6 +1514,118 @@ function _emailEssaiInfoBox(dateFormatee, horaire, lieu, dateRaw, niveau) {
       +'</td></tr>'
     +'<tr><td style="padding:7px 0;color:#888;">💶 Tarif</td><td style="color:'+(tarif==='Gratuit'?'#81c784':'#f0f0f0')+';font-weight:700;">'+tarif+'</td></tr>'
     +'</table></div>';
+}
+
+// ── Helpers communs aux emails essai ────────────────────────────
+
+function _essaiJ7Urls(email, dateRaw) {
+  let base = '';
+  try { base = ScriptApp.getService().getUrl(); } catch(e) { return {confirmer:'',annuler:'',reporter:''}; }
+  const dp  = (dateRaw||'').slice(0,10);
+  const enc = encodeURIComponent(email);
+  return {
+    confirmer: base+'?action=repondreEssaiJ7&email='+enc+'&date='+dp+'&reponse=confirmer',
+    annuler:   base+'?action=repondreEssaiJ7&email='+enc+'&date='+dp+'&reponse=annuler',
+    reporter:  base+'?action=repondreEssaiJ7&email='+enc+'&date='+dp+'&reponse=reporter',
+  };
+}
+
+// E1 — Guideur ou couple, cours > 7 jours : confirmé + rappel J-7 prévu
+function _emailEssaiE1(prenom, email, dateFormatee, horaire, lieu, dateRaw, niveau) {
+  const infoBox = _emailEssaiInfoBox(dateFormatee, horaire, lieu, dateRaw, niveau);
+  const livretUrl = _livretUrl(niveau, lieu, dateRaw);
+  const html = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Votre cours d\'essai est <strong style="color:#81c784;">confirmé</strong>. Nous avons hâte de vous accueillir sur la piste !</p>'
+    +infoBox
+    +(livretUrl?'<div style="text-align:center;margin:16px 0;"><a href="'+livretUrl+'" style="display:inline-block;color:#7ab4ff;padding:12px 24px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border:1px solid #7ab4ff;">📖 Télécharger le livret d\'information</a></div>':'')
+    +'<div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:16px;margin:16px 0;">'
+    +'<div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Pour votre cours d\'essai</div>'
+    +'<div style="font-size:13px;color:#ccc;line-height:2.2;">'
+    +'✓ <strong style="color:#f0f0f0;">Arrivez 5 minutes en avance</strong> — pour vous changer et commencer détendu(e).<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Chaussures à semelles lisses</strong> — cuir ou daim, ou des chaussettes pour un premier cours.<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Tenue confortable</strong> — permettant de bouger librement.<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Pas de partenaire fixe</strong> — nous pratiquons la rotation, venez seul(e) ou à deux.<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Pas d\'expérience requise</strong> — le cours repart de zéro à chaque séance.'
+    +'</div></div>'
+    +'<p style="font-size:12px;color:#888;text-align:center;margin:12px 0 20px;">Vous recevrez un rappel 7 jours avant le cours pour confirmer votre présence.</p>'
+    +'<p style="font-size:11px;color:#555;text-align:center;margin:8px 0 16px;">Au-delà d\'un cours d\'essai, une inscription régulière est nécessaire pour participer.</p>'
+    +'<p style="font-size:12px;color:#666;text-align:center;margin:0 0 20px;">Une question ? <a href="mailto:'+EMAIL_CONTACT+'" style="color:#D4AF37;">'+EMAIL_CONTACT+'</a></p>'
+    +SIG_HTML;
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject:NOM_ECOLE+' — Cours d\'essai confirmé !',
+    htmlBody:_emailStageWrap('🎓','Cours d\'essai confirmé','#7ab4ff','#0a1020',html)});
+}
+
+// E2 — Guidée sans partenaire : liste d'attente systématique
+function _emailEssaiE2(prenom, email, dateFormatee, horaire, lieu, dateRaw, niveau) {
+  const infoBox = _emailEssaiInfoBox(dateFormatee, horaire, lieu, dateRaw, niveau);
+  const html = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 16px;">Votre demande est bien enregistrée. <strong style="color:#e8c84a;">Les places pour les guidées sans partenaire sont gérées selon les disponibilités du soir</strong> — vous êtes en liste d\'attente.</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Nous vous contacterons dès que nous pouvons vous confirmer une place. Si vous souhaitez venir avec un partenaire, vous pouvez également nous le signaler — cela accélérera votre admission.</p>'
+    +infoBox
+    +'<div style="text-align:center;margin:20px 0;"><a href="mailto:'+EMAIL_CONTACT+'?subject=Essai%20tango%20—%20liste%20d\'attente" style="display:inline-block;background:transparent;color:#D4AF37;padding:12px 28px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border:1px solid #D4AF37;">Nous contacter</a></div>'
+    +SIG_HTML;
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject:NOM_ECOLE+' — Cours d\'essai : liste d\'attente',
+    htmlBody:_emailStageWrap('⏳','En liste d\'attente','#e8c84a','#1a1400',html)});
+}
+
+// E4 — Rappel J-7 (envoyé par déclencheur) avec boutons confirmer / annuler / reporter
+function _emailEssaiE4(prenom, email, dateFormatee, horaire, lieu, dateRaw, niveau) {
+  const infoBox = _emailEssaiInfoBox(dateFormatee, horaire, lieu, dateRaw, niveau);
+  const urls = _essaiJ7Urls(email, dateRaw);
+  const html = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 16px;">Votre cours d\'essai a lieu <strong style="color:#f0f0f0;">dans 7 jours</strong>. Merci de nous confirmer votre présence.</p>'
+    +infoBox
+    +'<div style="margin:24px 0;text-align:center;">'
+    +(urls.confirmer?'<a href="'+urls.confirmer+'" style="display:inline-block;background:#81c784;color:#000;padding:13px 28px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;margin:6px;">✓ Je serai là</a>':'')
+    +(urls.reporter?'<a href="'+urls.reporter+'" style="display:inline-block;background:transparent;color:#e8c84a;padding:13px 28px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border:1px solid #e8c84a;margin:6px;">📅 Reporter</a>':'')
+    +(urls.annuler?'<a href="'+urls.annuler+'" style="display:inline-block;background:transparent;color:#ef9a9a;padding:13px 28px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border:1px solid #ef9a9a;margin:6px;">✕ Annuler</a>':'')
+    +'</div>'
+    +'<p style="font-size:12px;color:#666;text-align:center;margin:0 0 20px;">Une question ? <a href="mailto:'+EMAIL_CONTACT+'" style="color:#D4AF37;">'+EMAIL_CONTACT+'</a></p>'
+    +SIG_HTML;
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject:NOM_ECOLE+' — Rappel : votre cours d\'essai dans 7 jours',
+    htmlBody:_emailStageWrap('📅','Rappel J-7','#e8c84a','#1a1400',html)});
+}
+
+// E5 — Créneau complet (capacité atteinte par rôle)
+function _emailEssaiE5(prenom, email, dateFormatee, horaire, lieu, dateRaw, niveau) {
+  const infoBox = _emailEssaiInfoBox(dateFormatee, horaire, lieu, dateRaw, niveau);
+  const html = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 16px;">Votre demande est bien enregistrée. <strong style="color:#ef9a9a;">Le créneau que vous avez choisi est complet pour votre rôle</strong> — vous êtes en liste d\'attente.</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Nous vous contacterons dès qu\'une place se libère ou pour vous proposer un autre créneau.</p>'
+    +infoBox
+    +'<div style="text-align:center;margin:20px 0;"><a href="mailto:'+EMAIL_CONTACT+'?subject=Essai%20tango%20—%20liste%20d\'attente" style="display:inline-block;background:transparent;color:#D4AF37;padding:12px 28px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border:1px solid #D4AF37;">Nous contacter</a></div>'
+    +SIG_HTML;
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject:NOM_ECOLE+' — Cours d\'essai : liste d\'attente',
+    htmlBody:_emailStageWrap('⏳','Liste d\'attente','#e8c84a','#1a1400',html)});
+}
+
+// E6 — Guideur ou couple, cours < 7 jours : confirmé directement (pas de J-7)
+function _emailEssaiE6(prenom, email, dateFormatee, horaire, lieu, dateRaw, niveau) {
+  const infoBox = _emailEssaiInfoBox(dateFormatee, horaire, lieu, dateRaw, niveau);
+  const livretUrl = _livretUrl(niveau, lieu, dateRaw);
+  const html = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Votre cours d\'essai est <strong style="color:#81c784;">confirmé</strong>. Nous avons hâte de vous accueillir sur la piste !</p>'
+    +infoBox
+    +(livretUrl?'<div style="text-align:center;margin:16px 0;"><a href="'+livretUrl+'" style="display:inline-block;color:#7ab4ff;padding:12px 24px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;border:1px solid #7ab4ff;">📖 Télécharger le livret d\'information</a></div>':'')
+    +'<div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:16px;margin:16px 0;">'
+    +'<div style="font-size:10px;color:#D4AF37;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Pour votre cours d\'essai</div>'
+    +'<div style="font-size:13px;color:#ccc;line-height:2.2;">'
+    +'✓ <strong style="color:#f0f0f0;">Arrivez 5 minutes en avance</strong> — pour vous changer et commencer détendu(e).<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Chaussures à semelles lisses</strong> — cuir ou daim, ou des chaussettes pour un premier cours.<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Tenue confortable</strong> — permettant de bouger librement.<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Pas de partenaire fixe</strong> — nous pratiquons la rotation, venez seul(e) ou à deux.<br/>'
+    +'✓ <strong style="color:#f0f0f0;">Pas d\'expérience requise</strong> — le cours repart de zéro à chaque séance.'
+    +'</div></div>'
+    +'<p style="font-size:11px;color:#555;text-align:center;margin:8px 0 16px;">Au-delà d\'un cours d\'essai, une inscription régulière est nécessaire pour participer.</p>'
+    +'<p style="font-size:12px;color:#666;text-align:center;margin:0 0 20px;">Une question ? <a href="mailto:'+EMAIL_CONTACT+'" style="color:#D4AF37;">'+EMAIL_CONTACT+'</a></p>'
+    +SIG_HTML;
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject:NOM_ECOLE+' — Cours d\'essai confirmé !',
+    htmlBody:_emailStageWrap('🎓','Cours d\'essai confirmé','#7ab4ff','#0a1020',html)});
 }
 
 // E15 — Confirmation inscription cours d'essai

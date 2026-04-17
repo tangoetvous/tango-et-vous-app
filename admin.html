@@ -5856,6 +5856,7 @@ function renderStages() {
     h+='<button class="sub-tab'+(filtreStageSlot===sl.id?' active':'')+'" data-action="filt-stage-slot" data-slot="'+sl.id+'">'+sl.lbl+'</button>';
   });
   h+='<button class="sub-tab'+(filtreStageSlot==='pointage'?' active':'')+'" data-action="filt-stage-slot" data-slot="pointage">✓ Pointage</button>';
+  h+='<button class="sub-tab'+(filtreStageSlot==='attente'?' active':'')+'" data-action="filt-stage-slot" data-slot="attente">⏳ Attente</button>';
   h+='<button class="sub-tab'+(filtreStageSlot==='inscrire'?' active':'')+'" data-action="filt-stage-slot" data-slot="inscrire">✏️ Inscrire</button>';
   h+='</div>';
 
@@ -5896,6 +5897,30 @@ function renderStages() {
         +'<div style="display:flex;gap:6px;">'
         +'<button class="btn-point btn-pres'+(i.present===true?' on':'')+'" data-action="pointer-stage-pres" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✓</button>'
         +'<button class="btn-point btn-abs'+(i.present===false?' on':'')+'" data-action="pointer-stage-abs" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✗</button>'
+        +'</div></div>';
+    });
+    return h;
+  }
+
+  if(filtreStageSlot==='attente'){
+    h+=_tevSearchBar();
+    var att2=ins.filter(function(i){return i.attente;});
+    if(!att2.length) return h+'<div class="empty-state">Aucune personne en liste d\'attente pour ce stage.</div>';
+    h+='<div class="stats-row stats-3">'
+      +'<div class="stat"><div class="stat-n n-warn">'+att2.length+'</div><div class="stat-l">En attente</div></div>'
+      +'<div class="stat"><div class="stat-n">'+att2.filter(function(i){return i.role==='guideur';}).length+'</div><div class="stat-l">Guideurs</div></div>'
+      +'<div class="stat"><div class="stat-n">'+att2.filter(function(i){return i.role==='guidee';}).length+'</div><div class="stat-l">Guidées</div></div>'
+      +'</div>';
+    att2.forEach(function(i){
+      var origIdx=ins.indexOf(i);
+      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+      h+='<div class="card hl-warn" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top">'
+        +'<div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+(i.prenom+' '+i.nom).replace(/"/g,'&quot;')+'" data-email="'+(i.email||'')+'" data-tel="'+(i.tel||'')+'" data-ctx="stage">'+i.prenom+' '+i.nom+'</div>'
+        +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(', ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
+        +'<span class="pill '+rcls+'" style="font-size:9px;">'+i.role+'</span></div>'
+        +'<div class="btn-row">'
+        +'<button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Confirmer</button>'
+        +'<button class="btn btn-err" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="all">✕ Retirer</button>'
         +'</div></div>';
     });
     return h;
