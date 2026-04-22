@@ -109,6 +109,17 @@ const LIVRETS = {
   },
 };
 
+const LIENS_ASSOCONNECT = {
+  '2025-2026': {
+    cours:  'https://le-regard-se-pose.assoconnect.com/collect/description/524220-a-inscription-aux-cours-de-tango-argentin-avec-florencia-garcia-jeremy-braitbart-septembre-2025-juin-2026',
+    renouv: 'https://le-regard-se-pose.assoconnect.com/collect/description/524239-j-renouvellement-de-carte-de-10-ou-20-cours-2025-2026',
+  },
+  '2026-2027': {
+    cours:  'https://le-regard-se-pose.assoconnect.com/collect/description/695654-a-inscription-aux-cours-de-tango-argentin-avec-florencia-garcia-jeremy-braitbart-septembre-2026-juin-2027',
+    renouv: 'https://le-regard-se-pose.assoconnect.com/collect/description/696013-j-renouvellement-de-carte-de-10-ou-20-cours-2026-2027',
+  },
+};
+
 // Capacités par rôle pour les cours d'essai
 const CAPACITE_GUIDEURS    = 22;  // max guideurs (solo ou couple) par créneau
 const CAPACITE_GUIDEES_PART = 22; // max guidées AVEC partenaire par créneau
@@ -568,17 +579,47 @@ function ajouterPresenceManuelle(body) {
     sp.getRange(nr,7).setValue(note||(n>1?`Cours ${dejaPointe+i+1}/${n}`:'Ajout'));
   }
 
-  // Mettre à jour UTILISES / RESTANTS dans SHEET_ELEVES
+  // Mettre à jour UTILISES / RESTANTS dans SHEET_ELEVES + renouvellement auto si débord
   const lr = se.getLastRow();
+  let eleveEmail = '', eleveNom = nom;
+  let renouvAuto = false;
   if (lr >= ELEVES_START_ROW) {
     const data = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues();
     const idx  = data.findIndex(r => r[COL.ID]===eleveId);
     if (idx >= 0) {
-      const rn      = idx+ELEVES_START_ROW;
-      const newUtil = Math.min(10, (Number(data[idx][COL.UTILISES])||0)+aAjouter);
-      const newRest = Math.max(0,  (Number(data[idx][COL.RESTANTS])||0)-aAjouter);
-      se.getRange(rn, COL.UTILISES+1).setValue(newUtil);
-      se.getRange(rn, COL.RESTANTS+1).setValue(newRest);
+      const rn        = idx+ELEVES_START_ROW;
+      eleveEmail      = (data[idx][COL.EMAIL]||'').toString().trim();
+      const utilisesAvant = Number(data[idx][COL.UTILISES])||0;
+      const totalApres    = utilisesAvant + aAjouter;
+      if (totalApres > 10) {
+        // Renouvellement automatique : carte terminée, débord sur nouvelle
+        const overflow = totalApres - 10;
+        se.getRange(rn, COL.UTILISES+1).setValue(10);
+        se.getRange(rn, COL.RESTANTS+1).setValue(0);
+        // Créer nouvelle ligne élève (nouvelle carte non payée)
+        const nouvId   = 'CR'+Date.now();
+        const nouvUtil = overflow;
+        const nouvRest = 10 - overflow;
+        const nouvExp  = _calcExpiration(date);
+        const newRow   = [...data[idx]]; // copier toutes les colonnes
+        newRow[COL.ID]          = nouvId;
+        newRow[COL.DATE_ACHAT]  = new Date(date);
+        newRow[COL.EXPIRATION]  = nouvExp ? new Date(nouvExp) : '';
+        newRow[COL.UTILISES]    = nouvUtil;
+        newRow[COL.RESTANTS]    = nouvRest;
+        newRow[COL.STATUT_CARTE]= 'Active';
+        newRow[COL.NOTES]       = 'Renouvellement auto — non payée';
+        se.appendRow(newRow);
+        // Marquer la nouvelle carte comme non payée dans une colonne dédiée (col 14)
+        const nouvLr = se.getLastRow();
+        se.getRange(nouvLr, 14).setValue('NON_PAYE');
+        renouvAuto = true;
+      } else {
+        const newUtil = Math.min(10, utilisesAvant+aAjouter);
+        const newRest = Math.max(0, (Number(data[idx][COL.RESTANTS])||0)-aAjouter);
+        se.getRange(rn, COL.UTILISES+1).setValue(newUtil);
+        se.getRange(rn, COL.RESTANTS+1).setValue(newRest);
+      }
       // Premier cours : activer la carte si pas encore commencée
       if (!data[idx][COL.DATE_ACHAT]||!_fmtDate(data[idx][COL.DATE_ACHAT])) {
         se.getRange(rn, COL.DATE_ACHAT+1).setValue(new Date(date));
@@ -591,18 +632,16 @@ function ajouterPresenceManuelle(body) {
   }
 
   // E04 — bienvenue 1ère séance
-  if (estPremierCours) {
-    const lr2  = se.getLastRow();
-    if (lr2 >= ELEVES_START_ROW) {
-      const d2   = se.getRange(ELEVES_START_ROW,1,lr2-ELEVES_START_ROW+1,13).getValues();
-      const elRow = d2.find(r => r[COL.ID]===eleveId);
-      if (elRow) {
-        const email = (elRow[COL.EMAIL]||'').toString().trim();
-        if (email) try { _emailBienvenuePremiereCours(nom,email,'',niveau); } catch(err){}
-      }
-    }
+  if (estPremierCours && eleveEmail) {
+    try { _emailBienvenuePremiereCours(nom,eleveEmail,'',niveau); } catch(err){}
   }
-  return {ok:true, added:aAjouter, skipped:dejaPointe||undefined,
+
+  // Email renouvellement automatique
+  if (renouvAuto && eleveEmail) {
+    try { _emailCarteAutoRenouvelee(nom, eleveEmail, date); } catch(err){}
+  }
+
+  return {ok:true, added:aAjouter, renouvAuto, skipped:dejaPointe||undefined,
     message:`${aAjouter} présence(s) ajoutée(s) pour ${nom} le ${date}`};
 }
 
@@ -2081,6 +2120,32 @@ function _emailInscriptionConfirmee(prenom, email, cours, niveau, ville, formule
 }
 
 // E04 — Bienvenue 1ère séance (déclenché au 1er pointage)
+// Email renouvellement automatique de carte (10 cours épuisés + débord)
+function _emailCarteAutoRenouvelee(nom, email, dateRaw) {
+  const prenom    = (nom||'').split(' ')[0]||nom;
+  const dateLbl   = _fmtDateFrLong(dateRaw);
+  const sai = _saisonCourante(dateRaw);
+  const lienRenouv = (LIENS_ASSOCONNECT[sai]||LIENS_ASSOCONNECT['2025-2026']).renouv;
+  const html = '<p style="font-size:16px;margin:0 0 6px;">Bonjour <strong style="color:#D4AF37;">'+prenom+'</strong> !</p>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 16px;">Votre carte de 10 cours est arrivée à son terme lors du cours du <strong style="color:#f0f0f0;">'+dateLbl+'</strong>. Nous avons automatiquement ouvert une nouvelle carte avec <strong style="color:#e8c84a;">1 cours déjà comptabilisé</strong> dessus.</p>'
+    +'<div style="background:#0d1a2e;border-radius:10px;padding:18px 20px;margin:16px 0;border:1px solid #1e3a5f;">'
+    +'<div style="font-size:10px;color:#7ab4ff;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #1e3a5f;">Votre nouvelle carte</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+    +'<tr><td style="padding:7px 0;color:#888;width:40%;">Cours utilisés</td><td style="color:#f0f0f0;font-weight:600;">1 / 10</td></tr>'
+    +'<tr><td style="padding:7px 0;color:#888;">Cours restants</td><td style="color:#81c784;font-weight:600;">9</td></tr>'
+    +'<tr><td style="padding:7px 0;color:#888;">Statut paiement</td><td style="color:#ffaa44;font-weight:600;">⚠ Non réglée</td></tr>'
+    +'</table></div>'
+    +'<p style="font-size:13px;color:#ccc;line-height:1.7;margin:0 0 20px;">Pour continuer à danser, merci de renouveler votre carte de 10 cours sur AssoConnect.</p>'
+    +'<div style="text-align:center;margin:22px 0;">'
+    +'<a href="'+lienRenouv+'" style="display:inline-block;background:#D4AF37;color:#000;padding:14px 34px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;text-decoration:none;">Renouveler ma carte de 10 cours</a>'
+    +'</div>'
+    +'<p style="font-size:12px;color:#666;text-align:center;margin:0 0 20px;">Une question ? <a href="mailto:'+EMAIL_CONTACT+'" style="color:#D4AF37;">'+EMAIL_CONTACT+'</a></p>'
+    +SIG_HTML;
+  MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,
+    subject:NOM_ECOLE+' — Votre nouvelle carte de 10 cours a démarré',
+    htmlBody:_emailStageWrap('🎴','Nouvelle carte ouverte','#D4AF37','#1a1000',html)});
+}
+
 function _emailBienvenuePremiereCours(nom, email, cours, niveau) {
   const prenom = nom.split(' ')[0]||nom;
   MailApp.sendEmail({to:email, replyTo:EMAIL_CONTACT,

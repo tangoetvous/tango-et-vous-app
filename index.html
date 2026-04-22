@@ -2238,15 +2238,39 @@
     try {
       if (IS_DEMO) {
         const already = (eleveData.presences||[]).filter(p => p.date===date).length;
-        const toAdd = Math.max(0, nb - already);
+        if (already >= 2) {
+          msgEl.textContent='2 pointages maximum par jour.'; msgEl.style.display='block';
+          btn.disabled=false; btn.textContent='✓ Valider'; return;
+        }
+        const toAdd = Math.max(0, Math.min(2 - already, nb - already));
         if (toAdd === 0) {
           msgEl.textContent='Déjà pointé pour ce jour.'; msgEl.style.display='block';
           btn.disabled=false; btn.textContent='✓ Valider'; return;
         }
+        const utilisesAvant = eleveData.carte.coursUtilises || 0;
+        const totalApres = utilisesAvant + toAdd;
         for (let i=0; i<toAdd; i++)
           (eleveData.presences=eleveData.presences||[]).unshift({date,niveau:eleveData.eleve.niveau,note:'Pointage élève'});
-        eleveData.carte.coursUtilises = Math.min(10,(eleveData.carte.coursUtilises||0)+toAdd);
-        eleveData.carte.coursRestants = Math.max(0,(eleveData.carte.coursRestants||0)-toAdd);
+        if (totalApres > 10) {
+          // Renouvellement automatique
+          const overflow = totalApres - 10;
+          eleveData.carte.coursUtilises = 10;
+          eleveData.carte.coursRestants = 0;
+          try {
+            if (window.BroadcastChannel) {
+              const bc = new BroadcastChannel('tev_inscriptions');
+              bc.postMessage({type:'cartePointage', data:{email:eleveData.eleve.email,date,nbAdded:toAdd-overflow,utilises:10,restants:0}});
+              bc.postMessage({type:'carteAutoRenouv', data:{email:eleveData.eleve.email,date,overflow}});
+              bc.close();
+            }
+          } catch(e) {}
+          msgEl.textContent='Carte terminée ! Une nouvelle carte a été créée (1 cours dessus). Un email vous a été envoyé.';
+          msgEl.style.display='block'; msgEl.style.color='#e8c84a';
+          btn.disabled=false; btn.textContent='✓ Valider';
+          fermerModalPointerSelf(); renderDashboard(); return;
+        }
+        eleveData.carte.coursUtilises = totalApres;
+        eleveData.carte.coursRestants = Math.max(0, 10 - totalApres);
         // Notifier l'interface admin si ouverte dans le même navigateur
         try {
           if (window.BroadcastChannel) {

@@ -1689,6 +1689,23 @@ function traiterMsgInscription(msg, doRender) {
     }
     if (doRender) { renderTab(); return; }
   }
+  if (msg.type === 'carteAutoRenouv') {
+    var d = msg.data || {};
+    var c = (adminData.cartes||[]).find(function(x){return x.email===d.email;});
+    if (c) {
+      c.utilises=10; c.restants=0;
+      // Créer nouvelle carte non payée
+      var overflow = d.overflow||1;
+      var nouvDates=[]; for(var _j=0;_j<overflow;_j++)nouvDates.push(d.date);
+      adminData.cartes.push({id:'Cr'+Date.now(),nom:c.nom,email:c.email,niveau:c.niveau,
+        statutEleve:c.statutEleve,utilises:overflow,restants:10-overflow,
+        datePremierCours:d.date,expiration:calcExpiration(d.date,c.ville||'paris'),
+        datesCours:nouvDates,statut:'Active',source:'auto_renouvellement',
+        ville:c.ville||'paris',partenaire:c.partenaire||'',emailPartenaire:c.emailPartenaire||'',
+        saison:c.saison,paye:false});
+    }
+    if (doRender) { renderTab(); return; }
+  }
   _notifierAdminInscription(msg);
   if (doRender) renderTab();
 }
@@ -5609,15 +5626,38 @@ function pointerCoursAction(id, date, nbCours, btn) {
     if(c){
       if(!c.datesCours)c.datesCours=[];
       var dejaPointe=c.datesCours.filter(function(d){return d===date;}).length;
-      var aAjouter=Math.max(0,nbCours-dejaPointe);
+      if(dejaPointe>=2){afficherToast('2 pointages maximum par jour');renderTab();return;}
+      var aAjouter=Math.max(0,Math.min(2-dejaPointe, nbCours-dejaPointe));
       if(aAjouter===0){afficherToast('Déjà pointé ce jour');renderTab();return;}
       var estPremierCours=!c.datePremierCours;
-      for(var i=0;i<aAjouter;i++)c.datesCours.push(date);
-      c.utilises=Math.min(10,(c.utilises||0)+aAjouter);
-      c.restants=Math.max(0,10-c.utilises);
-      if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}
-      if(estPremierCours)afficherToast('✉️ Email de bienvenue envoyé à '+(c.nom||c.email||''));
-      _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:c.datePremierCours,expiration:c.expiration});
+      var utilisesAvant=c.utilises||0;
+      var totalApres=utilisesAvant+aAjouter;
+      if(totalApres>10){
+        // Renouvellement automatique : 1 cours déborde sur nouvelle carte
+        var overflow=totalApres-10;
+        for(var i=0;i<aAjouter-overflow;i++)c.datesCours.push(date);
+        c.utilises=10; c.restants=0;
+        if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}
+        // Nouvelle carte non payée avec le(s) cours en débord
+        var nouvId='Cr'+Date.now();
+        var nouvDates=[]; for(var j=0;j<overflow;j++)nouvDates.push(date);
+        var nouvCarte={id:nouvId,nom:c.nom,email:c.email,niveau:c.niveau,statutEleve:c.statutEleve,
+          utilises:overflow,restants:10-overflow,datePremierCours:date,
+          expiration:calcExpiration(date,c.ville||'paris'),datesCours:nouvDates,
+          statut:'Active',source:'auto_renouvellement',ville:c.ville||'paris',
+          partenaire:c.partenaire||'',emailPartenaire:c.emailPartenaire||'',
+          saison:c.saison,paye:false};
+        adminData.cartes.push(nouvCarte);
+        _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:c.datePremierCours,expiration:c.expiration});
+        _broadcastAdminSync('nouvelleCarte',{email:c.email,utilises:overflow,restants:10-overflow,datesCours:nouvDates,datePremierCours:date,expiration:nouvCarte.expiration});
+        afficherToast('✉️ Carte terminée — nouvelle carte créée (non payée) pour '+(c.nom||''));
+      } else {
+        for(var i=0;i<aAjouter;i++)c.datesCours.push(date);
+        c.utilises=totalApres; c.restants=Math.max(0,10-totalApres);
+        if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}
+        if(estPremierCours)afficherToast('✉️ Email de bienvenue envoyé à '+(c.nom||c.email||''));
+        _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:c.datePremierCours,expiration:c.expiration});
+      }
     }
     renderTab(); return;
   }
