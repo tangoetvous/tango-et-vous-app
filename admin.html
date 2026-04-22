@@ -1677,7 +1677,14 @@ function traiterMsgInscription(msg, doRender) {
     if (c) {
       c.utilises = d.utilises != null ? d.utilises : c.utilises;
       c.restants  = d.restants  != null ? d.restants  : c.restants;
-      if (d.date) { if (!c.datesCours) c.datesCours=[]; if (c.datesCours.indexOf(d.date)<0) c.datesCours.push(d.date); c.datesCours.sort(); }
+      if (d.date) {
+        if (!c.datesCours) c.datesCours=[];
+        var nbAdd = d.nbAdded != null ? Math.min(2, Math.max(1, d.nbAdded)) : 1;
+        var dejaDansAdmin = c.datesCours.filter(function(x){return x===d.date;}).length;
+        var manquants = Math.max(0, nbAdd - dejaDansAdmin);
+        for (var _i=0; _i<manquants; _i++) c.datesCours.push(d.date);
+        c.datesCours.sort();
+      }
       if (!c.datePremierCours && d.date) { c.datePremierCours=d.date; c.expiration=calcExpiration(d.date,c.ville||'paris'); }
     }
     if (doRender) { renderTab(); return; }
