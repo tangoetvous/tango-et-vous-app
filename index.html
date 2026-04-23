@@ -65,15 +65,10 @@
     eleve: { id: 'CTr014', prenom: 'Felipe', nom: 'DIAZ', niveau: 'Débutant', ville: 'paris', email: 'felipea.diazp@gmail.com', tel: '+33783531142' },
     carte: {
       type: 'carte10',
-      coursUtilises: 9, coursRestants: 1,
-      dateAchat: '2026-01-08', dateExpiration: '2026-07-08', statut: '🟡 1 cours restant'
+      coursUtilises: 4, coursRestants: 6,
+      dateAchat: '2026-01-08', dateExpiration: '2026-07-08', statut: '🟢 Active', paye: true
     },
     presences: [
-      { date: '2026-04-09', niveau: 'Débutant', note: '' },
-      { date: '2026-03-12', niveau: 'Débutant', note: '' },
-      { date: '2026-02-26', niveau: 'Débutant', note: '' },
-      { date: '2026-02-12', niveau: 'Débutant', note: '' },
-      { date: '2026-02-05', niveau: 'Débutant', note: '' },
       { date: '2026-01-29', niveau: 'Débutant', note: '' },
       { date: '2026-01-22', niveau: 'Débutant', note: '' },
       { date: '2026-01-15', niveau: 'Débutant', note: '' },
@@ -388,6 +383,20 @@
       const isExpired   = days !== null && days < 0;
       const canStart    = isExhausted || isExpired;
       const isNonPaye   = carte.paye === false;
+
+      // Pastille paiement
+      const payeStatusEl = $('carte-paye-status');
+      if (payeStatusEl) {
+        if (isNonPaye) {
+          payeStatusEl.innerHTML = '<span style="display:inline-block;background:#1a0800;border:1px solid #e65100;border-radius:20px;padding:3px 10px;font-size:11px;color:#ffb74d;font-weight:600;">⚠️ Non payée</span>';
+          payeStatusEl.style.display = '';
+        } else if (carte.paye === true) {
+          payeStatusEl.innerHTML = '<span style="display:inline-block;background:rgba(76,175,80,0.15);border:1px solid rgba(76,175,80,0.4);border-radius:20px;padding:3px 10px;font-size:11px;color:#81c784;font-weight:600;">✓ Payée</span>';
+          payeStatusEl.style.display = '';
+        } else {
+          payeStatusEl.style.display = 'none';
+        }
+      }
 
       // Boutons
       const btnJePointe = $('btn-je-pointe');
@@ -3562,6 +3571,8 @@ a{color:var(--gold);text-decoration:none;}
                 <span class="meta-key" style="font-size:11px;color:var(--text-faint)">Validité : 3 mois + vacances scolaires</span>
               </div>
             </div>
+            <!-- Pastille paiement -->
+            <div id="carte-paye-status" style="display:none;text-align:right;margin-bottom:8px;"></div>
             <!-- Avertissement non payé -->
             <div id="nonpaye-warn" style="display:none;background:#1a0800;border:1px solid #e65100;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#ffb74d;line-height:1.5;">
               ⚠️ Carte renouvelée, paiement en attente —
