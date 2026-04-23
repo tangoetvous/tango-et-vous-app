@@ -2270,6 +2270,9 @@
     if (r1) r1.checked = true;
     const m = document.getElementById('self-pointer-msg');
     if (m) { m.style.display='none'; m.textContent=''; }
+    // Réinitialiser le bouton Valider (peut rester désactivé après une validation précédente)
+    const okBtn = document.getElementById('btn-pointer-self-ok');
+    if (okBtn) { okBtn.disabled = false; okBtn.textContent = '✓ Valider'; }
     // Masquer "2 cours" si 1 restant ou déjà pointé aujourd'hui
     const remaining  = eleveData && eleveData.carte ? (Number(eleveData.carte.coursRestants) || 0) : 10;
     const todayCount = eleveData && eleveData.presences ? eleveData.presences.filter(p => p.date === todayStr).length : 0;
@@ -2568,7 +2571,7 @@
       return;
     }
     // Ignorer le cache plan (géocodage), la file de notifications admin et la synchro inscrits stages pour ne pas boucler
-    if (e.key.startsWith('tev_') && !e.key.startsWith('tev_plan_') && !e.key.startsWith('tev_demo_msgs_') && e.key !== 'tev_demo_discussions' && e.key !== 'tev_pending_inscriptions' && e.key !== 'tev_stages_inscrits') {
+    if (e.key.startsWith('tev_') && !e.key.startsWith('tev_plan_') && !e.key.startsWith('tev_nonpayee_') && !e.key.startsWith('tev_demo_msgs_') && e.key !== 'tev_demo_discussions' && e.key !== 'tev_pending_inscriptions' && e.key !== 'tev_stages_inscrits') {
       location.reload();
     }
   });
