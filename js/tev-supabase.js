@@ -224,6 +224,7 @@ async function tevGetAdminData() {
     { data: inscriptionsCours },
     { data: inscriptionsStages },
     { data: inscriptionsEssai },
+    { data: inscriptionsEssaiYoga },
     { data: publications },
     { data: agendaModifs },
   ] = await Promise.all([
@@ -232,7 +233,8 @@ async function tevGetAdminData() {
     _tev.from('cours_particuliers').select('*').order('created_at', { ascending: false }),
     _tev.from('inscriptions_cours').select('*').order('created_at', { ascending: false }),
     _tev.from('inscriptions_stages').select('*').order('stage_date', { ascending: false }),
-    _tev.from('inscriptions_essai').select('*').order('date_essai', { ascending: false }),
+    _tev.from('inscriptions_essai').select('*').neq('type', 'yoga').order('date_essai', { ascending: false }),
+    _tev.from('inscriptions_essai').select('*').eq('type', 'yoga').order('date_essai', { ascending: false }),
     _tev.from('publications').select('*').order('created_at', { ascending: false }),
     _tev.from('agenda_modifs').select('*').order('date'),
   ]);
@@ -269,7 +271,8 @@ async function tevGetAdminData() {
     coursParticuliers: coursParticuliers || [],
     coursTango:        inscriptionsCours || [],
     inscriptionsStages: inscriptionsStages || [],
-    coursEssai:        inscriptionsEssai   || [],
+    coursEssai:        inscriptionsEssai      || [],
+    essaiYoga:         inscriptionsEssaiYoga  || [],
     publications:      publications       || [],
     agendaModifs:      agendaModifs       || [],
     stats: {

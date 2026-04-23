@@ -238,6 +238,9 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
 .required { color: #D4AF37; }
 .form-footer { font-size: 13px; color: #555; text-align: center; line-height: 1.8; padding: 16px 24px 22px; border-top: 1px solid #222; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/tev-supabase.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 <div class="wrapper">
@@ -567,6 +570,7 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
 
   <div class="err-global" id="err-global-2">Veuillez sélectionner au moins un stage avant de valider.</div>
   <div class="submit-area">
+    <div class="cf-turnstile" data-sitekey="0x4AAAAAADCDhidbX3fOzZl5" data-theme="dark" style="margin-bottom:12px;"></div>
     <button type="button" class="btn-submit" id="btnSubmit">Je m'inscris</button>
   </div>
 </div>
@@ -1071,6 +1075,12 @@ function allerEtape1(){
 // ── Soumission ───────────────────────────────────────────────────
 async function soumettre(){
   if(!validerEtape2()) return;
+  var tsToken=(document.querySelector('[name="cf-turnstile-response"]')||{}).value||'';
+  if(!tsToken){
+    document.getElementById('err-global-2').textContent='Vérification anti-robot requise.';
+    document.getElementById('err-global-2').classList.add('visible');
+    return;
+  }
   var btn = document.getElementById('btnSubmit');
   btn.disabled=true; btn.textContent='Envoi en cours…';
 
@@ -1136,10 +1146,22 @@ async function soumettre(){
   }
 
   try {
-    await fetch(APPS_SCRIPT_URL, {
-      method:'POST', mode:'no-cors',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(data)
+    await TEV.client.from('inscriptions_stages').insert({
+      prenom: data.prenom,
+      nom: data.nom,
+      email: data.email.toLowerCase(),
+      telephone: data.telephone,
+      role: data.role,
+      niveau: data.niveau,
+      situation: data.situation,
+      partenaire: data.partenaire || '',
+      partenaire_email: data.partenaireEmail || '',
+      total_inscrit: data.totalInscrit,
+      total_global: data.totalGlobal,
+      type_confirmation: data.typeConfirmation,
+      remarques: data.remarques || '',
+      donnees: data,
+      saison: '2025-2026',
     });
     afficherConfirmation(data);
     // Notifier admin

@@ -156,6 +156,9 @@ select option{background:#1a1a1a;color:#fff;}
 .sr-row .srv{color:#e8c84a;font-weight:bold;text-align:right;}
 .sr-row .srv.or{color:#D4AF37;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/tev-supabase.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 <div class="wrapper">
@@ -343,6 +346,7 @@ select option{background:#1a1a1a;color:#fff;}
       <div class="recap" id="recap-e4" style="margin-bottom:4px;"></div>
       <p class="mention-reglement" style="margin-top:4px;margin-bottom:20px;">Règlement sur place le jour du cours</p>
       <div class="errmsg" id="errmsg"></div>
+      <div class="cf-turnstile" data-sitekey="0x4AAAAAADCDhidbX3fOzZl5" data-theme="dark" style="margin-bottom:12px;"></div>
       <button class="btn-submit" id="btn-submit" onclick="soumettre()">ENVOYER MON INSCRIPTION</button>
       <p class="mention">Vos données sont utilisées uniquement pour la gestion de votre inscription et ne sont pas transmises à des tiers.</p>
       <div class="nav" style="margin-top:12px;">
@@ -856,6 +860,9 @@ async function soumettre(){
   const err=document.getElementById("errmsg");
   err.style.display="none";
 
+  const tsToken=(document.querySelector('[name="cf-turnstile-response"]')||{}).value||'';
+  if(!tsToken){err.textContent="Vérification anti-robot requise.";err.style.display="block";return;}
+
   // Vérifier rôle
   if(!document.getElementById("role").value) {
     err.textContent="Merci de choisir votre rôle.";
@@ -898,31 +905,35 @@ async function soumettre(){
     remarque:document.getElementById("rem").value.trim()
   };
 
-  // Si le script n'est pas encore configuré, simuler la réussite (mode démo)
-  if(SCRIPT_URL.includes("VOTRE_DEPLOYMENT")) {
+  function _showSuccess(){
     document.getElementById("form-zone").style.display="none";
     document.getElementById("progress-bar").style.display="none";
     document.getElementById("success").style.display="block";
     afficherMsgRappel();
     afficherRecapSucces();
     _notifierAdminEssai(payload);
-    return;
   }
+
+  // Mode démo (SCRIPT_URL non configuré)
+  if(SCRIPT_URL.includes("VOTRE_DEPLOYMENT")) { _showSuccess(); return; }
+
   try{
-    const resp=await fetch(SCRIPT_URL,{method:"POST",body:JSON.stringify(payload)});
-    if(!resp.ok) throw new Error('Erreur serveur ('+resp.status+')');
-    const data=await resp.json();
-    if(data.ok){
-      document.getElementById("form-zone").style.display="none";
-      document.getElementById("progress-bar").style.display="none";
-      document.getElementById("success").style.display="block";
-      afficherMsgRappel();
-      afficherRecapSucces();
-      _notifierAdminEssai(payload);
-    } else {
-      err.textContent="Une erreur est survenue. Merci de réessayer ou de nous contacter.";
-      err.style.display="block"; btn.disabled=false; btn.textContent="ENVOYER MON INSCRIPTION";
-    }
+    const dp=payload.date.split('/');
+    const dateIso=dp.length===3?dp[2]+'-'+dp[1]+'-'+dp[0]:payload.date;
+    const {error}=await TEV.client.from('inscriptions_essai').insert({
+      prenom:payload.prenom, nom:payload.nom,
+      email:payload.email.trim().toLowerCase(), tel:payload.tel,
+      date_essai:dateIso, ville:(payload.lieu||'').toLowerCase(),
+      niveau:payload.niveau||'', horaire:payload.horaire||'',
+      role:payload.role||'', niveau_eleve:payload.niveauEleve||'',
+      avec_partenaire:payload.avecPart||'', genre:payload.genre||'',
+      part_prenom:payload.partPrenom||'', part_nom:payload.partNom||'',
+      part_email:payload.partEmail||'', part_tel:payload.partTel||'',
+      part_role:payload.partRole||'', remarque:payload.remarque||'',
+      statut:'demande',
+    });
+    if(error) throw error;
+    _showSuccess();
   } catch(e){
     err.textContent="Erreur de connexion. Merci de réessayer.";
     err.style.display="block"; btn.disabled=false; btn.textContent="ENVOYER MON INSCRIPTION";

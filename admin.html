@@ -1121,7 +1121,15 @@ function essaiVersCoursTango(email, statut, btn) {
     ct.push({id:'CT'+Date.now(),prenom:ess.prenom||'',nom:ess.nom||'',email:email,tel:'',role:ess.role||'guidee',niveau:ess.niveau||'',cours:cours,ville:ess.ville||'paris',statut:statut,partenaire:ess.partenaire||'',emailPartenaire:ess.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonPourNouvelleEntree()});
   }
   adminData.coursTango=ct;
-  if(!IS_DEMO){postAS({action:'essaiVersCoursTango',email:email,statut:statut,cours:cours}).catch(function(){});}
+  if(!IS_DEMO){
+    TEV.client.from('inscriptions_cours').upsert(
+      {prenom:ess.prenom||'',nom:ess.nom||'',email:email.toLowerCase(),tel:ess.tel||'',
+       role:ess.role||'guidee',niveau:ess.niveau||'',cours:cours,ville:ess.ville||'paris',
+       statut:statut,partenaire:ess.partenaire||'',email_partenaire:ess.emailPartenaire||'',
+       saison:saisonPourNouvelleEntree()},
+      {onConflict:'email'}
+    ).catch(function(){});
+  }
   fermerContact();
   var lbls={demande:'Demande en attente',attente_paiement:'Validé·e',inscrit:'Inscrit·e'};
   afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' dans Inscr Tango');
@@ -1201,7 +1209,15 @@ function soumettreInscriptionEssai(email) {
     adminData.cartes.push({id:'C'+Date.now(),nom:prenom+' '+nom,niveau:niveau,email:emailV,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Active',source:'inscription',ville:ville,datesCours:[],partenaire:partenaire,paye:true});
     recalcStats();
   }
-  if(!IS_DEMO){postAS({action:'inscrireDepuisEssai',email:emailV,prenom:prenom,nom:nom,tel:tel,cours:cours,formule:formule,paie:paie,montant:montant}).catch(function(){});}
+  if(!IS_DEMO){
+    TEV.creerEleve({nom:nom,prenom:prenom,email:emailV,tel:tel,niveau:niveau,ville:ville,source:'inscription',saison:saisonPourNouvelleEntree()}).catch(function(){});
+    TEV.client.from('inscriptions_cours').upsert(
+      {prenom:prenom,nom:nom,email:emailV.toLowerCase(),tel:tel,role:role,niveau:niveau,cours:cours,
+       ville:ville,statut:'inscrit',partenaire:partenaire,email_partenaire:emailPartenaire,
+       type:formule,paiement:paie,montant:montant,saison:saisonPourNouvelleEntree()},
+      {onConflict:'email'}
+    ).catch(function(){});
+  }
   if(ok)ok.style.display='block';
   setTimeout(function(){fermerContact();switchTab('eleves-tango');},1500);
 }
@@ -1251,7 +1267,15 @@ function soumettreEssaiStatut(email, statut) {
   }
   adminData.coursTango=ct;
   console.log('[TEV] coursTango mis à jour, entrée:', ct.find(function(c){return c.email===email;}));
-  if(!IS_DEMO){postAS({action:'essaiVersCoursTango',email:email,statut:statut,cours:cours}).catch(function(){});}
+  if(!IS_DEMO){
+    TEV.client.from('inscriptions_cours').upsert(
+      {prenom:ess.prenom||'',nom:ess.nom||'',email:email.toLowerCase(),tel:ess.tel||'',
+       role:ess.role||'guidee',niveau:niveau,cours:cours,ville:ville,
+       statut:statut,partenaire:ess.partenaire||'',email_partenaire:ess.emailPartenaire||'',
+       saison:saisonPourNouvelleEntree()},
+      {onConflict:'email'}
+    ).catch(function(){});
+  }
   fermerContact();
   var elTc=gel('tab-content');
   console.log('[TEV] tab-content trouvé:', !!elTc);
@@ -3604,6 +3628,7 @@ async function chargerDonnees() {
       coursParticuliers: d.coursParticuliers  || [],
       coursTango:        d.coursTango         || adminData.coursTango || [],
       essai:             d.coursEssai         || adminData.essai || [],
+      essaiYoga:         d.essaiYoga          || adminData.essaiYoga || [],
       publications:      d.publications       || [],
       agendaModifs:      d.agendaModifs       || [],
     });
@@ -3916,7 +3941,7 @@ function handleAction(action, btn) {
         if (!existe) {
           adminData.coursYoga.push({id:'CY'+Date.now(),prenom:prenom,nom:nom,email:email,tel:'',cours:cours,statut:'inscrit',saison:sai,dateInscription:today()});
         }
-        if (!IS_DEMO) postAS({action:'inscrireEleveYoga',email:email,prenom:prenom,nom:nom,cours:cours,saison:sai}).catch(function(){});
+        if (!IS_DEMO) TEV.client.from('cours_yoga').insert({prenom:prenom,nom:nom,email:email.toLowerCase(),cours:cours,statut:'inscrit',saison:sai}).catch(function(){});
         fermerContact();
         afficherToast('✓ '+prenom+' '+nom+' inscrit.e en yoga — '+COURS_YOGA_LBL[cours]);
         renderTab();
@@ -5230,7 +5255,10 @@ function marquerAbsenceJour(date, email, btn) {
   adminData.absencesJour.forEach(function(a,i){if(a.date===date&&a.email===email) idx=i;});
   if(idx>=0) adminData.absencesJour.splice(idx,1);
   else adminData.absencesJour.push({date:date,email:email,ts:Date.now()});
-  if(!IS_DEMO) postAS({action:'absenceJour',date:date,email:email}).catch(function(){});
+  if(!IS_DEMO){
+    if(idx>=0){TEV.client.from('absences_jour').delete().eq('date',date).eq('email',email).catch(function(){});}
+    else{TEV.client.from('absences_jour').insert({date:date,email:email}).catch(function(){});}
+  }
   renderTab();
 }
 function envoyerEmailAttente(email, date, niveau, role, btn) {
@@ -5284,7 +5312,7 @@ function valYogaEssai(email, date, btn) {
     if(e) e.statut='confirme';
     renderTab(); return;
   }
-  postAS({action:'validerYogaEssai',email:email,date:date}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;btn.textContent='✓';});
+  TEV.client.from('inscriptions_essai').update({statut:'confirme'}).eq('email',email).eq('date_essai',date).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;btn.textContent='✓';});
 }
 function pointerYoga(date, email, present) {
   var e = (adminData.essaiYoga||[]).find(function(x){return x.email===email&&x.date===date;});
@@ -5326,7 +5354,7 @@ function soumettreYogaInscrManuel() {
   if (!existe) {
     adminData.essaiYoga.push({id:'EY'+Date.now(),prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,date:date,statut:'confirme',present:null,gratuit:gratuit,saison:saisonPourNouvelleEntree(),dateInscription:today()});
   }
-  if (!IS_DEMO) postAS({action:'yogaEssaiInscription',prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,date:date,gratuit:gratuit}).catch(function(){});
+  if (!IS_DEMO) TEV.client.from('inscriptions_essai').insert({prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,date_essai:date,gratuit:gratuit,statut:'confirme',type:'yoga'}).catch(function(){});
   if (ok) ok.style.display='block';
   if (gel('yi-prenom')) gel('yi-prenom').value='';
   if (gel('yi-nom'))    gel('yi-nom').value='';
@@ -5420,12 +5448,12 @@ function inscrireCours() {
     if(type.indexOf('carte')>=0){var c=adminData.cartes.find(function(x){return x.email===email;});if(c){c.restants=10;c.utilises=0;c.datePremierCours='';c.expiration='';c.datesCours=[];c.ville=ville;}}
     if(ok)ok.style.display='block'; return;
   }
-  postAS({action:'inscrireCours',email:email,cours:cours,type:type,paiement:paie,montant:Number(montant),date:date,ville:ville}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';chargerDonnees();}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+  TEV.client.from('inscriptions_cours').insert({email:email.toLowerCase(),cours:cours,type:type,paiement:paie,montant:Number(montant),ville:ville,statut:'inscrit',saison:saisonPourNouvelleEntree()}).then(function(){if(ok)ok.style.display='block';chargerDonnees();}).catch(function(e){if(err){err.textContent=(e&&e.message)||'Erreur';err.style.display='block';}});
 }
 function valDemande(id, btn) {
   btn.disabled=true; btn.textContent='⏳';
   if(IS_DEMO){var d=adminData.demandesInscription.find(function(x){return x.id===id;});if(d)d.statut='valide';renderTab();return;}
-  postAS({action:'validerDemandeInscription',id:id}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓';});
+  TEV.client.from('inscriptions_cours').update({statut:'valide'}).eq('id',id).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;btn.textContent='✓';});
 }
 
 // ================================================================
@@ -5759,7 +5787,11 @@ function sauvegarderEditCarte() {
   c.datePremierCours = dates[0] || c.datePremierCours || '';
   if(c.datePremierCours && !c.expiration) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris');
   _broadcastAdminSync('carteUpdate', {email:c.email, utilises:c.utilises, restants:c.restants, datesCours:c.datesCours, datePremierCours:c.datePremierCours, expiration:c.expiration});
-  if(!IS_DEMO) postAS({action:'modifierDatesCarte', eleveId:c.id, utilises:n, datesCours:dates}).catch(function(){});
+  if(!IS_DEMO){
+    var upd={carte_utilises:n,carte_restants:Math.max(0,10-n)};
+    if(dates[0])upd.carte_date_achat=dates[0];
+    TEV.client.from('eleves').update(upd).eq('id',c.id).catch(function(){});
+  }
   fermerModalEditCarte();
   renderTab();
 }
@@ -5780,17 +5812,11 @@ function reporterCarteJs(id, btn) {
     afficherToast('↩ Carte de '+c.nom+' reportée sur '+saiProch);
     renderTab();return;
   }
-  postAS({action:'reporterCarte',eleveId:id})
-    .then(function(r){
-      if(r&&r.ok){
-        c.isReport=true;
-        c.saisonOrigine=sai;
-        c.saison=r.nextSaison||saiProch;
-        c.statut='Active';
-        c.datePremierCours='';
-        c.expiration='';
-        afficherToast('↩ Carte reportée sur '+(r.nextSaison||saiProch));
-      }
+  TEV.client.from('eleves').update({saison:saiProch,carte_utilises:0,carte_restants:10,carte_date_achat:null,carte_expiration:null})
+    .eq('id',id)
+    .then(function(){
+      c.isReport=true;c.saisonOrigine=sai;c.saison=saiProch;c.statut='Active';c.datePremierCours='';c.expiration='';
+      afficherToast('↩ Carte reportée sur '+saiProch);
       chargerDonnees();
     })
     .catch(function(){btn.disabled=false;btn.textContent='↩ Reporter';});
@@ -5854,10 +5880,8 @@ function validerReport(reportId, btn) {
     afficherToast('✓ '+c.nom+' inscrit.e saison '+saiProch+' — '+rep.classesRestantes+' cours reportés (exp. '+expAff+')');
     renderTab();return;
   }
-  postAS({action:'validerReport',reportId:reportId,email:rep.email,nom:rep.nom,
-    classesRestantes:rep.classesRestantes,saisonOrigine:sai,saisonDestination:saiProch,
-    ville:rep.ville,niveau:rep.niveau,expProvisoire:expProvisoire,
-    partenaire:rep.partenaire,emailPartenaire:rep.emailPartenaire})
+  TEV.client.from('eleves').update({saison:saiProch,carte_restants:rep.classesRestantes,carte_utilises:Math.max(0,10-rep.classesRestantes),carte_date_achat:null,carte_expiration:expProvisoire||null})
+    .eq('email',(rep.email||'').toLowerCase())
     .then(function(){chargerDonnees();})
     .catch(function(){btn.disabled=false;btn.textContent='✓ Valider l\'inscription';});
 }
@@ -6107,7 +6131,10 @@ function annulerStageInscrit(date, idx, slot, btn) {
     syncStageInscritsToLocal();
     renderTab(); return;
   }
-  postAS({action:'annulerStageInscrit',date:date,idx:idx,slot:slot}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+  var _stPerson=adminData.stages&&adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits[idx];
+  var _stEmail=_stPerson?(_stPerson.email||'').toLowerCase():'';
+  if(!_stEmail){btn.disabled=false;return;}
+  TEV.client.from('inscriptions_stages').delete().eq('email',_stEmail).eq('stage_date',date).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
 }
 
 function stageMoveInsrit(date, idx, dir) {
@@ -6196,13 +6223,13 @@ function soumettreInscriptionStageAdmin() {
     setTimeout(function(){filtreStage=date;filtreStageSlot='technique';renderTab();},1500);
     return;
   }
-  postAS({action:'inscriptionStage',date:date,prenom:prenom,nom:nom,email:email,tel:tel,role:role,slots:slots,montant:montant,partNom:partNom,partEmail:partEmail}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+  TEV.inscriptionStage({nom:nom,prenom:prenom,email:email,date:date,stageNom:slots.join('|'),type:role,saison:saisonPourNouvelleEntree()}).then(function(){if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=(e&&e.message)||'Erreur';err.style.display='block';}});
 }
 
 function valAttStage(date, nom, btn) {
   btn.disabled=true;btn.textContent='⏳';
   if(IS_DEMO){var st=adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits.find(function(x){return(x.prenom+' '+x.nom)===nom;});if(st)st.attente=false;renderTab();return;}
-  postAS({action:'validerAttente',date:date}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓';});
+  TEV.client.from('inscriptions_stages').update({type_confirmation:'confirme'}).eq('stage_date',date).eq('type_confirmation','attente').then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;btn.textContent='✓';});
 }
 function pointerStage(date, idx, present) {
   var i=adminData.stages&&adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits[idx];
@@ -6259,7 +6286,7 @@ function soranoAction(id, paye, btn) {
     else{if(!adminData.sorano)adminData.sorano=[];adminData.sorano.push({id:id,email:ct.email,paiementSorano:paye,saison:sai});}
     renderTab();return;
   }
-  postAS({action:'updateSorano',id:id,paiement:paye}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;});
+  TEV.client.from('inscriptions_cours').update({paiement_sorano:paye}).eq('id',id).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
 }
 function relanceSorano(email, nom, btn) {
   btn.disabled=true; btn.textContent='⏳';
@@ -7488,7 +7515,12 @@ function soumettreValiderPaiement(force) {
     setTimeout(function(){switchTab('eleves-tango');},1500);
     return;
   }
-  postAS({action:'validerPaiementCoursTango',id:id,carte10:carte10,tel:tel,email:email,paiement:paiement,datePaiement:datePaiement}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+  var updPaie={statut:'inscrit',type:carte10==='oui'?'carte10':'forfait',paiement:paiement};
+  if(tel)updPaie.tel=tel; if(email)updPaie.email=email.toLowerCase();
+  TEV.client.from('inscriptions_cours').update(updPaie).eq('id',id).then(function(){
+    if(carte10==='oui'){TEV.creerEleve({email:updPaie.email||email,saison:saisonPourNouvelleEntree(),source:'inscription'}).catch(function(){});}
+    if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);
+  }).catch(function(e){if(err){err.textContent=(e&&e.message)||'Erreur';err.style.display='block';}});
 }
 
 function renderFormulaireDemandeAdmin() {
@@ -7683,7 +7715,7 @@ function soumettreDemande() {
     setTimeout(function(){sousOngletCoursTango=(statut==='demande'?'attente_validation':statut);renderTab();},1500);
     return;
   }
-  postAS({action:'creerDemandeAdmin',prenom:prenom,nom:nom,email:email,tel:tel,role:role,cours:cours,partNom:partNom,partEmail:partEmail}).then(function(r){if(r.error)throw new Error(r.error);if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+  TEV.client.from('inscriptions_cours').insert({prenom:prenom,nom:nom,email:email.toLowerCase(),tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:partNom,email_partenaire:partEmail,saison:saisonPourNouvelleEntree()}).then(function(){if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=(e&&e.message)||'Erreur';err.style.display='block';}});
 }
 
 // ================================================================
