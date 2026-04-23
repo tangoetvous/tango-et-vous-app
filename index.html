@@ -246,6 +246,11 @@
       localStorage.removeItem('tev_carte_update_'+demoEmail);
     } catch(e) {}
     eleveData = JSON.parse(JSON.stringify(DEMO_DATA)); // copie fraîche à chaque connexion
+    // Appliquer le statut non-payé mémorisé (par l'élève ou l'admin)
+    try {
+      if (localStorage.getItem('tev_nonpayee_'+(eleveData.eleve.email||'').toLowerCase()) === '1')
+        eleveData.carte.paye = false;
+    } catch(e) {}
     renderDashboard();
     showScreen('screen-dashboard');
     _initAdminSync();
@@ -287,6 +292,11 @@
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       eleveData = data;
+      // Fallback : si le flag non-payé est en localStorage mais pas encore sur le serveur
+      try {
+        if (localStorage.getItem('tev_nonpayee_'+(data.eleve.email||'').toLowerCase()) === '1')
+          eleveData.carte.paye = false;
+      } catch(e) {}
       renderDashboard();
       showScreen('screen-dashboard');
       _initAdminSync();
@@ -1230,6 +1240,12 @@
       const _canStartAcc = _isExhAcc || _isExpAcc;
       const _isNonPayeAcc = carte.paye === false;
 
+      // Pastille paiement (visible dans tous les états)
+      if (carte.paye === true) {
+        h += '<div style="text-align:right;margin-bottom:6px;"><span style="display:inline-block;background:rgba(76,175,80,0.15);border:1px solid rgba(76,175,80,0.4);border-radius:20px;padding:3px 10px;font-size:11px;color:#81c784;font-weight:600;">✓ Payée</span></div>';
+      } else if (_isNonPayeAcc) {
+        h += '<div style="text-align:right;margin-bottom:6px;"><span style="display:inline-block;background:#1a0800;border:1px solid #e65100;border-radius:20px;padding:3px 10px;font-size:11px;color:#ffb74d;font-weight:600;">⚠️ Non payée</span></div>';
+      }
       if (_canStartAcc) {
         // Carte épuisée ou expirée → proposer de démarrer une nouvelle
         h += '<button onclick="renewCarteSelf()" style="width:100%;background:rgba(255,255,255,0.08);color:var(--text,#fff);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin:12px 0 8px;font-family:inherit;letter-spacing:0.2px;">↻ Commencer une nouvelle carte sans payer pour l\'instant</button>';
