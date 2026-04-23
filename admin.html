@@ -1708,20 +1708,14 @@ function traiterMsgInscription(msg, doRender) {
     }
     if (doRender) { renderTab(); return; }
   }
-  if (msg.type === 'carteAutoRenouv') {
-    var d = msg.data || {};
-    var c = (adminData.cartes||[]).find(function(x){return x.email===d.email;});
-    if (c) {
-      c.utilises=10; c.restants=0;
-      // Créer nouvelle carte non payée
-      var overflow = d.overflow||1;
-      var nouvDates=[]; for(var _j=0;_j<overflow;_j++)nouvDates.push(d.date);
-      adminData.cartes.push({id:'Cr'+Date.now(),nom:c.nom,email:c.email,niveau:c.niveau,
-        statutEleve:c.statutEleve,utilises:overflow,restants:10-overflow,
-        datePremierCours:d.date,expiration:calcExpiration(d.date,c.ville||'paris'),
-        datesCours:nouvDates,statut:'Active',source:'auto_renouvellement',
-        ville:c.ville||'paris',partenaire:c.partenaire||'',emailPartenaire:c.emailPartenaire||'',
-        saison:c.saison,paye:false});
+  if (msg.type === 'cartePointage' && d.renouv) {
+    // Renouvellement depuis interface élève : reset de la même carte à 1/10
+    var cRenouv = (adminData.cartes||[]).find(function(x){return x.email===d.email;});
+    if (cRenouv) {
+      cRenouv.utilises=1; cRenouv.restants=9;
+      cRenouv.datesCours=[d.date]; cRenouv.datePremierCours=d.date;
+      cRenouv.expiration=calcExpiration(d.date,cRenouv.ville||'paris');
+      cRenouv.paye=false;
     }
     if (doRender) { renderTab(); return; }
   }
@@ -5650,24 +5644,14 @@ function pointerCoursAction(id, date, nbCours, btn) {
       var utilisesAvant=c.utilises||0;
       var totalApres=utilisesAvant+aAjouter;
       if(totalApres>10){
-        // Renouvellement automatique : 1 cours déborde sur nouvelle carte
-        var overflow=totalApres-10;
-        for(var i=0;i<aAjouter-overflow;i++)c.datesCours.push(date);
-        c.utilises=10; c.restants=0;
-        if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}
-        // Nouvelle carte non payée avec le(s) cours en débord
-        var nouvId='Cr'+Date.now();
-        var nouvDates=[]; for(var j=0;j<overflow;j++)nouvDates.push(date);
-        var nouvCarte={id:nouvId,nom:c.nom,email:c.email,niveau:c.niveau,statutEleve:c.statutEleve,
-          utilises:overflow,restants:10-overflow,datePremierCours:date,
-          expiration:calcExpiration(date,c.ville||'paris'),datesCours:nouvDates,
-          statut:'Active',source:'auto_renouvellement',ville:c.ville||'paris',
-          partenaire:c.partenaire||'',emailPartenaire:c.emailPartenaire||'',
-          saison:c.saison,paye:false};
-        adminData.cartes.push(nouvCarte);
-        _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:c.datePremierCours,expiration:c.expiration});
-        _broadcastAdminSync('nouvelleCarte',{email:c.email,utilises:overflow,restants:10-overflow,datesCours:nouvDates,datePremierCours:date,expiration:nouvCarte.expiration});
-        afficherToast('✉️ Carte terminée — nouvelle carte créée (non payée) pour '+(c.nom||''));
+        // Renouvellement automatique : la carte repart à 1/10, non payée
+        c.datesCours=[date]; // repart avec seulement le cours en débord
+        c.utilises=1; c.restants=9;
+        c.datePremierCours=date;
+        c.expiration=calcExpiration(date,c.ville||'paris');
+        c.paye=false;
+        _broadcastAdminSync('carteUpdate',{email:c.email,utilises:1,restants:9,datesCours:[date],datePremierCours:date,expiration:c.expiration});
+        afficherToast('✉️ Carte terminée — redémarrée à 1/10 (non payée) pour '+(c.nom||''));
       } else {
         for(var i=0;i<aAjouter;i++)c.datesCours.push(date);
         c.utilises=totalApres; c.restants=Math.max(0,10-totalApres);

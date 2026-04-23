@@ -361,14 +361,6 @@
         badge.className = 'exp-badge ok';
       }
 
-      // Statut
-      $('carte-statut').textContent = carte.statut;
-      $('carte-statut').className = 'statut-pill ' + (
-        carte.statut.includes('🟢') ? 'active' :
-        carte.statut.includes('🟡') ? 'soon' :
-        carte.statut.includes('🔴') ? 'empty' : 'expired'
-      );
-
       // Barre de progression linéaire
       $('progress-bar-fill').style.width = pct + '%';
       $('progress-bar-fill').style.background = statusColor;
@@ -2258,20 +2250,16 @@
           (eleveData.presences=eleveData.presences||[]).unshift({date,niveau:eleveData.eleve.niveau,note:'Pointage élève'});
         if (totalApres > 10) {
           // Renouvellement automatique
-          const overflow = totalApres - 10;
-          eleveData.carte.coursUtilises = 10;
-          eleveData.carte.coursRestants = 0;
+          // Renouvellement : la carte repart à 1/10, non payée
+          eleveData.carte.coursUtilises = 1;
+          eleveData.carte.coursRestants = 9;
           try {
             if (window.BroadcastChannel) {
               const bc = new BroadcastChannel('tev_inscriptions');
-              bc.postMessage({type:'cartePointage', data:{email:eleveData.eleve.email,date,nbAdded:toAdd-overflow,utilises:10,restants:0}});
-              bc.postMessage({type:'carteAutoRenouv', data:{email:eleveData.eleve.email,date,overflow}});
+              bc.postMessage({type:'cartePointage', data:{email:eleveData.eleve.email,date,nbAdded:1,utilises:1,restants:9,renouv:true}});
               bc.close();
             }
           } catch(e) {}
-          msgEl.textContent='Carte terminée ! Une nouvelle carte a été créée (1 cours dessus). Un email vous a été envoyé.';
-          msgEl.style.display='block'; msgEl.style.color='#e8c84a';
-          btn.disabled=false; btn.textContent='✓ Valider';
           fermerModalPointerSelf(); renderDashboard(); renderAccueil(); return;
         }
         eleveData.carte.coursUtilises = totalApres;
@@ -3435,7 +3423,6 @@ a{color:var(--gold);text-decoration:none;}
               <div class="gauge-info">
                 <div class="gauge-remaining" id="gauge-remaining">—</div>
                 <div class="gauge-remaining-label">cours restants</div>
-                <span class="statut-pill active" id="carte-statut">—</span>
               </div>
             </div>
             <div class="progress-bar-wrap">
