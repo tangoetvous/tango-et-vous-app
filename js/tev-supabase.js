@@ -7,7 +7,7 @@
 const TEV_SUPABASE_URL  = 'https://qhngqzvvllktuwspojxc.supabase.co';
 const TEV_SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFobmdxenZ2bGxrdHV3c3BvanhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MjQ0NDYsImV4cCI6MjA5MjMwMDQ0Nn0.j-yMQryi3qoImIf6vyiqQ3SKzHeJoPsrJuP1YwaSyLs';
 
-const ADMIN_EMAILS = [
+const _TEV_ADMIN_EMAILS = [
   'tangoetvous@gmail.com',
   'florencia@tangoetvous.com',
   'jeremy@tangoetvous.com',
@@ -51,7 +51,7 @@ async function tevGetSession() {
 }
 
 function tevIsAdmin(email) {
-  return ADMIN_EMAILS.includes((email || '').toLowerCase());
+  return _TEV_ADMIN_EMAILS.includes((email || '').toLowerCase());
 }
 
 // ================================================================
