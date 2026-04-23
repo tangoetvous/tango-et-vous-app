@@ -5504,7 +5504,10 @@ function _buildCartesData() {
     var carteS = c.saison || saisonCourante();
     return carteS===sai && (c.utilises>0||c.restants>0||c.datePremierCours||c.statut==='Nouvelle carte');
   });
-  cartesEleves.forEach(function(c){ if(c.paye===undefined)c.paye=(c.source==='inscription'); });
+  cartesEleves.forEach(function(c){
+    if(c.paye===undefined)c.paye=(c.source==='inscription');
+    try { if(localStorage.getItem('tev_nonpayee_'+c.email)==='1') c.paye=false; } catch(e) {}
+  });
   var emailsCartes = {};
   cartesEleves.forEach(function(c){ emailsCartes[c.email]=true; });
   (adminData.coursTango||[]).filter(function(ct){
@@ -5648,7 +5651,7 @@ function pointerCoursAction(id, date, nbCours, btn) {
       if(!c.datesCours)c.datesCours=[];
       var dejaPointe=c.datesCours.filter(function(d){return d===date;}).length;
       if(dejaPointe>=2){afficherToast('2 pointages maximum par jour');renderTab();return;}
-      var aAjouter=Math.max(0,Math.min(2-dejaPointe, nbCours-dejaPointe));
+      var aAjouter=Math.max(0,Math.min(2-dejaPointe, nbCours));
       if(aAjouter===0){afficherToast('Déjà pointé ce jour');renderTab();return;}
       var estPremierCours=!c.datePremierCours;
       var utilisesAvant=c.utilises||0;
@@ -5708,8 +5711,12 @@ function toggleCartePaye(id) {
   var c=(adminData.cartes||[]).find(function(x){return x.id===id;});
   if(!c)return;
   c.paye=!c.paye;
-  // If now paid, restore coursTango inscrit status
-  if(c.paye){var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='attente_paiement';});if(cte)cte.statut='inscrit';}
+  // If now paid, restore coursTango inscrit status + clear non-payé flag
+  if(c.paye){
+    var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='attente_paiement';});
+    if(cte)cte.statut='inscrit';
+    try { localStorage.removeItem('tev_nonpayee_'+c.email); } catch(e) {}
+  }
   if(!IS_DEMO)postAS({action:'toggleCartePaye',eleveId:id,paye:c.paye}).catch(function(){});
   renderTab();
 }

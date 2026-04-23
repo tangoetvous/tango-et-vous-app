@@ -561,10 +561,10 @@ function ajouterPresenceManuelle(body) {
 
   // Anti-doublon : déjà combien de cours pointés ce jour pour cet élève ?
   const dejaPointe = _countPresencesRaw(sp, eleveId, date);
-  if (dejaPointe >= n) {
+  const aAjouter = Math.min(n, 2 - dejaPointe);
+  if (aAjouter <= 0) {
     return {ok:true, skipped:true, message:`Déjà ${dejaPointe} cours pointé(s) le ${date}`};
   }
-  const aAjouter = n - dejaPointe;
 
   // 1ère présence de la saison → E04
   const presencesExistantes = _getPresences(sp, eleveId);

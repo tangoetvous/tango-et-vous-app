@@ -2297,7 +2297,7 @@
           msgEl.textContent='2 pointages maximum par jour.'; msgEl.style.display='block';
           btn.disabled=false; btn.textContent='✓ Valider'; return;
         }
-        const toAdd = Math.max(0, Math.min(2 - already, nb - already));
+        const toAdd = Math.max(0, Math.min(2 - already, nb));
         if (toAdd === 0) {
           msgEl.textContent='Déjà pointé pour ce jour.'; msgEl.style.display='block';
           btn.disabled=false; btn.textContent='✓ Valider'; return;
@@ -2308,15 +2308,17 @@
           (eleveData.presences=eleveData.presences||[]).unshift({date,niveau:eleveData.eleve.niveau,note:'Pointage élève'});
         if (totalApres > 10) {
           // Overflow : même ligne réinitialisée à 1/10, non payée
-          eleveData.carte.coursUtilises = totalApres - 10;
-          eleveData.carte.coursRestants = 10 - (totalApres - 10);
+          const overflow = totalApres - 10;
+          eleveData.carte.coursUtilises = overflow;
+          eleveData.carte.coursRestants = 10 - overflow;
           eleveData.carte.paye = false;
           eleveData.carte.dateAchat = '';
           eleveData.carte.dateExpiration = '';
+          try { localStorage.setItem('tev_nonpayee_' + eleveData.eleve.email, '1'); } catch(e) {}
           try {
             if (window.BroadcastChannel) {
               const bc = new BroadcastChannel('tev_inscriptions');
-              bc.postMessage({type:'cartePointage', data:{email:eleveData.eleve.email,date,nbAdded:1,utilises:1,restants:9,renouv:true}});
+              bc.postMessage({type:'cartePointage', data:{email:eleveData.eleve.email,date,nbAdded:overflow,utilises:overflow,restants:10-overflow,renouv:true,paye:false}});
               bc.close();
             }
           } catch(e) {}
@@ -2368,6 +2370,7 @@
     const prevTxt = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = '⏳ En cours…'; }
     const _broadcastRenouv = function() {
+      try { localStorage.setItem('tev_nonpayee_' + eleveData.eleve.email, '1'); } catch(e) {}
       try {
         if (window.BroadcastChannel) {
           const bc = new BroadcastChannel('tev_inscriptions');
