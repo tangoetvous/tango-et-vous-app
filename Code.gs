@@ -592,27 +592,18 @@ function ajouterPresenceManuelle(body) {
       const utilisesAvant = Number(data[idx][COL.UTILISES])||0;
       const totalApres    = utilisesAvant + aAjouter;
       if (totalApres > 10) {
-        // Renouvellement automatique : carte terminée, débord sur nouvelle
+        // Renouvellement automatique : même ligne réinitialisée à overflow/10, non payée
         const overflow = totalApres - 10;
-        se.getRange(rn, COL.UTILISES+1).setValue(10);
-        se.getRange(rn, COL.RESTANTS+1).setValue(0);
-        // Créer nouvelle ligne élève (nouvelle carte non payée)
-        const nouvId   = 'CR'+Date.now();
         const nouvUtil = overflow;
         const nouvRest = 10 - overflow;
         const nouvExp  = _calcExpiration(date);
-        const newRow   = [...data[idx]]; // copier toutes les colonnes
-        newRow[COL.ID]          = nouvId;
-        newRow[COL.DATE_ACHAT]  = new Date(date);
-        newRow[COL.EXPIRATION]  = nouvExp ? new Date(nouvExp) : '';
-        newRow[COL.UTILISES]    = nouvUtil;
-        newRow[COL.RESTANTS]    = nouvRest;
-        newRow[COL.STATUT_CARTE]= 'Active';
-        newRow[COL.NOTES]       = 'Renouvellement auto — non payée';
-        se.appendRow(newRow);
-        // Marquer la nouvelle carte comme non payée dans une colonne dédiée (col 14)
-        const nouvLr = se.getLastRow();
-        se.getRange(nouvLr, 14).setValue('NON_PAYE');
+        se.getRange(rn, COL.UTILISES+1).setValue(nouvUtil);
+        se.getRange(rn, COL.RESTANTS+1).setValue(nouvRest);
+        se.getRange(rn, COL.DATE_ACHAT+1).setValue(new Date(date));
+        if (nouvExp) se.getRange(rn, COL.EXPIRATION+1).setValue(new Date(nouvExp));
+        else se.getRange(rn, COL.EXPIRATION+1).setValue('');
+        se.getRange(rn, COL.NOTES+1).setValue('Renouvellement auto — non payée');
+        se.getRange(rn, 14).setValue('NON_PAYE');
         renouvAuto = true;
       } else {
         const newUtil = Math.min(10, utilisesAvant+aAjouter);
@@ -1175,7 +1166,7 @@ function _getCartesAdmin() {
     Object.keys(presencesByEleve).forEach(id=>presencesByEleve[id].sort());
   }
 
-  return s.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues()
+  return s.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,14).getValues()
     .filter(r=>r[COL.ID])
     .map(r=>{
       const id          = (r[COL.ID]||'').toString();
@@ -1190,6 +1181,7 @@ function _getCartesAdmin() {
         email:(r[COL.EMAIL]||'').toString().trim(),
         statutEleve:(r[COL.STATUT_ELEVE]||STATUT.EN_ATTENTE).toString().trim(),
         source:(r[COL.SOURCE]||'manuel').toString(),
+        paye: (r[13]||'').toString() !== 'NON_PAYE',
         isReport, saisonOrigine: isReport ? currentSaison : '',
         saison: isReport ? saisonReport : currentSaison,
         datesCours: presencesByEleve[id] || [],
@@ -1875,6 +1867,7 @@ function renouvelerCarteGs(body) {
   se.getRange(rowNum, COL.DATE_ACHAT+1).setValue('');
   se.getRange(rowNum, COL.EXPIRATION+1).setValue('');
   se.getRange(rowNum, COL.STATUT_CARTE+1).setValue('Active');
+  se.getRange(rowNum, 14).setValue(paye ? '' : 'NON_PAYE');
   // E10 — carte renouvelée (si payé)
   if (paye && email) {
     const prenom = nom.split(' ')[0]||nom;
@@ -1914,8 +1907,16 @@ function reporterCarteGs(body) {
 }
 
 function toggleCartePaye(body) {
-  // Le toggle paye est géré côté admin uniquement (UI) — pas de persistance Sheets nécessaire
-  // pour l'instant. Si besoin, ajouter une colonne "Payé" dans SHEET_ELEVES.
+  const {eleveId, paye} = body;
+  if (!eleveId) return {ok:false};
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const se = _getSheet(ss, SHEET_ELEVES);
+  const lr = se.getLastRow();
+  if (lr < ELEVES_START_ROW) return {ok:false};
+  const data = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,1).getValues();
+  const idx  = data.findIndex(r=>r[0]===eleveId);
+  if (idx < 0) return {ok:false};
+  se.getRange(idx+ELEVES_START_ROW, 14).setValue(paye===true ? '' : 'NON_PAYE');
   return {ok:true};
 }
 
