@@ -5668,11 +5668,18 @@ function pointerCoursAction(id, date, nbCours, btn) {
     .then(function(r){
       if(r&&r.skipped){afficherToast('Déjà pointé ce jour');}
       else if(c){
-        // Sync temps-réel vers l'interface élève (même navigateur)
-        var newUtil=Math.min(10,(c.utilises||0)+nbCours);
-        var newRest=Math.max(0,(c.restants||0)-nbCours);
-        _broadcastAdminSync('carteUpdate',{email:c.email,utilises:newUtil,restants:newRest,
-          datePremierCours:c.datePremierCours||date,expiration:c.expiration});
+        var syncData;
+        if(r&&r.renouvAuto){
+          var ov=r.overflow||1;
+          syncData={email:c.email,utilises:ov,restants:10-ov,paye:false,
+            datePremierCours:date,expiration:calcExpiration(date,c.ville||'paris')};
+          afficherToast('✉️ Carte terminée — redémarrée à '+ov+'/10 (non payée) pour '+(c.nom||c.email||''));
+        } else {
+          syncData={email:c.email,utilises:Math.min(10,(c.utilises||0)+nbCours),
+            restants:Math.max(0,(c.restants||0)-nbCours),
+            datePremierCours:c.datePremierCours||date,expiration:c.expiration};
+        }
+        _broadcastAdminSync('carteUpdate',syncData);
       }
       chargerDonnees();
     })

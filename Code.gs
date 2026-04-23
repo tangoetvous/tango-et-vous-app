@@ -45,6 +45,7 @@ const COL = {
   NOTES:8, ACTIONS:9, EMAIL:10,
   STATUT_ELEVE:11,
   SOURCE:12,
+  PAYE:13,
 };
 
 const STATUT = {
@@ -273,7 +274,7 @@ function getEleveByEmail(email) {
   const sp = _getSheet(ss, SHEET_PRESENCES);
   const lr = se.getLastRow();
   if (lr < ELEVES_START_ROW) return {error:'not_found',email};
-  const data = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues();
+  const data = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,14).getValues();
   const row  = data.find(r=>(r[COL.EMAIL]||'').toString().trim().toLowerCase()===email);
   if (!row) return {error:'not_found',email};
   const st = (row[COL.STATUT_ELEVE]||STATUT.EN_ATTENTE).toString().trim();
@@ -291,6 +292,7 @@ function getEleveByEmail(email) {
       dateAchat:    _fmtDate(row[COL.DATE_ACHAT]),
       dateExpiration:_fmtDate(row[COL.EXPIRATION]),
       statut:(row[COL.STATUT_CARTE]||'').toString(),
+      paye: (row[COL.PAYE]||'').toString() !== 'NON_PAYE',
     },
     presences:_getPresences(sp, row[COL.ID]),
   };
@@ -582,7 +584,7 @@ function ajouterPresenceManuelle(body) {
   // Mettre à jour UTILISES / RESTANTS dans SHEET_ELEVES + renouvellement auto si débord
   const lr = se.getLastRow();
   let eleveEmail = '', eleveNom = nom;
-  let renouvAuto = false;
+  let renouvAuto = false, renouvOverflow = 0;
   if (lr >= ELEVES_START_ROW) {
     const data = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,13).getValues();
     const idx  = data.findIndex(r => r[COL.ID]===eleveId);
@@ -603,8 +605,8 @@ function ajouterPresenceManuelle(body) {
         if (nouvExp) se.getRange(rn, COL.EXPIRATION+1).setValue(new Date(nouvExp));
         else se.getRange(rn, COL.EXPIRATION+1).setValue('');
         se.getRange(rn, COL.NOTES+1).setValue('Renouvellement auto — non payée');
-        se.getRange(rn, 14).setValue('NON_PAYE');
-        renouvAuto = true;
+        se.getRange(rn, COL.PAYE+1).setValue('NON_PAYE');
+        renouvAuto = true; renouvOverflow = overflow;
       } else {
         const newUtil = Math.min(10, utilisesAvant+aAjouter);
         const newRest = Math.max(0, (Number(data[idx][COL.RESTANTS])||0)-aAjouter);
@@ -632,7 +634,8 @@ function ajouterPresenceManuelle(body) {
     try { _emailCarteAutoRenouvelee(nom, eleveEmail, date); } catch(err){}
   }
 
-  return {ok:true, added:aAjouter, renouvAuto, skipped:dejaPointe||undefined,
+  SpreadsheetApp.flush();
+  return {ok:true, added:aAjouter, renouvAuto, overflow:renouvOverflow, skipped:dejaPointe||undefined,
     message:`${aAjouter} présence(s) ajoutée(s) pour ${nom} le ${date}`};
 }
 
@@ -1181,7 +1184,7 @@ function _getCartesAdmin() {
         email:(r[COL.EMAIL]||'').toString().trim(),
         statutEleve:(r[COL.STATUT_ELEVE]||STATUT.EN_ATTENTE).toString().trim(),
         source:(r[COL.SOURCE]||'manuel').toString(),
-        paye: (r[13]||'').toString() !== 'NON_PAYE',
+        paye: (r[COL.PAYE]||'').toString() !== 'NON_PAYE',
         isReport, saisonOrigine: isReport ? currentSaison : '',
         saison: isReport ? saisonReport : currentSaison,
         datesCours: presencesByEleve[id] || [],
@@ -1867,7 +1870,7 @@ function renouvelerCarteGs(body) {
   se.getRange(rowNum, COL.DATE_ACHAT+1).setValue('');
   se.getRange(rowNum, COL.EXPIRATION+1).setValue('');
   se.getRange(rowNum, COL.STATUT_CARTE+1).setValue('Active');
-  se.getRange(rowNum, 14).setValue(paye ? '' : 'NON_PAYE');
+  se.getRange(rowNum, COL.PAYE+1).setValue(paye ? '' : 'NON_PAYE');
   // E10 — carte renouvelée (si payé)
   if (paye && email) {
     const prenom = nom.split(' ')[0]||nom;
@@ -1916,7 +1919,7 @@ function toggleCartePaye(body) {
   const data = se.getRange(ELEVES_START_ROW,1,lr-ELEVES_START_ROW+1,1).getValues();
   const idx  = data.findIndex(r=>r[0]===eleveId);
   if (idx < 0) return {ok:false};
-  se.getRange(idx+ELEVES_START_ROW, 14).setValue(paye===true ? '' : 'NON_PAYE');
+  se.getRange(idx+ELEVES_START_ROW, COL.PAYE+1).setValue(paye===true ? '' : 'NON_PAYE');
   return {ok:true};
 }
 
