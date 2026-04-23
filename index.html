@@ -245,7 +245,12 @@
   // CONNEXION DÉMO
   // ================================================================
   window.demoLogin = function() {
-    eleveData = DEMO_DATA;
+    // Nettoyer le localStorage pour que les données de démo ne soient pas écrasées
+    try {
+      const demoEmail = (DEMO_DATA.eleve.email||'').toLowerCase();
+      localStorage.removeItem('tev_carte_update_'+demoEmail);
+    } catch(e) {}
+    eleveData = JSON.parse(JSON.stringify(DEMO_DATA)); // copie fraîche à chaque connexion
     renderDashboard();
     showScreen('screen-dashboard');
     _initAdminSync();
@@ -2185,7 +2190,8 @@
       bc.onmessage = ev => _handleAdminMsg(ev.data);
     }
     // Appliquer la dernière mise à jour de carte (si elle a eu lieu quand l'app était fermée)
-    try {
+    // En mode démo, on ignore le localStorage pour ne pas écraser les données de démo
+    if (!IS_DEMO) try {
       const _email = (eleveData && eleveData.eleve && eleveData.eleve.email || '').toLowerCase();
       if (_email) {
         const _carteUpd = JSON.parse(localStorage.getItem('tev_carte_update_'+_email) || 'null');
