@@ -1703,6 +1703,12 @@ function traiterMsgInscription(msg, doRender) {
         var manquants = Math.max(0, nbAdd - dejaDansAdmin);
         for (var _i=0; _i<manquants; _i++) c.datesCours.push(d.date);
         c.datesCours.sort();
+        // Compteur journalier multi-cartes (ne se remet pas à zéro lors d'un renouvellement)
+        if (!d.renouv && d.nbAdded > 0) {
+          if (!adminData._dailyCounts) adminData._dailyCounts = {};
+          var _dck = (d.email||'').toLowerCase()+'|'+d.date;
+          adminData._dailyCounts[_dck] = (adminData._dailyCounts[_dck]||0) + Math.min(2, d.nbAdded);
+        }
       }
       if (!c.datePremierCours && d.date) { c.datePremierCours=d.date; c.expiration=calcExpiration(d.date,c.ville||'paris'); }
     }
@@ -3984,7 +3990,8 @@ function handleAction(action, btn) {
         var c=adminData.cartes.find(function(x){return x.id===id;});
         if(!c)return;
         var todayDate=today();
-        var dejaPointe=(c.datesCours||[]).filter(function(d){return d===todayDate;}).length;
+        if(!adminData._dailyCounts)adminData._dailyCounts={};
+        var dejaPointe=adminData._dailyCounts[(c.email||'').toLowerCase()+'|'+todayDate]||0;
         if(dejaPointe>=2){afficherToast('2 pointages maximum par jour');return;}
         pointerCoursAction(id,todayDate,dejaPointe+1,btn);
       })();
@@ -5572,7 +5579,8 @@ function renderCartesPointage(d) {
     var sCls=fini?'pill-err':bient?'pill-warn':'pill-ok';
     var sLbl=fini?'À renouveler':bient?'Expire dans '+days+'j':'Active';
     var todayDate=today();
-    var dejaPointe=(c.datesCours||[]).filter(function(dd){return dd===todayDate;}).length;
+    if(!adminData._dailyCounts)adminData._dailyCounts={};
+    var dejaPointe=adminData._dailyCounts[(c.email||'').toLowerCase()+'|'+todayDate]||0;
     var pteBtn=dejaPointe>=2
       ?'<span class="pill pill-ok" style="font-size:10px;">✓ Pointé ×2</span>'
       :(!fini||dejaPointe===1)
@@ -5649,22 +5657,27 @@ function pointerCoursAction(id, date, nbCours, btn) {
     var c=adminData.cartes.find(function(x){return x.id===id;});
     if(c){
       if(!c.datesCours)c.datesCours=[];
-      var dejaPointe=c.datesCours.filter(function(d){return d===date;}).length;
+      if(!adminData._dailyCounts)adminData._dailyCounts={};
+      var _dkp=(c.email||'').toLowerCase()+'|'+date;
+      var dejaPointe=adminData._dailyCounts[_dkp]||0;
       if(dejaPointe>=2){afficherToast('2 pointages maximum par jour');renderTab();return;}
       var aAjouter=Math.max(0,Math.min(2-dejaPointe, nbCours));
       if(aAjouter===0){afficherToast('Déjà pointé ce jour');renderTab();return;}
       var estPremierCours=!c.datePremierCours;
       var utilisesAvant=c.utilises||0;
       var totalApres=utilisesAvant+aAjouter;
+      adminData._dailyCounts[_dkp]=(adminData._dailyCounts[_dkp]||0)+aAjouter;
       if(totalApres>10){
-        // Renouvellement automatique : la carte repart à 1/10, non payée
-        c.datesCours=[date]; // repart avec seulement le cours en débord
-        c.utilises=1; c.restants=9;
+        // Renouvellement automatique : la carte repart à overflow/10, non payée
+        var ov=totalApres-10;
+        c.datesCours=[date];
+        c.utilises=ov; c.restants=10-ov;
         c.datePremierCours=date;
         c.expiration=calcExpiration(date,c.ville||'paris');
         c.paye=false;
-        _broadcastAdminSync('carteUpdate',{email:c.email,utilises:1,restants:9,datesCours:[date],datePremierCours:date,expiration:c.expiration});
-        afficherToast('✉️ Carte terminée — redémarrée à 1/10 (non payée) pour '+(c.nom||''));
+        try{localStorage.setItem('tev_nonpayee_'+c.email,'1');}catch(e){}
+        _broadcastAdminSync('carteUpdate',{email:c.email,utilises:ov,restants:10-ov,datesCours:[date],datePremierCours:date,expiration:c.expiration,paye:false});
+        afficherToast('✉️ Carte terminée — redémarrée à '+ov+'/10 (non payée) pour '+(c.nom||''));
       } else {
         for(var i=0;i<aAjouter;i++)c.datesCours.push(date);
         c.utilises=totalApres; c.restants=Math.max(0,10-totalApres);
@@ -5681,15 +5694,20 @@ function pointerCoursAction(id, date, nbCours, btn) {
     .then(function(r){
       if(r&&r.skipped){afficherToast('Déjà pointé ce jour');}
       else if(c){
+        var added=r&&r.added||nbCours;
+        if(!adminData._dailyCounts)adminData._dailyCounts={};
+        var _dkpp=(c.email||'').toLowerCase()+'|'+date;
+        adminData._dailyCounts[_dkpp]=(adminData._dailyCounts[_dkpp]||0)+added;
         var syncData;
         if(r&&r.renouvAuto){
           var ov=r.overflow||1;
           syncData={email:c.email,utilises:ov,restants:10-ov,paye:false,
             datePremierCours:date,expiration:calcExpiration(date,c.ville||'paris')};
+          try{localStorage.setItem('tev_nonpayee_'+c.email,'1');}catch(e){}
           afficherToast('✉️ Carte terminée — redémarrée à '+ov+'/10 (non payée) pour '+(c.nom||c.email||''));
         } else {
-          syncData={email:c.email,utilises:Math.min(10,(c.utilises||0)+nbCours),
-            restants:Math.max(0,(c.restants||0)-nbCours),
+          syncData={email:c.email,utilises:Math.min(10,(c.utilises||0)+added),
+            restants:Math.max(0,(c.restants||0)-added),
             datePremierCours:c.datePremierCours||date,expiration:c.expiration};
         }
         _broadcastAdminSync('carteUpdate',syncData);
