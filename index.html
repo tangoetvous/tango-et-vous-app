@@ -2264,12 +2264,18 @@
   // POINTAGE SELF — Carte 10 (exposé sur window pour les onclick HTML)
   // ================================================================
   function ouvrirModalPointerSelf() {
-    const d = new Date().toISOString().slice(0,10);
-    document.getElementById('self-pointer-date').value = d;
+    const todayStr = new Date().toISOString().slice(0,10);
+    document.getElementById('self-pointer-date').value = todayStr;
     const r1 = document.querySelector('input[name="self-nb"][value="1"]');
     if (r1) r1.checked = true;
     const m = document.getElementById('self-pointer-msg');
     if (m) { m.style.display='none'; m.textContent=''; }
+    // Masquer "2 cours" si 1 restant ou déjà pointé aujourd'hui
+    const remaining  = eleveData && eleveData.carte ? (Number(eleveData.carte.coursRestants) || 0) : 10;
+    const todayCount = eleveData && eleveData.presences ? eleveData.presences.filter(p => p.date === todayStr).length : 0;
+    const maxCanAdd  = Math.min(remaining, Math.max(0, 2 - todayCount));
+    const wrap2 = document.getElementById('self-nb-2-wrap');
+    if (wrap2) wrap2.style.display = maxCanAdd <= 1 ? 'none' : '';
     document.getElementById('modal-pointer-self').style.display = 'flex';
   }
   function fermerModalPointerSelf() {
@@ -2361,6 +2367,20 @@
     const btn = document.getElementById('btn-renew-carte-self');
     const prevTxt = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = '⏳ En cours…'; }
+    const _broadcastRenouv = function() {
+      try {
+        if (window.BroadcastChannel) {
+          const bc = new BroadcastChannel('tev_inscriptions');
+          bc.postMessage({type:'cartePointage', data:{
+            email: eleveData.eleve.email,
+            date: new Date().toISOString().slice(0,10),
+            nbAdded: 0, utilises: 0, restants: 10,
+            renouv: true, paye: false
+          }});
+          bc.close();
+        }
+      } catch(e) {}
+    };
     try {
       if (IS_DEMO) {
         eleveData.carte.coursUtilises = 0;
@@ -2368,6 +2388,7 @@
         eleveData.carte.paye = false;
         eleveData.carte.dateAchat = '';
         eleveData.carte.dateExpiration = '';
+        _broadcastRenouv();
         renderDashboard(); renderAccueil(); return;
       }
       await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
@@ -2380,6 +2401,7 @@
         eleveData.carte = d2.carte;
         eleveData.presences = d2.presences || eleveData.presences;
       }
+      _broadcastRenouv();
       renderDashboard(); renderAccueil();
     } catch(err) {
       if (btn) { btn.disabled = false; btn.textContent = prevTxt; }
@@ -4099,7 +4121,7 @@ if('serviceWorker' in navigator){
       <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;color:var(--text);">
         <input type="radio" name="self-nb" value="1" checked/> 1 cours
       </label>
-      <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;color:var(--text);">
+      <label id="self-nb-2-wrap" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;color:var(--text);">
         <input type="radio" name="self-nb" value="2"/> 2 cours
       </label>
     </div>

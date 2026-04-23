@@ -1709,13 +1709,23 @@ function traiterMsgInscription(msg, doRender) {
     if (doRender) { renderTab(); return; }
   }
   if (msg.type === 'cartePointage' && d.renouv) {
-    // Renouvellement depuis interface élève : reset de la même carte à 1/10
     var cRenouv = (adminData.cartes||[]).find(function(x){return x.email===d.email;});
     if (cRenouv) {
-      cRenouv.utilises=1; cRenouv.restants=9;
-      cRenouv.datesCours=[d.date]; cRenouv.datePremierCours=d.date;
-      cRenouv.expiration=calcExpiration(d.date,cRenouv.ville||'paris');
+      var rUtil = d.utilises != null ? d.utilises : 1;
+      var rRest = d.restants  != null ? d.restants  : 9;
+      cRenouv.utilises=rUtil; cRenouv.restants=rRest;
       cRenouv.paye=false;
+      if (rUtil > 0 && d.date) {
+        // Renouvellement avec débordement : premier cours = date du débord
+        cRenouv.datesCours=[d.date];
+        cRenouv.datePremierCours=d.date;
+        cRenouv.expiration=calcExpiration(d.date,cRenouv.ville||'paris');
+      } else {
+        // Renouvellement manuel élève (0/10, pas encore de cours)
+        cRenouv.datesCours=[];
+        cRenouv.datePremierCours='';
+        cRenouv.expiration='';
+      }
     }
     if (doRender) { renderTab(); return; }
   }
