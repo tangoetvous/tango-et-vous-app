@@ -9,33 +9,14 @@
 <meta name="apple-mobile-web-app-title" content="Tango & Vous"/>
 <title>Tango &amp; Vous</title>
 <link rel="manifest" href="manifest.json"/>
-<!-- Firebase -->
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getAuth, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-  import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js';
-
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/tev-supabase.js"></script>
+<script>
   // ================================================================
-  // ⚙️  CONFIGURATION — À remplacer avec tes valeurs Firebase
+  // DEMO MODE — true uniquement quand l'utilisateur clique sur "Démo"
   // ================================================================
-  const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyD-STk_VpUIe6mjOh7kX9bsaOE8OvPNEcs",
-    authDomain: "tango-et-vous.firebaseapp.com",
-    projectId: "tango-et-vous",
-    storageBucket: "tango-et-vous.firebasestorage.app",
-    messagingSenderId: "778867090916",
-    appId: "1:778867090916:web:697fab0815e79f336493f1"
-  };
-
-  // ⚙️  URL de ton Apps Script déployé (Web App)
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
-  // ⚙️  Clé VAPID — Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
-  const VAPID_KEY = 'VOTRE_VAPID_KEY';
-
-  // ================================================================
-  // DEMO MODE — active si les configs sont vides
-  // ================================================================
-  const IS_DEMO = FIREBASE_CONFIG.apiKey === 'VOTRE_API_KEY' || APPS_SCRIPT_URL.includes('VOTRE_DEPLOYMENT');
+  let IS_DEMO = false;
 
   // ================================================================
   // PARAMÈTRES DYNAMIQUES (admin.html → localStorage → index.html)
@@ -105,20 +86,11 @@
   };
 
   // ================================================================
-  // INIT FIREBASE
-  // ================================================================
-  let auth = null;
-  let _fbApp = null;
-  if (!IS_DEMO) {
-    _fbApp = initializeApp(FIREBASE_CONFIG);
-    auth = getAuth(_fbApp);
-  }
-
-  // ================================================================
   // STATE
   // ================================================================
   let currentUser = null;
   let eleveData = null;
+  let _tevRealtimeChannel = null;
 
   // ================================================================
   // HELPERS UI
@@ -161,28 +133,16 @@
   }
 
   // ================================================================
-  // AUTH — ENVOI LIEN MAGIQUE
+  // AUTH — ENVOI LIEN MAGIQUE (Supabase OTP)
   // ================================================================
   window.sendMagicLink = async function() {
     const email = $('auth-email').value.trim().toLowerCase();
     if (!email || !email.includes('@')) {
       showMsg('auth-msg', 'Merci de saisir une adresse email valide.'); return;
     }
-
-    if (IS_DEMO) {
-      // Mode démo : on simule directement
-      $('auth-email-sent').textContent = email;
-      showScreen('screen-sent');
-      return;
-    }
-
     setLoading('btn-magic', true);
     try {
-      const actionCodeSettings = {
-        url: window.location.href,
-        handleCodeInApp: true,
-      };
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      await TEV.signInMagicLink(email);
       window.localStorage.setItem('emailForSignIn', email);
       $('auth-email-sent').textContent = email;
       showScreen('screen-sent');
@@ -194,52 +154,39 @@
   };
 
   // ================================================================
-  // AUTH — VÉRIFICATION LIEN AU RETOUR EMAIL
-  // ================================================================
-  async function checkEmailLink() {
-    if (IS_DEMO) return;
-    if (!isSignInWithEmailLink(auth, window.location.href)) return;
-    let email = window.localStorage.getItem('emailForSignIn');
-    if (!email) {
-      email = window.prompt('Confirmez votre adresse email pour finaliser la connexion :');
-    }
-    if (!email) return;
-    try {
-      await signInWithEmailLink(auth, email, window.location.href);
-      window.localStorage.removeItem('emailForSignIn');
-      // Nettoyer l'URL
-      history.replaceState(null, '', window.location.pathname);
-    } catch(e) {
-      showScreen('screen-auth');
-      showMsg('auth-msg', 'Lien expiré ou invalide. Merci de réessayer.');
-    }
-  }
-
-  // ================================================================
-  // AUTH — OBSERVER
+  // AUTH — OBSERVER (Supabase onAuthStateChange)
   // ================================================================
   function initAuth() {
-    if (IS_DEMO) {
-      // Mode démo : bouton démo sur l'écran auth
-      $('demo-btn-wrap').style.display = 'block';
-      showScreen('screen-auth');
-      return;
-    }
-    onAuthStateChanged(auth, async user => {
-      if (user) {
-        currentUser = user;
-        await loadEleveData(user.email);
-      } else {
+    // Toujours afficher le bouton démo
+    const demoWrap = $('demo-btn-wrap');
+    if (demoWrap) demoWrap.style.display = 'block';
+
+    // Supabase gère automatiquement la redirection OTP
+    TEV.onAuthChange(async (event, session) => {
+      if (session && session.user) {
+        // Nettoyer l'URL après connexion par lien magique
+        if (window.location.hash || window.location.search.includes('access_token')) {
+          history.replaceState(null, '', window.location.pathname);
+        }
+        if (!IS_DEMO) {
+          currentUser = session.user;
+          await loadEleveData(session.user.email);
+        }
+      } else if (!IS_DEMO) {
+        currentUser = null;
+        eleveData = null;
         showScreen('screen-auth');
       }
     });
-    checkEmailLink();
+
+    if (!IS_DEMO) showScreen('screen-auth');
   }
 
   // ================================================================
   // CONNEXION DÉMO
   // ================================================================
   window.demoLogin = function() {
+    IS_DEMO = true;
     // Nettoyer le localStorage pour que les données de démo ne soient pas écrasées
     try {
       const demoEmail = (DEMO_DATA.eleve.email||'').toLowerCase();
@@ -260,37 +207,36 @@
   // DÉCONNEXION
   // ================================================================
   window.logout = async function() {
-    if (IS_DEMO) {
-      eleveData = null;
-      showScreen('screen-auth');
-      return;
-    }
-    try { await signOut(auth); } catch(e) {}
-    currentUser = null;
+    if (_tevRealtimeChannel) { TEV.unsubscribe(_tevRealtimeChannel); _tevRealtimeChannel = null; }
+    const wasDemo = IS_DEMO;
+    IS_DEMO = false;
     eleveData = null;
+    currentUser = null;
+    if (!wasDemo) { try { await TEV.signOut(); } catch(e) {} }
     showScreen('screen-auth');
   };
 
   // ================================================================
-  // CHARGEMENT DONNÉES ÉLÈVE
+  // CHARGEMENT DONNÉES ÉLÈVE (Supabase)
   // ================================================================
   async function loadEleveData(email) {
     showScreen('screen-loading');
     try {
-      const url = `${APPS_SCRIPT_URL}?action=getEleve&email=${encodeURIComponent(email)}`;
-      let res;
-      try { res = await fetch(url); }
-      catch(netErr) {
-        // Erreur réseau (hors-ligne, serveur inaccessible)
-        $('notfound-icon').textContent = '📡';
-        $('notfound-title').textContent = 'Connexion impossible';
-        $('notfound-desc').textContent = 'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.';
+      const data = await TEV.getEleve(email);
+      if (data.error === 'not_found') {
+        $('notfound-icon').textContent = '🔍';
+        $('notfound-title').textContent = 'Compte introuvable';
+        $('notfound-desc').textContent = 'Aucun élève enregistré avec l\'adresse';
+        $('notfound-email').textContent = email || '';
+        showScreen('screen-notfound'); return;
+      }
+      if (data.error) {
+        $('notfound-icon').textContent = '⏳';
+        $('notfound-title').textContent = 'Accès non disponible';
+        $('notfound-desc').textContent = data.message || 'Votre compte n\'est pas encore activé.';
         $('notfound-email').textContent = '';
         showScreen('screen-notfound'); return;
       }
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
       eleveData = data;
       // Fallback : si le flag non-payé est en localStorage mais pas encore sur le serveur
       try {
@@ -300,13 +246,11 @@
       renderDashboard();
       showScreen('screen-dashboard');
       _initAdminSync();
-      _initPush();
     } catch(e) {
-      // Erreur API : élève introuvable ou erreur serveur
-      $('notfound-icon').textContent = '🔍';
-      $('notfound-title').textContent = 'Compte introuvable';
-      $('notfound-desc').textContent = 'Aucun élève enregistré avec l\'adresse';
-      $('notfound-email').textContent = email || '';
+      $('notfound-icon').textContent = '📡';
+      $('notfound-title').textContent = 'Connexion impossible';
+      $('notfound-desc').textContent = 'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.';
+      $('notfound-email').textContent = '';
       showScreen('screen-notfound');
     }
   }
@@ -627,9 +571,15 @@
       catch(e) { _discDiscList = []; }
     } else {
       try {
-        const r = await fetch(`${APPS_SCRIPT_URL}?action=getDiscussions`);
-        const d = await r.json();
-        _discDiscList = (d.discussions || []).filter(disc => disc.statut === 'ouvert' && _discPeutVoir(disc));
+        const elv = (eleveData && eleveData.eleve) || {};
+        const discs = await TEV.getDiscussions({ eleveEmail: elv.email });
+        _discDiscList = discs.filter(disc => !disc.fermee).map(disc => ({
+          id: disc.id, titre: disc.titre,
+          createur_email: disc.eleve_email, createur_nom: disc.eleve_nom,
+          statut: disc.fermee ? 'ferme' : 'ouvert',
+          date: disc.last_message_at || disc.created_at,
+          groupes: [],
+        }));
       } catch(e) {
         _discDiscList = _discDiscList || [];
       }
@@ -715,10 +665,12 @@
         try { const m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]'); m.push(newMsg); localStorage.setItem('tev_demo_msgs_'+_discCurrentId, JSON.stringify(m)); } catch(e) {}
         return;
       }
-      fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
-        action:'postDiscussionMessage', discussion_id:_discCurrentId,
-        auteur_email:elv.email||'', auteur_nom:nomComplet, message:msg
-      })}).catch(() => {});
+      TEV.postMessage({
+        discussionId: _discCurrentId,
+        auteur: 'eleve',
+        auteurEmail: elv.email||'',
+        contenu: msg,
+      }).catch(() => {});
     }
     if (sendBtn) sendBtn.addEventListener('click', sendMsg);
     if (inp) inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); sendMsg(); } });
@@ -759,9 +711,15 @@
       try { const m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]'); _discMsgs=m; _discRenderMsgs(); } catch(e) {}
       return;
     }
-    fetch(`${APPS_SCRIPT_URL}?action=getDiscussionMessages&id=${encodeURIComponent(_discCurrentId)}`)
-      .then(r => r.json())
-      .then(d => { if (d && d.messages) { _discMsgs = d.messages; _discRenderMsgs(); } })
+    TEV.getMessages(_discCurrentId)
+      .then(msgs => {
+        _discMsgs = msgs.map(m => ({
+          id: m.id, discussion_id: m.discussion_id,
+          auteur_email: m.auteur_email, auteur_nom: m.auteur_email,
+          message: m.contenu, date: m.created_at,
+        }));
+        _discRenderMsgs();
+      })
       .catch(() => {});
   }
 
@@ -774,10 +732,14 @@
         _discPollTO = setTimeout(doPoll, 3000);
         return;
       }
-      fetch(`${APPS_SCRIPT_URL}?action=getDiscussionMessages&id=${encodeURIComponent(_discCurrentId)}`)
-        .then(r => r.json())
-        .then(d => {
-          if (d && d.messages && d.messages.length !== _discMsgs.length) { _discMsgs = d.messages; _discRenderMsgs(); }
+      TEV.getMessages(_discCurrentId)
+        .then(msgs => {
+          const mapped = msgs.map(m => ({
+            id: m.id, discussion_id: m.discussion_id,
+            auteur_email: m.auteur_email, auteur_nom: m.auteur_email,
+            message: m.contenu, date: m.created_at,
+          }));
+          if (mapped.length !== _discMsgs.length) { _discMsgs = mapped; _discRenderMsgs(); }
           _discPollTO = setTimeout(doPoll, 15000);
         })
         .catch(() => { _discPollTO = setTimeout(doPoll, 20000); });
@@ -850,11 +812,11 @@
         renderDiscussions(); return;
       }
       try {
-        const r = await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify({
-          action:'createDiscussion', titre, groupes:groupesSel,
-          createur_email:elv.email||'', createur_nom:nomComplet
-        })});
-        const d = await r.json();
+        const d = await TEV.createDiscussion({
+          titre,
+          eleveEmail: elv.email || '',
+          eleveNom: nomComplet,
+        });
         if (d.ok) {
           _discDiscList = null;
           _discCurrentId = d.id; _discCurrentTitle = titre; _discView = 'chat'; _discMsgs = [];
@@ -871,32 +833,7 @@
     setTimeout(() => { const t = $('disc-form-titre'); if (t) t.focus(); }, 100);
   }
 
-  // ── Notifications push (Firebase Cloud Messaging) ─────────────
-  async function _initPush() {
-    if (!_fbApp || !('Notification' in window) || Notification.permission === 'denied') return;
-    if (VAPID_KEY === 'VOTRE_VAPID_KEY') return; // non configuré
-    try {
-      const perm = await Notification.requestPermission();
-      if (perm !== 'granted') return;
-      const swReg = await navigator.serviceWorker.ready;
-      const messaging = getMessaging(_fbApp);
-      const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
-      if (token) {
-        const groupes = _discGetMonGroupe();
-        fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify({
-          action:'saveFcmToken', token,
-          email:(eleveData&&eleveData.eleve&&eleveData.eleve.email)||'',
-          groupes, app:'eleve'
-        })}).catch(()=>{});
-      }
-      onMessage(messaging, payload => {
-        const n = payload.notification || {};
-        _showInAppNotif((n.title||'Tango & Vous') + (n.body ? ' — ' + n.body : ''));
-        _discDiscList = null;
-        if (currentTab === 'discussions' && _discView === 'list') renderDiscussions();
-      });
-    } catch(e) { /* permission refusée ou navigateur non supporté */ }
-  }
+  // ── Notifications push (à implémenter via Supabase/Resend) ────
 
   // ================================================================
   // YOGA PANE
@@ -1997,8 +1934,12 @@
 
     if (!IS_DEMO) {
       try {
-        const res  = await fetch(`${APPS_SCRIPT_URL}?action=getPublications`);
-        if (res.ok) { const data = await res.json(); pubs = data.publications || []; }
+        const serverPubs = await TEV.getPublications();
+        if (serverPubs.length) pubs = serverPubs.map(p => ({
+          id: p.id, titre: p.titre, contenu: p.contenu,
+          publiee: p.publiee, dateProgrammee: p.created_at,
+          cat: p.cat || '', extrait: p.extrait || '',
+        }));
       } catch(e) {}
     }
 
@@ -2252,36 +2193,44 @@
   }
 
   function _initAdminSync() {
-    // BroadcastChannel real-time
-    if (window.BroadcastChannel) {
-      const bc = new BroadcastChannel('tev_admin_sync');
-      bc.onmessage = ev => _handleAdminMsg(ev.data);
-    }
-    // Appliquer la dernière mise à jour de carte (si elle a eu lieu quand l'app était fermée)
-    // En mode démo, on ignore le localStorage pour ne pas écraser les données de démo
-    if (!IS_DEMO) try {
-      const _email = (eleveData && eleveData.eleve && eleveData.eleve.email || '').toLowerCase();
-      if (_email) {
-        const _carteUpd = JSON.parse(localStorage.getItem('tev_carte_update_'+_email) || 'null');
-        if (_carteUpd && _carteUpd.data) _handleAdminMsg(_carteUpd);
+    // En mode démo : garder BroadcastChannel pour la synchro admin↔élève dans le même navigateur
+    if (IS_DEMO) {
+      if (window.BroadcastChannel) {
+        const bc = new BroadcastChannel('tev_admin_sync');
+        bc.onmessage = ev => _handleAdminMsg(ev.data);
       }
-    } catch(e) {}
-    // Appliquer les mises à jour d'agenda stockées en localStorage (si elles ont eu lieu quand l'app était fermée)
+      return;
+    }
+
+    // En mode PROD : Supabase real-time remplace BroadcastChannel + localStorage
+    if (_tevRealtimeChannel) { TEV.unsubscribe(_tevRealtimeChannel); _tevRealtimeChannel = null; }
+    const eleveId = eleveData && eleveData.eleve && eleveData.eleve.id;
+    if (eleveId) {
+      _tevRealtimeChannel = TEV.subscribeEleve(eleveId, (type, newRow) => {
+        if (type === 'carteUpdate') {
+          // Traduire la ligne Supabase en format attendu par _handleAdminMsg
+          _handleAdminMsg({ type: 'carteUpdate', data: {
+            utilises:        newRow.carte_utilises,
+            restants:        newRow.carte_restants,
+            datePremierCours: newRow.carte_date_achat,
+            expiration:      newRow.carte_expiration,
+            paye:            newRow.carte_paye,
+          }});
+        }
+        if (type === 'presenceAdded') {
+          if (eleveData && eleveData.presences) {
+            eleveData.presences.unshift({ date: newRow.date, niveau: newRow.niveau, note: newRow.note });
+          }
+          if (currentTab === 'carte') renderDashboard();
+          if (currentTab === 'accueil') renderAccueil();
+        }
+      });
+    }
+
+    // Appliquer les mises à jour d'agenda stockées en localStorage (si offline)
     try {
       const agUpds = JSON.parse(localStorage.getItem('tev_agenda_updates') || '[]');
       agUpds.forEach(m => _appliquerAgendaUpdate(m.data || m));
-    } catch(e) {}
-    // Appliquer les publications stockées
-    try {
-      const storedPubs = JSON.parse(localStorage.getItem('tev_publications') || '[]');
-      if (storedPubs.length && eleveData) {
-        if (!eleveData.publications) eleveData.publications = [];
-        storedPubs.forEach(sp => {
-          const idx = eleveData.publications.findIndex(p => p.id === sp.id);
-          if (idx >= 0) eleveData.publications[idx] = sp;
-          else eleveData.publications.push(sp);
-        });
-      }
     } catch(e) {}
   }
 
@@ -2370,21 +2319,18 @@
         } catch(e) {}
         fermerModalPointerSelf(); renderDashboard(); renderAccueil(); return;
       }
-      const resp = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
-        action:'pointageManuel', eleveId:eleveData.eleve.id,
-        date, niveau:eleveData.eleve.niveau, note:'Pointage élève (auto)', nbCours:nb
-      })});
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const data = await resp.json();
+      const data = await TEV.pointerCours({
+        eleveId: eleveData.eleve.id,
+        date, niveau: eleveData.eleve.niveau,
+        note: 'Pointage élève (auto)', nbCours: nb,
+      });
       if (data.skipped) {
         msgEl.textContent='Déjà pointé pour ce jour — aucun doublon créé.'; msgEl.style.display='block';
         btn.disabled=false; btn.textContent='✓ Valider'; return;
       }
       fermerModalPointerSelf();
-      const r2 = await fetch(`${APPS_SCRIPT_URL}?action=getEleve&email=${encodeURIComponent(eleveData.eleve.email||'')}`);
-      if (!r2.ok) throw new Error('HTTP ' + r2.status);
-      const d2  = await r2.json();
-      if (d2 && d2.carte) { eleveData.carte=d2.carte; eleveData.presences=d2.presences||eleveData.presences; renderDashboard(); }
+      const d2 = await TEV.getEleve(eleveData.eleve.email);
+      if (d2 && d2.carte) { eleveData.carte=d2.carte; eleveData.presences=d2.presences||eleveData.presences; renderDashboard(); renderAccueil(); }
     } catch(err) {
       msgEl.textContent='Erreur de connexion. Réessayez.'; msgEl.style.display='block';
       btn.disabled=false; btn.textContent='✓ Valider';
@@ -2422,12 +2368,8 @@
         _broadcastRenouv();
         renderDashboard(); renderAccueil(); return;
       }
-      await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
-        action:'renouvelerCarte', eleveId:eleveData.eleve.id, paye:false
-      })});
-      const r2 = await fetch(`${APPS_SCRIPT_URL}?action=getEleve&email=${encodeURIComponent(eleveData.eleve.email||'')}`);
-      if (!r2.ok) throw new Error('HTTP ' + r2.status);
-      const d2 = await r2.json();
+      await TEV.renouvelerCarte({ eleveId: eleveData.eleve.id, paye: false });
+      const d2 = await TEV.getEleve(eleveData.eleve.email);
       if (d2 && d2.carte) {
         eleveData.carte = d2.carte;
         eleveData.presences = d2.presences || eleveData.presences;

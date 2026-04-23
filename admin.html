@@ -369,24 +369,15 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   <div class="content" id="tab-content"><div class="spinner"></div></div>
 </div>
 
-<!-- Firebase Messaging (notifications push discussions) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/tev-supabase.js"></script>
 <script>
 // ================================================================
 // CONFIG
 // ================================================================
-var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
 var ADMIN_EMAILS    = ['tangoetvous@gmail.com','florencia@tangoetvous.com','jeremy@tangoetvous.com'];
 var URL_PWA              = 'https://tangoetvous.github.io/tango-et-vous-app';
-// ⚙️  Clé VAPID — Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
-var VAPID_KEY_ADMIN = 'VOTRE_VAPID_KEY';
-var FIREBASE_CONFIG_ADMIN = {
-  apiKey: "AIzaSyD-STk_VpUIe6mjOh7kX9bsaOE8OvPNEcs",
-  authDomain: "tango-et-vous.firebaseapp.com", projectId: "tango-et-vous",
-  storageBucket: "tango-et-vous.firebasestorage.app",
-  messagingSenderId: "778867090916", appId: "1:778867090916:web:697fab0815e79f336493f1"
-};
 
 // ── Liens AssoConnect par saison (mis à jour chaque année avant le 1er mai) ──
 var LIENS_ASSOCONNECT_DEFAUT = {
@@ -421,7 +412,7 @@ function sauverLiensAssoconnect(saison, data) {
   } catch(e){}
 }
 var CLOUDINARY_NAME = 'dnggqa2kw';
-var IS_DEMO         = APPS_SCRIPT_URL.indexOf('VOTRE_DEPLOYMENT') >= 0;
+var IS_DEMO         = true; // false une fois l'admin authentifié via Supabase
 var DEMO_DATE       = new Date(); // date réelle
 
 // ================================================================
@@ -1107,7 +1098,7 @@ function sauverContact(btn) {
     afficherToast('✓ Coordonnées mises à jour');
     fermerContact(); renderTab(); return;
   }
-  postAS({action:'updateContact',oldEmail:oldEmail,prenom:prenom.trim(),nom:nom.trim(),tel:tel,newEmail:newEmail})
+  TEV.client.from('eleves').update({prenom:prenom.trim(),nom:nom.trim(),tel:tel,email:newEmail}).eq('email',oldEmail)
     .then(function(){afficherToast('✓ Coordonnées mises à jour');fermerContact();chargerDonnees();})
     .catch(function(e){btn.disabled=false;btn.textContent='✓ Enregistrer';if(err){err.textContent=e.message;err.style.display='block';}});
 }
@@ -1348,7 +1339,9 @@ function recalcStats() {
   adminData.stats     = {total:(adminData.cartes||[]).length,actifs:adminData.actifs.length,enAttente:adminData.enAttente.length,inactifs:adminData.inactifs.length};
 }
 function postAS(body) {
-  return fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify(body)}).then(function(r){return r.json();});
+  // Stub — les appels hérités sont progressivement remplacés par des fonctions TEV
+  console.warn('[postAS] action non migrée vers Supabase :', body.action);
+  return Promise.resolve({ ok: false, error: 'not_migrated' });
 }
 function mailtoGmail(email, sujet) {
   return 'googlegmail://co?to='+encodeURIComponent(email)+'&subject='+encodeURIComponent(sujet||'Tango & Vous');
@@ -1826,7 +1819,7 @@ function sauverTarifs(btn) {
     // Tarifs futurs (prochaine saison) : stocker pour les formulaires de pré-inscription publics
     try { localStorage.setItem('tev_tarifs_prochaine_saison', JSON.stringify(tarifs)); } catch(e){}
   }
-  if (!IS_DEMO) { postAS({action:'sauverTarifs', payload:JSON.stringify(payload)}).catch(function(){}); }
+  if (!IS_DEMO) { TEV.setParam('tarifs', payload).catch(function(){}); }
   if(btn) { btn.textContent='✓ Enregistré'; btn.disabled=true; setTimeout(function(){btn.textContent='💾 Enregistrer';btn.disabled=false;renderTab();},1800); }
 }
 function resetTarifs() {
@@ -3501,22 +3494,11 @@ function sauverTarifsType(type, sai) {
   renderTab();
 }
 
-// Polling Apps Script pour nouveaux essais Wix (toutes les 60s, hors démo)
+// En Supabase, les essais arrivent directement via inscriptions_essai — polling allégé
 var _essaiPollTimer = null;
 function demarrerPollEssais() {
   if (IS_DEMO || _essaiPollTimer) return;
-  _essaiPollTimer = setInterval(function() {
-    postAS({action:'getNouveauxEssais'}).then(function(r) {
-      if (!r || !r.essais || !r.essais.length) return;
-      var changed = false;
-      r.essais.forEach(function(d) {
-        var avantLen = (adminData.essai||[]).length;
-        _appliquerEssaiInscription(d);
-        if ((adminData.essai||[]).length !== avantLen) changed = true;
-      });
-      if (changed) renderTab();
-    }).catch(function() {});
-  }, 60000);
+  _essaiPollTimer = setInterval(function() { chargerDonnees(); }, 120000);
 }
 function rafraichirEssais(btn) {
   if (btn) { btn.disabled=true; btn.textContent='⏳'; }
@@ -3524,16 +3506,8 @@ function rafraichirEssais(btn) {
     setTimeout(function(){ if(btn){btn.disabled=false;btn.textContent='↻ Rafraîchir';} },600);
     return;
   }
-  postAS({action:'getNouveauxEssais'}).then(function(r) {
-    if (btn) { btn.disabled=false; btn.textContent='↻ Rafraîchir'; }
-    if (!r || !r.essais || !r.essais.length) return;
-    var changed = false;
-    r.essais.forEach(function(d) {
-      var avantLen = (adminData.essai||[]).length;
-      _appliquerEssaiInscription(d);
-      if ((adminData.essai||[]).length !== avantLen) changed = true;
-    });
-    if (changed) renderTab();
+  chargerDonnees().then(function() {
+    if(btn){btn.disabled=false;btn.textContent='↻ Rafraîchir';}
   }).catch(function() { if(btn){btn.disabled=false;btn.textContent='↻ Rafraîchir';} });
 }
 
@@ -3582,12 +3556,16 @@ function envoyerLien() {
   errEl.style.display = 'none';
   if (!email) { errEl.textContent='Email requis.'; errEl.style.display='block'; return; }
   if (ADMIN_EMAILS.indexOf(email) < 0) { errEl.textContent='Email non autorisé.'; errEl.style.display='block'; return; }
-  if (IS_DEMO) { demarrerApp(email); return; }
-  gel('ls1').style.display='none';
-  gel('ls2').style.display='block';
+  // Mode démo — connexion directe
+  demarrerDemoApp(email);
 }
-function demarrerApp(email) {
-  adminData = JSON.parse(JSON.stringify(DEMO_DATA));
+function demarrerDemoApp(email) {
+  IS_DEMO = true;
+  demarrerApp(email, true);
+}
+function demarrerApp(email, isDemo) {
+  IS_DEMO = !!isDemo;
+  adminData = Object.assign({}, JSON.parse(JSON.stringify(DEMO_DATA)), { _email: email });
   recalcStats();
   filtreStage = Object.keys(adminData.stages)[0]||'';
   chargerTarifs();
@@ -3600,30 +3578,7 @@ function demarrerApp(email) {
   traiterInscriptionsEnAttente();
   renderTab();
   demarrerPollEssais();
-  if (!IS_DEMO) _initPushAdmin(email);
-}
-function _initPushAdmin(email) {
-  if (!('Notification' in window) || Notification.permission === 'denied') return;
-  if (VAPID_KEY_ADMIN === 'VOTRE_VAPID_KEY') return; // non configuré
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
-  Notification.requestPermission().then(function(perm) {
-    if (perm !== 'granted') return;
-    try {
-      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG_ADMIN);
-      var msg = firebase.messaging();
-      navigator.serviceWorker.ready.then(function(swReg) {
-        msg.getToken({ vapidKey: VAPID_KEY_ADMIN, serviceWorkerRegistration: swReg })
-          .then(function(token) {
-            if (token) postAS({ action:'saveFcmToken', token:token, email:email, groupes:[], app:'admin' }).catch(function(){});
-          }).catch(function(){});
-        msg.onMessage(function(payload) {
-          var n = payload.notification || {};
-          afficherToast((n.title||'Tango & Vous') + (n.body ? ' — ' + n.body : ''));
-          if (currentTab === 'discussions') { chargerDiscussions(function(){ renderDiscussions(); }); }
-        });
-      });
-    } catch(e) {}
-  });
+  if (!IS_DEMO) chargerDonnees();
 }
 // Event listener sélecteur de saison dans le header
 document.addEventListener('DOMContentLoaded', function() {
@@ -3634,34 +3589,37 @@ function logout() {
   gel('app').style.display='none';
   gel('login-screen').style.display='flex';
   adminData={};
+  IS_DEMO = true;
+  if (TEV) TEV.signOut().catch(function(){});
 }
 async function chargerDonnees() {
+  if (IS_DEMO) { renderTab(); return; }
   try {
-    var r = await fetch(APPS_SCRIPT_URL+'?action=getAdminData&email='+encodeURIComponent(adminData._email||''));
-    var d = await r.json();
-    if (d.error) throw new Error(d.error);
-    adminData = d;
-    if(!adminData.carteReports)adminData.carteReports=[];
-    if (!filtreStage && adminData.stages) filtreStage=Object.keys(adminData.stages)[0]||'';
-    // Charger les dates persistées (écrase les valeurs hardcodées si elles existent)
-    try {
-      var rc = await fetch(APPS_SCRIPT_URL+'?action=getCoursDates');
-      var dc = await rc.json();
-      if (Array.isArray(dc.paris)     && dc.paris.length)     COURS_PARIS     = dc.paris;
-      if (Array.isArray(dc.vincennes) && dc.vincennes.length) COURS_VINCENNES = dc.vincennes;
-      saveCoursDatesLocal(); // sync localStorage pour index.html
-    } catch(ex) { /* conserver les valeurs hardcodées si erreur */ }
+    var d = await TEV.getAdminData();
+    var emailSaved = adminData._email;
+    adminData = Object.assign({}, adminData, {
+      _email:            emailSaved,
+      cartes:            d.cartes            || adminData.cartes || [],
+      presences:         d.presences         || [],
+      coursParticuliers: d.coursParticuliers  || [],
+      coursTango:        d.coursTango         || adminData.coursTango || [],
+      essai:             d.coursEssai         || adminData.essai || [],
+      publications:      d.publications       || [],
+      agendaModifs:      d.agendaModifs       || [],
+    });
+    if(!adminData.carteReports) adminData.carteReports=[];
+    recalcStats();
+    saveCoursDatesLocal();
     renderTab();
     syncStageInscritsToLocal();
-  } catch(e) { console.error('Erreur:', e.message); }
+  } catch(e) { console.error('Erreur chargerDonnees:', e.message); }
 }
 
-// Persiste les tableaux COURS_PARIS / COURS_VINCENNES dans Apps Script
+// Persiste les tableaux COURS_PARIS / COURS_VINCENNES dans localStorage (et Supabase params)
 function saveCoursDatesRemote() {
   saveCoursDatesLocal();
   if (IS_DEMO || !adminData._email) return;
-  postAS({action:'saveCoursDates', email:adminData._email,
-          paris:COURS_PARIS, vincennes:COURS_VINCENNES}).catch(function(){});
+  TEV.setParam('cours_dates', { paris: COURS_PARIS, vincennes: COURS_VINCENNES }).catch(function(){});
 }
 
 // Persiste les 3 tableaux de dates dans localStorage pour index.html
@@ -4182,7 +4140,11 @@ function handleAction(action, btn) {
       break;
     case 'fermer-discussion':
       (function(did){ ouvrirModalConfirm('Fermer cette discussion\u00a0? Les participants ne pourront plus écrire.',function(){
-        postAS({action:'closeDiscussion',id:did}).then(function(){
+        if (IS_DEMO) {
+          try{var dd=JSON.parse(localStorage.getItem('tev_demo_discussions')||'[]');dd.forEach(function(d){if(d.id===did)d.statut='ferme';});localStorage.setItem('tev_demo_discussions',JSON.stringify(dd));}catch(e){}
+          afficherToast('\uD83D\uDD12 Discussion fermée.'); chargerDiscussions(function(){ _discView='list'; renderTab(); }); return;
+        }
+        TEV.closeDiscussion(did).then(function(){
           afficherToast('\uD83D\uDD12 Discussion fermée.');
           chargerDiscussions(function(){ _discView='list'; renderTab(); });
         });
@@ -4190,7 +4152,11 @@ function handleAction(action, btn) {
       break;
     case 'suppr-discussion':
       (function(did){ ouvrirModalConfirm('Supprimer définitivement cette discussion et tous ses messages\u00a0?',function(){
-        postAS({action:'deleteDiscussion',id:did}).then(function(){
+        if (IS_DEMO) {
+          try{var dd=JSON.parse(localStorage.getItem('tev_demo_discussions')||'[]');localStorage.setItem('tev_demo_discussions',JSON.stringify(dd.filter(function(d){return d.id!==did;})));}catch(e){}
+          afficherToast('\uD83D\uDDD1 Discussion supprimée.'); chargerDiscussions(function(){ _discView='list'; renderTab(); }); return;
+        }
+        TEV.deleteDiscussion(did).then(function(){
           afficherToast('\uD83D\uDDD1 Discussion supprimée.');
           chargerDiscussions(function(){ _discView='list'; renderTab(); });
         });
@@ -4201,13 +4167,12 @@ function handleAction(action, btn) {
         var titreEl=gel('disc-titre'), titre=titreEl?titreEl.value.trim():'';
         var errEl=gel('disc-form-err');
         if(!titre){if(errEl){errEl.textContent='Veuillez saisir un titre.';errEl.style.display='block';}return;}
-        var groupes=Array.from(document.querySelectorAll('.disc-grp-cb:checked')).map(function(cb){return cb.value;});
         var creatBtn=document.querySelector('[data-action="creer-discussion"]');
         if(creatBtn) creatBtn.disabled=true;
         var nom=adminData._email&&adminData._email.includes('florencia')?'Florencia':adminData._email&&adminData._email.includes('jeremy')?'Jérémy':'Admin';
         if (IS_DEMO) {
           var fakeId='disc_'+Date.now(), dateNow=new Date().toISOString();
-          var newDisc={id:fakeId,titre:titre,groupes:groupes,createur_email:adminData._email||'',createur_nom:nom,statut:'ouvert',date:dateNow};
+          var newDisc={id:fakeId,titre:titre,groupes:[],createur_email:adminData._email||'',createur_nom:nom,statut:'ouvert',date:dateNow};
           try{var dd=JSON.parse(localStorage.getItem('tev_demo_discussions')||'[]');dd.unshift(newDisc);localStorage.setItem('tev_demo_discussions',JSON.stringify(dd));}catch(e){}
           if(!adminData.discussions) adminData.discussions=[];
           adminData.discussions.unshift(newDisc);
@@ -4217,10 +4182,9 @@ function handleAction(action, btn) {
           _discView='chat'; renderTab();
           return;
         }
-        postAS({action:'createDiscussion',titre:titre,groupes:groupes,createur_email:adminData._email||'',createur_nom:nom})
+        TEV.createDiscussion({titre:titre, eleveEmail:adminData._email||'', eleveNom:nom})
           .then(function(r){
             if(r.error) throw new Error(r.error);
-            if(window.BroadcastChannel){var bc=new BroadcastChannel('tev_admin_sync');bc.postMessage({type:'newDiscussion',data:{titre:titre,id:r.id}});bc.close();}
             afficherToast('\uD83D\uDCAC Discussion ouverte\u00a0!');
             _discCurrentId=r.id; _discCurrentTitle=titre; _discCurrentStatut='ouvert'; _discMsgs=[];
             _discView='chat';
@@ -4916,18 +4880,18 @@ function soumettreEleve() {
     adminData.cartes.unshift({id:'E'+Date.now(),nom:nom,email:email,niveau:niv,statutEleve:act?'Actif':'En attente',utilises:0,restants:0,statut:'',source:'manuel',ville:ville,datesCours:[],partenaire:''});
     recalcStats(); gel('fne').innerHTML=''; renderTab(); return;
   }
-  postAS({action:'creerEleve',nom:nom,email:email,niveau:niv,source:'manuel',ville:ville}).then(function() {
-    if (act) return postAS({action:'activerEleve',email:email});
+  TEV.creerEleve({nom:nom,email:email,niveau:niv,source:'manuel',ville:ville}).then(function() {
+    if (act) return TEV.activerEleve({email:email});
   }).then(function() { chargerDonnees(); }).catch(function(e) { err.textContent=e.message; err.style.display='block'; });
 }
 function activerEleve(id, email, btn) {
   btn.disabled=true; btn.textContent='⏳';
   if (IS_DEMO) { var c=adminData.cartes.find(function(x){return x.id===id;}); if(c)c.statutEleve='Actif'; recalcStats(); renderTab(); return; }
-  postAS({action:'activerEleve',id:id,email:email}).then(function(r){ if(r.error)throw new Error(r.error); chargerDonnees(); }).catch(function(e){ btn.disabled=false; btn.textContent='✓ Activer'; console.error(e.message); });
+  TEV.activerEleve({id:id,email:email}).then(function(r){ if(r&&r.error)throw new Error(r.error); chargerDonnees(); }).catch(function(e){ btn.disabled=false; btn.textContent='✓ Activer'; console.error(e.message); });
 }
 function desactiverEleve(id, email, btn) {
   if (IS_DEMO) { var c=adminData.cartes.find(function(x){return x.id===id;}); if(c)c.statutEleve='Inactif'; recalcStats(); renderTab(); return; }
-  postAS({action:'desactiverEleve',id:id,email:email}).then(function(){chargerDonnees();}).catch(function(e){console.error(e.message);});
+  TEV.desactiverEleve({id:id,email:email}).then(function(){chargerDonnees();}).catch(function(e){console.error(e.message);});
 }
 
 // ================================================================
@@ -5258,7 +5222,7 @@ function valGuideeEssai(email, date, btn) {
     if(e){ e.statut='confirme'; e.presenceConfirmee=true; }
     renderTab(); return;
   }
-  postAS({action:'validerGuideeEssai',email:email,date:date}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓ Valider';});
+  TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('email',email).eq('date_essai',date).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓ Valider';});
 }
 function marquerAbsenceJour(date, email, btn) {
   if(!adminData.absencesJour) adminData.absencesJour=[];
@@ -5288,7 +5252,7 @@ function envoyerEmailAttente(email, date, niveau, role, btn) {
 function pointerEssai(date, email, present) {
   var e = adminData.essai.find(function(x){return x.email===email&&x.date===date;});
   if (e) e.present = present;
-  if (!IS_DEMO) postAS({action:'pointerEssai',email:email,date:date,present:present}).catch(function(){});
+  if (!IS_DEMO) TEV.client.from('inscriptions_essai').update({presence_confirmee:!!present}).eq('email',email).eq('date_essai',date).catch(function(){});
   renderTab();
 }
 function toggleMoisAcc(id) {
@@ -5325,7 +5289,7 @@ function valYogaEssai(email, date, btn) {
 function pointerYoga(date, email, present) {
   var e = (adminData.essaiYoga||[]).find(function(x){return x.email===email&&x.date===date;});
   if (e) e.present = present;
-  if (!IS_DEMO) postAS({action:'pointerYogaEssai',email:email,date:date,present:present}).catch(function(){});
+  if (!IS_DEMO) TEV.client.from('inscriptions_essai').update({presence_confirmee:!!present}).eq('email',email).eq('date_essai',date).catch(function(){});
   renderTab();
 }
 function envYogaJ1(date, btn) {
@@ -5690,7 +5654,7 @@ function pointerCoursAction(id, date, nbCours, btn) {
   }
   if(btn)btn.disabled=true;
   var c=adminData.cartes.find(function(x){return x.id===id;});
-  postAS({action:'pointageManuel',eleveId:id,date:date,niveau:c?c.niveau:'',note:'Pointage admin',nbCours:nbCours})
+  TEV.pointerCours({eleveId:id,date:date,niveau:c?c.niveau:'',note:'Pointage admin',nbCours:nbCours})
     .then(function(r){
       if(r&&r.skipped){afficherToast('Déjà pointé ce jour');}
       else if(c){
@@ -5723,7 +5687,7 @@ var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.
 if(cte){cte.statut=paye===true?'inscrit':'attente_paiement';}
 _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCours:[],datePremierCours:'',expiration:''});}renderTab();return;}
   if(btn){btn.disabled=true;btn.textContent='⏳';}
-  postAS({action:'renouvelerCarte',eleveId:id,paye:paye===true}).then(function(){chargerDonnees();}).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
+  TEV.renouvelerCarte({eleveId:id,paye:paye===true}).then(function(){chargerDonnees();}).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
 }
 function toggleCartePaye(id) {
   var c=(adminData.cartes||[]).find(function(x){return x.id===id;});
@@ -5740,7 +5704,7 @@ function toggleCartePaye(id) {
   }
   // Synchroniser la pastille paiement dans l'interface élève
   _broadcastAdminSync('carteUpdate',{email:c.email, paye:c.paye});
-  if(!IS_DEMO)postAS({action:'toggleCartePaye',eleveId:id,paye:c.paye}).catch(function(){});
+  if(!IS_DEMO)TEV.toggleCartePaye({eleveId:id,paye:c.paye}).catch(function(){});
   renderTab();
 }
 var _editCarteId = null;
@@ -6717,7 +6681,7 @@ function sauverModifAgenda() {
   agendaModifs.push({id:'AM'+Date.now(), date:date, type:type, action:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu});
   var ok = gel('am-ok');
   if (ok) { ok.style.display='block'; setTimeout(function(){ok.style.display='none';},2500); }
-  if (!IS_DEMO) postAS({action:'sauverModifAgenda', date:date, type:type, actionType:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu}).catch(function(){});
+  if (!IS_DEMO) TEV.sauverModifAgenda({type:type, date:date, action:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu}).catch(function(){});
   saveCoursDatesRemote();
   _broadcastAdminSync('agendaUpdate', {type:type, date:date, action:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu});
   renderTab();
@@ -7063,17 +7027,17 @@ function savePub(existingId) {
     _broadcastAdminSync('newPublication', newPub);
     gel('pub-ed').innerHTML=''; renderTab(); return;
   }
-  postAS(payload).then(function(r){if(r.error)throw new Error(r.error);gel('pub-ed').innerHTML='';chargerDonnees();}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+  TEV.sauvegarderPublication({id:existingId,titre:payload.titre,contenu:payload.contenu}).then(function(){gel('pub-ed').innerHTML='';chargerDonnees();}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
 }
 function publierPub(id, btn) {
   btn.disabled=true;
   if(IS_DEMO){var p=adminData.publications&&adminData.publications.find(function(x){return x.id===id;});if(p){p.publiee=true;_broadcastAdminSync('newPublication',p);}renderTab();return;}
-  postAS({action:'publierPublication',id:id}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;});
+  TEV.publierPublication(id).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;});
 }
 function supprimerPub(id, btn) {
   btn.disabled=true;
   if(IS_DEMO){adminData.publications=(adminData.publications||[]).filter(function(p){return p.id!==id;});renderTab();return;}
-  postAS({action:'supprimerPublication',id:id}).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;});
+  TEV.supprimerPublication(id).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;});
 }
 
 // ================================================================
@@ -7422,7 +7386,7 @@ function changerStatutCoursTango(id, statut, btn) {
     }
     renderTab(); return;
   }
-  postAS({action:'changerStatutCoursTango',id:id,statut:statut}).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+  TEV.client.from('inscriptions_cours').update({statut:statut}).eq('id',id).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
 }
 
 function prefillVP(id) {
@@ -7734,8 +7698,31 @@ gel('btn-logout').addEventListener('click', logout);
 document.querySelectorAll('.tab-btn[data-tab]').forEach(function(btn) {
   btn.addEventListener('click', function() { switchTab(btn.dataset.tab); });
 });
-// Préremplir l'email en mode démo
-if (IS_DEMO) gel('login-email').value = 'tangoetvous@gmail.com';
+// Pré-remplir l'email et écouter le retour Supabase OTP
+gel('login-email').value = 'tangoetvous@gmail.com';
+TEV.onAuthChange(function(event, session) {
+  if (session && session.user) {
+    var email = session.user.email;
+    if (ADMIN_EMAILS.indexOf(email) >= 0) {
+      // Nettoyer l'URL après redirection OTP
+      if (window.location.hash || window.location.search.includes('access_token')) {
+        history.replaceState(null, '', window.location.pathname);
+      }
+      IS_DEMO = false;
+      adminData._email = email;
+      adminData = Object.assign({}, JSON.parse(JSON.stringify(DEMO_DATA)), { _email: email });
+      recalcStats();
+      filtreStage = Object.keys(adminData.stages)[0]||'';
+      chargerTarifs(); chargerLivrets(); chargerDatesYogaStages(); chargerMilongas();
+      gel('login-screen').style.display='none';
+      gel('app').style.display='block';
+      updateSaisonSelect();
+      traiterInscriptionsEnAttente();
+      renderTab();
+      chargerDonnees();
+    }
+  }
+});
 
 // ================================================================
 // DISCUSSIONS (ADMIN)
@@ -7746,10 +7733,18 @@ function chargerDiscussions(callback) {
     if (callback) callback();
     return;
   }
-  fetch(APPS_SCRIPT_URL + '?action=getDiscussions')
-    .then(function(r){ return r.json(); })
-    .then(function(d){ adminData.discussions = d.discussions||[]; if(callback) callback(); })
-    .catch(function(){ adminData.discussions = adminData.discussions||[]; if(callback) callback(); });
+  TEV.getDiscussions().then(function(discs) {
+    adminData.discussions = discs.map(function(d) {
+      return {
+        id: d.id, titre: d.titre,
+        createur_email: d.eleve_email, createur_nom: d.eleve_nom,
+        statut: d.fermee ? 'ferme' : 'ouvert',
+        groupes: [],
+        date: d.last_message_at || d.created_at,
+      };
+    });
+    if (callback) callback();
+  }).catch(function() { adminData.discussions = adminData.discussions||[]; if(callback) callback(); });
 }
 
 function _discGroupLabel(g) {
@@ -7866,10 +7861,12 @@ function _discLoadMessages() {
     try{var m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]');_discMsgs=m;_discRenderMsgs();}catch(e){}
     return;
   }
-  fetch(APPS_SCRIPT_URL+'?action=getDiscussionMessages&id='+encodeURIComponent(_discCurrentId))
-    .then(function(r){return r.json();})
-    .then(function(d){ if(d&&d.messages){_discMsgs=d.messages;_discRenderMsgs();} })
-    .catch(function(){});
+  TEV.getMessages(_discCurrentId).then(function(msgs) {
+    _discMsgs = msgs.map(function(m) {
+      return {id:m.id, discussion_id:m.discussion_id, auteur_email:m.auteur_email, auteur_nom:m.auteur_email, message:m.contenu, date:m.created_at};
+    });
+    _discRenderMsgs();
+  }).catch(function(){});
 }
 
 function _discStartPoll() {
@@ -7881,13 +7878,11 @@ function _discStartPoll() {
       _discPollTO=setTimeout(doPoll,3000);
       return;
     }
-    fetch(APPS_SCRIPT_URL+'?action=getDiscussionMessages&id='+encodeURIComponent(_discCurrentId))
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if(d&&d.messages&&d.messages.length!==_discMsgs.length){ _discMsgs=d.messages; _discRenderMsgs(); }
-        _discPollTO=setTimeout(doPoll,15000);
-      })
-      .catch(function(){ _discPollTO=setTimeout(doPoll,20000); });
+    TEV.getMessages(_discCurrentId).then(function(msgs) {
+      var mapped=msgs.map(function(m){return{id:m.id,discussion_id:m.discussion_id,auteur_email:m.auteur_email,auteur_nom:m.auteur_email,message:m.contenu,date:m.created_at};});
+      if(mapped.length!==_discMsgs.length){ _discMsgs=mapped; _discRenderMsgs(); }
+      _discPollTO=setTimeout(doPoll,15000);
+    }).catch(function(){ _discPollTO=setTimeout(doPoll,20000); });
   }
   _discPollTO=setTimeout(doPoll,3000);
 }
@@ -7909,7 +7904,7 @@ function _discEnvoyerMsg() {
     try{var m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]');m.push(newMsg);localStorage.setItem('tev_demo_msgs_'+_discCurrentId,JSON.stringify(m));}catch(e){}
     return;
   }
-  postAS({action:'postDiscussionMessage',discussion_id:_discCurrentId,auteur_email:adminData._email||'',auteur_nom:nom,message:msg}).catch(function(){});
+  TEV.postMessage({discussionId:_discCurrentId,auteur:'admin',auteurEmail:adminData._email||'',contenu:msg}).catch(function(){});
 }
 </script>
 </body>
