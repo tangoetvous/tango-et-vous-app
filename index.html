@@ -943,12 +943,12 @@
   function renderNavOverlay() {
     const grid = $('nav-overlay-grid');
     if (!grid) return;
-    const hasCarte = !!(eleveData && eleveData.carte && (eleveData.carte.id || eleveData.carte.restants >= 0));
+    const hasCarte = !!(eleveData && eleveData.carte && (eleveData.carte.id || eleveData.carte.restants >= 0 || eleveData.carte.coursRestants >= 0));
     const m = new Date().getMonth() + 1;
     const isPreinscPeriod = m >= 5 && m <= 8;
     const rows = [
       ['accueil'],
-      [...(hasCarte ? ['carte'] : []), 'stages', 'cours-particuliers', 'milonga', ...(isPreinscPeriod ? ['preinscription'] : [])],
+      ['carte', 'stages', 'cours-particuliers', 'milonga', ...(isPreinscPeriod ? ['preinscription'] : [])],
       ['agenda', 'carte-lieux', 'actu'],
       ['yoga', 'hypnose'],
       ['contact', 'whatsapp', 'discussions', 'avis']
@@ -1183,7 +1183,6 @@
       h += '<div style="flex:1;">'
         + '<div style="font-size:38px;font-weight:200;color:#fff;line-height:1;">' + remaining + '</div>'
         + '<div style="font-size:14px;color:#fff;letter-spacing:1px;margin-bottom:10px;">cours restants</div>';
-      if (carte.statut) h += '<span class="statut-pill ' + ((carte.statut||'').includes('🟢') ? 'active' : (carte.statut||'').includes('🟡') ? 'soon' : 'empty') + '" style="font-size:11px;">' + carte.statut + '</span>';
       h += '</div></div>';
       h += dots;
       if (carte.dateExpiration) h += '<div style="font-size:13px;color:#fff;margin-top:4px;">Expiration : ' + formatDate(carte.dateExpiration) + '</div>';
