@@ -2857,7 +2857,7 @@ a{color:var(--gold);text-decoration:none;}
 }
 .nav-overlay{
   position:fixed;inset:0;background:#0a0a0a;
-  z-index:200;display:flex;flex-direction:column;
+  z-index:1000;display:flex;flex-direction:column;
   transform:translateX(100%);
   transition:transform .28s cubic-bezier(.4,0,.2,1);
 }
@@ -3801,10 +3801,10 @@ if('serviceWorker' in navigator){
   (function() {
     var MILONGAS_FB = [
       { id:'milonga-dolce-vita', label:'Milonga La Dolce Vita', nom:'La Dolce Vita',
-        lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)'},
+        lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)', metroGps:'48.8462,2.3872'},
         color:'#ff8c00', horaire_debut:'17h30', horaire_fin:'23h30' },
       { id:'milonga-colectivo', label:'Milonga Le Colectivo', nom:'Le Colectivo',
-        lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)'},
+        lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)', metroGps:'48.8773,2.3892'},
         color:'#4dd0e1', horaire_debut:'20h30', horaire_fin:'2h' }
     ];
     var milSrc = MILONGAS_FB;
@@ -3819,6 +3819,9 @@ if('serviceWorker' in navigator){
       var lng = pts[1] ? parseFloat(pts[1]) : 0;
       var rue = (mil.lieu||{}).rue||'';
       var tpt = (mil.lieu||{}).transport||'';
+      var metroGpsRaw = ((mil.lieu||{}).metroGps||'').split(',');
+      var metroLat = metroGpsRaw[0] ? parseFloat(metroGpsRaw[0]) : 0;
+      var metroLng = metroGpsRaw[1] ? parseFloat(metroGpsRaw[1]) : 0;
       LIEUX.push({
         id: mil.id,
         label: mil.label||mil.nom,
@@ -3827,7 +3830,7 @@ if('serviceWorker' in navigator){
         geocodeQuery: rue,
         sub: (mil.horaire_debut||'17h30')+'\u2013'+(mil.horaire_fin||'23h30')+' \u00b7 '+tpt,
         lat: lat||0, lng: lng||0,
-        metro: { geocodeQuery: tpt, lat: 0, lng: 0, name: tpt },
+        metro: { geocodeQuery: tpt, lat: metroLat, lng: metroLng, name: tpt },
         color: mil.color||'#ff8c00',
         mapsUrl: gps
           ? 'https://maps.google.com/?q='+encodeURIComponent(gps)
@@ -3837,7 +3840,7 @@ if('serviceWorker' in navigator){
   })();
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v6';
+  var CACHE_KEY = 'tev_plan_coords_v7';
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
