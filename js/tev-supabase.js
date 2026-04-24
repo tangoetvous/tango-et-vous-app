@@ -541,6 +541,7 @@ function _calcExpirationSb(dateStr, ville) {
 window.TEV = {
   // Auth
   signInMagicLink: tevSignInMagicLink,
+  verifyOtp:       tevVerifyOtp,
   signOut:         tevSignOut,
   onAuthChange:    tevOnAuthChange,
   getSession:      tevGetSession,

@@ -145,11 +145,25 @@
       await TEV.signInMagicLink(email);
       window.localStorage.setItem('emailForSignIn', email);
       $('auth-email-sent').textContent = email;
+      if ($('auth-otp')) $('auth-otp').value = '';
       showScreen('screen-sent');
     } catch(e) {
       showMsg('auth-msg', 'Erreur : ' + (e.message || 'impossible d\'envoyer le lien.'));
     } finally {
       setLoading('btn-magic', false);
+    }
+  };
+
+  window.verifyOtp = async function() {
+    const email = window.localStorage.getItem('emailForSignIn') || '';
+    const token = ($('auth-otp').value || '').trim();
+    if (!token || token.length !== 6) { showMsg('otp-msg', 'Saisissez le code à 6 chiffres.'); return; }
+    setLoading('btn-verify-otp', true);
+    try {
+      await TEV.verifyOtp(email, token);
+    } catch(e) {
+      showMsg('otp-msg', 'Code invalide ou expiré. Réessayez.');
+      setLoading('btn-verify-otp', false);
     }
   };
 
@@ -2409,6 +2423,10 @@
     if (authEmail) authEmail.addEventListener('keydown', e => { if (e.key === 'Enter') window.sendMagicLink(); });
     const btnDemo = document.querySelector('.btn-demo');
     if (btnDemo) btnDemo.addEventListener('click', () => window.demoLogin());
+    const btnVerifyOtp = $('btn-verify-otp');
+    if (btnVerifyOtp) btnVerifyOtp.addEventListener('click', () => window.verifyOtp());
+    const authOtp = $('auth-otp');
+    if (authOtp) authOtp.addEventListener('keydown', e => { if (e.key === 'Enter') window.verifyOtp(); });
     const btnBackSent = $('btn-back-sent');
     if (btnBackSent) btnBackSent.addEventListener('click', () => window.goBackAuth());
     const btnBackNF = $('btn-back-notfound');
@@ -3386,7 +3404,7 @@ a{color:var(--gold);text-decoration:none;}
         <label>Adresse email</label>
         <input type="email" id="auth-email" placeholder="votre@email.com" autocomplete="email" autocapitalize="none"/>
       </div>
-      <button class="btn-primary" id="btn-magic">Recevoir mon lien de connexion</button>
+      <button class="btn-primary" id="btn-magic">Recevoir mon code de connexion</button>
       <div class="msg" id="auth-msg"></div>
       <div id="demo-btn-wrap">
         <p style="font-size:11px;color:#444;margin-bottom:8px;letter-spacing:1px;">— MODE DÉMONSTRATION —</p>
@@ -3403,11 +3421,15 @@ a{color:var(--gold);text-decoration:none;}
 <div class="screen" id="screen-sent">
   <div class="sent-card">
     <span class="sent-icon">✉️</span>
-    <div class="sent-title">Lien envoyé !</div>
-    <div class="sent-desc">Un lien de connexion a été envoyé à</div>
+    <div class="sent-title">Code envoyé !</div>
+    <div class="sent-desc">Un code à 6 chiffres a été envoyé à</div>
     <div class="sent-email" id="auth-email-sent"></div>
-    <div class="sent-note">Vérifiez votre boîte de réception (et vos spams si besoin).<br/>Le lien est valable <strong style="color:var(--text)">1 heure</strong>.<br/>Appuyez dessus depuis votre téléphone pour vous connecter.</div>
-    <button class="btn-back" id="btn-back-sent">← Changer d'adresse email</button>
+    <div class="sent-note">Saisissez le code reçu par email ci-dessous.</div>
+    <input type="text" id="auth-otp" placeholder="123456" maxlength="6" inputmode="numeric"
+      style="font-size:26px;letter-spacing:8px;text-align:center;width:100%;padding:14px;border-radius:10px;border:1px solid #333;background:#111;color:#fff;margin:12px 0;box-sizing:border-box;"/>
+    <div class="msg" id="otp-msg"></div>
+    <button class="btn-primary" id="btn-verify-otp" style="margin-top:4px;">Se connecter</button>
+    <button class="btn-back" id="btn-back-sent" style="margin-top:8px;">← Changer d'adresse email</button>
   </div>
 </div>
 
