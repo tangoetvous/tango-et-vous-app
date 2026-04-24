@@ -35,6 +35,11 @@ async function tevSignInMagicLink(email) {
   if (error) throw error;
 }
 
+async function tevVerifyOtp(email, token) {
+  const { error } = await _tev.auth.verifyOtp({ email, token, type: 'email' });
+  if (error) throw error;
+}
+
 async function tevSignOut() {
   await _tev.auth.signOut();
 }

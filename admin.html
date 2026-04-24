@@ -306,15 +306,24 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
         <input type="email" id="login-email" placeholder="votre@email.com" autocapitalize="none"/>
       </div>
       <button class="btn btn-gold" id="btn-login" style="width:100%;padding:12px;font-size:13px;">
-        Recevoir le lien de connexion
+        Recevoir le code de connexion
       </button>
       <div class="box-err" id="login-err" style="margin-top:10px;"></div>
     </div>
     <div id="ls2" style="display:none;">
       <div class="box-ok" style="display:block;margin-bottom:14px;">
-        ✓ Lien envoyé ! Vérifiez votre boîte email et cliquez sur le lien de connexion.
+        ✓ Code envoyé ! Saisissez le code à 6 chiffres reçu par email.
       </div>
-      <button class="btn btn-ghost" id="btn-login-back" style="width:100%;">← Retour</button>
+      <div class="field">
+        <label>Code à 6 chiffres</label>
+        <input type="text" id="login-otp" placeholder="123456" maxlength="6" inputmode="numeric"
+          style="font-size:22px;letter-spacing:6px;text-align:center;"/>
+      </div>
+      <button class="btn btn-gold" id="btn-verify-otp" style="width:100%;padding:12px;font-size:13px;">
+        Se connecter
+      </button>
+      <div class="box-err" id="login-otp-err" style="margin-top:10px;"></div>
+      <button class="btn btn-ghost" id="btn-login-back" style="width:100%;margin-top:8px;">← Retour</button>
     </div>
   </div>
 </div>
@@ -3590,7 +3599,23 @@ function envoyerLien() {
     errEl.textContent = (e && e.message) || 'Erreur lors de l\'envoi.';
     errEl.style.display = 'block';
     btn.disabled = false;
-    btn.textContent = 'Recevoir le lien de connexion';
+    btn.textContent = 'Recevoir le code de connexion';
+  });
+}
+function verifierOtp() {
+  var email = gel('login-email').value.trim().toLowerCase();
+  var token = gel('login-otp').value.trim();
+  var errEl = gel('login-otp-err');
+  errEl.style.display = 'none';
+  if (!token || token.length !== 6) { errEl.textContent='Code à 6 chiffres requis.'; errEl.style.display='block'; return; }
+  var btn = gel('btn-verify-otp');
+  btn.disabled = true;
+  btn.textContent = 'Vérification…';
+  tevVerifyOtp(email, token).catch(function(e) {
+    errEl.textContent = (e && e.message) || 'Code invalide ou expiré.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Se connecter';
   });
 }
 function demarrerDemoApp(email) {
@@ -7732,9 +7757,14 @@ function soumettreDemande() {
 // INIT — attacher les listeners statiques
 // ================================================================
 gel('btn-login').addEventListener('click', envoyerLien);
+gel('btn-verify-otp').addEventListener('click', verifierOtp);
+gel('login-otp').addEventListener('keydown', function(e){ if(e.key==='Enter') verifierOtp(); });
 gel('btn-login-back').addEventListener('click', function() {
   gel('ls1').style.display='block';
   gel('ls2').style.display='none';
+  gel('login-otp').value='';
+  gel('login-otp-err').style.display='none';
+  var btn=gel('btn-login'); btn.disabled=false; btn.textContent='Recevoir le code de connexion';
 });
 gel('btn-logout').addEventListener('click', logout);
 document.querySelectorAll('.tab-btn[data-tab]').forEach(function(btn) {
