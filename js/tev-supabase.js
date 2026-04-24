@@ -28,10 +28,7 @@ function _fmtDateSb(val) {
 // ================================================================
 
 async function tevSignInMagicLink(email) {
-  const { error } = await _tev.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.origin + window.location.pathname },
-  });
+  const { error } = await _tev.auth.signInWithOtp({ email });
   if (error) throw error;
 }
 
