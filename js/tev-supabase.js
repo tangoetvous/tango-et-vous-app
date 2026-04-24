@@ -249,6 +249,7 @@ async function tevGetAdminData() {
     niveau:          e.niveau,
     email:           e.email,
     tel:             e.tel,
+    role:            e.role,
     statutEleve:     e.statut_eleve,
     source:          e.source,
     partenaire:      e.partenaire,
