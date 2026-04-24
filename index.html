@@ -157,7 +157,7 @@
   window.verifyOtp = async function() {
     const email = window.localStorage.getItem('emailForSignIn') || '';
     const token = ($('auth-otp').value || '').trim();
-    if (!token || token.length !== 6) { showMsg('otp-msg', 'Saisissez le code à 6 chiffres.'); return; }
+    if (!token || token.length < 6) { showMsg('otp-msg', 'Saisissez le code reçu par email.'); return; }
     setLoading('btn-verify-otp', true);
     try {
       await TEV.verifyOtp(email, token);
@@ -3425,7 +3425,7 @@ a{color:var(--gold);text-decoration:none;}
     <div class="sent-desc">Un code à 6 chiffres a été envoyé à</div>
     <div class="sent-email" id="auth-email-sent"></div>
     <div class="sent-note">Saisissez le code reçu par email ci-dessous.</div>
-    <input type="text" id="auth-otp" placeholder="123456" maxlength="6" inputmode="numeric"
+    <input type="text" id="auth-otp" placeholder="12345678" maxlength="8" inputmode="numeric"
       style="font-size:26px;letter-spacing:8px;text-align:center;width:100%;padding:14px;border-radius:10px;border:1px solid #333;background:#111;color:#fff;margin:12px 0;box-sizing:border-box;"/>
     <div class="msg" id="otp-msg"></div>
     <button class="btn-primary" id="btn-verify-otp" style="margin-top:4px;">Se connecter</button>

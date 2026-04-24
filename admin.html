@@ -312,11 +312,11 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     </div>
     <div id="ls2" style="display:none;">
       <div class="box-ok" style="display:block;margin-bottom:14px;">
-        ✓ Code envoyé ! Saisissez le code à 6 chiffres reçu par email.
+        ✓ Code envoyé ! Saisissez le code reçu par email reçu par email.
       </div>
       <div class="field">
         <label>Code à 6 chiffres</label>
-        <input type="text" id="login-otp" placeholder="123456" maxlength="6" inputmode="numeric"
+        <input type="text" id="login-otp" placeholder="12345678" maxlength="8" inputmode="numeric"
           style="font-size:22px;letter-spacing:6px;text-align:center;"/>
       </div>
       <button class="btn btn-gold" id="btn-verify-otp" style="width:100%;padding:12px;font-size:13px;">
@@ -3607,7 +3607,7 @@ function verifierOtp() {
   var token = gel('login-otp').value.trim();
   var errEl = gel('login-otp-err');
   errEl.style.display = 'none';
-  if (!token || token.length !== 6) { errEl.textContent='Code à 6 chiffres requis.'; errEl.style.display='block'; return; }
+  if (!token || token.length < 6) { errEl.textContent='Code requis.'; errEl.style.display='block'; return; }
   var btn = gel('btn-verify-otp');
   btn.disabled = true;
   btn.textContent = 'Vérification…';
