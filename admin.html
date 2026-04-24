@@ -312,7 +312,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     </div>
     <div id="ls2" style="display:none;">
       <div class="box-ok" style="display:block;margin-bottom:14px;">
-        ✓ En mode démo, connexion directe. En production, copiez le lien reçu par email et ouvrez-le dans votre navigateur.
+        ✓ Lien envoyé ! Vérifiez votre boîte email et cliquez sur le lien de connexion.
       </div>
       <button class="btn btn-ghost" id="btn-login-back" style="width:100%;">← Retour</button>
     </div>
@@ -3580,8 +3580,18 @@ function envoyerLien() {
   errEl.style.display = 'none';
   if (!email) { errEl.textContent='Email requis.'; errEl.style.display='block'; return; }
   if (ADMIN_EMAILS.indexOf(email) < 0) { errEl.textContent='Email non autorisé.'; errEl.style.display='block'; return; }
-  // Mode démo — connexion directe
-  demarrerDemoApp(email);
+  var btn = gel('btn-login');
+  btn.disabled = true;
+  btn.textContent = 'Envoi en cours…';
+  tevSignInMagicLink(email).then(function() {
+    gel('ls1').style.display = 'none';
+    gel('ls2').style.display = 'block';
+  }).catch(function(e) {
+    errEl.textContent = (e && e.message) || 'Erreur lors de l\'envoi.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Recevoir le lien de connexion';
+  });
 }
 function demarrerDemoApp(email) {
   IS_DEMO = true;
