@@ -83,3 +83,12 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - `supabase/import_eleves_2025_2026.sql` : import initial élèves + inscriptions tango
 - `supabase/import_cours_yoga.sql` : import élèves yoga dans cours_yoga
 - `supabase/update_paiements.sql` : mise à jour paiement+montant depuis CSV original
+
+## Saisie des données — règle importante
+À partir de la saison 2026-2027, **toutes les données entrent exclusivement par** :
+1. **Formulaires publics** sur www.tangoetvous.com (essai tango, demande d'inscription tango, stages, essai yoga)
+2. **Formulaires dans l'appli admin** (boutons "Inscrire" dans Élèves Tango, Inscriptions Tango, Stages, Yoga, etc.)
+3. **Section Paramètres** de l'appli admin
+
+Les imports SQL en masse (comme pour 2025-2026) ne doivent plus être nécessaires.
+Claude ne saisit des données directement en SQL qu'exceptionnellement, sur demande explicite.
