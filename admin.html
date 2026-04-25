@@ -1007,16 +1007,13 @@ function listeSaisons() {
 function changerSaisonVue(val) {
   saisonVue = val||null;
   var sel=gel('hdr-saison'); if(sel) sel.value=val||'';
-  updateSaisonSelect();
+  _styleSaisonSelect();
   chargerMilongas(saisonActive()); // recharge milongas pour la saison visée
   renderTab();
 }
-function updateSaisonSelect() {
+function _styleSaisonSelect() {
   var sel=gel('hdr-saison'); if(!sel) return;
   var sai=saisonActive();
-  sel.innerHTML=listeSaisons().map(function(s){
-    return '<option value="'+s+'"'+(s===sai?' selected':'')+'>'+s+'</option>';
-  }).join('');
   if (sai===saisonSuivante()) {
     sel.style.color='#2e7d32'; sel.style.borderColor='#2e7d32';
     sel.style.order='2'; sel.style.marginLeft='10px'; sel.style.marginRight='0';
@@ -1024,6 +1021,14 @@ function updateSaisonSelect() {
     sel.style.color='#1565c0'; sel.style.borderColor='#1565c0';
     sel.style.order='0'; sel.style.marginLeft='0'; sel.style.marginRight='10px';
   }
+}
+function updateSaisonSelect() {
+  var sel=gel('hdr-saison'); if(!sel) return;
+  var sai=saisonActive();
+  sel.innerHTML=listeSaisons().map(function(s){
+    return '<option value="'+s+'"'+(s===sai?' selected':'')+'>'+s+'</option>';
+  }).join('');
+  _styleSaisonSelect();
 }
 
 // ================================================================
