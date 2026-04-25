@@ -289,12 +289,17 @@ async function tevGetAdminData() {
     };
   });
 
+  const coursYoga = (coursYogaRaw || []).map(cy => {
+    const elv = elevesMap[cy.email] || {};
+    return { ...cy, tel: cy.tel || elv.tel || '' };
+  });
+
   return {
     cartes,
     presences:         presences        || [],
     coursParticuliers: coursParticuliers || [],
     coursTango,
-    coursYoga:         coursYogaRaw     || [],
+    coursYoga:         coursYoga,
     inscriptionsStages: inscriptionsStages || [],
     coursEssai:        inscriptionsEssai      || [],
     essaiYoga:         inscriptionsEssaiYoga  || [],
