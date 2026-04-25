@@ -85,7 +85,9 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - `supabase/update_paiements.sql` : mise à jour paiement+montant depuis CSV original
 
 ## Comportement des formulaires publics selon la période
-Le formulaire `inscription-cours.html` détecte automatiquement le mode selon la date :
+
+### `inscription-cours.html` (inscription tango régulier)
+Détecte automatiquement le mode selon la date :
 - **Septembre → avril** : mode `regulier` → saison courante
 - **Mai → août** : mode `preinscription` → saison suivante
 - **Mai–juin** (sans mode forcé dans l'URL) : écran de choix proposé à l'utilisateur
@@ -93,6 +95,21 @@ Le formulaire `inscription-cours.html` détecte automatiquement le mode selon la
 Override possible via URL : `?mode=preinscription` ou `?mode=regulier`
 
 En mode préinscription, les tarifs de la prochaine saison sont lus depuis les Paramètres admin (`localStorage` clé `tev_tarifs_prochaine_saison`). Les liens AssoConnect changent aussi selon la saison détectée.
+
+### `cours-essai.html` (cours d'essai tango)
+- Les dates sont **codées en dur** dans l'objet `DATES` (organisé par ville/niveau)
+- Seules les dates **futures** sont affichées (filtrées dynamiquement à partir d'aujourd'hui)
+- Les deux saisons coexistent dans la liste, séparées par des en-têtes de saison
+- Les 4 premières dates de septembre de chaque saison ont `gratuit:true` → badge "GRATUIT"
+- Système de quotas temps réel : appel fetch pour compter inscrits, badge "Complet" si quota atteint
+- Pour mettre à jour les dates : modifier le tableau `DATES` dans `cours-essai.html`
+
+### `essai-yoga.html` (cours d'essai yoga)
+- Dates dans le tableau plat `COURS_YOGA` (format ISO `YYYY-MM-DD`, ordre chronologique)
+- Filtre dynamique : seulement les **20 prochaines dates futures** affichées (`slice(0, 20)`)
+- Cours **gratuits** : les **2 premiers cours de septembre** de chaque saison (détectés automatiquement par `estGratuit()`)
+- Prix pour les dates non gratuites : lu depuis `localStorage.tev_tarifs_actifs`, fallback `15€`
+- Pour mettre à jour les dates : modifier le tableau `COURS_YOGA` dans `essai-yoga.html`
 
 ## Saisie des données — règle importante
 À partir de la saison 2026-2027, **toutes les données entrent exclusivement par** :
