@@ -508,6 +508,12 @@ async function tevGetParam(cle) {
   const { data } = await _tev.from('parametres').select('valeur').eq('cle', cle).single();
   return data ? data.valeur : null;
 }
+async function tevGetAllParams() {
+  const { data } = await _tev.from('parametres').select('cle, valeur');
+  const result = {};
+  (data || []).forEach(row => { result[row.cle] = row.valeur; });
+  return result;
+}
 
 async function tevSetParam(cle, valeur) {
   await _tev.from('parametres').upsert({ cle, valeur }, { onConflict: 'cle' });
@@ -603,7 +609,8 @@ window.TEV = {
   getAgendaModifs:   tevGetAgendaModifs,
   sauverModifAgenda: tevSauverModifAgenda,
   // Params
-  getParam: tevGetParam,
+  getParam:    tevGetParam,
+  getAllParams: tevGetAllParams,
   setParam: tevSetParam,
   // Real-time
   subscribeEleve: tevSubscribeEleve,

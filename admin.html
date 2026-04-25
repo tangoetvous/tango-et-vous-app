@@ -420,6 +420,7 @@ function sauverLiensAssoconnect(saison, data) {
   try { stored = JSON.parse(localStorage.getItem('tev_liens_assoconnect')||'{}'); } catch(e){}
   stored[saison] = data;
   try { localStorage.setItem('tev_liens_assoconnect', JSON.stringify(stored)); } catch(e){}
+  if (!IS_DEMO) TEV.setParam('tev_liens_assoconnect', stored).catch(function(){});
   try {
     var bc = new BroadcastChannel('tev_admin');
     bc.postMessage({type:'liensAssoconnectUpdated', saison:saison, liens:data});
@@ -1359,6 +1360,7 @@ function sauverLivrets() {
   var data={};
   champs.forEach(function(k){data[k]=(gel('livret-'+k)||{}).value||'';});
   try { localStorage.setItem('tev_livrets',JSON.stringify(data)); Object.assign(LIVRETS,data); } catch(e){}
+  if (!IS_DEMO) TEV.setParam('tev_livrets', data).catch(function(){});
   afficherToast('✓ Livrets enregistrés');
   renderTab();
 }
@@ -1963,7 +1965,9 @@ function chargerMilongas(sai) {
 }
 function sauverMilongas(sai) {
   var key = 'tev_milongas_' + (sai || saisonParametres || saisonCourante());
-  try { localStorage.setItem(key, JSON.stringify({milongas:MILONGAS, modifie:today()})); } catch(e){}
+  var val = {milongas:MILONGAS, modifie:today()};
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
+  if (!IS_DEMO) TEV.setParam(key, val).catch(function(){});
 }
 
 function _parseDateLine(line) {
@@ -1983,7 +1987,9 @@ function sauverDatesYoga(sai) {
   });
   dates.sort();
   if (!dates.length) { afficherToast('⚠️ Aucune date valide'); return; }
-  try { localStorage.setItem('tev_dates_yoga_'+sai, JSON.stringify({saison:sai, dates:dates, modifie:today()})); } catch(e){}
+  var _yogaVal = {saison:sai, dates:dates, modifie:today()};
+  try { localStorage.setItem('tev_dates_yoga_'+sai, JSON.stringify(_yogaVal)); } catch(e){}
+  if (!IS_DEMO) TEV.setParam('tev_dates_yoga_'+sai, _yogaVal).catch(function(){});
   chargerDatesYogaStages();
   saveCoursDatesLocal();
   afficherToast('✓ '+dates.length+' dates yoga '+sai+' enregistrées');
@@ -2006,7 +2012,9 @@ function sauverDatesStages(sai) {
   });
   stages.sort(function(a,b){return a.date.localeCompare(b.date);});
   if (!stages.length) { afficherToast('⚠️ Aucune date valide'); return; }
-  try { localStorage.setItem('tev_dates_stages_'+sai, JSON.stringify({saison:sai, stages:stages, modifie:today()})); } catch(e){}
+  var _stVal = {saison:sai, stages:stages, modifie:today()};
+  try { localStorage.setItem('tev_dates_stages_'+sai, JSON.stringify(_stVal)); } catch(e){}
+  if (!IS_DEMO) TEV.setParam('tev_dates_stages_'+sai, _stVal).catch(function(){});
   chargerDatesYogaStages();
   // Synchroniser adminData.stages
   stages.forEach(function(st){
@@ -2044,6 +2052,7 @@ function _saveParam(type, sai, section, value) {
   try { raw=JSON.parse(localStorage.getItem(key)||'{}'); } catch(e){}
   raw[section]=value;
   try { localStorage.setItem(key,JSON.stringify(raw)); } catch(e){}
+  if (!IS_DEMO) TEV.setParam(key, raw).catch(function(){});
 }
 function _iAccord(type, section) {
   var k=type+'-'+section;
@@ -3664,7 +3673,7 @@ function demarrerApp(email, isDemo) {
   traiterInscriptionsEnAttente();
   renderTab();
   demarrerPollEssais();
-  if (!IS_DEMO) { chargerDonnees(); chargerResaSalles(); }
+  if (!IS_DEMO) { chargerDonnees(); chargerParamsRemote(); }
 }
 // Event listener sélecteur de saison dans le header
 document.addEventListener('DOMContentLoaded', function() {
@@ -4485,12 +4494,12 @@ function handleAction(action, btn) {
       })();
       break;
     case 'ouvrir-preinscription':
-      try { var _cfg=JSON.parse(localStorage.getItem('tev_config_saison')||'{}');_cfg.preInscriptionOuverte=true;_cfg.saisonProchaine=saisonSuivante();localStorage.setItem('tev_config_saison',JSON.stringify(_cfg)); } catch(ex){}
+      (function(){ try { var _cfg=JSON.parse(localStorage.getItem('tev_config_saison')||'{}');_cfg.preInscriptionOuverte=true;_cfg.saisonProchaine=saisonSuivante();localStorage.setItem('tev_config_saison',JSON.stringify(_cfg));if(!IS_DEMO)TEV.setParam('tev_config_saison',_cfg).catch(function(){}); } catch(ex){} })();
       afficherToast('✓ Pré-inscriptions '+saisonSuivante()+' ouvertes');
       renderTab();
       break;
     case 'fermer-preinscription':
-      try { var _cfg=JSON.parse(localStorage.getItem('tev_config_saison')||'{}');_cfg.preInscriptionOuverte=false;localStorage.setItem('tev_config_saison',JSON.stringify(_cfg)); } catch(ex){}
+      (function(){ try { var _cfg=JSON.parse(localStorage.getItem('tev_config_saison')||'{}');_cfg.preInscriptionOuverte=false;localStorage.setItem('tev_config_saison',JSON.stringify(_cfg));if(!IS_DEMO)TEV.setParam('tev_config_saison',_cfg).catch(function(){}); } catch(ex){} })();
       afficherToast('Pré-inscriptions fermées.');
       renderTab();
       break;
@@ -4546,6 +4555,7 @@ function handleAction(action, btn) {
           p16_ext:  parseFloat((gel('sor-p16-ext') ||{}).value)||0
         };
         try { localStorage.setItem('tev_adhesion_sorano', JSON.stringify(sor)); } catch(e){}
+        if (!IS_DEMO) TEV.setParam('tev_adhesion_sorano', sor).catch(function(){});
         afficherToast('\u2713 Adh\u00e9sion Sorano enregistr\u00e9e');
       })();
       break;
@@ -7913,7 +7923,7 @@ TEV.onAuthChange(function(event, session) {
       updateSaisonSelect();
       traiterInscriptionsEnAttente();
       renderTab();
-      chargerDonnees(); chargerResaSalles();
+      chargerDonnees(); chargerParamsRemote();
     }
   }
 });
@@ -7969,13 +7979,32 @@ function saveResaSalles(salles) {
   try { localStorage.setItem('tev_resa_salles', JSON.stringify(salles)); } catch(e) {}
   if (!IS_DEMO) TEV.setParam('resa_salles', salles).catch(function(){});
 }
-async function chargerResaSalles() {
+async function chargerParamsRemote() {
   if (IS_DEMO) return;
   try {
-    var remote = await TEV.getParam('resa_salles');
-    if (Array.isArray(remote) && remote.length) {
-      localStorage.setItem('tev_resa_salles', JSON.stringify(remote));
-      if (currentTab==='resa-salles' || currentTab==='tarifs') renderTab();
+    var params = await TEV.getAllParams();
+    var KEYS_LOCAUX = ['tev_liens_assoconnect','tev_livrets','tev_adhesion_sorano','tev_config_saison','tev_resa_salles','tev_tarifs','tev_cours_dates'];
+    var changed = false;
+    Object.keys(params).forEach(function(cle) {
+      var val = params[cle];
+      if (val === null || val === undefined) return;
+      // clés préfixées tev_ stockées directement, sinon reconstruire
+      var localKey = (cle.indexOf('tev_')===0) ? cle : cle;
+      try {
+        var current = localStorage.getItem(localKey);
+        var incoming = JSON.stringify(val);
+        if (current !== incoming) {
+          localStorage.setItem(localKey, incoming);
+          changed = true;
+        }
+      } catch(e) {}
+    });
+    if (changed) {
+      chargerTarifs();
+      chargerLivrets();
+      chargerDatesYogaStages();
+      chargerMilongas();
+      renderTab();
     }
   } catch(e) {}
 }
