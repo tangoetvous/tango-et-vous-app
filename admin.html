@@ -371,6 +371,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
         <button class="tab-btn" data-tab="agenda" style="color:#38bdf8"><span class="tab-icon">📅</span><span class="tab-label">Agenda</span></button>
         <button class="tab-btn" data-tab="stages" style="color:#f472b6"><span class="tab-icon">💃</span><span class="tab-label">Stages</span></button>
         <button class="tab-btn" data-tab="milonga" style="color:#ff8c00"><span class="tab-icon">🎶</span><span class="tab-label">Milonga</span></button>
+        <button class="tab-btn" data-tab="resa-salles" style="color:#67e8f9"><span class="tab-icon">🏢</span><span class="tab-label">Résa Salles</span></button>
       </div>
       <div class="admin-nav-row">
         <button class="tab-btn" data-tab="publications" style="color:#fbbf24"><span class="tab-icon">📝</span><span class="tab-label">Publications</span></button>
@@ -2327,6 +2328,12 @@ function renderParametres() {
   });
   h += '</div>';
 
+  // ── Section Résa Salles ────────────────────────────────────
+  h += '<div style="margin-top:24px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Résa Salles</div>';
+  h += _renderResaSallesSection();
+  h += '</div>';
+
   // ── Section WhatsApp ────────────────────────────────────
   h += _renderWhatsappParamSection(sai);
 
@@ -3765,6 +3772,7 @@ function switchTab(tab) {
       'eleves-tango':'👥 Élèves tango','repertoire':'📋 Répertoire',
       'cours-tango':'🎓 Inscriptions Tango','essai':'🎯 Séances d\'essai',
       'cartes':'🎴 Cartes 10','stages':'💃 Stages','milonga':'🎶 Milonga',
+      'resa-salles':'🏢 Résa Salles',
       'sorano':'🏛 Sorano','yoga':'🧘 Yoga','agenda':'📅 Agenda',
       'publications':'📝 Publications','whatsapp':'💬 WhatsApp','tarifs':'⚙️ Paramètres',
       'discussions':'🗨️ Discussions'
@@ -3806,6 +3814,7 @@ function renderTab() {
     else if (currentTab==='tarifs')       html=renderParametres();
     else if (currentTab==='milonga')      html=renderMilongaPresences();
     else if (currentTab==='discussions')  html=renderDiscussions();
+    else if (currentTab==='resa-salles')  html=renderResaSalles();
     if(isSaisonPassee()){
       var banner='<div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--warn-text);display:flex;align-items:center;gap:8px;">🔒 Saison '+saisonActive()+' archivée — consultation uniquement</div>';
       html='<div class="saison-archivee">'+banner+html+'</div>';
@@ -4439,6 +4448,39 @@ function handleAction(action, btn) {
         }
         sauverLiensAssoconnect(sai, {cours:cours, renouv:renouv, yoga:yoga});
         afficherToast('✓ Liens AssoConnect '+sai+' enregistrés');
+        renderTab();
+      })();
+      break;
+    case 'sauver-resa-salles':
+      (function() {
+        var existing = loadResaSalles();
+        var salles = existing.map(function(_, idx) {
+          return {
+            nom:  (gel('resa-nom-'+idx)||{}).value  || '',
+            lien: (gel('resa-lien-'+idx)||{}).value || ''
+          };
+        });
+        saveResaSalles(salles);
+        afficherToast('✓ Salles enregistrées');
+        renderTab();
+      })();
+      break;
+    case 'ajouter-resa-salle':
+      (function() {
+        var salles = loadResaSalles();
+        salles.push({nom:'', lien:''});
+        saveResaSalles(salles);
+        renderTab();
+      })();
+      break;
+    case 'suppr-resa-salle':
+      (function() {
+        var idx = parseInt(btn.dataset.idx||'0');
+        var salles = loadResaSalles();
+        salles.splice(idx, 1);
+        if (!salles.length) salles = [{nom:'', lien:''}];
+        saveResaSalles(salles);
+        afficherToast('✓ Salle supprimée');
         renderTab();
       })();
       break;
@@ -7911,6 +7953,64 @@ function _discRelDate(iso) {
     if(diff<7)return 'il y a '+diff+' j';
     return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
   }catch(e){return '';}
+}
+
+// ================================================================
+// RÉSA SALLES
+// ================================================================
+function loadResaSalles() {
+  try {
+    var s = JSON.parse(localStorage.getItem('tev_resa_salles')||'null');
+    if (Array.isArray(s) && s.length) return s;
+  } catch(e) {}
+  return [{nom:'', lien:''}];
+}
+function saveResaSalles(salles) {
+  try { localStorage.setItem('tev_resa_salles', JSON.stringify(salles)); } catch(e) {}
+}
+function renderResaSalles() {
+  var salles = loadResaSalles().filter(function(s){ return s.nom || s.lien; });
+  var h = '<div style="padding:16px;">';
+  h += '<div class="section-hdr">🏢 Réservation de salles</div>';
+  if (!salles.length) {
+    h += '<div style="color:var(--dim);font-size:13px;text-align:center;padding:40px 20px;">Aucune salle configurée — allez dans ⚙️ Paramètres → Résa Salles</div>';
+  } else {
+    h += '<div style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">';
+    salles.forEach(function(s) {
+      var hasLien = !!s.lien;
+      h += '<a href="'+(s.lien||'#')+'" '+(hasLien?'target="_blank" rel="noopener"':'onclick="return false;"')
+        +' style="display:flex;align-items:center;gap:14px;padding:18px 20px;background:var(--card);border:1px solid var(--border);border-radius:10px;text-decoration:none;'+(hasLien?'cursor:pointer;':'cursor:default;opacity:.6;')+'">'
+        +'<span style="font-size:26px;">🏢</span>'
+        +'<span style="font-size:16px;font-weight:700;color:var(--text);flex:1;">'+s.nom+'</span>'
+        +(hasLien?'<span style="font-size:13px;color:var(--gold);">Réserver →</span>':'')
+        +'</a>';
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+function _renderResaSallesSection() {
+  var salles = loadResaSalles();
+  var iS = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;';
+  var h = '<div class="card" style="padding:0;">';
+  salles.forEach(function(salle, idx) {
+    h += '<div style="padding:12px 16px;'+(idx>0?'border-top:1px solid var(--border);':'')+'display:flex;flex-direction:column;gap:8px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+      +'<span style="font-size:12px;font-weight:600;color:var(--gold);">Salle '+(idx+1)+'</span>'
+      +(salles.length>1?'<button data-action="suppr-resa-salle" data-idx="'+idx+'" style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;font-size:14px;padding:0 4px;" title="Supprimer">✕</button>':'')
+      +'</div>'
+      +'<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Nom</label>'
+      +'<input id="resa-nom-'+idx+'" type="text" value="'+(salle.nom||'').replace(/"/g,'&quot;')+'" placeholder="ex : Espace Danse Studio" style="'+iS+'"></div>'
+      +'<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Lien vers le site</label>'
+      +'<input id="resa-lien-'+idx+'" type="url" value="'+(salle.lien||'').replace(/"/g,'&quot;')+'" placeholder="https://..." style="'+iS+'"></div>'
+      +'</div>';
+  });
+  h += '<div style="padding:10px 16px 14px;display:flex;gap:8px;border-top:1px solid var(--border);">'
+    +'<button class="btn btn-ghost" data-action="ajouter-resa-salle" style="font-size:12px;">+ Ajouter une salle</button>'
+    +'<button class="btn btn-gold" data-action="sauver-resa-salles" style="font-size:12px;">💾 Enregistrer</button>'
+    +'</div></div>';
+  return h;
 }
 
 function renderDiscussions() {
