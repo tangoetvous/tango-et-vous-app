@@ -84,6 +84,16 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - `supabase/import_cours_yoga.sql` : import élèves yoga dans cours_yoga
 - `supabase/update_paiements.sql` : mise à jour paiement+montant depuis CSV original
 
+## Comportement des formulaires publics selon la période
+Le formulaire `inscription-cours.html` détecte automatiquement le mode selon la date :
+- **Septembre → avril** : mode `regulier` → saison courante
+- **Mai → août** : mode `preinscription` → saison suivante
+- **Mai–juin** (sans mode forcé dans l'URL) : écran de choix proposé à l'utilisateur
+
+Override possible via URL : `?mode=preinscription` ou `?mode=regulier`
+
+En mode préinscription, les tarifs de la prochaine saison sont lus depuis les Paramètres admin (`localStorage` clé `tev_tarifs_prochaine_saison`). Les liens AssoConnect changent aussi selon la saison détectée.
+
 ## Saisie des données — règle importante
 À partir de la saison 2026-2027, **toutes les données entrent exclusivement par** :
 1. **Formulaires publics** sur www.tangoetvous.com (essai tango, demande d'inscription tango, stages, essai yoga)
