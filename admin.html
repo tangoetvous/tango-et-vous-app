@@ -4812,9 +4812,11 @@ function validerChangementCours(id) {
   renderTab();
   if (!IS_DEMO) {
     TEV.client.from('inscriptions_cours').update({
-      cours: cours, ville: e.ville, niveau: e.niveau,
+      ville: e.ville, niveau: e.niveau,
       paiement: paiement, montant: montant
-    }).eq('id', id).catch(function(){});
+    }).eq('id', id)
+    .then(function(){ chargerDonnees(); })
+    .catch(function(err){ afficherToast('⚠️ Erreur sauvegarde: ' + ((err&&err.message)||'')); });
   }
 }
 function supprimerEleve(id) {
@@ -4859,7 +4861,9 @@ function basculerRole(id) {
   afficherToast('✓ '+e.prenom+' '+e.nom+' → '+(e.role==='guideur'?'Guideur':'Guidée'));
   renderTab();
   if (!IS_DEMO) {
-    TEV.client.from('eleves').update({role: e.role}).eq('email', e.email).catch(function(){});
+    TEV.client.from('eleves').update({role: e.role}).eq('email', e.email)
+    .then(function(){ chargerDonnees(); })
+    .catch(function(err){ afficherToast('⚠️ Erreur sauvegarde rôle: ' + ((err&&err.message)||'')); });
   }
 }
 // ── Yoga : supprimer et changer cours ─────────────────────────────
