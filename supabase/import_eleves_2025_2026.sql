@@ -18,7 +18,7 @@
 -- Inscriptions multi-cours :
 --   flocastagnos@yahoo.fr : Florence Castagnos inscrite débutant + intermédiaire
 --   vvasiliu@gmail.com    : Vlad Vasiliu inscrit paris + vincennes
---   sandrine_billot@...   : Sandrine Billot inscrite hatha + yin
+--   mymybloch@gmail.com  : Myriam Bloch inscrite hatha + yin
 
 BEGIN;
 
@@ -175,7 +175,7 @@ VALUES
   ('WARNOD', 'Raymond', 'rwarnod@yahoo.fr', '+33652163857', 'intermediaire', 'vincennes', 'Actif', 'inscription', '', '', '', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
   ('ANTOINE', 'Baudoux', 'antoinej.baudoux@gmail.com', '+33607063758', '', '', 'Actif', 'inscription', '', '', 'yoga: hatha', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
   ('BEZZAH', 'Noham', 'bezzahnoham@gmail.com', '+33658352018', '', '', 'Actif', 'inscription', '', '', 'yoga: hatha', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
-  ('BILLOT', 'Sandrine', 'sandrine_billot@orange.fr', '+33626820835', '', '', 'Actif', 'inscription', '', '', 'yoga: hatha + yin', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
+  ('BILLOT', 'Sandrine', 'sandrine_billot@orange.fr', '+33626820835', '', '', 'Actif', 'inscription', '', '', 'yoga: hatha', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
   ('BOISSEAUX', 'Pascale', 'boisseaux.pascale@gmail.com', '+33603549110', '', '', 'Actif', 'inscription', '', '', 'yoga: hatha', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
   ('BORDIN', 'Noelle', 'nbordin@free.fr', '+33664550340', '', '', 'Actif', 'inscription', '', '', 'yoga: hatha', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
   ('CANTON-PONT', 'Claude', 'claudecanton@yahoo.fr', '+33625702853', '', '', 'Actif', 'inscription', '', '', 'yoga: hatha', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
@@ -187,7 +187,7 @@ VALUES
   ('BEDEZ', 'Bertrand', 'bertrand.bedez@yahoo.com', '+33766823672', '', '', 'Actif', 'inscription', '', '', 'yoga: yin', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
   ('BENOISTEL', 'Marie-Laure', 'ml.benoistel@gmail.com', '+33781412935', '', '', 'Actif', 'inscription', '', '', 'yoga: yin', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
   ('BENSAMOUN', 'Danielle', 'bensamoundanielle@gmail.com', '+33634483562', '', '', 'Actif', 'inscription', '', '', 'yoga: yin', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
-  ('BLOCH', 'Myriam', 'mymybloch@gmail.com', '+33672912651', '', '', 'Actif', 'inscription', '', '', 'yoga: yin', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
+  ('BLOCH', 'Myriam', 'mymybloch@gmail.com', '+33672912651', '', '', 'Actif', 'inscription', '', '', 'yoga: hatha + yin', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
   ('BOUKOBZA', 'Eva', 'evaboukobza@gmail.com', '+33629139095', '', '', 'Actif', 'inscription', '', '', 'yoga: yin', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
   ('DEMOUY', 'Marianne', 'demouy.jm@orange.fr', '+33684989290', '', '', 'Actif', 'inscription', '', '', 'yoga: yin', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
   ('GUILLOT', 'Jean-Claude', 'jean-claude.guillot14@orange.fr', '+33685958211', '', '', 'Actif', 'inscription', '', '', 'yoga: yin', '2025-2026', NULL, NULL, 0, 0, 'Forfait', TRUE),
@@ -350,7 +350,7 @@ VALUES
   ('Baudoux', 'ANTOINE', 'antoinej.baudoux@gmail.com', 'hatha', '', 'forfait', '2025-2026', 'inscrit', '', ''),
   ('Noham', 'BEZZAH', 'bezzahnoham@gmail.com', 'hatha', '', 'forfait', '2025-2026', 'inscrit', '', ''),
   ('Sandrine', 'BILLOT', 'sandrine_billot@orange.fr', 'hatha', '', 'forfait', '2025-2026', 'inscrit', '', ''),
-  ('Sandrine', 'BILLOT', 'sandrine_billot@orange.fr', 'yin', '', 'forfait', '2025-2026', 'inscrit', '', ''),
+  ('Myriam', 'BLOCH', 'mymybloch@gmail.com', 'hatha', '', 'forfait', '2025-2026', 'inscrit', '', ''),
   ('Pascale', 'BOISSEAUX', 'boisseaux.pascale@gmail.com', 'hatha', '', 'forfait', '2025-2026', 'inscrit', '', ''),
   ('Noelle', 'BORDIN', 'nbordin@free.fr', 'hatha', '', 'forfait', '2025-2026', 'inscrit', '', ''),
   ('Claude', 'CANTON-PONT', 'claudecanton@yahoo.fr', 'hatha', '', 'forfait', '2025-2026', 'inscrit', '', ''),
