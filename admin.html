@@ -3684,6 +3684,7 @@ async function chargerDonnees() {
       presences:         d.presences         || [],
       coursParticuliers: d.coursParticuliers  || [],
       coursTango:        d.coursTango         || adminData.coursTango || [],
+      coursYoga:         d.coursYoga          || adminData.coursYoga || [],
       essai:             d.coursEssai         || adminData.essai || [],
       essaiYoga:         d.essaiYoga          || adminData.essaiYoga || [],
       publications:      d.publications       || [],
@@ -4843,6 +4844,11 @@ function confirmerSupprimerEleve(id) {
   fermerContact();
   afficherToast('🗑 '+nom+' archivé·e');
   renderTab();
+  if (!IS_DEMO) {
+    TEV.client.from('inscriptions_cours').update({statut: 'supprimé'}).eq('id', id)
+    .then(function(){ chargerDonnees(); })
+    .catch(function(err){ afficherToast('⚠️ Erreur suppression: ' + ((err&&err.message)||'')); });
+  }
 }
 function majRechercheEleve(val) {
   rechercheEleve = val;
@@ -4894,6 +4900,11 @@ function validerChangementCoursYoga(id) {
   fermerContact();
   afficherToast('✓ '+e.prenom+' '+e.nom+' → '+(COURS_YOGA_LBL[e.cours]||e.cours));
   renderTab();
+  if (!IS_DEMO) {
+    TEV.client.from('cours_yoga').update({cours: e.cours}).eq('id', id)
+    .then(function(){ chargerDonnees(); })
+    .catch(function(err){ afficherToast('⚠️ Erreur sauvegarde: ' + ((err&&err.message)||'')); });
+  }
 }
 function supprimerEleveYoga(id) {
   var e=(adminData.coursYoga||[]).find(function(x){return x.id===id;});
@@ -4917,6 +4928,11 @@ function confirmerSupprimerEleveYoga(id) {
   fermerContact();
   afficherToast('🗑 '+nom+' supprimé·e');
   renderTab();
+  if (!IS_DEMO) {
+    TEV.client.from('cours_yoga').delete().eq('id', id)
+    .then(function(){ chargerDonnees(); })
+    .catch(function(err){ afficherToast('⚠️ Erreur suppression: ' + ((err&&err.message)||'')); });
+  }
 }
 
 // ================================================================
