@@ -463,6 +463,16 @@ let DATES = {
   }
 };
 
+// Charger les dates depuis les Paramètres admin (localStorage), écrase le fallback hardcodé
+(function() {
+  try {
+    var s = JSON.parse(localStorage.getItem('tev_cours_dates') || 'null');
+    if (s && Array.isArray(s.paris) && s.paris.length && Array.isArray(s.vincennes) && s.vincennes.length) {
+      DATES = _buildDatesFromArrays(s.paris, s.vincennes);
+    }
+  } catch(e) {}
+})();
+
 // Horaires — lus depuis les Paramètres admin (localStorage), fallback sur valeurs par défaut
 var HORAIRES = (function() {
   function sai() {

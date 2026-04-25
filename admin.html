@@ -1972,6 +1972,7 @@ function sauverDatesYoga(sai) {
   if (!dates.length) { afficherToast('⚠️ Aucune date valide'); return; }
   try { localStorage.setItem('tev_dates_yoga_'+sai, JSON.stringify({saison:sai, dates:dates, modifie:today()})); } catch(e){}
   chargerDatesYogaStages();
+  saveCoursDatesLocal();
   afficherToast('✓ '+dates.length+' dates yoga '+sai+' enregistrées');
   renderTab();
 }
@@ -2989,6 +2990,7 @@ function supprimerDateParam(type, date) {
     var debut = y1+'-09-01', fin = (y1+1)+'-08-31';
     var remaining = COURS_YOGA.filter(function(d){return d>=debut&&d<=fin;});
     try { localStorage.setItem('tev_dates_yoga_'+sai, JSON.stringify({saison:sai, dates:remaining, modifie:today()})); } catch(e){}
+    saveCoursDatesLocal();
   } else if (type==='stages') {
     STAGES = STAGES.filter(function(s){return s.date!==date;});
     if (adminData.stages && adminData.stages[date]) delete adminData.stages[date];

@@ -97,19 +97,22 @@ Override possible via URL : `?mode=preinscription` ou `?mode=regulier`
 En mode préinscription, les tarifs de la prochaine saison sont lus depuis les Paramètres admin (`localStorage` clé `tev_tarifs_prochaine_saison`). Les liens AssoConnect changent aussi selon la saison détectée.
 
 ### `cours-essai.html` (cours d'essai tango)
-- Les dates sont **codées en dur** dans l'objet `DATES` (organisé par ville/niveau)
+- Les dates viennent de **localStorage `tev_cours_dates`** (mis à jour par l'admin via Paramètres → Dates)
+- Fallback hardcodé dans le fichier si localStorage absent
+- Converties via `_buildDatesFromArrays(paris, vincennes)` : ISO → DD/MM/YYYY + saison + gratuit
 - Seules les dates **futures** sont affichées (filtrées dynamiquement à partir d'aujourd'hui)
 - Les deux saisons coexistent dans la liste, séparées par des en-têtes de saison
-- Les 4 premières dates de septembre de chaque saison ont `gratuit:true` → badge "GRATUIT"
+- Cours **gratuits** : tous les cours de septembre pour les Débutants (marqués automatiquement)
 - Système de quotas temps réel : appel fetch pour compter inscrits, badge "Complet" si quota atteint
-- Pour mettre à jour les dates : modifier le tableau `DATES` dans `cours-essai.html`
+- Pour mettre à jour les dates : Paramètres admin → section Dates (Paris ou Vincennes)
 
 ### `essai-yoga.html` (cours d'essai yoga)
-- Dates dans le tableau plat `COURS_YOGA` (format ISO `YYYY-MM-DD`, ordre chronologique)
+- Les dates viennent de **localStorage `tev_cours_dates.yoga`** (mis à jour par l'admin via Paramètres → Yoga → Dates)
+- Fallback hardcodé dans le fichier si localStorage absent
 - Filtre dynamique : seulement les **20 prochaines dates futures** affichées (`slice(0, 20)`)
 - Cours **gratuits** : les **2 premiers cours de septembre** de chaque saison (détectés automatiquement par `estGratuit()`)
 - Prix pour les dates non gratuites : lu depuis `localStorage.tev_tarifs_actifs`, fallback `15€`
-- Pour mettre à jour les dates : modifier le tableau `COURS_YOGA` dans `essai-yoga.html`
+- Pour mettre à jour les dates : Paramètres admin → Yoga → Dates
 
 ## Saisie des données — règle importante
 À partir de la saison 2026-2027, **toutes les données entrent exclusivement par** :

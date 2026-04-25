@@ -228,7 +228,7 @@ function getYogaLien() {
 // ================================================================
 // DATES YOGA
 // ================================================================
-const COURS_YOGA = [
+let COURS_YOGA = [
   // 2025-2026 (gratuit : 2025-09-09 et 2025-09-16)
   '2025-09-09','2025-09-16','2025-09-23','2025-09-30',
   '2025-10-07','2025-10-14',
@@ -252,6 +252,16 @@ const COURS_YOGA = [
   '2027-05-04','2027-05-11','2027-05-18','2027-05-25',
   '2027-06-01','2027-06-08','2027-06-15','2027-06-22'
 ];
+
+// Charger les dates depuis les Paramètres admin (localStorage), écrase le fallback hardcodé
+(function() {
+  try {
+    var s = JSON.parse(localStorage.getItem('tev_cours_dates') || 'null');
+    if (s && Array.isArray(s.yoga) && s.yoga.length) {
+      COURS_YOGA = s.yoga.slice().sort();
+    }
+  } catch(e) {}
+})();
 
 const JOURS_FR = ['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'];
 const MOIS_FR  = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
