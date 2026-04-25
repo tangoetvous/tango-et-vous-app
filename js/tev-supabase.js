@@ -268,11 +268,24 @@ async function tevGetAdminData() {
       .map(p => _fmtDateSb(p.date)),
   }));
 
+  // Lookup eleves by email to enrich inscriptions_cours with tel and role
+  const elevesMap = {};
+  (eleves || []).forEach(e => { elevesMap[e.email] = e; });
+  const coursTango = (inscriptionsCours || []).map(ic => {
+    const elv = elevesMap[ic.email] || {};
+    return {
+      ...ic,
+      tel:             ic.tel  || elv.tel  || '',
+      role:            ic.role || elv.role || '',
+      emailPartenaire: ic.email_partenaire || ic.emailPartenaire || '',
+    };
+  });
+
   return {
     cartes,
     presences:         presences        || [],
     coursParticuliers: coursParticuliers || [],
-    coursTango:        inscriptionsCours || [],
+    coursTango,
     inscriptionsStages: inscriptionsStages || [],
     coursEssai:        inscriptionsEssai      || [],
     essaiYoga:         inscriptionsEssaiYoga  || [],
