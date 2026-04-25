@@ -4874,7 +4874,7 @@ function basculerRole(id) {
 }
 // ── Yoga : supprimer et changer cours ─────────────────────────────
 function ouvrirChangementCoursYoga(id) {
-  var e=(adminData.coursYoga||[]).find(function(x){return x.id===id;});
+  var e=(adminData.coursYoga||[]).find(function(x){return String(x.id)===String(id);});
   if(!e) return;
   var box=gel('modal-contact-box'); if(!box) return;
   var h='<div class="modal-titre">✏️ Changer le cours yoga</div>'
@@ -4893,7 +4893,7 @@ function ouvrirChangementCoursYoga(id) {
   gel('modal-contact').classList.add('vis');
 }
 function validerChangementCoursYoga(id) {
-  var e=(adminData.coursYoga||[]).find(function(x){return x.id===id;});
+  var e=(adminData.coursYoga||[]).find(function(x){return String(x.id)===String(id);});
   if(!e) return;
   var sel=gel('ccy-cours'); if(!sel) return;
   e.cours=sel.value;
@@ -4907,7 +4907,7 @@ function validerChangementCoursYoga(id) {
   }
 }
 function supprimerEleveYoga(id) {
-  var e=(adminData.coursYoga||[]).find(function(x){return x.id===id;});
+  var e=(adminData.coursYoga||[]).find(function(x){return String(x.id)===String(id);});
   if(!e) return;
   var box=gel('modal-contact-box'); if(!box) return;
   var h='<div class="modal-titre" style="color:#ff6b6b;">🗑 Supprimer l\'élève yoga</div>'
@@ -4922,9 +4922,9 @@ function supprimerEleveYoga(id) {
   gel('modal-contact').classList.add('vis');
 }
 function confirmerSupprimerEleveYoga(id) {
-  var e=(adminData.coursYoga||[]).find(function(x){return x.id===id;});
+  var e=(adminData.coursYoga||[]).find(function(x){return String(x.id)===String(id);});
   var nom=e?(e.prenom+' '+e.nom):'';
-  adminData.coursYoga=(adminData.coursYoga||[]).filter(function(x){return x.id!==id;});
+  adminData.coursYoga=(adminData.coursYoga||[]).filter(function(x){return String(x.id)!==String(id);});
   fermerContact();
   afficherToast('🗑 '+nom+' supprimé·e');
   renderTab();
