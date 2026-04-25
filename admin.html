@@ -3662,6 +3662,22 @@ async function chargerDonnees() {
   try {
     var d = await TEV.getAdminData();
     var emailSaved = adminData._email;
+    // Reconstruire adminData.stages depuis inscriptions_stages Supabase
+    var stagesReels = adminData.stages || {};
+    // Vider les inscrits des stages existants (effacer la démo)
+    Object.keys(stagesReels).forEach(function(date) { stagesReels[date].inscrits = []; });
+    (d.inscriptionsStages || []).forEach(function(ins) {
+      var dateKey = (ins.stage_date || '').slice(0, 10);
+      if (!dateKey) return;
+      if (!stagesReels[dateKey]) stagesReels[dateKey] = { label: ins.stage_nom || dateKey, inscrits: [] };
+      stagesReels[dateKey].inscrits.push({
+        prenom: ins.prenom || '', nom: ins.nom || '', email: ins.email || '',
+        tel: '', role: '', slots: ins.type ? [ins.type] : [],
+        present: null, montant: 0,
+        attente: ins.statut === 'attente',
+        partenaire: '', emailPartenaire: ''
+      });
+    });
     adminData = Object.assign({}, adminData, {
       _email:            emailSaved,
       cartes:            d.cartes            || adminData.cartes || [],
@@ -3672,6 +3688,7 @@ async function chargerDonnees() {
       essaiYoga:         d.essaiYoga          || adminData.essaiYoga || [],
       publications:      d.publications       || [],
       agendaModifs:      d.agendaModifs       || [],
+      stages:            stagesReels,
     });
     if(!adminData.carteReports) adminData.carteReports=[];
     recalcStats();
