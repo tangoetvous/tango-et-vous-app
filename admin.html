@@ -3664,7 +3664,7 @@ function demarrerApp(email, isDemo) {
   traiterInscriptionsEnAttente();
   renderTab();
   demarrerPollEssais();
-  if (!IS_DEMO) chargerDonnees();
+  if (!IS_DEMO) { chargerDonnees(); chargerResaSalles(); }
 }
 // Event listener sélecteur de saison dans le header
 document.addEventListener('DOMContentLoaded', function() {
@@ -7913,7 +7913,7 @@ TEV.onAuthChange(function(event, session) {
       updateSaisonSelect();
       traiterInscriptionsEnAttente();
       renderTab();
-      chargerDonnees();
+      chargerDonnees(); chargerResaSalles();
     }
   }
 });
@@ -7967,6 +7967,17 @@ function loadResaSalles() {
 }
 function saveResaSalles(salles) {
   try { localStorage.setItem('tev_resa_salles', JSON.stringify(salles)); } catch(e) {}
+  if (!IS_DEMO) TEV.setParam('resa_salles', salles).catch(function(){});
+}
+async function chargerResaSalles() {
+  if (IS_DEMO) return;
+  try {
+    var remote = await TEV.getParam('resa_salles');
+    if (Array.isArray(remote) && remote.length) {
+      localStorage.setItem('tev_resa_salles', JSON.stringify(remote));
+      if (currentTab==='resa-salles' || currentTab==='tarifs') renderTab();
+    }
+  } catch(e) {}
 }
 function renderResaSalles() {
   var salles = loadResaSalles().filter(function(s){ return s.nom || s.lien; });
