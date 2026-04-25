@@ -4779,12 +4779,14 @@ function ouvrirChangementCours(id) {
   var COURS=['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
   var box=gel('modal-contact-box');
   if(!box) return;
-  var h='<div class="modal-titre">✏️ Changer le cours</div>'
+  var PAI_OPT='<option value="">— Non renseigné —</option>'+Object.entries(PAI_LBL).map(function(kv){return '<option value="'+kv[0]+'"'+(e.paiement===kv[0]?' selected':'')+'>'+kv[1]+'</option>';}).join('');
+  var h='<div class="modal-titre">✏️ Modifier l\'inscription</div>'
     +'<div style="font-size:13px;font-weight:600;margin-bottom:14px;">'+e.prenom+' '+e.nom+'</div>'
-    +'<div class="field"><label>Cours actuel</label><div style="font-size:12px;color:var(--dim);padding:4px 0;">'+e.cours+'</div></div>'
-    +'<div class="field"><label>Nouveau cours</label><select id="cc-cours">';
+    +'<div class="field"><label>Cours</label><select id="cc-cours">';
   COURS.forEach(function(c){h+='<option'+(c===e.cours?' selected':'')+'>'+c+'</option>';});
   h+='</select></div>'
+    +'<div class="field"><label>Moyen de paiement</label><select id="cc-paiement">'+PAI_OPT+'</select></div>'
+    +'<div class="field"><label>Montant (€)</label><input type="number" id="cc-montant" value="'+(e.montant||'')+'" placeholder="ex: 170" style="width:100%;box-sizing:border-box;"></div>'
     +'<div class="box-err" id="cc-err"></div>'
     +'<div class="btn-row">'
     +'<button class="btn btn-gold" style="flex:2;" onclick="validerChangementCours(\''+id+'\')">✓ Valider</button>'
@@ -4798,12 +4800,22 @@ function validerChangementCours(id) {
   if(!e) return;
   var sel=gel('cc-cours'); if(!sel) return;
   var cours=sel.value;
+  var paiement=(gel('cc-paiement')||{}).value||'';
+  var montant=parseInt((gel('cc-montant')||{}).value||0)||0;
   e.cours=cours;
   e.ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   e.niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
+  e.paiement=paiement;
+  e.montant=montant;
   fermerContact();
-  afficherToast('✓ '+e.prenom+' '+e.nom+' déplacé·e → '+cours);
+  afficherToast('✓ '+e.prenom+' '+e.nom+' mis à jour');
   renderTab();
+  if (!IS_DEMO) {
+    TEV.client.from('inscriptions_cours').update({
+      cours: cours, ville: e.ville, niveau: e.niveau,
+      paiement: paiement, montant: montant
+    }).eq('id', id).catch(function(){});
+  }
 }
 function supprimerEleve(id) {
   var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
@@ -4846,6 +4858,9 @@ function basculerRole(id) {
   e.role = e.role==='guideur' ? 'guidee' : 'guideur';
   afficherToast('✓ '+e.prenom+' '+e.nom+' → '+(e.role==='guideur'?'Guideur':'Guidée'));
   renderTab();
+  if (!IS_DEMO) {
+    TEV.client.from('eleves').update({role: e.role}).eq('email', e.email).catch(function(){});
+  }
 }
 // ── Yoga : supprimer et changer cours ─────────────────────────────
 function ouvrirChangementCoursYoga(id) {
