@@ -268,9 +268,14 @@ async function tevGetAdminData() {
       .map(p => _fmtDateSb(p.date)),
   }));
 
-  // Lookup eleves by email to enrich inscriptions_cours with tel and role
+  // Lookup eleves by email to enrich inscriptions_cours with tel, role and cours label
   const elevesMap = {};
   (eleves || []).forEach(e => { elevesMap[e.email] = e; });
+  const _coursLabel = (ville, niveau) => {
+    const v = ville === 'vincennes' ? 'Vincennes — Lundi' : 'Paris — Jeudi';
+    const n = niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
+    return `${v} — ${n}`;
+  };
   const coursTango = (inscriptionsCours || []).map(ic => {
     const elv = elevesMap[ic.email] || {};
     return {
@@ -278,6 +283,7 @@ async function tevGetAdminData() {
       tel:             ic.tel  || elv.tel  || '',
       role:            ic.role || elv.role || '',
       emailPartenaire: ic.email_partenaire || ic.emailPartenaire || '',
+      cours:           ic.cours || _coursLabel(ic.ville, ic.niveau),
     };
   });
 
