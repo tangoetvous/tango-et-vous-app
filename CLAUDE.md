@@ -74,11 +74,17 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - [ ] Implémenter notifications push via FCM + Supabase Edge Functions — IMPORTANT : inclure nettoyage automatique des tokens invalides (FCM retourne les échecs dans la réponse → DELETE FROM fcm_tokens WHERE token IN (échecs))
 
 ## Stack technique retenue
-- **DB + Auth** : Supabase
-- **Déploiement** : Cloudflare Workers
-- **Emails transactionnels** : Brevo (limite free : 300/jour — prévoir offre payante si envois groupés à 150-200 élèves)
-- **Notifications push** : Firebase Cloud Messaging (gratuit, sans limite de volume — parfait pour 200 élèves)
-- **Code.gs (Google Apps Script)** : fichier legacy, ne plus utiliser
+- **DB + Auth** : Supabase (plan free — 500 MB, 200 connexions Realtime simultanées max)
+- **Déploiement** : Cloudflare Workers Static Assets (pratiquement illimité pour du statique)
+- **Emails transactionnels** : Brevo — **déjà configuré comme SMTP Supabase** (magic links passent par Brevo, confirmé par l'adresse `brevosend.com`)
+  - Free : 300 emails/jour (magic links inclus — ~50/jour en phase de test)
+  - Starter 7€/mois : 5 000 emails/mois sans limite journalière — **recommandé dès maintenant**
+  - La limite "contacts" (500 en Starter) ne concerne que le CRM/newsletter Brevo, pas les emails transactionnels via API
+- **Notifications push** : Firebase Cloud Messaging — gratuit, sans limite de volume, **ne pas remplacer par Brevo push**
+  - Nettoyage automatique des tokens invalides à implémenter (voir TODO)
+- **Discussions** : messages stockés dans Supabase, notifications via FCM — Brevo non impliqué
+- **Code.gs (Google Apps Script)** : fichier legacy, **ne plus utiliser**, emails non envoyés depuis la migration Supabase
+- **GitHub Actions** : 2 000 min/mois gratuit (~1 000 déploiements possibles)
 
 ## PWA
 - `manifest.json` : espace élèves (index.html)
