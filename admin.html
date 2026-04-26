@@ -358,6 +358,10 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
       <div class="admin-nav-row">
         <button class="tab-btn" data-tab="tarifs" style="color:#e2e8f0"><span class="tab-icon">⚙️</span><span class="tab-label">Paramètres</span></button>
         <select id="nav-archives" style="background:var(--s3);color:var(--dim);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:600;padding:6px 8px;cursor:pointer;"><option value="">🗄 Archives</option></select>
+        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;flex-shrink:0;">
+          <button id="btn-activer-notif" onclick="activerNotifications()" style="background:var(--s3);color:var(--dim);border:none;border-right:1px solid var(--border);font-size:11px;font-weight:600;padding:6px 9px;cursor:pointer;white-space:nowrap;">🔔 Activer</button>
+          <button onclick="testerNotifications()" style="background:var(--s3);color:var(--dim);border:none;font-size:11px;font-weight:600;padding:6px 9px;cursor:pointer;white-space:nowrap;">⚡ Tester</button>
+        </div>
       </div>
       <div class="admin-nav-row">
         <button class="tab-btn" data-tab="eleves-tango" style="color:#60b0ff"><span class="tab-icon">👥</span><span class="tab-label">Élèves tango</span></button>
@@ -3705,6 +3709,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (archSel) archSel.addEventListener('change', function() {
     if (this.value) { changerSaisonVue(this.value); toggleAdminNav(); }
   });
+  _updateActiverBtn();
 });
 function logout() {
   gel('app').style.display='none';
@@ -3795,6 +3800,41 @@ function syncStageInscritsToLocal() {
 // ================================================================
 // NAVIGATION
 // ================================================================
+function _updateActiverBtn() {
+  var btn = gel('btn-activer-notif'); if (!btn) return;
+  var p = ('Notification' in window) ? Notification.permission : 'unsupported';
+  if (p === 'granted')  { btn.textContent = '🔔 Activées'; btn.style.color = '#4ade80'; btn.disabled = true; }
+  else if (p === 'denied') { btn.textContent = '🔕 Bloquées'; btn.style.color = '#ef4444'; btn.disabled = true; }
+  else { btn.textContent = '🔔 Activer'; btn.style.color = 'var(--dim)'; btn.disabled = false; }
+}
+async function activerNotifications() {
+  if (!('Notification' in window)) { afficherToast('❌ Notifications non supportées par ce navigateur'); return; }
+  if (Notification.permission === 'granted') { afficherToast('✓ Notifications déjà activées'); return; }
+  try {
+    var perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      afficherToast('✓ Notifications activées !');
+      _updateActiverBtn();
+    } else {
+      afficherToast('❌ Permission refusée — vérifie les réglages du navigateur');
+      _updateActiverBtn();
+    }
+  } catch(e) { afficherToast('❌ Erreur : ' + e.message); }
+}
+async function testerNotifications() {
+  if (!('Notification' in window)) { afficherToast('❌ Notifications non supportées'); return; }
+  if (Notification.permission !== 'granted') { afficherToast('⚠️ Active d\'abord les notifications'); return; }
+  try {
+    var reg = await navigator.serviceWorker.ready;
+    reg.showNotification('🔔 Tango & Vous', {
+      body: 'Les notifications fonctionnent correctement !',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'tev-test'
+    });
+    afficherToast('⚡ Notification de test envoyée');
+  } catch(e) { afficherToast('❌ Erreur : ' + e.message); }
+}
 function updateNotifBadge() {
   var dot = gel('notif-dot'); if (!dot) return;
   var notifs = adminData.notifications || [];
