@@ -32,6 +32,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **`cours_particuliers`** : cours particuliers
 - **`publications`** : publications/annonces
 - **`agenda_modifs`** : modifications d'agenda
+- **`devis`** : demandes de devis (via formulaire Wix à venir) — colonnes : id, created_at, prenom, nom, email, tel, type_event, date_event, nb_personnes, lieu, message, statut ('nouveau'/'traite'/'refuse')
 
 ## Architecture JS clé
 - **`js/tev-supabase.js`** : toutes les requêtes Supabase, fonction `tevGetAdminData()`
@@ -72,6 +73,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
 - [ ] Implémenter emails automatiques via Brevo + Supabase Edge Functions (remplace Code.gs/MailApp qui est inactif)
 - [ ] Implémenter notifications push via FCM + Supabase Edge Functions — IMPORTANT : inclure nettoyage automatique des tokens invalides (FCM retourne les échecs dans la réponse → DELETE FROM fcm_tokens WHERE token IN (échecs))
+- [ ] Étendre icône 🔔 (badge rouge) + push aux événements suivants : essai tango, essai yoga, demande d'inscription tango, inscription stage, cours particuliers, demande de devis, RSVP milonga depuis espace élève — d'autres cas à lister par l'utilisateur
 
 ## Stack technique retenue
 - **DB + Auth** : Supabase (plan free — 500 MB, 200 connexions Realtime simultanées max)

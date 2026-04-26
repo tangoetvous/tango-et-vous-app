@@ -362,22 +362,23 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
       <div class="admin-nav-row">
         <button class="tab-btn" data-tab="eleves-tango" style="color:#60b0ff"><span class="tab-icon">👥</span><span class="tab-label">Élèves tango</span></button>
         <button class="tab-btn" data-tab="repertoire" style="color:#4ade80"><span class="tab-icon">📋</span><span class="tab-label">Répertoire</span></button>
-      </div>
-      <div class="admin-nav-row">
         <button class="tab-btn" data-tab="essai" style="color:#fb923c"><span class="tab-icon">🎯</span><span class="tab-label">Essai tango</span></button>
         <button class="tab-btn" data-tab="cours-tango" style="color:#c084fc"><span class="tab-icon">🎓</span><span class="tab-label">Inscriptions tango</span></button>
+      </div>
+      <div class="admin-nav-row">
         <button class="tab-btn" data-tab="cartes" style="color:#f59e0b"><span class="tab-icon">🎴</span><span class="tab-label">Cartes 10</span></button>
         <button class="tab-btn" data-tab="sorano" style="color:#2dd4bf"><span class="tab-icon">🏛</span><span class="tab-label">Sorano</span></button>
+        <button class="tab-btn" data-tab="stages" style="color:#f472b6"><span class="tab-icon">💃</span><span class="tab-label">Stages</span></button>
+        <button class="tab-btn" data-tab="milonga" style="color:#ff8c00"><span class="tab-icon">🎶</span><span class="tab-label">Milonga</span></button>
       </div>
       <div class="admin-nav-row">
         <button class="tab-btn" data-tab="agenda" style="color:#38bdf8"><span class="tab-icon">📅</span><span class="tab-label">Agenda</span></button>
-        <button class="tab-btn" data-tab="stages" style="color:#f472b6"><span class="tab-icon">💃</span><span class="tab-label">Stages</span></button>
-        <button class="tab-btn" data-tab="milonga" style="color:#ff8c00"><span class="tab-icon">🎶</span><span class="tab-label">Milonga</span></button>
         <button class="tab-btn" data-tab="resa-salles" style="color:#67e8f9"><span class="tab-icon">🏢</span><span class="tab-label">Résa Salles</span></button>
+        <button class="tab-btn" data-tab="devis" style="color:#fde68a"><span class="tab-icon">📋</span><span class="tab-label">Devis</span></button>
       </div>
       <div class="admin-nav-row">
-        <button class="tab-btn" data-tab="publications" style="color:#fbbf24"><span class="tab-icon">📝</span><span class="tab-label">Publications</span></button>
         <button class="tab-btn" data-tab="yoga" style="color:#a78bfa"><span class="tab-icon">🧘</span><span class="tab-label">Yoga</span></button>
+        <button class="tab-btn" data-tab="publications" style="color:#fbbf24"><span class="tab-icon">📝</span><span class="tab-label">Publications</span></button>
         <button class="tab-btn" data-tab="whatsapp" style="color:#25d366"><span class="tab-icon">💬</span><span class="tab-label">WhatsApp</span></button>
         <button class="tab-btn" data-tab="discussions" style="color:#e879f9"><span class="tab-icon">🗨️</span><span class="tab-label">Discussions</span></button>
       </div>
@@ -3820,7 +3821,7 @@ function switchTab(tab) {
       'resa-salles':'🏢 Résa Salles',
       'sorano':'🏛 Sorano','yoga':'🧘 Yoga','agenda':'📅 Agenda',
       'publications':'📝 Publications','whatsapp':'💬 WhatsApp','tarifs':'⚙️ Paramètres',
-      'discussions':'🗨️ Discussions'
+      'discussions':'🗨️ Discussions','devis':'📋 Devis'
     };
     _lbl.textContent = _LABELS[tab] || tab;
   }
@@ -3860,6 +3861,7 @@ function renderTab() {
     else if (currentTab==='milonga')      html=renderMilongaPresences();
     else if (currentTab==='discussions')  html=renderDiscussions();
     else if (currentTab==='resa-salles')  html=renderResaSalles();
+    else if (currentTab==='devis')        html=renderDevis();
     if(isSaisonPassee()){
       var banner='<div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--warn-text);display:flex;align-items:center;gap:8px;">🔒 Saison '+saisonActive()+' archivée — consultation uniquement</div>';
       html='<div class="saison-archivee">'+banner+html+'</div>';
@@ -4526,6 +4528,17 @@ function handleAction(action, btn) {
         if (!salles.length) salles = [{nom:'', lien:''}];
         saveResaSalles(salles);
         afficherToast('✓ Salle supprimée');
+        renderTab();
+      })();
+      break;
+    case 'marquer-devis-traite':
+      (function() {
+        var id = btn.dataset.id;
+        if (!adminData.devis) return;
+        var d = adminData.devis.find(function(x){ return String(x.id)===String(id); });
+        if (d) d.statut = 'traite';
+        if (!IS_DEMO) TEV.from('devis').update({statut:'traite'}).eq('id', id).catch(function(){});
+        afficherToast('✓ Devis marqué traité');
         renderTab();
       })();
       break;
@@ -8087,6 +8100,37 @@ function _renderResaSallesSection() {
     +'<button class="btn btn-ghost" data-action="ajouter-resa-salle" style="font-size:12px;">+ Ajouter une salle</button>'
     +'<button class="btn btn-gold" data-action="sauver-resa-salles" style="font-size:12px;">💾 Enregistrer</button>'
     +'</div></div>';
+  return h;
+}
+
+function renderDevis() {
+  var devis = adminData.devis || [];
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;">'
+    + '<h2 style="margin:0;font-size:16px;">📋 Devis</h2>'
+    + '</div>';
+  if (!devis.length) return h + '<div class="empty-state">Aucune demande de devis pour l\'instant.<br>Les demandes arriveront ici via le formulaire du site.</div>';
+  var nouveaux = devis.filter(function(d){ return d.statut === 'nouveau'; });
+  var traites  = devis.filter(function(d){ return d.statut !== 'nouveau'; });
+  function card(d) {
+    var dt = d.created_at ? _discRelDate(d.created_at) : '';
+    var statutCls = d.statut === 'nouveau' ? 'pill-warn' : d.statut === 'traite' ? 'pill-ok' : '';
+    var statutLbl = d.statut === 'nouveau' ? 'Nouveau' : d.statut === 'traite' ? 'Traité' : 'Refusé';
+    return '<div class="card">'
+      + '<div class="card-top"><div>'
+      + '<div class="card-nom">' + (d.prenom||'') + ' ' + (d.nom||'') + '</div>'
+      + '<div class="card-sub">' + (d.email||'') + (d.tel ? ' · ' + d.tel : '') + (dt ? ' · ' + dt : '') + '</div>'
+      + '</div><span class="pill ' + statutCls + '">' + statutLbl + '</span></div>'
+      + (d.type_event ? '<div style="margin-top:8px;font-size:13px;color:var(--dim);">🎉 ' + d.type_event + (d.date_event ? ' — ' + d.date_event : '') + (d.nb_personnes ? ' — ' + d.nb_personnes + ' pers.' : '') + '</div>' : '')
+      + (d.lieu ? '<div style="font-size:13px;color:var(--dim);">📍 ' + d.lieu + '</div>' : '')
+      + (d.message ? '<div style="margin-top:6px;font-size:13px;color:var(--text);white-space:pre-wrap;">' + d.message + '</div>' : '')
+      + '<div class="btn-row" style="margin-top:10px;">'
+      + (d.email ? '<a href="mailto:' + d.email + '" class="btn btn-gold" style="text-decoration:none;">✉️ Email</a>' : '')
+      + (d.tel ? '<a href="tel:' + d.tel + '" class="btn btn-ghost" style="text-decoration:none;">📞 Appeler</a>' : '')
+      + (d.statut === 'nouveau' ? '<button class="btn btn-ghost" data-action="marquer-devis-traite" data-id="' + d.id + '">✓ Marquer traité</button>' : '')
+      + '</div></div>';
+  }
+  if (nouveaux.length) { h += '<div class="section-hdr">Nouveaux (' + nouveaux.length + ')</div>'; nouveaux.forEach(function(d){ h += card(d); }); }
+  if (traites.length)  { h += '<div class="section-hdr" style="margin-top:16px;">Traités (' + traites.length + ')</div>'; traites.forEach(function(d){ h += card(d); }); }
   return h;
 }
 
