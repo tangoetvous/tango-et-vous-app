@@ -74,6 +74,8 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - [ ] Implémenter emails automatiques via Brevo + Supabase Edge Functions (remplace Code.gs/MailApp qui est inactif)
 - [ ] Implémenter notifications push via FCM + Supabase Edge Functions — IMPORTANT : inclure nettoyage automatique des tokens invalides (FCM retourne les échecs dans la réponse → DELETE FROM fcm_tokens WHERE token IN (échecs))
 - [ ] Étendre icône 🔔 (badge rouge) + push aux événements suivants : essai tango, essai yoga, demande d'inscription tango, inscription stage, cours particuliers, demande de devis, RSVP milonga depuis espace élève — d'autres cas à lister par l'utilisateur
+- [ ] Revoir le formulaire cours particuliers
+- [ ] Rubrique Devis : ajouter génération de devis PDF — champs à remplir dans l'appli → PDF téléchargeable/envoyable par email. Attendre que l'utilisateur fournisse : logo, données fixes (coordonnées, mentions), structure du devis
 
 ## Stack technique retenue
 - **DB + Auth** : Supabase (plan free — 500 MB, 200 connexions Realtime simultanées max)
