@@ -4942,24 +4942,60 @@ function ficheEleveInscrit(e, borderStyle, grise) {
 function ouvrirChangementCours(id) {
   var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
   if(!e) return;
+  var sai=e.saison||saisonCourante();
   var COURS=['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
-  var box=gel('modal-contact-box');
-  if(!box) return;
+  var coursActuels=(adminData.coursTango||[]).filter(function(x){return x.email===e.email&&x.statut==='inscrit'&&(x.saison||saisonCourante())===sai;}).map(function(x){return x.cours;});
+  var autresInscrits=coursActuels.filter(function(c){return c!==e.cours;});
+  var coursDispo=COURS.filter(function(c){return coursActuels.indexOf(c)<0;});
+  var box=gel('modal-contact-box'); if(!box) return;
   var PAI_OPT='<option value="">— Non renseigné —</option>'+Object.entries(PAI_LBL).map(function(kv){return '<option value="'+kv[0]+'"'+(e.paiement===kv[0]?' selected':'')+'>'+kv[1]+'</option>';}).join('');
+  var PAI_OPT2='<option value="">— Non renseigné —</option>'+Object.entries(PAI_LBL).map(function(kv){return '<option value="'+kv[0]+'">'+kv[1]+'</option>';}).join('');
   var h='<div class="modal-titre">✏️ Modifier l\'inscription</div>'
-    +'<div style="font-size:13px;font-weight:600;margin-bottom:14px;">'+e.prenom+' '+e.nom+'</div>'
+    +'<div style="font-size:13px;font-weight:600;margin-bottom:4px;">'+escHtml(e.prenom)+' '+escHtml(e.nom)+'</div>'
+    +(autresInscrits.length?'<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">Aussi inscrit·e : '+autresInscrits.map(function(c){return escHtml(c);}).join(', ')+'</div>':'<div style="margin-bottom:12px;"></div>')
     +'<div class="field"><label>Cours</label><select id="cc-cours">';
   COURS.forEach(function(c){h+='<option'+(c===e.cours?' selected':'')+'>'+c+'</option>';});
   h+='</select></div>'
     +'<div class="field"><label>Moyen de paiement</label><select id="cc-paiement">'+PAI_OPT+'</select></div>'
-    +'<div class="field"><label>Montant (€)</label><input type="number" id="cc-montant" value="'+(e.montant||'')+'" placeholder="ex: 170" style="width:100%;box-sizing:border-box;"></div>'
-    +'<div class="box-err" id="cc-err"></div>'
+    +'<div class="field"><label>Montant (€)</label><input type="number" id="cc-montant" value="'+(e.montant||'')+'" placeholder="ex: 170" style="width:100%;box-sizing:border-box;"></div>';
+  if(coursDispo.length){
+    h+='<div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:14px;">'
+      +'<div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">+ Inscrire sur un 2ème cours</div>'
+      +'<div class="field"><label>Cours à ajouter</label><select id="cc-cours2"><option value="">— Choisir —</option>';
+    coursDispo.forEach(function(c){h+='<option>'+c+'</option>';});
+    h+='</select></div>'
+      +'<div class="field"><label>Paiement</label><select id="cc-paiement2">'+PAI_OPT2+'</select></div>'
+      +'<div class="field"><label>Montant (€)</label><input type="number" id="cc-montant2" placeholder="ex: 170" style="width:100%;box-sizing:border-box;"></div>'
+      +'<button class="btn btn-ghost" style="width:100%;margin-bottom:4px;" onclick="ajouterDeuxiemeCoursTango(\''+id+'\')">+ Inscrire sur ce 2ème cours</button>'
+      +'</div>';
+  }
+  h+='<div class="box-err" id="cc-err"></div>'
     +'<div class="btn-row">'
     +'<button class="btn btn-gold" style="flex:2;" onclick="validerChangementCours(\''+id+'\')">✓ Valider</button>'
     +'<button class="btn btn-ghost" data-action="fermer-contact">Annuler</button>'
     +'</div>';
   box.innerHTML=h;
   gel('modal-contact').classList.add('vis');
+}
+function ajouterDeuxiemeCoursTango(sourceId) {
+  var e=(adminData.coursTango||[]).find(function(x){return x.id===sourceId;});
+  if(!e) return;
+  var sel=gel('cc-cours2'); if(!sel||!sel.value){gel('cc-err').textContent='Choisissez un cours à ajouter.';return;}
+  var cours=sel.value;
+  var paiement=(gel('cc-paiement2')||{}).value||'';
+  var montant=parseInt((gel('cc-montant2')||{}).value||0)||0;
+  var ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
+  var niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
+  var newEntry={id:'new_'+Date.now(),prenom:e.prenom,nom:e.nom,email:e.email,tel:e.tel||'',ville:ville,niveau:niveau,cours:cours,role:e.role,paiement:paiement,montant:montant,statut:'inscrit',saison:e.saison||saisonCourante(),partenaire:'',emailPartenaire:'',type:e.type||'forfait'};
+  adminData.coursTango.push(newEntry);
+  fermerContact();
+  afficherToast('✓ '+e.prenom+' '+e.nom+' ajouté·e sur '+cours);
+  renderTab();
+  if(!IS_DEMO){
+    TEV.client.from('inscriptions_cours').insert({prenom:e.prenom,nom:e.nom,email:e.email,ville:ville,niveau:niveau,paiement:paiement,montant:montant,statut:'inscrit',saison:e.saison||saisonCourante(),type:e.type||'forfait'})
+    .then(function(){chargerDonnees();})
+    .catch(function(err){afficherToast('⚠️ Erreur: '+((err&&err.message)||''));});
+  }
 }
 function validerChangementCours(id) {
   var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
