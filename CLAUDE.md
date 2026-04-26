@@ -33,6 +33,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **`publications`** : publications/annonces
 - **`agenda_modifs`** : modifications d'agenda
 - **`devis`** : demandes de devis (via formulaire Wix à venir) — colonnes : id, created_at, prenom, nom, email, tel, type_event, date_event, nb_personnes, lieu, message, statut ('nouveau'/'traite'/'refuse')
+- **`notifications`** : historique des notifications admin — colonnes : id, created_at, type, message, lu (bool), lien_tab — à créer quand push implémenté
 
 ## Architecture JS clé
 - **`js/tev-supabase.js`** : toutes les requêtes Supabase, fonction `tevGetAdminData()`
@@ -89,6 +90,19 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Discussions** : messages stockés dans Supabase, notifications via FCM — Brevo non impliqué
 - **Code.gs (Google Apps Script)** : fichier legacy, **ne plus utiliser**, emails non envoyés depuis la migration Supabase
 - **GitHub Actions** : 2 000 min/mois gratuit (~1 000 déploiements possibles)
+
+## Notifications push — état d'avancement
+- Boutons **[🔔 Activer | ⚡ Tester]** ajoutés dans le menu ligne 1
+- "Activer" : demande la permission navigateur (fonctionne)
+- "Tester" : envoie une vraie notification via le service worker (fonctionne déjà sans serveur)
+- **Manque pour la suite** : VAPID key (Firebase Console → Project Settings → Cloud Messaging → Web Push certificates) + table `fcm_tokens` dans Supabase + Edge Function d'envoi
+- Firebase config dans `sw.js` : projectId=`tango-et-vous`, messagingSenderId=`778867090916`
+- Sélectionneur de saison : 2026-2027 apparaît automatiquement le 1er mai ou manuellement via Paramètres → "Ouvrir pré-inscriptions"
+
+## Test espace élève
+- Connexion élève = magic link par email uniquement (pas de mot de passe)
+- Pour tester : créer des élèves de test avec des emails contrôlés
+- Astuce : utiliser les alias Gmail `tonmail+eleve1@gmail.com`, `+eleve2@gmail.com` etc. — arrivent tous dans la même boîte
 
 ## PWA
 - `manifest.json` : espace élèves (index.html)
