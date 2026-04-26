@@ -339,7 +339,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   <div class="hdr">
     <div class="hdr-logo">TANGO &amp; VOUS</div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <button id="btn-notif" title="Discussions" onclick="switchTab('discussions')" style="position:relative;background:none;border:none;cursor:pointer;padding:2px 4px;font-size:18px;line-height:1;opacity:.75;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'">🔔<span id="notif-dot" style="display:none;position:absolute;top:1px;right:1px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:1.5px solid var(--s1);"></span></button>
+      <button id="btn-notif" title="Notifications" onclick="switchTab('notifications')" style="position:relative;background:none;border:none;cursor:pointer;padding:2px 4px;font-size:18px;line-height:1;opacity:.75;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'">🔔<span id="notif-dot" style="display:none;position:absolute;top:1px;right:1px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:1.5px solid var(--s1);"></span></button>
       <button data-tab="tarifs" title="Paramètres" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:16px;line-height:1;opacity:.75;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'" onclick="switchTab('tarifs')">⚙️</button>
       <button class="admin-menu-btn" onclick="toggleAdminNav()">☰ Menu</button>
       <button class="btn-logout" id="btn-logout" title="Déconnexion" style="background:transparent;border:1px solid var(--border);color:var(--dim);padding:6px 9px;border-radius:6px;cursor:pointer;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
@@ -381,6 +381,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
         <button class="tab-btn" data-tab="publications" style="color:#fbbf24"><span class="tab-icon">📝</span><span class="tab-label">Publications</span></button>
         <button class="tab-btn" data-tab="whatsapp" style="color:#25d366"><span class="tab-icon">💬</span><span class="tab-label">WhatsApp</span></button>
         <button class="tab-btn" data-tab="discussions" style="color:#e879f9"><span class="tab-icon">🗨️</span><span class="tab-label">Discussions</span></button>
+        <button class="tab-btn" data-tab="notifications" style="color:#ef4444"><span class="tab-icon">🔔</span><span class="tab-label">Notifications</span></button>
       </div>
     </div>
   </div>
@@ -3796,16 +3797,16 @@ function syncStageInscritsToLocal() {
 // ================================================================
 function updateNotifBadge() {
   var dot = gel('notif-dot'); if (!dot) return;
-  var discs = adminData.discussions || [];
-  if (!discs.length) { dot.style.display = 'none'; return; }
-  var lastSeen = localStorage.getItem('tev_disc_last_seen') || '';
-  var latest = discs.reduce(function(max, d) { return (d.date||'') > max ? (d.date||'') : max; }, '');
-  dot.style.display = (latest && latest > lastSeen) ? 'inline-block' : 'none';
+  var notifs = adminData.notifications || [];
+  var unread = notifs.filter(function(n){ return !n.lu; }).length;
+  dot.style.display = unread ? 'inline-block' : 'none';
 }
 function switchTab(tab) {
   currentTab = tab;
-  if (tab === 'discussions') {
-    localStorage.setItem('tev_disc_last_seen', new Date().toISOString());
+  if (tab === 'notifications') {
+    var notifs = adminData.notifications || [];
+    notifs.forEach(function(n){ n.lu = true; });
+    if (!IS_DEMO && notifs.length) TEV.from('notifications').update({lu:true}).eq('lu',false).catch(function(){});
     var dot = gel('notif-dot'); if (dot) dot.style.display = 'none';
   }
   document.querySelectorAll('.tab-btn').forEach(function(b) {
@@ -3821,7 +3822,7 @@ function switchTab(tab) {
       'resa-salles':'🏢 Résa Salles',
       'sorano':'🏛 Sorano','yoga':'🧘 Yoga','agenda':'📅 Agenda',
       'publications':'📝 Publications','whatsapp':'💬 WhatsApp','tarifs':'⚙️ Paramètres',
-      'discussions':'🗨️ Discussions','devis':'📋 Devis'
+      'discussions':'🗨️ Discussions','devis':'📋 Devis','notifications':'🔔 Notifications'
     };
     _lbl.textContent = _LABELS[tab] || tab;
   }
@@ -3862,6 +3863,7 @@ function renderTab() {
     else if (currentTab==='discussions')  html=renderDiscussions();
     else if (currentTab==='resa-salles')  html=renderResaSalles();
     else if (currentTab==='devis')        html=renderDevis();
+    else if (currentTab==='notifications') html=renderNotifications();
     if(isSaisonPassee()){
       var banner='<div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--warn-text);display:flex;align-items:center;gap:8px;">🔒 Saison '+saisonActive()+' archivée — consultation uniquement</div>';
       html='<div class="saison-archivee">'+banner+html+'</div>';
@@ -4530,6 +4532,15 @@ function handleAction(action, btn) {
         afficherToast('✓ Salle supprimée');
         renderTab();
       })();
+      break;
+    case 'tout-marquer-lu':
+      (adminData.notifications||[]).forEach(function(n){ n.lu=true; });
+      if (!IS_DEMO) TEV.from('notifications').update({lu:true}).eq('lu',false).catch(function(){});
+      updateNotifBadge();
+      renderTab();
+      break;
+    case 'ouvrir-notif':
+      switchTab(btn.dataset.tab);
       break;
     case 'marquer-devis-traite':
       (function() {
@@ -8100,6 +8111,34 @@ function _renderResaSallesSection() {
     +'<button class="btn btn-ghost" data-action="ajouter-resa-salle" style="font-size:12px;">+ Ajouter une salle</button>'
     +'<button class="btn btn-gold" data-action="sauver-resa-salles" style="font-size:12px;">💾 Enregistrer</button>'
     +'</div></div>';
+  return h;
+}
+
+function renderNotifications() {
+  var notifs = adminData.notifications || [];
+  var _NOTIF_ICONS = { devis:'📋', essai:'🎯', 'essai-yoga':'🧘', inscription:'🎓', stage:'💃', 'cours-particulier':'🎵', 'milonga-rsvp':'🎶', discussion:'🗨️' };
+  var _NOTIF_TABS  = { devis:'devis', essai:'essai', 'essai-yoga':'yoga', inscription:'cours-tango', stage:'stages', 'cours-particulier':'cours-particuliers', 'milonga-rsvp':'milonga', discussion:'discussions' };
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;">'
+    + '<h2 style="margin:0;font-size:16px;">🔔 Notifications</h2>'
+    + (notifs.some(function(n){return !n.lu;}) ? '<button class="btn btn-ghost" data-action="tout-marquer-lu">✓ Tout marquer lu</button>' : '')
+    + '</div>';
+  if (!notifs.length) return h + '<div class="empty-state">Aucune notification pour l\'instant.<br>Les alertes arriveront ici dès qu\'un formulaire sera rempli ou qu\'une action nécessite ton attention.</div>';
+  var nonLues = notifs.filter(function(n){ return !n.lu; });
+  var lues    = notifs.filter(function(n){ return  n.lu; });
+  function card(n) {
+    var icon = _NOTIF_ICONS[n.type] || '🔔';
+    var tab  = _NOTIF_TABS[n.type];
+    var dt   = n.date ? _discRelDate(n.date) : '';
+    return '<div class="card" style="' + (!n.lu ? 'border-left:3px solid #ef4444;' : 'opacity:.7;') + (tab ? 'cursor:pointer;' : '') + '"'
+      + (tab ? ' data-action="ouvrir-notif" data-tab="' + tab + '"' : '') + '>'
+      + '<div class="card-top"><div>'
+      + '<div class="card-nom">' + icon + ' ' + (n.message||'') + '</div>'
+      + (dt ? '<div class="card-sub">' + dt + '</div>' : '')
+      + '</div>' + (!n.lu ? '<span style="width:8px;height:8px;background:#ef4444;border-radius:50%;display:inline-block;flex-shrink:0;margin-top:4px;"></span>' : '') + '</div>'
+      + '</div>';
+  }
+  if (nonLues.length) { h += '<div class="section-hdr">Non lues (' + nonLues.length + ')</div>'; nonLues.forEach(function(n){ h += card(n); }); }
+  if (lues.length)    { h += '<div class="section-hdr" style="margin-top:16px;">Lues (' + lues.length + ')</div>'; lues.forEach(function(n){ h += card(n); }); }
   return h;
 }
 
