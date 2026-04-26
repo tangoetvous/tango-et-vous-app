@@ -147,6 +147,12 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 - Prix pour les dates non gratuites : lu depuis `localStorage.tev_tarifs_actifs`, fallback `15€`
 - Pour mettre à jour les dates : Paramètres admin → Yoga → Dates
 
+## Pistes de généralisation / revente future
+- L'appli est potentiellement vendable à d'autres écoles de danses de couple (salsa, bachata, west coast swing, kizomba, rock...)
+- Bases déjà présentes : guideur/guidée, niveaux, cours avec/sans partenaire (tango vs yoga), stages, tarifs paramétrables
+- Pour généraliser : rendre configurables les intitulés de rôles (guideur/guidée → leader/follower ou custom), nombre de niveaux, disciplines, couleurs/logo
+- **Pendant le développement** : éviter de hardcoder des éléments spécifiques au tango qui pourraient être des paramètres
+
 ## Saisie des données — règle importante
 À partir de la saison 2026-2027, **toutes les données entrent exclusivement par** :
 1. **Formulaires publics** sur www.tangoetvous.com (essai tango, demande d'inscription tango, stages, essai yoga)
