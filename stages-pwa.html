@@ -757,7 +757,7 @@ function autoResizeIframe() {
   // Petit délai pour laisser les transitions CSS se terminer
   setTimeout(function() {
     try {
-      window.parent.postMessage({ type: 'iframeResize', height: document.body.scrollHeight }, '*');
+      window.parent.postMessage({ type: 'iframeResize', height: document.body.scrollHeight }, window.location.origin);
     } catch(e) {}
   }, 380);
 }
@@ -1137,7 +1137,7 @@ async function soumettre(){
     var msgDemo = {type:'stageInscription', data:data};
     var isIframeDemo = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
     if (isIframeDemo) {
-      try { window.parent.postMessage(msgDemo, '*'); } catch(e){}
+      try { window.parent.postMessage(msgDemo, window.location.origin); } catch(e){}
     } else {
       try { var pd=JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]'); pd.push(msgDemo); localStorage.setItem('tev_pending_inscriptions',JSON.stringify(pd)); } catch(e){}
       try { if(window.BroadcastChannel){ var bcd=new BroadcastChannel('tev_inscriptions'); bcd.postMessage(msgDemo); bcd.close(); } } catch(e){}
@@ -1168,7 +1168,7 @@ async function soumettre(){
     var msg = {type:'stageInscription', data:data};
     var isIframe = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
     if (isIframe) {
-      try { window.parent.postMessage(msg, '*'); } catch(e){}
+      try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
     } else {
       try {
         var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');

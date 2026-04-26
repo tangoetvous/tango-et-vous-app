@@ -967,7 +967,7 @@ function _notifierAdminEssai(payload) {
   var msg = {type:'essaiInscription', data:d};
   var isIframe = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
   if (isIframe) {
-    try { window.parent.postMessage(msg, '*'); } catch(e){}
+    try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
   } else {
     try {
       var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]');

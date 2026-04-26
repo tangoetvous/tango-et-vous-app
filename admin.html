@@ -5640,7 +5640,7 @@ function renderCours() {
   if (sousOngletCours==='attente') {
     var g=demandes.filter(function(d){return d.role==='guidee'&&d.statut==='en_attente';});
     if(!g.length)return h+'<div class="empty-state">Aucune guidée en attente.</div>';
-    g.forEach(function(d){h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+d.prenom+' '+d.nom+'</div><div class="card-sub">'+d.cours+'</div>'+partenaireTag(d.partenaire,'guidee')+'</div><span class="pill pill-warn">Attente</span></div><div class="btn-row"><button class="btn btn-ok" data-action="val-demande" data-id="'+d.id+'">✓ Valider</button>'+btnEmail(d.email,d.prenom+' '+d.nom)+'</div></div>';});
+    g.forEach(function(d){h+='<div class="card hl-warn"><div class="card-top"><div><div class="card-nom">'+escHtml(d.prenom)+' '+escHtml(d.nom)+'</div><div class="card-sub">'+escHtml(d.cours)+'</div>'+partenaireTag(d.partenaire,'guidee')+'</div><span class="pill pill-warn">Attente</span></div><div class="btn-row"><button class="btn btn-ok" data-action="val-demande" data-id="'+d.id+'">✓ Valider</button>'+btnEmail(d.email,escHtml(d.prenom)+' '+escHtml(d.nom))+'</div></div>';});
     return h;
   }
   if (sousOngletCours==='inscrire') {
@@ -5692,7 +5692,7 @@ function renderCours() {
     h+='<div class="card'+(att?' hl-warn':'')+'"><div class="card-top"><div class="card-nom">'+cours+'</div>'+(att?'<span class="pill pill-warn">'+att+' attente</span>':'')+'</div>';
     list.slice().sort(function(a,b){return a.role.localeCompare(b.role);}).forEach(function(d){
       var rcls=d.role==='guideur'?'pill-guideur':'pill-guidee';
-      h+='<div class="inline-row"><div style="flex:1;"><div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">'+d.prenom+' '+d.nom+' <span class="pill '+rcls+'" style="font-size:8px;">'+d.role+'</span></div>'+(d.partenaire?partenaireTag(d.partenaire,d.role):'')+' </div><div style="display:flex;gap:5px;align-items:center;flex-shrink:0;"><span class="pill '+(d.statut==='valide'?'pill-ok':'pill-warn')+'">'+(d.statut==='valide'?'✓ Validé':'Attente')+'</span>'+(d.statut==='en_attente'&&d.role==='guidee'?'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-demande" data-id="'+d.id+'">✓</button>':'')+'</div></div>';
+      h+='<div class="inline-row"><div style="flex:1;"><div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">'+escHtml(d.prenom)+' '+escHtml(d.nom)+' <span class="pill '+rcls+'" style="font-size:8px;">'+escHtml(d.role)+'</span></div>'+(d.partenaire?partenaireTag(d.partenaire,d.role):'')+' </div><div style="display:flex;gap:5px;align-items:center;flex-shrink:0;"><span class="pill '+(d.statut==='valide'?'pill-ok':'pill-warn')+'">'+(d.statut==='valide'?'✓ Validé':'Attente')+'</span>'+(d.statut==='en_attente'&&d.role==='guidee'?'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-demande" data-id="'+d.id+'">✓</button>':'')+'</div></div>';
     });
     h+='</div>';
   });

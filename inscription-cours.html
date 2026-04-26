@@ -875,7 +875,7 @@ function finalize() {
   // Notifier admin
   const isIframe = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
   if (isIframe) {
-    try { window.parent.postMessage(msg, '*'); } catch(e) {}
+    try { window.parent.postMessage(msg, window.location.origin); } catch(e) {}
   } else {
     // Hors iframe : stocker en localStorage (repris au login admin) + BroadcastChannel (admin ouvert dans un autre onglet)
     try {
@@ -948,7 +948,7 @@ function restart(){
 render();
 
 // Auto-resize Wix
-function notifyHeight(){ window.parent.postMessage({type:'tv-resize',height:document.body.scrollHeight},'*'); }
+function notifyHeight(){ window.parent.postMessage({type:'tv-resize',height:document.body.scrollHeight},window.location.origin); }
 new MutationObserver(notifyHeight).observe(document.body,{childList:true,subtree:true});
 notifyHeight();
 
