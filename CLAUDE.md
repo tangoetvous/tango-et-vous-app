@@ -70,7 +70,15 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - [ ] Tester modification cours/paiement/montant → persiste après refresh
 - [ ] Installer l'appli sur Mac (PWA déjà prête) : ouvrir admin dans Chrome → icône ⊕ dans la barre d'adresse → Installer
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
-- [ ] Vérifier envoi emails depuis l'admin
+- [ ] Implémenter emails automatiques via Brevo + Supabase Edge Functions (remplace Code.gs/MailApp qui est inactif)
+- [ ] Implémenter notifications push via FCM + Supabase Edge Functions — IMPORTANT : inclure nettoyage automatique des tokens invalides (FCM retourne les échecs dans la réponse → DELETE FROM fcm_tokens WHERE token IN (échecs))
+
+## Stack technique retenue
+- **DB + Auth** : Supabase
+- **Déploiement** : Cloudflare Workers
+- **Emails transactionnels** : Brevo (limite free : 300/jour — prévoir offre payante si envois groupés à 150-200 élèves)
+- **Notifications push** : Firebase Cloud Messaging (gratuit, sans limite de volume — parfait pour 200 élèves)
+- **Code.gs (Google Apps Script)** : fichier legacy, ne plus utiliser
 
 ## PWA
 - `manifest.json` : espace élèves (index.html)
