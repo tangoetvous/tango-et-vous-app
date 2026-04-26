@@ -91,6 +91,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Discussions** : messages stockés dans Supabase, notifications via FCM — Brevo non impliqué
 - **Code.gs (Google Apps Script)** : fichier legacy, **ne plus utiliser**, emails non envoyés depuis la migration Supabase
 - **GitHub Actions** : 2 000 min/mois gratuit (~1 000 déploiements possibles)
+- **Cloudflare Turnstile** : déjà intégré sur tous les formulaires publics (inscription-cours, cours-essai, essai-yoga, stages-pwa, cours-particuliers) — sitekey `0x4AAAAAADCDhidbX3fOzZl5`
 
 ## Notifications push — état d'avancement
 - Boutons **[🔔 Activer | ⚡ Tester]** ajoutés dans le menu ligne 1
