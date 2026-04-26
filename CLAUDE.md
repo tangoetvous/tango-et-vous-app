@@ -67,6 +67,28 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - Svetlana Castro, Alban Gérôme : paiement "Autres" → vide dans DB, à renseigner via ✏️
 - Paul May, Antoine Konopka, Boris Lefebvre, Sophie Madignier, Régine Cussaguet, Violaine Chavanne, Gérard Cissey : montant=0 (non renseigné dans CSV)
 
+## Intégration Wix — formulaires en iframe
+- Formulaires publics intégrables en iframe sur `www.tangoetvous.com` (Wix)
+- `admin.html` et `index.html` : jamais intégrables (`frame-ancestors 'none'`)
+- Chaque formulaire envoie sa hauteur via `postMessage({type:'tevHeight',height:h},'*')` (MutationObserver + resize + load)
+- Code Wix (HTML Code element) : charge `wix.js` SDK + iframe + listener qui appelle `window.Wix.setHeight(h)`
+- Turnstile : `challenges.cloudflare.com` ajouté au CSP (`script-src` + `frame-src`)
+- **Pages de test Wix** : créer des pages cachées (non référencées, hors menu) pour tester avant mise en production
+- URLs des formulaires déployés :
+  - `https://app.tangoetvous.fr/inscription-cours.html`
+  - `https://app.tangoetvous.fr/cours-essai.html`
+  - `https://app.tangoetvous.fr/essai-yoga.html`
+  - `https://app.tangoetvous.fr/stages-pwa.html`
+  - `https://app.tangoetvous.fr/cours-particuliers.html`
+
+## RGPD
+- Page `confidentialite.html` créée (responsable, données, finalités, sous-traitants, droits, CNIL)
+- Lien "politique de confidentialité" ajouté sous le bouton de soumission des 5 formulaires publics
+- **Sous-traitants** : Supabase (DB, région à vérifier), Brevo (emails, France), Cloudflare (hébergement + Turnstile, USA), Cloudinary (médias, USA), Firebase/Google (push, USA)
+- **Région Supabase** : à vérifier dans Settings → Database → Connection string (host contient le code région)
+- Droits des personnes : email `tangoetvous@gmail.com`, délai 1 mois
+- Durée de conservation : durée relation + 1 an
+
 ## À faire / en suspens
 - [ ] Vérifier correction Sandrine Billot (hatha uniquement) / Myriam Bloch (hatha+yin) dans Supabase — SQL généré mais pas confirmé exécuté
 - [ ] Tester suppression élève tango → persiste après refresh
