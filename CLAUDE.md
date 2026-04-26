@@ -91,7 +91,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Discussions** : messages stockés dans Supabase, notifications via FCM — Brevo non impliqué
 - **Code.gs (Google Apps Script)** : fichier legacy, **ne plus utiliser**, emails non envoyés depuis la migration Supabase
 - **GitHub Actions** : 2 000 min/mois gratuit (~1 000 déploiements possibles)
-- **Cloudflare Turnstile** : déjà intégré sur tous les formulaires publics (inscription-cours, cours-essai, essai-yoga, stages-pwa, cours-particuliers) — sitekey `0x4AAAAAADCDhidbX3fOzZl5`
+- **Cloudflare Turnstile** : déjà intégré sur tous les formulaires publics (inscription-cours, cours-essai, essai-yoga, stages-pwa, cours-particuliers) — sitekey `0x4AAAAAADCDhidbX3fOzZl5`. À ajouter sur le futur formulaire de devis (Wix).
 
 ## Notifications push — état d'avancement
 - Boutons **[🔔 Activer | ⚡ Tester]** ajoutés dans le menu ligne 1
@@ -154,6 +154,13 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 - Pour généraliser : rendre configurables les intitulés de rôles (guideur/guidée → leader/follower ou custom), nombre de niveaux, disciplines, couleurs/logo
 - **Pendant le développement** : éviter de hardcoder des éléments spécifiques au tango qui pourraient être des paramètres
 - **Projet futur séparé** : une fois Tango & Vous terminé, créer un repo distinct basé sur ce projet mais généralisé, en vue d'une commercialisation à d'autres écoles de danse
+
+## Workflow des inscriptions — réalité terrain
+- **Stages, cours d'essai, demandes d'inscription tango** : certains sont validés directement sans attente admin (flow automatique)
+- **Cours particuliers** : formulaire public → admin reçoit la demande, gère manuellement
+- **Devis** : formulaire Wix à venir → admin reçoit la fiche, répond par email/téléphone
+- **Seule action toujours manuelle** : ajouter l'élève dans "Élèves Tango" ou "Élèves Yoga" dans l'admin — ce n'est pas automatisé
+- **Turnstile manquant** : à ajouter sur le futur formulaire de devis
 
 ## Saisie des données — règle importante
 À partir de la saison 2026-2027, **toutes les données entrent exclusivement par** :
