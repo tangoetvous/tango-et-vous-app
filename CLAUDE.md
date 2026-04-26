@@ -152,6 +152,7 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 - Bases déjà présentes : guideur/guidée, niveaux, cours avec/sans partenaire (tango vs yoga), stages, tarifs paramétrables
 - Pour généraliser : rendre configurables les intitulés de rôles (guideur/guidée → leader/follower ou custom), nombre de niveaux, disciplines, couleurs/logo
 - **Pendant le développement** : éviter de hardcoder des éléments spécifiques au tango qui pourraient être des paramètres
+- **Projet futur séparé** : une fois Tango & Vous terminé, créer un repo distinct basé sur ce projet mais généralisé, en vue d'une commercialisation à d'autres écoles de danse
 
 ## Saisie des données — règle importante
 À partir de la saison 2026-2027, **toutes les données entrent exclusivement par** :
