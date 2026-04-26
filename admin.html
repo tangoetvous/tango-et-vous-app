@@ -356,6 +356,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <div class="admin-nav-overlay-list">
       <div class="admin-nav-row">
         <button class="tab-btn" data-tab="tarifs" style="color:#e2e8f0"><span class="tab-icon">⚙️</span><span class="tab-label">Paramètres</span></button>
+        <select id="nav-archives" style="background:var(--s3);color:var(--dim);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:600;padding:6px 8px;cursor:pointer;"><option value="">🗄 Archives</option></select>
       </div>
       <div class="admin-nav-row">
         <button class="tab-btn" data-tab="eleves-tango" style="color:#60b0ff"><span class="tab-icon">👥</span><span class="tab-label">Élèves tango</span></button>
@@ -1015,8 +1016,16 @@ function changerSaisonVue(val) {
 }
 function _styleSaisonSelect() {
   var sel=gel('hdr-saison'); if(!sel) return;
-  var sai=saisonActive();
-  if (sai===saisonSuivante()) {
+  var sai=saisonActive(), sc=saisonCourante(), ss=saisonSuivante();
+  if (sai<sc) {
+    // Saison passée — afficher indicateur archive en ambre
+    if (!Array.from(sel.options).some(function(o){return o.value===sai;})) {
+      var opt=document.createElement('option'); opt.value=sai; opt.text='🗄 '+sai; sel.insertBefore(opt,sel.firstChild);
+    }
+    sel.value=sai;
+    sel.style.color='#f59e0b'; sel.style.borderColor='#f59e0b';
+    sel.style.order='0'; sel.style.marginLeft='0'; sel.style.marginRight='10px';
+  } else if (sai===ss) {
     sel.style.color='#2e7d32'; sel.style.borderColor='#2e7d32';
     sel.style.order='2'; sel.style.marginLeft='10px'; sel.style.marginRight='0';
   } else {
@@ -1026,10 +1035,20 @@ function _styleSaisonSelect() {
 }
 function updateSaisonSelect() {
   var sel=gel('hdr-saison'); if(!sel) return;
-  var sai=saisonActive();
-  sel.innerHTML=listeSaisons().map(function(s){
+  var sai=saisonActive(), sc=saisonCourante();
+  // hdr-saison : seulement saison courante + prochaine (pas les passées)
+  var opts=[sc];
+  if(isPreinscriptionPeriod()) opts.push(saisonSuivante());
+  sel.innerHTML=opts.map(function(s){
     return '<option value="'+s+'"'+(s===sai?' selected':'')+'>'+s+'</option>';
   }).join('');
+  // nav-archives : saisons passées uniquement
+  var archSel=gel('nav-archives');
+  if(archSel){
+    var past=listeSaisons().filter(function(s){return s<sc;}).reverse();
+    archSel.innerHTML='<option value="">🗄 Archives</option>'
+      +past.map(function(s){return '<option value="'+s+'"'+(s===sai?' selected':'')+'>'+s+'</option>';}).join('');
+  }
   _styleSaisonSelect();
 }
 
@@ -3679,6 +3698,10 @@ function demarrerApp(email, isDemo) {
 document.addEventListener('DOMContentLoaded', function() {
   var sel = gel('hdr-saison');
   if (sel) sel.addEventListener('change', function(){ changerSaisonVue(this.value); });
+  var archSel = gel('nav-archives');
+  if (archSel) archSel.addEventListener('change', function() {
+    if (this.value) { changerSaisonVue(this.value); toggleAdminNav(); }
+  });
 });
 function logout() {
   gel('app').style.display='none';
