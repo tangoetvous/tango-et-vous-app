@@ -159,7 +159,7 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 - **Stages, cours d'essai, demandes d'inscription tango** : certains sont validés directement sans attente admin (flow automatique)
 - **Cours particuliers** : formulaire public → admin reçoit la demande, gère manuellement
 - **Devis** : formulaire Wix à venir → admin reçoit la fiche, répond par email/téléphone
-- **Seule action toujours manuelle** : ajouter l'élève dans "Élèves Tango" ou "Élèves Yoga" dans l'admin — ce n'est pas automatisé
+- **Ajout dans Élèves Tango/Yoga toujours manuel et intentionnel** : un élève n'est inscrit que s'il a payé sur AssoConnect. L'appli n'a pas accès à AssoConnect — c'est l'admin qui vérifie le paiement puis ajoute l'élève manuellement. Ne pas automatiser.
 - **Turnstile manquant** : à ajouter sur le futur formulaire de devis
 
 ## Saisie des données — règle importante
