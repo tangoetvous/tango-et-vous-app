@@ -5,6 +5,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Frontend** : HTML/CSS/JS vanilla (admin.html, index.html, etc.)
 - **Backend** : Supabase (base de données + auth)
 - **Déploiement** : Cloudflare Workers Static Assets via GitHub Actions
+- **Domaines** : site Wix = `tangoetvous.fr` / app Cloudflare = `app.tangoetvous.fr` (admin + élèves)
 - **Branche de travail** : `claude/dance-school-app-RTqb5`
 - **Repo** : `tangoetvous/tango-et-vous-app`
 
