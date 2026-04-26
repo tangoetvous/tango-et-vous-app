@@ -339,9 +339,10 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   <div class="hdr">
     <div class="hdr-logo">TANGO &amp; VOUS</div>
     <div style="display:flex;align-items:center;gap:8px;">
+      <button id="btn-notif" title="Discussions" onclick="switchTab('discussions')" style="position:relative;background:none;border:none;cursor:pointer;padding:2px 4px;font-size:18px;line-height:1;opacity:.75;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'">🔔<span id="notif-dot" style="display:none;position:absolute;top:1px;right:1px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:1.5px solid var(--s1);"></span></button>
       <button data-tab="tarifs" title="Paramètres" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:16px;line-height:1;opacity:.75;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'" onclick="switchTab('tarifs')">⚙️</button>
-      <button class="btn-logout" id="btn-logout" title="Déconnexion" style="background:transparent;border:1px solid var(--border);color:var(--dim);padding:6px 9px;border-radius:6px;cursor:pointer;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
       <button class="admin-menu-btn" onclick="toggleAdminNav()">☰ Menu</button>
+      <button class="btn-logout" id="btn-logout" title="Déconnexion" style="background:transparent;border:1px solid var(--border);color:var(--dim);padding:6px 9px;border-radius:6px;cursor:pointer;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
     </div>
   </div>
   <div class="main-tabs" id="main-tabs">
@@ -3792,8 +3793,20 @@ function syncStageInscritsToLocal() {
 // ================================================================
 // NAVIGATION
 // ================================================================
+function updateNotifBadge() {
+  var dot = gel('notif-dot'); if (!dot) return;
+  var discs = adminData.discussions || [];
+  if (!discs.length) { dot.style.display = 'none'; return; }
+  var lastSeen = localStorage.getItem('tev_disc_last_seen') || '';
+  var latest = discs.reduce(function(max, d) { return (d.date||'') > max ? (d.date||'') : max; }, '');
+  dot.style.display = (latest && latest > lastSeen) ? 'inline-block' : 'none';
+}
 function switchTab(tab) {
   currentTab = tab;
+  if (tab === 'discussions') {
+    localStorage.setItem('tev_disc_last_seen', new Date().toISOString());
+    var dot = gel('notif-dot'); if (dot) dot.style.display = 'none';
+  }
   document.querySelectorAll('.tab-btn').forEach(function(b) {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
@@ -7970,6 +7983,7 @@ function chargerDiscussions(callback) {
         date: d.last_message_at || d.created_at,
       };
     });
+    updateNotifBadge();
     if (callback) callback();
   }).catch(function() { adminData.discussions = adminData.discussions||[]; if(callback) callback(); });
 }
