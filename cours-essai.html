@@ -950,8 +950,10 @@ async function soumettre(){
     if(error) throw error;
     _showSuccess();
   } catch(e){
-    err.textContent="Erreur de connexion. Merci de réessayer.";
+    const msg = e && e.message ? e.message : String(e);
+    err.textContent="Erreur : "+msg;
     err.style.display="block"; btn.disabled=false; btn.textContent="ENVOYER MON INSCRIPTION";
+    console.error('[TEV] Supabase insert error:', e);
   }
 }
 
