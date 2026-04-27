@@ -945,15 +945,12 @@ async function soumettre(){
     const dp=payload.date.split('/');
     const dateIso=dp.length===3?dp[2]+'-'+dp[1]+'-'+dp[0]:payload.date;
     const niveauNorm = payload.niveau==='Débutant' ? 'debutant' : (payload.niveau||'').toLowerCase().startsWith('interm') ? 'intermediaire' : (payload.niveau||'').toLowerCase();
-    // Statut : 'attente' si capacité dépassée (limites actives en sept/oct/nov)
-    const moisDate = parseInt(dateIso.slice(5, 7), 10);
-    const hasLimits = moisDate >= 9 && moisDate < 12;
-    let statutFinal = 'demande';
-    if (hasLimits && (payload.role === 'guidee' || payload.role === 'guideur' || payload.role === 'double')) {
-      const cap = payload.role === 'guidee' ? QUOTA_GDE : QUOTA_GUI;
-      const current = payload.role === 'guidee' ? qData.d : qData.g;
-      if (current >= cap) statutFinal = 'attente';
-    }
+    // Règle de validation :
+    // - En couple → confirme (guideur ET guidée validés ensemble)
+    // - Seul guideur → confirme (toujours accepté)
+    // - Seule guidée → attente (admin valide manuellement depuis liste d'attente)
+    const enCouple = payload.avecPart === 'Oui';
+    const statutFinal = (enCouple || payload.role === 'guideur') ? 'confirme' : 'attente';
     const {error}=await TEV.client.from('inscriptions_essai').insert({
       prenom:payload.prenom, nom:payload.nom,
       email:payload.email.trim().toLowerCase(), tel:payload.tel,

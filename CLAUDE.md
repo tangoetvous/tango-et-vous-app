@@ -166,8 +166,12 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 - Seules les dates **futures** sont affichées (filtrées dynamiquement à partir d'aujourd'hui)
 - Les deux saisons coexistent dans la liste, séparées par des en-têtes de saison
 - Cours **gratuits** : tous les cours de septembre pour les Débutants (marqués automatiquement)
-- Système de quotas temps réel : appel fetch pour compter inscrits, badge "Complet" si quota atteint
+- Système de quotas temps réel : RPC Supabase `compter_inscrits_essai()`, badge "Complet" si quota atteint (QUOTA_GUI=22, QUOTA_GDE=23)
 - Pour mettre à jour les dates : Paramètres admin → section Dates (Paris ou Vincennes)
+- **Règle de validation des inscriptions** :
+  - Guideur seul → `statut='confirme'` → apparaît dans "Pointage" et "Par date"
+  - Guidée seule → `statut='attente'` → apparaît dans "Liste d'attente" et "Par date" (admin valide manuellement)
+  - En couple (avec partenaire) → `statut='confirme'` pour les deux → "Pointage" et "Par date"
 
 ### `essai-yoga.html` (cours d'essai yoga)
 - Les dates viennent de **localStorage `tev_cours_dates.yoga`** (mis à jour par l'admin via Paramètres → Yoga → Dates)
