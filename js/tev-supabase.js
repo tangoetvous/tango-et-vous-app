@@ -13,7 +13,11 @@ const _TEV_ADMIN_EMAILS = [
   'jeremy@tangoetvous.com',
 ];
 
-const _tev = window.supabase.createClient(TEV_SUPABASE_URL, TEV_SUPABASE_KEY);
+if (!window.supabase) {
+  console.error('[TEV] ERREUR : Supabase SDK non chargé — vérifiez que cdn.jsdelivr.net est accessible (VPN/proxy ?)');
+  document.body && (document.body.innerHTML = '<div style="padding:40px;font-family:sans-serif;color:#c00"><b>Erreur de chargement</b><br><br>Le SDK Supabase n\'a pas pu être chargé.<br>Vérifiez votre connexion ou désactivez votre VPN/proxy.<br><br><small>cdn.jsdelivr.net doit être accessible.</small></div>');
+}
+const _tev = window.supabase ? window.supabase.createClient(TEV_SUPABASE_URL, TEV_SUPABASE_KEY) : null;
 
 // ── Helper ─────────────────────────────────────────────────────
 function _fmtDateSb(val) {
