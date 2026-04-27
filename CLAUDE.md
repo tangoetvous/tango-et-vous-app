@@ -17,13 +17,15 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 
 ## Structure Supabase (tables principales)
 - **`eleves`** : profils élèves (nom, prenom, email, tel, role, statut_eleve, notes, saison...)
-- **`inscriptions_cours`** : inscriptions tango (email, prenom, nom, ville, niveau, type, paiement, montant, statut, saison)
+- **`inscriptions_cours`** : inscriptions tango (email, prenom, nom, tel, role, ville, niveau, cours, type, paiement, montant, statut, partenaire, email_partenaire, saison, donnees)
   - `ville` : `'paris'` ou `'vincennes'`
   - `niveau` : `'debutant'` ou `'intermediaire'`
+  - `role` : `'guideur'`, `'guidee'`, `'double'`
   - `type` : `'carte10'` ou `'forfait'`
   - `paiement` : `'cb1x'`, `'cb3x'`, `'especes'`, `'cheque'`, `'virement1x'`, `'virement3x'`
-  - `statut` : `'inscrit'`, `'supprimé'`, `'valide'`, `'attente'`
-  - ⚠️ Pas de colonne `cours` — elle est calculée côté JS depuis ville+niveau
+  - `statut` : `'inscrit'`, `'supprimé'`, `'valide'`, `'attente'`, `'demande'`
+  - `cours` : format `'paris—debutant'` (stockée en DB, calculée depuis ville+niveau lors de l'insert)
+  - ⚠️ Dans `tev-supabase.js`, `role` est prioritairement lu depuis `inscriptions_cours`, avec fallback sur `eleves.role`
 - **`cours_yoga`** : inscriptions yoga (email, prenom, nom, cours, paiement, montant, statut, saison)
   - `cours` : `'hatha'`, `'yin'`, `'forfait'` (forfait = hatha + yin)
   - RLS activé avec policies `allow_select/insert/update/delete` (USING true)
@@ -192,10 +194,13 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 - Inscription **double rôle** → même règle que guideur (confirme sauf quota dépassé en sept/oct/nov)
 
 **Quotas (affichage temps réel via RPC Supabase `compter_inscrits_essai`) :**
-- QUOTA_GUI = 22 guideurs par date
-- QUOTA_GDE = 23 guidées par date
+- QUOTA_GUI = 22 guideurs par date (total classe = essai + élèves réguliers)
+- QUOTA_GDE = 23 guidées par date (total classe = essai + élèves réguliers)
+- **Le quota inclut à la fois** : les inscriptions essai confirmées (statut='confirme') + les élèves réguliers inscrits à ce cours (inscriptions_cours, statut='inscrit', même ville+niveau+saison)
 - Limites actives **seulement en septembre, octobre, novembre** (mois 9, 10, 11)
 - Badge "Complet" si quota atteint ; cours non sélectionnable si les deux quotas sont atteints
+- RPC `compter_inscrits_essai(p_date_essai date, p_ville text, p_niveau text)` → retourne `{gui: int, gde: int}`
+- SQL à exécuter dans Supabase (SQL Editor) — voir section "SQL utiles" ci-dessous
 
 **Tarifs :**
 - Cours **gratuits** : tous les cours de septembre pour les Débutants (marqués `gratuit:true` dans les données de dates)
@@ -287,8 +292,12 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 
 ### Cartes 10 cours (tango)
 - Une carte 10 cours = type `'carte10'` dans `inscriptions_cours`
-- Durée de validité : 6 mois à compter du **premier cours utilisé** (pas de la date d'achat)
-- Le calcul d'expiration se fait côté JS à partir des pointages
+- Durée de validité : **3 mois** à compter du **premier cours utilisé** (pas de la date d'achat)
+- **Bonus** : pour chaque semaine sans cours (vacances, jours fériés) qui tombe dans les 3 mois, la date d'expiration est repoussée d'une semaine
+- Les semaines sans cours sont dans `SANS_COURS_PARIS` et `SANS_COURS_VINCENNES` dans `admin.html` — à mettre à jour chaque saison
+- Formule : `expiration = datePremierCours + 3 mois + (nb semaines sans cours dans cette période × 7 jours)`
+- Calcul : `calcExpiration(datePremierCours, ville)` dans `admin.html`
+- La carte est valable Paris ET Vincennes
 
 ### Pointage / présences
 - Table `presences` : une ligne par (eleve_id, date, cours)
@@ -328,3 +337,127 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 
 Les imports SQL en masse (comme pour 2025-2026) ne doivent plus être nécessaires.
 Claude ne saisit des données directement en SQL qu'exceptionnellement, sur demande explicite.
+
+## Emails automatiques — catalogue complet (source : Code.gs legacy)
+
+Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Code.gs ne fonctionne plus.
+
+### Cours d'essai Tango
+| Code | Déclencheur | Destinataire | Objet |
+|------|-------------|--------------|-------|
+| **E1** | Inscription confirme (>7j avant le cours) | Élève | "Cours d'essai confirmé !" + rappel J-7 annoncé |
+| **E2** | Inscription guidée seule (toujours attente) | Élève | "Cours d'essai : liste d'attente" |
+| **E4** | 7 jours avant le cours (déclencheur quotidien) | Élève confirmé | "Rappel J-7" avec boutons ✓ Je serai là / 📅 Reporter / ✕ Annuler |
+| **E5** | Inscription confirme mais quota dépassé | Élève | "Cours d'essai : liste d'attente" (créneau complet) |
+| **E6** | Inscription confirme <7j avant le cours | Élève | "Cours d'essai confirmé !" (sans rappel J-7 à venir) |
+| **E15** | Quand admin valide une guidée de la liste d'attente | Élève | "Cours d'essai confirmé !" avec bouton de confirmation de présence |
+| **J+1a** | Lendemain du cours, si présent | Élève présent | "À bientôt sur la piste !" + lien inscription cours réguliers |
+| **J+1b** | Lendemain du cours, si absent | Élève absent | "On vous attend bientôt !" + lien cours d'essai |
+| **Admin** | À chaque nouvelle inscription | Admin | Récap complet avec statut (E1/E2/E5/E6) |
+
+**Contenus clés E1/E6 :** confirmation, infobox (date, heure, lieu, tarif), livret téléchargeable, conseils (chaussures lisses, arriver 5min avant, etc.)
+**Contenu E4 :** infobox + 3 boutons (confirmer/reporter/annuler) → liens vers Apps Script → à remplacer par liens Supabase Edge Function
+**Livrets :** URLs par saison dans `LIVRETS` dans Code.gs — à intégrer dans les Paramètres admin
+
+### Stages
+| Code | Déclencheur | Destinataire | Objet |
+|------|-------------|--------------|-------|
+| **Confirmé** | Inscription type_confirmation='confirme' | Élève | "Votre stage est confirmé !" + récap dates+slots+prix + adresse Centre Kim Kan |
+| **Attente** | Inscription type_confirmation='attente' | Élève | "Demande de stage reçue" + récap + explication parité |
+| **Tardive** | Admin valide une inscrite en attente | Élève | "Bonne nouvelle ! Votre stage est confirmé !" |
+| **Admin** | À chaque nouvelle inscription | Admin | Récap complet |
+
+### Inscription cours tango régulier
+| Code | Déclencheur | Destinataire | Objet |
+|------|-------------|--------------|-------|
+| **E01** | Demande reçue (formulaire inscription-cours) | Élève | "Votre demande a bien été reçue" + prochaines étapes (48-72h validation, paiement) |
+| **E02** | Admin valide la demande → statut='valide' | Élève | "Votre inscription est validée" + montant (170€ par défaut) + modalités paiement |
+| **E03** | Admin valide le paiement → statut='inscrit' | Élève | "Inscription confirmée, à bientôt !" + lien espace élève PWA |
+| **E17** | Mode pré-inscription (mai-août) | Élève | "Pré-inscription 2026-2027 reçue" + info reprise septembre |
+| **Admin** | Chaque nouvelle demande | Admin | Récap (prénom, email, cours, rôle) |
+
+### Cartes 10 cours
+| Code | Déclencheur | Destinataire | Objet |
+|------|-------------|--------------|-------|
+| **Bienvenue** | Premier pointage de la saison | Élève | "Bienvenue dans votre cours !" + instructions PWA |
+| **Auto-renouvelée** | Débordement sur 11ᵉ cours (carte épuisée au pointage) | Élève | "Nouvelle carte ouverte" + lien AssoConnect renouvellement |
+| **E10** | Admin renouvelle manuellement | Élève | "Carte renouvelée, à bientôt !" |
+| **Fin saison J+1** | Déclencheur : lendemain dernier cours Paris juin | Élèves avec cours restants | "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" |
+| **Fin saison 25 août** | Déclencheur quotidien le 25 août | Élèves avec cours restants non ré-inscrits | "Dernier rappel : vos cours expirent" |
+
+### Cours particuliers
+| Déclencheur | Destinataire | Objet |
+|-------------|--------------|-------|
+| Formulaire soumis | Admin (tangoetvous@gmail.com) | "Cours particulier — Prénom Nom" + récap complet (prof, durée, lieu, objectifs, urgence) |
+| Formulaire soumis | Élève | "Demande de cours particulier reçue" + récap + contact (06 61 72 79 98 / tangoetvous@gmail.com) |
+
+### Profil élève
+| Code | Déclencheur | Destinataire | Objet |
+|------|-------------|--------------|-------|
+| **Activation** | Admin active un profil (statut='Actif') | Élève | "Votre espace élève est prêt" + lien PWA + instructions connexion magic link |
+| **Nouveau profil** | Création automatique depuis formulaire | Admin | "Nouveau profil : Prénom Nom" + source (essai/inscription/stage/CP) |
+
+### Récapitulatif fin de saison (déclencheurs automatiques)
+- **1er septembre** : désactivation des élèves sans carte reportée → email admin récap (N élèves désactivés)
+- **J+1 après dernier cours Paris** : emails fin de saison aux élèves avec cours restants
+- **25 août** : relance finale aux élèves avec cours restants non ré-inscrits
+
+## SQL utiles — à exécuter dans Supabase SQL Editor
+
+### Fonction `compter_inscrits_essai` (quota cours d'essai)
+**À créer/remplacer dans Supabase.** Compte guideurs+guidées confirmés = inscriptions essai + élèves réguliers du cours.
+
+```sql
+CREATE OR REPLACE FUNCTION compter_inscrits_essai(
+  p_date_essai date,
+  p_ville text,
+  p_niveau text
+) RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_saison text;
+  v_gui_essai integer := 0;
+  v_gde_essai integer := 0;
+  v_gui_cours integer := 0;
+  v_gde_cours integer := 0;
+BEGIN
+  -- Calcul de la saison depuis la date (sept = début de saison)
+  v_saison := CASE
+    WHEN EXTRACT(MONTH FROM p_date_essai) >= 9
+    THEN EXTRACT(YEAR FROM p_date_essai)::text || '-' || (EXTRACT(YEAR FROM p_date_essai) + 1)::text
+    ELSE (EXTRACT(YEAR FROM p_date_essai) - 1)::text || '-' || EXTRACT(YEAR FROM p_date_essai)::text
+  END;
+
+  -- Inscriptions essai confirmées pour cette date+ville+niveau
+  SELECT
+    COUNT(*) FILTER (WHERE role IN ('guideur', 'double') AND statut = 'confirme'),
+    COUNT(*) FILTER (WHERE role = 'guidee' AND statut = 'confirme')
+  INTO v_gui_essai, v_gde_essai
+  FROM inscriptions_essai
+  WHERE date_essai = p_date_essai
+    AND ville = p_ville
+    AND niveau = p_niveau
+    AND type = 'tango';
+
+  -- Élèves réguliers inscrits à ce cours (même saison)
+  SELECT
+    COUNT(*) FILTER (WHERE role = 'guideur'),
+    COUNT(*) FILTER (WHERE role = 'guidee')
+  INTO v_gui_cours, v_gde_cours
+  FROM inscriptions_cours
+  WHERE ville = p_ville
+    AND niveau = p_niveau
+    AND statut = 'inscrit'
+    AND saison = v_saison;
+
+  RETURN json_build_object(
+    'gui', v_gui_essai + v_gui_cours,
+    'gde', v_gde_essai + v_gde_cours
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION compter_inscrits_essai(date, text, text) TO anon, authenticated;
+```
