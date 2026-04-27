@@ -595,6 +595,8 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
 </div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+var _inIframe = window.self !== window.top;
+if (_inIframe) { var _tsDomEl = document.querySelector('.cf-turnstile'); if (_tsDomEl) _tsDomEl.style.display = 'none'; }
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec';
 const IS_DEMO = APPS_SCRIPT_URL.includes('VOTRE_DEPLOYMENT');
 
@@ -1076,11 +1078,13 @@ function allerEtape1(){
 // ── Soumission ───────────────────────────────────────────────────
 async function soumettre(){
   if(!validerEtape2()) return;
-  var tsToken=(document.querySelector('[name="cf-turnstile-response"]')||{}).value||'';
-  if(!tsToken){
-    document.getElementById('err-global-2').textContent='Vérification anti-robot requise.';
-    document.getElementById('err-global-2').classList.add('visible');
-    return;
+  if(!_inIframe){
+    var tsToken=(document.querySelector('[name="cf-turnstile-response"]')||{}).value||'';
+    if(!tsToken){
+      document.getElementById('err-global-2').textContent='Vérification anti-robot requise.';
+      document.getElementById('err-global-2').classList.add('visible');
+      return;
+    }
   }
   var btn = document.getElementById('btnSubmit');
   btn.disabled=true; btn.textContent='Envoi en cours…';

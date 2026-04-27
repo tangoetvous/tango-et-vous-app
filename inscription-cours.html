@@ -185,6 +185,7 @@ select option{background:var(--s2);}
 </div>
 
 <script>
+var _inIframe = window.self !== window.top;
 // ================================================================
 // ⚙️  CONFIG
 // ================================================================
@@ -631,7 +632,7 @@ function sInfos(num) {
       ? `<button class="btn-next" style="width:100%;" onclick="goCours2()">Passer au 2ᵉ cours →</button>`
       : (role ? `
         <button class="btn-next" style="width:100%;margin-bottom:8px;" onclick="goTarif()">💶 Évaluer mon tarif</button>
-        <div class="cf-turnstile" data-sitekey="0x4AAAAAADCDhidbX3fOzZl5" data-theme="dark" id="tev-ts" style="margin-bottom:12px;"></div>
+        ${_inIframe ? '' : '<div class="cf-turnstile" data-sitekey="0x4AAAAAADCDhidbX3fOzZl5" data-theme="dark" id="tev-ts" style="margin-bottom:12px;"></div>'}
         <button class="btn-next" style="width:100%;background:transparent;color:var(--gold);border:2px solid var(--gold);" onclick="soumettre()">ENVOYER MA DEMANDE</button>
         <p style="font-size:11px;color:#666;text-align:center;margin-top:10px;">En envoyant ce formulaire, vous acceptez notre <a href="/confidentialite.html" target="_blank" style="color:#D4AF37;">politique de confidentialité</a>.</p>
       ` : '')}
@@ -827,8 +828,10 @@ function prev(){ saveStep(); if(S.step>1){S.step--;render();} }
 function soumettre() {
   saveStep();
   if(!validateInfos()) return;
-  const tsToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
-  if (!tsToken) { showErr('Vérification anti-robot requise.'); return; }
+  if (!_inIframe) {
+    const tsToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
+    if (!tsToken) { showErr('Vérification anti-robot requise.'); return; }
+  }
   finalize();
 }
 
@@ -943,17 +946,16 @@ function restart(){
   }
 })();
 
-// Sync params depuis Supabase au chargement (source de vérité), puis render
+// Render immédiat avec les valeurs en cache (pas de blocage sur réseau)
+render();
+// Sync params depuis Supabase en arrière-plan — met à jour le cache pour la prochaine visite
 (async function() {
   try {
     var all = await TEV.getAllParams();
     Object.keys(all).forEach(function(k) {
       if (k.startsWith('tev_')) { try { localStorage.setItem(k, typeof all[k]==='string' ? all[k] : JSON.stringify(all[k])); } catch(e) {} }
     });
-    T = _computeT();
-    CI = _computeCI();
   } catch(e) {}
-  render();
 })();
 
 // Auto-resize Wix

@@ -171,6 +171,8 @@ select option{background:var(--s2);}
 </div><!-- .wrap -->
 
 <script>
+var _inIframe = window.self !== window.top;
+if (_inIframe) { var _tsDomEl = document.querySelector('.cf-turnstile'); if (_tsDomEl) _tsDomEl.style.display = 'none'; }
 // ================================================================
 // CONFIG
 // ================================================================
@@ -397,8 +399,10 @@ function soumettre() {
   if (!email || !email.includes('@')) { err.textContent='Email invalide.'; err.style.display='block'; return; }
   if (!date) { err.textContent='Veuillez choisir une date.'; err.style.display='block'; return; }
 
-  const tsToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
-  if (!tsToken) { err.textContent='Vérification anti-robot requise.'; err.style.display='block'; return; }
+  if (!_inIframe) {
+    const tsToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
+    if (!tsToken) { err.textContent='Vérification anti-robot requise.'; err.style.display='block'; return; }
+  }
 
   const btn = document.getElementById('btn-submit');
   btn.disabled = true;
@@ -476,17 +480,16 @@ function restart() {
   window.scrollTo(0,0);
 }
 
-// Sync params depuis Supabase au chargement (source de vérité), puis init
+// Init immédiate avec les valeurs en cache (pas de blocage sur réseau)
+init();
+// Sync params depuis Supabase en arrière-plan — met à jour le cache pour la prochaine visite
 (async function() {
   try {
     var all = await TEV.getAllParams();
     Object.keys(all).forEach(function(k) {
       if (k.startsWith('tev_')) { try { localStorage.setItem(k, typeof all[k]==='string' ? all[k] : JSON.stringify(all[k])); } catch(e) {} }
     });
-    _initCoursYoga();
-    _initParamsYoga();
   } catch(e) {}
-  init();
 })();
 
 // Mise à jour en temps réel si les Paramètres changent dans un autre onglet

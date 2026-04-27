@@ -231,6 +231,7 @@ select option{background:var(--s2);color:var(--text);}
 </div>
 
 <script>
+var _inIframe = window.self !== window.top;
 // ================================================================
 // ⚙️  CONFIGURATION
 // ================================================================
@@ -572,7 +573,7 @@ function sDispos() {
 
     <div class="recap">${recap}</div>
 
-    <div class="cf-turnstile" data-sitekey="0x4AAAAAADCDhidbX3fOzZl5" data-theme="dark" id="tev-ts" style="margin-bottom:12px;"></div>
+    ${_inIframe ? '' : '<div class="cf-turnstile" data-sitekey="0x4AAAAAADCDhidbX3fOzZl5" data-theme="dark" id="tev-ts" style="margin-bottom:12px;"></div>'}
     <button class="btn-submit" id="btn-sub" onclick="soumettre()">ENVOYER MA DEMANDE</button>
     <p style="font-size:11px;color:#666;text-align:center;margin-top:10px;">En envoyant ce formulaire, vous acceptez notre <a href="/confidentialite.html" target="_blank" style="color:#D4AF37;">politique de confidentialité</a>.</p>
 
@@ -613,8 +614,10 @@ async function soumettre() {
 
   if (!S.dispoTexte) { showErr('Merci d\'indiquer vos disponibilités.'); return; }
 
-  const tsToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
-  if (!tsToken) { showErr('Vérification anti-robot requise.'); return; }
+  if (!_inIframe) {
+    const tsToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
+    if (!tsToken) { showErr('Vérification anti-robot requise.'); return; }
+  }
 
   const btn = $('btn-sub');
   btn.disabled = true; btn.classList.add('loading');

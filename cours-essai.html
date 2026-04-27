@@ -383,6 +383,8 @@ select option{background:#1a1a1a;color:#fff;}
 </div>
 
 <script>
+var _inIframe = window.self !== window.top;
+if (_inIframe) { var _tsDomEl = document.querySelector('.cf-turnstile'); if (_tsDomEl) _tsDomEl.style.display = 'none'; }
 // ── CONFIGURATION ─────────────────────────────────────────
 const SCRIPT_URL = "https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec";
 const QUOTA_MAX  = 22;
@@ -871,8 +873,10 @@ async function soumettre(){
   const err=document.getElementById("errmsg");
   err.style.display="none";
 
-  const tsToken=(document.querySelector('[name="cf-turnstile-response"]')||{}).value||'';
-  if(!tsToken){err.textContent="Vérification anti-robot requise.";err.style.display="block";return;}
+  if(!_inIframe){
+    const tsToken=(document.querySelector('[name="cf-turnstile-response"]')||{}).value||'';
+    if(!tsToken){err.textContent="Vérification anti-robot requise.";err.style.display="block";return;}
+  }
 
   // Vérifier rôle
   if(!document.getElementById("role").value) {
