@@ -6390,8 +6390,16 @@ function supprimerEssaiInscr(email, date) {
   if (!adminData.essai) return;
   adminData.essai = adminData.essai.filter(function(e){ return !(e.email===email && e.date===date); });
   if (!IS_DEMO) {
-    TEV.client.from('inscriptions_essai').delete().eq('email', email).eq('date_essai', date)
-      .catch(function(e){ console.error('Erreur suppression essai:', e); chargerDonnees(); });
+    TEV.client.from('inscriptions_essai').delete()
+      .eq('email', email).eq('date_essai', date)
+      .then(function(res){
+        if (res && res.error) {
+          console.error('Erreur suppression essai:', res.error);
+          afficherToast('Erreur : ' + (res.error.message || res.error.code || 'suppression échouée'));
+          chargerDonnees();
+        }
+      })
+      .catch(function(e){ console.error('Erreur suppression essai (réseau):', e); chargerDonnees(); });
   }
   renderTab();
 }
@@ -6399,8 +6407,16 @@ function supprimerYogaEssaiInscr(email, date) {
   if (!adminData.essaiYoga) return;
   adminData.essaiYoga = adminData.essaiYoga.filter(function(e){ return !(e.email===email && e.date===date); });
   if (!IS_DEMO) {
-    TEV.client.from('inscriptions_essai_yoga').delete().eq('email', email).eq('date_essai', date)
-      .catch(function(e){ console.error('Erreur suppression essai yoga:', e); chargerDonnees(); });
+    TEV.client.from('inscriptions_essai_yoga').delete()
+      .eq('email', email).eq('date_essai', date)
+      .then(function(res){
+        if (res && res.error) {
+          console.error('Erreur suppression essai yoga:', res.error);
+          afficherToast('Erreur : ' + (res.error.message || res.error.code || 'suppression échouée'));
+          chargerDonnees();
+        }
+      })
+      .catch(function(e){ console.error('Erreur suppression essai yoga (réseau):', e); chargerDonnees(); });
   }
   renderTab();
 }
