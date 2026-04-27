@@ -102,6 +102,12 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - [ ] Rappels emails automatiques pour paiements CB en plusieurs fois (cb3x) — relances aux échéances
 - [ ] Rubrique Devis : ajouter génération de devis PDF — champs à remplir dans l'appli → PDF téléchargeable/envoyable par email. Attendre que l'utilisateur fournisse : logo, données fixes (coordonnées, mentions), structure du devis
 
+## Keep-alive automatique — mis en place, rien à faire
+- **Supabase** : mise en pause après 7 jours sans requête → workflow GitHub Actions ping toutes les 5 jours
+- **GitHub Actions** : crons désactivés après 60 jours sans push → le même workflow commit `.keep-alive` avec `[skip ci]` pour maintenir l'activité du repo sans déclencher de déploiement
+- Fichier : `.github/workflows/keep-alive.yml`
+- **Entièrement automatique** — aucune intervention manuelle nécessaire
+
 ## Stack technique retenue
 - **DB + Auth** : Supabase (plan free — 500 MB, 200 connexions Realtime simultanées max)
 - **Déploiement** : Cloudflare Workers Static Assets (pratiquement illimité pour du statique)
