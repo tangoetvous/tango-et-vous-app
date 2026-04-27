@@ -947,10 +947,19 @@ async function soumettre(){
     const niveauNorm = payload.niveau==='Débutant' ? 'debutant' : (payload.niveau||'').toLowerCase().startsWith('interm') ? 'intermediaire' : (payload.niveau||'').toLowerCase();
     // Règle de validation :
     // - En couple → confirme (guideur ET guidée validés ensemble)
-    // - Seul guideur → confirme (toujours accepté)
     // - Seule guidée → attente (admin valide manuellement depuis liste d'attente)
+    // - Guideur seul → confirme, sauf si quota guideurs dépassé en sept/oct/nov → attente
     const enCouple = payload.avecPart === 'Oui';
-    const statutFinal = (enCouple || payload.role === 'guideur') ? 'confirme' : 'attente';
+    const moisDate = parseInt(dateIso.slice(5, 7), 10);
+    const hasLimits = moisDate >= 9 && moisDate < 12;
+    let statutFinal;
+    if (enCouple) {
+      statutFinal = 'confirme';
+    } else if (payload.role === 'guideur') {
+      statutFinal = (hasLimits && qData.g >= QUOTA_GUI) ? 'attente' : 'confirme';
+    } else {
+      statutFinal = 'attente';
+    }
     const {error}=await TEV.client.from('inscriptions_essai').insert({
       prenom:payload.prenom, nom:payload.nom,
       email:payload.email.trim().toLowerCase(), tel:payload.tel,

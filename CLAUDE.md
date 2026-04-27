@@ -169,9 +169,9 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 - Système de quotas temps réel : RPC Supabase `compter_inscrits_essai()`, badge "Complet" si quota atteint (QUOTA_GUI=22, QUOTA_GDE=23)
 - Pour mettre à jour les dates : Paramètres admin → section Dates (Paris ou Vincennes)
 - **Règle de validation des inscriptions** :
-  - Guideur seul → `statut='confirme'` → apparaît dans "Pointage" et "Par date"
-  - Guidée seule → `statut='attente'` → apparaît dans "Liste d'attente" et "Par date" (admin valide manuellement)
-  - En couple (avec partenaire) → `statut='confirme'` pour les deux → "Pointage" et "Par date"
+  - En couple (avec partenaire) → `statut='confirme'` → "Pointage" et "Par date"
+  - Guidée seule → toujours `statut='attente'` → "Liste d'attente" et "Par date" (admin valide manuellement)
+  - Guideur seul → `statut='confirme'` sauf si quota guideurs (22) dépassé **en sept/oct/nov** → alors `statut='attente'`
 
 ### `essai-yoga.html` (cours d'essai yoga)
 - Les dates viennent de **localStorage `tev_cours_dates.yoga`** (mis à jour par l'admin via Paramètres → Yoga → Dates)
