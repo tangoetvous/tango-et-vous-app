@@ -181,6 +181,131 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 - Prix pour les dates non gratuites : lu depuis `localStorage.tev_tarifs_actifs`, fallback `15€`
 - Pour mettre à jour les dates : Paramètres admin → Yoga → Dates
 
+## Règles métier — formulaires publics
+
+### `cours-essai.html` — Cours d'essai Tango
+
+**Statut à l'inscription (table `inscriptions_essai`) :**
+- Inscription **en couple** (avecPart='Oui') → `statut='confirme'`
+- Inscription **guideur seul** → `statut='confirme'` sauf si quota guideurs atteint (QUOTA_GUI=22) **en sept/oct/nov** → `statut='attente'`
+- Inscription **guidée seule** → toujours `statut='attente'` (admin valide manuellement)
+- Inscription **double rôle** → même règle que guideur (confirme sauf quota dépassé en sept/oct/nov)
+
+**Quotas (affichage temps réel via RPC Supabase `compter_inscrits_essai`) :**
+- QUOTA_GUI = 22 guideurs par date
+- QUOTA_GDE = 23 guidées par date
+- Limites actives **seulement en septembre, octobre, novembre** (mois 9, 10, 11)
+- Badge "Complet" si quota atteint ; cours non sélectionnable si les deux quotas sont atteints
+
+**Tarifs :**
+- Cours **gratuits** : tous les cours de septembre pour les Débutants (marqués `gratuit:true` dans les données de dates)
+- Cours payants : 15€ seul / 30€ en couple
+
+**Affichage dans l'admin :**
+- `statut='confirme'` → onglet "Pointage" + onglet "Par date"
+- `statut='attente'` → onglet "Liste d'attente" + onglet "Par date"
+- Guideur et double rôle traités pareil côté admin (tous deux dans pGui)
+
+**Valeurs des champs stockées :**
+- `role` : `'guideur'`, `'guidee'`, `'double'` (normalisés avant insert, jamais `'Guideur.se'` etc.)
+- `niveau` : `'debutant'` ou `'intermediaire'` (normalisés avant insert, jamais `'Débutant'` etc.)
+- `type` : `'tango'`
+
+---
+
+### `essai-yoga.html` — Cours d'essai Yoga
+
+**Statut à l'inscription (table `inscriptions_essai`) :**
+- Toujours `statut='demande'` — l'admin valide manuellement depuis l'onglet Essai Yoga
+
+**Tarifs :**
+- Cours **gratuits** : les **2 premiers cours de septembre** de chaque saison (détectés automatiquement par `estGratuit()`)
+- Prix cours payant : lu depuis `localStorage.tev_tarifs_actifs`, fallback `15€`
+
+**Type :** `type='yoga'`
+
+---
+
+### `inscription-cours.html` — Inscription Tango régulier
+
+**Statut à l'inscription (table `inscriptions_cours`) :**
+- **Guidée seule dans TOUS ses cours** → `statut='attente'` → écran "liste d'attente" → admin valide manuellement
+- **Guideur, couple, ou double rôle** → `statut='demande'` → redirigé vers AssoConnect pour paiement
+
+**Rôles automatiques :**
+- Si l'utilisateur choisit "Avec partenaire", le rôle du partenaire est automatiquement l'inverse (guideur↔guidée)
+- `getRoleAuto(r)` : `'guideur'→'guidee'`, `'guidee'→'guideur'`, `'double'→'double'`
+
+**Détection du mode selon la date :**
+- Septembre → avril : mode `regulier` → saison courante
+- Mai → août : mode `preinscription` → saison suivante
+- Mai–juin (sans override URL) : écran de choix affiché
+- Override via URL : `?mode=preinscription` ou `?mode=regulier`
+
+**Tarifs (calculés côté client, indicatifs) :**
+- Tarifs lus depuis `localStorage.tev_tarifs_actifs` (mode régulier) ou `localStorage.tev_tarifs_prochaine_saison` (mode préinscription), fallback `TARIFS_BASE` hardcodé
+- Réductions disponibles : étudiant, demandeur d'emploi, moins de 25 ans
+- Cotisation Sorano (Vincennes) : à régler directement à Sorano, calculée selon âge + déjà adhérent ou non
+- Les tarifs affichés sont **indicatifs** — montant définitif confirmé sur AssoConnect
+
+**Liens AssoConnect :**
+- Stockés dans `LIENS_ASSOCONNECT_DEFAUT` par saison (`2025-2026`, `2026-2027`)
+- Overridables par l'admin via `localStorage.tev_liens_assoconnect`
+- Deux types : `'cours'` (nouvelle inscription) et `'renouv'` (renouvellement carte 10/20 cours)
+
+**Données envoyées à Supabase :** `prenom, nom, email, tel, role, niveau, cours (ville—niveau), ville, statut, partenaire, email_partenaire, saison, donnees (JSON complet)`
+
+---
+
+### `stages-pwa.html` — Inscription aux stages
+
+**Statut à l'inscription (table `inscriptions_stages`, champ `type_confirmation`) :**
+- **Guidée seule** (role=`'Guidé(e)'` et situation≠`'avec-partenaire'`) → `type_confirmation='attente'`
+- **Tous les autres** (guideur, couple, double rôle) → `type_confirmation='confirme'`
+
+**Valeurs de `role` stockées :** `'Guideur(se)'` ou `'Guidé(e)'` (format avec parenthèses, différent des autres formulaires)
+
+**Rôle partenaire automatique :** `roleInverse()` : `'Guideur(se)'↔'Guidé(e)'`
+
+**Tarifs** (par personne, lus depuis `localStorage` ou défauts hardcodés) :
+- Technique 1h : 20€
+- 1 stage : 25€, 2 stages : 45€, 3 stages : 65€, 4 stages : 85€
+- 2+technique : 60€, 3+technique : 75€, 4+technique : 95€
+- Paiement sur place le jour du stage
+
+---
+
+### `cours-particuliers.html` — Cours particuliers
+
+**Statut :** pas de `statut` côté formulaire — demande simple transmise via `TEV.reservationCP(payload)` → table `cours_particuliers`. L'admin gère manuellement.
+
+**Champs collectés :** `prenom, nom, email, tel, niveauEleve, prof, duree, lieu, lieuDetail, objectifs, remarque, dispoTexte, urgence, source ('pwa' ou 'wix')`
+
+---
+
+## Règles métier — espace admin (`admin.html`)
+
+### Cartes 10 cours (tango)
+- Une carte 10 cours = type `'carte10'` dans `inscriptions_cours`
+- Durée de validité : 6 mois à compter du **premier cours utilisé** (pas de la date d'achat)
+- Le calcul d'expiration se fait côté JS à partir des pointages
+
+### Pointage / présences
+- Table `presences` : une ligne par (eleve_id, date, cours)
+- Un élève peut être marqué présent/absent sur chaque date de cours
+- Les présences alimentent le décompte des cours restants sur les cartes 10
+
+### Suppression d'inscriptions
+- **Tango** : `UPDATE inscriptions_cours SET statut='supprimé'` (jamais DELETE — conservation historique)
+- **Yoga** : `DELETE FROM cours_yoga` (suppression réelle)
+- **Essai tango/yoga** : DELETE réel sur `inscriptions_essai` (via `supprimerEssaiInscr`)
+
+### Emails automatiques (état actuel — non implémentés)
+- Tous les appels `postAS()` (héritage Google Apps Script) affichent maintenant une alerte honnête :  
+  `'⚠️ Emails non encore configurés (Brevo à implémenter)'`
+- **Ne pas afficher de toast "Email envoyé"** si l'email n'est pas réellement envoyé
+- Emails à implémenter via Brevo + Supabase Edge Functions
+
 ## Pistes de généralisation / revente future
 - L'appli est potentiellement vendable à d'autres écoles de danses de couple (salsa, bachata, west coast swing, kizomba, rock...)
 - Bases déjà présentes : guideur/guidée, niveaux, cours avec/sans partenaire (tango vs yoga), stages, tarifs paramétrables
