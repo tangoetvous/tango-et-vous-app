@@ -388,8 +388,8 @@ select option{background:#1a1a1a;color:#fff;}
 var _inIframe = window.self !== window.top;
 if (_inIframe) { var _tsDomEl = document.querySelector('.cf-turnstile'); if (_tsDomEl) _tsDomEl.style.display = 'none'; }
 // ── CONFIGURATION ─────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/VOTRE_DEPLOYMENT_ID/exec";
-const QUOTA_MAX  = 22;
+const QUOTA_GUI = 22;
+const QUOTA_GDE = 23;
 
 // ── DONNÉES DATES ─────────────────────────────────────────
 // Valeurs initiales hardcodées (fallback si Apps Script inaccessible).
@@ -591,18 +591,32 @@ function afficherDates() {
   chargerTousQuotas(futur);
 }
 
+async function chargerUnQuota(dateStr) {
+  if (quotasCache[dateStr] !== undefined) return quotasCache[dateStr];
+  const dp = dateStr.split('/');
+  const dateIso = dp.length === 3 ? `${dp[2]}-${dp[1]}-${dp[0]}` : dateStr;
+  const niveauNorm = choix.niveau === 'Débutant' ? 'debutant' : 'intermediaire';
+  try {
+    const { data, error } = await TEV.client.rpc('compter_inscrits_essai', {
+      p_date_essai: dateIso,
+      p_ville: (choix.ville || '').toLowerCase(),
+      p_niveau: niveauNorm
+    });
+    if (error) throw error;
+    const q = { g: data.gui || 0, d: data.gde || 0 };
+    quotasCache[dateStr] = q;
+    return q;
+  } catch(e) {
+    console.warn('[TEV] quota error:', e);
+    const q = { g: 0, d: 0 };
+    quotasCache[dateStr] = q;
+    return q;
+  }
+}
+
 function chargerTousQuotas(liste) {
-  liste.forEach(item=>{
-    if(quotasCache[item.d]!==undefined) {
-      appliquerQuotaDate(item.d, quotasCache[item.d].g, quotasCache[item.d].d);
-      return;
-    }
-    fetch(`${SCRIPT_URL}?action=getInscrits&lieu=${encodeURIComponent(choix.ville)}&niveau=${encodeURIComponent(choix.niveau)}&date=${item.d}`)
-      .then(r=>r.json()).then(data=>{
-        const qG=(data.guideurs||[]).length, qD=(data.guides||[]).length;
-        quotasCache[item.d]={g:qG,d:qD};
-        appliquerQuotaDate(item.d, qG, qD);
-      }).catch(()=>{});
+  liste.forEach(item => {
+    chargerUnQuota(item.d).then(q => appliquerQuotaDate(item.d, q.g, q.d));
   });
 }
 
@@ -613,10 +627,10 @@ function appliquerQuotaDate(dateStr, qG, qD) {
   const itemEl=document.getElementById("di-"+dateStr);
   if(!infoEl||!itemEl) return;
   let tags="";
-  if(qG>=QUOTA_MAX) tags+=`<span class="tag-quota tag-g-plein">Guideurs complets</span>`;
-  if(qD>=QUOTA_MAX) tags+=`<span class="tag-quota tag-d-plein">Guidées complètes</span>`;
+  if(qG>=QUOTA_GUI) tags+=`<span class="tag-quota tag-g-plein">Guideurs complets</span>`;
+  if(qD>=QUOTA_GDE) tags+=`<span class="tag-quota tag-d-plein">Guidées complètes</span>`;
   if(tags) infoEl.innerHTML+=`<br/>${tags}`;
-  if(qG>=QUOTA_MAX && qD>=QUOTA_MAX) {
+  if(qG>=QUOTA_GUI && qD>=QUOTA_GDE) {
     itemEl.classList.add("complet-total");
     itemEl.onclick=null;
     if(arrEl) arrEl.textContent="Complet";
@@ -637,7 +651,7 @@ function naviguerEtape(n) {
 
 function choisirDate(d, gratuit) {
   const q=quotasCache[d];
-  if(q && q.g>=QUOTA_MAX && q.d>=QUOTA_MAX) return; // complet total
+  if(q && q.g>=QUOTA_GUI && q.d>=QUOTA_GDE) return; // complet total
   choix.date=d; choix.gratuit=gratuit===1;
   document.querySelectorAll(".date-item").forEach(el=>el.classList.remove("selected"));
   const el=document.getElementById("di-"+d);
@@ -684,65 +698,60 @@ function afficherEtape4() {
     <div class="recap-row"><span class="rk">👥 Participants</span><span class="rv" id="nb-part-recap">${nbPart}</span></div>
     <div class="recap-row"><span class="rk">💶 Tarif</span><span class="rv or" id="tarif-recap">${getTarif()}</span></div>`;
 
-  // Charger quotas si pas en cache
-  const cached=quotasCache[choix.date];
-  if(cached) {
-    qData={g:cached.g, d:cached.d};
+  // Charger quotas via Supabase (toujours frais à l'étape 4)
+  delete quotasCache[choix.date];
+  chargerUnQuota(choix.date).then(function(q) {
+    qData = { g: q.g, d: q.d };
     document.getElementById("quota-inline").style.display="block";
-    majQuota("g",qData.g); majQuota("d",qData.d);
+    majQuota("g", qData.g); majQuota("d", qData.d);
     verifierQuota();
-  } else {
-    fetch(`${SCRIPT_URL}?action=getInscrits&lieu=${encodeURIComponent(choix.ville)}&niveau=${encodeURIComponent(choix.niveau)}&date=${choix.date}`)
-      .then(r=>r.json()).then(data=>{
-        qData={g:(data.guideurs||[]).length, d:(data.guides||[]).length};
-        quotasCache[choix.date]=qData;
-        document.getElementById("quota-inline").style.display="block";
-        majQuota("g",qData.g); majQuota("d",qData.d);
-        verifierQuota();
-      }).catch(()=>{});
-  }
+  });
 
   // Pré-remplissage URL
   const up=new URLSearchParams(window.location.search);
   ["prenom","nom","email","tel"].forEach(k=>{if(up.get(k)) document.getElementById(k).value=up.get(k);});
 }
 
-function majQuota(t,n){
-  const pct=Math.min(100,Math.round(n/QUOTA_MAX*100));
+function majQuota(t, n) {
+  const cap = t === 'g' ? QUOTA_GUI : QUOTA_GDE;
+  const pct = Math.min(100, Math.round(n/cap*100));
   document.getElementById("qi-"+t).style.width=pct+"%";
-  document.getElementById("qi-"+t).className="qi-fill"+(n>=QUOTA_MAX?" plein":"");
-  document.getElementById("qc-"+t).textContent=n+"/"+QUOTA_MAX;
+  document.getElementById("qi-"+t).className="qi-fill"+(n>=cap?" plein":"");
+  document.getElementById("qc-"+t).textContent=n+"/"+cap;
 }
 
-function verifierQuota(){
+function verifierQuota() {
   const r=document.getElementById("role").value;
   const al=document.getElementById("alerte-role");
   const alerteDispo=document.getElementById("alerte-dispo");
   const btn=document.getElementById("btn-submit");
   alerteDispo.style.display="none";
   if(!r){al.style.display="none";btn.disabled=false;return;}
-  const n=r==="Guideur"?qData.g:qData.d;
-  if(n>=QUOTA_MAX){
+  const isGuidee = r==='guidee';
+  const cap = isGuidee ? QUOTA_GDE : QUOTA_GUI;
+  const n = isGuidee ? qData.d : qData.g;
+  if(n>=cap){
     al.style.display="block";
-    al.textContent="Le nombre de "+(r==="Guideur"?"guideurs":"guidé(e)s")+" est atteint pour cette date.";
+    al.textContent="Le nombre de "+(isGuidee?"guidé(e)s":"guideurs")+" est atteint pour cette date.";
     btn.disabled=true;
     afficherDatesAlternatives(r);
   } else {al.style.display="none";btn.disabled=false;}
 }
 
 function afficherDatesAlternatives(role) {
-  const cle=role==="Guideur"?"g":"d";
+  const isGuidee = role==='guidee';
+  const cle = isGuidee ? 'd' : 'g';
+  const cap = isGuidee ? QUOTA_GDE : QUOTA_GUI;
   const lst=(DATES[choix.ville]||{})[choix.niveau]||[];
   const auj=new Date(); auj.setHours(0,0,0,0);
   const dateChoisie=choix.date;
 
-  // Trouver les prochaines dates où ce rôle n'est pas complet
   const alternatives=[];
   lst.forEach(item=>{
     if(item.d===dateChoisie) return;
     if(parseDate(item.d)<auj) return;
     const q=quotasCache[item.d];
-    if(!q || q[cle]<QUOTA_MAX) alternatives.push(item.d);
+    if(!q || q[cle]<cap) alternatives.push(item.d);
   });
 
   if(alternatives.length===0) return;
@@ -931,11 +940,20 @@ async function soumettre(){
     _notifierAdminEssai(payload);
   }
 
-  // Mode démo (SCRIPT_URL non configuré)
+  // Envoi Supabase
   try{
     const dp=payload.date.split('/');
     const dateIso=dp.length===3?dp[2]+'-'+dp[1]+'-'+dp[0]:payload.date;
     const niveauNorm = payload.niveau==='Débutant' ? 'debutant' : (payload.niveau||'').toLowerCase().startsWith('interm') ? 'intermediaire' : (payload.niveau||'').toLowerCase();
+    // Statut : 'attente' si capacité dépassée (limites actives en sept/oct/nov)
+    const moisDate = parseInt(dateIso.slice(5, 7), 10);
+    const hasLimits = moisDate >= 9 && moisDate < 12;
+    let statutFinal = 'demande';
+    if (hasLimits && (payload.role === 'guidee' || payload.role === 'guideur' || payload.role === 'double')) {
+      const cap = payload.role === 'guidee' ? QUOTA_GDE : QUOTA_GUI;
+      const current = payload.role === 'guidee' ? qData.d : qData.g;
+      if (current >= cap) statutFinal = 'attente';
+    }
     const {error}=await TEV.client.from('inscriptions_essai').insert({
       prenom:payload.prenom, nom:payload.nom,
       email:payload.email.trim().toLowerCase(), tel:payload.tel,
@@ -946,7 +964,7 @@ async function soumettre(){
       part_prenom:payload.partPrenom||'', part_nom:payload.partNom||'',
       part_email:payload.partEmail||'', part_tel:payload.partTel||'',
       part_role:payload.partRole||'', remarque:payload.remarque||'',
-      statut:'demande', type:'tango',
+      statut:statutFinal, type:'tango',
     });
     if(error) throw error;
     _showSuccess();
@@ -1090,18 +1108,7 @@ function _buildDatesFromArrays(paris, vincennes) {
   };
 }
 
-// Récupère les dates depuis Apps Script et met à jour DATES.
-// Si le script n'est pas configuré ou si la requête échoue, les valeurs hardcodées sont conservées.
-if (!SCRIPT_URL.includes('VOTRE_DEPLOYMENT')) {
-  fetch(SCRIPT_URL+'?action=getCoursDates')
-    .then(function(r){ return r.json(); })
-    .then(function(data) {
-      if (Array.isArray(data.paris) && Array.isArray(data.vincennes) && data.paris.length && data.vincennes.length) {
-        DATES = _buildDatesFromArrays(data.paris, data.vincennes);
-      }
-    })
-    .catch(function(){});
-}
+// Les dates sont lues depuis localStorage (tev_cours_dates), mis à jour par l'admin via Paramètres.
 
 // ── RÉINITIALISATION ──────────────────────────────────────
 function reinitialiser() {
