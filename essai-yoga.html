@@ -199,24 +199,18 @@ function getSaisonCourante() {
   return (m>=9?y:y-1)+'-'+(m>=9?y+1:y);
 }
 // Horaires et adresse yoga — lus depuis les Paramètres admin, fallback sur valeurs par défaut
-var ADRESSE_YOGA = (function() {
+var ADRESSE_YOGA = { nom:'Espace Sorano', rue:'16 rue Charles Pathé, 94300 Vincennes', transport:'RER A — Vincennes (pl. Pierre Sémard)' };
+var HORAIRES_YOGA = { yin:'10h30', yin_fin:'11h30', hatha:'11h30', hatha_fin:'12h30' };
+function _initParamsYoga() {
   try {
     var p = JSON.parse(localStorage.getItem('tev_params_yoga_'+getSaisonCourante())||'{}');
     var a = p.adresse || {};
-    return {
-      nom:       a.nom       || 'Espace Sorano',
-      rue:       a.rue       || '16 rue Charles Pathé, 94300 Vincennes',
-      transport: a.transport || 'RER A — Vincennes (pl. Pierre Sémard)'
-    };
-  } catch(e) { return { nom:'Espace Sorano', rue:'16 rue Charles Pathé, 94300 Vincennes', transport:'RER A — Vincennes (pl. Pierre Sémard)' }; }
-})();
-var HORAIRES_YOGA = (function() {
-  try {
-    var p = JSON.parse(localStorage.getItem('tev_params_yoga_'+getSaisonCourante())||'{}');
+    ADRESSE_YOGA = { nom:a.nom||'Espace Sorano', rue:a.rue||'16 rue Charles Pathé, 94300 Vincennes', transport:a.transport||'RER A — Vincennes (pl. Pierre Sémard)' };
     var h = p.horaires || {};
-    return { yin:h.yin||'10h30', yin_fin:h.yin_fin||'11h30', hatha:h.hatha||'11h30', hatha_fin:h.hatha_fin||'12h30' };
-  } catch(e) { return { yin:'10h30', yin_fin:'11h30', hatha:'11h30', hatha_fin:'12h30' }; }
-})();
+    HORAIRES_YOGA = { yin:h.yin||'10h30', yin_fin:h.yin_fin||'11h30', hatha:h.hatha||'11h30', hatha_fin:h.hatha_fin||'12h30' };
+  } catch(e) {}
+}
+_initParamsYoga();
 function getYogaLien() {
   try {
     const sai = getSaisonCourante();
@@ -255,14 +249,15 @@ let COURS_YOGA = [
 ];
 
 // Charger les dates depuis les Paramètres admin (localStorage), écrase le fallback hardcodé
-(function() {
+function _initCoursYoga() {
   try {
     var s = JSON.parse(localStorage.getItem('tev_cours_dates') || 'null');
     if (s && Array.isArray(s.yoga) && s.yoga.length) {
       COURS_YOGA = s.yoga.slice().sort();
     }
   } catch(e) {}
-})();
+}
+_initCoursYoga();
 
 const JOURS_FR = ['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'];
 const MOIS_FR  = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
@@ -481,7 +476,18 @@ function restart() {
   window.scrollTo(0,0);
 }
 
-init();
+// Sync params depuis Supabase au chargement (source de vérité), puis init
+(async function() {
+  try {
+    var all = await TEV.getAllParams();
+    Object.keys(all).forEach(function(k) {
+      if (k.startsWith('tev_')) { try { localStorage.setItem(k, all[k]); } catch(e) {} }
+    });
+    _initCoursYoga();
+    _initParamsYoga();
+  } catch(e) {}
+  init();
+})();
 
 // Mise à jour en temps réel si les Paramètres changent dans un autre onglet
 window.addEventListener('storage', function(e) {

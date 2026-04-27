@@ -464,30 +464,31 @@ let DATES = {
 };
 
 // Charger les dates depuis les Paramètres admin (localStorage), écrase le fallback hardcodé
-(function() {
+function _initDates() {
   try {
     var s = JSON.parse(localStorage.getItem('tev_cours_dates') || 'null');
     if (s && Array.isArray(s.paris) && s.paris.length && Array.isArray(s.vincennes) && s.vincennes.length) {
       DATES = _buildDatesFromArrays(s.paris, s.vincennes);
     }
   } catch(e) {}
-})();
+}
+_initDates();
 
 // Horaires — lus depuis les Paramètres admin (localStorage), fallback sur valeurs par défaut
-var HORAIRES = (function() {
-  function sai() {
-    var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1;
-    return m>=9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y);
-  }
-  function loadHor(type) {
-    try { var p=JSON.parse(localStorage.getItem('tev_params_'+type+'_'+sai())||'{}'); return p.horaires||{}; } catch(e) { return {}; }
-  }
+var HORAIRES = {
+  Paris:     {"Débutant": "20h30", "Intermédiaire & Avancé": "21h45"},
+  Vincennes: {"Débutant": "19h30", "Intermédiaire & Avancé": "21h00"}
+};
+function _initHoraires() {
+  function sai() { var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1; return m>=9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y); }
+  function loadHor(type) { try { var p=JSON.parse(localStorage.getItem('tev_params_'+type+'_'+sai())||'{}'); return p.horaires||{}; } catch(e) { return {}; } }
   var hP=loadHor('paris'), hV=loadHor('vincennes');
-  return {
+  HORAIRES = {
     Paris:     {"Débutant": hP.deb||"20h30", "Intermédiaire & Avancé": hP.int||"21h45"},
     Vincennes: {"Débutant": hV.deb||"19h30", "Intermédiaire & Avancé": hV.int||"21h00"}
   };
-})();
+}
+_initHoraires();
 
 const JOURS_FR = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
 const MOIS_FR  = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
@@ -1128,6 +1129,18 @@ function reinitialiser() {
   document.querySelectorAll(".choix-btn").forEach(el=>el.classList.remove("selected"));
   goEtape(1);
 }
+
+// Sync params depuis Supabase au chargement (source de vérité)
+(async function() {
+  try {
+    var all = await TEV.getAllParams();
+    Object.keys(all).forEach(function(k) {
+      if (k.startsWith('tev_')) { try { localStorage.setItem(k, all[k]); } catch(e) {} }
+    });
+    _initDates();
+    _initHoraires();
+  } catch(e) {}
+})();
 
 // Mise à jour en temps réel si les Paramètres changent dans un autre onglet
 window.addEventListener('storage', function(e) {

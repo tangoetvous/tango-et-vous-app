@@ -248,10 +248,9 @@ const TARIFS_BASE = {
   adhesion_lrp:5,
   sorano_vinc:36, sorano_vinc_m16:26, sorano_ext:45, sorano_ext_m16:35
 };
-const T = (function() {
+function _computeT() {
   try {
     const today = new Date().toISOString().slice(0,10);
-    // Vérifier si des tarifs programmés sont désormais actifs
     const prog = JSON.parse(localStorage.getItem('tev_tarifs')||'null');
     if (prog && prog.tarifs && prog.dateEffet && today >= prog.dateEffet) {
       return Object.assign({}, TARIFS_BASE, prog.tarifs);
@@ -263,21 +262,17 @@ const T = (function() {
     const stored = JSON.parse(localStorage.getItem('tev_tarifs_actifs')||'null');
     return stored ? Object.assign({}, TARIFS_BASE, stored) : Object.assign({}, TARIFS_BASE);
   } catch(e) { return Object.assign({}, TARIFS_BASE); }
-})();
+}
+var T = _computeT();
 
 // ================================================================
 // DONNÉES
 // ================================================================
 // Infos cours — horaires et lieux lus depuis les Paramètres admin (localStorage)
 // puis fallback sur les valeurs par défaut
-var CI = (function() {
-  function sai() {
-    var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1;
-    return m>=9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y);
-  }
-  function loadP(type) {
-    try { return JSON.parse(localStorage.getItem('tev_params_'+type+'_'+sai())||'{}'); } catch(e) { return {}; }
-  }
+function _computeCI() {
+  function sai() { var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1; return m>=9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y); }
+  function loadP(type) { try { return JSON.parse(localStorage.getItem('tev_params_'+type+'_'+sai())||'{}'); } catch(e) { return {}; } }
   var pP=loadP('paris'), pV=loadP('vincennes');
   var hP=pP.horaires||{}, hV=pV.horaires||{};
   var aP=pP.adresse||{},  aV=pV.adresse||{};
@@ -287,7 +282,8 @@ var CI = (function() {
     vincennes: { debutant:     { jour:'Lundi soir',  h:hV.deb||'19h30', lieu:aV.nom||'Espace Sorano',        adr:aV.rue||'16 rue Charles Pathé, Vincennes' },
                  intermediaire:{ jour:'Lundi soir',  h:hV.int||'21h00', lieu:aV.nom||'Espace Sorano',        adr:aV.rue||'16 rue Charles Pathé, Vincennes' } },
   };
-})();
+}
+var CI = _computeCI();
 const NIV_LBL = { debutant:'Débutant', intermediaire:'Intermédiaire & Avancé' };
 const ROLE_LBL = { 'guideur':'Guideur·se', 'guidee':'Guidé·e', 'double':'Double rôle' };
 
@@ -946,7 +942,19 @@ function restart(){
     el.textContent = 'Inscription aux cours — saison ' + getSaisonCible();
   }
 })();
-render();
+
+// Sync params depuis Supabase au chargement (source de vérité), puis render
+(async function() {
+  try {
+    var all = await TEV.getAllParams();
+    Object.keys(all).forEach(function(k) {
+      if (k.startsWith('tev_')) { try { localStorage.setItem(k, all[k]); } catch(e) {} }
+    });
+    T = _computeT();
+    CI = _computeCI();
+  } catch(e) {}
+  render();
+})();
 
 // Auto-resize Wix
 function notifyHeight(){ window.parent.postMessage({type:'tv-resize',height:document.body.scrollHeight},window.location.origin); }

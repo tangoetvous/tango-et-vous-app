@@ -516,8 +516,10 @@ async function tevGetAllParams() {
 }
 
 async function tevSetParam(cle, valeur) {
-  await _tev.from('parametres').upsert({ cle, valeur }, { onConflict: 'cle' });
-  return { ok: true };
+  const { data: { session } } = await _tev.auth.getSession();
+  if (!session) return { ok: false, error: 'Non autorisé' };
+  const { error } = await _tev.from('parametres').upsert({ cle, valeur }, { onConflict: 'cle' });
+  return error ? { ok: false, error } : { ok: true };
 }
 
 // ================================================================
