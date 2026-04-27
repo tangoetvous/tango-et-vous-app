@@ -5611,12 +5611,12 @@ function valYogaEssai(email, date, btn) {
     if(e) e.statut='confirme';
     renderTab(); return;
   }
-  TEV.client.from('inscriptions_essai').update({statut:'confirme'}).eq('email',email).eq('date_essai',date).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;btn.textContent='✓';});
+  TEV.client.from('inscriptions_essai_yoga').update({statut:'confirme'}).eq('email',email).eq('date_essai',date).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;btn.textContent='✓';});
 }
 function pointerYoga(date, email, present) {
   var e = (adminData.essaiYoga||[]).find(function(x){return x.email===email&&x.date===date;});
   if (e) e.present = present;
-  if (!IS_DEMO) TEV.client.from('inscriptions_essai').update({presence_confirmee:!!present}).eq('email',email).eq('date_essai',date).catch(function(){});
+  if (!IS_DEMO) TEV.client.from('inscriptions_essai_yoga').update({presence_confirmee:!!present}).eq('email',email).eq('date_essai',date).catch(function(){});
   renderTab();
 }
 function envYogaJ1(date, btn) {
@@ -5653,7 +5653,7 @@ function soumettreYogaInscrManuel() {
   if (!existe) {
     adminData.essaiYoga.push({id:'EY'+Date.now(),prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,date:date,statut:'confirme',present:null,gratuit:gratuit,saison:saisonPourNouvelleEntree(),dateInscription:today()});
   }
-  if (!IS_DEMO) TEV.client.from('inscriptions_essai').insert({prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,date_essai:date,gratuit:gratuit,statut:'confirme',type:'yoga'}).catch(function(){});
+  if (!IS_DEMO) TEV.client.from('inscriptions_essai_yoga').insert({prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,date_essai:date,gratuit:gratuit,statut:'confirme'}).catch(function(){});
   if (ok) ok.style.display='block';
   if (gel('yi-prenom')) gel('yi-prenom').value='';
   if (gel('yi-nom'))    gel('yi-nom').value='';
