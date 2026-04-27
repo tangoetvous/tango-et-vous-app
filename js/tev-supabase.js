@@ -299,11 +299,20 @@ async function tevGetAdminData() {
     return { ...cy, tel: cy.tel || elv.tel || '' };
   });
 
+  const _normalizeRole = r => {
+    if (!r) return '';
+    if (r === 'Guideur.se') return 'guideur';
+    if (r === 'Guidé·e' || r === 'Guidée') return 'guidee';
+    if (r === 'Double rôle') return 'double';
+    return r;
+  };
+
   const _mapEssai = e => ({
     ...e,
     date:             e.date_essai,
     presenceConfirmee: e.presence_confirmee,
     emailPartenaire:  e.email_partenaire || '',
+    role:             _normalizeRole(e.role),
   });
 
   return {

@@ -5304,7 +5304,7 @@ function renderEssai() {
       var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
       var isVincAtt=(COURS_VINCENNES||[]).indexOf(grp.date)>=0;
       var villeAtt=isVincAtt?'vincennes':'paris';
-      var guiConf=grp.ins.filter(function(x){return x.role==='guideur'&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guideur');
+      var guiConf=grp.ins.filter(function(x){return (x.role==='guideur'||x.role==='double')&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guideur');
       var gdeConf=grp.ins.filter(function(x){return x.role==='guidee'&&x.statut==='confirme';}).length+countElevesInscrits(grp.date,grp.niveau,'guidee');
       var ccAtt=couleurCours(villeAtt,grp.niveau);
       var noLimAtt=noLimitsTango(grp.date);
@@ -5374,7 +5374,7 @@ function renderEssai() {
         +' — Essai: ✓'+presEssai+' ✗'+absEssai+' ?'+restEssai
         +' · Élèves: '+elevesPresents.length+(elevesAbsents.length?' ('+elevesAbsents.length+' absent'+(elevesAbsents.length>1?'s':'')+')':'')+'</div>';
       // ── Cours d'essai ──
-      var pGui=conf.filter(function(e){return e.role==='guideur';});
+      var pGui=conf.filter(function(e){return e.role==='guideur'||e.role==='double';});
       var pGde=conf.filter(function(e){return e.role==='guidee';});
       var pAlt=[]; var pml=Math.max(pGui.length,pGde.length);
       for(var pi=0;pi<pml;pi++){if(pi<pGui.length)pAlt.push(pGui[pi]);if(pi<pGde.length)pAlt.push(pGde[pi]);}
@@ -5473,7 +5473,7 @@ function renderEssai() {
       var key=date+'|'+niv;
       var grp=grpDN[key]||{date:date,niveau:niv,ins:[]};
       var ins=grp.ins;
-      var guiConf=ins.filter(function(e){return e.role==='guideur'&&e.statut==='confirme';});
+      var guiConf=ins.filter(function(e){return (e.role==='guideur'||e.role==='double')&&e.statut==='confirme';});
       var gde=ins.filter(function(e){return e.role==='guidee';}).length;
       var attVrai=ins.filter(function(e){return estVraimentAttente(e,ins);}).length;
       var nivLbl=niv==='debutant'?'Débutant':'Intermédiaire';
@@ -5502,7 +5502,7 @@ function renderEssai() {
       if(!ins.length){
         body='<div style="font-size:11px;color:var(--dim);padding:6px 0 10px;">Aucune inscription</div>';
       } else {
-        var iGui=ins.filter(function(e){return e.role==='guideur';});
+        var iGui=ins.filter(function(e){return e.role==='guideur'||e.role==='double';});
         var iGde=ins.filter(function(e){return e.role==='guidee';});
         var iAlt=[]; var ial=Math.max(iGui.length,iGde.length);
         for(var ia=0;ia<ial;ia++){if(ia<iGui.length)iAlt.push(iGui[ia]);if(ia<iGde.length)iAlt.push(iGde[ia]);}
