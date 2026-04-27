@@ -5572,10 +5572,9 @@ function envoyerEmailAttente(email, date, niveau, role, btn) {
     },800);
     return;
   }
-  postAS({action:'envoyerEmailAttente',email:email,date:date,niveau:niveau,role:role}).then(function(){
-    afficherToast('✉️ Email envoyé à '+prenomAff);
-    if(btn){btn.disabled=false;btn.textContent='✓';}
-  }).catch(function(){if(btn){btn.disabled=false;btn.textContent='✉️';}});
+  // TODO: implémenter via Brevo + Edge Function
+  afficherToast('⚠️ Emails non encore configurés (Brevo à implémenter)');
+  if(btn){btn.disabled=false;btn.textContent='✉️';}
 }
 function pointerEssai(date, email, present) {
   var e = adminData.essai.find(function(x){return x.email===email&&x.date===date;});
@@ -5599,7 +5598,10 @@ function envJ1(date, btn) {
   var el  = gel('j1s-'+date);
   if (el) { el.style.color='var(--gold)'; el.textContent='⏳'; }
   if (IS_DEMO) { setTimeout(function(){ if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+pres.length+'+'+abs.length+' (démo)';}btn.disabled=false;},800); return; }
-  postAS({action:'envoyerEmailsEssaiJ1',date:date,presents:pres,absents:abs}).then(function(r){if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+r.presentsSent+'+'+r.absentsSent;}}).catch(function(){if(el){el.style.color='var(--err-text)';el.textContent='Erreur';}btn.disabled=false;});
+  // TODO: implémenter via Brevo + Edge Function
+  if(el){el.style.color='var(--dim)';el.textContent='⚠️ N/A';}
+  afficherToast('⚠️ Emails J+1 non encore configurés (Brevo à implémenter)');
+  btn.disabled=false;
 }
 
 // ================================================================
@@ -5630,9 +5632,10 @@ function envYogaJ1(date, btn) {
   if (IS_DEMO) {
     setTimeout(function(){ if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+pres.length+'+'+abs.length+' (démo)';}btn.disabled=false;},800); return;
   }
-  postAS({action:'envoyerEmailsYogaJ1',date:date,presents:pres,absents:abs})
-    .then(function(r){if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+r.presentsSent+'+'+r.absentsSent;}})
-    .catch(function(){if(el){el.style.color='var(--err-text)';el.textContent='Erreur';}btn.disabled=false;});
+  // TODO: implémenter via Brevo + Edge Function
+  if(el){el.style.color='var(--dim)';el.textContent='⚠️ N/A';}
+  afficherToast('⚠️ Emails J+1 yoga non encore configurés (Brevo à implémenter)');
+  btn.disabled=false;
 }
 
 function soumettreYogaInscrManuel() {
@@ -6615,7 +6618,9 @@ function soranoAction(id, paye, btn) {
 function relanceSorano(email, nom, btn) {
   btn.disabled=true; btn.textContent='⏳';
   if(IS_DEMO){setTimeout(function(){btn.disabled=false;btn.textContent='✓ Envoyé (démo)';},800);return;}
-  postAS({action:'relanceSorano',email:email,nom:nom,lienPaiement:getAssoConnectLien('sorano')||getAssoConnectLien('cours')}).then(function(){btn.textContent='✓ Envoyé';}).catch(function(e){btn.disabled=false;btn.textContent='✉️ Relance';});
+  // TODO: implémenter via Brevo + Edge Function
+  afficherToast('⚠️ Emails non encore configurés (Brevo à implémenter)');
+  btn.disabled=false; btn.textContent='✉️ Relance';
 }
 
 // ================================================================
