@@ -1069,8 +1069,8 @@ var PAI_LBL  = {cb1x:'CB 1×',cb3x:'CB 3×',especes:'Espèces',cheque:'Chèque',
 // ================================================================
 var _contactCtx = null;
 function nomCliquable(nom, email, tel, ctx) {
-  var sn=(nom||'').replace(/"/g,'&quot;'), se=(email||'').replace(/"/g,'&quot;'), st=(tel||'').replace(/"/g,'&quot;');
-  return '<span class="nom-clickable" data-action="open-contact" data-nom="'+sn+'" data-email="'+se+'" data-tel="'+st+'" data-ctx="'+(ctx||'')+'">'+nom+'</span>';
+  var sn=escHtml(nom||''), se=escHtml(email||''), st=escHtml(tel||''), sc=escHtml(ctx||'');
+  return '<span class="nom-clickable" data-action="open-contact" data-nom="'+sn+'" data-email="'+se+'" data-tel="'+st+'" data-ctx="'+sc+'">'+sn+'</span>';
 }
 function ouvrirContact(nom, tel, email, ctx) {
   _contactCtx={nom:nom,tel:tel,email:email,ctx:ctx};
@@ -1078,7 +1078,7 @@ function ouvrirContact(nom, tel, email, ctx) {
   if(!box)return;
   var telRaw=(tel||'').replace(/\s/g,'');
   var telHtml=tel
-    ?'<div class="mc-tel">'+tel+'</div>'
+    ?'<div class="mc-tel">'+escHtml(tel)+'</div>'
     :'<div class="mc-tel" style="color:var(--dim);font-style:italic;font-size:13px;">Pas de téléphone</div>';
   var actHtml='<div class="btn-row" style="flex-wrap:wrap;gap:6px;margin-top:4px;">';
   if(email) actHtml+='<a href="'+mailtoGmail(email,'Tango &amp; Vous')+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">✉️ Email</a>';
@@ -1089,16 +1089,17 @@ function ouvrirContact(nom, tel, email, ctx) {
   actHtml+='</div>';
   var essaiHtml='';
   if(ctx==='essai' && !isSaisonPassee()){
+    var se2=escHtml(email||'');
     essaiHtml='<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:14px;">'
       +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px;">→ Transférer vers Inscr Tango</div>'
       +'<div class="btn-row" style="flex-wrap:wrap;gap:6px;">'
-      +'<button class="btn btn-warn" style="font-size:12px;" data-action="essai-vers-cours" data-email="'+(email||'')+'" data-statut="demande">Demande en att.</button>'
-      +'<button class="btn btn-gold" style="font-size:12px;" data-action="essai-vers-cours" data-email="'+(email||'')+'" data-statut="attente_paiement">✓ Validé·e</button>'
-      +'<button class="btn btn-ok" style="font-size:12px;" data-action="open-insc-essai" data-email="'+(email||'')+'">⭐ Inscrit·e</button>'
+      +'<button class="btn btn-warn" style="font-size:12px;" data-action="essai-vers-cours" data-email="'+se2+'" data-statut="demande">Demande en att.</button>'
+      +'<button class="btn btn-gold" style="font-size:12px;" data-action="essai-vers-cours" data-email="'+se2+'" data-statut="attente_paiement">✓ Validé·e</button>'
+      +'<button class="btn btn-ok" style="font-size:12px;" data-action="open-insc-essai" data-email="'+se2+'">⭐ Inscrit·e</button>'
       +'</div></div>';
   }
-  box.innerHTML='<div class="modal-titre">'+nom+'</div>'
-    +'<div class="mc-email">'+(email||'—')+'</div>'
+  box.innerHTML='<div class="modal-titre">'+escHtml(nom||'')+'</div>'
+    +'<div class="mc-email">'+escHtml(email||'—')+'</div>'
     +telHtml+actHtml+essaiHtml
     +'<div class="modal-btns" style="margin-top:16px;">'
     +'<button class="btn btn-ghost" style="font-size:12px;" id="mc-edit">✏️ Modifier</button>'
