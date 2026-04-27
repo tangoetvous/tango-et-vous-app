@@ -294,6 +294,13 @@ async function tevGetAdminData() {
     return { ...cy, tel: cy.tel || elv.tel || '' };
   });
 
+  const _mapEssai = e => ({
+    ...e,
+    date:             e.date_essai,
+    presenceConfirmee: e.presence_confirmee,
+    emailPartenaire:  e.email_partenaire || '',
+  });
+
   return {
     cartes,
     presences:         presences        || [],
@@ -301,8 +308,8 @@ async function tevGetAdminData() {
     coursTango,
     coursYoga:         coursYoga,
     inscriptionsStages: inscriptionsStages || [],
-    coursEssai:        inscriptionsEssai      || [],
-    essaiYoga:         inscriptionsEssaiYoga  || [],
+    coursEssai:        (inscriptionsEssai      || []).map(_mapEssai),
+    essaiYoga:         (inscriptionsEssaiYoga  || []).map(_mapEssai),
     publications:      publications       || [],
     agendaModifs:      agendaModifs       || [],
     stats: {
