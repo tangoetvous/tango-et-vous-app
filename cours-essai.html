@@ -935,11 +935,12 @@ async function soumettre(){
   try{
     const dp=payload.date.split('/');
     const dateIso=dp.length===3?dp[2]+'-'+dp[1]+'-'+dp[0]:payload.date;
+    const niveauNorm = payload.niveau==='Débutant' ? 'debutant' : (payload.niveau||'').toLowerCase().startsWith('interm') ? 'intermediaire' : (payload.niveau||'').toLowerCase();
     const {error}=await TEV.client.from('inscriptions_essai').insert({
       prenom:payload.prenom, nom:payload.nom,
       email:payload.email.trim().toLowerCase(), tel:payload.tel,
       date_essai:dateIso, ville:(payload.lieu||'').toLowerCase(),
-      niveau:payload.niveau||'', horaire:payload.horaire||'',
+      niveau:niveauNorm, horaire:payload.horaire||'',
       role:payload.role||'', niveau_eleve:payload.niveauEleve||'',
       avec_partenaire:payload.avecPart||'', genre:payload.genre||'',
       part_prenom:payload.partPrenom||'', part_nom:payload.partNom||'',

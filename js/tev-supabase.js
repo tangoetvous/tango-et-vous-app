@@ -307,12 +307,20 @@ async function tevGetAdminData() {
     return r;
   };
 
+  const _normalizeNiveau = n => {
+    if (!n) return '';
+    if (n === 'Débutant') return 'debutant';
+    if (n.startsWith('Interm') || n.startsWith('interm')) return 'intermediaire';
+    return n;
+  };
+
   const _mapEssai = e => ({
     ...e,
     date:             e.date_essai,
     presenceConfirmee: e.presence_confirmee,
     emailPartenaire:  e.email_partenaire || '',
     role:             _normalizeRole(e.role),
+    niveau:           _normalizeNiveau(e.niveau),
   });
 
   return {
