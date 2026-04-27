@@ -282,10 +282,11 @@ async function tevGetAdminData() {
     const elv = elevesMap[ic.email] || {};
     return {
       ...ic,
-      tel:             ic.tel  || elv.tel  || '',
-      role:            ic.role || elv.role || '',
-      emailPartenaire: ic.email_partenaire || ic.emailPartenaire || '',
-      cours:           ic.cours || _coursLabel(ic.ville, ic.niveau),
+      tel:              ic.tel  || elv.tel  || '',
+      role:             ic.role || elv.role || '',
+      emailPartenaire:  ic.email_partenaire || ic.emailPartenaire || '',
+      cours:            ic.cours || _coursLabel(ic.ville, ic.niveau),
+      dateInscription:  ic.dateInscription || (ic.created_at || '').slice(0, 10),
     };
   });
 

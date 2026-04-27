@@ -3733,10 +3733,11 @@ async function chargerDonnees() {
       if (!stagesReels[dateKey]) stagesReels[dateKey] = { label: ins.stage_nom || dateKey, inscrits: [] };
       stagesReels[dateKey].inscrits.push({
         prenom: ins.prenom || '', nom: ins.nom || '', email: ins.email || '',
-        tel: '', role: '', slots: ins.type ? [ins.type] : [],
-        present: null, montant: 0,
-        attente: ins.statut === 'attente',
-        partenaire: '', emailPartenaire: ''
+        tel: ins.telephone || '', role: ins.role || '',
+        niveau: ins.niveau || '', slots: ins.type ? [ins.type] : [],
+        present: null, montant: ins.total_inscrit || 0,
+        attente: ins.statut === 'attente' || ins.type_confirmation === 'attente',
+        partenaire: ins.partenaire || '', emailPartenaire: ins.partenaire_email || ''
       });
     });
     adminData = Object.assign({}, adminData, {
