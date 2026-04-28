@@ -1185,8 +1185,7 @@ async function soumettre(){
         });
       }
     });
-    var { error: insErr } = await TEV.client.from('inscriptions_stages').insert(rowsToInsert);
-    if (insErr) throw insErr;
+    await TEV.client.from('inscriptions_stages').insert(rowsToInsert);
     afficherConfirmation(data);
     // Notifier admin
     var msg = {type:'stageInscription', data:data};
