@@ -3787,6 +3787,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (this.value) { changerSaisonVue(this.value); toggleAdminNav(); }
   });
   _updateActiverBtn();
+
+  // Recharger dès que l'admin revient sur l'onglet (fiable même si timers throttlés)
+  var _lastVisible = Date.now();
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible' && !IS_DEMO && _adminDataReady) {
+      // Seulement si l'onglet était caché depuis plus de 5s
+      if (Date.now() - _lastVisible > 5000) chargerDonnees();
+    } else {
+      _lastVisible = Date.now();
+    }
+  });
 });
 function logout() {
   gel('app').style.display='none';
