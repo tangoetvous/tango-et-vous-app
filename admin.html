@@ -3697,7 +3697,7 @@ function demarrerApp(email, isDemo) {
   gel('app').style.display='block';
   updateSaisonSelect();
   traiterInscriptionsEnAttente();
-  renderTab();
+  if (IS_DEMO) { renderTab(); } else { gel('tab-content').innerHTML = '<div class="spinner"></div>'; }
   demarrerPollEssais();
   if (!IS_DEMO) { chargerDonnees(); chargerParamsRemote(); }
 }
@@ -3878,8 +3878,15 @@ function toggleAdminNav() {
 function renderTab() {
   // Sauvegarder la position de scroll avant de remplacer le contenu
   var savedScroll = window.scrollY || document.documentElement.scrollTop || 0;
-  // Remplacer l'élément pour éviter l'accumulation de listeners event
+  // Préserver les iframes existantes pour éviter leur rechargement stroboscopique
+  var savedIframes = {};
   var old = gel('tab-content');
+  if (old) {
+    old.querySelectorAll('iframe').forEach(function(fr) {
+      if (fr.src) savedIframes[fr.src] = fr;
+    });
+  }
+  // Remplacer l'élément pour éviter l'accumulation de listeners event
   var fresh = document.createElement('div');
   fresh.id = 'tab-content';
   fresh.className = old.className;
@@ -3911,6 +3918,13 @@ function renderTab() {
     }
     el.innerHTML = html;
     bindTabEvents(el);
+    // Réinsérer les iframes préservées pour éviter leur rechargement
+    el.querySelectorAll('iframe').forEach(function(newFr) {
+      if (newFr.src && savedIframes[newFr.src]) {
+        newFr.parentNode.replaceChild(savedIframes[newFr.src], newFr);
+        delete savedIframes[newFr.src];
+      }
+    });
     // Restaurer la position de scroll (uniquement si l'utilisateur était déjà scrollé)
     if (savedScroll > 0) window.scrollTo(0, savedScroll);
   }, 40);
