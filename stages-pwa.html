@@ -1152,23 +1152,40 @@ async function soumettre(){
   }
 
   try {
-    await TEV.client.from('inscriptions_stages').insert({
-      prenom: data.prenom,
-      nom: data.nom,
-      email: data.email.toLowerCase(),
-      telephone: data.telephone,
-      role: data.role,
-      niveau: data.niveau,
-      situation: data.situation,
-      partenaire: data.partenaire || '',
-      partenaire_email: data.partenaireEmail || '',
-      total_inscrit: data.totalInscrit,
-      total_global: data.totalGlobal,
-      type_confirmation: data.typeConfirmation,
-      remarques: data.remarques || '',
-      donnees: data,
-      saison: '2025-2026',
+    // Une ligne par date (permet confirmation date par date côté admin)
+    var avecPart = data.situation === 'avec-partenaire' && !data.memePersonne && data.partenaireEmail;
+    var rowsToInsert = [];
+    data.inscriptionsParDate.forEach(function(di) {
+      var slotsId = (di.stagesDetail || []).map(function(s){ return s.id; }).join('|');
+      rowsToInsert.push({
+        prenom: data.prenom, nom: data.nom,
+        email: data.email.toLowerCase(), telephone: data.telephone,
+        role: data.role, niveau: data.niveau, situation: data.situation,
+        partenaire: data.partenaire || '',
+        partenaire_email: (data.partenaireEmail || '').toLowerCase(),
+        stage_date: di.date, stage_nom: slotsId,
+        total_inscrit: di.prixInscrit,
+        type_confirmation: data.typeConfirmation,
+        remarques: data.remarques || '',
+        donnees: data, saison: '2025-2026',
+      });
+      if (avecPart) {
+        var slotsPId = (di.stagesPartDetail && di.stagesPartDetail.length ? di.stagesPartDetail : di.stagesDetail || []).map(function(s){ return s.id; }).join('|');
+        rowsToInsert.push({
+          prenom: data.partenairePrenom || '', nom: data.partenaireNom || '',
+          email: (data.partenaireEmail || '').toLowerCase(),
+          telephone: data.partenaireTel || '',
+          role: data.rolePartenaire, niveau: data.niveau, situation: data.situation,
+          partenaire: data.prenom + ' ' + data.nom,
+          partenaire_email: data.email.toLowerCase(),
+          stage_date: di.date, stage_nom: slotsPId,
+          total_inscrit: di.prixPartenaire || di.prixInscrit,
+          type_confirmation: 'confirme',
+          remarques: '', donnees: null, saison: '2025-2026',
+        });
+      }
     });
+    await TEV.client.from('inscriptions_stages').insert(rowsToInsert);
     afficherConfirmation(data);
     // Notifier admin
     var msg = {type:'stageInscription', data:data};
