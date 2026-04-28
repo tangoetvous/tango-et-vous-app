@@ -3637,37 +3637,32 @@ function sauverTarifsType(type, sai) {
 // d'inscriptions publiques (fonctionne depuis n'importe quelle source)
 // ================================================================
 var _realtimeChannel = null;
-var _realtimeOk = false;
 var _pollTimer = null;
 function demarrerRealtime() {
-  if (IS_DEMO || _realtimeChannel) return;
-  var _reloadTimer = null;
-  function _onInsert() {
-    clearTimeout(_reloadTimer);
-    _reloadTimer = setTimeout(function() { chargerDonnees(); }, 600);
+  if (IS_DEMO || _pollTimer) return;
+  // Polling toutes les 15s — fiable quelle que soit la source (Wix, autre appareil)
+  _pollTimer = setInterval(function() { chargerDonnees(); }, 15000);
+  // Realtime en bonus (peut être bloqué par RLS anon → admin, mais accélère si ça marche)
+  if (!_realtimeChannel) {
+    var _reloadTimer = null;
+    function _onInsert() {
+      clearTimeout(_reloadTimer);
+      _reloadTimer = setTimeout(function() { chargerDonnees(); }, 600);
+    }
+    _realtimeChannel = TEV.client
+      .channel('tev-admin-inserts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_stages' },    _onInsert)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_essai' },     _onInsert)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_essai_yoga' },_onInsert)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cours_particuliers' },     _onInsert)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_cours' },     _onInsert)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cours_yoga' },             _onInsert)
+      .subscribe(function(status) { console.log('[TEV Realtime]', status); });
   }
-  _realtimeChannel = TEV.client
-    .channel('tev-admin-inserts')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_stages' },    _onInsert)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_essai' },     _onInsert)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_essai_yoga' },_onInsert)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cours_particuliers' },     _onInsert)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_cours' },     _onInsert)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cours_yoga' },             _onInsert)
-    .subscribe(function(status) {
-      _realtimeOk = (status === 'SUBSCRIBED');
-      console.log('[TEV Realtime]', status);
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        // Realtime indisponible → polling toutes les 15s en fallback
-        if (!_pollTimer) _pollTimer = setInterval(function(){ chargerDonnees(); }, 15000);
-      } else if (status === 'SUBSCRIBED') {
-        clearInterval(_pollTimer); _pollTimer = null;
-      }
-    });
 }
 function arreterRealtime() {
-  if (_realtimeChannel) { TEV.client.removeChannel(_realtimeChannel); _realtimeChannel = null; }
   clearInterval(_pollTimer); _pollTimer = null;
+  if (_realtimeChannel) { TEV.client.removeChannel(_realtimeChannel); _realtimeChannel = null; }
 }
 
 // En Supabase, les essais arrivent directement via inscriptions_essai — polling allégé
