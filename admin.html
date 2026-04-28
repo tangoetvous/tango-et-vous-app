@@ -3772,17 +3772,30 @@ async function chargerDonnees() {
     // Vider les inscrits des stages existants (effacer la démo)
     Object.keys(stagesReels).forEach(function(date) { stagesReels[date].inscrits = []; });
     (d.inscriptionsStages || []).forEach(function(ins) {
-      var donnees = ins.donnees || {};
-      var parDate = donnees.inscriptionsParDate;
-      if (parDate && parDate.length) {
-        // Inscription via stages-pwa.html — une ligne par personne, multi-dates dans donnees
+      var dateKey = (ins.stage_date || '').slice(0, 10);
+      if (dateKey) {
+        // Nouveau format : une ligne par date (stage_date explicite)
+        if (!stagesReels[dateKey]) stagesReels[dateKey] = {label: fmtDate(dateKey), inscrits:[]};
+        stagesReels[dateKey].inscrits.push({
+          prenom: ins.prenom || '', nom: ins.nom || '', email: ins.email || '',
+          tel: ins.telephone || '', role: _normRole(ins.role || ''),
+          slots: ins.stage_nom ? ins.stage_nom.split('|').map(function(s){return s.trim();}).filter(Boolean) : [],
+          present: null, montant: ins.total_inscrit || 0,
+          attente: ins.type_confirmation === 'attente',
+          partenaire: ins.partenaire || '', emailPartenaire: ins.partenaire_email || ''
+        });
+      } else {
+        // Ancien format : une seule ligne sans stage_date, dates dans donnees.inscriptionsParDate
+        var donnees = ins.donnees || {};
+        var parDate = donnees.inscriptionsParDate;
+        if (!parDate || !parDate.length) return;
         var avecPart = donnees.situation === 'avec-partenaire' && !donnees.memePersonne
           && (donnees.partenairePrenom || donnees.partenaireNom);
         parDate.forEach(function(di) {
-          var dateKey = di.date; if (!dateKey) return;
-          if (!stagesReels[dateKey]) stagesReels[dateKey] = {label: di.dateLabel || fmtDate(dateKey), inscrits:[]};
+          var dk = di.date; if (!dk) return;
+          if (!stagesReels[dk]) stagesReels[dk] = {label: di.dateLabel || fmtDate(dk), inscrits:[]};
           var slots = (di.stagesDetail || []).map(function(s){ return s.type || s.id; });
-          stagesReels[dateKey].inscrits.push({
+          stagesReels[dk].inscrits.push({
             prenom: ins.prenom || '', nom: ins.nom || '', email: ins.email || '',
             tel: ins.telephone || '', role: _normRole(ins.role || ''),
             slots: slots, present: null,
@@ -3793,27 +3806,14 @@ async function chargerDonnees() {
           if (avecPart) {
             var slotsP = (di.stagesPartDetail || []).map(function(s){ return s.type || s.id; });
             if (!slotsP.length) slotsP = slots;
-            stagesReels[dateKey].inscrits.push({
+            stagesReels[dk].inscrits.push({
               prenom: donnees.partenairePrenom || '', nom: donnees.partenaireNom || '',
               email: ins.partenaire_email || '', tel: donnees.partenaireTel || '',
               role: _normRole(donnees.rolePartenaire || ''),
-              slots: slotsP, present: null,
-              montant: di.prixPartenaire || 0, attente: false,
+              slots: slotsP, present: null, montant: di.prixPartenaire || 0, attente: false,
               partenaire: ins.prenom + ' ' + ins.nom, emailPartenaire: ins.email
             });
           }
-        });
-      } else {
-        // Inscription manuelle admin (stage_date explicite, pas de donnees)
-        var dateKey = (ins.stage_date || '').slice(0, 10); if (!dateKey) return;
-        if (!stagesReels[dateKey]) stagesReels[dateKey] = {label: ins.stage_nom || fmtDate(dateKey), inscrits:[]};
-        stagesReels[dateKey].inscrits.push({
-          prenom: ins.prenom || '', nom: ins.nom || '', email: ins.email || '',
-          tel: ins.telephone || '', role: _normRole(ins.role || ins.type || ''),
-          slots: ins.stage_nom ? ins.stage_nom.split('|').map(function(s){return s.trim();}).filter(Boolean) : [],
-          present: null, montant: ins.total_inscrit || 0,
-          attente: ins.type_confirmation === 'attente',
-          partenaire: ins.partenaire || '', emailPartenaire: ins.partenaire_email || ''
         });
       }
     });
