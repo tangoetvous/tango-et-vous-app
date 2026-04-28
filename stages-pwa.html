@@ -1185,7 +1185,8 @@ async function soumettre(){
         });
       }
     });
-    await TEV.client.from('inscriptions_stages').insert(rowsToInsert);
+    var { error: insErr } = await TEV.client.from('inscriptions_stages').insert(rowsToInsert);
+    if (insErr) { console.error('Insert error:', insErr); throw new Error(insErr.message || insErr.code || JSON.stringify(insErr)); }
     afficherConfirmation(data);
     // Notifier admin
     var msg = {type:'stageInscription', data:data};
@@ -1202,7 +1203,7 @@ async function soumettre(){
     }
   } catch(err){
     btn.disabled=false; btn.textContent="Je m'inscris";
-    document.getElementById('err-global-2').textContent='Une erreur est survenue. Veuillez réessayer ou nous contacter à tangoetvous@gmail.com';
+    document.getElementById('err-global-2').textContent='Erreur : '+(err&&err.message||'inconnue')+' — Veuillez réessayer ou nous contacter.';
     document.getElementById('err-global-2').classList.add('visible');
   }
 }
