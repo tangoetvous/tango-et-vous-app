@@ -3879,7 +3879,6 @@ function toggleAdminNav() {
   if (ov) ov.classList.toggle('open');
 }
 function renderTab() {
-  // Sauvegarder la position de scroll avant de remplacer le contenu
   var savedScroll = window.scrollY || document.documentElement.scrollTop || 0;
   // Préserver les iframes existantes pour éviter leur rechargement stroboscopique
   var savedIframes = {};
@@ -3889,14 +3888,15 @@ function renderTab() {
       if (fr.src) savedIframes[fr.src] = fr;
     });
   }
+  var hasIframe = Object.keys(savedIframes).length > 0;
   // Remplacer l'élément pour éviter l'accumulation de listeners event
   var fresh = document.createElement('div');
   fresh.id = 'tab-content';
   fresh.className = old.className;
   old.parentNode.replaceChild(fresh, old);
   var el = fresh;
-  el.innerHTML = '<div class="spinner"></div>';
-  setTimeout(function() {
+
+  function doRender() {
     var html = '';
     if      (currentTab==='cours-tango')  html=renderCoursTango();
     else if (currentTab==='repertoire')   html=renderRepertoire();
@@ -3921,16 +3921,23 @@ function renderTab() {
     }
     el.innerHTML = html;
     bindTabEvents(el);
-    // Réinsérer les iframes préservées pour éviter leur rechargement
+    // Réinsérer les iframes préservées (pas de rechargement, pas de flash)
     el.querySelectorAll('iframe').forEach(function(newFr) {
       if (newFr.src && savedIframes[newFr.src]) {
         newFr.parentNode.replaceChild(savedIframes[newFr.src], newFr);
         delete savedIframes[newFr.src];
       }
     });
-    // Restaurer la position de scroll (uniquement si l'utilisateur était déjà scrollé)
     if (savedScroll > 0) window.scrollTo(0, savedScroll);
-  }, 40);
+  }
+
+  if (hasIframe) {
+    // Iframe déjà chargé : rendu synchrone immédiat, aucun spinner, aucun flash
+    doRender();
+  } else {
+    el.innerHTML = '<div class="spinner"></div>';
+    setTimeout(doRender, 40);
+  }
 }
 
 // ================================================================
