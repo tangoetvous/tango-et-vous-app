@@ -3641,7 +3641,8 @@ var _pollTimer = null;
 function demarrerRealtime() {
   if (IS_DEMO || _pollTimer) return;
   // Polling toutes les 15s — fiable quelle que soit la source (Wix, autre appareil)
-  _pollTimer = setInterval(function() { chargerDonnees(); }, 15000);
+  console.log('[TEV] Polling 15s démarré');
+  _pollTimer = setInterval(function() { console.log('[TEV] poll'); chargerDonnees(); }, 15000);
   // Realtime en bonus (peut être bloqué par RLS anon → admin, mais accélère si ça marche)
   if (!_realtimeChannel) {
     var _reloadTimer = null;
@@ -3788,16 +3789,19 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   _updateActiverBtn();
 
-  // Recharger dès que l'admin revient sur l'onglet (fiable même si timers throttlés)
-  var _lastVisible = Date.now();
+  // Recharger dès que l'admin revient sur l'onglet ou l'app reprend le focus
+  var _lastAutoRefresh = 0;
+  function _autoRefreshSiAdmin() {
+    if (IS_DEMO || !_adminDataReady) return;
+    var now = Date.now();
+    if (now - _lastAutoRefresh < 8000) return; // anti-spam
+    _lastAutoRefresh = now;
+    chargerDonnees();
+  }
   document.addEventListener('visibilitychange', function() {
-    if (document.visibilityState === 'visible' && !IS_DEMO && _adminDataReady) {
-      // Seulement si l'onglet était caché depuis plus de 5s
-      if (Date.now() - _lastVisible > 5000) chargerDonnees();
-    } else {
-      _lastVisible = Date.now();
-    }
+    if (document.visibilityState === 'visible') _autoRefreshSiAdmin();
   });
+  window.addEventListener('focus', _autoRefreshSiAdmin);
 });
 function logout() {
   gel('app').style.display='none';
