@@ -649,6 +649,14 @@ async function soumettre() {
 
   try {
     await TEV.reservationCP(payload);
+    // Notifier admin — BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
+    const msg = { type:'coursParticulierInscription', data: payload };
+    try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
+    try {
+      const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]');
+      pending.push(msg); localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+    } catch(e){}
+    try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
     afficherSucces();
   } catch(e) {
     btn.disabled = false; btn.classList.remove('loading');

@@ -426,13 +426,14 @@ function soumettre() {
   } catch(e){}
 
   if (!IS_DEMO) {
-    TEV.client.from('inscriptions_essai_yoga').insert({
+    const { error: insErr } = await TEV.client.from('inscriptions_essai_yoga').insert({
       prenom, nom, email, tel,
       date_essai: date,
       cours: coursSelectionne,
       gratuit,
       statut: 'demande',
-    }).catch(() => {});
+    });
+    if (insErr) console.error('[TEV] essai-yoga insert error:', insErr);
   }
 
   // Construire récap

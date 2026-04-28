@@ -54,6 +54,37 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Suppression tango** = `UPDATE inscriptions_cours SET statut='supprimé'` (pas DELETE)
 - **Suppression yoga** = `DELETE FROM cours_yoga` (suppression réelle)
 - **Comparaison d'IDs yoga** : utiliser `String(x.id)===String(id)` car Supabase retourne des bigint (nombres) mais les onclick passent des strings
+
+## Règles obligatoires — formulaires publics (à appliquer à tout nouveau formulaire)
+
+### 1. Vérification d'erreur sur les inserts Supabase
+Supabase JS v2 ne lève pas d'exception par défaut — toujours capturer et relancer :
+```javascript
+const { error: insErr } = await TEV.client.from('ma_table').insert({...});
+if (insErr) throw new Error(insErr.message || insErr.code || JSON.stringify(insErr));
+```
+Sans ça, un insert raté affiche une fausse confirmation et rien n'est sauvegardé.
+
+### 2. Notification admin en temps réel (BroadcastChannel toujours en premier)
+Depuis une iframe Wix, `postMessage` vers le parent échoue (cross-origin).
+`BroadcastChannel` fonctionne cross-tab sur `app.tangoetvous.fr` même depuis une iframe.
+**Pattern obligatoire** (BroadcastChannel + localStorage + postMessage, sans condition isIframe) :
+```javascript
+const msg = { type: 'monTypeInscription', data: payload };
+try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
+try {
+  const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]');
+  pending.push(msg); localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+} catch(e){}
+try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
+```
+
+### 3. Colonnes Supabase — toujours vérifier le schéma avant d'insérer
+Un insert avec des colonnes inexistantes échoue silencieusement (sans vérif d'erreur).
+Consulter `supabase/schema.sql` et ajouter les colonnes manquantes via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS ...` avant de coder l'insert.
+
+### 4. Valeur `null` dans les colonnes NOT NULL
+Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que `null` pour les champs JSONB optionnels.
 - **Cache JS** : `<script src="js/tev-supabase.js?v=2">` — incrémenter v= si le cache pose problème
 
 ## Données saison 2025-2026

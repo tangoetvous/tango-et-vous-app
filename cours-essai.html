@@ -997,17 +997,14 @@ function _notifierAdminEssai(payload) {
     rolePartenaire:   payload.partRole||''
   };
   var msg = {type:'essaiInscription', data:d};
-  var isIframe = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
-  if (isIframe) {
-    try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
-  } else {
-    try {
-      var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]');
-      pending.push(msg);
-      localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
-    } catch(e){}
-    try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
-  }
+  // BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
+  try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
+  try {
+    var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]');
+    pending.push(msg);
+    localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+  } catch(e){}
+  try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
 }
 
 // ── MESSAGE RAPPEL ────────────────────────────────────────

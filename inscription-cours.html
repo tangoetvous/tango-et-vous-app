@@ -874,23 +874,18 @@ function finalize() {
       isWaitlist: wait
     }
   };
-  // Notifier admin
-  const isIframe = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
-  if (isIframe) {
-    try { window.parent.postMessage(msg, window.location.origin); } catch(e) {}
-  } else {
-    // Hors iframe : stocker en localStorage (repris au login admin) + BroadcastChannel (admin ouvert dans un autre onglet)
-    try {
-      const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
-      pending.push(msg);
-      localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
-    } catch(e) {}
-    try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e) {}
-  }
+  // Notifier admin — BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
+  try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e) {}
+  try {
+    const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
+    pending.push(msg);
+    localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+  } catch(e) {}
+  try { window.parent.postMessage(msg, window.location.origin); } catch(e) {}
 
   // Persister en Supabase
   if (window.TEV) {
-    TEV.client.from('inscriptions_cours').insert({
+    const { error: insErr } = await TEV.client.from('inscriptions_cours').insert({
       prenom: S.prenom, nom: S.nom,
       email: (S.email||'').toLowerCase(), tel: S.tel||'',
       role: S.role||'', niveau: S.c1.niveau||'',
@@ -901,7 +896,8 @@ function finalize() {
       email_partenaire: S.pEmail||'',
       saison: S.saison||'',
       donnees: msg.data,
-    }).catch(() => {});
+    });
+    if (insErr) console.error('[TEV] inscription-cours insert error:', insErr);
   }
 }
 
