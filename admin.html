@@ -6538,30 +6538,35 @@ function supprimerSoranoInscr(id) {
 
 function annulerStageInscrit(date, idx, slot, btn) {
   btn.disabled=true;
+  var st=adminData.stages&&adminData.stages[date];
+  if(!st||!st.inscrits){btn.disabled=false;return;}
+  var person=st.inscrits[idx];
+  if(!person){btn.disabled=false;return;}
+  var personSlots=person.slots||[];
+  var supprimerTout=!slot||slot==='all'||personSlots.length<=1;
+
   if(IS_DEMO){
-    var st=adminData.stages&&adminData.stages[date];
-    if(!st||!st.inscrits){renderTab();return;}
-    var person=st.inscrits[idx];
-    if(!person){renderTab();return;}
-    var personSlots=person.slots||[];
-    if(!slot||personSlots.length<=1){
-      // Supprimer la personne entièrement
+    if(supprimerTout){
       st.inscrits.splice(idx,1);
     } else {
-      // Retirer seulement ce créneau
-      var si=personSlots.indexOf(slot);
-      if(si>=0)personSlots.splice(si,1);
-      person.slots=personSlots;
-      // Recalculer le montant avec la bonne grille tarifaire
-      person.montant=calcMontantStage(personSlots);
+      var si=personSlots.indexOf(slot); if(si>=0)personSlots.splice(si,1);
+      person.slots=personSlots; person.montant=calcMontantStage(personSlots);
     }
-    syncStageInscritsToLocal();
-    renderTab(); return;
+    syncStageInscritsToLocal(); renderTab(); return;
   }
-  var _stPerson=adminData.stages&&adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits[idx];
-  var _stEmail=_stPerson?(_stPerson.email||'').toLowerCase():'';
-  if(!_stEmail){btn.disabled=false;return;}
-  TEV.client.from('inscriptions_stages').delete().eq('email',_stEmail).eq('stage_date',date).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+
+  var dbId=person._dbId;
+  if(!dbId){btn.disabled=false;afficherToast('⚠️ Inscription introuvable en base');return;}
+
+  if(supprimerTout){
+    TEV.client.from('inscriptions_stages').delete().eq('id',dbId)
+      .then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+  } else {
+    // Retirer seulement ce créneau — mettre à jour stage_nom
+    var newSlots=personSlots.filter(function(s){return s!==slot;});
+    TEV.client.from('inscriptions_stages').update({stage_nom:newSlots.join('|')}).eq('id',dbId)
+      .then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+  }
 }
 
 function stageMoveInsrit(date, idx, dir) {
