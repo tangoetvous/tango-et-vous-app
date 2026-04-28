@@ -1189,19 +1189,15 @@ async function soumettre(){
     var { error: insErr } = await TEV.client.from('inscriptions_stages').insert(rowsToInsert);
     if (insErr) { console.error('Insert error:', insErr); throw new Error(insErr.message || insErr.code || JSON.stringify(insErr)); }
     afficherConfirmation(data);
-    // Notifier admin
+    // Notifier admin — BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
     var msg = {type:'stageInscription', data:data};
-    var isIframe = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
-    if (isIframe) {
-      try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
-    } else {
-      try {
-        var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
-        pending.push(msg);
-        localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
-      } catch(e){}
-      try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
-    }
+    try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
+    try {
+      var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
+      pending.push(msg);
+      localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+    } catch(e){}
+    try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
   } catch(err){
     btn.disabled=false; btn.textContent="Je m'inscris";
     document.getElementById('err-global-2').textContent='Erreur : '+(err&&err.message||'inconnue')+' — Veuillez réessayer ou nous contacter.';
