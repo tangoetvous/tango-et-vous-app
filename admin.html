@@ -8095,14 +8095,13 @@ document.querySelectorAll('.tab-btn[data-tab]').forEach(function(btn) {
 // Pré-remplir l'email et écouter le retour Supabase OTP
 gel('login-email').value = 'tangoetvous@gmail.com';
 TEV.onAuthChange(function(event, session) {
+  // TOKEN_REFRESHED = renouvellement silencieux du JWT — rien à faire côté UI
+  if (event === 'TOKEN_REFRESHED') return;
   if (session && session.user) {
     var email = session.user.email;
     if (ADMIN_EMAILS.indexOf(email) >= 0) {
-      // Si déjà initialisé (ex: renouvellement de token Supabase), juste rafraîchir silencieusement
-      if (_adminDataReady && adminData._email === email) {
-        chargerDonnees(); chargerParamsRemote();
-        return;
-      }
+      // Si déjà initialisé (ex: retour au premier plan), ne pas réinitialiser
+      if (_adminDataReady && adminData._email === email) return;
       // Première connexion — initialisation complète
       if (window.location.hash || window.location.search.includes('access_token')) {
         history.replaceState(null, '', window.location.pathname);
