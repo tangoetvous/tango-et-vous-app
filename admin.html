@@ -6294,6 +6294,38 @@ function validerReport(reportId, btn) {
 // ================================================================
 // TAB STAGES
 // ================================================================
+function _groupCouples(list) {
+  var used = [], groups = [];
+  for (var i = 0; i < list.length; i++) {
+    if (used.indexOf(i) >= 0) continue;
+    var p = list[i];
+    var partIdx = -1;
+    if (p.partenaire) {
+      for (var j = i + 1; j < list.length; j++) {
+        if (used.indexOf(j) >= 0) continue;
+        var q = list[j];
+        if ((q.prenom + ' ' + q.nom).trim().toLowerCase() === p.partenaire.toLowerCase()) {
+          partIdx = j; break;
+        }
+      }
+    }
+    if (partIdx >= 0) {
+      used.push(i); used.push(partIdx);
+      groups.push({type:'couple', persons:[p, list[partIdx]]});
+    } else {
+      used.push(i);
+      groups.push({type:'single', person:p});
+    }
+  }
+  return groups;
+}
+function _coupleWrap(inner) {
+  return '<div style="border:2px solid #c0392b;border-radius:12px;padding:4px;margin-bottom:10px;">'
+    + inner + '</div>';
+}
+function _coeurSep() {
+  return '<div style="text-align:center;color:#c0392b;font-size:13px;line-height:1.4;">♥</div>';
+}
 function renderStages() {
   var saiStage=saisonActive();
   var stages=adminData.stages||{};
@@ -6362,20 +6394,27 @@ function renderStages() {
       +'</div>';
     if(!ins.length) return h+'<div class="empty-state">Aucun inscrit pour ce stage.</div>';
     var allSorted=ins.slice().sort(function(a,b){return (a.nom+a.prenom).localeCompare(b.nom+b.prenom,'fr');});
-    allSorted.forEach(function(i){
+    function _cardTous(i, noMargin){
       var origIdx=ins.indexOf(i);
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
       var statPill=i.attente
         ?'<span class="pill pill-warn" style="font-size:9px;">Attente</span>'
         :'<span class="pill pill-ok" style="font-size:9px;">Confirmé</span>';
-      h+='<div class="card'+(i.attente?' hl-warn':'')+'" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top">'
+      return '<div class="card'+(i.attente?' hl-warn':'')+'"'+(noMargin?' style="margin-bottom:0;"':'')+' data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top">'
         +'<div style="flex:1;min-width:0;">'
         +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
         +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span>'+statPill+'</div>'
-        +'<div class="card-sub" style="margin-top:3px;">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.montant?' · '+(i.montant)+'€':'')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
+        +'<div class="card-sub" style="margin-top:3px;">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.montant?' · '+(i.montant)+'€':'')+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</div>'
         +'</div>'
         +'<button class="btn btn-err" style="padding:4px 8px;font-size:11px;flex-shrink:0;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="all">✕</button>'
         +'</div></div>';
+    }
+    _groupCouples(allSorted).forEach(function(g){
+      if(g.type==='couple'){
+        h+=_coupleWrap(_cardTous(g.persons[0],true)+_coeurSep()+_cardTous(g.persons[1],true));
+      } else {
+        h+=_cardTous(g.person,false);
+      }
     });
     return h;
   }
@@ -6495,20 +6534,25 @@ function renderStages() {
   var insGde=insSlot.filter(function(i){return i.role==='guidee';});
   var insAlt=[]; var ail=Math.max(insGui.length,insGde.length);
   for(var ai=0;ai<ail;ai++){if(ai<insGui.length)insAlt.push(insGui[ai]);if(ai<insGde.length)insAlt.push(insGde[ai]);}
-  insAlt.forEach(function(i){
+  function _rowSlot(i, noMargin){
     var origIdx=ins.indexOf(i);
     var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-    h+='<div class="point-row">'
-      +'<div style="flex:1;min-width:0;">'
+    return '<div class="point-row"'+(noMargin?' style="margin-bottom:0;"':'')+' data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;">'
       +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
       +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
-      +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
-      +'</div>'
+      +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</div></div>'
       +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
       +'<button class="btn-point" style="font-size:10px;padding:2px 5px;" data-action="stage-move-up" data-date="'+filtreStage+'" data-idx="'+origIdx+'">▲</button>'
       +'<button class="btn-point" style="font-size:10px;padding:2px 5px;" data-action="stage-move-down" data-date="'+filtreStage+'" data-idx="'+origIdx+'">▼</button>'
       +(i.email?btnEmail(i.email,i.prenom+' '+i.nom):'')
       +'</div></div>';
+  }
+  _groupCouples(insAlt).forEach(function(g){
+    if(g.type==='couple'){
+      h+=_coupleWrap(_rowSlot(g.persons[0],true)+_coeurSep()+_rowSlot(g.persons[1],true));
+    } else {
+      h+=_rowSlot(g.person,false);
+    }
   });
   return h;
 }
