@@ -1801,7 +1801,7 @@ function _appliquerYogaConfirmPresence(d) {
 // Dispatcher (postMessage iframe + localStorage + BroadcastChannel)
 function traiterMsgInscription(msg, doRender) {
   if (!msg || !msg.type) return;
-  if (msg.type === 'stageInscription') _appliquerStageInscription(msg.data);
+  if (msg.type === 'stageInscription') { _appliquerStageInscription(msg.data); if(!IS_DEMO){chargerDonnees();return;} }
   if (msg.type === 'coursInscription') _appliquerCoursInscription(msg.data);
   if (msg.type === 'essaiInscription') _appliquerEssaiInscription(msg.data);
   if (msg.type === 'yogaEssaiInscription') _appliquerYogaEssaiInscription(msg.data);
@@ -3777,6 +3777,7 @@ async function chargerDonnees() {
         // Nouveau format : une ligne par date (stage_date explicite)
         if (!stagesReels[dateKey]) stagesReels[dateKey] = {label: fmtDate(dateKey), inscrits:[]};
         stagesReels[dateKey].inscrits.push({
+          _dbId: ins.id,
           prenom: ins.prenom || '', nom: ins.nom || '', email: ins.email || '',
           tel: ins.telephone || '', role: _normRole(ins.role || ''),
           slots: ins.stage_nom ? ins.stage_nom.split('|').map(function(s){return s.trim();}).filter(Boolean) : [],
@@ -6657,12 +6658,12 @@ function valAttStage(date, nom, btn) {
   var st=adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits.find(function(x){return(x.prenom+' '+x.nom)===nom;});
   if(IS_DEMO){if(st)st.attente=false;renderTab();return;}
   if(st)st.attente=false;
-  var email=st&&st.email;
-  // Filtrer par email + stage_date → confirmation uniquement pour cette date
-  TEV.client.from('inscriptions_stages').update({type_confirmation:'confirme'})
-    .eq('email',email).eq('stage_date',date).eq('type_confirmation','attente')
-    .then(function(){chargerDonnees();})
-    .catch(function(){if(st)st.attente=true;btn.disabled=false;btn.textContent='✓ Confirmer';renderTab();});
+  var q=TEV.client.from('inscriptions_stages').update({type_confirmation:'confirme'});
+  // Utiliser l'id DB si disponible (le plus sûr), sinon fallback email+date
+  if(st&&st._dbId) q=q.eq('id',st._dbId);
+  else q=q.eq('email',st&&st.email||'').eq('stage_date',date);
+  q.then(function(){chargerDonnees();})
+   .catch(function(){if(st)st.attente=true;btn.disabled=false;btn.textContent='✓ Confirmer';renderTab();});
 }
 function pointerStage(date, idx, present) {
   var i=adminData.stages&&adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits[idx];
