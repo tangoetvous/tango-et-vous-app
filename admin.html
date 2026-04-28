@@ -6654,8 +6654,15 @@ function soumettreInscriptionStageAdmin() {
 
 function valAttStage(date, nom, btn) {
   btn.disabled=true;btn.textContent='⏳';
-  if(IS_DEMO){var st=adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits.find(function(x){return(x.prenom+' '+x.nom)===nom;});if(st)st.attente=false;renderTab();return;}
-  TEV.client.from('inscriptions_stages').update({type_confirmation:'confirme'}).eq('stage_date',date).eq('type_confirmation','attente').then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;btn.textContent='✓';});
+  var st=adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits.find(function(x){return(x.prenom+' '+x.nom)===nom;});
+  if(IS_DEMO){if(st)st.attente=false;renderTab();return;}
+  if(st)st.attente=false; // mise à jour mémoire immédiate pour éviter le flash
+  var email=st&&st.email;
+  var q=TEV.client.from('inscriptions_stages').update({type_confirmation:'confirme'});
+  // stage_date est null pour les inscriptions via stages-pwa.html → filtrer par email
+  if(email) q=q.eq('email',email).eq('type_confirmation','attente');
+  else q=q.eq('stage_date',date).eq('type_confirmation','attente');
+  q.then(function(){chargerDonnees();}).catch(function(){if(st)st.attente=true;btn.disabled=false;btn.textContent='✓ Confirmer';renderTab();});
 }
 function pointerStage(date, idx, present) {
   var i=adminData.stages&&adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits[idx];
