@@ -393,7 +393,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=3"></script>
+<script src="js/tev-supabase.js?v=4"></script>
 <script>
 // ================================================================
 // CONFIG
@@ -1074,7 +1074,9 @@ function nomCliquable(nom, email, tel, ctx) {
   return '<span class="nom-clickable" data-action="open-contact" data-nom="'+sn+'" data-email="'+se+'" data-tel="'+st+'" data-ctx="'+sc+'">'+sn+'</span>';
 }
 function ouvrirContact(nom, tel, email, ctx) {
-  _contactCtx={nom:nom,tel:tel,email:email,ctx:ctx};
+  var carte=(adminData.cartes||[]).find(function(c){return c.email===email;});
+  var photoUrl=carte&&carte.photo_url||'';
+  _contactCtx={nom:nom,tel:tel,email:email,ctx:ctx,photo_url:photoUrl};
   var box=gel('modal-contact-box');
   if(!box)return;
   var telRaw=(tel||'').replace(/\s/g,'');
@@ -1099,7 +1101,10 @@ function ouvrirContact(nom, tel, email, ctx) {
       +'<button class="btn btn-ok" style="font-size:12px;" data-action="open-insc-essai" data-email="'+se2+'">⭐ Inscrit·e</button>'
       +'</div></div>';
   }
-  box.innerHTML='<div class="modal-titre">'+escHtml(nom||'')+'</div>'
+  var photoHtml=photoUrl
+    ?'<div style="text-align:center;margin-bottom:10px;"><img src="'+_escAttr(photoUrl)+'" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);display:inline-block;"></div>'
+    :'<div style="text-align:center;margin-bottom:10px;"><div style="width:72px;height:72px;border-radius:50%;background:var(--s3);display:inline-flex;align-items:center;justify-content:center;font-size:30px;border:2px solid var(--border);">👤</div></div>';
+  box.innerHTML=photoHtml+'<div class="modal-titre">'+escHtml(nom||'')+'</div>'
     +'<div class="mc-email">'+escHtml(email||'—')+'</div>'
     +telHtml+actHtml+essaiHtml
     +'<div class="modal-btns" style="margin-top:16px;">'
@@ -1110,12 +1115,23 @@ function ouvrirContact(nom, tel, email, ctx) {
   gel('mc-edit').addEventListener('click',basculerEditContact);
   gel('modal-contact').classList.add('vis');
 }
+var _ecPhotoUrl = null;
 function basculerEditContact() {
   var c=_contactCtx||{};
+  _ecPhotoUrl = c.photo_url||null;
   var nomParts=(c.nom||'').trim().split(' ');
   var prenom=nomParts[0]||'', nomFam=nomParts.slice(1).join(' ')||'';
   var box=gel('modal-contact-box');
+  var photoPreview=_ecPhotoUrl
+    ?'<img src="'+_escAttr(_ecPhotoUrl)+'" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);display:inline-block;">'
+    :'<div style="width:72px;height:72px;border-radius:50%;background:var(--s3);display:inline-flex;align-items:center;justify-content:center;font-size:30px;border:2px solid var(--border);">👤</div>';
   box.innerHTML='<div class="modal-titre" style="margin-bottom:12px;">✏️ Modifier les coordonnées</div>'
+    +'<div style="text-align:center;margin-bottom:12px;">'
+    +'<div id="ec-photo-preview" style="margin-bottom:6px;">'+photoPreview+'</div>'
+    +'<label class="btn btn-ghost" style="cursor:pointer;font-size:11px;padding:4px 10px;">📷 Changer la photo'
+    +'<input type="file" id="ec-photo-file" accept="image/*" style="display:none;"></label>'
+    +'<div id="ec-photo-prog" style="font-size:11px;color:var(--dim);margin-top:4px;min-height:16px;"></div>'
+    +'</div>'
     +'<div class="field"><label>Prénom</label><input type="text" id="ec-prenom" value="'+prenom.replace(/"/g,'&quot;')+'" autocapitalize="words"/></div>'
     +'<div class="field"><label>Nom</label><input type="text" id="ec-nom" value="'+nomFam.replace(/"/g,'&quot;')+'" autocapitalize="words"/></div>'
     +'<div class="field"><label>Téléphone</label><input type="tel" id="ec-tel" value="'+(c.tel||'').replace(/"/g,'&quot;')+'"/></div>'
@@ -1125,8 +1141,28 @@ function basculerEditContact() {
     +'<button class="btn btn-gold" id="ec-save">✓ Enregistrer</button>'
     +'<button class="modal-cancel" id="ec-cancel">Annuler</button>'
     +'</div>';
+  gel('ec-photo-file').addEventListener('change',function(){_uploadPhotoContact(this);});
   gel('ec-save').addEventListener('click',function(){sauverContact(this);});
   gel('ec-cancel').addEventListener('click',function(){ouvrirContact(c.nom,c.tel,c.email,c.ctx);});
+}
+function _uploadPhotoContact(input) {
+  var file=input.files[0]; if(!file)return;
+  var prog=gel('ec-photo-prog');
+  if(prog){prog.textContent='⏳ Upload…';prog.style.color='var(--gold)';}
+  var fd=new FormData(); fd.append('file',file); fd.append('upload_preset','tango_uploads');
+  fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_NAME+'/image/upload',{method:'POST',body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.secure_url){
+        _ecPhotoUrl=d.secure_url;
+        var preview=gel('ec-photo-preview');
+        if(preview)preview.innerHTML='<img src="'+_escAttr(d.secure_url)+'" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);display:inline-block;">';
+        if(prog){prog.textContent='✅ Photo chargée';prog.style.color='#4caf50';}
+      } else {
+        if(prog){prog.textContent='❌ Échec';prog.style.color='#e53935';}
+      }
+    })
+    .catch(function(){if(prog){prog.textContent='❌ Erreur réseau';prog.style.color='#e53935';}});
 }
 function sauverContact(btn) {
   var c=_contactCtx||{};
@@ -1151,10 +1187,16 @@ function sauverContact(btn) {
     // cartes.nom est "Prenom Nom" combiné
     (adminData.cartes||[]).forEach(function(x){if(x.email===newEmail||x.email===oldEmail)x.nom=fullNom;});
     _contactCtx.nom=fullNom; _contactCtx.tel=tel; _contactCtx.email=newEmail;
+    if(_ecPhotoUrl!==null){
+      _contactCtx.photo_url=_ecPhotoUrl;
+      (adminData.cartes||[]).forEach(function(x){if(x.email===oldEmail||x.email===newEmail)x.photo_url=_ecPhotoUrl;});
+    }
     afficherToast('✓ Coordonnées mises à jour');
     fermerContact(); renderTab(); return;
   }
-  TEV.client.from('eleves').update({prenom:prenom.trim(),nom:nom.trim(),tel:tel,email:newEmail}).eq('email',oldEmail)
+  var updatePayload={prenom:prenom.trim(),nom:nom.trim(),tel:tel,email:newEmail};
+  if(_ecPhotoUrl!==null) updatePayload.photo_url=_ecPhotoUrl;
+  TEV.client.from('eleves').update(updatePayload).eq('email',oldEmail)
     .then(function(){afficherToast('✓ Coordonnées mises à jour');fermerContact();chargerDonnees();})
     .catch(function(e){btn.disabled=false;btn.textContent='✓ Enregistrer';if(err){err.textContent=e.message;err.style.display='block';}});
 }

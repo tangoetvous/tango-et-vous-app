@@ -98,6 +98,7 @@ async function tevGetEleve(email) {
       email: eleve.email,
       tel: eleve.tel,
       statut: eleve.statut_eleve,
+      photo_url: eleve.photo_url || null,
     },
     carte: {
       coursUtilises:  eleve.carte_utilises,
@@ -261,6 +262,7 @@ async function tevGetAdminData() {
     partenaire:      e.partenaire,
     emailPartenaire: e.email_partenaire,
     notes:           e.notes,
+    photo_url:       e.photo_url || null,
     ville:           e.ville,
     saison:          e.saison,
     utilises:        e.carte_utilises,
@@ -599,6 +601,16 @@ function _calcExpirationSb(dateStr, ville) {
   return d.toISOString().slice(0, 10);
 }
 
+// ================================================================
+// PHOTO ÉLÈVE
+// ================================================================
+async function tevUpdateElevePhoto(email, photo_url) {
+  email = (email || '').trim().toLowerCase();
+  const { error } = await _tev.from('eleves').update({ photo_url }).eq('email', email);
+  if (error) throw error;
+  return { ok: true };
+}
+
 // Export global pour usage dans les HTML
 window.TEV = {
   // Auth
@@ -647,6 +659,8 @@ window.TEV = {
   subscribeEleve: tevSubscribeEleve,
   subscribeAdmin: tevSubscribeAdmin,
   unsubscribe:    tevUnsubscribe,
+  // Photo
+  updateElevePhoto: tevUpdateElevePhoto,
   // Client brut (pour requêtes custom)
   client: _tev,
 };
