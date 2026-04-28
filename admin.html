@@ -3632,6 +3632,32 @@ function sauverTarifsType(type, sai) {
   renderTab();
 }
 
+// ================================================================
+// SUPABASE REALTIME — écoute les inserts sur toutes les tables
+// d'inscriptions publiques (fonctionne depuis n'importe quelle source)
+// ================================================================
+var _realtimeChannel = null;
+function demarrerRealtime() {
+  if (IS_DEMO || _realtimeChannel) return;
+  var _reloadTimer = null;
+  function _onInsert() {
+    // Débounce : plusieurs inserts simultanés (couple) → un seul rechargement
+    clearTimeout(_reloadTimer);
+    _reloadTimer = setTimeout(function() { chargerDonnees(); }, 600);
+  }
+  _realtimeChannel = TEV.client
+    .channel('tev-admin-inserts')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_stages' },    _onInsert)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_essai' },     _onInsert)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_essai_yoga' },_onInsert)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cours_particuliers' },     _onInsert)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_cours' },     _onInsert)
+    .subscribe();
+}
+function arreterRealtime() {
+  if (_realtimeChannel) { TEV.client.removeChannel(_realtimeChannel); _realtimeChannel = null; }
+}
+
 // En Supabase, les essais arrivent directement via inscriptions_essai — polling allégé
 var _essaiPollTimer = null;
 function demarrerPollEssais() {
@@ -3742,6 +3768,7 @@ function demarrerApp(email, isDemo) {
   traiterInscriptionsEnAttente();
   if (IS_DEMO) { renderTab(); } else { gel('tab-content').innerHTML = '<div class="spinner"></div>'; }
   demarrerPollEssais();
+  demarrerRealtime();
   if (!IS_DEMO) { chargerDonnees(); chargerParamsRemote(); }
 }
 // Event listener sélecteur de saison dans le header
@@ -3760,6 +3787,7 @@ function logout() {
   adminData={};
   IS_DEMO = true;
   _adminDataReady = false;
+  arreterRealtime();
   if (TEV) TEV.signOut().catch(function(){});
 }
 async function chargerDonnees() {
