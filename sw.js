@@ -57,10 +57,9 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.url.includes('script.google.com') || e.request.url.includes('googleapis') || e.request.url.includes('gstatic.com')) {
-    return; // laisse passer sans cache
-  }
+  // Ne pas intercepter les ressources externes (Supabase, CDN, Firebase, Google)
+  if (!e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request).catch(() => caches.match(e.request).then(r => r || new Response('', { status: 503 })))
   );
 });
