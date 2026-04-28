@@ -3797,6 +3797,7 @@ async function chargerDonnees() {
           if (!stagesReels[dk]) stagesReels[dk] = {label: di.dateLabel || fmtDate(dk), inscrits:[]};
           var slots = (di.stagesDetail || []).map(function(s){ return s.type || s.id; });
           stagesReels[dk].inscrits.push({
+            _dbId: ins.id,
             prenom: ins.prenom || '', nom: ins.nom || '', email: ins.email || '',
             tel: ins.telephone || '', role: _normRole(ins.role || ''),
             slots: slots, present: null,
@@ -3808,6 +3809,7 @@ async function chargerDonnees() {
             var slotsP = (di.stagesPartDetail || []).map(function(s){ return s.type || s.id; });
             if (!slotsP.length) slotsP = slots;
             stagesReels[dk].inscrits.push({
+              _dbId: ins.id,
               prenom: donnees.partenairePrenom || '', nom: donnees.partenaireNom || '',
               email: ins.partenaire_email || '', tel: donnees.partenaireTel || '',
               role: _normRole(donnees.rolePartenaire || ''),
@@ -6556,13 +6558,13 @@ function annulerStageInscrit(date, idx, slot, btn) {
   }
 
   var dbId=person._dbId;
-  if(!dbId){btn.disabled=false;afficherToast('⚠️ Inscription introuvable en base');return;}
-
+  var q;
   if(supprimerTout){
-    TEV.client.from('inscriptions_stages').delete().eq('id',dbId)
-      .then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+    q=TEV.client.from('inscriptions_stages').delete();
+    q=dbId?q.eq('id',dbId):q.eq('email',person.email||'').is('stage_date',null);
+    q.then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
   } else {
-    // Retirer seulement ce créneau — mettre à jour stage_nom
+    if(!dbId){btn.disabled=false;afficherToast('⚠️ Rechargez la page puis réessayez');return;}
     var newSlots=personSlots.filter(function(s){return s!==slot;});
     TEV.client.from('inscriptions_stages').update({stage_nom:newSlots.join('|')}).eq('id',dbId)
       .then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
