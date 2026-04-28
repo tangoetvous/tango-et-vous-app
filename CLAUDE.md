@@ -55,6 +55,23 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Suppression yoga** = `DELETE FROM cours_yoga` (suppression réelle)
 - **Comparaison d'IDs yoga** : utiliser `String(x.id)===String(id)` car Supabase retourne des bigint (nombres) mais les onclick passent des strings
 
+## Architecture temps réel — admin.html
+
+### Flux de connexion réel vs démo
+- **Mode démo** : `demarrerDemoApp()` → `demarrerApp()` → `demarrerRealtime()` + `demarrerPollEssais()`
+- **Connexion réelle** : `TEV.onAuthChange` (magic link / OTP) → `demarrerRealtime()` + `demarrerPollEssais()` appelés directement dans le callback
+- ⚠️ **Ne jamais mettre `demarrerRealtime()` uniquement dans `demarrerApp()`** — `demarrerApp()` n'est appelé que pour la démo. Le vrai flux passe par `TEV.onAuthChange`.
+
+### Polling 15s (mécanisme principal)
+- `demarrerRealtime()` démarre un `setInterval(chargerDonnees, 15000)` — garantit la mise à jour toutes les 15s quelle que soit la source (autre appareil, Wix iframe, Supabase Realtime)
+- `demarrerRealtime()` ne démarre qu'une fois (garde `_pollTimer` pour éviter les doublons)
+- Supabase Realtime (`postgres_changes`) est un bonus en plus du polling — peut être bloqué par RLS
+
+### Service Worker — règle importante
+- Le SW (`sw.js`) ne doit intercepter **que les ressources same-origin** (`app.tangoetvous.fr`)
+- Ne jamais intercepter les ressources cross-origin (Supabase, jsDelivr, Firebase, Google) — `caches.match()` retourne `undefined` pour les CDN non cachés, ce qui cause `FetchEvent.respondWith: null response`
+- Pattern correct dans `sw.js` : `if (!e.request.url.startsWith(self.location.origin)) return;`
+
 ## Règles obligatoires — formulaires publics (à appliquer à tout nouveau formulaire)
 
 ### 1. Vérification d'erreur sur les inserts Supabase
