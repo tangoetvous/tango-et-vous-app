@@ -1154,6 +1154,7 @@ async function soumettre(){
   try {
     // Une ligne par date (permet confirmation date par date côté admin)
     var avecPart = data.situation === 'avec-partenaire' && !data.memePersonne && (data.partenairePrenom || data.partenaireNom);
+    var typeConfPrincipal = avecPart ? 'confirme' : data.typeConfirmation;
     var rowsToInsert = [];
     data.inscriptionsParDate.forEach(function(di) {
       var slotsId = (di.stagesDetail || []).map(function(s){ return s.type || s.id; }).join('|');
@@ -1165,7 +1166,7 @@ async function soumettre(){
         partenaire_email: (data.partenaireEmail || '').toLowerCase(),
         stage_date: di.date, stage_nom: slotsId,
         total_inscrit: di.prixInscrit,
-        type_confirmation: data.typeConfirmation,
+        type_confirmation: typeConfPrincipal,
         remarques: data.remarques || '',
         donnees: data, saison: '2025-2026',
       });
