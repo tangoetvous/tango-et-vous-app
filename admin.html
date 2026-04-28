@@ -3717,6 +3717,7 @@ function logout() {
   gel('login-screen').style.display='flex';
   adminData={};
   IS_DEMO = true;
+  _adminDataReady = false;
   if (TEV) TEV.signOut().catch(function(){});
 }
 async function chargerDonnees() {
@@ -8090,12 +8091,16 @@ TEV.onAuthChange(function(event, session) {
   if (session && session.user) {
     var email = session.user.email;
     if (ADMIN_EMAILS.indexOf(email) >= 0) {
-      // Nettoyer l'URL après redirection OTP
+      // Si déjà initialisé (ex: renouvellement de token Supabase), juste rafraîchir silencieusement
+      if (_adminDataReady && adminData._email === email) {
+        chargerDonnees(); chargerParamsRemote();
+        return;
+      }
+      // Première connexion — initialisation complète
       if (window.location.hash || window.location.search.includes('access_token')) {
         history.replaceState(null, '', window.location.pathname);
       }
       IS_DEMO = false;
-      adminData._email = email;
       adminData = Object.assign({}, JSON.parse(JSON.stringify(DEMO_DATA)), { _email: email });
       recalcStats();
       filtreStage = Object.keys(adminData.stages)[0]||'';
