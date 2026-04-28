@@ -437,6 +437,7 @@ function sauverLiensAssoconnect(saison, data) {
 var CLOUDINARY_NAME = 'dnggqa2kw';
 var IS_DEMO         = false;
 var DEMO_DATE       = new Date(); // date réelle
+var _adminDataReady = false; // true une fois chargerDonnees() complété (empêche chargerParamsRemote de rendre des données démo)
 
 // ================================================================
 // DONNÉES AGENDA
@@ -3756,6 +3757,7 @@ async function chargerDonnees() {
     if(!adminData.carteReports) adminData.carteReports=[];
     recalcStats();
     saveCoursDatesLocal();
+    _adminDataReady = true;
     renderTab();
     syncStageInscritsToLocal();
   } catch(e) { console.error('Erreur chargerDonnees:', e.message); }
@@ -8102,7 +8104,7 @@ TEV.onAuthChange(function(event, session) {
       gel('app').style.display='block';
       updateSaisonSelect();
       traiterInscriptionsEnAttente();
-      renderTab();
+      gel('tab-content').innerHTML = '<div class="spinner"></div>';
       chargerDonnees(); chargerParamsRemote();
     }
   }
@@ -8185,7 +8187,7 @@ async function chargerParamsRemote() {
       chargerLivrets();
       chargerDatesYogaStages();
       chargerMilongas();
-      renderTab();
+      if (_adminDataReady) renderTab(); // ne pas rendre avant que les vraies données soient chargées
     }
   } catch(e) {}
 }
