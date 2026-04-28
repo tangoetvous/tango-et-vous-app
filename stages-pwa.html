@@ -1156,7 +1156,7 @@ async function soumettre(){
     var avecPart = data.situation === 'avec-partenaire' && !data.memePersonne && data.partenaireEmail;
     var rowsToInsert = [];
     data.inscriptionsParDate.forEach(function(di) {
-      var slotsId = (di.stagesDetail || []).map(function(s){ return s.id; }).join('|');
+      var slotsId = (di.stagesDetail || []).map(function(s){ return s.type || s.id; }).join('|');
       rowsToInsert.push({
         prenom: data.prenom, nom: data.nom,
         email: data.email.toLowerCase(), telephone: data.telephone,
@@ -1170,7 +1170,7 @@ async function soumettre(){
         donnees: data, saison: '2025-2026',
       });
       if (avecPart) {
-        var slotsPId = (di.stagesPartDetail && di.stagesPartDetail.length ? di.stagesPartDetail : di.stagesDetail || []).map(function(s){ return s.id; }).join('|');
+        var slotsPId = (di.stagesPartDetail && di.stagesPartDetail.length ? di.stagesPartDetail : di.stagesDetail || []).map(function(s){ return s.type || s.id; }).join('|');
         rowsToInsert.push({
           prenom: data.partenairePrenom || '', nom: data.partenaireNom || '',
           email: (data.partenaireEmail || '').toLowerCase(),
