@@ -3887,7 +3887,7 @@ async function chargerDonnees() {
     recalcStats();
     saveCoursDatesLocal();
     _adminDataReady = true;
-    renderTab();
+    _renderTabSiPasFormulaire();
     syncStageInscritsToLocal();
   } catch(e) { console.error('Erreur chargerDonnees:', e.message); }
 }
@@ -4006,6 +4006,14 @@ function toggleAdminNav() {
   var ov = gel('admin-nav-overlay');
   if (ov) ov.classList.toggle('open');
 }
+// Rafraîchissement de données en arrière-plan : ne pas re-rendre si l'admin
+// est en train de saisir dans un formulaire iframe (évite la réinitialisation)
+function _renderTabSiPasFormulaire() {
+  var tc = gel('tab-content');
+  if (tc && tc.querySelector('iframe')) return; // formulaire actif — on laisse tranquille
+  renderTab();
+}
+
 function renderTab() {
   var savedScroll = window.scrollY || document.documentElement.scrollTop || 0;
   // Préserver les iframes existantes pour éviter leur rechargement stroboscopique
@@ -8412,7 +8420,7 @@ async function chargerParamsRemote() {
       chargerLivrets();
       chargerDatesYogaStages();
       chargerMilongas();
-      if (_adminDataReady) renderTab(); // ne pas rendre avant que les vraies données soient chargées
+      if (_adminDataReady) _renderTabSiPasFormulaire(); // ne pas rendre avant que les vraies données soient chargées
     }
   } catch(e) {}
 }
