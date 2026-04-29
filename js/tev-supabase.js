@@ -235,6 +235,7 @@ async function tevGetAdminData() {
     { data: publications },
     { data: agendaModifs },
     { data: coursYogaRaw },
+    { data: absencesJour },
   ] = await Promise.all([
     _tev.from('eleves').select('*').order('nom'),
     _tev.from('presences').select('*').order('date', { ascending: false }),
@@ -246,6 +247,7 @@ async function tevGetAdminData() {
     _tev.from('publications').select('*').order('created_at', { ascending: false }),
     _tev.from('agenda_modifs').select('*').order('date'),
     _tev.from('cours_yoga').select('*').order('created_at', { ascending: false }),
+    _tev.from('absences_jour').select('*'),
   ]);
 
   // Construire le format attendu par admin.html (cartes)
@@ -337,6 +339,7 @@ async function tevGetAdminData() {
     essaiYoga:         (inscriptionsEssaiYoga  || []).map(_mapEssai),
     publications:      publications       || [],
     agendaModifs:      agendaModifs       || [],
+    absencesJour:      (absencesJour || []).map(a => ({ date: a.date, email: a.email })),
     stats: {
       total:     (eleves || []).length,
       actifs:    (eleves || []).filter(e => e.statut_eleve === 'Actif').length,
