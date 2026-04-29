@@ -76,15 +76,7 @@ select option{background:#1a1a1a;color:#fff;}
 @media(max-width:480px){.row2{grid-template-columns:1fr;}.choix-grid.col2{grid-template-columns:1fr;}}
 .part-zone{display:none;background:#151515;border:1px solid #2a2a2a;border-radius:6px;padding:16px;margin-top:8px;}
 
-/* QUOTA INLINE */
-.quota-inline{display:none;margin-top:10px;padding:10px 12px;background:#151515;border-radius:6px;border:1px solid #2a2a2a;}
-.qi-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
-.qi-row:last-child{margin-bottom:0;}
-.qi-label{font-size:12px;color:#888;width:80px;flex-shrink:0;}
-.qi-track{flex:1;height:4px;background:#2a2a2a;border-radius:2px;overflow:hidden;}
-.qi-fill{height:100%;background:#D4AF37;border-radius:2px;transition:width .3s;}
-.qi-fill.plein{background:#c62828;}
-.qi-count{font-size:12px;color:#888;width:40px;text-align:right;flex-shrink:0;}
+
 .alerte-role{display:none;background:#1a0000;border-left:3px solid #c62828;padding:10px 12px;border-radius:0 6px 6px 0;font-size:13px;color:#ff6b6b;margin-top:8px;}
 
 /* RÉCAP */
@@ -239,19 +231,6 @@ select option{background:#1a1a1a;color:#fff;}
     <!-- ÉTAPE 4 -->
     <div class="etape" id="e4">
       <div class="etape-titre">Vos informations</div>
-
-      <div class="quota-inline" id="quota-inline">
-        <div class="qi-row">
-          <div class="qi-label">Guideur.ses</div>
-          <div class="qi-track"><div class="qi-fill" id="qi-g" style="width:0%"></div></div>
-          <div class="qi-count" id="qc-g">0/22</div>
-        </div>
-        <div class="qi-row">
-          <div class="qi-label">Guidé·e·s</div>
-          <div class="qi-track"><div class="qi-fill" id="qi-d" style="width:0%"></div></div>
-          <div class="qi-count" id="qc-d">0/22</div>
-        </div>
-      </div>
 
       <!-- Cadre 1 : Infos personnelles -->
       <div class="cadre-dore" style="margin-top:16px;">
@@ -702,8 +681,6 @@ function afficherEtape4() {
   delete quotasCache[choix.date];
   chargerUnQuota(choix.date).then(function(q) {
     qData = { g: q.g, d: q.d };
-    document.getElementById("quota-inline").style.display="block";
-    majQuota("g", qData.g); majQuota("d", qData.d);
     verifierQuota();
   });
 
@@ -712,13 +689,7 @@ function afficherEtape4() {
   ["prenom","nom","email","tel"].forEach(k=>{if(up.get(k)) document.getElementById(k).value=up.get(k);});
 }
 
-function majQuota(t, n) {
-  const cap = t === 'g' ? QUOTA_GUI : QUOTA_GDE;
-  const pct = Math.min(100, Math.round(n/cap*100));
-  document.getElementById("qi-"+t).style.width=pct+"%";
-  document.getElementById("qi-"+t).className="qi-fill"+(n>=cap?" plein":"");
-  document.getElementById("qc-"+t).textContent=n+"/"+cap;
-}
+
 
 function verifierQuota() {
   const r=document.getElementById("role").value;
