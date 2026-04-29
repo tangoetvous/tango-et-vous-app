@@ -140,6 +140,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - Durée de conservation : durée relation + 1 an
 
 ## À faire / en suspens
+- [ ] **Tester déclaration d'absence depuis espace élève** : bouton 🚫 Absent sur la carte "PROCHAIN COURS" → vérifier que l'absence apparaît bien dans admin → Essai Tango → Pointage sur la bonne date et le bon cours
 - [ ] Vérifier correction Sandrine Billot (hatha uniquement) / Myriam Bloch (hatha+yin) dans Supabase — SQL généré mais pas confirmé exécuté
 - [ ] Tester suppression élève tango → persiste après refresh
 - [ ] Tester modification cours/paiement/montant → persiste après refresh
