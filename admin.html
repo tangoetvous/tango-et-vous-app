@@ -5717,11 +5717,13 @@ function valGuideeEssai(email, date, btn) {
   TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('email',email).eq('date_essai',date).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓ Valider';});
 }
 function marquerAbsenceJour(date, email, btn) {
+  console.log('[TEV] marquerAbsenceJour', date, email);
   if(!adminData.absencesJour) adminData.absencesJour=[];
   var idx=-1;
   adminData.absencesJour.forEach(function(a,i){if(a.date===date&&a.email===email) idx=i;});
   if(idx>=0) adminData.absencesJour.splice(idx,1);
   else adminData.absencesJour.push({date:date,email:email,ts:Date.now()});
+  afficherToast(idx>=0?'↩ Rétabli':'🚫 Marqué absent — '+email);
   if(!IS_DEMO){
     if(idx>=0){TEV.client.from('absences_jour').delete().eq('date',date).eq('email',email).catch(function(){});}
     else{TEV.client.from('absences_jour').insert({date:date,email:email}).catch(function(){});}
