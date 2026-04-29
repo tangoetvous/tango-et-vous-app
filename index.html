@@ -280,6 +280,20 @@
         showScreen('screen-notfound'); return;
       }
       eleveData = data;
+      // Absences déclarées par l'élève — localStorage d'abord, puis sync DB en arrière-plan
+      eleveData.absencesJour = [];
+      try { eleveData.absencesJour = JSON.parse(localStorage.getItem('tev_abs_'+((data.eleve&&data.eleve.email)||'').toLowerCase())||'[]'); } catch(e) {}
+      TEV.client.from('absences_jour').select('date').eq('email',((data.eleve&&data.eleve.email)||'').toLowerCase())
+        .then(function(res){
+          if(res&&res.data){
+            var fromDB=res.data.map(function(a){return a.date;});
+            var local=eleveData.absencesJour||[];
+            fromDB.forEach(function(d){if(local.indexOf(d)<0)local.push(d);});
+            eleveData.absencesJour=local;
+            try{localStorage.setItem('tev_abs_'+((eleveData.eleve&&eleveData.eleve.email)||'').toLowerCase(),JSON.stringify(local));}catch(e2){}
+            if(currentTab==='accueil')renderAccueil();
+          }
+        }).catch(function(){});
       // Fallback : si le flag non-payé est en localStorage mais pas encore sur le serveur
       try {
         if (localStorage.getItem('tev_nonpayee_'+(data.eleve.email||'').toLowerCase()) === '1')
@@ -1406,9 +1420,49 @@
       });
     }
 
+    // ── Déclarer une absence ──────────────────────────────────────
+    const _absences = (eleveData && eleveData.absencesJour) ? eleveData.absencesJour : [];
+    const _prochainsCours = coursArr.filter(d => d >= todayStr).slice(0, 8);
+    if (_prochainsCours.length > 0) {
+      h += '<div style="margin-bottom:20px;">';
+      h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#60b0ff;font-weight:700;margin-bottom:10px;">📋 Mes prochains cours</div>';
+      _prochainsCours.forEach(function(d) {
+        var isAbs = _absences.indexOf(d) >= 0;
+        var dateSafe = d.replace(/'/g, "\\'");
+        h += '<div style="background:rgba('+(isAbs?'200,100,100':'96,176,255')+',0.07);border:1px solid rgba('+(isAbs?'200,100,100':'96,176,255')+',0.2);border-left:3px solid '+(isAbs?'#c87070':'#60b0ff')+';border-radius:8px;padding:9px 12px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+          + '<div style="min-width:0;">'
+          + '<div style="font-size:13px;font-weight:600;color:'+(isAbs?'rgba(255,255,255,0.45)':'#fff')+';'+(isAbs?'text-decoration:line-through;':'')+'">' + fmtLong(d) + '</div>'
+          + (isAbs ? '<div style="font-size:11px;color:#e05252;margin-top:2px;">Absence déclarée</div>' : '<div style="font-size:11px;color:#60b0ff;margin-top:2px;">' + coursHeure + '</div>')
+          + '</div>'
+          + '<a href="javascript:void(0)" onclick="toggleAbsenceCours(\'' + dateSafe + '\')" style="font-size:11px;font-weight:600;border-radius:20px;border:1px solid '+(isAbs?'rgba(96,176,255,0.6)':'rgba(200,100,100,0.6)')+';padding:4px 10px;color:'+(isAbs?'#60b0ff':'#e05252')+';text-decoration:none;white-space:nowrap;flex-shrink:0;">'+(isAbs?'↩ Présent':'🚫 Absent')+'</a>'
+          + '</div>';
+      });
+      h += '</div>';
+    }
+
     h += '</div>'; // padding
     pane.innerHTML = h;
   }
+
+  // Déclarer/annuler une absence depuis l'espace élève
+  window.toggleAbsenceCours = function(date) {
+    var email = ((eleveData&&eleveData.eleve&&eleveData.eleve.email)||'').toLowerCase();
+    if(!email) return;
+    if(!eleveData.absencesJour) eleveData.absencesJour=[];
+    var idx = eleveData.absencesJour.indexOf(date);
+    var marking = idx < 0;
+    if(marking) eleveData.absencesJour.push(date);
+    else eleveData.absencesJour.splice(idx,1);
+    try { localStorage.setItem('tev_abs_'+email, JSON.stringify(eleveData.absencesJour)); } catch(e) {}
+    renderAccueil();
+    if(marking){
+      TEV.client.from('absences_jour').insert({date:date,email:email})
+        .then(function(res){ if(res&&res.error) console.warn('absences_jour insert:',res.error.message); })
+        .catch(function(){});
+    } else {
+      TEV.client.from('absences_jour').delete().eq('date',date).eq('email',email).catch(function(){});
+    }
+  };
 
   // ================================================================
   // DONNÉES AGENDA (synchronisées avec admin.html via tev_cours_dates)
