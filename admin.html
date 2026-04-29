@@ -4087,16 +4087,6 @@ function bindTabEvents(el) {
     if (!btn) return;
     handleAction(btn.dataset.action, btn);
   });
-  // touchend pour les boutons absence (iOS Safari : click ne remonte pas toujours)
-  var _touchStartY = 0;
-  el.addEventListener('touchstart', function(e) { _touchStartY = e.touches[0].clientY; }, {passive: true});
-  el.addEventListener('touchend', function(e) {
-    var btn = e.target.closest('[data-action="marquer-absence-jour"]');
-    if (!btn) return;
-    if (Math.abs(e.changedTouches[0].clientY - _touchStartY) > 10) return; // scroll, not tap
-    e.preventDefault(); // empêche le click suivant de redéclencher
-    marquerAbsenceJour(btn.dataset.date, btn.dataset.email, btn);
-  }, {passive: false});
   // Sous-onglets
   el.addEventListener('click', function(e) {
     var b = e.target.closest('[data-filt-e]');
@@ -5584,7 +5574,7 @@ function renderEssai() {
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
           +'<span class="pill pill-ok" style="font-size:8px;">Inscrit</span>'
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+c.role+'</span>'
-          +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--warn-text);border-color:var(--warn-text);" data-action="marquer-absence-jour" data-date="'+grp.date+'" data-email="'+c.email+'">🚫 Absent</button>'
+          +'<a href="javascript:void(0)" class="btn btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--warn-text);border-color:var(--warn-text);text-decoration:none;" data-date="'+grp.date+'" data-email="'+c.email+'" onclick="marquerAbsenceJour(this.dataset.date,this.dataset.email,this)">🚫 Absent</a>'
           +'</div></div>';
       });
       // ── Élèves absents ce jour ──
@@ -5595,7 +5585,7 @@ function renderEssai() {
           +'</div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
           +'<span class="pill" style="font-size:8px;background:#c62828;color:#fff;">Absent</span>'
-          +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px;" data-action="marquer-absence-jour" data-date="'+grp.date+'" data-email="'+c.email+'">↩ Rétablir</button>'
+          +'<a href="javascript:void(0)" class="btn btn-ghost" style="padding:3px 8px;font-size:11px;text-decoration:none;" data-date="'+grp.date+'" data-email="'+c.email+'" onclick="marquerAbsenceJour(this.dataset.date,this.dataset.email,this)">↩ Rétablir</a>'
           +'</div></div>';
       });
       body += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
@@ -5727,16 +5717,18 @@ function valGuideeEssai(email, date, btn) {
   TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('email',email).eq('date_essai',date).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓ Valider';});
 }
 function marquerAbsenceJour(date, email, btn) {
-  if(!adminData.absencesJour) adminData.absencesJour=[];
-  var idx=-1;
-  adminData.absencesJour.forEach(function(a,i){if(a.date===date&&a.email===email) idx=i;});
-  if(idx>=0) adminData.absencesJour.splice(idx,1);
-  else adminData.absencesJour.push({date:date,email:email,ts:Date.now()});
-  if(!IS_DEMO){
-    if(idx>=0){TEV.client.from('absences_jour').delete().eq('date',date).eq('email',email).catch(function(){});}
-    else{TEV.client.from('absences_jour').insert({date:date,email:email}).catch(function(){});}
-  }
-  afficherToast(idx>=0 ? '↩ Élève rétabli' : '🚫 Élève absent pour ce cours');
+  var idx = -1;
+  try {
+    if(!adminData.absencesJour) adminData.absencesJour=[];
+    adminData.absencesJour.forEach(function(a,i){if(a.date===date&&a.email===email) idx=i;});
+    if(idx>=0) adminData.absencesJour.splice(idx,1);
+    else adminData.absencesJour.push({date:date,email:email,ts:Date.now()});
+    if(!IS_DEMO){
+      if(idx>=0){TEV.client.from('absences_jour').delete().eq('date',date).eq('email',email).catch(function(){});}
+      else{TEV.client.from('absences_jour').insert({date:date,email:email}).catch(function(){});}
+    }
+  } catch(e) {}
+  afficherToast(idx>=0 ? '↩ Élève rétabli' : '🚫 Absent pour ce cours');
   renderTab();
 }
 function envoyerEmailAttente(email, date, niveau, role, btn) {
