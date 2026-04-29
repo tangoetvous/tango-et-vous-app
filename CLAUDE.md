@@ -37,6 +37,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **`agenda_modifs`** : modifications d'agenda
 - **`devis`** : demandes de devis (via formulaire Wix à venir) — colonnes : id, created_at, prenom, nom, email, tel, type_event, date_event, nb_personnes, lieu, message, statut ('nouveau'/'traite'/'refuse')
 - **`notifications`** : historique des notifications admin — colonnes : id, created_at, type, message, lu (bool), lien_tab — à créer quand push implémenté
+- **`absences_jour`** : absences déclarées sur les cours réguliers — colonnes : id, created_at, date (date), email (text), UNIQUE(date, email). GRANT SELECT/INSERT/UPDATE/DELETE accordé à anon + authenticated. Alimentée par l'admin (bouton Absent dans Pointage) ET par l'espace élève (bouton sur carte Prochain Cours).
 
 ## Architecture JS clé
 - **`js/tev-supabase.js`** : toutes les requêtes Supabase, fonction `tevGetAdminData()`
@@ -54,6 +55,10 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Suppression tango** = `UPDATE inscriptions_cours SET statut='supprimé'` (pas DELETE)
 - **Suppression yoga** = `DELETE FROM cours_yoga` (suppression réelle)
 - **Comparaison d'IDs yoga** : utiliser `String(x.id)===String(id)` car Supabase retourne des bigint (nombres) mais les onclick passent des strings
+- **iOS Safari — boutons cliquables** : les `<button>` avec délégation de click ne fonctionnent pas de manière fiable dans certains contextes DOM sur iOS Safari. Toujours utiliser `<a href="javascript:void(0)" onclick="...">` pour les actions inline dans du HTML généré dynamiquement.
+- **Absences élèves réguliers** (table `absences_jour`) : persistance double — localStorage immédiat + sync Supabase en arrière-plan. Dans `chargerDonnees()` (admin) et au chargement de l'espace élève, merger les entrées localStorage avec les données DB pour survivre aux rechargements automatiques même si le sync DB échoue.
+- **`adminData.absencesJour`** : chargé dans `tevGetAdminData()` depuis `absences_jour`, mergé avec localStorage `tev_absences_jour` dans `chargerDonnees()`. Utilisé dans le Pointage de l'onglet Essai Tango.
+- **`eleveData.absencesJour`** : chargé au login élève depuis localStorage `tev_abs_<email>`, puis sync DB en arrière-plan. Affiché dans `renderAccueil()` sur la carte "PROCHAIN COURS".
 
 ## Architecture temps réel — admin.html
 
