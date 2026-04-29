@@ -5546,7 +5546,15 @@ function renderEssai() {
       var restEssai=conf.length-presEssai-absEssai;
       var toutPointe=restEssai===0;
       var ccPt=couleurCours(villePt,grp.niveau);
-      var body='<div class="section-hdr" style="color:'+ccPt+';">'+fmtDate(grp.date)+' — '+nivLbl
+      var confGui=conf.filter(function(e){return e.role==='guideur'||e.role==='double';}).length;
+      var confGde=conf.filter(function(e){return e.role==='guidee';}).length;
+      var elevGui=elevesPresents.filter(function(c){return c.role==='guideur';}).length;
+      var elevGde=elevesPresents.filter(function(c){return c.role==='guidee';}).length;
+      var totGui=confGui+elevGui;
+      var totGde=confGde+elevGde;
+      var body='<div class="section-hdr" style="color:'+ccPt+';">'
+        +fmtDate(grp.date)+' — '+nivLbl+' — '+(villePt==='vincennes'?'Vincennes':'Paris')
+        +' — 👨 '+totGui+' · 👩 '+totGde
         +' — Essai: ✓'+presEssai+' ✗'+absEssai+' ?'+restEssai
         +' · Élèves: '+elevesPresents.length+(elevesAbsents.length?' ('+elevesAbsents.length+' absent'+(elevesAbsents.length>1?'s':'')+')':'')+'</div>';
       // ── Cours d'essai ──
@@ -5611,7 +5619,9 @@ function renderEssai() {
       var accIdPt = 'acc-pt-'+key.replace('|','-');
       var isOpenPt = !isPastPt && !firstFutureOpenPt;
       if (!isPastPt && !firstFutureOpenPt) firstFutureOpenPt = true;
-      var accHdrPt = '<span style="color:'+ccPt+';">'+fmtDate(grp.date)+' — '+nivLbl+'</span>';
+      var accHdrPt = '<span style="color:'+ccPt+';">'+fmtDate(grp.date)+' — '+nivLbl+'</span>'
+        +' <span style="font-weight:400;color:var(--dim);font-size:11px;">'+(villePt==='vincennes'?'Vincennes':'Paris')+'</span>'
+        +' <span style="font-weight:400;color:var(--dim);">👨 '+totGui+' · 👩 '+totGde+'</span>';
       if (isPastPt) { pastBodyPt += renderAcc(accIdPt, accHdrPt, body, false); }
       else { futureBodyPt += renderAcc(accIdPt, accHdrPt, body, isOpenPt); }
     });
@@ -5652,6 +5662,7 @@ function renderEssai() {
       var key=date+'|'+niv;
       var grp=grpDN[key]||{date:date,niveau:niv,ins:[]};
       var ins=grp.ins;
+      if(!ins.length) return;
       var guiConf=ins.filter(function(e){return (e.role==='guideur'||e.role==='double')&&e.statut==='confirme';});
       var gde=ins.filter(function(e){return e.role==='guidee';}).length;
       var attVrai=ins.filter(function(e){return estVraimentAttente(e,ins);}).length;
@@ -8177,7 +8188,7 @@ function renderFormulaireInscriptionDirecteAdmin() {
     +'</div>'
     +'<div class="field"><label>Cours * (plusieurs possibles)</label>'
     +'<div style="display:flex;flex-direction:column;gap:6px;padding:4px 0;">'
-    +COURS_VALS.map(function(c){ return '<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="checkbox" name="di-cours" value="'+c+'" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> '+c+'</label>'; }).join('')
+    +COURS_VALS.map(function(c){ return '<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="checkbox" name="di-cours" value="'+c+'" onchange="diUpdatePaieZone()" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> '+c+'</label>'; }).join('')
     +'</div></div>'
     +'<div class="field"><label>Rôle *</label>'
     +'<div style="display:flex;gap:12px;padding:4px 0;">'
@@ -8211,10 +8222,7 @@ function renderFormulaireInscriptionDirecteAdmin() {
     +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="radio" name="di-formule-p" value="forfait" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> Forfait</label>'
     +'</div></div>'
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
-    +'<div class="field" style="margin:0;"><label>Paiement *</label><select id="di-paie">'+PAI_OPT+'</select></div>'
-    +'<div class="field" id="di-paie-part-zone" style="margin:0;display:none;"><label>Paiement partenaire</label><select id="di-paie-p">'+PAI_OPT+'</select></div>'
-    +'</div>'
+    +'<div id="di-cours-paie-zone"></div>'
     +'<div id="di-err" style="display:none;background:#1a0000;border-left:3px solid var(--danger);padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#ff6b6b;margin-bottom:10px;"></div>'
     +'<div id="di-ok"  style="display:none;background:#001a00;border-left:3px solid #4ade80;padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#4ade80;margin-bottom:10px;">✓ Élève inscrit·e !</div>'
     +'<button class="btn btn-gold" style="width:100%;" onclick="soumettreInscriptionDirecte()">✓ Inscrire</button>'
@@ -8224,13 +8232,49 @@ window.diTogglePart = function(radio) {
   var avec = radio.value === 'avec';
   var z = gel('di-part-zone'); if(z) z.style.display = avec ? 'block' : 'none';
   var fp = gel('di-formule-part-zone'); if(fp) fp.style.display = avec ? 'block' : 'none';
-  var pp = gel('di-paie-part-zone'); if(pp) pp.style.display = avec ? 'block' : 'none';
+  diUpdatePaieZone();
 };
 window.diSyncFormulePart = function() {
   var f = document.querySelector('input[name="di-formule"]:checked');
   if (!f) return;
   var rp = document.querySelector('input[name="di-formule-p"][value="'+f.value+'"]');
   if (rp) rp.checked = true;
+  diUpdatePaieZone();
+};
+window.diUpdatePaieZone = function() {
+  var COURS_VALS_Z = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
+  var PAI_OPT_Z = Object.entries(PAI_LBL).map(function(kv){ return '<option value="'+kv[0]+'">'+kv[1]+'</option>'; }).join('');
+  var checked = Array.from(document.querySelectorAll('input[name="di-cours"]:checked'));
+  var avec = (document.querySelector('input[name="di-part"]:checked')||{}).value === 'avec';
+  var z = gel('di-cours-paie-zone');
+  if(!z) return;
+  if(!checked.length){ z.innerHTML=''; return; }
+  var formule = (document.querySelector('input[name="di-formule"]:checked')||{}).value||'carte10';
+  var formulePrt = (document.querySelector('input[name="di-formule-p"]:checked')||{}).value||formule;
+  var h = '';
+  checked.forEach(function(cb){
+    var cours = cb.value;
+    var ci = COURS_VALS_Z.indexOf(cours);
+    var isVinc = cours.toLowerCase().indexOf('vincennes')>=0;
+    var defMt = formule==='carte10'?(TARIFS.carte10||170):(isVinc?(TARIFS.forfait_vincennes||210):(TARIFS.forfait_paris||200));
+    var defMtP = formulePrt==='carte10'?(TARIFS.carte10||170):(isVinc?(TARIFS.forfait_vincennes||210):(TARIFS.forfait_paris||200));
+    h += '<div style="margin-bottom:8px;padding:8px 10px;background:var(--s2);border-radius:6px;">';
+    h += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;">'+cours+'</div>';
+    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+    h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Paiement</label><select id="di-paie-'+ci+'">'+PAI_OPT_Z+'</select></div>';
+    h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Montant (€)</label><input type="number" id="di-montant-'+ci+'" value="'+defMt+'" min="0" step="1"/></div>';
+    h += '</div>';
+    if(avec){
+      h += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">';
+      h += '<div style="font-size:10px;color:var(--dim);margin-bottom:4px;">Partenaire</div>';
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Paiement</label><select id="di-paie-p-'+ci+'">'+PAI_OPT_Z+'</select></div>';
+      h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Montant (€)</label><input type="number" id="di-montant-p-'+ci+'" value="'+defMtP+'" min="0" step="1"/></div>';
+      h += '</div></div>';
+    }
+    h += '</div>';
+  });
+  z.innerHTML = h;
 };
 window.soumettreInscriptionDirecte = function() {
   var prenom  = ((gel('di-prenom')||{}).value||'').trim();
@@ -8250,8 +8294,6 @@ window.soumettreInscriptionDirecte = function() {
   var formule = formEl ? formEl.value : 'carte10';
   var formPEl = document.querySelector('input[name="di-formule-p"]:checked');
   var formulePart = formPEl ? formPEl.value : formule;
-  var paie    = ((gel('di-paie')||{}).value||'cb1x');
-  var paiePart= avec ? ((gel('di-paie-p')||{}).value||paie) : paie;
   var err = gel('di-err'), ok = gel('di-ok');
   if(err) err.style.display='none'; if(ok) ok.style.display='none';
   if (!prenom||!nom||!email) { if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';} return; }
@@ -8262,12 +8304,18 @@ window.soumettreInscriptionDirecte = function() {
   var sai = saisonPourNouvelleEntree();
   var ts  = Date.now();
   if(!adminData.coursTango) adminData.coursTango=[];
+  var COURS_VALS_REF = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
   // Créer une entrée par cours sélectionné
   coursCoches.forEach(function(cours, idx) {
     var ville  = cours.toLowerCase().indexOf('vincennes')>=0 ? 'vincennes' : 'paris';
     var niveau = cours.toLowerCase().indexOf('inter')>=0 ? 'intermediaire' : 'debutant';
-    var montant  = formule==='carte10' ? (TARIFS.carte10||0) : (ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0;
-    var montantP = formulePart==='carte10'? (TARIFS.carte10||0) : (ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0;
+    var ci = COURS_VALS_REF.indexOf(cours);
+    var paie = ((gel('di-paie-'+ci)||{}).value||'cb1x');
+    var mf = gel('di-montant-'+ci);
+    var montant = mf ? (parseFloat(mf.value)||0) : (formule==='carte10' ? (TARIFS.carte10||0) : (ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0);
+    var paiePart = avec ? ((gel('di-paie-p-'+ci)||{}).value||paie) : paie;
+    var mpf = avec ? gel('di-montant-p-'+ci) : null;
+    var montantP = mpf ? (parseFloat(mpf.value)||0) : (formulePart==='carte10' ? (TARIFS.carte10||0) : (ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0);
     var ts_c = ts + idx*2, ts_p = ts + idx*2 + 1;
     // Inscrit
     var existing = adminData.coursTango.find(function(e){return e.email===email && e.cours===cours;});
