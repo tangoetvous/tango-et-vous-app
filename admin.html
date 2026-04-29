@@ -6527,20 +6527,23 @@ function renderStages() {
       });
     }
     h+='<div class="section-hdr">Pointage présences</div>';
-    var confGui=conf.filter(function(i){return i.role==='guideur';});
-    var confGde=conf.filter(function(i){return i.role==='guidee';});
-    var confAlt=[]; var pml=Math.max(confGui.length,confGde.length);
-    for(var pi=0;pi<pml;pi++){if(pi<confGui.length)confAlt.push(confGui[pi]);if(pi<confGde.length)confAlt.push(confGde[pi]);}
-    confAlt.forEach(function(i){
-      var origIdx=ins.indexOf(i);
-      var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-      h+='<div class="point-row" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;"><div class="point-nom" style="display:flex;align-items:center;gap:6px;">'+i.prenom+' '+i.nom
-        +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span></div>'
-        +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
-        +'<div style="display:flex;gap:6px;">'
-        +'<button class="btn-point btn-pres'+(i.present===true?' on':'')+'" data-action="pointer-stage-pres" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✓</button>'
-        +'<button class="btn-point btn-abs'+(i.present===false?' on':'')+'" data-action="pointer-stage-abs" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✗</button>'
-        +'</div></div>';
+    _groupCouples(conf).forEach(function(grp){
+      function _stPRow(i){
+        var origIdx=ins.indexOf(i);
+        var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+        return '<div class="point-row" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;"><div class="point-nom" style="display:flex;align-items:center;gap:6px;">'+i.prenom+' '+i.nom
+          +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span></div>'
+          +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
+          +'<div style="display:flex;gap:6px;">'
+          +'<button class="btn-point btn-pres'+(i.present===true?' on':'')+'" data-action="pointer-stage-pres" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✓</button>'
+          +'<button class="btn-point btn-abs'+(i.present===false?' on':'')+'" data-action="pointer-stage-abs" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✗</button>'
+          +'</div></div>';
+      }
+      if(grp.type==='couple'){
+        h+=_coupleWrap(_stPRow(grp.persons[0])+_coeurSep()+_stPRow(grp.persons[1]));
+      } else {
+        h+=_stPRow(grp.person);
+      }
     });
     return h;
   }
