@@ -5061,23 +5061,19 @@ function _elevesResultatsHTML(inscrits, supprimes) {
        +(cap.fullGui||cap.fullGde?'<span style="font-size:11px;font-weight:700;color:#ff6b6b;border:1px solid #ff6b6b;border-radius:4px;padding:1px 6px;">COMPLET</span>':''))
     +'</div>';
   if(!liste.length&&!listeSupp.length) return r+'<div class="empty-state">Aucun élève inscrit dans ce cours.</div>';
-  var used={}, couples=[], soloGui=[], soloGde=[];
-  liste.forEach(function(e){
-    if(used[e.email]) return;
-    if(e.emailPartenaire){
-      var p=liste.find(function(x){return x.email===e.emailPartenaire;});
-      if(p&&!used[p.email]){used[e.email]=true;used[p.email]=true;var gui=e.role==='guideur'?e:p,gde=e.role==='guidee'?e:p;couples.push([gui,gde]);return;}
-    }
-    used[e.email]=true;
-    if(e.role==='guideur') soloGui.push(e); else soloGde.push(e);
-  });
-  var nbTotal=liste.length,nbCouples=couples.length,nbSolos=soloGui.length+soloGde.length;
+  var groups=_groupCouples(liste);
+  var couplesGrp=groups.filter(function(g){return g.type==='couple';});
+  var soloGrp=groups.filter(function(g){return g.type==='single';});
+  var nbCouples=couplesGrp.length, nbSolos=soloGrp.length;
+  var nbTotal=liste.length;
   r+='<div style="font-size:11px;color:var(--dim);padding:5px 12px 8px;font-style:italic;">'+nbTotal+' élève'+(nbTotal>1?'s':'')+' — '+nbCouples+' couple'+(nbCouples>1?'s':'')+', '+nbSolos+' solo'+(nbSolos>1?'s':'')+'</div>';
-  if(couples.length){
-    r+='<div class="section-hdr">Couples ('+couples.length+')</div>';
-    couples.forEach(function(pair){ r+=_coupleWrap(ficheEleveInscrit(pair[0],'')+ficheEleveInscrit(pair[1],'')); });
+  if(couplesGrp.length){
+    r+='<div class="section-hdr">Couples ('+couplesGrp.length+')</div>';
+    couplesGrp.forEach(function(g){ r+=_coupleWrap(ficheEleveInscrit(g.persons[0],'')+ficheEleveInscrit(g.persons[1],'')); });
   }
-  if(soloGui.length||soloGde.length){
+  if(soloGrp.length){
+    var soloGui=soloGrp.filter(function(g){return g.person.role==='guideur';}).map(function(g){return g.person;});
+    var soloGde=soloGrp.filter(function(g){return g.person.role!=='guideur';}).map(function(g){return g.person;});
     r+='<div class="section-hdr">Solos ('+(soloGui.length+soloGde.length)+')</div>';
     var maxS=Math.max(soloGui.length,soloGde.length);
     for(var si=0;si<maxS;si++){
