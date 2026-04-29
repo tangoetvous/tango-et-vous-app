@@ -938,7 +938,8 @@ async function soumettre(){
     } else {
       statutFinal = 'attente';
     }
-    const {error}=await TEV.client.from('inscriptions_essai').insert({
+
+    const rowPrincipal = {
       prenom:payload.prenom, nom:payload.nom,
       email:payload.email.trim().toLowerCase(), tel:payload.tel,
       date_essai:dateIso, ville:(payload.lieu||'').toLowerCase(),
@@ -946,10 +947,30 @@ async function soumettre(){
       role:payload.role||'', niveau_eleve:payload.niveauEleve||'',
       avec_partenaire:payload.avecPart||'', genre:payload.genre||'',
       part_prenom:payload.partPrenom||'', part_nom:payload.partNom||'',
-      part_email:payload.partEmail||'', part_tel:payload.partTel||'',
+      part_email:(payload.partEmail||'').trim().toLowerCase(), part_tel:payload.partTel||'',
       part_role:payload.partRole||'', remarque:payload.remarque||'',
       statut:statutFinal, type:'tango',
-    });
+    };
+
+    const rowsToInsert = [rowPrincipal];
+
+    // Fiche partenaire (couple uniquement)
+    if (enCouple && (payload.partPrenom || payload.partNom)) {
+      rowsToInsert.push({
+        prenom:payload.partPrenom||'', nom:payload.partNom||'',
+        email:(payload.partEmail||'').trim().toLowerCase(), tel:payload.partTel||'',
+        date_essai:dateIso, ville:(payload.lieu||'').toLowerCase(),
+        niveau:niveauNorm, horaire:payload.horaire||'',
+        role:payload.partRole||'', niveau_eleve:'',
+        avec_partenaire:'Oui', genre:'',
+        part_prenom:payload.prenom, part_nom:payload.nom,
+        part_email:payload.email.trim().toLowerCase(), part_tel:payload.tel,
+        part_role:payload.role||'', remarque:'',
+        statut:'confirme', type:'tango',
+      });
+    }
+
+    const {error}=await TEV.client.from('inscriptions_essai').insert(rowsToInsert);
     if(error) throw error;
     _showSuccess();
   } catch(e){
