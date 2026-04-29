@@ -4087,13 +4087,6 @@ function bindTabEvents(el) {
     if (!btn) return;
     handleAction(btn.dataset.action, btn);
   });
-  // Direct listeners on absence buttons (iOS Safari delegation on div is unreliable)
-  el.querySelectorAll('[data-action="marquer-absence-jour"]').forEach(function(absBtn) {
-    absBtn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      marquerAbsenceJour(this.dataset.date, this.dataset.email, this);
-    });
-  });
   // Sous-onglets
   el.addEventListener('click', function(e) {
     var b = e.target.closest('[data-filt-e]');
@@ -5733,6 +5726,7 @@ function marquerAbsenceJour(date, email, btn) {
     if(idx>=0){TEV.client.from('absences_jour').delete().eq('date',date).eq('email',email).catch(function(){});}
     else{TEV.client.from('absences_jour').insert({date:date,email:email}).catch(function(){});}
   }
+  afficherToast(idx>=0 ? '↩ Élève rétabli' : '🚫 Élève absent pour ce cours');
   renderTab();
 }
 function envoyerEmailAttente(email, date, niveau, role, btn) {
