@@ -321,6 +321,7 @@ async function tevGetAdminData() {
     date:             e.date_essai,
     presenceConfirmee: e.presence_confirmee,
     emailPartenaire:  e.email_partenaire || '',
+    partenaire:       [e.part_prenom, e.part_nom].filter(Boolean).join(' ').trim() || e.partenaire || '',
     role:             _normalizeRole(e.role),
     niveau:           _normalizeNiveau(e.niveau),
   });
