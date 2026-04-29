@@ -339,7 +339,7 @@ async function tevGetAdminData() {
     essaiYoga:         (inscriptionsEssaiYoga  || []).map(_mapEssai),
     publications:      publications       || [],
     agendaModifs:      agendaModifs       || [],
-    absencesJour:      (absencesJour || []).map(a => ({ date: a.date, email: a.email })),
+    absencesJour:      absencesJour != null ? absencesJour.map(a => ({ date: a.date, email: a.email })) : null,
     stats: {
       total:     (eleves || []).length,
       actifs:    (eleves || []).filter(e => e.statut_eleve === 'Actif').length,
