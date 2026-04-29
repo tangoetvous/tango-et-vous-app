@@ -5075,7 +5075,7 @@ function _elevesResultatsHTML(inscrits, supprimes) {
   r+='<div style="font-size:11px;color:var(--dim);padding:5px 12px 8px;font-style:italic;">'+nbTotal+' élève'+(nbTotal>1?'s':'')+' — '+nbCouples+' couple'+(nbCouples>1?'s':'')+', '+nbSolos+' solo'+(nbSolos>1?'s':'')+'</div>';
   if(couples.length){
     r+='<div class="section-hdr">Couples ('+couples.length+')</div>';
-    couples.forEach(function(pair,idx){r+=ficheEleveInscrit(pair[0],idx>0?'border-top:1px solid var(--border);':'');r+=ficheEleveInscrit(pair[1],'');});
+    couples.forEach(function(pair){ r+=_coupleWrap(ficheEleveInscrit(pair[0],'')+ficheEleveInscrit(pair[1],'')); });
   }
   if(soloGui.length||soloGde.length){
     r+='<div class="section-hdr">Solos ('+(soloGui.length+soloGde.length)+')</div>';
@@ -5486,9 +5486,9 @@ function renderEssai() {
           ?' <span style="font-weight:400;color:var(--dim);font-size:11px;">👨 '+guiConf+' · 👩 '+gdeConf+' confirmés</span>'
           :' <span style="font-weight:400;color:'+(compAtt?'var(--warn-text)':'var(--dim)')+';font-size:11px;">👨 '+guiConf+'/22 · 👩 '+gdeConf+'/23'+(compAtt?' — complet':'')+' </span>')
         +'</div>';
-      attenteGrp.forEach(function(e){
+      function _attEssaiCard(e){
         var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-        body += '<div class="point-row">'
+        return '<div class="point-row">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
           +nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')
@@ -5501,6 +5501,10 @@ function renderEssai() {
           +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓ Valider</button>'
           +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" title="Supprimer">✕</button>'
           +'</div></div>';
+      }
+      _groupCouples(attenteGrp).forEach(function(g){
+        if(g.type==='couple') body+=_coupleWrap(_attEssaiCard(g.persons[0])+_attEssaiCard(g.persons[1]));
+        else body+=_attEssaiCard(g.person);
       });
       var isPastAtt = grp.date < todayStr;
       var accIdAtt = 'acc-att-'+key.replace('|','-');
@@ -5568,7 +5572,7 @@ function renderEssai() {
       };
       _groupCouples(conf).forEach(function(g){
         if(g.type==='couple'){
-          body+=_coupleWrap(_mkEssaiPtCard(g.persons[0])+_coeurSep()+_mkEssaiPtCard(g.persons[1]));
+          body+=_coupleWrap(_mkEssaiPtCard(g.persons[0])+_mkEssaiPtCard(g.persons[1]));
         } else {
           body+=_mkEssaiPtCard(g.person);
         }
@@ -5699,7 +5703,7 @@ function renderEssai() {
         };
         _groupCouples(ins).forEach(function(g){
           if(g.type==='couple'){
-            body+=_coupleWrap(_mkEssaiDateCard(g.persons[0])+_coeurSep()+_mkEssaiDateCard(g.persons[1]));
+            body+=_coupleWrap(_mkEssaiDateCard(g.persons[0])+_mkEssaiDateCard(g.persons[1]));
           } else {
             body+=_mkEssaiDateCard(g.person);
           }
@@ -6044,10 +6048,7 @@ function renderCartesPointage(d) {
   var cartes=d.cartes, coursKey=d.coursKey, now=d.now;
   var h=_tevSearchBar();
   h+='<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Cliquez "Pointer" pour enregistrer le cours d\'aujourd\'hui. Max 2 par jour.</div>';
-  var lastCours=null;
-  cartes.forEach(function(c){
-    var coursLbl=coursKey(c);
-    if(coursLbl!==lastCours){ lastCours=coursLbl; h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>'; }
+  function _carteRowPtg(c){
     var nbUtil=c.utilises||0;
     var totalSlots=c.isReport?(c.classesReportees||c.restants||10):10;
     var expAff=c.expiration;
@@ -6066,7 +6067,7 @@ function renderCartesPointage(d) {
       :(!fini||dejaPointe===1)
         ?'<button class="btn btn-gold" style="padding:4px 10px;font-size:11px;" data-action="pointer-cours-1" data-id="'+c.id+'">'+(dejaPointe===1?(fini?'↻ Renouvellement ×2':'+ Pointer ×2'):'+ Pointer')+'</button>'
         :'<span style="font-size:10px;color:var(--dim);">—</span>';
-    h+='<div class="point-row" data-snom="'+c.nom.toLowerCase().replace(/"/g,'&quot;')+'" style="display:flex;align-items:center;gap:8px;padding:8px 12px;flex-wrap:nowrap;">'
+    return '<div class="point-row" data-snom="'+c.nom.toLowerCase().replace(/"/g,'&quot;')+'" style="display:flex;align-items:center;gap:8px;padding:8px 12px;flex-wrap:nowrap;">'
       +'<div style="flex:1;display:flex;align-items:center;gap:8px;overflow:hidden;">'
       +'<span class="point-nom nom-clickable" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" data-action="open-contact" data-nom="'+c.nom.replace(/"/g,'&quot;')+'" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-tel="'+(c.tel||'').replace(/"/g,'&quot;')+'" data-ctx="carte">'+c.nom+'</span>'
       +pteBtn
@@ -6074,6 +6075,15 @@ function renderCartesPointage(d) {
       +'<span style="font-size:12px;color:var(--text);white-space:nowrap;">'+nbUtil+'/'+totalSlots+'</span>'
       +'<span class="pill '+sCls+'" style="font-size:9px;white-space:nowrap;">'+sLbl+'</span>'
       +'</div>';
+  }
+  var _ptgGroups={}, _ptgOrder=[];
+  cartes.forEach(function(c){ var k=coursKey(c); if(!_ptgGroups[k]){_ptgGroups[k]=[];_ptgOrder.push(k);} _ptgGroups[k].push(c); });
+  _ptgOrder.forEach(function(coursLbl){
+    h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>';
+    var _gc=_ptgGroups[coursLbl], _used={}, _cp=[], _sl=[];
+    _gc.forEach(function(c){ if(_used[c.email])return; if(c.emailPartenaire){var p=_gc.find(function(x){return x.email===c.emailPartenaire;}); if(p&&!_used[p.email]){_used[c.email]=true;_used[p.email]=true;_cp.push([c,p]);return;}} _used[c.email]=true;_sl.push(c); });
+    _cp.forEach(function(pair){ h+=_coupleWrap(_carteRowPtg(pair[0])+_carteRowPtg(pair[1])); });
+    _sl.forEach(function(c){ h+=_carteRowPtg(c); });
   });
   return h;
 }
@@ -6081,10 +6091,7 @@ function renderCartesDetails(d) {
   var cartes=d.cartes, coursKey=d.coursKey, now=d.now, isReportPeriod=d.isReportPeriod;
   var h=_tevSearchBar();
   h+='<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Un élève peut pointer deux fois le même jour (cours débutant + intermédiaire).</div>';
-  var lastCours=null;
-  cartes.forEach(function(c){
-    var coursLbl=coursKey(c);
-    if(coursLbl!==lastCours){ lastCours=coursLbl; h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>'; }
+  function _carteRowDet(c){
     var nbUtil=c.utilises||0, datesCours=c.datesCours||[];
     var totalSlots=c.isReport?(c.classesReportees||c.restants||10):10;
     var expAff=c.expiration;
@@ -6111,7 +6118,7 @@ function renderCartesDetails(d) {
     var payePill=payeOk
       ?'<span class="pill pill-ok" style="font-size:8px;cursor:pointer;" data-action="toggle-carte-paye" data-id="'+c.id+'">✓ Payé</span>'
       :'<span class="pill pill-warn" style="font-size:8px;cursor:pointer;" data-action="toggle-carte-paye" data-id="'+c.id+'">Non payé</span>';
-    h+='<div class="point-row" data-snom="'+c.nom.toLowerCase().replace(/"/g,'&quot;')+'" style="display:block;padding:10px 12px;'+(fini||bient?'border-left:3px solid var(--warn-text);':'border-left:3px solid var(--border);')+'">'
+    return '<div class="point-row" data-snom="'+c.nom.toLowerCase().replace(/"/g,'&quot;')+'" style="display:block;padding:10px 12px;"+(fini||bient?'border-left:3px solid var(--warn-text);':'border-left:3px solid var(--border);')+'">'
       +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">'
       +'<span class="point-nom nom-clickable" style="font-size:13px;" data-action="open-contact" data-nom="'+c.nom.replace(/"/g,'&quot;')+'" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-tel="'+(c.tel||'').replace(/"/g,'&quot;')+'" data-ctx="carte">'+c.nom+'</span>'
       +'<span class="pill '+sCls+'" style="font-size:8px;">'+sLbl+'</span>'
@@ -6128,6 +6135,15 @@ function renderCartesDetails(d) {
       +(isReportPeriod&&!fini&&!c.isReport&&(c.restants||0)>0?'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="reporter-carte" data-id="'+c.id+'">↩ Reporter</button>':'')
       +btnEmail(c.email,c.nom)
       +'</div></div>';
+  }
+  var _detGroups={}, _detOrder=[];
+  cartes.forEach(function(c){ var k=coursKey(c); if(!_detGroups[k]){_detGroups[k]=[];_detOrder.push(k);} _detGroups[k].push(c); });
+  _detOrder.forEach(function(coursLbl){
+    h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>';
+    var _gc=_detGroups[coursLbl], _used={}, _cp=[], _sl=[];
+    _gc.forEach(function(c){ if(_used[c.email])return; if(c.emailPartenaire){var p=_gc.find(function(x){return x.email===c.emailPartenaire;}); if(p&&!_used[p.email]){_used[c.email]=true;_used[p.email]=true;_cp.push([c,p]);return;}} _used[c.email]=true;_sl.push(c); });
+    _cp.forEach(function(pair){ h+=_coupleWrap(_carteRowDet(pair[0])+_carteRowDet(pair[1])); });
+    _sl.forEach(function(c){ h+=_carteRowDet(c); });
   });
   return h;
 }
@@ -6540,7 +6556,7 @@ function renderStages() {
           +'</div></div>';
       }
       if(grp.type==='couple'){
-        h+=_coupleWrap(_stPRow(grp.persons[0])+_coeurSep()+_stPRow(grp.persons[1]));
+        h+=_coupleWrap(_stPRow(grp.persons[0])+_stPRow(grp.persons[1]));
       } else {
         h+=_stPRow(grp.person);
       }
@@ -6557,16 +6573,19 @@ function renderStages() {
       +'<div class="stat"><div class="stat-n">'+att2.filter(function(i){return i.role==='guideur';}).length+'</div><div class="stat-l">Guideurs</div></div>'
       +'<div class="stat"><div class="stat-n">'+att2.filter(function(i){return i.role==='guidee';}).length+'</div><div class="stat-l">Guidées</div></div>'
       +'</div>';
-    att2.forEach(function(i){
-      var origIdx=ins.indexOf(i);
+    function _attStageCard(i){
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
-      h+='<div class="card hl-warn" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top">'
+      return '<div class="card hl-warn" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top">'
         +'<div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+(i.prenom+' '+i.nom).replace(/"/g,'&quot;')+'" data-email="'+(i.email||'')+'" data-tel="'+(i.tel||'')+'" data-ctx="stage">'+i.prenom+' '+i.nom+'</div>'
         +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(', ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
         +'<span class="pill '+rcls+'" style="font-size:9px;">'+i.role+'</span></div>'
         +'<div class="btn-row">'
         +'<button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Confirmer</button>'
         +'</div></div>';
+    }
+    _groupCouples(att2).forEach(function(grp){
+      if(grp.type==='couple') h+=_coupleWrap(_attStageCard(grp.persons[0])+_attStageCard(grp.persons[1]));
+      else h+=_attStageCard(grp.person);
     });
     return h;
   }
@@ -7956,7 +7975,10 @@ function renderCoursTango() {
     var items = grp[cours];
     h += '<div class="section-hdr">'+cours+' ('+items.length+')</div>'
       +'<div style="padding:0 16px;">';
-    items.forEach(function(e){ h += ficheEleve(e); });
+    _groupCouples(items).forEach(function(g){
+      if(g.type==='couple') h+=_coupleWrap(ficheEleve(g.persons[0])+ficheEleve(g.persons[1]));
+      else h+=ficheEleve(g.person);
+    });
     h += '</div>';
   });
   return h;
