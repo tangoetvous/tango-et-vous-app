@@ -5574,7 +5574,7 @@ function renderEssai() {
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
           +'<span class="pill pill-ok" style="font-size:8px;">Inscrit</span>'
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+c.role+'</span>'
-          +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--warn-text);border-color:var(--warn-text);" data-action="marquer-absence-jour" data-date="'+grp.date+'" data-email="'+c.email+'" onclick="marquerAbsenceJour(this.dataset.date,this.dataset.email,this)">🚫 Absent</button>'
+          +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px;color:var(--warn-text);border-color:var(--warn-text);" data-action="marquer-absence-jour" data-date="'+grp.date+'" data-email="'+c.email+'" onclick="marquerAbsenceJour(this.dataset.date,this.dataset.email,this);event.stopPropagation();">🚫 Absent</button>'
           +'</div></div>';
       });
       // ── Élèves absents ce jour ──
@@ -5585,7 +5585,7 @@ function renderEssai() {
           +'</div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
           +'<span class="pill" style="font-size:8px;background:#c62828;color:#fff;">Absent</span>'
-          +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px;" data-action="marquer-absence-jour" data-date="'+grp.date+'" data-email="'+c.email+'" onclick="marquerAbsenceJour(this.dataset.date,this.dataset.email,this)">↩ Rétablir</button>'
+          +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px;" data-action="marquer-absence-jour" data-date="'+grp.date+'" data-email="'+c.email+'" onclick="marquerAbsenceJour(this.dataset.date,this.dataset.email,this);event.stopPropagation();">↩ Rétablir</button>'
           +'</div></div>';
       });
       body += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
@@ -5717,13 +5717,11 @@ function valGuideeEssai(email, date, btn) {
   TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('email',email).eq('date_essai',date).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓ Valider';});
 }
 function marquerAbsenceJour(date, email, btn) {
-  console.log('[TEV] marquerAbsenceJour', date, email);
   if(!adminData.absencesJour) adminData.absencesJour=[];
   var idx=-1;
   adminData.absencesJour.forEach(function(a,i){if(a.date===date&&a.email===email) idx=i;});
   if(idx>=0) adminData.absencesJour.splice(idx,1);
   else adminData.absencesJour.push({date:date,email:email,ts:Date.now()});
-  afficherToast(idx>=0?'↩ Rétabli':'🚫 Marqué absent — '+email);
   if(!IS_DEMO){
     if(idx>=0){TEV.client.from('absences_jour').delete().eq('date',date).eq('email',email).catch(function(){});}
     else{TEV.client.from('absences_jour').insert({date:date,email:email}).catch(function(){});}
