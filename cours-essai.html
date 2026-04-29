@@ -755,9 +755,16 @@ function togglePart(){
 
 // ── SÉLECTION RÔLE ────────────────────────────────────────
 function getRolePartenaireAuto(r) {
-  if(r === "Guideur.se") return "Guidé·e";
-  if(r === "Guidé·e") return "Guideur.se";
-  return "Double rôle"; // double rôle → partenaire aussi double rôle
+  if(r === 'guideur') return 'guidee';
+  if(r === 'guidee') return 'guideur';
+  return 'double';
+}
+
+function getRoleLabel(r) {
+  if(r === 'guideur') return 'Guideur.se';
+  if(r === 'guidee') return 'Guidé·e';
+  if(r === 'double') return 'Double rôle';
+  return '—';
 }
 
 function choisirRole(r) {
@@ -779,7 +786,7 @@ function majRolePartenaire() {
   const roleP = getRolePartenaireAuto(r);
   const el = document.getElementById("part-role-auto");
   const hid = document.getElementById("part-role-hidden");
-  if(el) el.textContent = r ? roleP : "—";
+  if(el) el.textContent = r ? getRoleLabel(roleP) : "—";
   if(hid) hid.value = r ? roleP : "";
 }
 
