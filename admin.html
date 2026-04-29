@@ -5534,11 +5534,7 @@ function renderEssai() {
         +' — Essai: ✓'+presEssai+' ✗'+absEssai+' ?'+restEssai
         +' · Élèves: '+elevesPresents.length+(elevesAbsents.length?' ('+elevesAbsents.length+' absent'+(elevesAbsents.length>1?'s':'')+')':'')+'</div>';
       // ── Cours d'essai ──
-      var pGui=conf.filter(function(e){return e.role==='guideur'||e.role==='double';});
-      var pGde=conf.filter(function(e){return e.role==='guidee';});
-      var pAlt=[]; var pml=Math.max(pGui.length,pGde.length);
-      for(var pi=0;pi<pml;pi++){if(pi<pGui.length)pAlt.push(pGui[pi]);if(pi<pGde.length)pAlt.push(pGde[pi]);}
-      pAlt.forEach(function(e) {
+      var _mkEssaiPtCard = function(e) {
         var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
         var ctEntry=(adminData.coursTango||[]).find(function(c){return c.email===e.email;});
         var ctStatut=ctEntry?ctEntry.statut:null;
@@ -5546,8 +5542,8 @@ function renderEssai() {
         if(ctStatut==='inscrit') pastille='<span class="pill pill-ok" style="font-size:8px;padding:1px 5px;">Inscrit</span>';
         else if(ctStatut==='valide'||ctStatut==='attente_paiement') pastille='<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">att. paiem.</span>';
         else if(ctStatut==='demande') pastille='<span style="display:inline-block;background:#FFD600;color:#003399;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;border:2px solid #003399;white-space:nowrap;">DEM</span>';
-        body += '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
-          +'<div class="point-sub">'+e.ville+(e.partenaire?' · avec '+e.partenaire:'')+'</div></div>'
+        return '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
+          +'<div class="point-sub">'+e.ville+(e.partenaire?' · <span style="color:#c0392b;">♥ '+e.partenaire+'</span>':'')+'</div></div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
           +(e.presenceConfirmee===true?'<span class="pill pill-ok" style="font-size:8px;">✓Conf.</span>':'')
           +pastille
@@ -5557,6 +5553,13 @@ function renderEssai() {
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'">✗</button>'
           +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" title="Supprimer">✕</button>'
           +'</div></div>';
+      };
+      _groupCouples(conf).forEach(function(g){
+        if(g.type==='couple'){
+          body+=_coupleWrap(_mkEssaiPtCard(g.persons[0])+_coeurSep()+_mkEssaiPtCard(g.persons[1]));
+        } else {
+          body+=_mkEssaiPtCard(g.person);
+        }
       });
       // ── Élèves inscrits présents ──
       var eGui=elevesPresents.filter(function(c){return c.role==='guideur';});
@@ -5662,21 +5665,17 @@ function renderEssai() {
       if(!ins.length){
         body='<div style="font-size:11px;color:var(--dim);padding:6px 0 10px;">Aucune inscription</div>';
       } else {
-        var iGui=ins.filter(function(e){return e.role==='guideur'||e.role==='double';});
-        var iGde=ins.filter(function(e){return e.role==='guidee';});
-        var iAlt=[]; var ial=Math.max(iGui.length,iGde.length);
-        for(var ia=0;ia<ial;ia++){if(ia<iGui.length)iAlt.push(iGui[ia]);if(ia<iGde.length)iAlt.push(iGde[ia]);}
-        iAlt.forEach(function(e){
+        var _mkEssaiDateCard = function(e) {
           var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
           var vraiAtt=estVraimentAttente(e,ins);
-          body += '<div class="point-row">'
+          return '<div class="point-row">'
             +'<div style="flex:1;min-width:0;">'
             +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
             +nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')
             +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
             +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
             +'</div>'
-            +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
+            +(e.partenaire?'<div class="point-sub"><span style="color:#c0392b;">♥ '+e.partenaire+'</span></div>':'')
             +'</div>'
             +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
             +(vraiAtt
@@ -5685,6 +5684,13 @@ function renderEssai() {
             +btnEmail(e.email,e.prenom+' '+e.nom)
             +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+date+'" title="Supprimer">✕</button>'
             +'</div></div>';
+        };
+        _groupCouples(ins).forEach(function(g){
+          if(g.type==='couple'){
+            body+=_coupleWrap(_mkEssaiDateCard(g.persons[0])+_coeurSep()+_mkEssaiDateCard(g.persons[1]));
+          } else {
+            body+=_mkEssaiDateCard(g.person);
+          }
         });
       }
       var isPastDN = date < todayStr;
