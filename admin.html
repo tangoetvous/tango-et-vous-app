@@ -4087,6 +4087,16 @@ function bindTabEvents(el) {
     if (!btn) return;
     handleAction(btn.dataset.action, btn);
   });
+  // touchend pour les boutons absence (iOS Safari : click ne remonte pas toujours)
+  var _touchStartY = 0;
+  el.addEventListener('touchstart', function(e) { _touchStartY = e.touches[0].clientY; }, {passive: true});
+  el.addEventListener('touchend', function(e) {
+    var btn = e.target.closest('[data-action="marquer-absence-jour"]');
+    if (!btn) return;
+    if (Math.abs(e.changedTouches[0].clientY - _touchStartY) > 10) return; // scroll, not tap
+    e.preventDefault(); // empêche le click suivant de redéclencher
+    marquerAbsenceJour(btn.dataset.date, btn.dataset.email, btn);
+  }, {passive: false});
   // Sous-onglets
   el.addEventListener('click', function(e) {
     var b = e.target.closest('[data-filt-e]');
