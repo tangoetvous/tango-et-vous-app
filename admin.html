@@ -3882,7 +3882,18 @@ async function chargerDonnees() {
       publications:      d.publications       || [],
       agendaModifs:      d.agendaModifs       || [],
       stages:            stagesReels,
-      absencesJour:      d.absencesJour != null ? d.absencesJour : (adminData.absencesJour || []),
+      absencesJour:      (function(){
+        var fromDB = d.absencesJour != null ? d.absencesJour : null;
+        var stored = [];
+        try { stored = JSON.parse(localStorage.getItem('tev_absences_jour')||'[]'); } catch(e){}
+        if(fromDB===null) return stored.length ? stored : (adminData.absencesJour||[]);
+        // Merge : DB + entrées localStorage absentes du DB (insert pas encore propagé ou échoué)
+        var merged = fromDB.slice();
+        stored.forEach(function(la){
+          if(!merged.some(function(db){return db.date===la.date&&db.email===la.email;})) merged.push(la);
+        });
+        return merged;
+      })(),
     });
     if(!adminData.carteReports) adminData.carteReports=[];
     recalcStats();
@@ -5723,9 +5734,13 @@ function marquerAbsenceJour(date, email, btn) {
     adminData.absencesJour.forEach(function(a,i){if(a.date===date&&a.email===email) idx=i;});
     if(idx>=0) adminData.absencesJour.splice(idx,1);
     else adminData.absencesJour.push({date:date,email:email,ts:Date.now()});
+    // Persist in localStorage so 15s reload doesn't overwrite local state
+    try { localStorage.setItem('tev_absences_jour', JSON.stringify(adminData.absencesJour)); } catch(e2) {}
     if(!IS_DEMO){
-      if(idx>=0){TEV.client.from('absences_jour').delete().eq('date',date).eq('email',email).catch(function(){});}
-      else{TEV.client.from('absences_jour').insert({date:date,email:email}).catch(function(){});}
+      if(idx>=0){ TEV.client.from('absences_jour').delete().eq('date',date).eq('email',email).catch(function(){}); }
+      else { TEV.client.from('absences_jour').insert({date:date,email:email})
+        .then(function(res){ if(res&&res.error) afficherToast('⚠️ Sync DB: '+res.error.message); })
+        .catch(function(){}); }
     }
   } catch(e) {}
   afficherToast(idx>=0 ? '↩ Élève rétabli' : '🚫 Absent pour ce cours');
