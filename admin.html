@@ -8566,7 +8566,7 @@ window.diUpdatePaieZone = function() {
   });
   z.innerHTML = h;
 };
-window.soumettreInscriptionDirecte = function() {
+window.soumettreInscriptionDirecte = function(force) {
   var prenom  = ((gel('di-prenom')||{}).value||'').trim();
   var nom     = ((gel('di-nom')||{}).value||'').trim();
   var email   = ((gel('di-email')||{}).value||'').trim().toLowerCase();
@@ -8589,6 +8589,34 @@ window.soumettreInscriptionDirecte = function() {
     }
   });
   if(validErr){ if(err){err.textContent=validErr;err.style.display='block';} return; }
+
+  // ── Vérification quotas (sauf forçage ou période sans limite) ──
+  if (!force && !noLimitsTangoToday()) {
+    var COURS_VALS_REF2 = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
+    var quotaWarn = null;
+    coursCoches.forEach(function(cours) { if(quotaWarn) return;
+      var ci2 = COURS_VALS_REF2.indexOf(cours);
+      var ville2  = cours.toLowerCase().indexOf('vincennes')>=0 ? 'vincennes' : 'paris';
+      var niveau2 = cours.toLowerCase().indexOf('inter')>=0 ? 'intermediaire' : 'debutant';
+      var role2   = ((document.querySelector('input[name="di-role-'+ci2+'"]:checked')||{}).value)||'guideur';
+      var cap2 = capaciteCours(ville2, niveau2);
+      var actuel2 = role2==='guideur' ? cap2.gui : cap2.gde;
+      var max2    = role2==='guideur' ? cap2.maxGui : cap2.maxGde;
+      var rLbl2   = role2==='guideur' ? 'guideurs' : 'guidées';
+      if(actuel2 >= max2) {
+        quotaWarn = '⚠️ ' + cours + ' — quota atteint : '+actuel2+'/'+max2+' '+rLbl2+'.';
+      }
+    });
+    if(quotaWarn) {
+      if(err) {
+        err.innerHTML = quotaWarn
+          + '<br><button class="btn btn-warn" onclick="soumettreInscriptionDirecte(true)" style="margin-top:8px;width:100%;">⚡ Forcer l\'inscription quand même</button>';
+        err.style.display = 'block';
+      }
+      return;
+    }
+  }
+
   var sai = saisonPourNouvelleEntree();
   var ts  = Date.now();
   if(!adminData.coursTango) adminData.coursTango=[];
