@@ -887,19 +887,80 @@ async function finalize() {
 
   // Persister en Supabase
   if (window.TEV) {
-    const { error: insErr } = await TEV.client.from('inscriptions_cours').insert({
+    const p2Pre = S.samePartner===true ? S.pPrenom : S.p2Prenom;
+    const p2Nom = S.samePartner===true ? S.pNom    : S.p2Nom;
+    const p2Eml = S.samePartner===true ? S.pEmail  : S.p2Email;
+    const p2Tel = S.samePartner===true ? S.pTel    : S.p2Tel;
+    const rows = [];
+
+    // ── Principal — Cours 1
+    rows.push({
       prenom: S.prenom, nom: S.nom,
       email: (S.email||'').toLowerCase(), tel: S.tel||'',
       role: S.role||'', niveau: S.c1.niveau||'',
-      cours: (S.c1.ville||'')+'—'+(S.c1.niveau||''),
+      cours: S.c1.ville+'—'+S.c1.niveau,
       ville: S.c1.ville||'',
       statut: wait ? 'attente' : 'demande',
-      partenaire: S.pPrenom ? S.pPrenom+' '+S.pNom : '',
-      email_partenaire: S.pEmail||'',
+      partenaire: S.venue==='avec-part' && S.pPrenom ? (S.pPrenom+' '+S.pNom).trim() : '',
+      email_partenaire: S.venue==='avec-part' ? (S.pEmail||'').toLowerCase() : '',
       saison: S.saison||'',
       donnees: msg.data,
     });
-    if (insErr) console.error('[TEV] inscription-cours insert error:', insErr);
+
+    // ── Partenaire — Cours 1 (si couple)
+    if (S.venue === 'avec-part' && S.pEmail) {
+      rows.push({
+        prenom: S.pPrenom||'', nom: S.pNom||'',
+        email: (S.pEmail||'').toLowerCase(), tel: S.pTel||'',
+        role: S.pRole || getRoleAuto(S.role) || '',
+        niveau: S.c1.niveau||'',
+        cours: S.c1.ville+'—'+S.c1.niveau,
+        ville: S.c1.ville||'',
+        statut: 'demande',
+        partenaire: (S.prenom+' '+S.nom).trim(),
+        email_partenaire: (S.email||'').toLowerCase(),
+        saison: S.saison||'',
+        donnees: msg.data,
+      });
+    }
+
+    // ── Principal — Cours 2
+    if (incl2) {
+      rows.push({
+        prenom: S.prenom, nom: S.nom,
+        email: (S.email||'').toLowerCase(), tel: S.tel||'',
+        role: S.role2||'', niveau: S.c2.niveau||'',
+        cours: S.c2.ville+'—'+S.c2.niveau,
+        ville: S.c2.ville||'',
+        statut: wait ? 'attente' : 'demande',
+        partenaire: S.venue2==='avec-part' && p2Pre ? (p2Pre+' '+p2Nom).trim() : '',
+        email_partenaire: S.venue2==='avec-part' ? (p2Eml||'').toLowerCase() : '',
+        saison: S.saison||'',
+        donnees: msg.data,
+      });
+
+      // ── Partenaire — Cours 2 (si couple)
+      if (S.venue2 === 'avec-part' && p2Eml) {
+        rows.push({
+          prenom: p2Pre||'', nom: p2Nom||'',
+          email: (p2Eml||'').toLowerCase(), tel: p2Tel||'',
+          role: getRoleAuto(S.role2)||'',
+          niveau: S.c2.niveau||'',
+          cours: S.c2.ville+'—'+S.c2.niveau,
+          ville: S.c2.ville||'',
+          statut: 'demande',
+          partenaire: (S.prenom+' '+S.nom).trim(),
+          email_partenaire: (S.email||'').toLowerCase(),
+          saison: S.saison||'',
+          donnees: msg.data,
+        });
+      }
+    }
+
+    for (const row of rows) {
+      const { error: insErr } = await TEV.client.from('inscriptions_cours').insert(row);
+      if (insErr) console.error('[TEV] inscription-cours insert error:', insErr);
+    }
   }
 }
 
