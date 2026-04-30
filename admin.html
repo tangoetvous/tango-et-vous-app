@@ -4848,6 +4848,14 @@ function handleAction(action, btn) {
       _devisVue = (_devisVue === 'demandes') ? 'liste' : 'demandes';
       renderTab();
       break;
+    case 'toggle-demande-detail':
+      (function() {
+        var sid = String(btn.dataset.id);
+        if (_demandesExpanded.has(sid)) { _demandesExpanded.delete(sid); }
+        else { _demandesExpanded.add(sid); }
+        renderTab();
+      })();
+      break;
     case 'emettre-devis':
       (function() {
         var id = btn.dataset.id;
@@ -8680,6 +8688,14 @@ function renderNotifications() {
 }
 
 var _devisVue = 'demandes'; // 'demandes' | 'liste'
+var _demandesExpanded = new Set();
+
+function _dvRow(label, val) {
+  if (!val) return '';
+  return '<div style="display:flex;gap:6px;font-size:12px;margin-top:3px;">'
+    + '<span style="color:var(--dim);min-width:130px;flex-shrink:0;">' + label + '</span>'
+    + '<span style="color:var(--text);word-break:break-word;">' + val + '</span></div>';
+}
 
 function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
   if (!devisList.length) {
@@ -8809,109 +8825,119 @@ function renderDevis() {
     }
   });
 
-  function row(label, val) {
-    if (!val) return '';
-    return '<div style="display:flex;gap:6px;font-size:12px;margin-top:3px;">'
-      + '<span style="color:var(--dim);min-width:120px;flex-shrink:0;">' + label + '</span>'
-      + '<span style="color:var(--text);word-break:break-word;">' + val + '</span>'
-      + '</div>';
-  }
-
   function cardDemande(d) {
     var dt = d.created_at ? _discRelDate(d.created_at) : '';
     var nom = ((d.civilite ? d.civilite + ' ' : '') + (d.prenom||'') + ' ' + (d.nom||'')).trim();
     var prestations = (d.prestations_labels || []).join(', ') || (d.prestations_ids || []).join(', ');
     var dvList = devisParDemande[d.id] || [];
     var isSoc = d.type_contact === 'societe';
+    var expanded = _demandesExpanded.has(String(d.id));
+
+    // ── Résumé (toujours visible)
+    var summaryParts = [];
+    if (d.mode === 'event') {
+      if (d.date_evenement) summaryParts.push('📅 ' + d.date_evenement + (d.date_flexible ? ' <span style="color:var(--faint);">(flex)</span>' : ''));
+      if (d.horaire_evenement) summaryParts.push('🕐 ' + d.horaire_evenement);
+      if (d.lieu) summaryParts.push('📍 ' + d.lieu + (d.code_postal ? ' ' + d.code_postal : ''));
+      if (d.nombre_invites) summaryParts.push('👥 ' + d.nombre_invites);
+    } else {
+      if (d.type_demande) summaryParts.push(d.type_demande);
+      if (d.date_butoir) summaryParts.push('🗓 ' + d.date_butoir);
+      if (d.lieu_cours) summaryParts.push('📍 ' + d.lieu_cours);
+      if (d.pour_qui) summaryParts.push('Pour : ' + d.pour_qui);
+    }
+    if (dvList.length) summaryParts.push(dvList.length === 1 ? '1 devis' : dvList.length + ' devis');
 
     var card = '<div class="card">';
 
     // ── Entête
     card += '<div class="card-top"><div>'
-      + '<div class="card-nom">' + nom + (isSoc ? ' <span style="font-size:11px;font-weight:400;color:var(--dim);">(Société)</span>' : '') + '</div>'
-      + '<div class="card-sub">' + (d.email||'') + (d.telephone ? ' · '+d.telephone : '') + (dt ? ' · '+dt : '') + '</div>'
+      + '<div class="card-nom">'
+      + nom
+      + (isSoc && d.nom_societe ? ' — ' + d.nom_societe : '')
+      + (isSoc ? ' <span style="font-size:10px;color:var(--dim);font-weight:400;border:1px solid var(--border);border-radius:3px;padding:1px 5px;">Société</span>' : '')
+      + '</div>'
+      + '<div class="card-sub">' + (d.email||'') + (d.telephone ? ' · ' + d.telephone : '') + (dt ? ' · ' + dt : '') + '</div>'
       + '</div>';
     card += '<select class="input" style="width:auto;font-size:12px;padding:4px 8px;" data-action="statut-demande-devis" data-id="'+d.id+'">';
     STATUTS_PIPELINE.forEach(function(s) {
-      var l = STATUT_DEMANDE[s] ? STATUT_DEMANDE[s].lbl : s;
-      card += '<option value="'+s+'"'+(d.statut===s?' selected':'')+'>'+l+'</option>';
+      card += '<option value="'+s+'"'+(d.statut===s?' selected':'')+'>'+(STATUT_DEMANDE[s]?STATUT_DEMANDE[s].lbl:s)+'</option>';
     });
     card += '</select></div>';
 
     // ── Prestations
     if (prestations) {
-      card += '<div style="margin-top:8px;font-size:13px;color:var(--gold);font-weight:600;">' + prestations + '</div>';
+      card += '<div style="margin-top:6px;font-size:13px;color:var(--gold);font-weight:600;">' + prestations + '</div>';
     }
 
-    // ── Détails selon le mode
-    card += '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">';
-
-    if (d.mode === 'event') {
-      card += row('Type d\'événement', d.type_evenement);
-      card += row('Date', d.date_evenement ? d.date_evenement + (d.date_flexible ? ' <em style="color:var(--dim)">(flexible)</em>' : '') : '');
-      card += row('Horaire', d.horaire_evenement);
-      card += row('Lieu', (d.lieu||'') + (d.code_postal ? ' ('+d.code_postal+')' : ''));
-      card += row('Nombre d\'invités', d.nombre_invites ? d.nombre_invites + ' personnes' : '');
-      card += row('Durée prestation', d.duree_prestation);
-    } else {
-      card += row('Type de demande', d.type_demande);
-      card += row('Pour qui', d.pour_qui);
-      card += row('Niveau tango', d.niveau_tango);
-      card += row('Date butoir', d.date_butoir ? d.date_butoir + (d.date_butoir_flexible ? ' <em style="color:var(--dim)">(flexible)</em>' : '') : '');
-      card += row('Professeur souhaité', d.professeur);
-      card += row('Lieu des cours', d.lieu_cours);
-      card += row('Commune domicile', d.commune_domicile);
-      card += row('Durée / cours', d.duree_cours);
-      card += row('Nombre de cours', d.nombre_cours);
-      card += row('Disponibilités', d.dates_periodes);
+    // ── Résumé clé
+    if (summaryParts.length) {
+      card += '<div style="margin-top:4px;font-size:12px;color:var(--dim);">' + summaryParts.join(' · ') + '</div>';
     }
 
-    // ── Commun
-    if (d.budget) card += row('Budget', d.budget);
-
-    if (d.message) {
-      card += '<div style="margin-top:8px;">'
-        + '<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Message</div>'
-        + '<div style="font-size:13px;color:var(--text);white-space:pre-wrap;background:var(--bg2,#f9f9f9);border-radius:6px;padding:8px 10px;">' + d.message + '</div>'
-        + '</div>';
-    }
-
-    if (d.comment_connu) card += row('Comment connu', '💬 ' + d.comment_connu);
-
-    // ── Facturation
-    if (isSoc && (d.nom_societe || d.adresse_facturation)) {
-      card += '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px;">';
-      card += row('Société', d.nom_societe);
-      card += row('Adresse facturation', d.adresse_facturation ? d.adresse_facturation.replace(/\n/g, ', ') : '');
-      card += '</div>';
-    } else if (d.adresse_facturation) {
-      card += row('Adresse', d.adresse_facturation.replace(/\n/g, ', '));
-    }
-
-    card += '</div>';
-
-    // ── Devis associés
-    if (dvList.length) {
-      card += '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">';
-      dvList.forEach(function(dv) {
-        var dvSt = STATUT_DEVIS[dv.statut] || { cls:'pill-warn', lbl:dv.statut };
-        var montant = dv.montant_ht ? (Number(dv.montant_ht).toLocaleString('fr-FR'))+'€ HT' : '';
-        card += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
-          + '<span style="font-weight:600;font-size:13px;color:var(--gold);">'+dv.numero+'</span>'
-          + '<span class="pill '+dvSt.cls+'" style="font-size:11px;">'+dvSt.lbl+'</span>'
-          + (montant ? '<span style="font-size:13px;color:var(--dim);">'+montant+'</span>' : '')
-          + '<a href="/generateur-devis.html?numero='+encodeURIComponent(dv.numero)+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:12px;padding:3px 10px;">📄 Ouvrir</a>'
-          + (dv.statut==='brouillon' ? '<button class="btn btn-ghost" style="font-size:12px;padding:3px 10px;" data-action="emettre-devis" data-id="'+dv.id+'">✓ Marquer émis</button>' : '')
+    // ── Détails (section expansible)
+    if (expanded) {
+      card += '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">';
+      if (d.mode === 'event') {
+        card += _dvRow('Type d\'événement', d.type_evenement);
+        card += _dvRow('Date', d.date_evenement ? d.date_evenement + (d.date_flexible ? ' <em style="color:var(--faint)">(flexible)</em>' : '') : '');
+        card += _dvRow('Horaire', d.horaire_evenement);
+        card += _dvRow('Lieu', (d.lieu||'') + (d.code_postal ? ' ('+d.code_postal+')' : ''));
+        card += _dvRow('Nombre d\'invités', d.nombre_invites ? d.nombre_invites + ' personnes' : '');
+        card += _dvRow('Durée prestation', d.duree_prestation);
+      } else {
+        card += _dvRow('Type de demande', d.type_demande);
+        card += _dvRow('Pour qui', d.pour_qui);
+        card += _dvRow('Niveau tango', d.niveau_tango);
+        card += _dvRow('Date butoir', d.date_butoir ? d.date_butoir + (d.date_butoir_flexible ? ' <em style="color:var(--faint)">(flexible)</em>' : '') : '');
+        card += _dvRow('Professeur souhaité', d.professeur);
+        card += _dvRow('Lieu des cours', d.lieu_cours);
+        card += _dvRow('Commune domicile', d.commune_domicile);
+        card += _dvRow('Durée / cours', d.duree_cours);
+        card += _dvRow('Nombre de cours', d.nombre_cours);
+        card += _dvRow('Disponibilités', d.dates_periodes);
+      }
+      if (d.budget) card += _dvRow('Budget', d.budget);
+      if (d.message) {
+        card += '<div style="margin-top:8px;">'
+          + '<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Message</div>'
+          + '<div style="font-size:13px;color:var(--text);white-space:pre-wrap;background:var(--s3);border-radius:6px;padding:8px 10px;border:1px solid var(--border);">' + d.message + '</div>'
           + '</div>';
-      });
+      }
+      if (d.comment_connu) card += _dvRow('Comment connu', '💬 ' + d.comment_connu);
+      if (isSoc) {
+        if (d.nom_societe) card += _dvRow('Société', d.nom_societe);
+        if (d.adresse_facturation) card += _dvRow('Adresse facturation', d.adresse_facturation.replace(/\n/g, ', '));
+      } else if (d.adresse_facturation) {
+        card += _dvRow('Adresse', d.adresse_facturation.replace(/\n/g, ', '));
+      }
+
+      // Devis associés
+      if (dvList.length) {
+        card += '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">';
+        dvList.forEach(function(dv) {
+          var dvSt = STATUT_DEVIS[dv.statut] || { cls:'pill-warn', lbl:dv.statut };
+          var montant = dv.montant_ht ? Number(dv.montant_ht).toLocaleString('fr-FR')+'€ HT' : '';
+          card += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">'
+            + '<span style="font-weight:600;font-size:12px;color:var(--gold);">'+dv.numero+'</span>'
+            + '<span class="pill '+dvSt.cls+'" style="font-size:10px;">'+dvSt.lbl+'</span>'
+            + (montant ? '<span style="font-size:12px;color:var(--dim);">'+montant+'</span>' : '')
+            + '<a href="/generateur-devis.html?numero='+encodeURIComponent(dv.numero)+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:11px;padding:2px 8px;">📄 Ouvrir</a>'
+            + (dv.statut==='brouillon' ? '<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;" data-action="emettre-devis" data-id="'+dv.id+'">✓ Marquer émis</button>' : '')
+            + '</div>';
+        });
+        card += '</div>';
+      }
       card += '</div>';
     }
 
     // ── Boutons
-    card += '<div class="btn-row" style="margin-top:10px;">';
-    if (d.email) card += '<a href="mailto:'+d.email+'" class="btn btn-gold" style="text-decoration:none;">✉️ Email</a>';
-    if (d.telephone) card += '<a href="tel:'+d.telephone+'" class="btn btn-ghost" style="text-decoration:none;">📞 Appeler</a>';
-    card += '<button class="btn btn-ghost" data-action="creer-devis" data-id="'+d.id+'">📋 Créer un devis</button>';
+    card += '<div class="btn-row" style="margin-top:8px;">';
+    if (d.email) card += '<a href="mailto:'+d.email+'" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Email</a>';
+    if (d.telephone) card += '<a href="tel:'+d.telephone+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📞</a>';
+    card += '<button class="btn btn-ghost" data-action="creer-devis" data-id="'+d.id+'" style="font-size:12px;">📋 Créer un devis</button>';
+    card += '<button class="btn btn-ghost" data-action="toggle-demande-detail" data-id="'+d.id+'" style="font-size:12px;margin-left:auto;">'
+      + (expanded ? '▴ Réduire' : '▾ Voir tout') + '</button>';
     card += '</div></div>';
     return card;
   }
