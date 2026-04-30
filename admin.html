@@ -2388,14 +2388,8 @@ function renderParametres() {
   saiLabels[sc]                 = 'Saison actuelle';
   saiLabels[saisonSuivante()]   = 'Saison prochaine';
 
-  // ── Adhésion Le Regard Se Pose (1ère position) ─────────────
-  var h = _renderAdhesionLRPSection();
-
-  // ── Adhésion Sorano (2ème position) ────────────────────────
-  h += _renderAdhesionSoranoSection();
-
   // ── Sélecteur de saison ────────────────────────────────────
-  h += '<div style="margin-bottom:20px;">'
+  var h = '<div style="margin-bottom:20px;">'
     + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:10px;">Saison</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
   saisons.forEach(function(s) {
@@ -2416,6 +2410,16 @@ function renderParametres() {
        + sai + ' archivée — consultation uniquement</div>';
   }
   h += '</div>';
+
+  // ── Adhésion Le Regard Se Pose (1ère position, saison-dépendante) ──
+  h += '<div class="card" style="margin-bottom:14px;padding:0;">'
+    + _renderAccordSection('adhesions', 'lrp', '🤝 Adhésion Le Regard Se Pose', _renderAdhesionLRPContent(sai))
+    + '</div>';
+
+  // ── Adhésion Sorano (2ème position, saison-dépendante) ─────────────
+  h += '<div class="card" style="margin-bottom:14px;padding:0;">'
+    + _renderAccordSection('adhesions', 'sorano', '🏛 Adhésion Sorano', _renderAdhesionSoranoContent(sai))
+    + '</div>';
 
   // ── Cartes cours ───────────────────────────────────────────
   ['paris','vincennes','yoga','stages'].forEach(function(type) {
@@ -2479,28 +2483,28 @@ function chargerAdhesionSorano() {
   try { var r=JSON.parse(localStorage.getItem('tev_adhesion_sorano')||'null'); return r||ADHESION_SORANO_DEFAUT; }
   catch(e) { return ADHESION_SORANO_DEFAUT; }
 }
-function _renderAdhesionLRPSection() {
-  var val = TARIFS.adhesion_lrp !== undefined ? TARIFS.adhesion_lrp : 5;
+function _renderAdhesionLRPContent(sai) {
+  var stored = _loadParam('adhesions', sai, 'lrp');
+  var val = stored.montant !== undefined ? stored.montant : (TARIFS.adhesion_lrp || 5);
   var iS = 'width:72px;text-align:right;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;';
-  return '<div style="margin-bottom:20px;">'
-    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Adhésion Le Regard Se Pose</div>'
-    +'<div class="card">'
-    +'<div class="box-info" style="margin-bottom:14px;font-size:12px;">Incluse dans les forfaits annuels et les Cartes de 10 cours (1ère inscription).</div>'
+  return '<div style="padding:12px 16px;">'
+    +'<div class="box-info" style="margin-bottom:12px;font-size:12px;">Incluse dans les forfaits annuels et les Cartes de 10 cours (1ère inscription).</div>'
     +'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">'
-    +'<span style="font-size:13px;color:var(--text);">Montant de l\'adhésion</span>'
+    +'<span style="font-size:13px;color:var(--text);">Montant de l'adhésion</span>'
     +'<div style="display:flex;align-items:center;gap:5px;">'
     +'<input type="number" id="lrp-montant" min="0" value="'+val+'" style="'+iS+'">'
     +'<span style="color:var(--dim);font-size:12px;">€</span>'
     +'</div></div>'
     +'<div class="btn-row" style="margin-top:14px;">'
-    +'<button class="btn btn-gold" data-action="sauver-adhesion-lrp" style="font-size:12px;">💾 Enregistrer</button>'
-    +'</div>'
+    +'<button class="btn btn-gold" data-action="sauver-adhesion-lrp" data-saison="'+sai+'" style="font-size:12px;">💾 Enregistrer</button>'
     +'</div>'
     +'</div>';
 }
 
-function _renderAdhesionSoranoSection() {
-  var sor = chargerAdhesionSorano();
+function _renderAdhesionSoranoContent(sai) {
+  var stored = _loadParam('adhesions', sai, 'sorano');
+  var def = chargerAdhesionSorano();
+  function v(k) { return stored[k] !== undefined ? stored[k] : def[k]; }
   var iS = 'width:72px;text-align:right;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;';
   function champ(id, lbl, val) {
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
@@ -2510,21 +2514,17 @@ function _renderAdhesionSoranoSection() {
       +'<span style="color:var(--dim);font-size:12px;">€</span>'
       +'</div></div>';
   }
-  return '<div style="margin-top:24px;">'
-    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Adhésion Sorano</div>'
-    +'<div class="card">'
-    +'<div class="box-info" style="margin-bottom:14px;font-size:12px;">Réglée directement à Sorano — cours Vincennes uniquement. Tarif selon âge et résidence.</div>'
-    +champ('m16-vinc',  'Moins de 16 ans \u2014 r\u00e9sident\u00b7e \u00e0 Vincennes',     sor.m16_vinc)
-    +champ('m16-ext',   'Moins de 16 ans \u2014 non r\u00e9sident\u00b7e \u00e0 Vincennes',  sor.m16_ext)
-    +champ('p16-vinc',  'Plus de 16 ans \u2014 r\u00e9sident\u00b7e \u00e0 Vincennes',       sor.p16_vinc)
-    +champ('p16-ext',   'Plus de 16 ans \u2014 non r\u00e9sident\u00b7e \u00e0 Vincennes',   sor.p16_ext)
+  return '<div style="padding:12px 16px;">'
+    +'<div class="box-info" style="margin-bottom:12px;font-size:12px;">Réglée directement à Sorano — cours Vincennes uniquement. Tarif selon âge et résidence.</div>'
+    +champ('m16-vinc', 'Moins de 16 ans — résident·e à Vincennes',     v('m16_vinc'))
+    +champ('m16-ext',  'Moins de 16 ans — non résident·e à Vincennes',  v('m16_ext'))
+    +champ('p16-vinc', 'Plus de 16 ans — résident·e à Vincennes',       v('p16_vinc'))
+    +champ('p16-ext',  'Plus de 16 ans — non résident·e à Vincennes',   v('p16_ext'))
     +'<div class="btn-row" style="margin-top:14px;">'
-    +'<button class="btn btn-gold" data-action="sauver-adhesion-sorano" style="font-size:12px;">\uD83D\uDCBE Enregistrer</button>'
-    +'</div>'
+    +'<button class="btn btn-gold" data-action="sauver-adhesion-sorano" data-saison="'+sai+'" style="font-size:12px;">💾 Enregistrer</button>'
     +'</div>'
     +'</div>';
 }
-
 // ── Carte d'un cours (header fixe + sections accordion) ─────
 function _renderParamCard(type, sai) {
   var cfg = {
@@ -5076,26 +5076,31 @@ function handleAction(action, btn) {
       break;
     case 'sauver-adhesion-lrp':
       (function() {
+        var sai = btn.dataset.saison || saisonCourante();
         var val = parseFloat((gel('lrp-montant')||{}).value)||0;
-        TARIFS.adhesion_lrp = val;
-        try { var act=JSON.parse(localStorage.getItem('tev_tarifs_actifs')||'{}'); act.adhesion_lrp=val; localStorage.setItem('tev_tarifs_actifs',JSON.stringify(act)); } catch(e){}
-        try { var pl=JSON.parse(localStorage.getItem('tev_tarifs')||'null'); if(pl&&pl.tarifs){pl.tarifs.adhesion_lrp=val;localStorage.setItem('tev_tarifs',JSON.stringify(pl));} } catch(e){}
-        try { if(window.BroadcastChannel){var bc=new BroadcastChannel('tev_admin_sync');bc.postMessage({type:'tarifsUpdate',data:TARIFS,ts:Date.now()});bc.close();} } catch(e){}
-        if (!IS_DEMO) TEV.setParam('lrp_adhesion', {montant:val}).catch(function(){});
+        _saveParam('adhesions', sai, 'lrp', {montant: val});
+        if (sai === saisonCourante()) {
+          TARIFS.adhesion_lrp = val;
+          try { var act=JSON.parse(localStorage.getItem('tev_tarifs_actifs')||'{}'); act.adhesion_lrp=val; localStorage.setItem('tev_tarifs_actifs',JSON.stringify(act)); } catch(e){}
+        }
         afficherToast('✓ Adhésion LRP enregistrée');
       })();
       break;
     case 'sauver-adhesion-sorano':
       (function() {
+        var sai = btn.dataset.saison || saisonCourante();
         var sor = {
           m16_vinc: parseFloat((gel('sor-m16-vinc')||{}).value)||0,
           m16_ext:  parseFloat((gel('sor-m16-ext') ||{}).value)||0,
           p16_vinc: parseFloat((gel('sor-p16-vinc')||{}).value)||0,
           p16_ext:  parseFloat((gel('sor-p16-ext') ||{}).value)||0
         };
-        try { localStorage.setItem('tev_adhesion_sorano', JSON.stringify(sor)); } catch(e){}
-        if (!IS_DEMO) TEV.setParam('tev_adhesion_sorano', sor).catch(function(){});
-        afficherToast('\u2713 Adh\u00e9sion Sorano enregistr\u00e9e');
+        _saveParam('adhesions', sai, 'sorano', sor);
+        // Garder l'ancienne clé à jour pour la saison courante (compatibilité chargerAdhesionSorano)
+        if (sai === saisonCourante()) {
+          try { localStorage.setItem('tev_adhesion_sorano', JSON.stringify(sor)); } catch(e){}
+        }
+        afficherToast('✓ Adhésion Sorano enregistrée');
       })();
       break;
   }
