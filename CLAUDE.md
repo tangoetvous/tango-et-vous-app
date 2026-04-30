@@ -122,6 +122,42 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - **Règle partenaire** : si le champ `partenaire` contient le nom de la personne elle-même, l'ignorer (erreur de saisie) — traiter comme solo
 - **Yoga** : pas de notion de partenaire, cours individuels uniquement
 
+## Corrections partenaires — saison 2025-2026 (session du 2026-04-30)
+
+### Partenaires manquants ajoutés (INSERT inscriptions_cours uniquement — eleves a une contrainte UNIQUE email)
+| Personne ajoutée | Email partagé | Partenaire | Cours | Type |
+|---|---|---|---|---|
+| Anaïs GOSSELIN | salvaje91@gmail.com | Hugo FIGUEREDO | Débutant Paris | carte10 |
+| Irmak NACAK | hbutash@gmail.com | Henry BUTASH | Débutant Paris | carte10 |
+| Bruno GODEFROY | p.sabrier@gmail.com | Pauline SABRIER | Débutant Paris | carte10 |
+| Emmanuel PERES DE HAUTECLOCQUE | paminaetemmanuel@gmail.com | Pamina PERES DE HAUTECLCOCQUE | Débutant Paris | carte10 |
+| Clothilde SCHALCHLI | locvinchau@gmail.com | Ambroise SCHALCHLI | Débutant Paris | forfait |
+| Bertrand VORMS | lesvorms@noos.fr | Sandrine VORMS | Intermédiaire Paris | forfait |
+| Maria KARADJOVA | maria.karadjova@dentons.com | Nikolay KARADJOV | Intermédiaire Vincennes | forfait |
+
+### Corrections champ partenaire (UPDATE Supabase)
+| Élève | Avant | Après | Motif |
+|---|---|---|---|
+| Pauline SABRIER | 'Pauline Sabrier' | 'Bruno GODEFROY' | Auto-référence (erreur CSV) |
+| Raphaël LOUVET | 'Raphael Louvet' | '' | Auto-référence, solo |
+| Alban GÉRÔME | 'Sandrine Pitarque' | '' | Partenaire inconnue, solo |
+| Aline CUNIN | 'Nicolas Targa' | '' | Partenaire parti |
+| Felipe DIAZ | 'Angèle Diaz' | 'Angèle LETICHE' | Mauvais nom (nom de jeune fille ?) |
+| Alexandre BEZIN | '' | 'Alice MÉRIAUX' | Champ vide dans import |
+| Olympe PIRO | 'gil GALLIOT' | 'Gil GALLIOT LAPOULE' | Double nom tronqué |
+| Aïcha FOFANA | 'Guarino Gautier' | 'Gautier GUARINO' | Prénom/nom inversés |
+| Arnaud POHIN | 'Theodora PRASIADOU' | 'Theodora PRASADOU' | Faute d'orthographe |
+| Sophie VOUTEAU | prenom='Vouteau' nom='VOUTEAU SOPHIE' | prenom='Sophie' nom='VOUTEAU' | Import mal formaté |
+| Vlad VASILIU (vincennes) | 'Annette Gnourdo' | 'Annette GOURDON' | Faute de frappe |
+
+### Améliorations code `_groupCouples` (admin.html)
+- **Préfixe double-nom** : 'GALLIOT' matche 'GALLIOT LAPOULE' (startsWith)
+- **Normalisation accents** : `_normNom()` via NFD — 'François'='FRANCOIS', 'Frédéric'='Frederic', etc.
+- Ces deux améliorations évitent de futurs encadrés rouges manquants
+
+### Nouvelle fonctionnalité
+- Bouton 🔗 sur chaque élève sans partenaire dans Élèves Tango → modal de liaison vers une autre personne sans partenaire du même cours → sauvegarde dans `inscriptions_cours` ET `eleves` dans les deux sens
+
 ## Données manquantes / à compléter manuellement
 - Svetlana Castro, Alban Gérôme : paiement "Autres" → vide dans DB, à renseigner via ✏️
 - Paul May, Antoine Konopka, Boris Lefebvre, Sophie Madignier, Régine Cussaguet, Violaine Chavanne, Gérard Cissey : montant=0 (non renseigné dans CSV)
