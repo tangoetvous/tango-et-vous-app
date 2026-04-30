@@ -35,7 +35,9 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **`cours_particuliers`** : cours particuliers
 - **`publications`** : publications/annonces
 - **`agenda_modifs`** : modifications d'agenda
-- **`devis`** : demandes de devis (via formulaire Wix à venir) — colonnes : id, created_at, prenom, nom, email, tel, type_event, date_event, nb_personnes, lieu, message, statut ('nouveau'/'traite'/'refuse')
+- **`demandes_devis`** : demandes reçues via formulaire public `demande-devis.html` — voir section Devis ci-dessous
+- **`devis`** : devis officiels créés par l'admin — voir section Devis ci-dessous
+- **`compteurs_devis`** : numérotation annuelle des devis (accès via fonction SECURITY DEFINER uniquement)
 - **`notifications`** : historique des notifications admin — colonnes : id, created_at, type, message, lu (bool), lien_tab — à créer quand push implémenté
 - **`absences_jour`** : absences déclarées sur les cours réguliers — colonnes : id, created_at, date (date), email (text), UNIQUE(date, email). GRANT SELECT/INSERT/UPDATE/DELETE accordé à anon + authenticated. Alimentée par l'admin (bouton Absent dans Pointage) ET par l'espace élève (bouton sur carte Prochain Cours).
 
@@ -156,7 +158,9 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] Étendre icône 🔔 (badge rouge) + push aux événements suivants : essai tango, essai yoga, demande d'inscription tango, inscription stage, cours particuliers, demande de devis, RSVP milonga depuis espace élève — d'autres cas à lister par l'utilisateur
 - [ ] Revoir le formulaire cours particuliers
 - [ ] Rappels emails automatiques pour paiements CB en plusieurs fois (cb3x) — relances aux échéances
-- [ ] Rubrique Devis : ajouter génération de devis PDF — champs à remplir dans l'appli → PDF téléchargeable/envoyable par email. Attendre que l'utilisateur fournisse : logo, données fixes (coordonnées, mentions), structure du devis
+- [x] Rubrique Devis : formulaire public + générateur PDF + admin complet — TERMINÉ (voir section Devis)
+- [ ] Devis : envoyer le PDF par email directement depuis l'appli (actuellement via Gmail ouvert manuellement)
+- [ ] Devis : ajouter Turnstile sur demande-devis.html quand intégré en iframe Wix
 
 ## Keep-alive automatique — mis en place, rien à faire
 - **Supabase** : mise en pause après 7 jours sans requête → workflow GitHub Actions ping toutes les 5 jours
@@ -379,7 +383,7 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 ## Workflow des inscriptions — réalité terrain
 - **Stages, cours d'essai, demandes d'inscription tango** : certains sont validés directement sans attente admin (flow automatique)
 - **Cours particuliers** : formulaire public → admin reçoit la demande, gère manuellement
-- **Devis** : formulaire Wix à venir → admin reçoit la fiche, répond par email/téléphone
+- **Devis** : formulaire public `demande-devis.html` → admin reçoit la fiche → crée un devis dans `generateur-devis.html` → envoie par Gmail
 - **Ajout dans Élèves Tango/Yoga toujours manuel et intentionnel** : un élève n'est inscrit que s'il a payé sur AssoConnect. L'appli n'a pas accès à AssoConnect — c'est l'admin qui vérifie le paiement puis ajoute l'élève manuellement. Ne pas automatiser.
 - **Turnstile manquant** : à ajouter sur le futur formulaire de devis
 
@@ -515,3 +519,171 @@ $$;
 
 GRANT EXECUTE ON FUNCTION compter_inscrits_essai(date, text, text) TO anon, authenticated;
 ```
+
+## Rubrique Devis — architecture complète
+
+### Fichiers
+
+| Fichier | Rôle |
+|---------|------|
+| `demande-devis.html` | Formulaire public 5 étapes (intégrable en iframe Wix) |
+| `generateur-devis.html` | Générateur de devis PDF — interface admin |
+| `worker.js` | Cloudflare Worker : routes API devis + fallback assets |
+| `supabase/devis_schema.sql` | Schéma SQL complet (tables + fonction + trigger) |
+
+### Tables Supabase
+
+**`demandes_devis`** — reçoit les soumissions du formulaire public
+```
+id, created_at, mode ('event'|'private')
+prestations_ids[], prestations_labels[]
+-- Mode event :
+type_evenement, date_evenement, date_flexible, horaire_evenement
+lieu, code_postal, nombre_invites, duree_prestation
+-- Mode cours privé :
+type_demande, pour_qui, niveau_tango
+date_butoir, date_butoir_flexible, professeur
+lieu_cours, commune_domicile, duree_cours, nombre_cours, dates_periodes
+-- Commun étape 3 :
+budget, message, comment_connu
+-- Coordonnées :
+civilite, prenom, nom, email, telephone
+type_contact ('particulier'|'societe'), nom_societe, adresse_facturation
+-- Pipeline admin :
+statut ('reçue'|'devis_envoyé'|'signé'|'acompte_payé'|'réalisée'|'soldée'|'refusée')
+```
+RLS : INSERT autorisé à `anon` (formulaire public) — SELECT/UPDATE à `authenticated` seulement.
+
+⚠️ **Colonnes ajoutées après création initiale** — à exécuter dans Supabase SQL Editor si pas encore fait :
+```sql
+ALTER TABLE demandes_devis
+  ADD COLUMN IF NOT EXISTS horaire_evenement   text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS type_contact        text DEFAULT 'particulier',
+  ADD COLUMN IF NOT EXISTS nom_societe         text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS adresse_facturation text DEFAULT '';
+```
+
+**`devis`** — devis officiels créés par l'admin
+```
+id, created_at, updated_at
+numero (DEVIS-AAAA-NNNN, UNIQUE), annee, num_sequence
+date_emission, date_validite
+demande_id (FK → demandes_devis, ON DELETE SET NULL)
+client_nom, client_adresse
+evt_date, evt_horaire, evt_lieu, evt_details
+prestations (jsonb) [{type, intitule, duree, hasPassages, nbPassages, prix}]
+montant_ht, acompte_mode ('percent'|'amount'), acompte_value
+statut (enum: brouillon|emis|signe|acompte_paye|realise|solde|annule|refuse)
+```
+RLS : toutes opérations autorisées à `authenticated`.
+
+**`compteurs_devis`** — numérotation annuelle
+- Accès uniquement via la fonction `reserver_numero_devis()` (SECURITY DEFINER)
+- RLS bloque tout accès direct (anon + authenticated)
+
+**Fonction `reserver_numero_devis(p_annee integer DEFAULT NULL)`**
+- Atomique, anti race-condition : INSERT … ON CONFLICT DO UPDATE RETURNING
+- Retourne `'DEVIS-2026-0042'`
+- GRANT EXECUTE TO authenticated
+
+**Trigger `trg_protect_devis_numero`**
+- Interdit toute modification de `numero`, `annee`, `num_sequence`, `date_emission` une fois `statut != 'brouillon'`
+- Obligatoire légalement (art. 242 nonies A CGI — numérotation chronologique continue)
+
+### Worker Cloudflare (`worker.js`)
+
+**Aucun secret requis** — clé anon Supabase hardcodée (`SUPABASE_ANON`), JWT admin passé directement.
+
+Routes :
+- `POST /admin/api/devis` → insert dans `demandes_devis` avec clé anon (RLS permissif)
+- `POST /api/devis/creer` → appel RPC `reserver_numero_devis` + insert `devis` avec JWT admin
+- `PATCH /api/devis/:id/emettre` → statut brouillon→emis (JWT admin)
+- `PATCH /api/devis/:id/annuler` → statut→annule (JWT admin)
+- `PATCH /api/demandes-devis/:id` → mise à jour statut/notes (JWT admin)
+- `* fallback` → `env.ASSETS.fetch(request)` (assets statiques)
+
+### Formulaire public `demande-devis.html`
+
+5 étapes :
+1. **Prestations** — grille de choix (démo tango, cours tango, chorégraphie, cours particulier, initiation, spectacle, atelier) — sélection multiple
+2. **Événement ou besoin** — toggle Événement / Cours privé avec champs adaptés
+   - Événement : type, date + flexible, horaire (libre, ex: "20h30, après le dîner"), lieu, code postal, nombre invités, durée prestation
+   - Cours privé : type demande, pour qui, niveau tango, date butoir + flexible, professeur souhaité, lieu cours, commune domicile, durée cours, nombre cours, disponibilités
+3. **Précisions** — budget (tranches), message libre, comment connu
+4. **Coordonnées** — toggle Particulier / Société
+   - Particulier : civilité, prénom, nom, email, téléphone + adresse optionnelle pour le devis
+   - Société : idem + nom société (requis) + adresse facturation (requise)
+5. **Récapitulatif** — lecture seule avant envoi
+
+Validation : Turnstile à ajouter (sitekey `0x4AAAAAADCDhidbX3fOzZl5`) avant intégration Wix.
+Envoi : POST vers `https://app.tangoetvous.fr/admin/api/devis`.
+
+### Générateur de devis `generateur-devis.html`
+
+Interface split : panneau édition (gauche) + aperçu PDF temps réel (droite).
+
+**Émetteur** : Association Le Regard Se Pose, SIRET 522 679 752 00025, MVAC20 18 rue Ramus 75020 Paris.
+
+**Catalogue prestations** (`PRESTATIONS_CATALOG`) : démo tango, cours tango, chorégraphie mariage, cours particulier, initiation, spectacle, atelier — chacun avec intitulé et durée suggérés.
+
+**Persistance DB** (sauvegarde/chargement brouillon) :
+- `loadDevisFromDB(numero)` : chargé au réouverture depuis `devis` table via JWT admin (localStorage `sb-qhngqzvvllktuwspojxc-auth-token`)
+- `sauvegarderBrouillon()` : PATCH vers Supabase REST avec JWT admin
+- Bouton "💾 Sauvegarder" dans le panneau édition
+- Appelé automatiquement dans `prefillFromURL()` si `?numero=` présent
+
+**Modes** :
+- Brouillon : badge "Brouillon", filigrane sur l'aperçu, numéro libre
+- Officiel (`?numero=DEVIS-YYYY-NNNN`) : numéro verrouillé, filigrane retiré
+
+**Frais annexes** : déplacement + hébergement (optionnels, avec checkbox + montant + description).
+
+**Acompte** : % ou montant fixe, toggle bouton, calcul automatique dans l'aperçu.
+
+**Mentions légales** : TVA non applicable (art. 293 B CGI), médiation consommation (art. L612-1), validité 30 jours, RIB inclus.
+
+**Impression PDF** : `window.print()` sur la zone `#devis` uniquement (CSS `@media print`).
+
+### Admin — onglet Devis
+
+**Deux vues** (bouton bascule) :
+- **Demandes** (défaut) : liste des `demandes_devis` groupées par statut (Nouvelles / En cours / Terminées)
+- **Devis générés** : liste des `devis` avec boutons Ouvrir/Retoucher + Email Gmail
+
+**Carte demande** (collapsed) :
+- Nom client + badge Société si applicable
+- Prestations demandées (or)
+- Résumé : date · horaire · lieu · invités (ou type cours privé)
+- Boutons : ✉️ Email · 📞 · 📋 Créer un devis · ▾ Voir tout
+
+**Carte demande** (expanded via `_demandesExpanded` Set) :
+- Tous les champs selon mode (event ou privé)
+- Message dans bloc fond `var(--s3)` + border (lisible sur thème sombre)
+- Bloc facturation : société + adresse si type_contact='societe'
+- Devis associés avec lien Ouvrir
+
+**Pipeline statut demande** : select dropdown dans l'entête de chaque carte → PATCH immédiat via Worker.
+
+**Créer un devis** depuis une demande :
+- Pre-remplit : client_nom (nom_societe si société), client_adresse (adresse_facturation), evt_date, evt_horaire (horaire_evenement), evt_lieu, evt_details (type_evenement + invités + durée)
+- Ouvre `generateur-devis.html?numero=DEVIS-YYYY-NNNN&...` dans un nouvel onglet
+- Le générateur charge depuis DB au réouverture (les URL params ne sont qu'un pré-remplissage initial)
+
+**Bouton Email Gmail** (dans vue "Devis générés") :
+- Ouvre `https://mail.google.com/mail/?view=cm&fs=1&to=EMAIL&su=SUJET&body=CORPS`
+- Sujet pré-rempli : `Devis DEVIS-YYYY-NNNN – Tango & Vous / Le Regard Se Pose`
+- Corps pré-rempli avec formule de politesse + mention du devis en pièce jointe + coordonnées
+- L'admin personnalise et envoie depuis Gmail
+
+**Variables JS globales** (admin.html) :
+- `_devisVue` : `'demandes'` | `'liste'`
+- `_demandesExpanded` : `Set` des IDs de demandes dépliées
+- `_dvRow(label, val)` : helper HTML pour les lignes label/valeur dans les cartes
+
+### Cloudflare Worker — pas de secrets requis
+
+La clé `SUPABASE_ANON` est hardcodée dans `worker.js` (identique à `TEV_SUPABASE_KEY` dans `tev-supabase.js`).
+Les opérations admin utilisent le JWT de l'utilisateur connecté passé en `Authorization: Bearer`.
+`BREVO_API_KEY` reste optionnel (notification non bloquante si absent).
+
+**Ne plus jamais configurer SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY dans Cloudflare** — ils ne sont plus utilisés.
