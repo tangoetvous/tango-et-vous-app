@@ -119,6 +119,8 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - Vlad VASILIU : inscrit paris/intermediaire ET vincennes/intermediaire
 - Myriam BLOCH : yoga forfait (hatha + yin), 505€
 - Couples avec email partagé : BUTASH/NACAK, FIGUEREDO/GOSSELIN, GODEFROY/SABRIER, SCHALCHLI×2, VORMS×2, KARADJOV/KARADJOVA
+- **Règle partenaire** : si le champ `partenaire` contient le nom de la personne elle-même, l'ignorer (erreur de saisie) — traiter comme solo
+- **Yoga** : pas de notion de partenaire, cours individuels uniquement
 
 ## Données manquantes / à compléter manuellement
 - Svetlana Castro, Alban Gérôme : paiement "Autres" → vide dans DB, à renseigner via ✏️
