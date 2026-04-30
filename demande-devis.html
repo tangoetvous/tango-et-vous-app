@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="theme-color" content="#0a0a0a">
+<title>Demande de Devis — Tango & Vous</title>
+
+<!-- ============================================================
+     CONFIGURATION
+     ============================================================
+     SCRIPT_URL : URL de l'endpoint qui reçoit la demande de devis.
+     Remplacer par l'URL réelle après déploiement, par ex. :
+       https://app.tangoetvous.fr/admin/api/devis
+     Tant que la valeur contient "VOTRE_ID_DEPLOIEMENT", le formulaire
+     fonctionne en MODE DÉMO (pas d'envoi réel, simulation de succès).
+     ============================================================ -->
+<script>
+  const CONFIG = {
+    SCRIPT_URL: 'https://app.tangoetvous.fr/admin/api/devis',
+    ACTION: 'demandeDevis',
+    EMAIL_CONTACT: '[tangoetvous@gmail.com](mailto:tangoetvous@gmail.com)',
+    TELEPHONE: '+33 7 73 27 59 06'
+  };
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   CHARTE TANGO & VOUS — Black / Gold
+   ============================================================ */
+:root {
+  --bg: #0a0a0a;
+  --bg-soft: #141414;
+  --bg-card: #1a1a1a;
+  --bg-elevated: #222;
+  --gold: #c9a961;
+  --gold-bright: #e3c785;
+  --gold-dim: #8a7440;
+  --text: #f5f0e6;
+  --text-dim: #f5f0e6;
+  --text-faint: #f5f0e6;
+  --border: #2a2520;
+  --border-active: var(--gold);
+  --error: #d97757;
+  --success: #7ab87a;
+  --shadow: 0 10px 40px rgba(0,0,0,0.5);
+  --radius: 4px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  /* Important : pas de overflow-x:hidden ici, sinon position:sticky casse */
+}
+
+body {
+  padding: 24px 16px 80px;
+  /* Texture subtile gold sur fond noir */
+  background:
+    radial-gradient(ellipse at top, rgba(201,169,97,0.04), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(201,169,97,0.02), transparent 50%),
+    var(--bg);
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* ============================================================
+   EN-TÊTE
+   ============================================================ */
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.header-eyebrow {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(28px, 6vw, 42px);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  margin-bottom: 8px;
+  color: var(--gold);
+}
+
+.header h1 .accent {
+  font-style: italic;
+}
+
+.header-sep {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 16px auto 12px;
+}
+
+.header-sub {
+  font-size: 13px;
+  color: #0a0a0a;
+  font-weight: 300;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ============================================================
+   PROGRESSION (étapes)
+   ============================================================ */
+.progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 28px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.progress-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  transition: all 0.3s ease;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.progress-step.active .progress-dot {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--bg);
+}
+
+.progress-step.done .progress-dot {
+  border-color: var(--gold);
+  background: transparent;
+  color: var(--gold);
+}
+
+.progress-step.done {
+  cursor: pointer;
+}
+
+.progress-step.done .progress-dot {
+  transition: all 0.2s ease;
+}
+
+.progress-step.done:hover .progress-dot {
+  background: var(--gold);
+  color: var(--bg);
+}
+
+.progress-step.done:hover .progress-label {
+  color: var(--gold);
+}
+
+.progress-line {
+  width: 24px;
+  height: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.progress-line.done { background: var(--gold-dim); }
+
+.progress-label {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .progress-label { display: block; }
+  .progress-step.active .progress-label { color: var(--gold); }
+  .progress-line { width: 40px; }
+}
+
+/* ============================================================
+   CARTE / FORMULAIRE
+   ============================================================ */
+.form-card {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  box-shadow: var(--shadow);
+  position: relative;
+}
+
+@media (min-width: 640px) {
+  .form-card { padding: 40px 36px; }
+}
+
+.form-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.step-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+.step-title .num {
+  color: var(--gold);
+  font-style: italic;
+  margin-right: 8px;
+}
+
+.step-desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 24px;
+  font-weight: 300;
+}
+
+.step { display: none; }
+.step.active { display: block; animation: fadeIn 0.35s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   GRILLE DE PRESTATIONS (étape 1)
+   ============================================================ */
+.prestations-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+@media (min-width: 560px) {
+  .prestations-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.prestation-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 14px 16px 52px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.prestation-card:hover {
+  border-color: var(--gold-dim);
+  background: var(--bg-elevated);
+}
+
+.prestation-card.selected {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(201,169,97,0.08), rgba(201,169,97,0.02));
+  box-shadow: inset 0 0 0 1px var(--gold);
+}
+
+.prestation-card .icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.prestation-card .label {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.prestation-card.selected .label { color: var(--gold-bright); }
+
+.prestation-card .check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gold-dim);
+  background: rgba(201,169,97,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.prestation-card:hover .check {
+  border-color: var(--gold);
+  background: rgba(201,169,97,0.12);
+}
+
+.prestation-card.selected .check {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.prestation-card .check svg {
+  width: 12px;
+  height: 12px;
+  color: var(--bg);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.prestation-card.selected .check svg { opacity: 1; }
+
+/* ============================================================
+   CHAMPS DE FORMULAIRE
+   ============================================================ */
+.field {
+  margin-bottom: 18px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+@media (min-width: 560px) {
+  .field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .field-row.cols-2-1 { grid-template-columns: 2fr 1fr; }
+}
+
+.field-row .field { margin-bottom: 0; }
+
+.field label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.field label .req { color: var(--error); margin-left: 2px; }
+
+.field input[type="text"],
+.field input[type="email"],
+.field input[type="tel"],
+.field input[type="date"],
+.field input[type="number"],
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  transition: all 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 3px rgba(201,169,97,0.12);
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.field textarea {
+  min-height: 100px;
+  resize: vertical;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.field select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23c9a961' d='M6 8L0 0h12z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+.field input[type="date"] {
+  /* Force a consistent display on iOS Safari */
+  min-height: 44px;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.field-error {
+  font-size: 11px;
+  color: var(--error);
+  margin-top: 6px;
+  display: none;
+}
+
+.field.has-error input,
+.field.has-error select,
+.field.has-error textarea {
+  border-color: var(--error);
+}
+
+.field.has-error .field-error { display: block; }
+
+/* Civilité = pills */
+.pill-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pill:hover { border-color: var(--gold-dim); }
+
+.pill.selected {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--bg);
+  font-weight: 500;
+}
+
+/* Checkbox custom */
+.check-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  user-select: none;
+}
+
+.check-field input { display: none; }
+
+.check-field .box {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--gold-dim);
+  border-radius: 4px;
+  background: rgba(201,169,97,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  transition: all 0.2s;
+}
+
+.check-field:hover .box {
+  border-color: var(--gold);
+  background: rgba(201,169,97,0.12);
+}
+
+.check-field input:checked + .box {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.check-field .box svg {
+  width: 13px;
+  height: 13px;
+  color: var(--bg);
+  opacity: 0;
+}
+
+.check-field input:checked + .box svg { opacity: 1; }
+
+/* ============================================================
+   NAVIGATION (boutons)
+   ============================================================ */
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  gap: 12px;
+}
+
+.btn {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 12px 22px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-prev {
+  background: transparent;
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+
+.btn-prev:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+.btn-next, .btn-submit {
+  background: var(--gold);
+  color: var(--bg);
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.btn-next:hover, .btn-submit:hover {
+  background: var(--gold-bright);
+  transform: translateY(-1px);
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn .arrow { font-size: 14px; line-height: 1; }
+
+/* ============================================================
+   ÉCRAN DE SUCCÈS / ERREUR
+   ============================================================ */
+.outcome {
+  display: none;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.outcome.active { display: block; animation: fadeIn 0.4s ease; }
+
+.outcome-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(201,169,97,0.1);
+  border: 1px solid var(--gold);
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+}
+
+.outcome.error .outcome-icon {
+  background: rgba(217,119,87,0.1);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.outcome h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.outcome p {
+  color: var(--text-dim);
+  font-size: 14px;
+  max-width: 420px;
+  margin: 0 auto 8px;
+  font-weight: 300;
+}
+
+.outcome .contact {
+  margin-top: 24px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.outcome .contact a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.outcome .btn-retry {
+  margin-top: 24px;
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+}
+
+/* ============================================================
+   PIED DE PAGE
+   ============================================================ */
+.footer {
+  text-align: center;
+  margin-top: 28px;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.1em;
+}
+
+.footer a { color: var(--gold); text-decoration: none; }
+
+/* ============================================================
+   BANDEAU MODE DÉMO
+   ============================================================ */
+.demo-banner {
+  display: none;
+  background: rgba(217,119,87,0.1);
+  border: 1px solid var(--error);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 11px;
+  color: var(--error);
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.demo-banner.active { display: block; }
+
+/* ============================================================
+   ACCESSIBILITÉ
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   BIFURCATION MODE — événement vs cours particulier
+   ============================================================ */
+.mode-content { display: none; }
+.form-card[data-mode="event"]   .mode-content.mode-event   { display: block; }
+.form-card[data-mode="private"] .mode-content.mode-private { display: block; }
+
+[data-mode-text] { display: none; }
+.form-card[data-mode="event"]   [data-mode-text="event"]   { display: inline; }
+.form-card[data-mode="private"] [data-mode-text="private"] { display: inline; }
+
+.field-conditional { display: none; }
+.[field-conditional.show](http://field-conditional.show) { display: block; animation: fadeIn 0.25s ease; }
+
+.mode-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(201,169,97,0.07);
+  border: 1px solid var(--gold-dim);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 22px;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.mode-banner .icon {
+  flex-shrink: 0;
+  color: var(--gold);
+  font-style: italic;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+/* ============================================================
+   RÉCAPITULATIF (étape 5)
+   ============================================================ */
+.recap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.recap-section {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.recap-section:last-child { border-bottom: 0; }
+
+.recap-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.recap-section h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  color: var(--gold);
+  font-weight: 500;
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+
+.recap-edit {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.recap-edit:hover {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+}
+
+.recap-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 4px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.recap-row .key {
+  color: var(--text-faint);
+  flex-shrink: 0;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding-top: 4px;
+  min-width: 70px;
+}
+
+.recap-row .val {
+  color: var(--text);
+  text-align: right;
+  flex: 1;
+  font-weight: 400;
+  word-break: break-word;
+}
+
+.recap-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.recap-tag {
+  background: rgba(201,169,97,0.1);
+  border: 1px solid var(--gold-dim);
+  color: var(--gold-bright);
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.recap-message {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: var(--bg-soft);
+  border-left: 2px solid var(--gold-dim);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.recap-empty {
+  color: var(--text-faint);
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* Loading spinner */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: var(--bg);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- ============================================================
+       BANDEAU DÉMO (visible si SCRIPT_URL n'est pas configurée)
+       ============================================================ -->
+  <div class="demo-banner" id="demoBanner">
+    Mode démo — l'envoi est simulé. Configurez SCRIPT_URL pour activer le formulaire.
+  </div>
+
+  <!-- ============================================================
+       EN-TÊTE
+       ============================================================ -->
+  <header class="header">
+    <div class="header-eyebrow">Tango &amp; Vous · Événementiel</div>
+    <h1>Demande de <span class="accent">Devis</span></h1>
+    <div class="header-sep"></div>
+    <p class="header-sub">
+      Mariage, soirée d'entreprise, anniversaire, festival… Dites-nous tout
+      sur votre événement et nous vous répondrons sous 48&nbsp;h.
+    </p>
+  </header>
+
+  <!-- ============================================================
+       BARRE DE PROGRESSION
+       ============================================================ -->
+  <div class="progress" id="progress" aria-label="Progression du formulaire">
+    <div class="progress-step active" data-step="1">
+      <div class="progress-dot">1</div>
+      <span class="progress-label">Prestations</span>
+    </div>
+    <div class="progress-line"></div>
+    <div class="progress-step" data-step="2">
+      <div class="progress-dot">2</div>
+      <span class="progress-label">Événement</span>
+    </div>
+    <div class="progress-line"></div>
+    <div class="progress-step" data-step="3">
+      <div class="progress-dot">3</div>
+      <span class="progress-label">Détails</span>
+    </div>
+    <div class="progress-line"></div>
+    <div class="progress-step" data-step="4">
+      <div class="progress-dot">4</div>
+      <span class="progress-label">Contact</span>
+    </div>
+    <div class="progress-line"></div>
+    <div class="progress-step" data-step="5">
+      <div class="progress-dot">5</div>
+      <span class="progress-label">Récap</span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       FORMULAIRE
+       ============================================================ -->
+  <div class="form-card" data-mode="event">
+
+    <!-- ÉTAPE 1 : Prestations -->
+    <section class="step active" data-step="1">
+      <h2 class="step-title"><span class="num">I.</span>Quelle prestation vous intéresse ?</h2>
+      <p class="step-desc">Sélectionnez une ou plusieurs options.</p>
+
+      <div class="prestations-grid" id="prestationsGrid">
+        <!-- Rempli par JS -->
+      </div>
+
+      <div class="field-error" id="prestationsError" style="margin-top:12px;">
+        Merci de sélectionner au moins une prestation.
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn btn-next" data-next>
+          Continuer <span class="arrow">→</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 2 : Événement OU Besoin de cours particulier (selon mode) -->
+    <section class="step" data-step="2">
+      <h2 class="step-title">
+        <span class="num">II.</span>
+        <span data-mode-text="event">Votre événement</span>
+        <span data-mode-text="private">Votre besoin</span>
+      </h2>
+      <p class="step-desc">
+        <span data-mode-text="event">Quelques informations pour cadrer votre demande.</span>
+        <span data-mode-text="private">Quelques informations pour personnaliser les cours.</span>
+      </p>
+
+      <!-- ===========================================================
+           MODE ÉVÉNEMENT
+           =========================================================== -->
+      <div class="mode-content mode-event">
+
+        <div class="field">
+          <label for="typeEvenement">Type d'événement <span class="req">*</span></label>
+          <select id="typeEvenement" required>
+            <option value="">— Sélectionnez —</option>
+            <option>Mariage</option>
+            <option>Anniversaire</option>
+            <option>Soirée d'entreprise / Comité d'entreprise</option>
+            <option>Soirée privée</option>
+            <option>Festival / Événement culturel</option>
+            <option>Salon / Événement professionnel</option>
+            <option>Cocktail / Vernissage</option>
+            <option>Autre</option>
+          </select>
+          <div class="field-error">Merci de préciser le type d'événement.</div>
+        </div>
+
+        <div class="field-row cols-2-1">
+          <div class="field">
+            <label for="dateEvenement">Date envisagée</label>
+            <input type="date" id="dateEvenement">
+            <div class="field-hint">Laissez vide si la date n'est pas encore fixée.</div>
+          </div>
+          <div class="field">
+            <label>Date flexible ?</label>
+            <label class="check-field" style="margin-top:10px;">
+              <input type="checkbox" id="dateFlexible">
+              <span class="box">
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+              </span>
+              <span>Oui, flexible</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field-row cols-2-1">
+          <div class="field">
+            <label for="lieu">Lieu / Ville <span class="req">*</span></label>
+            <input type="text" id="lieu" placeholder="Paris, Vincennes, autre…">
+            <div class="field-error">Merci d'indiquer le lieu de l'événement.</div>
+          </div>
+          <div class="field">
+            <label for="codePostal">Code postal</label>
+            <input type="text" id="codePostal" inputmode="numeric" maxlength="5" placeholder="75020">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="nombreInvites">Nombre d'invités estimé</label>
+          <select id="nombreInvites">
+            <option value="">— Sélectionnez —</option>
+            <option>Moins de 20</option>
+            <option>20 à 50</option>
+            <option>50 à 100</option>
+            <option>100 à 200</option>
+            <option>Plus de 200</option>
+            <option>Je ne sais pas encore</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- ===========================================================
+           MODE COURS PARTICULIER
+           =========================================================== -->
+      <div class="mode-content mode-private">
+
+        <div class="mode-banner">
+          <span class="icon">i</span>
+          <span>Votre demande concerne des <strong>cours particuliers</strong> : nous adaptons les questions en conséquence (lieu de cours, professeur, nombre de séances…).</span>
+        </div>
+
+        <div class="field">
+          <label for="typeDemande">Nature de la demande <span class="req">*</span></label>
+          <select id="typeDemande" required>
+            <option value="">— Sélectionnez —</option>
+            <option>Chorégraphie pour danse de mariage</option>
+            <option>Chorégraphie pour un autre événement (anniversaire, EVJF, spectacle…)</option>
+            <option>Initiation à offrir en cadeau</option>
+            <option>Initiation pour découvrir le tango (pour vous-même)</option>
+            <option>Cours pour progresser / accordage de couple</option>
+            <option>Autre</option>
+          </select>
+          <div class="field-error">Merci de préciser la nature de votre demande.</div>
+        </div>
+
+        <div class="field">
+          <label>Pour qui ces cours ? <span class="req">*</span></label>
+          <div class="pill-group" id="pourQuiPills">
+            <div class="pill" data-value="Pour vous-même">Pour vous</div>
+            <div class="pill" data-value="Pour un couple (vous et votre partenaire)">Pour un couple</div>
+            <div class="pill" data-value="À offrir à un proche">À offrir à un proche</div>
+            <div class="pill" data-value="À offrir à un couple">À offrir à un couple</div>
+          </div>
+          <div class="field-error" id="pourQuiError">Merci de préciser pour qui sont ces cours.</div>
+        </div>
+
+        <div class="field">
+          <label for="niveauTango">Niveau de tango actuel</label>
+          <select id="niveauTango">
+            <option value="">— Sélectionnez —</option>
+            <option>Aucune expérience</option>
+            <option>Débutant (quelques cours)</option>
+            <option>Intermédiaire</option>
+            <option>Avancé</option>
+            <option>Variable / je ne sais pas</option>
+          </select>
+        </div>
+
+        <div class="field-row cols-2-1">
+          <div class="field">
+            <label for="dateButoir">Date butoir / événement</label>
+            <input type="date" id="dateButoir">
+            <div class="field-hint">Pour un mariage : la date du mariage. Pour un cadeau : optionnel.</div>
+          </div>
+          <div class="field">
+            <label>Pas de date fixe</label>
+            <label class="check-field" style="margin-top:10px;">
+              <input type="checkbox" id="dateButoirFlexible">
+              <span class="box">
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+              </span>
+              <span>À définir</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn btn-prev" data-prev>← Retour</button>
+        <button type="button" class="btn btn-next" data-next>
+          Continuer <span class="arrow">→</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 3 : Détails (selon mode) -->
+    <section class="step" data-step="3">
+      <h2 class="step-title">
+        <span class="num">III.</span>
+        <span data-mode-text="event">Précisions</span>
+        <span data-mode-text="private">Modalités du cours</span>
+      </h2>
+      <p class="step-desc">
+        <span data-mode-text="event">Plus c'est précis, plus notre devis sera juste.</span>
+        <span data-mode-text="private">Choisissez vos préférences pour le déroulement des cours.</span>
+      </p>
+
+      <!-- ===========================================================
+           MODE ÉVÉNEMENT
+           =========================================================== -->
+      <div class="mode-content mode-event">
+        <div class="field">
+          <label for="dureePrestation">Durée souhaitée</label>
+          <select id="dureePrestation">
+            <option value="">— Sélectionnez —</option>
+            <option>Démonstration courte (5–10 min)</option>
+            <option>30 minutes</option>
+            <option>1 heure</option>
+            <option>1 à 2 heures</option>
+            <option>Demi-journée</option>
+            <option>Journée complète</option>
+            <option>Soirée entière</option>
+            <option>À définir ensemble</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ===========================================================
+           MODE COURS PARTICULIER
+           =========================================================== -->
+      <div class="mode-content mode-private">
+
+        <div class="field">
+          <label for="professeur">Avec quel(s) professeur(s) ?</label>
+          <select id="professeur">
+            <option value="">— Sélectionnez —</option>
+            <option>Florencia Garcia</option>
+            <option>Jérémy Braitbart</option>
+            <option>Florencia et Jérémy</option>
+            <option>Sans préférence</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="lieuCours">Lieu souhaité <span class="req">*</span></label>
+          <select id="lieuCours" required>
+            <option value="">— Sélectionnez —</option>
+            <option>Studio à Nation (Paris)</option>
+            <option>Studio à Gambetta (Paris)</option>
+            <option>Studio à Vincennes / Montreuil / Fontenay-sous-Bois</option>
+            <option>À domicile</option>
+            <option>Dans vos locaux</option>
+            <option>À déterminer ensemble</option>
+          </select>
+          <div class="field-error">Merci d'indiquer le lieu souhaité.</div>
+        </div>
+
+        <div class="field field-conditional" id="communeDomicileField">
+          <label for="communeDomicile">Précisez votre commune <span class="req">*</span></label>
+          <input type="text" id="communeDomicile" placeholder="Ex: Paris 11e, Vincennes, Saint-Mandé…">
+          <div class="field-error">Merci de préciser la commune.</div>
+        </div>
+
+        <div class="field-row cols-2">
+          <div class="field">
+            <label for="dureeCours">Durée par cours</label>
+            <select id="dureeCours">
+              <option value="">— Sélectionnez —</option>
+              <option>1 heure</option>
+              <option>1 h 30</option>
+              <option>2 heures</option>
+              <option>À déterminer</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="nombreCours">Nombre de cours envisagé</label>
+            <select id="nombreCours">
+              <option value="">— Sélectionnez —</option>
+              <option>1 cours (découverte / initiation)</option>
+              <option>Quelques cours (2 à 5)</option>
+              <option>Forfait 10 cours hebdomadaires</option>
+              <option>Plus de 10 cours</option>
+              <option>À déterminer ensemble</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="datesPeriodes">Dates ou périodes souhaitées</label>
+          <input type="text" id="datesPeriodes" placeholder="Ex: en semaine après 18 h, samedi matin, week-end du 15 mai…">
+          <div class="field-hint">Nous sommes disponibles en journée pendant la semaine.</div>
+        </div>
+
+      </div>
+
+      <!-- ===========================================================
+           CHAMPS PARTAGÉS (les deux modes)
+           =========================================================== -->
+      <div class="field">
+        <label for="budget">Budget approximatif</label>
+        <select id="budget">
+          <option value="">— Optionnel —</option>
+          <option>Moins de 200 €</option>
+          <option>200 à 500 €</option>
+          <option>500 à 1 000 €</option>
+          <option>1 000 à 2 500 €</option>
+          <option>2 500 à 5 000 €</option>
+          <option>Plus de 5 000 €</option>
+          <option>À discuter</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="message">
+          <span data-mode-text="event">Votre message</span>
+          <span data-mode-text="private">Vos attentes / précisions</span>
+          <span class="req">*</span>
+        </label>
+        <textarea id="message" required
+          data-placeholder-event="Décrivez votre événement, vos envies, le contexte, l'ambiance souhaitée, le lieu précis si vous le connaissez, les contraintes éventuelles…"
+          data-placeholder-private="Décrivez votre projet : style de musique, niveau du/des bénéficiaire(s), envies particulières, occasion…"></textarea>
+        <div class="field-error">Merci de nous donner quelques détails.</div>
+      </div>
+
+      <div class="field">
+        <label for="commentConnu">Comment avez-vous connu Tango &amp; Vous ?</label>
+        <select id="commentConnu">
+          <option value="">— Optionnel —</option>
+          <option>Recherche internet / Google</option>
+          <option>Réseaux sociaux (Instagram, Facebook)</option>
+          <option>Bouche à oreille / Recommandation</option>
+          <option>Élève actuel ou ancien</option>
+          <option>Spectacle / Démonstration vue</option>
+          <option>Presse / Article</option>
+          <option>Autre</option>
+        </select>
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn btn-prev" data-prev>← Retour</button>
+        <button type="button" class="btn btn-next" data-next>
+          Continuer <span class="arrow">→</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 4 : Coordonnées -->
+    <section class="step" data-step="4">
+      <h2 class="step-title"><span class="num">IV.</span>Vos coordonnées</h2>
+      <p class="step-desc">Pour vous recontacter avec un devis personnalisé.</p>
+
+      <div class="field">
+        <label>Civilité</label>
+        <div class="pill-group" id="civilitePills">
+          <div class="pill" data-value="Mme">Mme</div>
+          <div class="pill" data-value="M.">M.</div>
+          <div class="pill" data-value="">Préfère ne pas dire</div>
+        </div>
+      </div>
+
+      <div class="field-row cols-2">
+        <div class="field">
+          <label for="prenom">Prénom <span class="req">*</span></label>
+          <input type="text" id="prenom" autocomplete="given-name" required>
+          <div class="field-error">Merci de renseigner votre prénom.</div>
+        </div>
+        <div class="field">
+          <label for="nom">Nom <span class="req">*</span></label>
+          <input type="text" id="nom" autocomplete="family-name" required>
+          <div class="field-error">Merci de renseigner votre nom.</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email <span class="req">*</span></label>
+        <input type="email" id="email" autocomplete="email" inputmode="email" required>
+        <div class="field-error">Merci de renseigner un email valide.</div>
+      </div>
+
+      <div class="field">
+        <label for="telephone">Téléphone <span class="req">*</span></label>
+        <input type="tel" id="telephone" autocomplete="tel" inputmode="tel" placeholder="06 00 00 00 00" required>
+        <div class="field-error">Merci de renseigner un téléphone valide.</div>
+      </div>
+
+      <div class="field" style="margin-top:24px;">
+        <label class="check-field">
+          <input type="checkbox" id="rgpd" required>
+          <span class="box">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+          </span>
+          <span>
+            J'accepte que mes données soient utilisées uniquement pour
+            traiter cette demande de devis.
+            <span class="req">*</span>
+          </span>
+        </label>
+        <div class="field-error" id="rgpdError">Merci d'accepter l'utilisation de vos données.</div>
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn btn-prev" data-prev>← Retour</button>
+        <button type="button" class="btn btn-next" data-next>
+          Vérifier <span class="arrow">→</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 5 : Récapitulatif -->
+    <section class="step" data-step="5">
+      <h2 class="step-title"><span class="num">V.</span>Récapitulatif</h2>
+      <p class="step-desc">Vérifiez vos informations avant l'envoi. Vous pouvez modifier chaque section.</p>
+
+      <div class="recap" id="recap">
+        <!-- Rempli dynamiquement par renderRecap() -->
+      </div>
+
+      <div class="nav">
+        <button type="button" class="btn btn-prev" data-prev>← Retour</button>
+        <button type="button" class="btn btn-submit" id="submitBtn">
+          Envoyer la demande <span class="arrow">✓</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ÉCRAN SUCCÈS -->
+    <section class="outcome" id="successScreen">
+      <div class="outcome-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 12l5 5L20 7"/>
+        </svg>
+      </div>
+      <h2>Merci pour votre demande !</h2>
+      <p>Nous avons bien reçu votre projet et reviendrons vers vous sous 48&nbsp;heures avec un devis personnalisé.</p>
+      <p class="contact">
+        Une question ? Contactez-nous directement :<br>
+        <a id="contactEmail" href="#"></a> · <span id="contactTel"></span>
+      </p>
+    </section>
+
+    <!-- ÉCRAN ERREUR -->
+    <section class="outcome error" id="errorScreen">
+      <div class="outcome-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="8" x2="12" y2="13"/>
+          <circle cx="12" cy="17" r="0.5" fill="currentColor"/>
+          <circle cx="12" cy="12" r="10"/>
+        </svg>
+      </div>
+      <h2>Oups, l'envoi a échoué</h2>
+      <p id="errorMessage">Une erreur est survenue. Vous pouvez réessayer ou nous contacter directement.</p>
+      <p class="contact">
+        <a id="contactEmailErr" href="#"></a> · <span id="contactTelErr"></span>
+      </p>
+      <button type="button" class="btn btn-retry" id="retryBtn">Réessayer</button>
+    </section>
+
+  </div>
+
+  <!-- ============================================================
+       PIED DE PAGE
+       ============================================================ -->
+  <div class="footer">
+    Tango &amp; Vous — Événementiel ·
+    <a href="https://www.tangoetvous.com" target="_blank" rel="noopener">[tangoetvous.com](http://tangoetvous.com)</a>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   DONNÉES — Liste des prestations (avec icônes SVG inline)
+   ============================================================ */
+const PRESTATIONS = [
+  { id: 'demo_tango',       label: 'Démonstration de Tango Argentin',
+    icon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="6" r="2.5"/><path d="M11 9v6l-3 8M11 15l3 5"/><circle cx="21" cy="5" r="2.5"/><path d="M21 8v7l3 8M21 15l-3 4"/><path d="M11 14c1 1 3 1 4 0M14 14c1 1 3 1 4 0"/></svg>' },
+  { id: 'demo_orchestre',   label: 'Démonstration avec Orchestre',
+    icon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="14" width="20" height="10" rx="2"/><path d="M9 14V9c0-1 1-2 2-2M23 14V9c0-1-1-2-2-2"/><line x1="11" y1="17" x2="21" y2="17"/><line x1="11" y1="20" x2="21" y2="20"/><circle cx="9" cy="19" r="1"/><circle cx="23" cy="19" r="1"/></svg>' },
+  { id: 'initiation',       label: 'Initiation au Tango en groupe',
+    icon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="11"/><path d="M16 9v7l5 3"/><path d="M11 16h2M19 16h2"/></svg>' },
+  { id: 'conference',       label: 'Conférence sur le Tango',
+    icon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h20v14H18l-3 4-3-4H6z"/><line x1="10" y1="13" x2="22" y2="13"/><line x1="10" y1="17" x2="18" y2="17"/></svg>' },
+  { id: 'choregraphie',     label: 'Chorégraphie pour Mariage / Événement',
+    icon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 26C9 22 4 18 4 12c0-3 2-5 5-5 2 0 5 1 7 4 2-3 5-4 7-4 3 0 5 2 5 5 0 6-5 10-12 14z"/></svg>' },
+  { id: 'spectacle_mesure', label: 'Spectacle SUR MESURE',
+    icon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h20v12H6z"/><path d="M6 8l4-3h12l4 3"/><line x1="12" y1="14" x2="20" y2="14"/><circle cx="10" cy="14" r="0.5" fill="currentColor"/><circle cx="22" cy="14" r="0.5" fill="currentColor"/></svg>' },
+  { id: 'folklore',         label: 'Démonstration de Folklore Argentin',
+    icon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4l3 8h8l-6 5 2 9-7-5-7 5 2-9-6-5h8z"/></svg>' },
+  { id: 'buffet_argentin',  label: 'Buffet par un Traiteur Argentin',
+    icon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 14h22v3a6 6 0 0 1-6 6H11a6 6 0 0 1-6-6z"/><line x1="9" y1="14" x2="9" y2="10"/><line x1="13" y1="14" x2="13" y2="8"/><line x1="17" y1="14" x2="17" y2="10"/></svg>' },
+  { id: 'offrir_initiation',label: 'Offrir une Initiation au Tango',
+    icon: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="12" width="22" height="14" rx="1"/><line x1="5" y1="17" x2="27" y2="17"/><line x1="16" y1="12" x2="16" y2="26"/><path d="M16 12c-2-3-6-3-6 0 0 2 3 2 6 0zM16 12c2-3 6-3 6 0 0 2-3 2-6 0z"/></svg>' }
+];
+
+/* ============================================================
+   IDs des prestations qui basculent en "mode cours particulier"
+   quand elles sont sélectionnées SEULES (sans aucune prestation
+   événementielle). Si l'utilisateur sélectionne aussi une presta
+   événementielle, on reste en mode événement.
+   ============================================================ */
+const PRIVATE_PRESTATIONS = ['choregraphie', 'offrir_initiation'];
+
+/* ============================================================
+   ÉTAT
+   ============================================================ */
+const state = {
+  currentStep: 1,
+  totalSteps: 5,
+  prestations: new Set(),
+  mode: 'event',          // 'event' | 'private'
+  civilite: '',
+  pourQui: ''
+};
+
+const isDemoMode = CONFIG.SCRIPT_URL.includes('VOTRE_ID_DEPLOIEMENT');
+
+/* ============================================================
+   INITIALISATION
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', () => {
+  if (isDemoMode) document.getElementById('demoBanner').classList.add('active');
+
+  // Contacts dans les écrans success/error
+  const contactEmail = `mailto:${[CONFIG.EMAIL](http://CONFIG.EMAIL)_CONTACT}`;
+  document.getElementById('contactEmail').href = contactEmail;
+  document.getElementById('contactEmail').textContent = [CONFIG.EMAIL](http://CONFIG.EMAIL)_CONTACT;
+  document.getElementById('contactEmailErr').href = contactEmail;
+  document.getElementById('contactEmailErr').textContent = [CONFIG.EMAIL](http://CONFIG.EMAIL)_CONTACT;
+  document.getElementById('contactTel').textContent = CONFIG.TELEPHONE;
+  document.getElementById('contactTelErr').textContent = CONFIG.TELEPHONE;
+
+  renderPrestations();
+  bindEvents();
+  initIframeResize();
+});
+
+/* ============================================================
+   RENDU DES PRESTATIONS (étape 1)
+   ============================================================ */
+function renderPrestations() {
+  const grid = document.getElementById('prestationsGrid');
+  grid.innerHTML = [PRESTATIONS.map](http://PRESTATIONS.map)(p => `
+    <div class="prestation-card" data-id="${[p.id](http://p.id)}" role="checkbox" aria-checked="false" tabindex="0">
+      <div class="icon">${p.icon}</div>
+      <div class="label">${p.label}</div>
+      <div class="check">
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+      </div>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('.prestation-card').forEach(card => {
+    const toggle = () => {
+      const id = [card.dataset.id](http://card.dataset.id);
+      if (state.prestations.has(id)) {
+        state.prestations.delete(id);
+        card.classList.remove('selected');
+        card.setAttribute('aria-checked', 'false');
+      } else {
+        state.prestations.add(id);
+        card.classList.add('selected');
+        card.setAttribute('aria-checked', 'true');
+      }
+      document.getElementById('prestationsError').style.display = 'none';
+    };
+    card.addEventListener('click', toggle);
+    card.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); }
+    });
+  });
+}
+
+/* ============================================================
+   ÉVÉNEMENTS (navigation, civilité, soumission)
+   ============================================================ */
+function bindEvents() {
+  document.querySelectorAll('[data-next]').forEach(btn => {
+    btn.addEventListener('click', goNext);
+  });
+  document.querySelectorAll('[data-prev]').forEach(btn => {
+    btn.addEventListener('click', goPrev);
+  });
+
+  // Civilité (pills)
+  document.querySelectorAll('#civilitePills .pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('#civilitePills .pill').forEach(p => p.classList.remove('selected'));
+      pill.classList.add('selected');
+      state.civilite = pill.dataset.value;
+    });
+  });
+
+  // Pour qui (pills, mode privé)
+  document.querySelectorAll('#pourQuiPills .pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('#pourQuiPills .pill').forEach(p => p.classList.remove('selected'));
+      pill.classList.add('selected');
+      state.pourQui = pill.dataset.value;
+      document.getElementById('pourQuiError').style.display = 'none';
+    });
+  });
+
+  // Champ commune conditionnel — affiché uniquement si "À domicile"
+  const lieuCours = document.getElementById('lieuCours');
+  lieuCours.addEventListener('change', () => {
+    const field = document.getElementById('communeDomicileField');
+    field.classList.toggle('show', lieuCours.value === 'À domicile');
+  });
+
+  // Navigation par clic sur les ronds de progression (étapes déjà visitées)
+  document.querySelectorAll('.progress-step').forEach(ps => {
+    ps.setAttribute('role', 'button');
+    ps.setAttribute('tabindex', '0');
+    const jump = () => {
+      if (!ps.classList.contains('done')) return; // Seules les étapes passées sont cliquables
+      const target = parseInt(ps.dataset.step, 10);
+      showStep(target);
+    };
+    ps.addEventListener('click', jump);
+    ps.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); jump(); }
+    });
+  });
+
+  // Effacer l'erreur sur input
+  document.querySelectorAll('input, select, textarea').forEach(el => {
+    el.addEventListener('input', () => {
+      el.closest('.field')?.classList.remove('has-error');
+    });
+    el.addEventListener('change', () => {
+      el.closest('.field')?.classList.remove('has-error');
+    });
+  });
+
+  // Soumission
+  document.getElementById('submitBtn').addEventListener('click', submit);
+  document.getElementById('retryBtn').addEventListener('click', () => {
+    document.getElementById('errorScreen').classList.remove('active');
+    document.querySelector('.step[data-step="5"]').classList.add('active');
+    document.getElementById('progress').style.display = '';
+  });
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+function goNext() {
+  if (!validateStep(state.currentStep)) return;
+
+  // En quittant l'étape 1, on calcule le mode et on l'applique
+  if (state.currentStep === 1) {
+    applyMode(computeMode());
+  }
+
+  if (state.currentStep < state.totalSteps) {
+    showStep(state.currentStep + 1);
+  }
+}
+
+function goPrev() {
+  if (state.currentStep > 1) showStep(state.currentStep - 1);
+}
+
+/* ============================================================
+   MODE — détermine si on est en demande événementielle ou
+   en demande de cours particulier.
+   ============================================================ */
+function computeMode() {
+  const ids = Array.from(state.prestations);
+  if (ids.length === 0) return 'event';
+  // Mode privé seulement si TOUTES les prestations sélectionnées
+  // sont dans la liste des prestations "cours particulier"
+  const allPrivate = ids.every(id => PRIVATE_PRESTATIONS.includes(id));
+  return allPrivate ? 'private' : 'event';
+}
+
+function applyMode(mode) {
+  state.mode = mode;
+  document.querySelector('.form-card').setAttribute('data-mode', mode);
+
+  // Met à jour le placeholder du textarea message en fonction du mode
+  const msg = document.getElementById('message');
+  msg.setAttribute('placeholder', msg.dataset[`placeholder${mode === 'private' ? 'Private' : 'Event'}`]);
+
+  // Pré-suggère le type de demande en mode privé
+  if (mode === 'private') {
+    const typeDemande = document.getElementById('typeDemande');
+    if (!typeDemande.value) {
+      if (state.prestations.has('choregraphie')) {
+        typeDemande.value = 'Chorégraphie pour danse de mariage';
+      } else if (state.prestations.has('offrir_initiation')) {
+        typeDemande.value = 'Initiation à offrir en cadeau';
+      }
+    }
+  }
+}
+
+function showStep(n) {
+  state.currentStep = n;
+
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelector(`.step[data-step="${n}"]`).classList.add('active');
+
+  // Rendu du récapitulatif quand on arrive à la dernière étape
+  if (n === 5) renderRecap();
+
+  // Progress bar
+  document.querySelectorAll('.progress-step').forEach(ps => {
+    const step = parseInt(ps.dataset.step, 10);
+    ps.classList.toggle('active', step === n);
+    ps.classList.toggle('done', step < n);
+  });
+  document.querySelectorAll('.progress-line').forEach((l, i) => {
+    l.classList.toggle('done', i < n - 1);
+  });
+
+  // Scroll vers le haut (utile en iframe)
+  scrollToTop();
+}
+
+function scrollToTop() {
+  // Dans l'iframe Wix, on demande au parent de scroller
+  try {
+    window.parent.postMessage({ type: 'tangoetvous-scroll', target: 'top' }, '*');
+  } catch (_) {}
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ============================================================
+   VALIDATION
+   ============================================================ */
+function validateStep(n) {
+  let valid = true;
+
+  if (n === 1) {
+    if (state.prestations.size === 0) {
+      document.getElementById('prestationsError').style.display = 'block';
+      valid = false;
+    }
+  }
+
+  if (n === 2) {
+    if (state.mode === 'event') {
+      valid = checkRequired(['typeEvenement', 'lieu']);
+    } else {
+      // Mode cours particulier
+      valid = checkRequired(['typeDemande']);
+      if (!state.pourQui) {
+        document.getElementById('pourQuiError').style.display = 'block';
+        valid = false;
+      }
+    }
+  }
+
+  if (n === 3) {
+    valid = checkRequired(['message']);
+    if (state.mode === 'private') {
+      if (!checkRequired(['lieuCours'])) valid = false;
+      // Si "À domicile", la commune devient requise
+      if (document.getElementById('lieuCours').value === 'À domicile') {
+        if (!checkRequired(['communeDomicile'])) valid = false;
+      }
+    }
+  }
+
+  if (n === 4) {
+    valid = checkRequired(['prenom', 'nom', 'email', 'telephone']);
+    // Email
+    const email = document.getElementById('email');
+    if (email.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+      email.closest('.field').classList.add('has-error');
+      valid = false;
+    }
+    // Téléphone (au moins 8 chiffres)
+    const tel = document.getElementById('telephone');
+    const digits = tel.value.replace(/\D/g, '');
+    if (tel.value && digits.length < 8) {
+      tel.closest('.field').classList.add('has-error');
+      valid = false;
+    }
+    // RGPD
+    const rgpd = document.getElementById('rgpd');
+    if (!rgpd.checked) {
+      document.getElementById('rgpdError').style.display = 'block';
+      valid = false;
+    } else {
+      document.getElementById('rgpdError').style.display = 'none';
+    }
+  }
+
+  return valid;
+}
+
+function checkRequired(ids) {
+  let ok = true;
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) {
+      el.closest('.field').classList.add('has-error');
+      ok = false;
+    } else {
+      el.closest('.field').classList.remove('has-error');
+    }
+  });
+  return ok;
+}
+
+/* ============================================================
+   RÉCAPITULATIF — rendu de l'étape 5
+   ============================================================ */
+function renderRecap() {
+  const get = id => document.getElementById(id).value.trim();
+  const sections = [];
+
+  // ----- Prestations -----
+  const labels = Array.from(state.prestations).map(id =>
+    PRESTATIONS.find(p => [p.id](http://p.id) === id)?.label || id
+  );
+  sections.push(`
+    <div class="recap-section">
+      <div class="recap-section-head">
+        <h3>Prestations</h3>
+        <button type="button" class="recap-edit" data-edit="1">Modifier</button>
+      </div>
+      <div class="recap-tags">
+        ${[labels.map](http://labels.map)(l => `<span class="recap-tag">${escapeHtml(l)}</span>`).join('')}
+      </div>
+    </div>
+  `);
+
+  if (state.mode === 'event') {
+    // ===== MODE ÉVÉNEMENT =====
+    const dateEv = get('dateEvenement');
+    const dateFlex = document.getElementById('dateFlexible').checked;
+    let dateDisplay;
+    if (dateEv) {
+      dateDisplay = formatFrDate(dateEv) + (dateFlex ? ' (flexible)' : '');
+    } else if (dateFlex) {
+      dateDisplay = 'Flexible / à définir';
+    } else {
+      dateDisplay = 'Non précisée';
+    }
+    const lieuFull = get('lieu') + (get('codePostal') ? ` (${get('codePostal')})` : '');
+
+    sections.push(`
+      <div class="recap-section">
+        <div class="recap-section-head">
+          <h3>Votre événement</h3>
+          <button type="button" class="recap-edit" data-edit="2">Modifier</button>
+        </div>
+        ${row('Type', get('typeEvenement'))}
+        ${row('Date', dateDisplay)}
+        ${row('Lieu', lieuFull)}
+        ${row('Invités', get('nombreInvites'))}
+      </div>
+    `);
+
+    sections.push(`
+      <div class="recap-section">
+        <div class="recap-section-head">
+          <h3>Précisions</h3>
+          <button type="button" class="recap-edit" data-edit="3">Modifier</button>
+        </div>
+        ${row('Durée', get('dureePrestation'))}
+        ${row('Budget', get('budget'))}
+        ${row('Connu via', get('commentConnu'))}
+        ${get('message') ? `<div class="recap-message">${escapeHtml(get('message'))}</div>` : ''}
+      </div>
+    `);
+
+  } else {
+    // ===== MODE COURS PARTICULIER =====
+    const dateBut = get('dateButoir');
+    const dateButFlex = document.getElementById('dateButoirFlexible').checked;
+    let dateDisplay;
+    if (dateBut) {
+      dateDisplay = formatFrDate(dateBut) + (dateButFlex ? ' (flexible)' : '');
+    } else if (dateButFlex) {
+      dateDisplay = 'À définir';
+    } else {
+      dateDisplay = 'Non précisée';
+    }
+
+    sections.push(`
+      <div class="recap-section">
+        <div class="recap-section-head">
+          <h3>Votre besoin</h3>
+          <button type="button" class="recap-edit" data-edit="2">Modifier</button>
+        </div>
+        ${row('Demande', get('typeDemande'))}
+        ${row('Pour qui', state.pourQui)}
+        ${row('Niveau', get('niveauTango'))}
+        ${row('Date butoir', dateDisplay)}
+      </div>
+    `);
+
+    const lieuCoursVal = get('lieuCours');
+    const lieuFull = lieuCoursVal === 'À domicile' && get('communeDomicile')
+      ? `${lieuCoursVal} — ${get('communeDomicile')}`
+      : lieuCoursVal;
+
+    sections.push(`
+      <div class="recap-section">
+        <div class="recap-section-head">
+          <h3>Modalités du cours</h3>
+          <button type="button" class="recap-edit" data-edit="3">Modifier</button>
+        </div>
+        ${row('Professeur', get('professeur'))}
+        ${row('Lieu', lieuFull)}
+        ${row('Durée', get('dureeCours'))}
+        ${row('Nombre', get('nombreCours'))}
+        ${row('Disponibilités', get('datesPeriodes'))}
+        ${row('Budget', get('budget'))}
+        ${row('Connu via', get('commentConnu'))}
+        ${get('message') ? `<div class="recap-message">${escapeHtml(get('message'))}</div>` : ''}
+      </div>
+    `);
+  }
+
+  // ----- Contact (commun aux deux modes) -----
+  const fullName = [state.civilite, get('prenom'), get('nom')].filter(Boolean).join(' ');
+  sections.push(`
+    <div class="recap-section">
+      <div class="recap-section-head">
+        <h3>Vos coordonnées</h3>
+        <button type="button" class="recap-edit" data-edit="4">Modifier</button>
+      </div>
+      ${row('Nom', fullName)}
+      ${row('Email', get('email'))}
+      ${row('Téléphone', get('telephone'))}
+    </div>
+  `);
+
+  document.getElementById('recap').innerHTML = sections.join('');
+
+  // Boutons "Modifier" → renvoie à l'étape correspondante
+  document.querySelectorAll('.recap-edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const step = parseInt(btn.dataset.edit, 10);
+      showStep(step);
+    });
+  });
+}
+
+function formatFrDate(iso) {
+  return new Date(iso).toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+}
+
+function row(key, val) {
+  if (!val) return '';
+  return `<div class="recap-row"><span class="key">${key}</span><span class="val">${escapeHtml(val)}</span></div>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+/* ============================================================
+   SOUMISSION
+   ============================================================ */
+async function submit() {
+  if (!validateStep(4)) return;
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  const originalHTML = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner"></span> Envoi…';
+
+  // Récupère les labels des prestations sélectionnées (pour lisibilité côté admin)
+  const prestationsLabels = Array.from(state.prestations).map(id => {
+    return PRESTATIONS.find(p => [p.id](http://p.id) === id)?.label || id;
+  });
+
+  const get = id => document.getElementById(id).value.trim();
+
+  // Champs communs aux deux modes
+  const payload = {
+    action: CONFIG.ACTION,
+    timestamp: new Date().toISOString(),
+    mode: state.mode, // 'event' ou 'private'
+
+    // Étape 1
+    prestations_ids: Array.from(state.prestations),
+    prestations_labels: prestationsLabels,
+
+    // Étape 3 — partagés
+    budget: get('budget'),
+    message: get('message'),
+    comment_connu: get('commentConnu'),
+
+    // Étape 4 — coordonnées
+    civilite: state.civilite,
+    prenom: get('prenom'),
+    nom: get('nom'),
+    email: get('email'),
+    telephone: get('telephone'),
+    rgpd: document.getElementById('rgpd').checked,
+
+    // Méta
+    source: 'wix-iframe',
+    user_agent: navigator.userAgent
+  };
+
+  // Champs spécifiques au mode
+  if (state.mode === 'event') {
+    Object.assign(payload, {
+      type_evenement: get('typeEvenement'),
+      date_evenement: get('dateEvenement'),
+      date_flexible: document.getElementById('dateFlexible').checked,
+      lieu: get('lieu'),
+      code_postal: get('codePostal'),
+      nombre_invites: get('nombreInvites'),
+      duree_prestation: get('dureePrestation')
+    });
+  } else {
+    Object.assign(payload, {
+      type_demande: get('typeDemande'),
+      pour_qui: state.pourQui,
+      niveau_tango: get('niveauTango'),
+      date_butoir: get('dateButoir'),
+      date_butoir_flexible: document.getElementById('dateButoirFlexible').checked,
+      professeur: get('professeur'),
+      lieu_cours: get('lieuCours'),
+      commune_domicile: get('communeDomicile'),
+      duree_cours: get('dureeCours'),
+      nombre_cours: get('nombreCours'),
+      dates_periodes: get('datesPeriodes')
+    });
+  }
+
+  try {
+    if (isDemoMode) {
+      // Simulation
+      console.log('[MODE DÉMO] Payload :', payload);
+      await new Promise(r => setTimeout(r, 900));
+      showSuccess();
+    } else {
+      const res = await fetch(CONFIG.SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      // Tente de parser, mais ne bloque pas si pas de JSON
+      try { await res.json(); } catch (_) {}
+      showSuccess();
+    }
+
+    // Notifie le parent (Wix) qu'un devis a été envoyé (analytics)
+    try {
+      window.parent.postMessage({
+        type: 'tangoetvous-devis-sent',
+        prestations: prestationsLabels
+      }, '*');
+    } catch (_) {}
+
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+    showError(err.message);
+  }
+}
+
+function showSuccess() {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('progress').style.display = 'none';
+  document.getElementById('successScreen').classList.add('active');
+  scrollToTop();
+}
+
+function showError(msg) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('progress').style.display = 'none';
+  document.getElementById('errorScreen').classList.add('active');
+  if (msg) {
+    document.getElementById('errorMessage').textContent =
+      `Une erreur est survenue (${msg}). Vous pouvez réessayer ou nous contacter directement.`;
+  }
+  scrollToTop();
+}
+
+/* ============================================================
+   IFRAME RESIZE — postMessage vers le parent (Wix)
+   ============================================================
+   Wix coupe les iframes à hauteur fixe. On envoie la hauteur
+   réelle du document à chaque changement pour que le code Wix
+   (Velo) puisse ajuster l'iframe.
+
+   Côté Wix (Velo, exemple) :
+     $w('#html1').onMessage((event) => {
+       if ([event.data](http://event.data)?.type === 'tangoetvous-resize') {
+         $w('#html1').height = [event.data](http://event.data).height;
+       }
+     });
+   ============================================================ */
+function initIframeResize() {
+  const send = () => {
+    const h = document.documentElement.scrollHeight;
+    try {
+      window.parent.postMessage({
+        type: 'tangoetvous-resize',
+        height: h
+      }, '*');
+    } catch (_) {}
+  };
+
+  // ResizeObserver = très réactif aux changements internes
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(send).observe(document.body);
+  }
+  // Filets de sécurité
+  window.addEventListener('load', send);
+  window.addEventListener('resize', send);
+  setInterval(send, 1500);
+}
+</script>
+</body>
+</html>

@@ -718,7 +718,18 @@ var DEMO_DATA = {
     {id:'CY001',prenom:'Claire',  nom:'Dupont',  email:'claire@ex.com',  tel:'06 11 22 33 44',cours:'forfait',statut:'inscrit',saison:'2025-2026',dateInscription:'2025-09-16'}
   ],
   carteReports: [],
-  absencesJour: []
+  absencesJour: [],
+  demandesDevis: [
+    {id:'DD001', created_at:'2026-04-25T10:30:00Z', mode:'event', prenom:'Isabelle', nom:'Renard', civilite:'Mme', email:'isabelle.renard@example.com', telephone:'06 12 34 56 78',
+     prestations_ids:['demo_tango','initiation'], prestations_labels:['Démonstration de tango','Initiation au tango'],
+     type_evenement:'Mariage', date_evenement:'2026-07-18', lieu:'Château de Vaux-le-Vicomte', code_postal:'77950', nombre_invites:120,
+     message:'Nous aimerions une prestation de 20 minutes avec une initiation pour nos invités.', budget:'1000-1500€', comment_connu:'Recommandation', statut:'reçue'},
+    {id:'DD002', created_at:'2026-04-20T14:00:00Z', mode:'event', prenom:'Thomas', nom:'Girard', civilite:'M.', email:'thomas.girard@example.com', telephone:'06 98 76 54 32',
+     prestations_ids:['spectacle_mesure'], prestations_labels:['Spectacle sur mesure'],
+     type_evenement:'Soirée entreprise', date_evenement:'2026-06-05', lieu:'Moulin Rouge — Paris 18e', code_postal:'75018', nombre_invites:80,
+     message:'Soirée annuelle de notre cabinet. Budget flexible pour une belle prestation.', budget:'+2000€', comment_connu:'Site web', statut:'devis_envoyé'},
+  ],
+  devisList: []
 };
 
 // ── Données réelles élèves 2025-2026 ──────────────────────────────────────────────
@@ -3894,6 +3905,8 @@ async function chargerDonnees() {
         });
         return merged;
       })(),
+      demandesDevis:     d.demandesDevis     || adminData.demandesDevis || [],
+      devisList:         d.devisList         || adminData.devisList || [],
     });
     if(!adminData.carteReports) adminData.carteReports=[];
     recalcStats();
@@ -4220,6 +4233,23 @@ function bindTabEvents(el) {
     if (ev.target.id==='am-lot-type-sel') {
       var stF = el.querySelector('#am-lot-stage-fields');
       if (stF) stF.style.display = ev.target.value==='stage'?'block':'none';
+    }
+    // Statut demande de devis
+    if (ev.target.dataset.action==='statut-demande-devis') {
+      (function() {
+        var selEl = ev.target;
+        var demandeId = selEl.dataset.id;
+        var newStatut = selEl.value;
+        var demande = (adminData.demandesDevis||[]).find(function(x){ return String(x.id)===String(demandeId); });
+        if (demande) demande.statut = newStatut;
+        if (!IS_DEMO) {
+          TEV.client.from('demandes_devis').update({ statut: newStatut }).eq('id', demandeId)
+            .then(function() { afficherToast('✓ Statut mis à jour'); })
+            .catch(function(e) { afficherToast('Erreur: '+(e.message||'')); });
+        } else {
+          afficherToast('✓ Statut mis à jour (démo)');
+        }
+      })();
     }
   });
   // Upload
@@ -4757,14 +4787,56 @@ function handleAction(action, btn) {
       switchTab(btn.dataset.tab);
       break;
     case 'marquer-devis-traite':
+      // Legacy — remplacé par statut-demande-devis (select)
+      break;
+    case 'creer-devis':
       (function() {
         var id = btn.dataset.id;
-        if (!adminData.devis) return;
-        var d = adminData.devis.find(function(x){ return String(x.id)===String(id); });
-        if (d) d.statut = 'traite';
-        if (!IS_DEMO) TEV.from('devis').update({statut:'traite'}).eq('id', id).catch(function(){});
-        afficherToast('✓ Devis marqué traité');
-        renderTab();
+        var nom = btn.dataset.nom || '';
+        var evtDate = btn.dataset.evtDate || '';
+        var evtLieu = btn.dataset.evtLieu || '';
+        var demande = (adminData.demandesDevis||[]).find(function(x){ return String(x.id)===String(id); });
+        if (IS_DEMO) {
+          window.open('/generateur-devis.html', '_blank');
+          return;
+        }
+        btn.disabled = true; btn.textContent = '⏳ Réservation…';
+        var pres = demande ? (demande.prestations_labels||[]).map(function(lbl){ return { intitule:lbl, prix:0 }; }) : [];
+        TEV.getSession().then(function(session) {
+          var tok = session ? session.access_token : '';
+          return fetch('/api/devis/creer', {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+tok },
+            body: JSON.stringify({
+              demande_id: id, client_nom: nom, client_adresse: '',
+              evt_date: evtDate, evt_lieu: evtLieu, prestations: pres,
+              acompte_mode: 'percent', acompte_value: 30,
+            }),
+          });
+        }).then(function(r){ return r.json(); }).then(function(res) {
+          btn.disabled = false; btn.textContent = '📋 Créer un devis';
+          if (res.generateur_url) { window.open(res.generateur_url, '_blank'); chargerDonnees(); }
+          else afficherToast('Erreur: '+(res.error||'inconnue'));
+        }).catch(function(e) {
+          btn.disabled = false; btn.textContent = '📋 Créer un devis';
+          afficherToast('Erreur: '+e.message);
+        });
+      })();
+      break;
+    case 'emettre-devis':
+      (function() {
+        var id = btn.dataset.id;
+        if (IS_DEMO) { afficherToast('Mode démo — action désactivée'); return; }
+        if (!confirm('Marquer ce devis comme émis ? Le numéro sera verrouillé.')) return;
+        btn.disabled = true; btn.textContent = '⏳';
+        TEV.getSession().then(function(session) {
+          var tok = session ? session.access_token : '';
+          return fetch('/api/devis/'+id+'/emettre', { method:'PATCH', headers:{'Authorization':'Bearer '+tok} });
+        }).then(function(r){ return r.json(); }).then(function(res) {
+          btn.disabled = false; btn.textContent = '✓ Marquer émis';
+          if (res.id) { afficherToast('✓ Devis émis'); chargerDonnees(); }
+          else afficherToast('Erreur: '+(res.error||'inconnue'));
+        }).catch(function(e) { btn.disabled=false; btn.textContent='✓ Marquer émis'; afficherToast('Erreur: '+e.message); });
       })();
       break;
     case 'ouvrir-preinscription':
@@ -8583,33 +8655,162 @@ function renderNotifications() {
 }
 
 function renderDevis() {
-  var devis = adminData.devis || [];
+  var demandes = adminData.demandesDevis || [];
+  var devisList = adminData.devisList || [];
+
+  var STATUT_DEMANDE = {
+    'reçue':        { cls:'pill-warn', lbl:'Reçue' },
+    'devis_envoyé': { cls:'pill-ok',   lbl:'Devis envoyé' },
+    'signé':        { cls:'pill-ok',   lbl:'Signé' },
+    'acompte_payé': { cls:'pill-ok',   lbl:'Acompte payé' },
+    'réalisée':     { cls:'',          lbl:'Réalisée' },
+    'soldée':       { cls:'',          lbl:'Soldée' },
+    'refusée':      { cls:'pill-err',  lbl:'Refusée' },
+  };
+  var STATUTS_PIPELINE = ['reçue','devis_envoyé','signé','acompte_payé','réalisée','soldée','refusée'];
+  var STATUT_DEVIS = {
+    'brouillon':    { cls:'pill-warn', lbl:'Brouillon' },
+    'emis':         { cls:'pill-ok',   lbl:'Émis' },
+    'signe':        { cls:'pill-ok',   lbl:'Signé' },
+    'acompte_paye': { cls:'pill-ok',   lbl:'Acompte payé' },
+    'realise':      { cls:'',          lbl:'Réalisé' },
+    'solde':        { cls:'',          lbl:'Soldé' },
+    'annule':       { cls:'pill-err',  lbl:'Annulé' },
+    'refuse':       { cls:'pill-err',  lbl:'Refusé' },
+  };
+
   var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;">'
     + '<h2 style="margin:0;font-size:16px;">📋 Devis</h2>'
     + '</div>';
-  if (!devis.length) return h + '<div class="empty-state">Aucune demande de devis pour l\'instant.<br>Les demandes arriveront ici via le formulaire du site.</div>';
-  var nouveaux = devis.filter(function(d){ return d.statut === 'nouveau'; });
-  var traites  = devis.filter(function(d){ return d.statut !== 'nouveau'; });
-  function card(d) {
-    var dt = d.created_at ? _discRelDate(d.created_at) : '';
-    var statutCls = d.statut === 'nouveau' ? 'pill-warn' : d.statut === 'traite' ? 'pill-ok' : '';
-    var statutLbl = d.statut === 'nouveau' ? 'Nouveau' : d.statut === 'traite' ? 'Traité' : 'Refusé';
-    return '<div class="card">'
-      + '<div class="card-top"><div>'
-      + '<div class="card-nom">' + (d.prenom||'') + ' ' + (d.nom||'') + '</div>'
-      + '<div class="card-sub">' + (d.email||'') + (d.tel ? ' · ' + d.tel : '') + (dt ? ' · ' + dt : '') + '</div>'
-      + '</div><span class="pill ' + statutCls + '">' + statutLbl + '</span></div>'
-      + (d.type_event ? '<div style="margin-top:8px;font-size:13px;color:var(--dim);">🎉 ' + d.type_event + (d.date_event ? ' — ' + d.date_event : '') + (d.nb_personnes ? ' — ' + d.nb_personnes + ' pers.' : '') + '</div>' : '')
-      + (d.lieu ? '<div style="font-size:13px;color:var(--dim);">📍 ' + d.lieu + '</div>' : '')
-      + (d.message ? '<div style="margin-top:6px;font-size:13px;color:var(--text);white-space:pre-wrap;">' + d.message + '</div>' : '')
-      + '<div class="btn-row" style="margin-top:10px;">'
-      + (d.email ? '<a href="mailto:' + d.email + '" class="btn btn-gold" style="text-decoration:none;">✉️ Email</a>' : '')
-      + (d.tel ? '<a href="tel:' + d.tel + '" class="btn btn-ghost" style="text-decoration:none;">📞 Appeler</a>' : '')
-      + (d.statut === 'nouveau' ? '<button class="btn btn-ghost" data-action="marquer-devis-traite" data-id="' + d.id + '">✓ Marquer traité</button>' : '')
-      + '</div></div>';
+
+  if (!demandes.length && !devisList.length) {
+    return h + '<div class="empty-state">Aucune demande de devis pour l\'instant.<br>'
+      + 'Les demandes arrivent via le formulaire <a href="/demande-devis.html" target="_blank" style="color:var(--gold);">demande-devis.html</a>.</div>';
   }
-  if (nouveaux.length) { h += '<div class="section-hdr">Nouveaux (' + nouveaux.length + ')</div>'; nouveaux.forEach(function(d){ h += card(d); }); }
-  if (traites.length)  { h += '<div class="section-hdr" style="margin-top:16px;">Traités (' + traites.length + ')</div>'; traites.forEach(function(d){ h += card(d); }); }
+
+  // Index: demande_id → devis
+  var devisParDemande = {};
+  devisList.forEach(function(dv) {
+    if (dv.demande_id) {
+      if (!devisParDemande[dv.demande_id]) devisParDemande[dv.demande_id] = [];
+      devisParDemande[dv.demande_id].push(dv);
+    }
+  });
+
+  function cardDemande(d) {
+    var dt = d.created_at ? _discRelDate(d.created_at) : '';
+    var st = STATUT_DEMANDE[d.statut] || { cls:'pill-warn', lbl: d.statut };
+    var nom = ((d.civilite ? d.civilite + ' ' : '') + (d.prenom||'') + ' ' + (d.nom||'')).trim();
+    var prestations = (d.prestations_labels || []).join(', ') || (d.prestations_ids || []).join(', ');
+    var dvList = devisParDemande[d.id] || [];
+
+    var card = '<div class="card">';
+    // Entête
+    card += '<div class="card-top"><div>'
+      + '<div class="card-nom">' + nom + '</div>'
+      + '<div class="card-sub">' + (d.email||'') + (d.telephone ? ' · '+d.telephone : '') + (dt ? ' · '+dt : '') + '</div>'
+      + '</div>';
+    card += '<select class="input" style="width:auto;font-size:12px;padding:4px 8px;" data-action="statut-demande-devis" data-id="'+d.id+'">';
+    STATUTS_PIPELINE.forEach(function(s) {
+      var l = STATUT_DEMANDE[s] ? STATUT_DEMANDE[s].lbl : s;
+      card += '<option value="'+s+'"'+(d.statut===s?' selected':'')+'>'+l+'</option>';
+    });
+    card += '</select>';
+    card += '</div>';
+
+    // Prestations
+    if (prestations) {
+      card += '<div style="margin-top:8px;font-size:13px;color:var(--gold);font-weight:600;">'+prestations+'</div>';
+    }
+
+    // Infos événement ou cours privé
+    if (d.mode === 'event') {
+      var evtParts = [];
+      if (d.type_evenement) evtParts.push('🎉 '+d.type_evenement);
+      if (d.date_evenement) evtParts.push('📅 '+d.date_evenement+(d.date_flexible?' (flexible)':''));
+      if (d.lieu) evtParts.push('📍 '+d.lieu+(d.code_postal?' '+d.code_postal:''));
+      if (d.nombre_invites) evtParts.push('👥 '+d.nombre_invites+' invités');
+      if (d.duree_prestation) evtParts.push('⏱ '+d.duree_prestation);
+      if (evtParts.length) card += '<div style="margin-top:6px;font-size:13px;color:var(--dim);">'+evtParts.join(' · ')+'</div>';
+    } else {
+      var pvParts = [];
+      if (d.type_demande) pvParts.push(d.type_demande);
+      if (d.pour_qui) pvParts.push('Pour : '+d.pour_qui);
+      if (d.niveau_tango) pvParts.push(d.niveau_tango);
+      if (d.duree_cours) pvParts.push(d.duree_cours);
+      if (d.nombre_cours) pvParts.push(d.nombre_cours+' cours');
+      if (d.lieu_cours) pvParts.push('📍 '+d.lieu_cours);
+      if (pvParts.length) card += '<div style="margin-top:6px;font-size:13px;color:var(--dim);">'+pvParts.join(' · ')+'</div>';
+    }
+
+    // Budget
+    if (d.budget) card += '<div style="font-size:13px;color:var(--dim);">💰 Budget : '+d.budget+'</div>';
+
+    // Message
+    if (d.message) card += '<div style="margin-top:6px;font-size:13px;color:var(--text);white-space:pre-wrap;">'+d.message+'</div>';
+
+    // Comment connu
+    if (d.comment_connu) card += '<div style="font-size:12px;color:var(--dim);margin-top:4px;">💬 '+d.comment_connu+'</div>';
+
+    // Devis associés
+    if (dvList.length) {
+      card += '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">';
+      dvList.forEach(function(dv) {
+        var dvSt = STATUT_DEVIS[dv.statut] || { cls:'pill-warn', lbl:dv.statut };
+        var montant = dv.montant_ht ? (Number(dv.montant_ht).toLocaleString('fr-FR'))+'€ HT' : '';
+        card += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">'
+          + '<span style="font-weight:600;font-size:13px;color:var(--gold);">'+dv.numero+'</span>'
+          + '<span class="pill '+dvSt.cls+'" style="font-size:11px;">'+dvSt.lbl+'</span>'
+          + (montant ? '<span style="font-size:13px;color:var(--dim);">'+montant+'</span>' : '')
+          + '<a href="/generateur-devis.html?numero='+encodeURIComponent(dv.numero)+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:12px;padding:3px 10px;">📄 Ouvrir</a>'
+          + (dv.statut==='brouillon' ? '<button class="btn btn-ghost" style="font-size:12px;padding:3px 10px;" data-action="emettre-devis" data-id="'+dv.id+'">✓ Marquer émis</button>' : '')
+          + '</div>';
+      });
+      card += '</div>';
+    }
+
+    // Boutons
+    card += '<div class="btn-row" style="margin-top:10px;">';
+    if (d.email) card += '<a href="mailto:'+d.email+'" class="btn btn-gold" style="text-decoration:none;">✉️ Email</a>';
+    if (d.telephone) card += '<a href="tel:'+d.telephone+'" class="btn btn-ghost" style="text-decoration:none;">📞 Appeler</a>';
+    card += '<button class="btn btn-ghost" data-action="creer-devis" data-id="'+d.id+'"'
+      + ' data-nom="'+((d.prenom||'')+' '+(d.nom||'')).trim()+'"'
+      + ' data-email="'+(d.email||'')+'"'
+      + ' data-evt-date="'+(d.date_evenement||'')+'"'
+      + ' data-evt-lieu="'+(d.lieu||'').replace(/"/g,'&quot;')+'"'
+      + ' data-evt-type="'+(d.type_evenement||'')+'"'
+      + '>📋 Créer un devis</button>';
+    card += '</div></div>';
+    return card;
+  }
+
+  // Sections par statut
+  var recues    = demandes.filter(function(d){ return d.statut==='reçue'; });
+  var enCours   = demandes.filter(function(d){ return d.statut==='devis_envoyé'||d.statut==='signé'||d.statut==='acompte_payé'; });
+  var terminees = demandes.filter(function(d){ return d.statut==='réalisée'||d.statut==='soldée'||d.statut==='refusée'; });
+
+  if (recues.length)    { h += '<div class="section-hdr">Nouvelles demandes ('+recues.length+')</div>'; recues.forEach(function(d){ h += cardDemande(d); }); }
+  if (enCours.length)   { h += '<div class="section-hdr" style="margin-top:16px;">En cours ('+enCours.length+')</div>'; enCours.forEach(function(d){ h += cardDemande(d); }); }
+  if (terminees.length) { h += '<div class="section-hdr" style="margin-top:16px;">Terminées ('+terminees.length+')</div>'; terminees.forEach(function(d){ h += cardDemande(d); }); }
+
+  // Devis sans demande associée
+  var devisSansDemande = devisList.filter(function(dv){ return !dv.demande_id; });
+  if (devisSansDemande.length) {
+    h += '<div class="section-hdr" style="margin-top:16px;">Devis standalone</div>';
+    devisSansDemande.forEach(function(dv) {
+      var dvSt = STATUT_DEVIS[dv.statut] || { cls:'pill-warn', lbl:dv.statut };
+      var montant = dv.montant_ht ? Number(dv.montant_ht).toLocaleString('fr-FR')+'€ HT' : '';
+      h += '<div class="card"><div class="card-top"><div>'
+        + '<div class="card-nom">'+dv.numero+'</div>'
+        + '<div class="card-sub">'+(dv.client_nom||'')+(montant?' · '+montant:'')+'</div>'
+        + '</div><span class="pill '+dvSt.cls+'">'+dvSt.lbl+'</span></div>'
+        + '<div class="btn-row" style="margin-top:10px;">'
+        + '<a href="/generateur-devis.html?numero='+encodeURIComponent(dv.numero)+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;">📄 Ouvrir générateur</a>'
+        + (dv.statut==='brouillon' ? '<button class="btn btn-ghost" data-action="emettre-devis" data-id="'+dv.id+'">✓ Marquer émis</button>' : '')
+        + '</div></div>';
+    });
+  }
+
   return h;
 }
 
