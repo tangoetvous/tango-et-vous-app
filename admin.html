@@ -6730,7 +6730,10 @@ function _groupCouples(list) {
       for (var j = i + 1; j < list.length; j++) {
         if (used.indexOf(j) >= 0) continue;
         var q = list[j];
-        if ((q.prenom + ' ' + q.nom).trim().toLowerCase() === p.partenaire.toLowerCase()) {
+        var qName = (q.prenom + ' ' + q.nom).trim().toLowerCase();
+        var pPart = p.partenaire.toLowerCase();
+        // Correspondance exacte ou double-nom tronqué (ex: "GALLIOT" vs "GALLIOT LAPOULE")
+        if (qName === pPart || qName.startsWith(pPart + ' ') || pPart.startsWith(qName + ' ')) {
           partIdx = j; break;
         }
       }
