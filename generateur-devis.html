@@ -1193,6 +1193,9 @@ RNA : W751181053</div>
       <div class="actions-bottom-hint">
         Aperçu vérifié ? Enregistrez votre devis :
       </div>
+      <button id="btnSauvegarder" class="btn btn-secondary" onclick="sauvegarderBrouillon()">
+        💾 Sauvegarder
+      </button>
       <button class="btn btn-primary btn-large" onclick="handlePrint()">
         ⤓ Enregistrer en PDF
       </button>
@@ -1215,7 +1218,7 @@ const EMETTEUR = {
   siret: '522 679 752 00025',
   rna: 'W751181053',
   telephone: '07 73 27 59 06',
-  email: '[regardsepose@gmail.com](mailto:regardsepose@gmail.com)',
+  email: 'regardsepose@gmail.com',
   // Médiateur de la consommation (obligatoire BtoC, art. L612-1 du Code de la consommation)
   // À remplir après adhésion à un médiateur (cf. https://www.economie.gouv.fr/mediation-conso)
   mediateur: {
@@ -1326,6 +1329,112 @@ function isoDate(d) {
    modification (conformité légale — numérotation chronologique
    continue). Sans `numero`, le devis est en mode brouillon.
    ============================================================ */
+/* ============================================================
+   PERSISTANCE DB — chargement et sauvegarde du brouillon
+   Utilise le JWT Supabase stocké en localStorage par admin.html
+   ============================================================ */
+const _SUPA_URL = 'https://qhngqzvvllktuwspojxc.supabase.co';
+const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFobmdxenZ2bGxrdHV3c3BvanhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MjQ0NDYsImV4cCI6MjA5MjMwMDQ0Nn0.j-yMQryi3qoImIf6vyiqQ3SKzHeJoPsrJuP1YwaSyLs';
+let _devisDbId = null;
+
+function _getJWT() {
+  try {
+    const raw = localStorage.getItem('sb-qhngqzvvllktuwspojxc-auth-token');
+    return raw ? JSON.parse(raw).access_token : null;
+  } catch { return null; }
+}
+
+async function loadDevisFromDB(numero) {
+  const jwt = _getJWT();
+  if (!jwt) return;
+  try {
+    const r = await fetch(`${_SUPA_URL}/rest/v1/devis?numero=eq.${encodeURIComponent(numero)}&select=*`, {
+      headers: { 'apikey': _SUPA_KEY, 'Authorization': `Bearer ${jwt}` }
+    });
+    if (!r.ok) return;
+    const rows = await r.json();
+    if (!rows.length) return;
+    const dv = rows[0];
+    _devisDbId = dv.id;
+
+    if (dv.client_nom)     document.getElementById('clientNom').value    = dv.client_nom;
+    if (dv.client_adresse) document.getElementById('clientAdresse').value = dv.client_adresse;
+    if (dv.evt_date)       document.getElementById('evtDate').value       = dv.evt_date;
+    if (dv.evt_horaire)    document.getElementById('evtHoraire').value    = dv.evt_horaire;
+    if (dv.evt_lieu)       document.getElementById('evtAdresse').value    = dv.evt_lieu;
+    if (dv.evt_details)    document.getElementById('evtDetails').value    = dv.evt_details;
+    if (dv.date_emission)  document.getElementById('dateEmission').value  = dv.date_emission;
+    if (dv.date_validite)  document.getElementById('dateValidite').value  = dv.date_validite;
+
+    if (Array.isArray(dv.prestations) && dv.prestations.length) {
+      state.prestations = dv.prestations.map(p => ({
+        type:        p.type        || '',
+        intitule:    p.intitule    || '',
+        duree:       p.duree       || '',
+        hasPassages: !!p.hasPassages,
+        nbPassages:  p.nbPassages  || 1,
+        prix:        parseFloat(p.prix) || 0
+      }));
+      renderPrestations();
+    }
+
+    if (dv.acompte_mode) {
+      setAcompteMode(dv.acompte_mode);
+      if (dv.acompte_value != null) {
+        document.getElementById('acompteValue').value = dv.acompte_value;
+        state.acompteValue = parseFloat(dv.acompte_value) || 0;
+      }
+    }
+    updatePreview();
+  } catch(e) { console.warn('loadDevisFromDB:', e); }
+}
+
+async function sauvegarderBrouillon() {
+  const jwt = _getJWT();
+  if (!jwt) { alert('Session expirée — reconnectez-vous à l\'admin.'); return; }
+  if (!_devisDbId) { alert('Aucun devis en base. Créez-le depuis l\'admin → Devis → "Créer un devis".'); return; }
+
+  const btn = document.getElementById('btnSauvegarder');
+  btn.textContent = '⏳ Sauvegarde…'; btn.disabled = true;
+
+  const patch = {
+    client_nom:     document.getElementById('clientNom').value.trim(),
+    client_adresse: document.getElementById('clientAdresse').value.trim(),
+    evt_date:       document.getElementById('evtDate').value       || '',
+    evt_horaire:    document.getElementById('evtHoraire').value    || '',
+    evt_lieu:       document.getElementById('evtAdresse').value    || '',
+    evt_details:    document.getElementById('evtDetails').value    || '',
+    prestations:    state.prestations,
+    montant_ht:     state.prestations.reduce((s, p) => s + (parseFloat(p.prix) || 0), 0),
+    acompte_mode:   state.acompteMode,
+    acompte_value:  state.acompteValue,
+  };
+
+  try {
+    const r = await fetch(`${_SUPA_URL}/rest/v1/devis?id=eq.${_devisDbId}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': _SUPA_KEY,
+        'Authorization': `Bearer ${jwt}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify(patch),
+    });
+    if (r.ok || r.status === 204) {
+      btn.textContent = '✓ Sauvegardé';
+      setTimeout(() => { btn.textContent = '💾 Sauvegarder'; btn.disabled = false; }, 2000);
+    } else {
+      const err = await r.text();
+      btn.textContent = '💾 Sauvegarder'; btn.disabled = false;
+      alert('Erreur sauvegarde: ' + err);
+    }
+  } catch(e) {
+    btn.textContent = '💾 Sauvegarder'; btn.disabled = false;
+    alert('Erreur: ' + e.message);
+  }
+}
+
 function prefillFromURL() {
   const p = new URLSearchParams(window.location.search);
 
@@ -1421,6 +1530,11 @@ function prefillFromURL() {
   // Lieu d'établissement (pour cas exceptionnel hors Paris)
   if (p.get('lieu_etablissement')) {
     document.getElementById('lieuEtab').value = p.get('lieu_etablissement');
+  }
+
+  // Si numéro officiel → charger depuis DB (écrase les params URL avec les données sauvegardées)
+  if (p.get('numero')) {
+    loadDevisFromDB(p.get('numero'));
   }
 }
 

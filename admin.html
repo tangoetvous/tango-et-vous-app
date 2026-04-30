@@ -4792,25 +4792,46 @@ function handleAction(action, btn) {
     case 'creer-devis':
       (function() {
         var id = btn.dataset.id;
-        var nom = btn.dataset.nom || '';
-        var evtDate = btn.dataset.evtDate || '';
-        var evtLieu = btn.dataset.evtLieu || '';
         var demande = (adminData.demandesDevis||[]).find(function(x){ return String(x.id)===String(id); });
-        if (IS_DEMO) {
-          window.open('/generateur-devis.html', '_blank');
-          return;
-        }
+        if (IS_DEMO) { window.open('/generateur-devis.html', '_blank'); return; }
+
+        // Construire les données client depuis la demande
+        var clientNom = demande
+          ? (demande.type_contact === 'societe' && demande.nom_societe
+              ? demande.nom_societe
+              : ((demande.prenom||'')+' '+(demande.nom||'')).trim())
+          : '';
+        var clientAdresse = demande ? (demande.adresse_facturation || '') : '';
+        var evtDate       = demande ? (demande.date_evenement || '')     : '';
+        var evtHoraire    = demande ? (demande.horaire_evenement || '')   : '';
+        var evtLieu       = demande ? (demande.lieu || '')               : '';
+        var evtDetailsParts = [];
+        if (demande && demande.type_evenement) evtDetailsParts.push(demande.type_evenement);
+        if (demande && demande.nombre_invites) evtDetailsParts.push(demande.nombre_invites + ' invités');
+        if (demande && demande.duree_prestation) evtDetailsParts.push('Durée : ' + demande.duree_prestation);
+        var evtDetails = evtDetailsParts.join(' · ');
+
+        var pres = demande
+          ? (demande.prestations_labels||[]).map(function(lbl){ return { intitule:lbl, prix:0 }; })
+          : [];
+
         btn.disabled = true; btn.textContent = '⏳ Réservation…';
-        var pres = demande ? (demande.prestations_labels||[]).map(function(lbl){ return { intitule:lbl, prix:0 }; }) : [];
         TEV.getSession().then(function(session) {
           var tok = session ? session.access_token : '';
           return fetch('/api/devis/creer', {
             method: 'POST',
             headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+tok },
             body: JSON.stringify({
-              demande_id: id, client_nom: nom, client_adresse: '',
-              evt_date: evtDate, evt_lieu: evtLieu, prestations: pres,
-              acompte_mode: 'percent', acompte_value: 30,
+              demande_id:     id,
+              client_nom:     clientNom,
+              client_adresse: clientAdresse,
+              evt_date:       evtDate,
+              evt_horaire:    evtHoraire,
+              evt_lieu:       evtLieu,
+              evt_details:    evtDetails,
+              prestations:    pres,
+              acompte_mode:   'percent',
+              acompte_value:  30,
             }),
           });
         }).then(function(r){ return r.json(); }).then(function(res) {
