@@ -8074,11 +8074,11 @@ function renderYogaEleves() {
   var sorted = liste.slice().sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom); });
   var yin   = sorted.filter(function(e){ return e.cours==='yin'||e.cours==='forfait'; });
   var hatha = sorted.filter(function(e){ return e.cours==='hatha'||e.cours==='forfait'; });
-  var h = '<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">'+liste.length+' élève'+(liste.length>1?'s':'')+' inscrit'+(liste.length>1?'s':'')+' en yoga — saison '+sai+'</div>';
+  var h = _tevSearchBar()+'<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">'+liste.length+' élève'+(liste.length>1?'s':'')+' inscrit'+(liste.length>1?'s':'')+' en yoga — saison '+sai+'</div>';
   function eleveRow(e) {
     var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
     var paiLbl = PAI_LBL[e.paiement]||e.paiement||'';
-    return '<div class="point-row">'
+    return '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'">'
       +'<div style="flex:1;min-width:0;">'
       +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','yoga')+'</div>'
       +'<div class="point-sub"><span class="pill pill-info" style="font-size:8px;">'+coursLbl+'</span>'
