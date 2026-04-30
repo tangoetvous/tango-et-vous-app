@@ -1,10 +1,9 @@
 // Cloudflare Worker — Tango & Vous
 // Gère les routes dynamiques + sert les assets statiques en fallback
 //
-// Secrets à configurer (wrangler secret put) :
-//   SUPABASE_URL           ex: https://xxxx.supabase.co
-//   SUPABASE_SERVICE_ROLE_KEY
-//   BREVO_API_KEY
+// Secret à configurer dans Cloudflare dashboard → Settings → Variables and Secrets :
+//   SUPABASE_SERVICE_ROLE_KEY   (type : Secret)
+//   BREVO_API_KEY               (type : Secret, optionnel)
 //
 // Routes :
 //   POST  /admin/api/devis             — formulaire public → demandes_devis + Brevo
@@ -13,6 +12,9 @@
 //   PATCH /api/devis/:id/annuler       — admin → annuler devis
 //   PATCH /api/demandes-devis/:id      — admin → changer statut demande
 //   *                                  — assets statiques (Cloudflare Static Assets)
+
+// URL publique Supabase — non sensible, déjà dans le frontend
+const SUPABASE_URL = 'https://qhngqzvvllktuwspojxc.supabase.co';
 
 const CORS_ORIGINS = [
   'https://www.tangoetvous.com',
@@ -74,15 +76,15 @@ export default {
 // Auth middleware — vérifie le JWT Supabase passé en Authorization
 // ================================================================
 async function withAdminAuth(request, env, handler) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    return jsonError(500, 'Secrets SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY non configurés dans Cloudflare');
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) {
+    return jsonError(500, 'Secret SUPABASE_SERVICE_ROLE_KEY non configuré dans Cloudflare dashboard → Settings → Variables and Secrets');
   }
 
   const authHeader = request.headers.get('Authorization') || '';
   const token = authHeader.replace('Bearer ', '').trim();
   if (!token) return jsonError(401, 'Token manquant — session expirée ?');
 
-  const supaUrl = env.SUPABASE_URL.replace(/\/$/, '');
+  const supaUrl = SUPABASE_URL.replace(/\/$/, '');
   try {
     const r = await fetch(`${supaUrl}/auth/v1/user`, {
       headers: {
@@ -105,8 +107,8 @@ async function withAdminAuth(request, env, handler) {
 // POST /admin/api/devis — formulaire public
 // ================================================================
 async function handleDemandeDevis(request, env) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-    return jsonError(500, 'Configuration serveur manquante (secrets non définis)');
+  if (!env.SUPABASE_SERVICE_ROLE_KEY) {
+    return jsonError(500, 'Secret SUPABASE_SERVICE_ROLE_KEY non configuré dans Cloudflare dashboard → Settings → Variables and Secrets');
   }
 
   let body;
@@ -189,7 +191,7 @@ async function handleCreerDevis(request, env) {
 
   // Réserver un numéro atomique
   const rpcRes = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/rpc/reserver_numero_devis`,
+    `${SUPABASE_URL}/rest/v1/rpc/reserver_numero_devis`,
     {
       method: 'POST',
       headers: sbHeaders(env, true),
@@ -359,7 +361,7 @@ function sbHeaders(env, serviceRole = true) {
 }
 
 function sbFetch(env, resource, method, body, prefer) {
-  const url = `${env.SUPABASE_URL}/rest/v1/${resource}`;
+  const url = `${SUPABASE_URL}/rest/v1/${resource}`;
   const headers = {
     'Content-Type': 'application/json',
     'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
