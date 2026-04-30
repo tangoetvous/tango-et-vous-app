@@ -817,7 +817,12 @@ function validateInfos(){
   if(!S.role){showErr('Merci de choisir votre rôle.');return false;}
   const p=document.getElementById('i-pre'),n=document.getElementById('i-nom'),
         e=document.getElementById('i-eml'),t=document.getElementById('i-tel');
-  if(!p?.value.trim()||!n?.value.trim()||!e?.value.trim()||!t?.value.trim()){showErr('Merci de remplir tous les champs obligatoires.');return false;}
+  // Si les champs infos ne sont plus dans le DOM (autre étape affichée), utiliser l'état sauvegardé
+  const prenom = p ? p.value.trim() : S.prenom;
+  const nom    = n ? n.value.trim() : S.nom;
+  const email  = e ? e.value.trim() : S.email;
+  const tel    = t ? t.value.trim() : S.tel;
+  if(!prenom||!nom||!email||!tel){showErr('Merci de remplir tous les champs obligatoires.');return false;}
   return true;
 }
 

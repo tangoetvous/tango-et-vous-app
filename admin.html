@@ -1811,10 +1811,17 @@ function _appliquerYogaConfirmPresence(d) {
 }
 
 // Dispatcher (postMessage iframe + localStorage + BroadcastChannel)
+var _msgDedup = {};
 function traiterMsgInscription(msg, doRender) {
   if (!msg || !msg.type) return;
+  // BroadcastChannel + postMessage arrivent simultanément depuis la même iframe → dédupliquer
+  var _fp = msg.type + '|' + ((msg.data && (msg.data.email || msg.data.prenom)) || '') + '|' + Math.floor(Date.now()/5000);
+  if (_msgDedup[_fp]) return;
+  _msgDedup[_fp] = true;
+  setTimeout(function(){ delete _msgDedup[_fp]; }, 10000);
+
   if (msg.type === 'stageInscription') { _appliquerStageInscription(msg.data); if(!IS_DEMO){chargerDonnees();return;} }
-  if (msg.type === 'coursInscription') _appliquerCoursInscription(msg.data);
+  if (msg.type === 'coursInscription') { _appliquerCoursInscription(msg.data); if(!IS_DEMO){setTimeout(chargerDonnees,2000);} }
   if (msg.type === 'essaiInscription') _appliquerEssaiInscription(msg.data);
   if (msg.type === 'yogaEssaiInscription') _appliquerYogaEssaiInscription(msg.data);
   if (msg.type === 'yogaConfirmerPresence') _appliquerYogaConfirmPresence(msg.data);
