@@ -4844,6 +4844,10 @@ function handleAction(action, btn) {
         });
       })();
       break;
+    case 'toggle-devis-vue':
+      _devisVue = (_devisVue === 'demandes') ? 'liste' : 'demandes';
+      renderTab();
+      break;
     case 'emettre-devis':
       (function() {
         var id = btn.dataset.id;
@@ -8675,6 +8679,82 @@ function renderNotifications() {
   return h;
 }
 
+var _devisVue = 'demandes'; // 'demandes' | 'liste'
+
+function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
+  if (!devisList.length) {
+    return '<div class="empty-state">Aucun devis généré pour l\'instant.<br>Cliquez sur "Créer un devis" depuis une demande, ou "📄 Nouveau devis" pour un devis autonome.</div>';
+  }
+
+  // Index demande_id → demande (pour retrouver l'email client)
+  var demandeById = {};
+  demandes.forEach(function(d) { demandeById[d.id] = d; });
+
+  var h = '';
+  var sorted = devisList.slice().sort(function(a, b) {
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  sorted.forEach(function(dv) {
+    var st = STATUT_DEVIS[dv.statut] || { cls:'pill-warn', lbl: dv.statut };
+    var montant = dv.montant_ht ? Number(dv.montant_ht).toLocaleString('fr-FR') + '€ HT' : '';
+    var demande = dv.demande_id ? demandeById[dv.demande_id] : null;
+    var clientEmail = demande ? (demande.email || '') : '';
+    var clientNomComplet = demande
+      ? ((demande.civilite ? demande.civilite + ' ' : '') + (demande.prenom||'') + ' ' + (demande.nom||'')).trim()
+      : (dv.client_nom || '');
+    var dt = dv.date_emission || (dv.created_at ? dv.created_at.slice(0,10) : '');
+    var evtDate = dv.evt_date ? ' · 📅 ' + dv.evt_date : '';
+    var evtLieu = dv.evt_lieu ? ' · 📍 ' + dv.evt_lieu : '';
+
+    // URL Gmail compose
+    var gmailSubject = encodeURIComponent('Devis ' + dv.numero + ' – Tango & Vous / Le Regard Se Pose');
+    var gmailBody = encodeURIComponent(
+      'Bonjour ' + (demande ? (demande.prenom || dv.client_nom) : dv.client_nom) + ',\n\n'
+      + 'Veuillez trouver ci-joint notre devis ' + dv.numero + (dv.evt_date ? ' pour votre événement du ' + dv.evt_date : '') + '.\n\n'
+      + 'N\'hésitez pas à me contacter pour toute question.\n\n'
+      + 'Cordialement,\n'
+      + 'Tango & Vous — Le Regard Se Pose\n'
+      + 'tangoetvous@gmail.com · 07 73 27 59 06'
+    );
+    var gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1'
+      + (clientEmail ? '&to=' + encodeURIComponent(clientEmail) : '')
+      + '&su=' + gmailSubject
+      + '&body=' + gmailBody;
+
+    h += '<div class="card">';
+    h += '<div class="card-top"><div>'
+      + '<div class="card-nom" style="display:flex;align-items:center;gap:8px;">'
+      +   '<span style="color:var(--gold);font-weight:700;">' + dv.numero + '</span>'
+      +   '<span class="pill ' + st.cls + '" style="font-size:11px;">' + st.lbl + '</span>'
+      + '</div>'
+      + '<div class="card-sub">'
+      +   (dv.client_nom ? dv.client_nom : '') + (montant ? ' · ' + montant : '') + (dt ? ' · ' + dt : '')
+      + '</div>';
+    if (dv.evt_date || dv.evt_lieu) {
+      h += '<div style="font-size:12px;color:var(--dim);margin-top:2px;">' + evtDate.replace(' · ','') + evtLieu + '</div>';
+    }
+    h += '</div></div>';
+
+    // Prestations
+    if (Array.isArray(dv.prestations) && dv.prestations.length) {
+      var presLabels = dv.prestations.map(function(p){ return p.intitule || '—'; }).join(' · ');
+      h += '<div style="font-size:12px;color:var(--dim);margin-top:6px;">' + presLabels + '</div>';
+    }
+
+    // Boutons
+    h += '<div class="btn-row" style="margin-top:10px;">';
+    h += '<a href="/generateur-devis.html?numero=' + encodeURIComponent(dv.numero) + '" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📄 Ouvrir / Retoucher</a>';
+    h += '<a href="' + gmailUrl + '" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Envoyer par email</a>';
+    if (dv.statut === 'brouillon') {
+      h += '<button class="btn btn-ghost" style="font-size:12px;" data-action="emettre-devis" data-id="' + dv.id + '">✓ Marquer émis</button>';
+    }
+    h += '</div></div>';
+  });
+
+  return h;
+}
+
 function renderDevis() {
   var demandes = adminData.demandesDevis || [];
   var devisList = adminData.devisList || [];
@@ -8702,7 +8782,10 @@ function renderDevis() {
 
   var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap;">'
     + '<h2 style="margin:0;font-size:16px;">📋 Devis</h2>'
-    + '<div style="display:flex;gap:8px;">'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    + '<button class="btn btn-ghost" style="font-size:13px;" data-action="toggle-devis-vue">'
+    + (_devisVue === 'demandes' ? '📂 Voir les devis générés ('+devisList.length+')' : '📥 Voir les demandes ('+demandes.length+')')
+    + '</button>'
     + '<a href="/demande-devis.html" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:13px;">🔗 Formulaire client</a>'
     + '<a href="/generateur-devis.html" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:13px;">📄 Nouveau devis</a>'
     + '</div></div>';
@@ -8710,6 +8793,11 @@ function renderDevis() {
   if (!demandes.length && !devisList.length) {
     return h + '<div class="empty-state">Aucune demande de devis pour l\'instant.<br>'
       + 'Les demandes arrivent via le formulaire <a href="/demande-devis.html" target="_blank" style="color:var(--gold);">demande-devis.html</a>.</div>';
+  }
+
+  // Vue : liste des devis générés
+  if (_devisVue === 'liste') {
+    return h + renderListeDevis(devisList, demandes, STATUT_DEVIS);
   }
 
   // Index: demande_id → devis
