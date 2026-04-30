@@ -5413,10 +5413,65 @@ function ficheEleveInscrit(e, borderStyle, grise) {
     +(typeLbl?'<span class="pill pill-ok" style="font-size:8px;">'+typeLbl+'</span>':'')
     +(paiLbl?'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+'</span>':'')
     +(e.email?'<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;font-size:11px;">✉️</a>':'')
+    +(!e.partenaire?'<button class="btn-point btn-ghost" onclick="ouvrirModalLierPartenaire(\''+e.id+'\')" title="Lier un partenaire" style="font-size:11px;">🔗</button>':'')
     +'<button class="btn-point btn-ghost" onclick="basculerRole(\''+e.id+'\')" title="Changer guideur/guidée" style="font-size:11px;">'+(e.role==='guideur'?'👨':'👩')+'</button>'
     +'<button class="btn-point btn-ghost" onclick="ouvrirChangementCours(\''+e.id+'\')" title="Changer de cours" style="font-size:11px;">✏️</button>'
     +'<button class="btn-point btn-ghost" onclick="supprimerEleve(\''+e.id+'\')" title="Supprimer l\'élève" style="font-size:11px;color:#ff6b6b;">🗑</button>'
     +'</div></div>';
+}
+function ouvrirModalLierPartenaire(id) {
+  var e = (adminData.coursTango||[]).find(function(x){return x.id===id;});
+  if (!e) return;
+  var sai = e.saison || saisonCourante();
+  var eligibles = (adminData.coursTango||[]).filter(function(x){
+    return x.ville===e.ville && x.niveau===e.niveau && x.statut==='inscrit'
+      && (x.saison||saisonCourante())===sai
+      && !x.partenaire && x.id!==id;
+  });
+  eligibles.sort(function(a,b){return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);});
+  var roleLbl = e.role==='guideur'?'Guideur':'Guidée';
+  var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
+  var box = gel('modal-contact-box'); if(!box) return;
+  var h = '<div class="modal-titre">🔗 Lier un partenaire</div>'
+    +'<div style="font-size:13px;font-weight:600;margin-bottom:12px;">'+escHtml((e.prenom||'')+' '+(e.nom||''))
+    +' <span class="pill '+rcls+'" style="font-size:9px;margin-left:4px;">'+roleLbl+'</span></div>';
+  if (!eligibles.length) {
+    h += '<div class="box-info">Aucune autre personne sans partenaire dans ce cours.</div>'
+      +'<div class="btn-row" style="margin-top:10px;"><button class="btn btn-ghost" data-action="fermer-contact">Fermer</button></div>';
+  } else {
+    var opts = eligibles.map(function(p){
+      var rLbl = p.role==='guideur'?'Guideur':'Guidée';
+      return '<option value="'+p.id+'">'+escHtml((p.prenom||'')+' '+(p.nom||''))+' — '+rLbl+'</option>';
+    }).join('');
+    h += '<div class="field"><label>Partenaire</label>'
+      +'<select id="lp-partner" style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:13px;">'+opts+'</select></div>'
+      +'<div class="btn-row" style="margin-top:14px;">'
+      +'<button class="btn btn-gold" style="flex:2;" onclick="validerLierPartenaire(\''+id+'\')">🔗 Lier</button>'
+      +'<button class="btn btn-ghost" data-action="fermer-contact">Annuler</button>'
+      +'</div>';
+  }
+  box.innerHTML = h;
+  gel('modal-contact').classList.add('vis');
+}
+function validerLierPartenaire(id) {
+  var e = (adminData.coursTango||[]).find(function(x){return x.id===id;});
+  var sel = gel('lp-partner');
+  if (!e || !sel || !sel.value) return;
+  var p = (adminData.coursTango||[]).find(function(x){return x.id===sel.value;});
+  if (!p) return;
+  var eNom = ((e.prenom||'')+' '+(e.nom||'')).trim();
+  var pNom = ((p.prenom||'')+' '+(p.nom||'')).trim();
+  e.partenaire = pNom;
+  p.partenaire = eNom;
+  fermerContact();
+  afficherToast('✓ '+eNom+' ↔ '+pNom+' liés');
+  renderTab();
+  if (!IS_DEMO) {
+    TEV.client.from('inscriptions_cours').update({partenaire:pNom}).eq('id',e.id).catch(function(){});
+    TEV.client.from('inscriptions_cours').update({partenaire:eNom}).eq('id',p.id).catch(function(){});
+    TEV.client.from('eleves').update({partenaire:pNom}).eq('email',(e.email||'').toLowerCase()).catch(function(){});
+    TEV.client.from('eleves').update({partenaire:eNom}).eq('email',(p.email||'').toLowerCase()).catch(function(){});
+  }
 }
 function ouvrirChangementCours(id) {
   var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
