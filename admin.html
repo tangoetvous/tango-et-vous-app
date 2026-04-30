@@ -4872,6 +4872,35 @@ function handleAction(action, btn) {
         }).catch(function(e) { btn.disabled=false; btn.textContent='✓ Marquer émis'; afficherToast('Erreur: '+e.message); });
       })();
       break;
+    case 'supprimer-devis':
+      (function() {
+        var id = btn.dataset.id;
+        var statut = btn.dataset.statut;
+        var numero = btn.dataset.numero;
+        if (IS_DEMO) { afficherToast('Mode démo — action désactivée'); return; }
+        if (statut === 'brouillon') {
+          if (!confirm('Supprimer définitivement le devis '+numero+' ?')) return;
+          btn.disabled = true;
+          TEV.client.from('devis').delete().eq('id', id)
+            .then(function(res) {
+              if (res.error) { btn.disabled=false; afficherToast('Erreur: '+(res.error.message||'')); return; }
+              afficherToast('🗑️ Devis supprimé');
+              chargerDonnees();
+            }).catch(function(e) { btn.disabled=false; afficherToast('Erreur: '+e.message); });
+        } else {
+          if (!confirm('Ce devis ('+numero+') a déjà été émis.\nVoulez-vous l\'annuler plutôt que le supprimer ?')) return;
+          btn.disabled = true; btn.textContent = '⏳';
+          TEV.getSession().then(function(session) {
+            var tok = session ? session.access_token : '';
+            return fetch('/api/devis/'+id+'/annuler', { method:'PATCH', headers:{'Authorization':'Bearer '+tok} });
+          }).then(function(r){ return r.json(); }).then(function(res) {
+            btn.disabled = false; btn.textContent = '🗑️';
+            if (res.id || res.statut) { afficherToast('✓ Devis annulé'); chargerDonnees(); }
+            else afficherToast('Erreur: '+(res.error||'inconnue'));
+          }).catch(function(e) { btn.disabled=false; btn.textContent='🗑️'; afficherToast('Erreur: '+e.message); });
+        }
+      })();
+      break;
     case 'ouvrir-preinscription':
       (function(){ try { var _cfg=JSON.parse(localStorage.getItem('tev_config_saison')||'{}');_cfg.preInscriptionOuverte=true;_cfg.saisonProchaine=saisonSuivante();localStorage.setItem('tev_config_saison',JSON.stringify(_cfg));if(!IS_DEMO)TEV.setParam('tev_config_saison',_cfg).catch(function(){}); } catch(ex){} })();
       afficherToast('✓ Pré-inscriptions '+saisonSuivante()+' ouvertes');
@@ -8765,6 +8794,7 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
     if (dv.statut === 'brouillon') {
       h += '<button class="btn btn-ghost" style="font-size:12px;" data-action="emettre-devis" data-id="' + dv.id + '">✓ Marquer émis</button>';
     }
+    h += '<button class="btn btn-ghost" style="font-size:12px;color:#e55;margin-left:auto;" data-action="supprimer-devis" data-id="' + dv.id + '" data-statut="' + dv.statut + '" data-numero="' + dv.numero + '">🗑️</button>';
     h += '</div></div>';
   });
 
@@ -8924,6 +8954,7 @@ function renderDevis() {
             + (montant ? '<span style="font-size:12px;color:var(--dim);">'+montant+'</span>' : '')
             + '<a href="/generateur-devis.html?numero='+encodeURIComponent(dv.numero)+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:11px;padding:2px 8px;">📄 Ouvrir</a>'
             + (dv.statut==='brouillon' ? '<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;" data-action="emettre-devis" data-id="'+dv.id+'">✓ Marquer émis</button>' : '')
+            + '<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;color:#e55;" data-action="supprimer-devis" data-id="'+dv.id+'" data-statut="'+dv.statut+'" data-numero="'+dv.numero+'">🗑️</button>'
             + '</div>';
         });
         card += '</div>';
