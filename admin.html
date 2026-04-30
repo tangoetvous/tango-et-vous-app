@@ -4045,6 +4045,9 @@ function _renderTabSiPasFormulaire() {
   var tc = gel('tab-content');
   if (tc && tc.querySelector('iframe')) return; // formulaire actif — on laisse tranquille
   if (currentTab === 'eleves-tango' && sousOngletEleves === 'inscrire') return; // saisie en cours
+  // Ne pas re-rendre si l'utilisateur est en train de saisir dans un champ
+  var ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return;
   renderTab();
 }
 
