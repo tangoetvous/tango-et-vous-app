@@ -6720,6 +6720,9 @@ function validerReport(reportId, btn) {
 // ================================================================
 // TAB STAGES
 // ================================================================
+function _normNom(s) {
+  return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+}
 function _groupCouples(list) {
   var used = [], groups = [];
   for (var i = 0; i < list.length; i++) {
@@ -6730,9 +6733,9 @@ function _groupCouples(list) {
       for (var j = i + 1; j < list.length; j++) {
         if (used.indexOf(j) >= 0) continue;
         var q = list[j];
-        var qName = (q.prenom + ' ' + q.nom).trim().toLowerCase();
-        var pPart = p.partenaire.toLowerCase();
-        // Correspondance exacte ou double-nom tronqué (ex: "GALLIOT" vs "GALLIOT LAPOULE")
+        var qName = _normNom((q.prenom + ' ' + q.nom).trim());
+        var pPart = _normNom(p.partenaire);
+        // Correspondance exacte, double-nom tronqué, ou accents ignorés
         if (qName === pPart || qName.startsWith(pPart + ' ') || pPart.startsWith(qName + ' ')) {
           partIdx = j; break;
         }
