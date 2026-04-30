@@ -378,6 +378,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
       <div class="admin-nav-row">
         <button class="tab-btn" data-tab="agenda" style="color:#38bdf8"><span class="tab-icon">📅</span><span class="tab-label">Agenda</span></button>
         <button class="tab-btn" data-tab="resa-salles" style="color:#67e8f9"><span class="tab-icon">🏢</span><span class="tab-label">Résa Salles</span></button>
+        <button class="tab-btn" data-tab="cours-particuliers" style="color:#f9a8d4"><span class="tab-icon">🎵</span><span class="tab-label">Cours part.</span></button>
         <button class="tab-btn" data-tab="devis" style="color:#fde68a"><span class="tab-icon">📋</span><span class="tab-label">Devis</span></button>
       </div>
       <div class="admin-nav-row">
@@ -4016,7 +4017,7 @@ function switchTab(tab) {
       'eleves-tango':'👥 Élèves tango','repertoire':'📋 Répertoire',
       'cours-tango':'🎓 Inscriptions Tango','essai':'🎯 Séances d\'essai',
       'cartes':'🎴 Cartes 10','stages':'💃 Stages','milonga':'🎶 Milonga',
-      'resa-salles':'🏢 Résa Salles',
+      'resa-salles':'🏢 Résa Salles','cours-particuliers':'🎵 Cours particuliers',
       'sorano':'🏛 Sorano','yoga':'🧘 Yoga','agenda':'📅 Agenda',
       'publications':'📝 Publications','whatsapp':'💬 WhatsApp','tarifs':'⚙️ Paramètres',
       'discussions':'🗨️ Discussions','devis':'📋 Devis','notifications':'🔔 Notifications'
@@ -4075,6 +4076,7 @@ function renderTab() {
     else if (currentTab==='milonga')      html=renderMilongaPresences();
     else if (currentTab==='discussions')  html=renderDiscussions();
     else if (currentTab==='resa-salles')  html=renderResaSalles();
+    else if (currentTab==='cours-particuliers') html=renderCoursParticuliers();
     else if (currentTab==='devis')        html=renderDevis();
     else if (currentTab==='notifications') html=renderNotifications();
     if(isSaisonPassee()){
@@ -4233,6 +4235,23 @@ function bindTabEvents(el) {
     if (ev.target.id==='am-lot-type-sel') {
       var stF = el.querySelector('#am-lot-stage-fields');
       if (stF) stF.style.display = ev.target.value==='stage'?'block':'none';
+    }
+    // Statut cours particulier
+    if (ev.target.dataset.action==='statut-cp') {
+      (function() {
+        var selEl = ev.target;
+        var cpId = selEl.dataset.id;
+        var newStatut = selEl.value;
+        var cp = (adminData.coursParticuliers||[]).find(function(x){ return String(x.id)===String(cpId); });
+        if (cp) cp.statut = newStatut;
+        if (!IS_DEMO) {
+          TEV.client.from('cours_particuliers').update({ statut: newStatut }).eq('id', cpId)
+            .then(function() { afficherToast('✓ Statut mis à jour'); })
+            .catch(function(e) { afficherToast('Erreur: '+(e.message||'')); });
+        } else {
+          afficherToast('✓ Statut mis à jour (démo)');
+        }
+      })();
     }
     // Statut demande de devis
     if (ev.target.dataset.action==='statut-demande-devis') {
@@ -8898,6 +8917,81 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
     h += '</div></div>';
   });
 
+  return h;
+}
+
+// ================================================================
+// COURS PARTICULIERS
+// ================================================================
+function renderCoursParticuliers() {
+  var liste = (adminData.coursParticuliers || []);
+  var STATUTS = {
+    'nouveau':    { cls:'pill-warn',  lbl:'Nouveau' },
+    'en_cours':   { cls:'pill-ok',    lbl:'En cours' },
+    'termine':    { cls:'',           lbl:'Terminé' },
+    'annule':     { cls:'pill-err',   lbl:'Annulé' },
+  };
+  var STATUTS_OPTS = ['nouveau','en_cours','termine','annule'];
+
+  var nb = liste.filter(function(cp){ return !cp.statut || cp.statut==='nouveau'; }).length;
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap;">'
+    + '<h2 style="margin:0;font-size:16px;">🎵 Cours particuliers'+(nb?' <span style="font-size:13px;color:#f9a8d4;">('+nb+' nouveau'+(nb>1?'x':'')+')</span>':'')+'</h2>'
+    + '<a href="/cours-particuliers.html" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:13px;">🔗 Formulaire</a>'
+    + '</div>';
+
+  if (!liste.length) {
+    return h + '<div class="empty-state">Aucune demande de cours particulier pour l\'instant.<br>'
+      + 'Les demandes arrivent via <a href="/cours-particuliers.html" target="_blank" style="color:var(--gold);">cours-particuliers.html</a>.</div>';
+  }
+
+  var nouveaux  = liste.filter(function(cp){ return !cp.statut||cp.statut==='nouveau'; });
+  var enCours   = liste.filter(function(cp){ return cp.statut==='en_cours'; });
+  var termines  = liste.filter(function(cp){ return cp.statut==='termine'||cp.statut==='annule'; });
+
+  function cardCP(cp) {
+    var dt = cp.created_at ? _discRelDate(cp.created_at) : '';
+    var st = STATUTS[cp.statut || 'nouveau'] || STATUTS['nouveau'];
+    var card = '<div class="card">';
+    card += '<div class="card-top"><div>'
+      + '<div class="card-nom">'+escHtml((cp.prenom||'')+' '+(cp.nom||''))+'</div>'
+      + '<div class="card-sub">'+(cp.email||'')+(cp.tel?' · '+cp.tel:'')+(dt?' · '+dt:'')+'</div>'
+      + '</div>';
+    card += '<select class="input" style="width:auto;font-size:12px;padding:4px 8px;" data-action="statut-cp" data-id="'+cp.id+'">';
+    STATUTS_OPTS.forEach(function(s){
+      card += '<option value="'+s+'"'+(( cp.statut||'nouveau')===s?' selected':'')+'>'+(STATUTS[s]?STATUTS[s].lbl:s)+'</option>';
+    });
+    card += '</select></div>';
+
+    var infoParts = [];
+    if (cp.professeur) infoParts.push('👤 '+cp.professeur);
+    if (cp.duree)      infoParts.push('⏱ '+cp.duree);
+    if (cp.lieu)       infoParts.push('📍 '+cp.lieu+(cp.lieu_detail?' ('+cp.lieu_detail+')':''));
+    if (cp.niveau)     infoParts.push('📊 '+cp.niveau);
+    if (infoParts.length) {
+      card += '<div style="margin-top:6px;font-size:12px;color:var(--dim);">'+infoParts.join(' · ')+'</div>';
+    }
+    if (cp.objectifs) {
+      card += '<div style="margin-top:6px;font-size:13px;color:var(--gold);font-weight:600;">'+escHtml(cp.objectifs)+'</div>';
+    }
+    if (cp.dispos) {
+      card += '<div style="margin-top:6px;font-size:12px;color:var(--text);">🗓 '+escHtml(cp.dispos)+'</div>';
+    }
+    if (cp.urgence) {
+      card += '<div style="margin-top:4px;font-size:12px;color:#f87171;">⚡ Urgence : '+escHtml(cp.urgence)+'</div>';
+    }
+    if (cp.remarque) {
+      card += '<div style="margin-top:6px;font-size:13px;color:var(--text);white-space:pre-wrap;background:var(--s3);border-radius:6px;padding:8px 10px;border:1px solid var(--border);">'+escHtml(cp.remarque)+'</div>';
+    }
+    card += '<div class="btn-row" style="margin-top:8px;">';
+    if (cp.email) card += '<a href="'+mailtoGmail(cp.email,'Tango &amp; Vous')+'" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Email</a>';
+    if (cp.tel)   card += '<a href="tel:'+cp.tel+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📞</a>';
+    card += '</div></div>';
+    return card;
+  }
+
+  if (nouveaux.length)  { h += '<div class="section-hdr">Nouvelles demandes ('+nouveaux.length+')</div>';  nouveaux.forEach(function(cp){ h+=cardCP(cp); }); }
+  if (enCours.length)   { h += '<div class="section-hdr" style="margin-top:16px;">En cours ('+enCours.length+')</div>'; enCours.forEach(function(cp){ h+=cardCP(cp); }); }
+  if (termines.length)  { h += '<div class="section-hdr" style="margin-top:16px;">Terminées / Annulées ('+termines.length+')</div>'; termines.forEach(function(cp){ h+=cardCP(cp); }); }
   return h;
 }
 
