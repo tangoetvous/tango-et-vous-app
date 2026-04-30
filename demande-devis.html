@@ -1010,6 +1010,11 @@ body {
           </div>
         </div>
 
+        <div class="field">
+          <label for="horaireEvenement">Horaire envisagé <span style="color:var(--dim);font-weight:400;">(facultatif)</span></label>
+          <input type="text" id="horaireEvenement" placeholder="Ex : 20h30, après le dîner, 19h–21h…">
+        </div>
+
         <div class="field-row cols-2-1">
           <div class="field">
             <label for="lieu">Lieu / Ville <span class="req">*</span></label>
@@ -1277,6 +1282,34 @@ body {
         </div>
       </div>
 
+      <div class="field">
+        <label>Vous êtes</label>
+        <div class="pill-group" id="typeContactPills">
+          <div class="pill active" data-value="particulier">Particulier</div>
+          <div class="pill" data-value="societe">Société / Organisation</div>
+        </div>
+      </div>
+
+      <div class="field-conditional show" id="field-particulier-addr">
+        <div class="field">
+          <label for="adresseParticulier">Adresse <span style="color:var(--dim);font-weight:400;">(pour le devis)</span></label>
+          <textarea id="adresseParticulier" rows="2" placeholder="12 rue des Fleurs&#10;75020 Paris" style="width:100%;resize:vertical;background:var(--field-bg,#1a1a1a);color:inherit;border:1px solid var(--border,#333);border-radius:8px;padding:10px 12px;font-size:15px;font-family:inherit;"></textarea>
+        </div>
+      </div>
+
+      <div class="field-conditional" id="field-societe-block">
+        <div class="field">
+          <label for="nomSociete">Nom de la société / organisation <span class="req">*</span></label>
+          <input type="text" id="nomSociete" placeholder="Acme SAS, Mairie de Paris…">
+          <div class="field-error" id="nomSocieteError">Merci de renseigner le nom de la société.</div>
+        </div>
+        <div class="field">
+          <label for="adresseSociete">Adresse de facturation <span class="req">*</span></label>
+          <textarea id="adresseSociete" rows="3" placeholder="12 rue des Fleurs&#10;75020 Paris" style="width:100%;resize:vertical;background:var(--field-bg,#1a1a1a);color:inherit;border:1px solid var(--border,#333);border-radius:8px;padding:10px 12px;font-size:15px;font-family:inherit;"></textarea>
+          <div class="field-error" id="adresseSocieteError">Merci de renseigner l'adresse.</div>
+        </div>
+      </div>
+
       <div class="field-row cols-2">
         <div class="field">
           <label for="prenom">Prénom <span class="req">*</span></label>
@@ -1428,7 +1461,8 @@ const state = {
   prestations: new Set(),
   mode: 'event',          // 'event' | 'private'
   civilite: '',
-  pourQui: ''
+  pourQui: '',
+  typeContact: 'particulier'
 };
 
 const isDemoMode = CONFIG.SCRIPT_URL.includes('VOTRE_ID_DEPLOIEMENT');
@@ -1516,6 +1550,18 @@ function bindEvents() {
       pill.classList.add('selected');
       state.pourQui = pill.dataset.value;
       document.getElementById('pourQuiError').style.display = 'none';
+    });
+  });
+
+  // Toggle particulier / société
+  document.querySelectorAll('#typeContactPills .pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('#typeContactPills .pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      state.typeContact = pill.dataset.value;
+      const isSoc = state.typeContact === 'societe';
+      document.getElementById('field-societe-block').classList.toggle('show', isSoc);
+      document.getElementById('field-particulier-addr').classList.toggle('show', !isSoc);
     });
   });
 
@@ -1684,6 +1730,21 @@ function validateStep(n) {
 
   if (n === 4) {
     valid = checkRequired(['prenom', 'nom', 'email', 'telephone']);
+    // Société
+    if (state.typeContact === 'societe') {
+      const nomSoc = document.getElementById('nomSociete');
+      if (!nomSoc.value.trim()) {
+        document.getElementById('nomSocieteError').style.display = 'block';
+        nomSoc.closest('.field').classList.add('has-error');
+        valid = false;
+      }
+      const adrSoc = document.getElementById('adresseSociete');
+      if (!adrSoc.value.trim()) {
+        document.getElementById('adresseSocieteError').style.display = 'block';
+        adrSoc.closest('.field').classList.add('has-error');
+        valid = false;
+      }
+    }
     // Email
     const email = document.getElementById('email');
     if (email.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
@@ -1769,6 +1830,7 @@ function renderRecap() {
         </div>
         ${row('Type', get('typeEvenement'))}
         ${row('Date', dateDisplay)}
+        ${row('Horaire', get('horaireEvenement'))}
         ${row('Lieu', lieuFull)}
         ${row('Invités', get('nombreInvites'))}
       </div>
@@ -1838,15 +1900,21 @@ function renderRecap() {
 
   // ----- Contact (commun aux deux modes) -----
   const fullName = [state.civilite, get('prenom'), get('nom')].filter(Boolean).join(' ');
+  const isSoc = state.typeContact === 'societe';
+  const adresseVal = isSoc
+    ? document.getElementById('adresseSociete').value.trim()
+    : document.getElementById('adresseParticulier').value.trim();
   sections.push(`
     <div class="recap-section">
       <div class="recap-section-head">
         <h3>Vos coordonnées</h3>
         <button type="button" class="recap-edit" data-edit="4">Modifier</button>
       </div>
+      ${isSoc ? row('Société', get('nomSociete')) : ''}
       ${row('Nom', fullName)}
       ${row('Email', get('email'))}
       ${row('Téléphone', get('telephone'))}
+      ${adresseVal ? `<div class="recap-row"><span class="key">Adresse</span><span class="val" style="white-space:pre-line">${escapeHtml(adresseVal)}</span></div>` : ''}
     </div>
   `);
 
@@ -1917,6 +1985,9 @@ async function submit() {
     nom: get('nom'),
     email: get('email'),
     telephone: get('telephone'),
+    type_contact: state.typeContact,
+    nom_societe: state.typeContact === 'societe' ? get('nomSociete') : '',
+    adresse_facturation: state.typeContact === 'societe' ? document.getElementById('adresseSociete').value.trim() : document.getElementById('adresseParticulier').value.trim(),
     rgpd: document.getElementById('rgpd').checked,
 
     // Méta
@@ -1933,7 +2004,8 @@ async function submit() {
       lieu: get('lieu'),
       code_postal: get('codePostal'),
       nombre_invites: get('nombreInvites'),
-      duree_prestation: get('dureePrestation')
+      duree_prestation: get('dureePrestation'),
+      horaire_evenement: get('horaireEvenement')
     });
   } else {
     Object.assign(payload, {
