@@ -1398,8 +1398,10 @@ function soumettreEssaiStatut(email, statut) {
   var lbls={demande:'Demande en attente',attente_paiement:'Validé·e'};
   afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' · '+cours);
 }
-function toggleInteret(date, email, btn) {
-  var e=(adminData.essai||[]).find(function(x){return x.date===date&&x.email===email;});
+function toggleInteret(date, email, btn, id) {
+  var e = id
+    ? (adminData.essai||[]).find(function(x){return String(x.id)===String(id);})
+    : (adminData.essai||[]).find(function(x){return x.date===date&&x.email===email;});
   if(!e)return;
   e.interesse=!e.interesse;
   btn.textContent=e.interesse?'❤️':'🤍';
@@ -1757,8 +1759,8 @@ function _appliquerEssaiInscription(d) {
   var statut = d.statut || (avecPart ? 'confirme' : (d.role === 'guidee' ? 'attente' : 'confirme'));
   var partNom = d.partenaire || (((d.partenairePrenom||'')+' '+(d.partenaireNom||'')).trim());
   var partEmail = d.partenaireEmail || d.emailPartenaire || '';
-  // Eviter doublon (même email + date)
-  var existe = adminData.essai.some(function(e){ return e.email===d.email && e.date===date; });
+  // Eviter doublon (même email + date + nom) — le nom différencie les couples avec email partagé
+  var existe = adminData.essai.some(function(e){ return e.email===d.email && e.date===date && (e.nom||'').toLowerCase()===(d.nom||'').toLowerCase(); });
   if (!existe) {
     adminData.essai.push({
       date:date, ville:d.ville||'paris', niveau:_normNiveau(d.niveau),
@@ -1772,7 +1774,7 @@ function _appliquerEssaiInscription(d) {
     var pNom    = d.partenaireNom    || '';
     var pEmail  = partEmail;
     var pRole   = _normRole(d.rolePartenaire) || (d.role==='guideur'?'guidee':'guideur');
-    var existeP = adminData.essai.some(function(e){ return e.email===pEmail && e.date===date && pEmail; });
+    var existeP = adminData.essai.some(function(e){ return e.email===pEmail && e.date===date && pEmail && (e.nom||'').toLowerCase()===(pNom||'').toLowerCase(); });
     if (!existeP) {
       adminData.essai.push({
         date:date, ville:d.ville||'paris', niveau:_normNiveau(d.niveau),
@@ -4333,13 +4335,13 @@ function handleAction(action, btn) {
       rafraichirEssais(btn);
       break;
     case 'val-guidee-essai':
-      valGuideeEssai(btn.dataset.email||'', btn.dataset.date||'', btn);
+      valGuideeEssai(btn.dataset.email||'', btn.dataset.date||'', btn, btn.dataset.id||'');
       break;
     case 'pointer-essai-pres':
-      pointerEssai(btn.dataset.date, btn.dataset.email, true);
+      pointerEssai(btn.dataset.date, btn.dataset.email, true, btn.dataset.id||'');
       break;
     case 'pointer-essai-abs':
-      pointerEssai(btn.dataset.date, btn.dataset.email, false);
+      pointerEssai(btn.dataset.date, btn.dataset.email, false, btn.dataset.id||'');
       break;
     case 'env-j1':
       envJ1(btn.dataset.date, btn);
@@ -4474,7 +4476,7 @@ function handleAction(action, btn) {
       (function(id){ ouvrirModalConfirm('Supprimer cette inscription ?', function(){ supprimerCoursInscr(id); }); })(btn.dataset.id);
       break;
     case 'suppr-essai-inscr':
-      (function(em,dt){ ouvrirModalConfirm('Supprimer cet essai ?', function(){ supprimerEssaiInscr(em,dt); }); })(btn.dataset.email, btn.dataset.date);
+      (function(em,dt,rid){ ouvrirModalConfirm('Supprimer cet essai ?', function(){ supprimerEssaiInscr(em,dt,rid); }); })(btn.dataset.email, btn.dataset.date, btn.dataset.id||'');
       break;
     case 'suppr-yoga-inscr':
       (function(em,dt){ ouvrirModalConfirm('Supprimer cet essai yoga ?', function(){ supprimerYogaEssaiInscr(em,dt); }); })(btn.dataset.email, btn.dataset.date);
@@ -5054,7 +5056,7 @@ function handleAction(action, btn) {
       fermerContact();
       break;
     case 'toggle-interet':
-      toggleInteret(btn.dataset.date||'', btn.dataset.email||'', btn);
+      toggleInteret(btn.dataset.date||'', btn.dataset.email||'', btn, btn.dataset.id||'');
       break;
     case 'sauver-whatsapp-liens':
       (function() {
@@ -5800,8 +5802,8 @@ function renderEssai() {
           +'</div>'
           +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
           +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="email-attente" data-email="'+e.email+'" data-date="'+grp.date+'" data-niveau="'+grp.niveau+'" data-role="'+e.role+'">✉️</button>'
-          +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'">✓ Valider</button>'
-          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" title="Supprimer">✕</button>'
+          +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +'</div></div>';
       }
       _groupCouples(attenteGrp).forEach(function(g){
@@ -5874,10 +5876,10 @@ function renderEssai() {
           +(e.presenceConfirmee===true?'<span class="pill pill-ok" style="font-size:8px;">✓Conf.</span>':'')
           +pastille
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
-          +'<button class="btn-heart'+(e.interesse?' on':'')+'" data-action="toggle-interet" data-date="'+grp.date+'" data-email="'+e.email+'" title="Intérêt">'+(e.interesse?'❤️':'🤍')+'</button>'
-          +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'">✓</button>'
-          +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'">✗</button>'
-          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" title="Supprimer">✕</button>'
+          +'<button class="btn-heart'+(e.interesse?' on':'')+'" data-action="toggle-interet" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'" title="Intérêt">'+(e.interesse?'❤️':'🤍')+'</button>'
+          +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✓</button>'
+          +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +'</div></div>';
       };
       _groupCouples(conf).forEach(function(g){
@@ -6008,10 +6010,10 @@ function renderEssai() {
             +'</div>'
             +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
             +(vraiAtt
-              ?'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+date+'">✓ Valider</button>'
+              ?'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
               :'<span class="pill pill-ok" style="font-size:8px;">Validé.e</span>')
             +btnEmail(e.email,e.prenom+' '+e.nom)
-            +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+date+'" title="Supprimer">✕</button>'
+            +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
             +'</div></div>';
         };
         _groupCouples(ins).forEach(function(g){
@@ -6035,14 +6037,19 @@ function renderEssai() {
   h += futureBodyDN;
   return h;
 }
-function valGuideeEssai(email, date, btn) {
+function valGuideeEssai(email, date, btn, id) {
   btn.disabled=true; btn.textContent='⏳';
   if (IS_DEMO) {
-    var e=adminData.essai.find(function(x){return x.email===email&&x.date===date;});
+    var e = id
+      ? adminData.essai.find(function(x){return String(x.id)===String(id);})
+      : adminData.essai.find(function(x){return x.email===email&&x.date===date;});
     if(e){ e.statut='confirme'; e.presenceConfirmee=true; }
     renderTab(); return;
   }
-  TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('email',email).eq('date_essai',date).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓ Valider';});
+  var q = id
+    ? TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('id',id)
+    : TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('email',email).eq('date_essai',date);
+  q.then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓ Valider';});
 }
 function marquerAbsenceJour(date, email, btn) {
   var idx = -1;
@@ -6078,10 +6085,17 @@ function envoyerEmailAttente(email, date, niveau, role, btn) {
   afficherToast('⚠️ Emails non encore configurés (Brevo à implémenter)');
   if(btn){btn.disabled=false;btn.textContent='✉️';}
 }
-function pointerEssai(date, email, present) {
-  var e = adminData.essai.find(function(x){return x.email===email&&x.date===date;});
+function pointerEssai(date, email, present, id) {
+  var e = id
+    ? adminData.essai.find(function(x){return String(x.id)===String(id);})
+    : adminData.essai.find(function(x){return x.email===email&&x.date===date;});
   if (e) e.present = present;
-  if (!IS_DEMO) TEV.client.from('inscriptions_essai').update({presence_confirmee:!!present}).eq('email',email).eq('date_essai',date).catch(function(){});
+  if (!IS_DEMO) {
+    var q = id
+      ? TEV.client.from('inscriptions_essai').update({presence_confirmee:!!present}).eq('id',id)
+      : TEV.client.from('inscriptions_essai').update({presence_confirmee:!!present}).eq('email',email).eq('date_essai',date);
+    q.catch(function(){});
+  }
   renderTab();
 }
 function toggleMoisAcc(id) {
@@ -6981,13 +6995,18 @@ function supprimerCoursInscr(id) {
   adminData.coursTango = adminData.coursTango.filter(function(e){ return e.id !== id; });
   renderTab();
 }
-function supprimerEssaiInscr(email, date) {
+function supprimerEssaiInscr(email, date, id) {
   if (!adminData.essai) return;
-  adminData.essai = adminData.essai.filter(function(e){ return !(e.email===email && e.date===date); });
+  if (id) {
+    adminData.essai = adminData.essai.filter(function(e){ return String(e.id)!==String(id); });
+  } else {
+    adminData.essai = adminData.essai.filter(function(e){ return !(e.email===email && e.date===date); });
+  }
   if (!IS_DEMO) {
-    TEV.client.from('inscriptions_essai').delete()
-      .eq('email', email).eq('date_essai', date)
-      .then(function(res){
+    var q = id
+      ? TEV.client.from('inscriptions_essai').delete().eq('id', id)
+      : TEV.client.from('inscriptions_essai').delete().eq('email', email).eq('date_essai', date);
+    q.then(function(res){
         if (res && res.error) {
           console.error('Erreur suppression essai:', res.error);
           afficherToast('Erreur : ' + (res.error.message || res.error.code || 'suppression échouée'));
@@ -8642,11 +8661,11 @@ window.soumettreInscriptionDirecte = function(force) {
     var mpf = avecC?gel('di-montant-p-'+ci):null;
     var montantP = mpf?(parseFloat(mpf.value)||0):(formulePart==='carte10'?(TARIFS.carte10||0):(ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0);
     var ts_c = ts+idx*2, ts_p = ts+idx*2+1;
-    var existing = adminData.coursTango.find(function(e){return e.email===email&&e.cours===cours;});
+    var existing = adminData.coursTango.find(function(e){return e.email===email&&e.cours===cours&&(e.nom||'').toLowerCase()===(nom||'').toLowerCase();});
     if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.ville=ville;existing.niveau=niveau;existing.partenaire=partNomC;existing.emailPartenaire=pEmailC;if(tel)existing.tel=tel;}
     else{adminData.coursTango.push({id:'CT'+ts_c,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',partenaire:partNomC,emailPartenaire:pEmailC,type:formule,paiement:paie,montant:montant,dateInscription:today(),saison:sai});}
     if(avecC){
-      var existingP=adminData.coursTango.find(function(e){return pEmailC&&e.email===pEmailC&&e.cours===cours;});
+      var existingP=adminData.coursTango.find(function(e){return pEmailC&&e.email===pEmailC&&e.cours===cours&&(e.nom||'').toLowerCase()===(pNomC||'').toLowerCase();});
       if(existingP){existingP.statut='inscrit';existingP.type=formulePart;existingP.paiement=paiePart;existingP.montant=montantP;existingP.ville=ville;existingP.niveau=niveau;existingP.partenaire=prenom+' '+nom;existingP.emailPartenaire=email;if(pTelC)existingP.tel=pTelC;}
       else{adminData.coursTango.push({id:'CT'+ts_p,prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,role:roleP,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',partenaire:prenom+' '+nom,emailPartenaire:email,type:formulePart,paiement:paiePart,montant:montantP,dateInscription:today(),saison:sai});}
       if(formulePart==='carte10'&&pEmailC&&!partenairesCartes[pEmailC])
