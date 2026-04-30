@@ -21,47 +21,51 @@ const CORS_ORIGINS = [
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-    const { pathname } = url;
-    const method = request.method;
+    try {
+      const url = new URL(request.url);
+      const { pathname } = url;
+      const method = request.method;
 
-    // Preflight CORS
-    if (method === 'OPTIONS') {
-      return corsResponse(null, 204, {}, request);
+      // Preflight CORS
+      if (method === 'OPTIONS') {
+        return corsResponse(null, 204, {}, request);
+      }
+
+      // ── Routes API ──────────────────────────────────────────────
+
+      // POST /admin/api/devis — formulaire public
+      if (pathname === '/admin/api/devis' && method === 'POST') {
+        return handleDemandeDevis(request, env);
+      }
+
+      // POST /api/devis/creer — admin crée un devis officiel
+      if (pathname === '/api/devis/creer' && method === 'POST') {
+        return withAdminAuth(request, env, () => handleCreerDevis(request, env));
+      }
+
+      // PATCH /api/devis/:id/emettre
+      const emettreM = pathname.match(/^\/api\/devis\/([^/]+)\/emettre$/);
+      if (emettreM && method === 'PATCH') {
+        return withAdminAuth(request, env, () => handleEmettreDevis(emettreM[1], env));
+      }
+
+      // PATCH /api/devis/:id/annuler
+      const annulerM = pathname.match(/^\/api\/devis\/([^/]+)\/annuler$/);
+      if (annulerM && method === 'PATCH') {
+        return withAdminAuth(request, env, () => handleAnnulerDevis(annulerM[1], env));
+      }
+
+      // PATCH /api/demandes-devis/:id — mise à jour statut demande
+      const demandeM = pathname.match(/^\/api\/demandes-devis\/([^/]+)$/);
+      if (demandeM && method === 'PATCH') {
+        return withAdminAuth(request, env, () => handleUpdateDemande(request, demandeM[1], env));
+      }
+
+      // Fallback → assets statiques
+      return env.ASSETS.fetch(request);
+    } catch (e) {
+      return jsonError(500, `Erreur interne: ${e.message || String(e)}`);
     }
-
-    // ── Routes API ──────────────────────────────────────────────
-
-    // POST /admin/api/devis — formulaire public
-    if (pathname === '/admin/api/devis' && method === 'POST') {
-      return handleDemandeDevis(request, env);
-    }
-
-    // POST /api/devis/creer — admin crée un devis officiel
-    if (pathname === '/api/devis/creer' && method === 'POST') {
-      return withAdminAuth(request, env, () => handleCreerDevis(request, env));
-    }
-
-    // PATCH /api/devis/:id/emettre
-    const emettreM = pathname.match(/^\/api\/devis\/([^/]+)\/emettre$/);
-    if (emettreM && method === 'PATCH') {
-      return withAdminAuth(request, env, () => handleEmettreDevis(emettreM[1], env));
-    }
-
-    // PATCH /api/devis/:id/annuler
-    const annulerM = pathname.match(/^\/api\/devis\/([^/]+)\/annuler$/);
-    if (annulerM && method === 'PATCH') {
-      return withAdminAuth(request, env, () => handleAnnulerDevis(annulerM[1], env));
-    }
-
-    // PATCH /api/demandes-devis/:id — mise à jour statut demande
-    const demandeM = pathname.match(/^\/api\/demandes-devis\/([^/]+)$/);
-    if (demandeM && method === 'PATCH') {
-      return withAdminAuth(request, env, () => handleUpdateDemande(request, demandeM[1], env));
-    }
-
-    // Fallback → assets statiques
-    return env.ASSETS.fetch(request);
   },
 };
 
@@ -93,6 +97,10 @@ async function withAdminAuth(request, env, handler) {
 // POST /admin/api/devis — formulaire public
 // ================================================================
 async function handleDemandeDevis(request, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return jsonError(500, 'Configuration serveur manquante (secrets non définis)');
+  }
+
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
 
@@ -109,6 +117,9 @@ async function handleDemandeDevis(request, env) {
     nom:                (body.nom || '').trim(),
     email:              (body.email || '').trim().toLowerCase(),
     telephone:          body.telephone || '',
+    type_contact:       body.type_contact || 'particulier',
+    nom_societe:        body.nom_societe || '',
+    adresse_facturation: body.adresse_facturation || '',
     statut:             'reçue',
   };
 
@@ -116,6 +127,7 @@ async function handleDemandeDevis(request, env) {
     Object.assign(row, {
       type_evenement:   body.type_evenement || '',
       date_evenement:   body.date_evenement || '',
+      horaire_evenement: body.horaire_evenement || '',
       date_flexible:    !!body.date_flexible,
       lieu:             body.lieu || '',
       code_postal:      body.code_postal || '',
@@ -139,7 +151,13 @@ async function handleDemandeDevis(request, env) {
   }
 
   // Insert dans Supabase
-  const insertRes = await sbFetch(env, 'demandes_devis', 'POST', row);
+  let insertRes;
+  try {
+    insertRes = await sbFetch(env, 'demandes_devis', 'POST', row);
+  } catch (e) {
+    return jsonError(500, `Erreur réseau Supabase: ${e.message || String(e)}`);
+  }
+
   if (!insertRes.ok) {
     const err = await insertRes.text();
     return jsonError(500, `Erreur DB: ${err}`);
@@ -150,7 +168,7 @@ async function handleDemandeDevis(request, env) {
     sendBrevoNotification(env, body).catch(() => {});
   }
 
-  return corsResponse({ ok: true }, 200);
+  return corsResponse({ ok: true }, 200, {}, request);
 }
 
 
