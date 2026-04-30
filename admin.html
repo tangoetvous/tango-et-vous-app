@@ -4836,13 +4836,24 @@ function handleAction(action, btn) {
           });
         }).then(function(r){ return r.json(); }).then(function(res) {
           btn.disabled = false; btn.textContent = '📋 Créer un devis';
-          if (res.generateur_url) { window.open(res.generateur_url, '_blank'); chargerDonnees(); }
-          else afficherToast('Erreur: '+(res.error||'inconnue'));
+          if (res.devis && res.devis.numero) {
+            chargerDonnees();
+            _devisGenerateurNumero = res.devis.numero;
+            renderTab();
+          } else afficherToast('Erreur: '+(res.error||'inconnue'));
         }).catch(function(e) {
           btn.disabled = false; btn.textContent = '📋 Créer un devis';
           afficherToast('Erreur: '+e.message);
         });
       })();
+      break;
+    case 'ouvrir-generateur':
+      _devisGenerateurNumero = btn.dataset.numero !== undefined ? btn.dataset.numero : '';
+      renderTab();
+      break;
+    case 'fermer-generateur':
+      _devisGenerateurNumero = null;
+      chargerDonnees();
       break;
     case 'toggle-devis-vue':
       _devisVue = (_devisVue === 'demandes') ? 'liste' : 'demandes';
@@ -4851,9 +4862,22 @@ function handleAction(action, btn) {
     case 'toggle-demande-detail':
       (function() {
         var sid = String(btn.dataset.id);
-        if (_demandesExpanded.has(sid)) { _demandesExpanded.delete(sid); }
-        else { _demandesExpanded.add(sid); }
+        if (_demandesExpanded.has(sid)) {
+          _demandesExpanded.delete(sid);
+          renderTab();
+          return;
+        }
+        _demandesExpanded.add(sid);
         renderTab();
+        // Auto-créer un brouillon si la demande n'a encore aucun devis
+        if (!IS_DEMO && !_autoBrouillonCreating.has(sid)) {
+          var demande = (adminData.demandesDevis||[]).find(function(d){ return String(d.id)===sid; });
+          var dvList  = (adminData.devisList||[]).filter(function(dv){ return String(dv.demande_id)===sid; });
+          if (demande && dvList.length === 0) {
+            _autoBrouillonCreating.add(sid);
+            _autoCreerBrouillon(demande).then(function(){ _autoBrouillonCreating.delete(sid); }).catch(function(){ _autoBrouillonCreating.delete(sid); });
+          }
+        }
       })();
       break;
     case 'emettre-devis':
@@ -8718,6 +8742,47 @@ function renderNotifications() {
 
 var _devisVue = 'demandes'; // 'demandes' | 'liste'
 var _demandesExpanded = new Set();
+var _devisGenerateurNumero = null; // null=liste, ''=nouveau vierge, 'DEVIS-...'=devis existant
+var _autoBrouillonCreating = new Set(); // IDs demandes en cours de création automatique
+
+function _autoCreerBrouillon(demande) {
+  return TEV.getSession().then(function(session) {
+    var tok = session ? session.access_token : '';
+    if (!tok) return;
+    var clientNom = (demande.type_contact === 'societe' && demande.nom_societe)
+      ? demande.nom_societe
+      : ((demande.prenom||'') + ' ' + (demande.nom||'')).trim();
+    var evtDetailsParts = [];
+    if (demande.mode === 'event') {
+      if (demande.type_evenement) evtDetailsParts.push(demande.type_evenement);
+      if (demande.nombre_invites) evtDetailsParts.push(demande.nombre_invites + ' invités');
+      if (demande.duree_prestation) evtDetailsParts.push('Durée : ' + demande.duree_prestation);
+    } else {
+      if (demande.type_demande) evtDetailsParts.push(demande.type_demande);
+      if (demande.pour_qui) evtDetailsParts.push('Pour : ' + demande.pour_qui);
+      if (demande.nombre_cours) evtDetailsParts.push(demande.nombre_cours + ' cours');
+    }
+    var pres = (demande.prestations_labels||[]).map(function(lbl){ return { intitule:lbl, prix:0 }; });
+    return fetch('/api/devis/creer', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+tok },
+      body: JSON.stringify({
+        demande_id:     demande.id,
+        client_nom:     clientNom,
+        client_adresse: demande.adresse_facturation || '',
+        evt_date:       demande.date_evenement || demande.date_butoir || '',
+        evt_horaire:    demande.horaire_evenement || '',
+        evt_lieu:       demande.lieu || demande.lieu_cours || '',
+        evt_details:    evtDetailsParts.join(' · '),
+        prestations:    pres,
+        acompte_mode:   'percent',
+        acompte_value:  30,
+      }),
+    }).then(function(r){ return r.json(); }).then(function(res){
+      if (res.devis) chargerDonnees();
+    });
+  });
+}
 
 function _dvRow(label, val) {
   if (!val) return '';
@@ -8789,7 +8854,7 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
 
     // Boutons
     h += '<div class="btn-row" style="margin-top:10px;">';
-    h += '<a href="/generateur-devis.html?numero=' + encodeURIComponent(dv.numero) + '" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📄 Ouvrir / Retoucher</a>';
+    h += '<button class="btn btn-ghost" style="font-size:12px;" data-action="ouvrir-generateur" data-numero="' + dv.numero + '">📄 Ouvrir / Retoucher</button>';
     h += '<a href="' + gmailUrl + '" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Envoyer par email</a>';
     if (dv.statut === 'brouillon') {
       h += '<button class="btn btn-ghost" style="font-size:12px;" data-action="emettre-devis" data-id="' + dv.id + '">✓ Marquer émis</button>';
@@ -8802,6 +8867,20 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
 }
 
 function renderDevis() {
+  // ── Mode générateur intégré (iframe dans le menu)
+  if (_devisGenerateurNumero !== null) {
+    var src = '/generateur-devis.html'
+      + (_devisGenerateurNumero ? '?numero=' + encodeURIComponent(_devisGenerateurNumero) : '');
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+      + '<button class="btn btn-ghost" data-action="fermer-generateur">← Retour</button>'
+      + '<span style="color:var(--dim);font-size:13px;">'
+      + (_devisGenerateurNumero || 'Nouveau devis') + '</span>'
+      + '</div>'
+      + '<iframe src="' + src + '" '
+      + 'style="width:100%;height:calc(100vh - 130px);border:none;border-radius:8px;">'
+      + '</iframe>';
+  }
+
   var demandes = adminData.demandesDevis || [];
   var devisList = adminData.devisList || [];
 
@@ -8833,7 +8912,7 @@ function renderDevis() {
     + (_devisVue === 'demandes' ? '📂 Voir les devis générés ('+devisList.length+')' : '📥 Voir les demandes ('+demandes.length+')')
     + '</button>'
     + '<a href="/demande-devis.html" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:13px;">🔗 Formulaire client</a>'
-    + '<a href="/generateur-devis.html" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:13px;">📄 Nouveau devis</a>'
+    + '<button class="btn btn-gold" style="font-size:13px;" data-action="ouvrir-generateur" data-numero="">📄 Nouveau devis</button>'
     + '</div></div>';
 
   if (!demandes.length && !devisList.length) {
@@ -8952,7 +9031,7 @@ function renderDevis() {
             + '<span style="font-weight:600;font-size:12px;color:var(--gold);">'+dv.numero+'</span>'
             + '<span class="pill '+dvSt.cls+'" style="font-size:10px;">'+dvSt.lbl+'</span>'
             + (montant ? '<span style="font-size:12px;color:var(--dim);">'+montant+'</span>' : '')
-            + '<a href="/generateur-devis.html?numero='+encodeURIComponent(dv.numero)+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:11px;padding:2px 8px;">📄 Ouvrir</a>'
+            + '<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;" data-action="ouvrir-generateur" data-numero="'+dv.numero+'">📄 Ouvrir</button>'
             + (dv.statut==='brouillon' ? '<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;" data-action="emettre-devis" data-id="'+dv.id+'">✓ Marquer émis</button>' : '')
             + '<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;color:#e55;" data-action="supprimer-devis" data-id="'+dv.id+'" data-statut="'+dv.statut+'" data-numero="'+dv.numero+'">🗑️</button>'
             + '</div>';
@@ -8994,7 +9073,7 @@ function renderDevis() {
         + '<div class="card-sub">'+(dv.client_nom||'')+(montant?' · '+montant:'')+'</div>'
         + '</div><span class="pill '+dvSt.cls+'">'+dvSt.lbl+'</span></div>'
         + '<div class="btn-row" style="margin-top:10px;">'
-        + '<a href="/generateur-devis.html?numero='+encodeURIComponent(dv.numero)+'" target="_blank" class="btn btn-ghost" style="text-decoration:none;">📄 Ouvrir générateur</a>'
+        + '<button class="btn btn-ghost" data-action="ouvrir-generateur" data-numero="'+dv.numero+'">📄 Ouvrir générateur</button>'
         + (dv.statut==='brouillon' ? '<button class="btn btn-ghost" data-action="emettre-devis" data-id="'+dv.id+'">✓ Marquer émis</button>' : '')
         + '</div></div>';
     });
