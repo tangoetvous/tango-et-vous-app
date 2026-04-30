@@ -2388,8 +2388,14 @@ function renderParametres() {
   saiLabels[sc]                 = 'Saison actuelle';
   saiLabels[saisonSuivante()]   = 'Saison prochaine';
 
+  // ── Adhésion Le Regard Se Pose (1ère position) ─────────────
+  var h = _renderAdhesionLRPSection();
+
+  // ── Adhésion Sorano (2ème position) ────────────────────────
+  h += _renderAdhesionSoranoSection();
+
   // ── Sélecteur de saison ────────────────────────────────────
-  var h = '<div style="margin-bottom:20px;">'
+  h += '<div style="margin-bottom:20px;">'
     + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:10px;">Saison</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
   saisons.forEach(function(s) {
@@ -2434,9 +2440,6 @@ function renderParametres() {
   // ── Section WhatsApp ────────────────────────────────────
   h += _renderWhatsappParamSection(sai);
 
-  // ── Section Adhésion Sorano ──────────────────────────────
-  h += _renderAdhesionSoranoSection();
-
   return h;
 }
 
@@ -2476,6 +2479,26 @@ function chargerAdhesionSorano() {
   try { var r=JSON.parse(localStorage.getItem('tev_adhesion_sorano')||'null'); return r||ADHESION_SORANO_DEFAUT; }
   catch(e) { return ADHESION_SORANO_DEFAUT; }
 }
+function _renderAdhesionLRPSection() {
+  var val = TARIFS.adhesion_lrp !== undefined ? TARIFS.adhesion_lrp : 5;
+  var iS = 'width:72px;text-align:right;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;';
+  return '<div style="margin-bottom:20px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Adhésion Le Regard Se Pose</div>'
+    +'<div class="card">'
+    +'<div class="box-info" style="margin-bottom:14px;font-size:12px;">Incluse dans les forfaits annuels et les Cartes de 10 cours (1ère inscription).</div>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">'
+    +'<span style="font-size:13px;color:var(--text);">Montant de l\'adhésion</span>'
+    +'<div style="display:flex;align-items:center;gap:5px;">'
+    +'<input type="number" id="lrp-montant" min="0" value="'+val+'" style="'+iS+'">'
+    +'<span style="color:var(--dim);font-size:12px;">€</span>'
+    +'</div></div>'
+    +'<div class="btn-row" style="margin-top:14px;">'
+    +'<button class="btn btn-gold" data-action="sauver-adhesion-lrp" style="font-size:12px;">💾 Enregistrer</button>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+}
+
 function _renderAdhesionSoranoSection() {
   var sor = chargerAdhesionSorano();
   var iS = 'width:72px;text-align:right;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;';
@@ -2701,7 +2724,7 @@ function _renderSecTarifsContent(type, sai) {
       +row('Forfait annuel Paris','forfait_paris','forfait_paris_reduit')
       +row('Forfait 2 cours (toutes combinaisons)','forfait_2cours','forfait_2cours_reduit')
       +hd('Adhésion')
-      +row('Adhésion Le Regard Se Pose (LRP)','adhesion_lrp',null);
+      +'<tr><td colspan="3" style="padding:5px 8px;font-size:12px;color:var(--dim);font-style:italic;">Adhésion LRP : <b style="color:var(--text);">'+TARIFS.adhesion_lrp+'€</b> — Géré dans Paramètres (en haut de page)</td></tr>';
   } else if (type==='vincennes') {
     body = hd('Forfait annuel')
       +row('Forfait annuel Vincennes','forfait_vincennes','forfait_vincennes_reduit')
@@ -3630,7 +3653,7 @@ function sauverTarifsType(type, sai) {
   var KEYS = {
     paris:    ['carte10','carte10_reduit','carte10_renouv','carte10_renouv_reduit',
                'unitaire_paris','unitaire_paris_reduit','forfait_paris','forfait_paris_reduit',
-               'forfait_2cours','forfait_2cours_reduit','adhesion_lrp'],
+               'forfait_2cours','forfait_2cours_reduit'],
     vincennes:['forfait_vincennes','forfait_vincennes_reduit',
                'sorano_vinc','sorano_vinc_m16','sorano_ext','sorano_ext_m16'],
     yoga:     ['yoga_essai','yoga_forfait_1cours','yoga_forfait_2cours'],
@@ -5050,6 +5073,17 @@ function handleAction(action, btn) {
       break;
     case 'go-to-params':
       switchTab('tarifs');
+      break;
+    case 'sauver-adhesion-lrp':
+      (function() {
+        var val = parseFloat((gel('lrp-montant')||{}).value)||0;
+        TARIFS.adhesion_lrp = val;
+        try { var act=JSON.parse(localStorage.getItem('tev_tarifs_actifs')||'{}'); act.adhesion_lrp=val; localStorage.setItem('tev_tarifs_actifs',JSON.stringify(act)); } catch(e){}
+        try { var pl=JSON.parse(localStorage.getItem('tev_tarifs')||'null'); if(pl&&pl.tarifs){pl.tarifs.adhesion_lrp=val;localStorage.setItem('tev_tarifs',JSON.stringify(pl));} } catch(e){}
+        try { if(window.BroadcastChannel){var bc=new BroadcastChannel('tev_admin_sync');bc.postMessage({type:'tarifsUpdate',data:TARIFS,ts:Date.now()});bc.close();} } catch(e){}
+        if (!IS_DEMO) TEV.setParam('lrp_adhesion', {montant:val}).catch(function(){});
+        afficherToast('✓ Adhésion LRP enregistrée');
+      })();
       break;
     case 'sauver-adhesion-sorano':
       (function() {
