@@ -626,7 +626,7 @@ body {
 
 .devis-totals-table .row .key { color: var(--gris-faint); }
 
-.devis-totals-table .[row.total](http://row.total) {
+.devis-totals-table .row.total {
   border-top: 2px solid var(--noir);
   margin-top: 4px;
   padding-top: 10px;
@@ -634,9 +634,9 @@ body {
   font-weight: 600;
 }
 
-.devis-totals-table .[row.total](http://row.total) .key { color: var(--noir); }
+.devis-totals-table .row.total .key { color: var(--noir); }
 
-.devis-totals-table .[row.total](http://row.total) .val { color: var(--bleu); }
+.devis-totals-table .row.total .val { color: var(--bleu); }
 
 /* Mention TVA */
 .devis-tva {
@@ -1327,7 +1327,7 @@ function isoDate(d) {
    continue). Sans `numero`, le devis est en mode brouillon.
    ============================================================ */
 function prefillFromURL() {
-  const p = new URLSearchParams([window.location.search](http://window.location.search));
+  const p = new URLSearchParams(window.location.search);
 
   // Numéro officiel : si présent, on verrouille le champ et on retire
   // le bandeau brouillon de l'aperçu.
@@ -1377,7 +1377,7 @@ function prefillFromURL() {
     const prixParam = p.get('prix' + i);
 
     if (type || intituleParam) {
-      const preset = type ? PRESTATIONS_CATALOG.find(c => [c.id](http://c.id) === type) : null;
+      const preset = type ? PRESTATIONS_CATALOG.find(c => c.id === type) : null;
       const nbPassages = parseInt(passagesParam || '0') || 0;
       pres.push({
         type: preset ? type : (type === 'custom' ? 'custom' : ''),
@@ -1429,7 +1429,7 @@ function prefillFromURL() {
    ============================================================ */
 function renderPrestations() {
   const list = document.getElementById('prestaList');
-  list.innerHTML = [state.prestations.map](http://state.prestations.map)((p, i) => `
+  list.innerHTML = state.prestations.map((p, i) => `
     <div class="presta-item">
       <div class="presta-item-head">
         <span class="presta-item-num">PRESTATION ${i + 1}</span>
@@ -1441,8 +1441,8 @@ function renderPrestations() {
         <label style="font-size:10px;color:var(--gris-faint);text-transform:uppercase;letter-spacing:0.08em;">Type de prestation</label>
         <select onchange="selectPrestaType(${i}, this.value)">
           <option value="">— Choisir dans le catalogue ou personnaliser ci-dessous —</option>
-          ${PRESTATIONS_[CATALOG.map](http://CATALOG.map)(c =>
-            `<option value="${[c.id](http://c.id)}" ${p.type === [c.id](http://c.id) ? 'selected' : ''}>${escapeHtml(c.label)}</option>`
+          ${PRESTATIONS_CATALOG.map(c =>
+            `<option value="${c.id}" ${p.type === c.id ? 'selected' : ''}>${escapeHtml(c.label)}</option>`
           ).join('')}
           <option value="custom" ${p.type === 'custom' ? 'selected' : ''}>Autre / Personnalisé</option>
         </select>
@@ -1498,7 +1498,7 @@ function selectPrestaType(i, typeId) {
   item.type = typeId;
 
   if (typeId && typeId !== 'custom') {
-    const preset = PRESTATIONS_CATALOG.find(c => [c.id](http://c.id) === typeId);
+    const preset = PRESTATIONS_CATALOG.find(c => c.id === typeId);
     if (preset) {
       // Si l'utilisateur a déjà tapé quelque chose de personnalisé,
       // on lui demande avant d'écraser
@@ -1649,13 +1649,13 @@ function updatePreview() {
   const m = EMETTEUR.mediateur;
   const mentionMed = document.getElementById('mentionMediateur');
   if (m && m.nom) {
-    [mentionMed.style](http://mentionMed.style).display = '';
+    mentionMed.style.display = '';
     let info = m.nom;
     if (m.adresse) info += ` — ${m.adresse}`;
-    if ([m.site](http://m.site)) info += ` — ${[m.site](http://m.site)}`;
+    if (m.site) info += ` — ${m.site}`;
     document.getElementById('mediateurInfo').textContent = info;
   } else {
-    [mentionMed.style](http://mentionMed.style).display = 'none';
+    mentionMed.style.display = 'none';
   }
 
   // Client
@@ -1670,15 +1670,15 @@ function updatePreview() {
   const details = val('evtDetails');
   const detailsEl = document.getElementById('prevEvtDetails');
   if (details) {
-    [detailsEl.style](http://detailsEl.style).display = '';
+    detailsEl.style.display = '';
     detailsEl.textContent = details;
   } else {
-    [detailsEl.style](http://detailsEl.style).display = 'none';
+    detailsEl.style.display = 'none';
   }
 
   // Prestations
   const tbody = document.getElementById('prevPrestaTable');
-  const prestaRows = [state.prestations.map](http://state.prestations.map)(p => {
+  const prestaRows = state.prestations.map(p => {
     // Construit la ligne de précisions sous l'intitulé : durée et/ou passages
     const parts = [];
     if (p.duree && p.duree.trim()) {

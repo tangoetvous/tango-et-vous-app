@@ -724,7 +724,7 @@ body {
 .form-card[data-mode="private"] [data-mode-text="private"] { display: inline; }
 
 .field-conditional { display: none; }
-.[field-conditional.show](http://field-conditional.show) { display: block; animation: fadeIn 0.25s ease; }
+.field-conditional.show { display: block; animation: fadeIn 0.25s ease; }
 
 .mode-banner {
   display: flex;
@@ -1381,7 +1381,7 @@ body {
        ============================================================ -->
   <div class="footer">
     Tango &amp; Vous — Événementiel ·
-    <a href="https://www.tangoetvous.com" target="_blank" rel="noopener">[tangoetvous.com](http://tangoetvous.com)</a>
+    <a href="https://www.tangoetvous.com" target="_blank" rel="noopener">tangoetvous.com</a>
   </div>
 
 </div>
@@ -1440,11 +1440,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (isDemoMode) document.getElementById('demoBanner').classList.add('active');
 
   // Contacts dans les écrans success/error
-  const contactEmail = `mailto:${[CONFIG.EMAIL](http://CONFIG.EMAIL)_CONTACT}`;
+  const contactEmail = `mailto:${CONFIG.EMAIL_CONTACT}`;
   document.getElementById('contactEmail').href = contactEmail;
-  document.getElementById('contactEmail').textContent = [CONFIG.EMAIL](http://CONFIG.EMAIL)_CONTACT;
+  document.getElementById('contactEmail').textContent = CONFIG.EMAIL_CONTACT;
   document.getElementById('contactEmailErr').href = contactEmail;
-  document.getElementById('contactEmailErr').textContent = [CONFIG.EMAIL](http://CONFIG.EMAIL)_CONTACT;
+  document.getElementById('contactEmailErr').textContent = CONFIG.EMAIL_CONTACT;
   document.getElementById('contactTel').textContent = CONFIG.TELEPHONE;
   document.getElementById('contactTelErr').textContent = CONFIG.TELEPHONE;
 
@@ -1458,8 +1458,8 @@ document.addEventListener('DOMContentLoaded', () => {
    ============================================================ */
 function renderPrestations() {
   const grid = document.getElementById('prestationsGrid');
-  grid.innerHTML = [PRESTATIONS.map](http://PRESTATIONS.map)(p => `
-    <div class="prestation-card" data-id="${[p.id](http://p.id)}" role="checkbox" aria-checked="false" tabindex="0">
+  grid.innerHTML = PRESTATIONS.map(p => `
+    <div class="prestation-card" data-id="${p.id}" role="checkbox" aria-checked="false" tabindex="0">
       <div class="icon">${p.icon}</div>
       <div class="label">${p.label}</div>
       <div class="check">
@@ -1470,7 +1470,7 @@ function renderPrestations() {
 
   grid.querySelectorAll('.prestation-card').forEach(card => {
     const toggle = () => {
-      const id = [card.dataset.id](http://card.dataset.id);
+      const id = card.dataset.id;
       if (state.prestations.has(id)) {
         state.prestations.delete(id);
         card.classList.remove('selected');
@@ -1733,7 +1733,7 @@ function renderRecap() {
 
   // ----- Prestations -----
   const labels = Array.from(state.prestations).map(id =>
-    PRESTATIONS.find(p => [p.id](http://p.id) === id)?.label || id
+    PRESTATIONS.find(p => p.id === id)?.label || id
   );
   sections.push(`
     <div class="recap-section">
@@ -1742,7 +1742,7 @@ function renderRecap() {
         <button type="button" class="recap-edit" data-edit="1">Modifier</button>
       </div>
       <div class="recap-tags">
-        ${[labels.map](http://labels.map)(l => `<span class="recap-tag">${escapeHtml(l)}</span>`).join('')}
+        ${labels.map(l => `<span class="recap-tag">${escapeHtml(l)}</span>`).join('')}
       </div>
     </div>
   `);
@@ -1891,7 +1891,7 @@ async function submit() {
 
   // Récupère les labels des prestations sélectionnées (pour lisibilité côté admin)
   const prestationsLabels = Array.from(state.prestations).map(id => {
-    return PRESTATIONS.find(p => [p.id](http://p.id) === id)?.label || id;
+    return PRESTATIONS.find(p => p.id === id)?.label || id;
   });
 
   const get = id => document.getElementById(id).value.trim();
@@ -2014,8 +2014,8 @@ function showError(msg) {
 
    Côté Wix (Velo, exemple) :
      $w('#html1').onMessage((event) => {
-       if ([event.data](http://event.data)?.type === 'tangoetvous-resize') {
-         $w('#html1').height = [event.data](http://event.data).height;
+       if (event.data?.type === 'tangoetvous-resize') {
+         $w('#html1').height = event.data.height;
        }
      });
    ============================================================ */
