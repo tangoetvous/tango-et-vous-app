@@ -74,21 +74,29 @@ export default {
 // Auth middleware — vérifie le JWT Supabase passé en Authorization
 // ================================================================
 async function withAdminAuth(request, env, handler) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return jsonError(500, 'Secrets SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY non configurés dans Cloudflare');
+  }
+
   const authHeader = request.headers.get('Authorization') || '';
   const token = authHeader.replace('Bearer ', '').trim();
-  if (!token) return jsonError(401, 'Token manquant');
+  if (!token) return jsonError(401, 'Token manquant — session expirée ?');
 
+  const supaUrl = env.SUPABASE_URL.replace(/\/$/, '');
   try {
-    const r = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    const r = await fetch(`${supaUrl}/auth/v1/user`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'apikey': env.SUPABASE_SERVICE_ROLE_KEY,
       },
     });
-    if (!r.ok) return jsonError(401, 'Token invalide');
+    if (!r.ok) {
+      const body = await r.text().catch(() => r.status);
+      return jsonError(401, `Token invalide (${r.status}): ${body}`);
+    }
     return handler();
-  } catch {
-    return jsonError(500, 'Erreur vérification auth');
+  } catch(e) {
+    return jsonError(500, `Erreur vérification auth: ${e.message || String(e)}`);
   }
 }
 
