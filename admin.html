@@ -4106,6 +4106,15 @@ function renderTab() {
 // BIND EVENTS — attaché après chaque render, AUCUN onclick inline
 // ================================================================
 function bindTabEvents(el) {
+  // PWA : intercepter les liens vers le générateur de devis
+  el.addEventListener('click', function(e) {
+    if (!_isPWA()) return;
+    var a = e.target.closest('a[href*="generateur-devis"]');
+    if (!a) return;
+    e.preventDefault();
+    var url = a.getAttribute('href');
+    _ouvrirGenerateur(url.replace(/[&?]from=admin/, ''));
+  });
   // Délégation principale sur le conteneur
   el.addEventListener('click', function(e) {
     var btn = e.target.closest('[data-action]');
@@ -4836,7 +4845,7 @@ function handleAction(action, btn) {
           });
         }).then(function(r){ return r.json(); }).then(function(res) {
           btn.disabled = false; btn.textContent = '📋 Créer un devis';
-          if (res.generateur_url) { window.open(res.generateur_url, '_blank'); chargerDonnees(); }
+          if (res.generateur_url) { _ouvrirGenerateur(res.generateur_url); chargerDonnees(); }
           else afficherToast('Erreur: '+(res.error||'inconnue'));
         }).catch(function(e) {
           btn.disabled = false; btn.textContent = '📋 Créer un devis';
@@ -8689,6 +8698,16 @@ function renderNotifications() {
 
 var _devisVue = 'demandes'; // 'demandes' | 'liste'
 var _demandesExpanded = new Set();
+
+function _isPWA() {
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+}
+function _ouvrirGenerateur(url) {
+  var u = url + (url.includes('?') ? '&' : '?') + 'from=admin';
+  if (_isPWA()) { window.location.href = u; }
+  else { var w = window.open(u, '_blank'); if (!w) window.location.href = u; }
+}
 
 function _dvRow(label, val) {
   if (!val) return '';
