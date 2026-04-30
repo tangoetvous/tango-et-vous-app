@@ -8187,11 +8187,6 @@ function renderFormulaireInscriptionDirecteAdmin() {
     +'<div style="display:flex;flex-direction:column;gap:6px;padding:4px 0;">'
     +COURS_VALS.map(function(c){ return '<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="checkbox" name="di-cours" value="'+c+'" onchange="diUpdatePaieZone()" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> '+c+'</label>'; }).join('')
     +'</div></div>'
-    +'<div class="field"><label>Rôle *</label>'
-    +'<div style="display:flex;gap:12px;padding:4px 0;">'
-    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="radio" name="di-role" value="guideur" checked style="width:auto;padding:0;flex-shrink:0;margin:0;"/> Guideur</label>'
-    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="radio" name="di-role" value="guidee" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> Guidée</label>'
-    +'</div></div>'
     +'<div class="field"><label>Formule *</label>'
     +'<div style="display:flex;gap:12px;padding:4px 0;">'
     +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="radio" name="di-formule" value="carte10" checked onchange="diUpdatePaieZone()" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> Carte 10</label>'
@@ -8206,6 +8201,10 @@ function renderFormulaireInscriptionDirecteAdmin() {
 window.diTogglePartCours = function(ci) {
   var avec = (document.querySelector('input[name="di-part-'+ci+'"]:checked')||{}).value === 'avec';
   var z = gel('di-part-zone-'+ci); if(z) z.style.display = avec ? 'block' : 'none';
+};
+window.diUpdateRolePartLabel = function(role, ci) {
+  var lbl = gel('di-role-part-lbl-'+ci);
+  if(lbl) lbl.textContent = (role==='guideur'?'👩 Guidée':'👨 Guideur')+' (auto)';
 };
 window.diUpdatePaieZone = function() {
   var COURS_VALS_Z = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
@@ -8225,6 +8224,11 @@ window.diUpdatePaieZone = function() {
     var defMt = formule==='carte10'?(TARIFS.carte10||170):(isVinc?(TARIFS.forfait_vincennes||210):(TARIFS.forfait_paris||200));
     h += '<div style="margin-bottom:8px;padding:8px 10px;background:var(--s2);border-radius:6px;">';
     h += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;">'+cours+'</div>';
+    h += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">';
+    h += '<span style="font-size:10px;color:var(--dim);">Rôle :</span>';
+    h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guideur" checked onchange="diUpdateRolePartLabel(\'guideur\','+ci+')" '+inp+'/> Guideur</label>';
+    h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guidee" onchange="diUpdateRolePartLabel(\'guidee\','+ci+')" '+inp+'/> Guidée</label>';
+    h += '</div>';
     h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
     h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Paiement</label><select id="di-paie-'+ci+'">'+PAI_OPT_Z+'</select></div>';
     h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Montant (€)</label><input type="number" id="di-montant-'+ci+'" value="'+defMt+'" min="0" step="1"/></div>';
@@ -8234,6 +8238,7 @@ window.diUpdatePaieZone = function() {
     h += '<label '+lbl+'><input type="radio" name="di-part-'+ci+'" value="avec" onchange="diTogglePartCours('+ci+')" '+inp+'/> Avec partenaire</label>';
     h += '</div>';
     h += '<div id="di-part-zone-'+ci+'" style="display:none;background:var(--s3);border-radius:6px;padding:8px;margin-top:4px;">';
+    h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="font-size:10px;color:var(--dim);">Rôle partenaire :</span><span id="di-role-part-lbl-'+ci+'" style="font-size:11px;color:var(--gold);font-weight:600;">👩 Guidée (auto)</span></div>';
     h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">';
     h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Prénom part. *</label><input type="text" id="di-p-prenom-'+ci+'"/></div>';
     h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Nom part. *</label><input type="text" id="di-p-nom-'+ci+'"/></div>';
@@ -8262,8 +8267,6 @@ window.soumettreInscriptionDirecte = function() {
   var email   = ((gel('di-email')||{}).value||'').trim().toLowerCase();
   var tel     = ((gel('di-tel')||{}).value||'').trim();
   var coursCoches = Array.from(document.querySelectorAll('input[name="di-cours"]:checked')).map(function(cb){ return cb.value; });
-  var roleEl  = document.querySelector('input[name="di-role"]:checked');
-  var role    = roleEl ? roleEl.value : 'guideur';
   var formEl  = document.querySelector('input[name="di-formule"]:checked');
   var formule = formEl ? formEl.value : 'carte10';
   var err = gel('di-err'), ok = gel('di-ok');
@@ -8281,7 +8284,6 @@ window.soumettreInscriptionDirecte = function() {
     }
   });
   if(validErr){ if(err){err.textContent=validErr;err.style.display='block';} return; }
-  var roleP = role==='guideur'?'guidee':'guideur';
   var sai = saisonPourNouvelleEntree();
   var ts  = Date.now();
   if(!adminData.coursTango) adminData.coursTango=[];
@@ -8290,6 +8292,8 @@ window.soumettreInscriptionDirecte = function() {
     var ville  = cours.toLowerCase().indexOf('vincennes')>=0 ? 'vincennes' : 'paris';
     var niveau = cours.toLowerCase().indexOf('inter')>=0 ? 'intermediaire' : 'debutant';
     var ci = COURS_VALS_REF.indexOf(cours);
+    var role = ((document.querySelector('input[name="di-role-'+ci+'"]:checked')||{}).value)||'guideur';
+    var roleP = role==='guideur'?'guidee':'guideur';
     var avecC = (document.querySelector('input[name="di-part-'+ci+'"]:checked')||{}).value==='avec';
     var pPrenomC = avecC?((gel('di-p-prenom-'+ci)||{}).value||'').trim():'';
     var pNomC    = avecC?((gel('di-p-nom-'+ci)||{}).value||'').trim():'';
