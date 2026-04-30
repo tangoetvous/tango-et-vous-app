@@ -4866,6 +4866,50 @@ function handleAction(action, btn) {
         });
       })();
       break;
+    case 'ouvrir-cp-form':
+      _cpFormOuvert = true;
+      renderTab();
+      break;
+    case 'fermer-cp-form':
+      _cpFormOuvert = false;
+      chargerDonnees();
+      break;
+    case 'toggle-cp-cal':
+      (function(){
+        var sid = String(btn.dataset.id);
+        if (_cpCalExpanded.has(sid)) _cpCalExpanded.delete(sid);
+        else _cpCalExpanded.add(sid);
+        renderTab();
+      })();
+      break;
+    case 'generer-ics-cp':
+      (function(){
+        function pad2(n){ return n<10?'0'+String(n):String(n); }
+        var id = btn.dataset.id;
+        var titreEl = gel('cp-ics-titre-'+id);
+        var dateEl  = gel('cp-ics-date-'+id);
+        var heureEl = gel('cp-ics-heure-'+id);
+        var dureeEl = gel('cp-ics-duree-'+id);
+        var lieuEl  = gel('cp-ics-lieu-'+id);
+        var notesEl = gel('cp-ics-notes-'+id);
+        if (!dateEl||!dateEl.value) { afficherToast('Merci de renseigner la date.'); return; }
+        if (!heureEl||!heureEl.value) { afficherToast('Merci de renseigner l\'heure.'); return; }
+        var hm = heureEl.value.split(':').map(Number);
+        var startMin = hm[0]*60 + hm[1];
+        var dureeMin = parseInt(dureeEl ? dureeEl.value : '60') || 60;
+        var endMin   = startMin + dureeMin;
+        _genererICS({
+          titre:     titreEl ? titreEl.value : 'Cours particulier',
+          dateDebut: dateEl.value.replace(/-/g,''),
+          heureDebut: pad2(Math.floor(startMin/60)) + pad2(startMin%60),
+          heureFin:   pad2(Math.floor(endMin/60))   + pad2(endMin%60),
+          lieu:  lieuEl  ? lieuEl.value  : '',
+          notes: notesEl ? notesEl.value : '',
+          filename: 'cours-particulier.ics',
+        });
+        afficherToast('✓ Fichier .ics généré — ouvrez-le pour l\'ajouter au calendrier');
+      })();
+      break;
     case 'ouvrir-generateur':
       _devisGenerateurNumero = btn.dataset.numero !== undefined ? btn.dataset.numero : '';
       renderTab();
@@ -8799,6 +8843,11 @@ var _demandesExpanded = new Set();
 var _devisGenerateurNumero = null; // null=liste, ''=nouveau vierge, 'DEVIS-...'=devis existant
 var _autoBrouillonCreating = new Set(); // IDs demandes en cours de création automatique
 
+// ── Cours particuliers
+var _cpFormOuvert  = false;  // formulaire ouvert en iframe
+var _cpRecherche   = '';     // filtre nom/prénom
+var _cpCalExpanded = new Set(); // IDs avec formulaire événement ouvert
+
 function _autoCreerBrouillon(demande) {
   return TEV.getSession().then(function(session) {
     var tok = session ? session.access_token : '';
@@ -8924,33 +8973,59 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
 // COURS PARTICULIERS
 // ================================================================
 function renderCoursParticuliers() {
-  var liste = (adminData.coursParticuliers || []);
+  // ── Mode formulaire en iframe (menu conservé)
+  if (_cpFormOuvert) {
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+      + '<button class="btn btn-ghost" data-action="fermer-cp-form">← Retour</button>'
+      + '<span style="color:var(--dim);font-size:13px;">Nouveau cours particulier</span>'
+      + '</div>'
+      + '<iframe src="/cours-particuliers.html" style="width:100%;height:calc(100vh - 130px);border:none;border-radius:8px;"></iframe>';
+  }
+
   var STATUTS = {
-    'nouveau':    { cls:'pill-warn',  lbl:'Nouveau' },
-    'en_cours':   { cls:'pill-ok',    lbl:'En cours' },
-    'termine':    { cls:'',           lbl:'Terminé' },
-    'annule':     { cls:'pill-err',   lbl:'Annulé' },
+    'nouveau':  { cls:'pill-warn', lbl:'Nouveau' },
+    'en_cours': { cls:'pill-ok',   lbl:'En cours' },
+    'termine':  { cls:'',          lbl:'Terminé' },
+    'annule':   { cls:'pill-err',  lbl:'Annulé' },
   };
   var STATUTS_OPTS = ['nouveau','en_cours','termine','annule'];
 
-  var nb = liste.filter(function(cp){ return !cp.statut || cp.statut==='nouveau'; }).length;
-  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap;">'
+  var tous = (adminData.coursParticuliers || []);
+  var q = _cpRecherche.toLowerCase().trim();
+  var liste = q ? tous.filter(function(cp){
+    return ((cp.prenom||'')+' '+(cp.nom||'')+' '+(cp.email||'')).toLowerCase().indexOf(q) >= 0;
+  }) : tous;
+
+  var nb = tous.filter(function(cp){ return !cp.statut || cp.statut==='nouveau'; }).length;
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;flex-wrap:wrap;">'
     + '<h2 style="margin:0;font-size:16px;">🎵 Cours particuliers'+(nb?' <span style="font-size:13px;color:#f9a8d4;">('+nb+' nouveau'+(nb>1?'x':'')+')</span>':'')+'</h2>'
-    + '<a href="/cours-particuliers.html" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:13px;">🔗 Formulaire</a>'
+    + '<button class="btn btn-ghost" style="font-size:13px;" data-action="ouvrir-cp-form">🔗 Nouveau formulaire</button>'
     + '</div>';
 
-  if (!liste.length) {
-    return h + '<div class="empty-state">Aucune demande de cours particulier pour l\'instant.<br>'
-      + 'Les demandes arrivent via <a href="/cours-particuliers.html" target="_blank" style="color:var(--gold);">cours-particuliers.html</a>.</div>';
+  h += '<div style="margin-bottom:12px;">'
+    + '<input type="search" value="'+escHtml(_cpRecherche)+'" placeholder="🔍 Rechercher par nom..." '
+    + 'oninput="_cpRecherche=this.value;var z=document.getElementById(\'cp-liste\');if(z){var tous2=(adminData.coursParticuliers||[]);var q2=this.value.toLowerCase().trim();var res=q2?tous2.filter(function(cp){return((cp.prenom||\'\')+\' \'+(cp.nom||\'\')+\' \'+(cp.email||\'\')).toLowerCase().indexOf(q2)>=0;}):tous2;z.innerHTML=_renderCPListe(res,'+JSON.stringify(STATUTS).replace(/"/g,"'")+','+JSON.stringify(STATUTS_OPTS).replace(/"/g,"'")+');}" '
+    + 'style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;" autocomplete="off">'
+    + '</div>';
+
+  if (!tous.length) {
+    return h + '<div class="empty-state">Aucune demande de cours particulier pour l\'instant.</div>';
   }
 
-  var nouveaux  = liste.filter(function(cp){ return !cp.statut||cp.statut==='nouveau'; });
-  var enCours   = liste.filter(function(cp){ return cp.statut==='en_cours'; });
-  var termines  = liste.filter(function(cp){ return cp.statut==='termine'||cp.statut==='annule'; });
+  h += '<div id="cp-liste">'+_renderCPListe(liste, STATUTS, STATUTS_OPTS)+'</div>';
+  return h;
+}
+
+function _renderCPListe(liste, STATUTS, STATUTS_OPTS) {
+  if (!liste.length) return '<div class="empty-state">Aucun résultat.</div>';
+
+  var nouveaux = liste.filter(function(cp){ return !cp.statut||cp.statut==='nouveau'; });
+  var enCours  = liste.filter(function(cp){ return cp.statut==='en_cours'; });
+  var termines = liste.filter(function(cp){ return cp.statut==='termine'||cp.statut==='annule'; });
 
   function cardCP(cp) {
     var dt = cp.created_at ? _discRelDate(cp.created_at) : '';
-    var st = STATUTS[cp.statut || 'nouveau'] || STATUTS['nouveau'];
+    var calOpen = _cpCalExpanded.has(String(cp.id));
     var card = '<div class="card">';
     card += '<div class="card-top"><div>'
       + '<div class="card-nom">'+escHtml((cp.prenom||'')+' '+(cp.nom||''))+'</div>'
@@ -8958,41 +9033,95 @@ function renderCoursParticuliers() {
       + '</div>';
     card += '<select class="input" style="width:auto;font-size:12px;padding:4px 8px;" data-action="statut-cp" data-id="'+cp.id+'">';
     STATUTS_OPTS.forEach(function(s){
-      card += '<option value="'+s+'"'+(( cp.statut||'nouveau')===s?' selected':'')+'>'+(STATUTS[s]?STATUTS[s].lbl:s)+'</option>';
+      card += '<option value="'+s+'"'+((cp.statut||'nouveau')===s?' selected':'')+'>'+(STATUTS[s]?STATUTS[s].lbl:s)+'</option>';
     });
     card += '</select></div>';
 
     var infoParts = [];
-    if (cp.professeur) infoParts.push('👤 '+cp.professeur);
-    if (cp.duree)      infoParts.push('⏱ '+cp.duree);
-    if (cp.lieu)       infoParts.push('📍 '+cp.lieu+(cp.lieu_detail?' ('+cp.lieu_detail+')':''));
-    if (cp.niveau)     infoParts.push('📊 '+cp.niveau);
-    if (infoParts.length) {
-      card += '<div style="margin-top:6px;font-size:12px;color:var(--dim);">'+infoParts.join(' · ')+'</div>';
+    if (cp.professeur) infoParts.push('👤 '+escHtml(cp.professeur));
+    if (cp.duree)      infoParts.push('⏱ '+escHtml(cp.duree));
+    if (cp.lieu)       infoParts.push('📍 '+escHtml(cp.lieu)+(cp.lieu_detail?' ('+escHtml(cp.lieu_detail)+')':''));
+    if (cp.niveau)     infoParts.push('📊 '+escHtml(cp.niveau));
+    if (infoParts.length) card += '<div style="margin-top:6px;font-size:12px;color:var(--dim);">'+infoParts.join(' · ')+'</div>';
+    if (cp.objectifs)  card += '<div style="margin-top:6px;font-size:13px;color:var(--gold);font-weight:600;">'+escHtml(cp.objectifs)+'</div>';
+    if (cp.dispos)     card += '<div style="margin-top:5px;font-size:12px;color:var(--text);">🗓 '+escHtml(cp.dispos)+'</div>';
+    if (cp.urgence)    card += '<div style="margin-top:4px;font-size:12px;color:#f87171;">⚡ Urgence : '+escHtml(cp.urgence)+'</div>';
+    if (cp.remarque)   card += '<div style="margin-top:6px;font-size:13px;color:var(--text);white-space:pre-wrap;background:var(--s3);border-radius:6px;padding:8px 10px;border:1px solid var(--border);">'+escHtml(cp.remarque)+'</div>';
+
+    // ── Formulaire événement calendrier (inline, expandable)
+    if (calOpen) {
+      var titreDef = escHtml('Cours particulier — '+(cp.prenom||'')+(cp.nom?' '+cp.nom:''));
+      var lieuDef  = escHtml((cp.lieu||'')+(cp.lieu_detail?' — '+cp.lieu_detail:''));
+      var notesDef = escHtml([cp.objectifs, cp.remarque, cp.dispos].filter(Boolean).join('\n'));
+      card += '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">'
+        + '<div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">📅 Créer un événement calendrier</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+        + '<div style="grid-column:1/-1;"><label style="font-size:11px;color:var(--dim);">Titre</label>'
+        +   '<input id="cp-ics-titre-'+cp.id+'" class="input" type="text" value="'+titreDef+'" style="width:100%;margin-top:3px;"></div>'
+        + '<div><label style="font-size:11px;color:var(--dim);">Date</label>'
+        +   '<input id="cp-ics-date-'+cp.id+'" class="input" type="date" style="width:100%;margin-top:3px;"></div>'
+        + '<div><label style="font-size:11px;color:var(--dim);">Heure début</label>'
+        +   '<input id="cp-ics-heure-'+cp.id+'" class="input" type="time" style="width:100%;margin-top:3px;"></div>'
+        + '<div><label style="font-size:11px;color:var(--dim);">Durée</label>'
+        +   '<select id="cp-ics-duree-'+cp.id+'" class="input" style="width:100%;margin-top:3px;">'
+        +     '<option value="30">30 min</option><option value="45">45 min</option>'
+        +     '<option value="60" selected>1 h</option><option value="75">1 h 15</option>'
+        +     '<option value="90">1 h 30</option><option value="120">2 h</option>'
+        +   '</select></div>'
+        + '<div style="grid-column:1/-1;"><label style="font-size:11px;color:var(--dim);">Lieu</label>'
+        +   '<input id="cp-ics-lieu-'+cp.id+'" class="input" type="text" value="'+lieuDef+'" style="width:100%;margin-top:3px;"></div>'
+        + '<div style="grid-column:1/-1;"><label style="font-size:11px;color:var(--dim);">Notes</label>'
+        +   '<textarea id="cp-ics-notes-'+cp.id+'" class="input" rows="2" style="width:100%;margin-top:3px;resize:vertical;">'+notesDef+'</textarea></div>'
+        + '</div>'
+        + '<button class="btn btn-gold" data-action="generer-ics-cp" data-id="'+cp.id+'" style="margin-top:8px;width:100%;font-size:13px;">⬇️ Télécharger l\'événement (.ics)</button>'
+        + '</div>';
     }
-    if (cp.objectifs) {
-      card += '<div style="margin-top:6px;font-size:13px;color:var(--gold);font-weight:600;">'+escHtml(cp.objectifs)+'</div>';
-    }
-    if (cp.dispos) {
-      card += '<div style="margin-top:6px;font-size:12px;color:var(--text);">🗓 '+escHtml(cp.dispos)+'</div>';
-    }
-    if (cp.urgence) {
-      card += '<div style="margin-top:4px;font-size:12px;color:#f87171;">⚡ Urgence : '+escHtml(cp.urgence)+'</div>';
-    }
-    if (cp.remarque) {
-      card += '<div style="margin-top:6px;font-size:13px;color:var(--text);white-space:pre-wrap;background:var(--s3);border-radius:6px;padding:8px 10px;border:1px solid var(--border);">'+escHtml(cp.remarque)+'</div>';
-    }
+
     card += '<div class="btn-row" style="margin-top:8px;">';
-    if (cp.email) card += '<a href="'+mailtoGmail(cp.email,'Tango &amp; Vous')+'" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Email</a>';
-    if (cp.tel)   card += '<a href="tel:'+cp.tel+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📞</a>';
+    if (cp.email) card += '<a href="'+mailtoGmail(cp.email,'Tango &amp; Vous')+'" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Gmail</a>';
+    if (cp.tel)   card += '<a href="tel:'+cp.tel+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📞 Appel</a>';
+    if (cp.tel)   card += '<a href="sms:'+cp.tel+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">💬 SMS</a>';
+    card += '<button class="btn btn-ghost" data-action="toggle-cp-cal" data-id="'+cp.id+'" style="font-size:12px;margin-left:auto;">'+(calOpen?'▴ Fermer':'📅 Calendrier')+'</button>';
     card += '</div></div>';
     return card;
   }
 
-  if (nouveaux.length)  { h += '<div class="section-hdr">Nouvelles demandes ('+nouveaux.length+')</div>';  nouveaux.forEach(function(cp){ h+=cardCP(cp); }); }
-  if (enCours.length)   { h += '<div class="section-hdr" style="margin-top:16px;">En cours ('+enCours.length+')</div>'; enCours.forEach(function(cp){ h+=cardCP(cp); }); }
-  if (termines.length)  { h += '<div class="section-hdr" style="margin-top:16px;">Terminées / Annulées ('+termines.length+')</div>'; termines.forEach(function(cp){ h+=cardCP(cp); }); }
-  return h;
+  var r = '';
+  if (nouveaux.length) { r += '<div class="section-hdr">Nouvelles demandes ('+nouveaux.length+')</div>';         nouveaux.forEach(function(cp){ r+=cardCP(cp); }); }
+  if (enCours.length)  { r += '<div class="section-hdr" style="margin-top:16px;">En cours ('+enCours.length+')</div>'; enCours.forEach(function(cp){ r+=cardCP(cp); }); }
+  if (termines.length) { r += '<div class="section-hdr" style="margin-top:16px;">Terminées / Annulées ('+termines.length+')</div>'; termines.forEach(function(cp){ r+=cardCP(cp); }); }
+  return r;
+}
+
+function _genererICS(opts) {
+  function pad2(n){ return n<10?'0'+String(n):String(n); }
+  var uid = 'tev-' + Date.now() + '@tangoetvous.fr';
+  var now = new Date();
+  var dtstamp = now.getFullYear()+pad2(now.getMonth()+1)+pad2(now.getDate())
+    +'T'+pad2(now.getHours())+pad2(now.getMinutes())+pad2(now.getSeconds());
+  function icsEsc(s){ return (s||'').replace(/\\/g,'\\\\').replace(/,/g,'\\,').replace(/;/g,'\\;').replace(/\n/g,'\\n'); }
+  var lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Tango & Vous//Admin//FR',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    'UID:'+uid,
+    'DTSTAMP:'+dtstamp,
+    'DTSTART:'+opts.dateDebut+'T'+opts.heureDebut+'00',
+    'DTEND:'+opts.dateDebut+'T'+opts.heureFin+'00',
+    'SUMMARY:'+icsEsc(opts.titre),
+  ];
+  if (opts.lieu)  lines.push('LOCATION:'+icsEsc(opts.lieu));
+  if (opts.notes) lines.push('DESCRIPTION:'+icsEsc(opts.notes));
+  lines.push('END:VEVENT','END:VCALENDAR');
+  var content = lines.join('\r\n');
+  var blob = new Blob([content], { type:'text/calendar;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href=url; a.download=(opts.filename||'evenement.ics');
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function renderDevis() {
