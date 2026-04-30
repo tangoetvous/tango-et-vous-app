@@ -6600,7 +6600,16 @@ function _groupCouples(list) {
     if (used.indexOf(i) >= 0) continue;
     var p = list[i];
     var partIdx = -1;
-    if (p.partenaire) {
+    var pEml = (p.emailPartenaire || p.email_partenaire || '').toLowerCase();
+    // 1. Match par email partenaire (fiable)
+    if (pEml) {
+      for (var j = i + 1; j < list.length; j++) {
+        if (used.indexOf(j) >= 0) continue;
+        if ((list[j].email || '').toLowerCase() === pEml) { partIdx = j; break; }
+      }
+    }
+    // 2. Fallback : match par nom
+    if (partIdx < 0 && p.partenaire) {
       for (var j = i + 1; j < list.length; j++) {
         if (used.indexOf(j) >= 0) continue;
         var q = list[j];
