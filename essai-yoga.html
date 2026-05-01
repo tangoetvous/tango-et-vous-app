@@ -403,7 +403,7 @@ function updatePrix() {
   }
 }
 
-function soumettre() {
+async function soumettre() {
   const prenom = document.getElementById('inp-prenom').value.trim();
   const nom    = document.getElementById('inp-nom').value.trim();
   const email  = document.getElementById('inp-email').value.trim().toLowerCase();
@@ -428,31 +428,7 @@ function soumettre() {
   const gratuit = estGratuit(date);
   const data = { prenom, nom, email, tel, cours:coursSelectionne, date, gratuit };
 
-  // Notifier admin (BroadcastChannel + localStorage)
-  const msg = { type:'yogaEssaiInscription', data };
-  try {
-    const bc = new BroadcastChannel('tev_inscriptions');
-    bc.postMessage(msg);
-    bc.close();
-  } catch(e){}
-  try {
-    const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]');
-    pending.push(msg);
-    localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
-  } catch(e){}
-
-  if (!IS_DEMO) {
-    const { error: insErr } = await TEV.client.from('inscriptions_essai_yoga').insert({
-      prenom, nom, email, tel,
-      date_essai: date,
-      cours: coursSelectionne,
-      gratuit,
-      statut: 'demande',
-    });
-    if (insErr) console.error('[TEV] essai-yoga insert error:', insErr);
-  }
-
-  // Construire récap
+  // Construire le récap (avant l'INSERT pour pouvoir afficher l'écran de succès)
   const coursLbl = {yin:'Yin Yoga '+HORAIRES_YOGA.yin, hatha:'Hatha Yoga '+HORAIRES_YOGA.hatha, forfait:'Yin Yoga + Hatha Yoga '+HORAIRES_YOGA.yin+'–'+HORAIRES_YOGA.hatha_fin}[coursSelectionne]||coursSelectionne;
   const recapHtml = `<div class="s-card">
     <div class="s-line"><span class="s-ico">🧘</span><span><b>${coursLbl}</b></span></div>
@@ -460,28 +436,63 @@ function soumettre() {
     <div class="s-line"><span class="s-ico">👤</span><span>${prenom} ${nom}</span></div>
     <div class="s-line"><span class="s-ico">✉️</span><span>${email}</span></div>
   </div>`;
+  const unitaire = getYogaEssaiPrix();
+  const isForfait = (coursSelectionne === 'forfait');
+  let tarifLineHtml;
+  if (gratuit && isForfait) {
+    tarifLineHtml = '<span class="s-ico">💶</span><span>1 cours offert + 1 cours payant. Paiement sur place en espèces (<b>'+unitaire+'€</b>).</span>';
+  } else if (gratuit) {
+    tarifLineHtml = '<span class="s-ico">🎁</span><span>Ce cours d\'essai est <b>gratuit</b>. Bienvenue !</span>';
+  } else if (isForfait) {
+    tarifLineHtml = '<span class="s-ico">💶</span><span>Paiement sur place en espèces (<b>2 × '+unitaire+'€ = '+(unitaire*2)+'€</b>).</span>';
+  } else {
+    tarifLineHtml = '<span class="s-ico">💶</span><span>Paiement sur place en espèces (<b>'+unitaire+'€</b>).</span>';
+  }
+  document.getElementById('s-tarif-line').innerHTML = tarifLineHtml;
+  document.getElementById('recap-yoga').innerHTML = recapHtml;
 
-  setTimeout(() => {
-    document.getElementById('form-zone').style.display = 'none';
-    const unitaire = getYogaEssaiPrix();
-    const isForfait = (data.cours === 'forfait');
-    let tarifLineHtml;
-    if (gratuit && isForfait) {
-      tarifLineHtml = '<span class="s-ico">💶</span><span>1 cours offert + 1 cours payant. Paiement sur place en espèces (<b>'+unitaire+'€</b>).</span>';
-    } else if (gratuit) {
-      tarifLineHtml = '<span class="s-ico">🎁</span><span>Ce cours d\'essai est <b>gratuit</b>. Bienvenue !</span>';
-    } else if (isForfait) {
-      tarifLineHtml = '<span class="s-ico">💶</span><span>Paiement sur place en espèces (<b>2 × '+unitaire+'€ = '+(unitaire*2)+'€</b>).</span>';
-    } else {
-      tarifLineHtml = '<span class="s-ico">💶</span><span>Paiement sur place en espèces (<b>'+unitaire+'€</b>).</span>';
-    }
-    document.getElementById('s-tarif-line').innerHTML = tarifLineHtml;
-    document.getElementById('recap-yoga').innerHTML = recapHtml;
-    document.getElementById('success-yoga').style.display = 'block';
-    window.scrollTo(0,0);
+  if (IS_DEMO) {
+    setTimeout(() => {
+      document.getElementById('form-zone').style.display = 'none';
+      document.getElementById('success-yoga').style.display = 'block';
+      window.scrollTo(0,0);
+      btn.disabled = false;
+      btn.textContent = 'S\'inscrire au cours d\'essai';
+    }, 600);
+    return;
+  }
+
+  // INSERT Supabase EN PREMIER (avant BroadcastChannel — évite la détachement d'iframe)
+  const { error: insErr } = await TEV.client.from('inscriptions_essai_yoga').insert({
+    prenom, nom, email, tel,
+    date_essai: date,
+    cours: coursSelectionne,
+    gratuit,
+    statut: 'demande',
+  });
+  if (insErr) {
+    err.textContent = 'Erreur lors de l\'inscription : ' + (insErr.message || insErr.code || 'Erreur inconnue');
+    err.style.display = 'block';
     btn.disabled = false;
     btn.textContent = 'S\'inscrire au cours d\'essai';
-  }, IS_DEMO ? 600 : 0);
+    return;
+  }
+
+  // INSERT réussi → notifier l'admin (BroadcastChannel + localStorage + postMessage)
+  const msg = { type:'yogaEssaiInscription', data };
+  try { const bc = new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } catch(e){}
+  try {
+    const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]');
+    pending.push(msg);
+    localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+  } catch(e){}
+  try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
+
+  document.getElementById('form-zone').style.display = 'none';
+  document.getElementById('success-yoga').style.display = 'block';
+  window.scrollTo(0,0);
+  btn.disabled = false;
+  btn.textContent = 'S\'inscrire au cours d\'essai';
 }
 
 function restart() {
