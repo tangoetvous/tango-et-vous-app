@@ -963,9 +963,13 @@ async function finalize() {
         const { error: insErr } = await TEV.client.from('inscriptions_cours').insert(row);
         if (insErr) throw new Error(insErr.message || insErr.code || JSON.stringify(insErr));
       }
+      // Informer l'admin du succès
+      try { window.parent.postMessage({ type: 'coursInscriptionDB', ok: true, prenom: S.prenom, nom: S.nom }, window.location.origin); } catch(e) {}
     } catch(dbErr) {
       console.error('[TEV] inscription-cours insert error:', dbErr);
-      alert('Votre demande a bien été reçue, mais un problème technique est survenu lors de l\'enregistrement (' + dbErr.message + '). Veuillez contacter tangoetvous@gmail.com.');
+      // Informer l'admin de l'échec
+      try { window.parent.postMessage({ type: 'coursInscriptionDB', ok: false, error: dbErr.message }, window.location.origin); } catch(e) {}
+      alert('Problème d\'enregistrement en base de données : ' + dbErr.message);
     }
   }
 }
