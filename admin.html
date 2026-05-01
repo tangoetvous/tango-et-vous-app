@@ -1391,16 +1391,17 @@ function soumettreEssaiStatut(email, statut) {
   var ct=adminData.coursTango||[];
   var dbOps=[];
   function _creerEntreeEssai(pers) {
-    var existing=ct.find(function(e){return e.email===pers.email&&(e.saison||saisonCourante())===sai&&e.statut!=='supprimé';});
+    var existing=pers.email?ct.find(function(e){return e.email===pers.email&&(e.saison||saisonCourante())===sai&&e.statut!=='supprimé';}):null;
     if(existing){
       existing.statut=statut; existing.cours=cours; existing.ville=ville; existing.niveau=niveau;
       _pendingCoursInserts[pers.email]=existing;
       dbOps.push({type:'update',id:existing.id,data:{statut:statut,cours:cours,ville:ville,niveau:niveau,role:pers.role,partenaire:pers.partenaire||'',email_partenaire:pers.emailPartenaire||''}});
     } else {
-      var newEntry={id:'CT'+Date.now()+Math.floor(Math.random()*9999),prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:sai};
+      var newId='CT'+Date.now()+Math.floor(Math.random()*9999);
+      var newEntry={id:newId,prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:sai};
       ct.push(newEntry);
-      _pendingCoursInserts[pers.email]=newEntry;
-      dbOps.push({type:'insert',data:{prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email.toLowerCase(),tel:pers.tel||'',role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:pers.partenaire||'',email_partenaire:pers.emailPartenaire||'',saison:sai}});
+      _pendingCoursInserts[pers.email||newId]=newEntry;
+      dbOps.push({type:'insert',data:{prenom:pers.prenom||'',nom:pers.nom||'',email:(pers.email||'').toLowerCase(),tel:pers.tel||'',role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:pers.partenaire||'',email_partenaire:pers.emailPartenaire||'',saison:sai}});
     }
   }
   var partRole=ess.role==='guideur'?'guidee':'guideur';
@@ -1410,14 +1411,12 @@ function soumettreEssaiStatut(email, statut) {
       ?(adminData.essai||[]).find(function(e){return e.email===ess.emailPartenaire&&e.date===ess.date;})
       :(adminData.essai||[]).find(function(e){return _normNom((e.prenom||'')+' '+(e.nom||''))===_normNom(ess.partenaire)&&e.date===ess.date;});
     var partEmail=ess.emailPartenaire||(partEss?partEss.email:'');
-    if(partEmail){
-      _creerEntreeEssai({
-        prenom:partEss?(partEss.prenom||''):ess.partenaire.split(' ')[0]||'',
-        nom:partEss?(partEss.nom||''):ess.partenaire.split(' ').slice(1).join(' ')||'',
-        email:partEmail,tel:partEss?(partEss.tel||''):'',role:partRole,
-        partenaire:(ess.prenom||'')+' '+(ess.nom||''),emailPartenaire:email
-      });
-    }
+    _creerEntreeEssai({
+      prenom:partEss?(partEss.prenom||''):ess.partenaire.split(' ')[0]||'',
+      nom:partEss?(partEss.nom||''):ess.partenaire.split(' ').slice(1).join(' ')||'',
+      email:partEmail,tel:partEss?(partEss.tel||''):'',role:partRole,
+      partenaire:(ess.prenom||'')+' '+(ess.nom||''),emailPartenaire:email
+    });
   }
   adminData.coursTango=ct;
   fermerContact();
@@ -1450,7 +1449,7 @@ function envoyerEssaiVersVP(email) {
   var dbOps=[];
   var mainId='CT'+Date.now()+Math.floor(Math.random()*9999);
   function _prepareLocal(pers,localId){
-    var existing=ct.find(function(e){return e.email===pers.email&&(e.saison||saisonCourante())===sai&&e.statut!=='supprimé';});
+    var existing=pers.email?ct.find(function(e){return e.email===pers.email&&(e.saison||saisonCourante())===sai&&e.statut!=='supprimé';}):null;
     if(existing){
       existing.statut='attente_paiement'; existing.ville=ess.ville||'paris'; existing.niveau=ess.niveau||'debutant'; existing.cours=cours;
       _pendingCoursInserts[pers.email]=existing;
@@ -1459,8 +1458,8 @@ function envoyerEssaiVersVP(email) {
     }
     var entry={id:localId,prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:sai};
     ct.push(entry);
-    _pendingCoursInserts[pers.email]=entry;
-    dbOps.push({type:'insert',data:{prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email.toLowerCase(),tel:pers.tel||'',role:pers.role,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:pers.partenaire||'',email_partenaire:pers.emailPartenaire||'',saison:sai}});
+    _pendingCoursInserts[pers.email||localId]=entry;
+    dbOps.push({type:'insert',data:{prenom:pers.prenom||'',nom:pers.nom||'',email:(pers.email||'').toLowerCase(),tel:pers.tel||'',role:pers.role,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:pers.partenaire||'',email_partenaire:pers.emailPartenaire||'',saison:sai}});
     return String(localId);
   }
   var usedId=_prepareLocal({prenom:ess.prenom||'',nom:ess.nom||'',email:email,tel:ess.tel||'',role:ess.role||'guidee',partenaire:ess.partenaire||'',emailPartenaire:ess.emailPartenaire||''},mainId);
@@ -1471,10 +1470,8 @@ function envoyerEssaiVersVP(email) {
       ?(adminData.essai||[]).find(function(e){return e.email===ess.emailPartenaire&&e.date===ess.date;})
       :(adminData.essai||[]).find(function(e){return _normNom((e.prenom||'')+' '+(e.nom||''))===_normNom(ess.partenaire)&&e.date===ess.date;});
     partEmail=ess.emailPartenaire||(partEss?partEss.email:'');
-    if(partEmail){
-      _prepareLocal({prenom:partEss?(partEss.prenom||''):ess.partenaire.split(' ')[0]||'',nom:partEss?(partEss.nom||''):ess.partenaire.split(' ').slice(1).join(' ')||'',email:partEmail,tel:partEss?(partEss.tel||''):'',role:partRole,partenaire:(ess.prenom||'')+' '+(ess.nom||''),emailPartenaire:email},'CT'+(Date.now()+1)+Math.floor(Math.random()*9999));
-      adminData.coursTango=ct;
-    }
+    _prepareLocal({prenom:partEss?(partEss.prenom||''):ess.partenaire.split(' ')[0]||'',nom:partEss?(partEss.nom||''):ess.partenaire.split(' ').slice(1).join(' ')||'',email:partEmail,tel:partEss?(partEss.tel||''):'',role:partRole,partenaire:(ess.prenom||'')+' '+(ess.nom||''),emailPartenaire:email},'CT'+(Date.now()+1)+Math.floor(Math.random()*9999));
+    adminData.coursTango=ct;
   }
   fermerContact();
   sousOngletCoursTango='valider_paiement';
