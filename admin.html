@@ -8716,15 +8716,17 @@ window.vpPrefill = function(id) {
       if(rEl){rEl.checked=true;vpUpdateRolePartLabel(role,ci);}
       var pEl=gel('vp-paie-'+ci); if(pEl&&ins.paiement) pEl.value=ins.paiement;
       var mEl=gel('vp-montant-'+ci); if(mEl&&ins.montant) mEl.value=ins.montant;
-      if(ins.partenaire&&ins.emailPartenaire){
+      if(ins.partenaire){
         var avecEl=document.querySelector('input[name="vp-part-'+ci+'"][value="avec"]');
         if(avecEl){avecEl.checked=true;vpTogglePartCours(ci);}
         var parts=ins.partenaire.split(' ');
         var ppEl=gel('vp-p-prenom-'+ci),pnEl=gel('vp-p-nom-'+ci),peEl=gel('vp-p-email-'+ci);
         if(ppEl) ppEl.value=parts[0]||'';
         if(pnEl) pnEl.value=parts.slice(1).join(' ')||'';
-        if(peEl) peEl.value=ins.emailPartenaire;
-        var partEntry=(adminData.coursTango||[]).find(function(x){return x.email===ins.emailPartenaire&&x.cours===ins.cours;});
+        if(peEl) peEl.value=ins.emailPartenaire||'';
+        var partEntry=ins.emailPartenaire
+          ?(adminData.coursTango||[]).find(function(x){return String(x.email)===String(ins.emailPartenaire)&&x.ville===ins.ville&&x.niveau===ins.niveau;})
+          :(adminData.coursTango||[]).find(function(x){return _normNom((x.prenom+' '+x.nom).trim())===_normNom(ins.partenaire)&&x.ville===ins.ville&&x.niveau===ins.niveau;});
         var ptEl=gel('vp-p-tel-'+ci); if(ptEl&&partEntry) ptEl.value=partEntry.tel||'';
       }
     });
