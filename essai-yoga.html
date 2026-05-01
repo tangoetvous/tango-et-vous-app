@@ -254,14 +254,27 @@ let COURS_YOGA = [
   '2027-06-01','2027-06-08','2027-06-15','2027-06-22'
 ];
 
-// Charger les dates depuis les Paramètres admin (localStorage), écrase le fallback hardcodé
+// Charger les dates depuis les Paramètres admin (localStorage)
+// N'écrase le fallback hardcodé que si les dates stockées contiennent des dates futures
 function _initCoursYoga() {
+  var today = todayISO();
+  // 1. tev_cours_dates.yoga (sauvegardé par saveCoursDatesRemote)
   try {
     var s = JSON.parse(localStorage.getItem('tev_cours_dates') || 'null');
-    if (s && Array.isArray(s.yoga) && s.yoga.length) {
+    if (s && Array.isArray(s.yoga) && s.yoga.length && s.yoga.some(function(d){return d>=today;})) {
       COURS_YOGA = s.yoga.slice().sort();
+      return;
     }
   } catch(e) {}
+  // 2. tev_dates_yoga_<saison> (sauvegardé par sauverDatesYoga)
+  try {
+    var sai = getSaisonCourante();
+    var sy = JSON.parse(localStorage.getItem('tev_dates_yoga_' + sai) || 'null');
+    if (sy && Array.isArray(sy.dates) && sy.dates.length && sy.dates.some(function(d){return d>=today;})) {
+      COURS_YOGA = sy.dates.slice().sort();
+    }
+  } catch(e) {}
+  // 3. Fallback hardcodé — déjà présent à la déclaration
 }
 _initCoursYoga();
 
@@ -486,7 +499,7 @@ function restart() {
 
 // Init immédiate avec les valeurs en cache (pas de blocage sur réseau)
 init();
-// Sync params depuis Supabase en arrière-plan — recharge si les dates yoga ont changé
+// Sync params depuis Supabase en arrière-plan — rafraîchit le sélecteur si les dates yoga ont changé
 (async function() {
   try {
     var all = await TEV.getAllParams();
@@ -498,12 +511,26 @@ init();
           var oldVal = localStorage.getItem(k);
           if (oldVal !== newVal) {
             localStorage.setItem(k, newVal);
-            if (k === 'tev_cours_dates') yogaChanged = true;
+            if (k === 'tev_cours_dates' || k.indexOf('tev_dates_yoga_') === 0) yogaChanged = true;
           }
         } catch(e) {}
       }
     });
-    if (yogaChanged) location.reload();
+    if (yogaChanged) {
+      _initCoursYoga();
+      var sel = document.getElementById('sel-date');
+      if (sel) {
+        while (sel.options.length > 1) sel.remove(1);
+        var t2 = todayISO();
+        COURS_YOGA.filter(function(d){return d>=t2;}).slice(0,20).forEach(function(d){
+          var opt = document.createElement('option');
+          opt.value = d;
+          var g = estGratuit(d);
+          opt.textContent = fmtDate(d)+(g?' — Gratuit':' — '+getYogaEssaiPrix()+'€');
+          sel.appendChild(opt);
+        });
+      }
+    }
   } catch(e) {}
 })();
 
