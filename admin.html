@@ -5451,6 +5451,29 @@ function ouvrirModalLierPartenaire(id) {
   box.innerHTML = h;
   gel('modal-contact').classList.add('vis');
 }
+function delierPartenaire(id) {
+  var e = (adminData.coursTango||[]).find(function(x){return x.id===id;});
+  if (!e || !e.partenaire) return;
+  var eNom = ((e.prenom||'')+' '+(e.nom||'')).trim();
+  var partNom = e.partenaire;
+  // Chercher le partenaire dans le même cours pour délier aussi de son côté
+  var p = (adminData.coursTango||[]).find(function(x){
+    return _normNom((x.prenom+' '+x.nom).trim()) === _normNom(partNom)
+      && x.ville===e.ville && x.niveau===e.niveau && x.statut==='inscrit';
+  });
+  e.partenaire = '';
+  e.emailPartenaire = '';
+  if (p) { p.partenaire = ''; p.emailPartenaire = ''; }
+  fermerContact();
+  afficherToast('✓ '+eNom+' délié·e'+(p?' de '+partNom:''));
+  renderTab();
+  if (!IS_DEMO) {
+    TEV.client.from('inscriptions_cours').update({partenaire:'',email_partenaire:''}).eq('id',e.id).catch(function(){});
+    if (p) TEV.client.from('inscriptions_cours').update({partenaire:'',email_partenaire:''}).eq('id',p.id).catch(function(){});
+    TEV.client.from('eleves').update({partenaire:'',email_partenaire:''}).eq('email',(e.email||'').toLowerCase()).catch(function(){});
+    if (p) TEV.client.from('eleves').update({partenaire:'',email_partenaire:''}).eq('email',(p.email||'').toLowerCase()).catch(function(){});
+  }
+}
 function validerLierPartenaire(id, selId) {
   var e = (adminData.coursTango||[]).find(function(x){return x.id===id;});
   var sel = gel(selId||'lp-partner');
@@ -5506,6 +5529,12 @@ function ouvrirChangementCours(id) {
       +'<div class="field"><label>Paiement</label><select id="cc-paiement2">'+PAI_OPT2+'</select></div>'
       +'<div class="field"><label>Montant (€)</label><input type="number" id="cc-montant2" placeholder="ex: 170" style="width:100%;box-sizing:border-box;"></div>'
       +'<button class="btn btn-ghost" style="width:100%;margin-bottom:4px;" onclick="ajouterDeuxiemeCoursTango(\''+id+'\')">+ Inscrire sur ce 2ème cours</button>'
+      +'</div>';
+  }
+  if (e.partenaire) {
+    h+='<div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:14px;display:flex;align-items:center;justify-content:space-between;">'
+      +'<span style="font-size:12px;color:var(--dim);">♥ '+escHtml(e.partenaire)+'</span>'
+      +'<button class="btn btn-err" style="font-size:11px;padding:3px 10px;" onclick="delierPartenaire(\''+id+'\')">✕ Délier</button>'
       +'</div>';
   }
   if (!e.partenaire) {
