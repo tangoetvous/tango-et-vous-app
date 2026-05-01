@@ -1195,6 +1195,7 @@ function sauverContact(btn) {
     if(x.emailPartenaire===oldEmail){ x.emailPartenaire=newEmail; }
   });}
   updLocal(adminData.coursTango); updLocal(adminData.coursYoga); updLocal(adminData.cartes); updLocal(adminData.essai);
+  Object.values(adminData.stages||{}).forEach(function(jour){ updLocal(jour.inscrits||[]); });
   (adminData.cartes||[]).forEach(function(x){if(x.email===newEmail||x.email===oldEmail)x.nom=fullNom;});
   _contactCtx.nom=fullNom; _contactCtx.tel=tel; _contactCtx.email=newEmail;
   if(_ecPhotoUrl!==null){
@@ -1207,18 +1208,21 @@ function sauverContact(btn) {
   }
   var emailNew=newEmail.trim().toLowerCase();
   var emailOld=oldEmail.toLowerCase();
-  var updatePayload={prenom:prenom.trim(),nom:nom.trim(),tel:tel,email:emailNew};
+  var pr=prenom.trim(), no=nom.trim();
+  var updatePayload={prenom:pr,nom:no,tel:tel,email:emailNew};
   if(_ecPhotoUrl!==null) updatePayload.photo_url=_ecPhotoUrl;
-  // Met à jour inscriptions_cours (personnes en demande/attente_paiement non encore dans eleves)
-  var p1=Promise.resolve(TEV.client.from('inscriptions_cours').update({prenom:prenom.trim(),nom:nom.trim(),tel:tel,email:emailNew}).eq('email',emailOld));
-  // Met à jour eleves (personnes déjà inscrites)
-  var p2=Promise.resolve(TEV.client.from('eleves').update(updatePayload).eq('email',emailOld));
-  Promise.all([p1,p2])
+  Promise.all([
+    Promise.resolve(TEV.client.from('inscriptions_cours').update({prenom:pr,nom:no,tel:tel,email:emailNew}).eq('email',emailOld)),
+    Promise.resolve(TEV.client.from('eleves').update(updatePayload).eq('email',emailOld)),
+    Promise.resolve(TEV.client.from('inscriptions_essai').update({prenom:pr,nom:no,tel:tel,email:emailNew}).eq('email',emailOld)),
+    Promise.resolve(TEV.client.from('inscriptions_stages').update({prenom:pr,nom:no,telephone:tel,email:emailNew}).eq('email',emailOld)),
+    Promise.resolve(TEV.client.from('cours_yoga').update({prenom:pr,nom:no,email:emailNew}).eq('email',emailOld)),
+  ])
     .then(function(res){
-      var e1=res[0]&&res[0].error, e2=res[1]&&res[1].error;
+      var anyErr=res.find(function(r){return r&&r.error;});
       btn.disabled=false; btn.textContent='✓ Enregistrer';
-      if(e1||e2){
-        var msg=((e1||e2).message||(e1||e2).code||'Erreur DB');
+      if(anyErr){
+        var msg=anyErr.error.message||anyErr.error.code||'Erreur DB';
         if(err){err.textContent=msg;err.style.display='block';} return;
       }
       afficherToast('✓ Coordonnées mises à jour');
