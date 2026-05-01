@@ -462,9 +462,11 @@ async function tevSauvegarderPublication({ id, cat, titre, extrait, contenu, ima
   const donnees = { cat: cat||'actu', extrait: extrait||'', image: image||'', video: video||'', dateProgrammee: dateProgrammee||'', datesProgrammees: datesProgrammees||[], cours: cours||[] };
   const fields = { titre, contenu, publiee: !!publiee, donnees };
   if (id) {
-    await _tev.from('publications').update(fields).eq('id', id);
+    const { error } = await _tev.from('publications').update(fields).eq('id', id);
+    if (error) throw new Error(error.message || error.code || JSON.stringify(error));
   } else {
-    const { data } = await _tev.from('publications').insert(fields).select('id').single();
+    const { data, error } = await _tev.from('publications').insert(fields).select('id').single();
+    if (error) throw new Error(error.message || error.code || JSON.stringify(error));
     id = data?.id;
   }
   return { ok: true, id };
