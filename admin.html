@@ -8500,7 +8500,7 @@ window.soumettreInscriptionDirecteYoga = function() {
   var err = gel('diy-err'), ok = gel('diy-ok');
   if(err) err.style.display='none'; if(ok) ok.style.display='none';
   if (!prenom||!nom||!email) { if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';} return; }
-  var sai = saisonPourNouvelleEntree();
+  var sai = saisonActive();
   var ts  = Date.now();
   var montant = cours==='forfait' ? (TARIFS.yoga_forfait_2cours||0) : (TARIFS.yoga_forfait_1cours||0);
   if (!adminData.coursYoga) adminData.coursYoga=[];
@@ -8508,6 +8508,18 @@ window.soumettreInscriptionDirecteYoga = function() {
   if (existing) { existing.cours=cours; existing.paiement=paie; existing.montant=montant; if(tel) existing.tel=tel; }
   else { adminData.coursYoga.push({id:'CY'+ts,prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,statut:'inscrit',paiement:paie,montant:montant,saison:sai,dateInscription:today()}); }
   if(ok) ok.style.display='block';
+  if (!IS_DEMO) {
+    var dbOp;
+    if (existing) {
+      dbOp = Promise.resolve(TEV.client.from('cours_yoga').update({cours:cours,paiement:paie,montant:montant}).eq('id', String(existing.id)));
+    } else {
+      dbOp = Promise.resolve(TEV.client.from('cours_yoga').insert({prenom:prenom,nom:nom,email:email,cours:cours,paiement:paie,montant:montant,statut:'inscrit',saison:sai}));
+    }
+    dbOp.then(function(res){
+      if (res && res.error) { if(err){err.textContent='Erreur DB : '+(res.error.message||res.error.code||'');err.style.display='block';} return; }
+      chargerDonnees();
+    }).catch(function(){});
+  }
   setTimeout(function(){ sousOngletYoga='eleves'; renderTab(); }, 1000);
 };
 
