@@ -1381,43 +1381,99 @@ function ouvrirFormulaireEssaiStatut(email, statut) {
   gel('modal-contact').classList.add('vis');
 }
 function soumettreEssaiStatut(email, statut) {
-  console.log('[TEV] soumettreEssaiStatut', email, statut);
   var coursEl=document.querySelector('input[name="es-cours"]:checked');
   var cours=coursEl?coursEl.value:'Paris — Jeudi — Débutant';
   var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
-  console.log('[TEV] ess trouvé:', !!ess, '| email cherché:', email);
   if(!ess){fermerContact();return;}
   var ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   var niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   var ct=adminData.coursTango||[];
-  var existing=ct.find(function(e){return e.email===email;});
-  if(existing){
-    existing.statut=statut; existing.cours=cours; existing.ville=ville; existing.niveau=niveau;
-  } else {
-    ct.push({id:'CT'+Date.now(),prenom:ess.prenom||'',nom:ess.nom||'',email:email,tel:'',role:ess.role||'guidee',niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:ess.partenaire||'',emailPartenaire:ess.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonPourNouvelleEntree()});
+  function _creerEntreeEssai(pers) {
+    var existing=ct.find(function(e){return e.email===pers.email;});
+    if(existing){
+      existing.statut=statut; existing.cours=cours; existing.ville=ville; existing.niveau=niveau;
+    } else {
+      ct.push({id:'CT'+Date.now()+Math.floor(Math.random()*9999),prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonPourNouvelleEntree()});
+    }
+    if(!IS_DEMO){
+      Promise.resolve(TEV.client.from('inscriptions_cours').upsert(
+        {prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email.toLowerCase(),tel:pers.tel||'',
+         role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,
+         partenaire:pers.partenaire||'',email_partenaire:pers.emailPartenaire||'',
+         saison:saisonPourNouvelleEntree()},
+        {onConflict:'email'}
+      )).catch(function(){});
+    }
+  }
+  var partRole=ess.role==='guideur'?'guidee':'guideur';
+  _creerEntreeEssai({prenom:ess.prenom||'',nom:ess.nom||'',email:email,tel:ess.tel||'',role:ess.role||'guidee',partenaire:ess.partenaire||'',emailPartenaire:ess.emailPartenaire||''});
+  if(ess.partenaire){
+    var partEss=ess.emailPartenaire
+      ?(adminData.essai||[]).find(function(e){return e.email===ess.emailPartenaire&&e.date===ess.date;})
+      :(adminData.essai||[]).find(function(e){return _normNom((e.prenom||'')+' '+(e.nom||''))===_normNom(ess.partenaire)&&e.date===ess.date;});
+    var partEmail=ess.emailPartenaire||(partEss?partEss.email:'');
+    if(partEmail){
+      _creerEntreeEssai({
+        prenom:partEss?(partEss.prenom||''):ess.partenaire.split(' ')[0]||'',
+        nom:partEss?(partEss.nom||''):ess.partenaire.split(' ').slice(1).join(' ')||'',
+        email:partEmail,tel:partEss?(partEss.tel||''):'',role:partRole,
+        partenaire:(ess.prenom||'')+' '+(ess.nom||''),emailPartenaire:email
+      });
+    }
   }
   adminData.coursTango=ct;
-  console.log('[TEV] coursTango mis à jour, entrée:', ct.find(function(c){return c.email===email;}));
-  if(!IS_DEMO){
-    TEV.client.from('inscriptions_cours').upsert(
-      {prenom:ess.prenom||'',nom:ess.nom||'',email:email.toLowerCase(),tel:ess.tel||'',
-       role:ess.role||'guidee',niveau:niveau,cours:cours,ville:ville,
-       statut:statut,partenaire:ess.partenaire||'',email_partenaire:ess.emailPartenaire||'',
-       saison:saisonPourNouvelleEntree()},
-      {onConflict:'email'}
-    ).catch(function(){});
-  }
   fermerContact();
   var elTc=gel('tab-content');
-  console.log('[TEV] tab-content trouvé:', !!elTc);
-  if(elTc){
-    var html=renderEssai();
-    console.log('[TEV] HTML contient DEM:', html.indexOf('DEM')>=0, '| longueur:', html.length);
-    elTc.innerHTML=html;
-    bindTabEvents(elTc);
-  }
+  if(elTc){var html=renderEssai();elTc.innerHTML=html;bindTabEvents(elTc);}
   var lbls={demande:'Demande en attente',attente_paiement:'Validé·e'};
-  afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' · '+cours);
+  afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' · '+cours+(ess.partenaire?' + partenaire':''));
+}
+function envoyerEssaiVersVP(email) {
+  var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
+  if(!ess){fermerContact();return;}
+  var villeLabel=ess.ville==='vincennes'?'Vincennes':'Paris';
+  var jourlbl=ess.ville==='vincennes'?'Lundi':'Jeudi';
+  var nivlbl=ess.niveau==='intermediaire'?'Intermédiaire':'Débutant';
+  var cours=villeLabel+' — '+jourlbl+' — '+nivlbl;
+  var partRole=ess.role==='guideur'?'guidee':'guideur';
+  var ct=adminData.coursTango||[];
+  var mainId='CT'+Date.now()+Math.floor(Math.random()*9999);
+  function _upsertLocal(pers,localId){
+    var existing=ct.find(function(e){return e.email===pers.email;});
+    if(existing){
+      existing.statut='attente_paiement'; existing.ville=ess.ville||'paris'; existing.niveau=ess.niveau||'debutant'; existing.cours=cours;
+      return String(existing.id);
+    }
+    var entry={id:localId,prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonPourNouvelleEntree()};
+    ct.push(entry);
+    return String(localId);
+  }
+  var usedId=_upsertLocal({prenom:ess.prenom||'',nom:ess.nom||'',email:email,tel:ess.tel||'',role:ess.role||'guidee',partenaire:ess.partenaire||'',emailPartenaire:ess.emailPartenaire||''},mainId);
+  adminData.coursTango=ct;
+  var partEss=null, partEmail='';
+  if(ess.partenaire){
+    partEss=ess.emailPartenaire
+      ?(adminData.essai||[]).find(function(e){return e.email===ess.emailPartenaire&&e.date===ess.date;})
+      :(adminData.essai||[]).find(function(e){return _normNom((e.prenom||'')+' '+(e.nom||''))===_normNom(ess.partenaire)&&e.date===ess.date;});
+    partEmail=ess.emailPartenaire||(partEss?partEss.email:'');
+    if(partEmail){
+      _upsertLocal({prenom:partEss?(partEss.prenom||''):ess.partenaire.split(' ')[0]||'',nom:partEss?(partEss.nom||''):ess.partenaire.split(' ').slice(1).join(' ')||'',email:partEmail,tel:partEss?(partEss.tel||''):'',role:partRole,partenaire:(ess.prenom||'')+' '+(ess.nom||''),emailPartenaire:email},'CT'+(Date.now()+1)+Math.floor(Math.random()*9999));
+      adminData.coursTango=ct;
+    }
+  }
+  if(!IS_DEMO){
+    var dbEntries=[{prenom:ess.prenom||'',nom:ess.nom||'',email:email.toLowerCase(),tel:ess.tel||'',role:ess.role||'guidee',niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:ess.partenaire||'',email_partenaire:ess.emailPartenaire||'',saison:saisonPourNouvelleEntree()}];
+    if(partEmail){
+      dbEntries.push({prenom:partEss?(partEss.prenom||''):ess.partenaire.split(' ')[0]||'',nom:partEss?(partEss.nom||''):ess.partenaire.split(' ').slice(1).join(' ')||'',email:partEmail.toLowerCase(),tel:partEss?(partEss.tel||''):'',role:partRole,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:(ess.prenom||'')+' '+(ess.nom||''),email_partenaire:email.toLowerCase(),saison:saisonPourNouvelleEntree()});
+    }
+    dbEntries.forEach(function(entry){
+      Promise.resolve(TEV.client.from('inscriptions_cours').upsert(entry,{onConflict:'email'})).catch(function(){});
+    });
+  }
+  fermerContact();
+  sousOngletCoursTango='valider_paiement';
+  switchTab('cours-tango');
+  setTimeout(function(){vpPrefill(usedId);},80);
 }
 function toggleInteret(date, email, btn, id) {
   var e = id
@@ -5084,7 +5140,7 @@ function handleAction(action, btn) {
       soumettreEssaiStatut(btn.dataset.email||'', btn.dataset.statut||'demande');
       break;
     case 'open-insc-essai':
-      ouvrirFormulaireInscriptionEssai(btn.dataset.email||'');
+      envoyerEssaiVersVP(btn.dataset.email||'');
       break;
     case 'soumettre-insc-essai':
       soumettreInscriptionEssai(btn.dataset.email||'');
