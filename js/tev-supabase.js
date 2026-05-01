@@ -341,7 +341,7 @@ async function tevGetAdminData() {
     inscriptionsStages: inscriptionsStages || [],
     coursEssai:        (inscriptionsEssai      || []).map(_mapEssai),
     essaiYoga:         (inscriptionsEssaiYoga  || []).map(_mapEssai),
-    publications:      publications       || [],
+    publications:      (publications || []).map(function(p){ return Object.assign({}, p.donnees || {}, p); }),
     agendaModifs:      agendaModifs       || [],
     absencesJour:      absencesJour != null ? absencesJour.map(a => ({ date: a.date, email: a.email })) : null,
     demandesDevis:     demandesDevisRaw  || [],
@@ -458,11 +458,13 @@ async function tevGetPublications() {
   return data || [];
 }
 
-async function tevSauvegarderPublication({ id, titre, contenu }) {
+async function tevSauvegarderPublication({ id, cat, titre, extrait, contenu, image, video, dateProgrammee, datesProgrammees, publiee, cours }) {
+  const donnees = { cat: cat||'actu', extrait: extrait||'', image: image||'', video: video||'', dateProgrammee: dateProgrammee||'', datesProgrammees: datesProgrammees||[], cours: cours||[] };
+  const fields = { titre, contenu, publiee: !!publiee, donnees };
   if (id) {
-    await _tev.from('publications').update({ titre, contenu }).eq('id', id);
+    await _tev.from('publications').update(fields).eq('id', id);
   } else {
-    const { data } = await _tev.from('publications').insert({ titre, contenu }).select('id').single();
+    const { data } = await _tev.from('publications').insert(fields).select('id').single();
     id = data?.id;
   }
   return { ok: true, id };

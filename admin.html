@@ -8227,12 +8227,7 @@ function ouvrirPub(pub) {
     +'<div class="box-err" id="ed-err"></div>'
     +'<div class="btn-row"><button class="btn btn-gold" data-action="save-pub" data-id="'+(pub?pub.id||'':'')+'" style="flex:2;">💾 '+(pub?'Enregistrer':'Créer')+'</button><button class="btn btn-ghost" data-action="annuler-pub">Annuler</button></div>'
     +'</div>';
-  // Rebind events pour le nouveau contenu du pub-ed
   var el = gel('pub-ed');
-  el.addEventListener('click', function(e) {
-    var btn = e.target.closest('[data-action]');
-    if (btn) handleAction(btn.dataset.action, btn);
-  });
   var pubFile = el.querySelector('#pub-file');
   if (pubFile) pubFile.addEventListener('change', function() { uploadMedia(pubFile); });
 }
@@ -8296,7 +8291,7 @@ function savePub(existingId) {
     _broadcastAdminSync('newPublication', newPub);
     gel('pub-ed').innerHTML=''; renderTab(); return;
   }
-  TEV.sauvegarderPublication({id:existingId,titre:payload.titre,contenu:payload.contenu}).then(function(){gel('pub-ed').innerHTML='';chargerDonnees();}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+  TEV.sauvegarderPublication(payload).then(function(){gel('pub-ed').innerHTML='';chargerDonnees();}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
 }
 function publierPub(id, btn) {
   btn.disabled=true;
