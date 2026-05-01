@@ -8810,10 +8810,10 @@ window.soumettreInscriptionDirecte = function(force) {
   });
   if(!IS_DEMO && insRows.length){
     TEV.client.from('inscriptions_cours').insert(insRows).then(function(r){if(r.error)console.error('ins_dir inscriptions_cours:',r.error);});
-    TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:formule==='carte10'?10:0,carte_statut:formule==='carte10'?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true}).catch(function(){});
+    Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:formule==='carte10'?10:0,carte_statut:formule==='carte10'?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     Object.keys(partenairesCartes).forEach(function(pem){
       var pd=partenairesCartes[pem];
-      TEV.client.from('eleves').upsert({prenom:pd.prenom,nom:pd.nom,email:pem,tel:pd.tel,niveau:pd.niveau,ville:pd.ville,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:10,carte_statut:'Nouvelle carte',carte_paye:true},{onConflict:'email',ignoreDuplicates:true}).catch(function(){});
+      Promise.resolve(TEV.client.from('eleves').upsert({prenom:pd.prenom,nom:pd.nom,email:pem,tel:pd.tel,niveau:pd.niveau,ville:pd.ville,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:10,carte_statut:'Nouvelle carte',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     });
   }
   var coursList=coursCoches.join(', ');
