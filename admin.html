@@ -2173,7 +2173,7 @@ function sauverDatesYoga(sai) {
   try { localStorage.setItem('tev_dates_yoga_'+sai, JSON.stringify(_yogaVal)); } catch(e){}
   if (!IS_DEMO) TEV.setParam('tev_dates_yoga_'+sai, _yogaVal).catch(function(){});
   chargerDatesYogaStages();
-  saveCoursDatesLocal();
+  saveCoursDatesRemote();
   afficherToast('✓ '+dates.length+' dates yoga '+sai+' enregistrées');
   renderTab();
 }
@@ -4064,11 +4064,11 @@ async function chargerDonnees() {
   } catch(e) { console.error('Erreur chargerDonnees:', e.message); }
 }
 
-// Persiste les tableaux COURS_PARIS / COURS_VINCENNES dans localStorage (et Supabase params)
+// Persiste COURS_PARIS / COURS_VINCENNES / COURS_YOGA dans localStorage (et Supabase params)
 function saveCoursDatesRemote() {
   saveCoursDatesLocal();
   if (IS_DEMO || !adminData._email) return;
-  TEV.setParam('cours_dates', { paris: COURS_PARIS, vincennes: COURS_VINCENNES }).catch(function(){});
+  TEV.setParam('tev_cours_dates', { paris: COURS_PARIS, vincennes: COURS_VINCENNES, yoga: COURS_YOGA }).catch(function(){});
 }
 
 // Persiste les 3 tableaux de dates dans localStorage pour index.html

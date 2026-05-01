@@ -486,13 +486,24 @@ function restart() {
 
 // Init immédiate avec les valeurs en cache (pas de blocage sur réseau)
 init();
-// Sync params depuis Supabase en arrière-plan — met à jour le cache pour la prochaine visite
+// Sync params depuis Supabase en arrière-plan — recharge si les dates yoga ont changé
 (async function() {
   try {
     var all = await TEV.getAllParams();
+    var yogaChanged = false;
     Object.keys(all).forEach(function(k) {
-      if (k.startsWith('tev_')) { try { localStorage.setItem(k, typeof all[k]==='string' ? all[k] : JSON.stringify(all[k])); } catch(e) {} }
+      if (k.startsWith('tev_')) {
+        try {
+          var newVal = typeof all[k]==='string' ? all[k] : JSON.stringify(all[k]);
+          var oldVal = localStorage.getItem(k);
+          if (oldVal !== newVal) {
+            localStorage.setItem(k, newVal);
+            if (k === 'tev_cours_dates') yogaChanged = true;
+          }
+        } catch(e) {}
+      }
     });
+    if (yogaChanged) location.reload();
   } catch(e) {}
 })();
 
