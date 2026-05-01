@@ -294,7 +294,7 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 - Inscription **en couple** (avecPart='Oui') → `statut='confirme'`
 - Inscription **guideur seul** → `statut='confirme'` sauf si quota guideurs atteint (QUOTA_GUI=22) **en sept/oct/nov** → `statut='attente'`
 - Inscription **guidée seule** → toujours `statut='attente'` (admin valide manuellement)
-- Inscription **double rôle** → même règle que guideur (confirme sauf quota dépassé en sept/oct/nov)
+- Inscription **double rôle** → même règle que guideur (confirme sauf quota dépassé en sept/oct/nov) — ⚠️ double rôle absent du formulaire inscription-cours.html mais peut exister en DB (données legacy)
 
 **Quotas (affichage temps réel via RPC Supabase `compter_inscrits_essai`) :**
 - QUOTA_GUI = 22 guideurs par date (total classe = essai + élèves réguliers)
@@ -336,13 +336,17 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 
 ### `inscription-cours.html` — Inscription Tango régulier
 
+**Rôles disponibles :** uniquement `guideur` et `guidee` — "double rôle" supprimé du formulaire (décision 2026-05)
+
 **Statut à l'inscription (table `inscriptions_cours`) :**
-- **Guidée seule dans TOUS ses cours** → `statut='attente'` → écran "liste d'attente" → admin valide manuellement
-- **Guideur, couple, ou double rôle** → `statut='demande'` → redirigé vers AssoConnect pour paiement
+- **Guidée seule dans TOUS ses cours** → `statut='demande'` → badge "non validé.e" → admin valide manuellement → `attente_paiement`
+- **Guideur seul ou couple** → `statut='attente_paiement'` → badge "validé.e" + 💳
+
+**Fiche partenaire :** créée dès qu'il y a un prénom ou nom (`S.pPrenom || S.pNom`), même sans email. L'email du partenaire est facultatif — stocké vide si non renseigné.
 
 **Rôles automatiques :**
 - Si l'utilisateur choisit "Avec partenaire", le rôle du partenaire est automatiquement l'inverse (guideur↔guidée)
-- `getRoleAuto(r)` : `'guideur'→'guidee'`, `'guidee'→'guideur'`, `'double'→'double'`
+- `getRoleAuto(r)` : `'guideur'→'guidee'`, `'guidee'→'guideur'`
 
 **Détection du mode selon la date :**
 - Septembre → avril : mode `regulier` → saison courante
@@ -414,8 +418,13 @@ Lifecycle des statuts dans `inscriptions_cours` pour les nouvelles inscriptions 
 
 **Depuis `inscription-cours.html` (formulaire public)** :
 - Guidée seule dans TOUS ses cours → `statut='demande'`
-- Guideur, couple, double → `statut='attente_paiement'`
-- Les 3 options de rôle (guideur·se, guidé·e, double rôle) sont toujours affichées, quel que soit le choix "vous venez…"
+- Guideur seul ou couple → `statut='attente_paiement'`
+- Seuls 2 rôles proposés : guideur·se et guidé·e (double rôle supprimé)
+- Fiche partenaire créée dès qu'il y a un prénom/nom, email facultatif
+
+**`vpPrefill` — préremplissage partenaire :**
+- Condition `ins.partenaire` suffit (pas besoin de `emailPartenaire`)
+- Lookup du tel partenaire : par email si dispo, sinon par `_normNom()` dans le même cours
 
 ### Cartes 10 cours (tango)
 - Une carte 10 cours = type `'carte10'` dans `inscriptions_cours`
