@@ -54,6 +54,9 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 
 ## Décisions techniques importantes
 - **`cours` non stockée** dans `inscriptions_cours` — calculée depuis ville+niveau dans `tev-supabase.js`
+- **Saison dans les formulaires admin directs** : toujours utiliser `saisonActive()` (saison affichée dans l'admin), jamais `saisonPourNouvelleEntree()` qui renvoie la saison suivante en mai-août. `saisonPourNouvelleEntree()` est réservé aux formulaires publics (inscription-cours.html, etc.)
+- **Supabase `.upsert()` + `.catch()`** : le builder Supabase n'expose pas `.catch()` directement. Toujours envelopper dans `Promise.resolve(...).catch(function(){})` ou utiliser `.then(null, fn)`.
+- **INSERT Supabase puis navigation** : après un INSERT admin, appeler `chargerDonnees()` dans le `.then()` du INSERT (pas dans un `setTimeout` fixe) pour éviter la race condition où le rechargement arrive avant la fin de l'écriture.
 - **Suppression tango** = `UPDATE inscriptions_cours SET statut='supprimé'` (pas DELETE)
 - **Suppression yoga** = `DELETE FROM cours_yoga` (suppression réelle)
 - **Comparaison d'IDs yoga** : utiliser `String(x.id)===String(id)` car Supabase retourne des bigint (nombres) mais les onclick passent des strings
