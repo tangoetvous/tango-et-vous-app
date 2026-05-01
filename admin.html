@@ -8877,23 +8877,22 @@ function soumettreDemande() {
   // Règle : avec partenaire = auto-validé ; guideur seul = auto-validé aussi
   var statut=(!avecPartenaire&&role==='guidee')?'demande':'valide';
   var id='CT'+Date.now();
-  if(IS_DEMO){
-    if(!adminData.coursTango)adminData.coursTango=[];
-    adminData.coursTango.push({id:id,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:partNom,emailPartenaire:partEmail,type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonActive()});
-    if(avecPartenaire){
-      var roleP=role==='guidee'?'guideur':'guidee';
-      var parts=partNom.split(' ');
-      adminData.coursTango.push({id:'CT'+(Date.now()+1),prenom:parts[0]||partNom,nom:parts.slice(1).join(' ')||'',email:partEmail,tel:'',role:roleP,niveau:niveau,cours:cours,ville:ville,statut:'valide',partenaire:prenom+' '+nom,emailPartenaire:email,type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonActive()});
-    }
-    if(ok)ok.style.display='block';
-    setTimeout(function(){sousOngletCoursTango=(statut==='demande'?'attente_validation':statut);renderTab();},1500);
-    return;
+  // Ajout immédiat dans l'état local (démo ET réel) pour que la personne apparaisse sans délai
+  if(!adminData.coursTango)adminData.coursTango=[];
+  adminData.coursTango.push({id:id,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:partNom,emailPartenaire:partEmail,type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonActive()});
+  if(avecPartenaire){
+    var roleP=role==='guidee'?'guideur':'guidee';
+    var parts=partNom.split(' ');
+    adminData.coursTango.push({id:'CT'+(Date.now()+1),prenom:parts[0]||partNom,nom:parts.slice(1).join(' ')||'',email:partEmail,tel:'',role:roleP,niveau:niveau,cours:cours,ville:ville,statut:'valide',partenaire:prenom+' '+nom,emailPartenaire:email,type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonActive()});
   }
+  if(ok)ok.style.display='block';
+  sousOngletCoursTango=(statut==='demande'?'attente_validation':statut);
+  renderTab();
+  if(IS_DEMO) return;
   TEV.client.from('inscriptions_cours').insert({prenom:prenom,nom:nom,email:email.toLowerCase(),tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:partNom,email_partenaire:partEmail,saison:saisonActive()}).then(function(){
-    if(ok)ok.style.display='block';
-    sousOngletCoursTango=(statut==='demande'?'attente_validation':statut);
     chargerDonnees();
-  }).catch(function(e){if(err){err.textContent=(e&&e.message)||'Erreur';err.style.display='block';}});
+    setTimeout(renderTab,300);
+  }).catch(function(e){if(err){err.textContent='⚠️ Erreur: '+((e&&e.message)||'INSERT échoué');err.style.display='block';}chargerDonnees();});
 }
 
 // ================================================================
