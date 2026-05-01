@@ -5378,6 +5378,7 @@ function _elevesSupprimes(supprimes) {
         + '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
         + '<span class="pill '+rcls+'">'+roleLbl+'</span>'
         + '<button class="btn-point btn-ok" onclick="retablirEleve(\''+e.id+'\')" title="Rétablir l\'élève" style="font-size:11px;">↩ Rétablir</button>'
+        + '<button class="btn-point btn-danger" onclick="supprimerDefinitivementEleve(\''+e.id+'\')" title="Supprimer définitivement" style="font-size:11px;background:var(--danger);color:#fff;">🗑 Définitif</button>'
         + '</div></div>';
     });
   });
@@ -5392,6 +5393,20 @@ function retablirEleve(id) {
   renderTab();
   if (!IS_DEMO) {
     TEV.client.from('inscriptions_cours').update({statut: 'inscrit'}).eq('id', id)
+    .then(function(){ chargerDonnees(); })
+    .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
+  }
+}
+function supprimerDefinitivementEleve(id) {
+  var e = (adminData.coursTango||[]).find(function(x){ return x.id===id; });
+  if (!e) return;
+  var nom = (e.prenom||'')+' '+(e.nom||'');
+  if (!confirm('Supprimer définitivement '+nom+' ? Cette action est irréversible.')) return;
+  adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return x.id!==id; });
+  afficherToast('🗑 '+nom+' supprimé·e définitivement');
+  renderTab();
+  if (!IS_DEMO) {
+    TEV.client.from('inscriptions_cours').delete().eq('id', id)
     .then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
   }
