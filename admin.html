@@ -1825,15 +1825,7 @@ function traiterMsgInscription(msg, doRender) {
   setTimeout(function(){ delete _msgDedup[_fp]; }, 10000);
 
   if (msg.type === 'stageInscription') { _appliquerStageInscription(msg.data); if(!IS_DEMO){chargerDonnees();return;} }
-  if (msg.type === 'coursInscription') { _appliquerCoursInscription(msg.data); if(!IS_DEMO){setTimeout(chargerDonnees,2000);} }
-  if (msg.type === 'coursInscriptionDB') {
-    if (msg.ok) {
-      afficherToast('✓ ' + (msg.prenom||'') + ' ' + (msg.nom||'') + ' enregistré(e) en base de données');
-    } else {
-      afficherToast('⚠️ Erreur INSERT inscriptions_cours : ' + (msg.error||'?'));
-    }
-    return;
-  }
+  if (msg.type === 'coursInscription') { _appliquerCoursInscription(msg.data); if(!IS_DEMO){setTimeout(chargerDonnees,500);} }
   if (msg.type === 'essaiInscription') _appliquerEssaiInscription(msg.data);
   if (msg.type === 'yogaEssaiInscription') _appliquerYogaEssaiInscription(msg.data);
   if (msg.type === 'yogaConfirmerPresence') _appliquerYogaConfirmPresence(msg.data);
@@ -1901,7 +1893,6 @@ function traiterInscriptionsEnAttente() {
 window.addEventListener('message', function(ev) {
   if (ev.origin && ev.origin !== 'null' && ev.origin !== window.location.origin) return;
   var t = ev.data && ev.data.type;
-  if (t === 'coursInscriptionDB') { traiterMsgInscription(ev.data, false); return; }
   if (t !== 'stageInscription' && t !== 'coursInscription' && t !== 'essaiInscription' && t !== 'yogaEssaiInscription' && t !== 'yogaConfirmerPresence') return;
   traiterMsgInscription(ev.data, true);
 });

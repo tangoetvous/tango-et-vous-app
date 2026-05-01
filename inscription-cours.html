@@ -864,7 +864,7 @@ async function finalize() {
   $(id).style.display='block';
   window.scrollTo(0,0);
 
-  // Notifier : postMessage si dans un iframe admin, localStorage+BroadcastChannel sinon
+  // Construire le message de notification
   const msg = {
     type: 'coursInscription',
     data: {
@@ -881,16 +881,8 @@ async function finalize() {
       isWaitlist: wait
     }
   };
-  // Notifier admin — BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
-  try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e) {}
-  try {
-    const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
-    pending.push(msg);
-    localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
-  } catch(e) {}
-  try { window.parent.postMessage(msg, window.location.origin); } catch(e) {}
 
-  // Persister en Supabase
+  // ── Persister en Supabase D'ABORD (l'iframe est encore dans le DOM → alert() fonctionne)
   if (window.TEV) {
     const p2Pre = S.samePartner===true ? S.pPrenom : S.p2Prenom;
     const p2Nom = S.samePartner===true ? S.pNom    : S.p2Nom;
@@ -963,15 +955,23 @@ async function finalize() {
         const { error: insErr } = await TEV.client.from('inscriptions_cours').insert(row);
         if (insErr) throw new Error(insErr.message || insErr.code || JSON.stringify(insErr));
       }
-      // Informer l'admin du succès
-      try { window.parent.postMessage({ type: 'coursInscriptionDB', ok: true, prenom: S.prenom, nom: S.nom }, window.location.origin); } catch(e) {}
     } catch(dbErr) {
+      // L'iframe est encore dans le DOM ici → alert() fonctionne
       console.error('[TEV] inscription-cours insert error:', dbErr);
-      // Informer l'admin de l'échec
-      try { window.parent.postMessage({ type: 'coursInscriptionDB', ok: false, error: dbErr.message }, window.location.origin); } catch(e) {}
-      alert('Problème d\'enregistrement en base de données : ' + dbErr.message);
+      alert('Erreur d\'enregistrement en base de données :\n' + dbErr.message + '\n\nContactez tangoetvous@gmail.com.');
+      return; // Ne pas envoyer de notification si l'INSERT a échoué
     }
   }
+
+  // ── Notifier l'admin APRÈS l'INSERT (l'iframe sera retiré du DOM après cette notification)
+  // BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
+  try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e) {}
+  try {
+    const pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
+    pending.push(msg);
+    localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+  } catch(e) {}
+  try { window.parent.postMessage(msg, window.location.origin); } catch(e) {}
 }
 
 function buildRecapFinal(incl2) {
