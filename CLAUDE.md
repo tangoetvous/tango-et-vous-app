@@ -23,14 +23,14 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
   - `role` : `'guideur'`, `'guidee'`, `'double'`
   - `type` : `'carte10'` ou `'forfait'`
   - `paiement` : `'cb1x'`, `'cb3x'`, `'especes'`, `'cheque'`, `'virement1x'`, `'virement3x'`
-  - `statut` : `'inscrit'`, `'supprimé'`, `'valide'`, `'attente'`, `'demande'`
+  - `statut` : `'inscrit'`, `'supprimé'`, `'valide'`, `'attente'`, `'demande'`, `'attente_paiement'`
   - `cours` : format `'paris—debutant'` (stockée en DB, calculée depuis ville+niveau lors de l'insert)
   - ⚠️ Dans `tev-supabase.js`, `role` est prioritairement lu depuis `inscriptions_cours`, avec fallback sur `eleves.role`
-- **`cours_yoga`** : inscriptions yoga (email, prenom, nom, cours, paiement, montant, statut, saison)
+- **`cours_yoga`** : inscriptions yoga (email, prenom, nom, cours, paiement, montant, statut, saison) — ⚠️ PAS de colonne `tel`
   - `cours` : `'hatha'`, `'yin'`, `'forfait'` (forfait = hatha + yin)
   - RLS activé avec policies `allow_select/insert/update/delete` (USING true)
-- **`inscriptions_stages`** : inscriptions aux stages
-- **`inscriptions_essai`** : cours d'essai tango et yoga
+- **`inscriptions_stages`** : inscriptions aux stages — ⚠️ colonne `telephone` (pas `tel`)
+- **`inscriptions_essai`** : cours d'essai tango et yoga — colonne `tel`
 - **`presences`** : pointage des présences
 - **`cours_particuliers`** : cours particuliers
 - **`publications`** : publications/annonces
@@ -60,8 +60,11 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **INSERT dans un iframe + BroadcastChannel : toujours faire l'INSERT AVANT d'envoyer la notification** — Si le BroadcastChannel/postMessage est envoyé en premier, l'admin re-rend l'onglet (`renderTab()`), ce qui retire l'iframe du DOM. L'INSERT tourne alors dans un iframe détaché : Chrome bloque silencieusement les `alert()` et les `window.parent.postMessage` de ces iframes, rendant toute erreur invisible. L'entrée apparaît brièvement (état local via BroadcastChannel) puis disparaît quand `chargerDonnees` écrase avec les données DB sans l'enregistrement raté. **Ordre correct dans `finalize()` :** (1) afficher l'écran de succès, (2) `await INSERT`, (3) si erreur → `alert()` fonctionne car iframe encore dans le DOM, (4) si succès → envoyer BroadcastChannel + postMessage.
 - **Suppression tango** = `UPDATE inscriptions_cours SET statut='supprimé'` (pas DELETE)
 - **Suppression yoga** = `DELETE FROM cours_yoga` (suppression réelle)
-- **Comparaison d'IDs yoga** : utiliser `String(x.id)===String(id)` car Supabase retourne des bigint (nombres) mais les onclick passent des strings
+- **Comparaison d'IDs — règle universelle** : utiliser `String(x.id)===String(id)` partout (pas seulement pour yoga). Supabase retourne des BIGINT (nombres) mais `btn.dataset.id`, `sel.value` et les valeurs d'attributs HTML sont toujours des strings. `42 === "42"` → `false` → find/match échoue silencieusement.
 - **iOS Safari — boutons cliquables** : les `<button>` avec délégation de click ne fonctionnent pas de manière fiable dans certains contextes DOM sur iOS Safari. Toujours utiliser `<a href="javascript:void(0)" onclick="...">` pour les actions inline dans du HTML généré dynamiquement.
+- **Race condition suppression vs polling 15s** : `_chargerDonneesSeq++` ne protège que les appels `chargerDonnees` déjà en vol — pas les nouveaux appels démarrés après la suppression, qui fetchent la DB avant que l'UPDATE soit confirmé. Solution : `_pendingSupprimes` (Set global). Ajouter `String(id)` avant `renderTab()`, retirer après confirmation DB. Dans `chargerDonnees()`, après mise à jour de `coursTango`, ré-appliquer : `ct.map(e => _pendingSupprimes.has(String(e.id)) ? {...e, statut:'supprimé'} : e)`.
+- **`sauverContact()` — mettre à jour TOUTES les tables** : la fonction doit mettre à jour en parallèle toutes les tables où la personne peut exister selon son contexte. Pattern `Promise.all([...])` sur : `inscriptions_cours` (ctx='ct', demande/attente_paiement non encore dans eleves), `eleves` (ctx='ct'/'eleve'/'carte'), `inscriptions_essai` (ctx='essai', col `tel`), `inscriptions_stages` (ctx='stage', col `telephone`), `cours_yoga` (ctx='yoga', pas de col `tel`). L'état local `adminData` doit être mis à jour immédiatement (hors IS_DEMO) pour que le prochain `chargerDonnees` ne l'écrase pas. Structure stages : itérer `Object.values(adminData.stages).forEach(jour => updLocal(jour.inscrits))`.
+- **`_renderTabSiPasFormulaire()` — protéger tous les formulaires** : la garde `activeElement INPUT/TEXTAREA/SELECT` ne suffit pas — si l'utilisateur vient de cliquer un bouton, le focus est perdu. Ajouter des gardes explicites pour chaque sous-onglet contenant un formulaire : `if (currentTab==='cours-tango' && (sousOngletCoursTango==='valider_paiement'||sousOngletCoursTango==='inscrire')) return;` — même modèle que `eleves-tango/inscrire`.
 - **Absences élèves réguliers** (table `absences_jour`) : persistance double — localStorage immédiat + sync Supabase en arrière-plan. Dans `chargerDonnees()` (admin) et au chargement de l'espace élève, merger les entrées localStorage avec les données DB pour survivre aux rechargements automatiques même si le sync DB échoue.
 - **`adminData.absencesJour`** : chargé dans `tevGetAdminData()` depuis `absences_jour`, mergé avec localStorage `tev_absences_jour` dans `chargerDonnees()`. Utilisé dans le Pointage de l'onglet Essai Tango.
 - **`eleveData.absencesJour`** : chargé au login élève depuis localStorage `tev_abs_<email>`, puis sync DB en arrière-plan. Affiché dans `renderAccueil()` sur la carte "PROCHAIN COURS".
@@ -191,7 +194,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 ## À faire / en suspens
 - [ ] **Tester déclaration d'absence depuis espace élève** : bouton 🚫 Absent sur la carte "PROCHAIN COURS" → vérifier que l'absence apparaît bien dans admin → Essai Tango → Pointage sur la bonne date et le bon cours
 - [ ] Vérifier correction Sandrine Billot (hatha uniquement) / Myriam Bloch (hatha+yin) dans Supabase — SQL généré mais pas confirmé exécuté
-- [ ] Tester suppression élève tango → persiste après refresh
+- [x] Tester suppression élève tango → persiste après refresh — CORRIGÉ (approche `_pendingSupprimes`)
 - [ ] Tester modification cours/paiement/montant → persiste après refresh
 - [ ] Installer l'appli sur Mac (PWA déjà prête) : ouvrir admin dans Chrome → icône ⊕ dans la barre d'adresse → Installer
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
@@ -389,6 +392,30 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 ---
 
 ## Règles métier — espace admin (`admin.html`)
+
+### Workflow Inscriptions Tango (onglet `cours-tango`, admin.html)
+
+Lifecycle des statuts dans `inscriptions_cours` pour les nouvelles inscriptions :
+
+| Situation | Statut initial | Badge admin | Action disponible |
+|-----------|---------------|-------------|-------------------|
+| Guidée seule | `demande` | "non validé.e" | Bouton "✓ Valider" → passe à `attente_paiement` |
+| Guideur seul | `attente_paiement` | "validé.e" + 💳 | Bouton 💳 → ouvre formulaire "Valider Paiement" |
+| Couple (avec partenaire) | `attente_paiement` (les deux) | "validé.e" + 💳 | Bouton 💳 → ouvre formulaire "Valider Paiement" |
+
+**Sous-onglets** : Tous · Att. Validation (demande/attente) · Att. Paiement (attente_paiement) · Inscrire · Valider Paiement
+
+**Formulaire "Valider Paiement"** (`sousOngletCoursTango='valider_paiement'`) :
+- Menu déroulant avec TOUTES les personnes en `demande`/`attente_paiement` de la saison active
+- Préremplissage via `vpPrefill(id)` — utiliser `String(x.id)===String(id)` pour le `find` (IDs Supabase BIGINT vs strings)
+- Formulaire identique à "Inscrire" dans Élèves Tango (prenom/nom/email/tel, cours, formule, rôle/paiement/montant par cours, partenaire)
+- À la validation : UPDATE `inscriptions_cours` SET statut='inscrit' + upsert `eleves` + navigation vers Élèves Tango
+- La navigation utilise `switchTab('eleves-tango')`, pas `renderTab()`
+
+**Depuis `inscription-cours.html` (formulaire public)** :
+- Guidée seule dans TOUS ses cours → `statut='demande'`
+- Guideur, couple, double → `statut='attente_paiement'`
+- Les 3 options de rôle (guideur·se, guidé·e, double rôle) sont toujours affichées, quel que soit le choix "vous venez…"
 
 ### Cartes 10 cours (tango)
 - Une carte 10 cours = type `'carte10'` dans `inscriptions_cours`
