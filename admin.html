@@ -4106,6 +4106,7 @@ function _renderTabSiPasFormulaire() {
   if (tc && tc.querySelector('iframe')) return; // formulaire actif — on laisse tranquille
   if (currentTab === 'eleves-tango' && sousOngletEleves === 'inscrire') return; // saisie en cours
   if (currentTab === 'cours-tango' && (sousOngletCoursTango === 'valider_paiement' || sousOngletCoursTango === 'inscrire')) return; // formulaire VP ou inscrire en cours
+  if (currentTab === 'essai' && filtreEssai === 'pointage') return; // pointage actif — ne pas interrompre le scroll
   // Ne pas re-rendre si l'utilisateur est en train de saisir dans un champ
   var ae = document.activeElement;
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return;
@@ -4163,7 +4164,7 @@ function renderTab() {
         delete savedIframes[newFr.src];
       }
     });
-    if (savedScroll > 0) window.scrollTo(0, savedScroll);
+    if (savedScroll > 0) requestAnimationFrame(function(){ window.scrollTo(0, savedScroll); });
   }
 
   if (hasIframe) {
