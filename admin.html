@@ -8790,8 +8790,8 @@ window.soumettreInscriptionDirecte = function(force) {
       if(formulePart==='carte10'&&pEmailC&&!partenairesCartes[pEmailC])
         partenairesCartes[pEmailC]={prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,ville:ville,niveau:niveau};
     }
-    insRows.push({prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,ville:ville,cours:ville+'—'+niveau,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,partenaire:partNomC,email_partenaire:pEmailC});
-    if(avecC&&pPrenomC&&pNomC){insRows.push({prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,role:roleP,niveau:niveau,ville:ville,cours:ville+'—'+niveau,type:formulePart,paiement:paiePart,montant:montantP,statut:'inscrit',saison:sai,partenaire:prenom+' '+nom,email_partenaire:email});}
+    insRows.push({prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,ville:ville,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,partenaire:partNomC,email_partenaire:pEmailC});
+    if(avecC&&pPrenomC&&pNomC){insRows.push({prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,role:roleP,niveau:niveau,ville:ville,cours:cours,type:formulePart,paiement:paiePart,montant:montantP,statut:'inscrit',saison:sai,partenaire:prenom+' '+nom,email_partenaire:email});}
   });
   // Cartes 10
   var cours0=coursCoches[0], ville0=cours0.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
@@ -8808,24 +8808,31 @@ window.soumettreInscriptionDirecte = function(force) {
       recalcStats();
     }
   });
+  var coursList=coursCoches.join(', ');
+  if(IS_DEMO){ afficherToast('✉️ Email de confirmation envoyé à '+prenom+' '+nom+' (démo)'); }
+  else{ postAS({action:'emailInscriptionDirecteAdmin',prenom:prenom,nom:nom,email:email,cours:coursList,formule:formule,saison:sai}).catch(function(){}); }
+  if(ok) ok.style.display='block';
+  var _gotoTab = function() {
+    var v1=cours0.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
+    var n1=cours0.toLowerCase().indexOf('inter')>=0?'int':'deb';
+    sousOngletEleves=v1+'-'+n1;
+    chargerDonnees();
+  };
   if(!IS_DEMO && insRows.length){
-    TEV.client.from('inscriptions_cours').insert(insRows).then(function(r){if(r.error)console.error('ins_dir inscriptions_cours:',r.error);});
+    // Eleves upserts (fire and forget)
     Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:formule==='carte10'?10:0,carte_statut:formule==='carte10'?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     Object.keys(partenairesCartes).forEach(function(pem){
       var pd=partenairesCartes[pem];
       Promise.resolve(TEV.client.from('eleves').upsert({prenom:pd.prenom,nom:pd.nom,email:pem,tel:pd.tel,niveau:pd.niveau,ville:pd.ville,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:10,carte_statut:'Nouvelle carte',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     });
+    // inscriptions_cours INSERT — navigate to list after completion
+    TEV.client.from('inscriptions_cours').insert(insRows).then(function(r){
+      if(r && r.error){ console.error('ins_dir inscriptions_cours:', r.error); }
+      _gotoTab();
+    });
+  } else {
+    setTimeout(function(){ var v1=cours0.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris'; var n1=cours0.toLowerCase().indexOf('inter')>=0?'int':'deb'; sousOngletEleves=v1+'-'+n1; renderTab(); }, 1500);
   }
-  var coursList=coursCoches.join(', ');
-  if(IS_DEMO){ afficherToast('✉️ Email de confirmation envoyé à '+prenom+' '+nom+' (démo)'); }
-  else{ postAS({action:'emailInscriptionDirecteAdmin',prenom:prenom,nom:nom,email:email,cours:coursList,formule:formule,saison:sai}).catch(function(){}); }
-  if(ok) ok.style.display='block';
-  setTimeout(function(){
-    var v1=cours0.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
-    var n1=cours0.toLowerCase().indexOf('inter')>=0?'int':'deb';
-    sousOngletEleves=v1+'-'+n1;
-    if(!IS_DEMO) chargerDonnees(); else renderTab();
-  }, 2000);
   } catch(ex) {
     if(err){ err.textContent='Erreur : '+(ex&&ex.message||String(ex)); err.style.display='block'; }
     console.error('soumettreInscriptionDirecte:', ex);
