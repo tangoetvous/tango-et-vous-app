@@ -7131,10 +7131,20 @@ function supprimerCoursInscr(id) {
   if (!adminData.coursTango) return;
   var e = adminData.coursTango.find(function(x){ return x.id===id; });
   if (e) e.statut = 'supprimé';
+  _chargerDonneesSeq++;
   renderTab();
   if (!IS_DEMO) {
-    TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('id',id)
-      .catch(function(err){ afficherToast('⚠️ Erreur suppression: '+((err&&err.message)||'')); chargerDonnees(); });
+    Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('id',id))
+      .then(function(res){
+        if (res && res.error) {
+          afficherToast('⚠️ Erreur suppression: '+(res.error.message||res.error.code||''));
+          chargerDonnees();
+        }
+      })
+      .catch(function(err){
+        afficherToast('⚠️ Erreur réseau: '+((err&&err.message)||''));
+        chargerDonnees();
+      });
   }
 }
 function supprimerEssaiInscr(email, date, id) {
