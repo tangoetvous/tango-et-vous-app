@@ -1388,22 +1388,18 @@ function soumettreEssaiStatut(email, statut) {
   var ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   var niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   var ct=adminData.coursTango||[];
+  var emails_a_upsert=[];
   function _creerEntreeEssai(pers) {
+    var newEntry={id:'CT'+Date.now()+Math.floor(Math.random()*9999),prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonActive()};
     var existing=ct.find(function(e){return e.email===pers.email;});
     if(existing){
       existing.statut=statut; existing.cours=cours; existing.ville=ville; existing.niveau=niveau;
+      newEntry=existing;
     } else {
-      ct.push({id:'CT'+Date.now()+Math.floor(Math.random()*9999),prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonActive()});
+      ct.push(newEntry);
     }
-    if(!IS_DEMO){
-      Promise.resolve(TEV.client.from('inscriptions_cours').upsert(
-        {prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email.toLowerCase(),tel:pers.tel||'',
-         role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,
-         partenaire:pers.partenaire||'',email_partenaire:pers.emailPartenaire||'',
-         saison:saisonActive()},
-        {onConflict:'email'}
-      )).catch(function(){});
-    }
+    _pendingCoursInserts[pers.email]=newEntry;
+    emails_a_upsert.push({prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email.toLowerCase(),tel:pers.tel||'',role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:pers.partenaire||'',email_partenaire:pers.emailPartenaire||'',saison:saisonActive()});
   }
   var partRole=ess.role==='guideur'?'guidee':'guideur';
   _creerEntreeEssai({prenom:ess.prenom||'',nom:ess.nom||'',email:email,tel:ess.tel||'',role:ess.role||'guidee',partenaire:ess.partenaire||'',emailPartenaire:ess.emailPartenaire||''});
@@ -1427,6 +1423,16 @@ function soumettreEssaiStatut(email, statut) {
   if(elTc){var html=renderEssai();elTc.innerHTML=html;bindTabEvents(elTc);}
   var lbls={demande:'Demande en attente',attente_paiement:'Validé·e'};
   afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' · '+cours+(ess.partenaire?' + partenaire':''));
+  if(!IS_DEMO){
+    Promise.all(emails_a_upsert.map(function(row){
+      return Promise.resolve(TEV.client.from('inscriptions_cours').upsert(row,{onConflict:'email'}));
+    })).then(function(){
+      emails_a_upsert.forEach(function(row){ delete _pendingCoursInserts[row.email]; });
+      chargerDonnees();
+    }).catch(function(){
+      emails_a_upsert.forEach(function(row){ delete _pendingCoursInserts[row.email]; });
+    });
+  }
 }
 function envoyerEssaiVersVP(email) {
   var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
@@ -1442,10 +1448,12 @@ function envoyerEssaiVersVP(email) {
     var existing=ct.find(function(e){return e.email===pers.email;});
     if(existing){
       existing.statut='attente_paiement'; existing.ville=ess.ville||'paris'; existing.niveau=ess.niveau||'debutant'; existing.cours=cours;
+      _pendingCoursInserts[pers.email]=existing;
       return String(existing.id);
     }
     var entry={id:localId,prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonActive()};
     ct.push(entry);
+    _pendingCoursInserts[pers.email]=entry;
     return String(localId);
   }
   var usedId=_upsertLocal({prenom:ess.prenom||'',nom:ess.nom||'',email:email,tel:ess.tel||'',role:ess.role||'guidee',partenaire:ess.partenaire||'',emailPartenaire:ess.emailPartenaire||''},mainId);
@@ -1461,19 +1469,23 @@ function envoyerEssaiVersVP(email) {
       adminData.coursTango=ct;
     }
   }
+  fermerContact();
+  sousOngletCoursTango='valider_paiement';
+  switchTab('cours-tango');
+  setTimeout(function(){vpPrefill(usedId);},80);
   if(!IS_DEMO){
     var dbEntries=[{prenom:ess.prenom||'',nom:ess.nom||'',email:email.toLowerCase(),tel:ess.tel||'',role:ess.role||'guidee',niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:ess.partenaire||'',email_partenaire:ess.emailPartenaire||'',saison:saisonActive()}];
     if(partEmail){
       dbEntries.push({prenom:partEss?(partEss.prenom||''):ess.partenaire.split(' ')[0]||'',nom:partEss?(partEss.nom||''):ess.partenaire.split(' ').slice(1).join(' ')||'',email:partEmail.toLowerCase(),tel:partEss?(partEss.tel||''):'',role:partRole,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:(ess.prenom||'')+' '+(ess.nom||''),email_partenaire:email.toLowerCase(),saison:saisonActive()});
     }
-    dbEntries.forEach(function(entry){
-      Promise.resolve(TEV.client.from('inscriptions_cours').upsert(entry,{onConflict:'email'})).catch(function(){});
+    Promise.all(dbEntries.map(function(entry){
+      return Promise.resolve(TEV.client.from('inscriptions_cours').upsert(entry,{onConflict:'email'}));
+    })).then(function(){
+      dbEntries.forEach(function(row){ delete _pendingCoursInserts[row.email]; });
+    }).catch(function(){
+      dbEntries.forEach(function(row){ delete _pendingCoursInserts[row.email]; });
     });
   }
-  fermerContact();
-  sousOngletCoursTango='valider_paiement';
-  switchTab('cours-tango');
-  setTimeout(function(){vpPrefill(usedId);},80);
 }
 function toggleInteret(date, email, btn, id) {
   var e = id
@@ -3763,6 +3775,7 @@ var _realtimeChannel = null;
 var _pollTimer = null;
 var _chargerDonneesSeq = 0; // Séquence pour ignorer les résultats périmés (race condition polling vs INSERT)
 var _pendingSupprimes = new Set(); // IDs supprimés localement mais pas encore confirmés par la DB
+var _pendingCoursInserts = {}; // email → entry : inserts locaux pas encore confirmés par la DB
 function demarrerRealtime() {
   if (IS_DEMO || _pollTimer) return;
   // Polling toutes les 15s — fiable quelle que soit la source (Wix, autre appareil)
@@ -4007,6 +4020,15 @@ async function chargerDonnees() {
         if (_pendingSupprimes.size) {
           ct = ct.map(function(e){
             return _pendingSupprimes.has(String(e.id)) ? Object.assign({}, e, {statut:'supprimé'}) : e;
+          });
+        }
+        // Réinjecter les inserts en attente de confirmation DB (protection anti-polling)
+        var piKeys = Object.keys(_pendingCoursInserts);
+        if (piKeys.length) {
+          piKeys.forEach(function(em) {
+            if (!ct.find(function(x){ return x.email === em; })) {
+              ct = ct.concat([_pendingCoursInserts[em]]);
+            }
           });
         }
         return ct;
