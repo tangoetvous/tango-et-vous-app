@@ -7159,7 +7159,7 @@ function renderStages() {
 // ── Suppression d'inscriptions ────────────────────────────────
 function supprimerCoursInscr(id) {
   if (!adminData.coursTango) return;
-  var e = adminData.coursTango.find(function(x){ return x.id===id; });
+  var e = adminData.coursTango.find(function(x){ return String(x.id)===String(id); });
   if (e) e.statut = 'supprimé';
   _pendingSupprimes.add(String(id));
   renderTab();
@@ -8689,7 +8689,7 @@ window.vpUpdateRolePartLabel = function(role, ci) {
 };
 window.vpPrefill = function(id) {
   if(!id) return;
-  var e = (adminData.coursTango||[]).find(function(x){return x.id===id;});
+  var e = (adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
   if(!e) return;
   var flds = {prenom:'vp-prenom', nom:'vp-nom', email:'vp-email', tel:'vp-tel'};
   Object.keys(flds).forEach(function(k){ var el=gel(flds[k]); if(el) el.value=e[k]||''; });
