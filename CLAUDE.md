@@ -68,6 +68,11 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Absences élèves réguliers** (table `absences_jour`) : persistance double — localStorage immédiat + sync Supabase en arrière-plan. Dans `chargerDonnees()` (admin) et au chargement de l'espace élève, merger les entrées localStorage avec les données DB pour survivre aux rechargements automatiques même si le sync DB échoue.
 - **`adminData.absencesJour`** : chargé dans `tevGetAdminData()` depuis `absences_jour`, mergé avec localStorage `tev_absences_jour` dans `chargerDonnees()`. Utilisé dans le Pointage de l'onglet Essai Tango.
 - **`eleveData.absencesJour`** : chargé au login élève depuis localStorage `tev_abs_<email>`, puis sync DB en arrière-plan. Affiché dans `renderAccueil()` sur la carte "PROCHAIN COURS".
+- **`inscriptions_cours` — pas de contrainte UNIQUE sur `email`** : `upsert({onConflict:'email'})` échoue silencieusement car il n'existe aucun index UNIQUE sur cette colonne. Toujours utiliser `insert()` pour les nouvelles entrées et `update().eq('id',...)` pour les modifications. Ne jamais utiliser `upsert({onConflict:'email'})` sur cette table.
+- **Race condition INSERT admin vs polling 15s — pattern `_pendingCoursInserts`** : même problème que `_pendingSupprimes` mais pour les nouvelles entrées. Après un INSERT optimiste (local d'abord), stocker `{email → entry}` dans `_pendingCoursInserts`. Dans `chargerDonnees()`, après fusion de `coursTango`, ré-injecter les entrées pendantes si elles sont absentes des données DB. Supprimer la clé après confirmation DB (`.then()` du `Promise.all`). Quand l'email est vide (partenaire sans email), utiliser l'ID local comme clé : `_pendingCoursInserts[pers.email||newId]`.
+- **Création d'entrée partenaire — ne pas conditionner sur l'email** : lors d'un transfert essai→cours, la création de la fiche partenaire était gardée par `if(partEmail)`. Or un partenaire peut être connu par son nom (`ess.partenaire`) sans avoir d'email. La garde correcte est `if(ess.partenaire)`. Dans `_creerEntreeEssai` / `_prepareLocal`, si `pers.email` est vide, sauter la recherche `existing` (impossible de matcher sans email) et toujours faire un INSERT avec `email: ''`.
+- **`_renderTabSiPasFormulaire()` — garde Essai Tango Pointage** : le polling 15s provoquait un scroll-to-top en re-rendant l'onglet pendant que l'utilisateur scrollait dans le pointage. Ajouter : `if (currentTab === 'essai' && filtreEssai === 'pointage') return;`. Restauration du scroll : utiliser `requestAnimationFrame(function(){ window.scrollTo(0, savedScroll); })` après `innerHTML =` pour attendre le reflow du layout avant de repositionner.
+- **`nomCliquable` dans les listes essai — toujours passer `e.tel||''`** : les appels qui passaient `''` comme troisième argument faisaient que le téléphone n'apparaissait pas dans la fiche. Passer `e.tel||''` systématiquement pour toutes les entrées essai.
 
 ## Architecture temps réel — admin.html
 
@@ -195,6 +200,9 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] **Tester déclaration d'absence depuis espace élève** : bouton 🚫 Absent sur la carte "PROCHAIN COURS" → vérifier que l'absence apparaît bien dans admin → Essai Tango → Pointage sur la bonne date et le bon cours
 - [ ] Vérifier correction Sandrine Billot (hatha uniquement) / Myriam Bloch (hatha+yin) dans Supabase — SQL généré mais pas confirmé exécuté
 - [x] Tester suppression élève tango → persiste après refresh — CORRIGÉ (approche `_pendingSupprimes`)
+- [x] Transfert essai → inscriptions tango (boutons Validé·e / Demande en att. / Inscrit·e) — CORRIGÉ (saison `saisonActive()`, INSERT au lieu de `upsert`, `_pendingCoursInserts`, partenaire sans email)
+- [x] Pointage Essai Tango : scroll to top toutes les 15s — CORRIGÉ (garde `_renderTabSiPasFormulaire` + `requestAnimationFrame`)
+- [x] Liste d'attente dans Pointage Essai Tango avec bouton ✓ Valider — FAIT
 - [ ] Tester modification cours/paiement/montant → persiste après refresh
 - [ ] Installer l'appli sur Mac (PWA déjà prête) : ouvrir admin dans Chrome → icône ⊕ dans la barre d'adresse → Installer
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
