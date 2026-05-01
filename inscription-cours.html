@@ -909,7 +909,6 @@ async function finalize() {
       partenaire: S.venue==='avec-part' && S.pPrenom ? (S.pPrenom+' '+S.pNom).trim() : '',
       email_partenaire: S.venue==='avec-part' ? (S.pEmail||'').toLowerCase() : '',
       saison: S.saison||'',
-      donnees: msg.data,
     });
 
     // ── Partenaire — Cours 1 (si couple)
@@ -925,7 +924,6 @@ async function finalize() {
         partenaire: (S.prenom+' '+S.nom).trim(),
         email_partenaire: (S.email||'').toLowerCase(),
         saison: S.saison||'',
-        donnees: msg.data,
       });
     }
 
@@ -941,7 +939,6 @@ async function finalize() {
         partenaire: S.venue2==='avec-part' && p2Pre ? (p2Pre+' '+p2Nom).trim() : '',
         email_partenaire: S.venue2==='avec-part' ? (p2Eml||'').toLowerCase() : '',
         saison: S.saison||'',
-        donnees: msg.data,
       });
 
       // ── Partenaire — Cours 2 (si couple)
@@ -957,14 +954,18 @@ async function finalize() {
           partenaire: (S.prenom+' '+S.nom).trim(),
           email_partenaire: (S.email||'').toLowerCase(),
           saison: S.saison||'',
-          donnees: msg.data,
         });
       }
     }
 
-    for (const row of rows) {
-      const { error: insErr } = await TEV.client.from('inscriptions_cours').insert(row);
-      if (insErr) console.error('[TEV] inscription-cours insert error:', insErr);
+    try {
+      for (const row of rows) {
+        const { error: insErr } = await TEV.client.from('inscriptions_cours').insert(row);
+        if (insErr) throw new Error(insErr.message || insErr.code || JSON.stringify(insErr));
+      }
+    } catch(dbErr) {
+      console.error('[TEV] inscription-cours insert error:', dbErr);
+      alert('Votre demande a bien été reçue, mais un problème technique est survenu lors de l\'enregistrement (' + dbErr.message + '). Veuillez contacter tangoetvous@gmail.com.');
     }
   }
 }
