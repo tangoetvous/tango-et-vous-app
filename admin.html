@@ -3682,6 +3682,7 @@ function sauverTarifsType(type, sai) {
 // ================================================================
 var _realtimeChannel = null;
 var _pollTimer = null;
+var _chargerDonneesSeq = 0; // Séquence pour ignorer les résultats périmés (race condition polling vs INSERT)
 function demarrerRealtime() {
   if (IS_DEMO || _pollTimer) return;
   // Polling toutes les 15s — fiable quelle que soit la source (Wix, autre appareil)
@@ -3858,8 +3859,10 @@ function logout() {
 }
 async function chargerDonnees() {
   if (IS_DEMO) { renderTab(); return; }
+  var _seq = ++_chargerDonneesSeq;
   try {
     var d = await TEV.getAdminData();
+    if (_seq !== _chargerDonneesSeq) return; // Résultat périmé — un appel plus récent est en cours
     var emailSaved = adminData._email;
     // Reconstruire adminData.stages depuis inscriptions_stages Supabase
     var stagesReels = adminData.stages || {};
