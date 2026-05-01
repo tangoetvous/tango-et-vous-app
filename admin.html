@@ -1393,14 +1393,14 @@ function soumettreEssaiStatut(email, statut) {
     if(existing){
       existing.statut=statut; existing.cours=cours; existing.ville=ville; existing.niveau=niveau;
     } else {
-      ct.push({id:'CT'+Date.now()+Math.floor(Math.random()*9999),prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonPourNouvelleEntree()});
+      ct.push({id:'CT'+Date.now()+Math.floor(Math.random()*9999),prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonActive()});
     }
     if(!IS_DEMO){
       Promise.resolve(TEV.client.from('inscriptions_cours').upsert(
         {prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email.toLowerCase(),tel:pers.tel||'',
          role:pers.role,niveau:niveau,cours:cours,ville:ville,statut:statut,
          partenaire:pers.partenaire||'',email_partenaire:pers.emailPartenaire||'',
-         saison:saisonPourNouvelleEntree()},
+         saison:saisonActive()},
         {onConflict:'email'}
       )).catch(function(){});
     }
@@ -1444,7 +1444,7 @@ function envoyerEssaiVersVP(email) {
       existing.statut='attente_paiement'; existing.ville=ess.ville||'paris'; existing.niveau=ess.niveau||'debutant'; existing.cours=cours;
       return String(existing.id);
     }
-    var entry={id:localId,prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonPourNouvelleEntree()};
+    var entry={id:localId,prenom:pers.prenom||'',nom:pers.nom||'',email:pers.email,tel:pers.tel||'',role:pers.role,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:pers.partenaire||'',emailPartenaire:pers.emailPartenaire||'',type:'',paiement:'',montant:0,dateInscription:today(),saison:saisonActive()};
     ct.push(entry);
     return String(localId);
   }
@@ -1462,9 +1462,9 @@ function envoyerEssaiVersVP(email) {
     }
   }
   if(!IS_DEMO){
-    var dbEntries=[{prenom:ess.prenom||'',nom:ess.nom||'',email:email.toLowerCase(),tel:ess.tel||'',role:ess.role||'guidee',niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:ess.partenaire||'',email_partenaire:ess.emailPartenaire||'',saison:saisonPourNouvelleEntree()}];
+    var dbEntries=[{prenom:ess.prenom||'',nom:ess.nom||'',email:email.toLowerCase(),tel:ess.tel||'',role:ess.role||'guidee',niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:ess.partenaire||'',email_partenaire:ess.emailPartenaire||'',saison:saisonActive()}];
     if(partEmail){
-      dbEntries.push({prenom:partEss?(partEss.prenom||''):ess.partenaire.split(' ')[0]||'',nom:partEss?(partEss.nom||''):ess.partenaire.split(' ').slice(1).join(' ')||'',email:partEmail.toLowerCase(),tel:partEss?(partEss.tel||''):'',role:partRole,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:(ess.prenom||'')+' '+(ess.nom||''),email_partenaire:email.toLowerCase(),saison:saisonPourNouvelleEntree()});
+      dbEntries.push({prenom:partEss?(partEss.prenom||''):ess.partenaire.split(' ')[0]||'',nom:partEss?(partEss.nom||''):ess.partenaire.split(' ').slice(1).join(' ')||'',email:partEmail.toLowerCase(),tel:partEss?(partEss.tel||''):'',role:partRole,niveau:ess.niveau||'debutant',cours:cours,ville:ess.ville||'paris',statut:'attente_paiement',partenaire:(ess.prenom||'')+' '+(ess.nom||''),email_partenaire:email.toLowerCase(),saison:saisonActive()});
     }
     dbEntries.forEach(function(entry){
       Promise.resolve(TEV.client.from('inscriptions_cours').upsert(entry,{onConflict:'email'})).catch(function(){});
@@ -6014,7 +6014,7 @@ function renderEssai() {
         return '<div class="point-row">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
-          +nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')
+          +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')
           +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
           +'</div>'
           +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
@@ -6090,7 +6090,7 @@ function renderEssai() {
         if(ctStatut==='inscrit') pastille='<span class="pill pill-ok" style="font-size:8px;padding:1px 5px;">Inscrit</span>';
         else if(ctStatut==='valide'||ctStatut==='attente_paiement') pastille='<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">att. paiem.</span>';
         else if(ctStatut==='demande') pastille='<span style="display:inline-block;background:#FFD600;color:#003399;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;border:2px solid #003399;white-space:nowrap;">DEM</span>';
-        return '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
+        return '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · <span style="color:#c0392b;">♥ '+e.partenaire+'</span>':'')+'</div></div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
           +(e.presenceConfirmee===true?'<span class="pill pill-ok" style="font-size:8px;">✓Conf.</span>':'')
@@ -6116,7 +6116,7 @@ function renderEssai() {
           var _mkAttPtCard = function(e) {
             var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
             return '<div class="point-row" style="opacity:0.9;">'
-              +'<div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')+'</div>'
+              +'<div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+'</div>'
               +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
               +'</div>'
               +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
@@ -6243,7 +6243,7 @@ function renderEssai() {
           return '<div class="point-row">'
             +'<div style="flex:1;min-width:0;">'
             +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
-            +nomCliquable(e.prenom+' '+e.nom,e.email||'','','essai')
+            +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')
             +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
             +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
             +'</div>'
