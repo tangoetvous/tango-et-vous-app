@@ -1189,28 +1189,45 @@ function sauverContact(btn) {
   btn.disabled=true; btn.textContent='⏳';
   var oldEmail=c.email||'';
   var fullNom=prenom.trim()+' '+nom.trim();
+  // Mettre à jour l'état local dans toutes les structures (demo ET réel)
+  function updLocal(arr){ (arr||[]).forEach(function(x){
+    if(x.email===oldEmail){ x.email=newEmail; x.tel=tel; if(x.prenom!==undefined)x.prenom=prenom.trim(); if(x.nom!==undefined)x.nom=nom.trim(); }
+    if(x.emailPartenaire===oldEmail){ x.emailPartenaire=newEmail; }
+  });}
+  updLocal(adminData.coursTango); updLocal(adminData.coursYoga); updLocal(adminData.cartes); updLocal(adminData.essai);
+  (adminData.cartes||[]).forEach(function(x){if(x.email===newEmail||x.email===oldEmail)x.nom=fullNom;});
+  _contactCtx.nom=fullNom; _contactCtx.tel=tel; _contactCtx.email=newEmail;
+  if(_ecPhotoUrl!==null){
+    _contactCtx.photo_url=_ecPhotoUrl;
+    (adminData.cartes||[]).forEach(function(x){if(x.email===oldEmail||x.email===newEmail)x.photo_url=_ecPhotoUrl;});
+  }
   if(IS_DEMO){
-    // Mettre à jour dans toutes les structures de données
-    function upd(arr){ (arr||[]).forEach(function(x){
-      if(x.email===oldEmail){ x.email=newEmail; x.tel=tel; if(x.prenom!==undefined)x.prenom=prenom.trim(); if(x.nom!==undefined)x.nom=nom.trim(); }
-      if(x.email===oldEmail||x.emailPartenaire===oldEmail){ if(x.emailPartenaire===oldEmail)x.emailPartenaire=newEmail; }
-    });}
-    upd(adminData.coursTango); upd(adminData.coursYoga); upd(adminData.cartes); upd(adminData.essai);
-    // cartes.nom est "Prenom Nom" combiné
-    (adminData.cartes||[]).forEach(function(x){if(x.email===newEmail||x.email===oldEmail)x.nom=fullNom;});
-    _contactCtx.nom=fullNom; _contactCtx.tel=tel; _contactCtx.email=newEmail;
-    if(_ecPhotoUrl!==null){
-      _contactCtx.photo_url=_ecPhotoUrl;
-      (adminData.cartes||[]).forEach(function(x){if(x.email===oldEmail||x.email===newEmail)x.photo_url=_ecPhotoUrl;});
-    }
     afficherToast('✓ Coordonnées mises à jour');
     fermerContact(); renderTab(); return;
   }
-  var updatePayload={prenom:prenom.trim(),nom:nom.trim(),tel:tel,email:newEmail};
+  var emailNew=newEmail.trim().toLowerCase();
+  var emailOld=oldEmail.toLowerCase();
+  var updatePayload={prenom:prenom.trim(),nom:nom.trim(),tel:tel,email:emailNew};
   if(_ecPhotoUrl!==null) updatePayload.photo_url=_ecPhotoUrl;
-  TEV.client.from('eleves').update(updatePayload).eq('email',oldEmail)
-    .then(function(){afficherToast('✓ Coordonnées mises à jour');fermerContact();chargerDonnees();})
-    .catch(function(e){btn.disabled=false;btn.textContent='✓ Enregistrer';if(err){err.textContent=e.message;err.style.display='block';}});
+  // Met à jour inscriptions_cours (personnes en demande/attente_paiement non encore dans eleves)
+  var p1=Promise.resolve(TEV.client.from('inscriptions_cours').update({prenom:prenom.trim(),nom:nom.trim(),tel:tel,email:emailNew}).eq('email',emailOld));
+  // Met à jour eleves (personnes déjà inscrites)
+  var p2=Promise.resolve(TEV.client.from('eleves').update(updatePayload).eq('email',emailOld));
+  Promise.all([p1,p2])
+    .then(function(res){
+      var e1=res[0]&&res[0].error, e2=res[1]&&res[1].error;
+      btn.disabled=false; btn.textContent='✓ Enregistrer';
+      if(e1||e2){
+        var msg=((e1||e2).message||(e1||e2).code||'Erreur DB');
+        if(err){err.textContent=msg;err.style.display='block';} return;
+      }
+      afficherToast('✓ Coordonnées mises à jour');
+      fermerContact(); renderTab();
+    })
+    .catch(function(e){
+      btn.disabled=false; btn.textContent='✓ Enregistrer';
+      if(err){err.textContent=e.message;err.style.display='block';}
+    });
 }
 function fermerContact() {
   gel('modal-contact').classList.remove('vis');
