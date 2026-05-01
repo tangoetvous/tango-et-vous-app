@@ -3685,6 +3685,7 @@ function sauverTarifsType(type, sai) {
 var _realtimeChannel = null;
 var _pollTimer = null;
 var _chargerDonneesSeq = 0; // Séquence pour ignorer les résultats périmés (race condition polling vs INSERT)
+var _pendingSupprimes = new Set(); // IDs supprimés localement mais pas encore confirmés par la DB
 function demarrerRealtime() {
   if (IS_DEMO || _pollTimer) return;
   // Polling toutes les 15s — fiable quelle que soit la source (Wix, autre appareil)
@@ -3924,7 +3925,15 @@ async function chargerDonnees() {
       cartes:            d.cartes            || adminData.cartes || [],
       presences:         d.presences         || [],
       coursParticuliers: d.coursParticuliers  || [],
-      coursTango:        d.coursTango         || adminData.coursTango || [],
+      coursTango:        (function(){
+        var ct = d.coursTango || adminData.coursTango || [];
+        if (_pendingSupprimes.size) {
+          ct = ct.map(function(e){
+            return _pendingSupprimes.has(String(e.id)) ? Object.assign({}, e, {statut:'supprimé'}) : e;
+          });
+        }
+        return ct;
+      })(),
       coursYoga:         d.coursYoga          || adminData.coursYoga || [],
       essai:             d.coursEssai         || adminData.essai || [],
       essaiYoga:         d.essaiYoga          || adminData.essaiYoga || [],
@@ -7131,17 +7140,21 @@ function supprimerCoursInscr(id) {
   if (!adminData.coursTango) return;
   var e = adminData.coursTango.find(function(x){ return x.id===id; });
   if (e) e.statut = 'supprimé';
-  _chargerDonneesSeq++;
+  _pendingSupprimes.add(String(id));
   renderTab();
   if (!IS_DEMO) {
     Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('id',id))
       .then(function(res){
         if (res && res.error) {
+          _pendingSupprimes.delete(String(id));
           afficherToast('⚠️ Erreur suppression: '+(res.error.message||res.error.code||''));
           chargerDonnees();
+        } else {
+          _pendingSupprimes.delete(String(id));
         }
       })
       .catch(function(err){
+        _pendingSupprimes.delete(String(id));
         afficherToast('⚠️ Erreur réseau: '+((err&&err.message)||''));
         chargerDonnees();
       });
