@@ -7129,8 +7129,13 @@ function renderStages() {
 // ── Suppression d'inscriptions ────────────────────────────────
 function supprimerCoursInscr(id) {
   if (!adminData.coursTango) return;
-  adminData.coursTango = adminData.coursTango.filter(function(e){ return e.id !== id; });
+  var e = adminData.coursTango.find(function(x){ return x.id===id; });
+  if (e) e.statut = 'supprimé';
   renderTab();
+  if (!IS_DEMO) {
+    TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('id',id)
+      .catch(function(err){ afficherToast('⚠️ Erreur suppression: '+((err&&err.message)||'')); chargerDonnees(); });
+  }
 }
 function supprimerEssaiInscr(email, date, id) {
   if (!adminData.essai) return;
@@ -8784,7 +8789,7 @@ window.soumettreValiderPaiement = function(force) {
     });
     Promise.all(updates).then(function(){
       chargerDonnees();
-      setTimeout(function(){sousOngletEleves=ville0+'-'+(niveau0==='intermediaire'?'int':'deb');renderTab();},1500);
+      setTimeout(function(){sousOngletEleves=ville0+'-'+(niveau0==='intermediaire'?'int':'deb');switchTab('eleves-tango');},1500);
     }).catch(function(ex){if(err){err.textContent='Erreur: '+((ex&&ex.message)||'Update échoué');err.style.display='block';}chargerDonnees();});
   } else {
     setTimeout(function(){sousOngletEleves=ville0+'-'+(niveau0==='intermediaire'?'int':'deb');switchTab('eleves-tango');},1500);
