@@ -5413,8 +5413,6 @@ function ficheEleveInscrit(e, borderStyle, grise) {
     +(typeLbl?'<span class="pill pill-ok" style="font-size:8px;">'+typeLbl+'</span>':'')
     +(paiLbl?'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+'</span>':'')
     +(e.email?'<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;font-size:11px;">✉️</a>':'')
-    +(!e.partenaire?'<button class="btn-point btn-ghost" onclick="ouvrirModalLierPartenaire(\''+e.id+'\')" title="Lier un partenaire" style="font-size:11px;">🔗</button>':'')
-    +'<button class="btn-point btn-ghost" onclick="basculerRole(\''+e.id+'\')" title="Changer guideur/guidée" style="font-size:11px;">'+(e.role==='guideur'?'👨':'👩')+'</button>'
     +'<button class="btn-point btn-ghost" onclick="ouvrirChangementCours(\''+e.id+'\')" title="Changer de cours" style="font-size:11px;">✏️</button>'
     +'<button class="btn-point btn-ghost" onclick="supprimerEleve(\''+e.id+'\')" title="Supprimer l\'élève" style="font-size:11px;color:#ff6b6b;">🗑</button>'
     +'</div></div>';
@@ -5453,9 +5451,9 @@ function ouvrirModalLierPartenaire(id) {
   box.innerHTML = h;
   gel('modal-contact').classList.add('vis');
 }
-function validerLierPartenaire(id) {
+function validerLierPartenaire(id, selId) {
   var e = (adminData.coursTango||[]).find(function(x){return x.id===id;});
-  var sel = gel('lp-partner');
+  var sel = gel(selId||'lp-partner');
   if (!e || !sel || !sel.value) return;
   var p = (adminData.coursTango||[]).find(function(x){return x.id===sel.value;});
   if (!p) return;
@@ -5484,8 +5482,15 @@ function ouvrirChangementCours(id) {
   var box=gel('modal-contact-box'); if(!box) return;
   var PAI_OPT='<option value="">— Non renseigné —</option>'+Object.entries(PAI_LBL).map(function(kv){return '<option value="'+kv[0]+'"'+(e.paiement===kv[0]?' selected':'')+'>'+kv[1]+'</option>';}).join('');
   var PAI_OPT2='<option value="">— Non renseigné —</option>'+Object.entries(PAI_LBL).map(function(kv){return '<option value="'+kv[0]+'">'+kv[1]+'</option>';}).join('');
+  var roleLblCur=e.role==='guideur'?'Guideur':'Guidée';
+  var roleInvLbl=e.role==='guideur'?'Guidée':'Guideur';
+  var rclsCur=e.role==='guideur'?'pill-guideur':'pill-guidee';
   var h='<div class="modal-titre">✏️ Modifier l\'inscription</div>'
-    +'<div style="font-size:13px;font-weight:600;margin-bottom:4px;">'+escHtml(e.prenom)+' '+escHtml(e.nom)+'</div>'
+    +'<div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px;">'
+    +escHtml(e.prenom)+' '+escHtml(e.nom)
+    +'<span class="pill '+rclsCur+'" style="font-size:9px;">'+roleLblCur+'</span>'
+    +'<button class="btn btn-ghost" onclick="basculerRole(\''+id+'\');fermerContact();" style="font-size:11px;padding:2px 8px;">⇄ Passer '+roleInvLbl+'</button>'
+    +'</div>'
     +(autresInscrits.length?'<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">Aussi inscrit·e : '+autresInscrits.map(function(c){return escHtml(c);}).join(', ')+'</div>':'<div style="margin-bottom:12px;"></div>')
     +'<div class="field"><label>Cours</label><select id="cc-cours">';
   COURS.forEach(function(c){h+='<option'+(c===e.cours?' selected':'')+'>'+c+'</option>';});
@@ -5502,6 +5507,28 @@ function ouvrirChangementCours(id) {
       +'<div class="field"><label>Montant (€)</label><input type="number" id="cc-montant2" placeholder="ex: 170" style="width:100%;box-sizing:border-box;"></div>'
       +'<button class="btn btn-ghost" style="width:100%;margin-bottom:4px;" onclick="ajouterDeuxiemeCoursTango(\''+id+'\')">+ Inscrire sur ce 2ème cours</button>'
       +'</div>';
+  }
+  if (!e.partenaire) {
+    var sai2 = e.saison || saisonCourante();
+    var eligibles = (adminData.coursTango||[]).filter(function(x){
+      return x.ville===e.ville && x.niveau===e.niveau && x.statut==='inscrit'
+        && (x.saison||saisonCourante())===sai2
+        && !x.partenaire && x.id!==id;
+    });
+    eligibles.sort(function(a,b){return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);});
+    h+='<div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:14px;">'
+      +'<div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">🔗 Lier un partenaire</div>';
+    if (!eligibles.length) {
+      h+='<div style="font-size:12px;color:var(--dim);padding-bottom:4px;">Aucune autre personne sans partenaire dans ce cours.</div>';
+    } else {
+      var opts2 = '<option value="">— Choisir —</option>'+eligibles.map(function(p){
+        var rLbl=p.role==='guideur'?'Guideur':'Guidée';
+        return '<option value="'+p.id+'">'+escHtml((p.prenom||'')+' '+(p.nom||''))+' — '+rLbl+'</option>';
+      }).join('');
+      h+='<div class="field"><label>Partenaire</label><select id="cc-lp" style="width:100%;box-sizing:border-box;">'+opts2+'</select></div>'
+        +'<button class="btn btn-ghost" style="width:100%;margin-bottom:4px;" onclick="validerLierPartenaire(\''+id+'\',\'cc-lp\')">🔗 Lier ce partenaire</button>';
+    }
+    h+='</div>';
   }
   h+='<div class="box-err" id="cc-err"></div>'
     +'<div class="btn-row">'
