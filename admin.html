@@ -8703,6 +8703,9 @@ window.diUpdatePaieZone = function() {
   z.innerHTML = h;
 };
 window.soumettreInscriptionDirecte = function(force) {
+  var err = gel('di-err'), ok = gel('di-ok');
+  if(err) err.style.display='none'; if(ok) ok.style.display='none';
+  try {
   var prenom  = ((gel('di-prenom')||{}).value||'').trim();
   var nom     = ((gel('di-nom')||{}).value||'').trim();
   var email   = ((gel('di-email')||{}).value||'').trim().toLowerCase();
@@ -8710,8 +8713,6 @@ window.soumettreInscriptionDirecte = function(force) {
   var coursCoches = Array.from(document.querySelectorAll('input[name="di-cours"]:checked')).map(function(cb){ return cb.value; });
   var formEl  = document.querySelector('input[name="di-formule"]:checked');
   var formule = formEl ? formEl.value : 'carte10';
-  var err = gel('di-err'), ok = gel('di-ok');
-  if(err) err.style.display='none'; if(ok) ok.style.display='none';
   if (!prenom||!nom||!email) { if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';} return; }
   if (!coursCoches.length) { if(err){err.textContent='Choisissez au moins un cours.';err.style.display='block';} return; }
   var COURS_VALS_REF = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
@@ -8825,6 +8826,10 @@ window.soumettreInscriptionDirecte = function(force) {
     sousOngletEleves=v1+'-'+n1;
     if(!IS_DEMO) chargerDonnees(); else renderTab();
   }, 2000);
+  } catch(ex) {
+    if(err){ err.textContent='Erreur : '+(ex&&ex.message||String(ex)); err.style.display='block'; }
+    console.error('soumettreInscriptionDirecte:', ex);
+  }
 };
 
 function soumettreDemande() {
