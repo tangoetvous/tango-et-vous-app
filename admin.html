@@ -8817,6 +8817,7 @@ window.soumettreInscriptionDirecte = function(force) {
     var n1=cours0.toLowerCase().indexOf('inter')>=0?'int':'deb';
     sousOngletEleves=v1+'-'+n1;
     chargerDonnees();
+    setTimeout(renderTab, 300);
   };
   if(!IS_DEMO && insRows.length){
     // Eleves upserts (fire and forget)
@@ -8827,7 +8828,10 @@ window.soumettreInscriptionDirecte = function(force) {
     });
     // inscriptions_cours INSERT — navigate to list after completion
     TEV.client.from('inscriptions_cours').insert(insRows).then(function(r){
-      if(r && r.error){ console.error('ins_dir inscriptions_cours:', r.error); }
+      if(r && r.error){
+        afficherToast('⚠️ Erreur INSERT: '+(r.error.message||r.error.code||JSON.stringify(r.error)));
+        console.error('ins_dir inscriptions_cours:', r.error);
+      }
       _gotoTab();
     });
   } else {
