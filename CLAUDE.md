@@ -209,6 +209,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [x] Pointage Essai Tango : scroll to top toutes les 15s — CORRIGÉ (garde `_renderTabSiPasFormulaire` + `requestAnimationFrame`)
 - [x] Liste d'attente dans Pointage Essai Tango avec bouton ✓ Valider — FAIT
 - [x] Publications : double création, photo non sauvegardée, champs perdus — CORRIGÉ (listener redondant, colonne donnees JSONB, propagation erreurs Supabase)
+- [x] Yoga — inscription directe élève ne persistait pas : `soumettreInscriptionDirecteYoga` n'appelait pas Supabase, saisonPourNouvelleEntree→saisonActive — CORRIGÉ
 - [ ] Tester modification cours/paiement/montant → persiste après refresh
 - [ ] Installer l'appli sur Mac (PWA déjà prête) : ouvrir admin dans Chrome → icône ⊕ dans la barre d'adresse → Installer
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
