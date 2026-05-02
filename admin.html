@@ -4556,6 +4556,9 @@ function handleAction(action, btn) {
     case 'reporter-carte':
       reporterCarteJs(id, btn);
       break;
+    case 'suppr-carte':
+      (function(em,nom){ ouvrirModalConfirm('Supprimer la carte 10 de '+nom+' ?', function(){ confirmerSupprimerCarte(em,nom); }); })(btn.dataset.email||'', btn.dataset.nom||'');
+      break;
     case 'qr-carte':
       ouvrirModalQR(id, btn.dataset.nom||'', btn.dataset.cours||'');
       break;
@@ -5771,15 +5774,25 @@ function supprimerEleve(id) {
 function confirmerSupprimerEleve(id) {
   var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
   if(!e){fermerContact();return;}
-  var nom=e.prenom+' '+e.nom;
+  var nom=e.prenom+' '+e.nom, email=e.email;
   e.statut='supprimé';
+  // Supprimer aussi les cartes associées dans l'état local
+  (adminData.coursTango||[]).forEach(function(ct){
+    if(ct.email===email && ct.type&&ct.type.indexOf('carte')>=0 && ct.statut==='inscrit') ct.statut='supprimé';
+  });
+  var carteEleve=(adminData.cartes||[]).find(function(c){ return c.email===email; });
+  if(carteEleve) carteEleve.statut='supprimé';
   fermerContact();
   afficherToast('🗑 '+nom+' archivé·e');
   renderTab();
   if (!IS_DEMO) {
-    TEV.client.from('inscriptions_cours').update({statut: 'supprimé'}).eq('id', id)
-    .then(function(){ chargerDonnees(); })
-    .catch(function(err){ afficherToast('⚠️ Erreur suppression: ' + ((err&&err.message)||'')); });
+    var ops=[
+      Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('id',id)),
+      Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('email',email).eq('type','carte10').eq('statut','inscrit'))
+    ];
+    if(carteEleve) ops.push(Promise.resolve(TEV.client.from('eleves').update({carte_statut:'supprimé'}).eq('email',email)));
+    Promise.all(ops).then(function(){ chargerDonnees(); })
+    .catch(function(err){ afficherToast('⚠️ Erreur suppression: '+((err&&err.message)||'')); });
   }
 }
 function majRechercheEleve(val) {
@@ -6594,9 +6607,10 @@ function _buildCartesData() {
   var sai = saisonActive();
   var cartesEleves = (adminData.cartes||[]).filter(function(c){
     var carteS = c.saison || saisonCourante();
-    return carteS===sai && (c.utilises>0||c.restants>0||c.datePremierCours||c.statut==='Nouvelle carte');
+    return carteS===sai && c.statut!=='supprimé' && (c.utilises>0||c.restants>0||c.datePremierCours||c.statut==='Nouvelle carte');
   });
   cartesEleves.forEach(function(c){
+    c._fromCoursTango = false;
     if(c.paye===undefined)c.paye=(c.source==='inscription');
     try { if(localStorage.getItem('tev_nonpayee_'+c.email)==='1') c.paye=false; } catch(e) {}
   });
@@ -6609,7 +6623,8 @@ function _buildCartesData() {
       id:ct.id, nom:ct.prenom+' '+ct.nom, niveau:ct.niveau,
       email:ct.email, statutEleve:'Actif', utilises:0, restants:10,
       datePremierCours:'', expiration:'', statut:'Nouvelle carte',
-      source:'inscription', ville:ct.ville, datesCours:[], partenaire:ct.partenaire||'', paye:true
+      source:'inscription', ville:ct.ville, datesCours:[], partenaire:ct.partenaire||'', paye:true,
+      _fromCoursTango: true
     };
     cartesEleves.push(newCarte);
     if(!adminData.cartes)adminData.cartes=[];
@@ -6630,17 +6645,59 @@ function _buildCartesData() {
   var isReportPeriod=IS_DEMO||(todayD>=yyyyCur+'-07-01'&&todayD<=yyyyCur+'-08-31');
   return {cartes:cartesEleves, normNiv:normNiv, coursKey:coursKey, now:now, todayD:todayD, isReportPeriod:isReportPeriod};
 }
+function renderCartesSupprimees(d) {
+  var sai = saisonActive();
+  var suppCt = (adminData.coursTango||[]).filter(function(ct){
+    return ct.type&&ct.type.indexOf('carte')>=0 && ct.statut==='supprimé' && (ct.saison||saisonCourante())===sai;
+  });
+  var suppEl = (adminData.cartes||[]).filter(function(c){
+    return c.statut==='supprimé' && (c.saison||saisonCourante())===sai;
+  });
+  var seen={}, tous=[];
+  suppEl.forEach(function(c){ seen[c.email]=true; tous.push({nom:c.nom||'', email:c.email, tel:c.tel||''}); });
+  suppCt.forEach(function(ct){ if(!seen[ct.email]){ seen[ct.email]=true; tous.push({nom:(ct.prenom||'')+' '+(ct.nom||''), email:ct.email, tel:ct.tel||''}); } });
+  if(!tous.length) return '<div class="empty-state">Aucune carte supprimée pour la saison '+sai+'.</div>';
+  tous.sort(function(a,b){ return a.nom.localeCompare(b.nom,'fr'); });
+  var h='<div style="font-size:11px;color:var(--dim);padding:8px 12px;font-style:italic;">'+tous.length+' carte'+(tous.length>1?'s':'')+' supprimée'+(tous.length>1?'s':'')+' — saison '+sai+'</div>';
+  tous.forEach(function(e){
+    h+='<div class="point-row" style="display:flex;align-items:center;gap:8px;opacity:0.7;">'
+      +'<div style="flex:1;">'+nomCliquable(e.nom,e.email,e.tel,'ct')+'</div>'
+      +'<span class="pill pill-err" style="font-size:9px;">Supprimée</span>'
+      +'</div>';
+  });
+  return h;
+}
+function confirmerSupprimerCarte(email, nom) {
+  var sai = saisonActive();
+  (adminData.coursTango||[]).forEach(function(ct){
+    if(ct.email===email && ct.type&&ct.type.indexOf('carte')>=0 && ct.statut==='inscrit') ct.statut='supprimé';
+  });
+  var carteEleve=(adminData.cartes||[]).find(function(c){ return c.email===email; });
+  if(carteEleve) carteEleve.statut='supprimé';
+  afficherToast('🗑 Carte de '+nom+' supprimée');
+  renderTab();
+  if(!IS_DEMO){
+    var ops=[
+      Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('email',email).eq('type','carte10').eq('statut','inscrit'))
+    ];
+    if(carteEleve) ops.push(Promise.resolve(TEV.client.from('eleves').update({carte_statut:'supprimé'}).eq('email',email)));
+    Promise.all(ops).then(function(){ chargerDonnees(); }).catch(function(e){ afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
+  }
+}
 function renderCartes() {
   var d=_buildCartesData();
   var cartes=d.cartes;
-  if(!cartes.length)return'<div class="empty-state">Aucune carte de 10 cours.<br>Inscrivez un élève avec "Carte de 10 cours" dans l\'onglet Cours.</div>';
-  // Sous-onglets
+  var _stBtn=function(tab,lbl){
+    var sel=cartesSubTab===tab;
+    return '<button class="btn" data-action="cartes-subtab" data-tab="'+tab+'" style="flex:1;border-radius:8px 8px 0 0;border-bottom:none;font-size:13px;padding:8px 0;'+(sel?'background:var(--gold);color:#1a1a1a;font-weight:700;':'background:var(--s3);color:var(--dim);')+'">'+lbl+'</button>';
+  };
   var h='<div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:0;">'
-    +'<button class="btn" data-action="cartes-subtab" data-tab="pointage" style="flex:1;border-radius:8px 8px 0 0;border-bottom:none;font-size:13px;padding:8px 0;'+(cartesSubTab==='pointage'?'background:var(--gold);color:#1a1a1a;font-weight:700;':'background:var(--s3);color:var(--dim);')+'">'
-    +'✅ Pointage</button>'
-    +'<button class="btn" data-action="cartes-subtab" data-tab="details" style="flex:1;border-radius:8px 8px 0 0;border-bottom:none;font-size:13px;padding:8px 0;'+(cartesSubTab==='details'?'background:var(--gold);color:#1a1a1a;font-weight:700;':'background:var(--s3);color:var(--dim);')+'">'
-    +'🔍 Détails</button>'
+    +_stBtn('pointage','✅ Pointage')
+    +_stBtn('details','🔍 Détails')
+    +_stBtn('supprimees','🗑 Supprimées')
     +'</div>';
+  if(cartesSubTab==='supprimees') return h+renderCartesSupprimees(d);
+  if(!cartes.length) return h+'<div class="empty-state">Aucune carte de 10 cours.<br>Inscrivez un élève avec "Carte de 10 cours" dans l\'onglet Cours.</div>';
   if(cartesSubTab==='pointage') h+=renderCartesPointage(d);
   else h+=renderCartesDetails(d);
   return h;
@@ -6675,6 +6732,7 @@ function renderCartesPointage(d) {
       +'</div>'
       +'<span style="font-size:12px;color:var(--text);white-space:nowrap;">'+nbUtil+'/'+totalSlots+'</span>'
       +'<span class="pill '+sCls+'" style="font-size:9px;white-space:nowrap;">'+sLbl+'</span>'
+      +'<button class="btn btn-err" style="padding:2px 6px;font-size:10px;" data-action="suppr-carte" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-nom="'+c.nom.replace(/"/g,'&quot;')+'">🗑</button>'
       +'</div>';
   }
   var _ptgGroups={}, _ptgOrder=[];
@@ -6735,6 +6793,7 @@ function renderCartesDetails(d) {
       +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="renouveler-carte" data-id="'+c.id+'" data-nom="'+c.nom+'">↻ Renouveler</button>'
       +(isReportPeriod&&!fini&&!c.isReport&&(c.restants||0)>0?'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="reporter-carte" data-id="'+c.id+'">↩ Reporter</button>':'')
       +btnEmail(c.email,c.nom)
+      +'<button class="btn btn-err" style="padding:3px 8px;font-size:10px;" data-action="suppr-carte" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-nom="'+c.nom.replace(/"/g,'&quot;')+'">🗑 Supprimer</button>'
       +'</div></div>';
   }
   var _detGroups={}, _detOrder=[];
