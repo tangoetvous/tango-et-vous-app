@@ -1652,13 +1652,13 @@ function fermerModalRenouveler() {
   _renewModalId = null;
 }
 var _qrCarteId = null;
-function ouvrirModalQR(id, nom, cours) {
+function ouvrirModalQR(id, nom, cours, email) {
   _qrCarteId = id;
   var el = gel('modal-qr-nom');
   if(el) el.textContent = nom + (cours ? ' — ' + cours : '');
   gel('modal-qr').classList.add('vis');
   var basePath = window.location.pathname.replace(/\/[^/]*$/, '/');
-  var url = window.location.origin + basePath + 'pointer.html?id=' + encodeURIComponent(id) + '&nom=' + encodeURIComponent(nom);
+  var url = window.location.origin + basePath + 'pointer.html?id=' + encodeURIComponent(id) + '&nom=' + encodeURIComponent(nom) + (email?'&email='+encodeURIComponent(email):'');
   var urlEl = gel('modal-qr-url');
   if(urlEl) urlEl.textContent = url;
   var canvas = gel('modal-qr-canvas');
@@ -4056,6 +4056,14 @@ async function chargerDonnees() {
       devisList:         d.devisList         || adminData.devisList || [],
     });
     if(!adminData.carteReports) adminData.carteReports=[];
+    // Reconstruire _dailyCounts depuis les présences d'aujourd'hui (protège contre refresh et polling 15s)
+    var _tdRebuild = today();
+    var _dcRebuild = {};
+    (adminData.cartes || []).forEach(function(c) {
+      var cnt = (c.datesCours || []).filter(function(d) { return d === _tdRebuild; }).length;
+      if (cnt > 0) _dcRebuild[(c.email || '').toLowerCase() + '|' + _tdRebuild] = cnt;
+    });
+    adminData._dailyCounts = _dcRebuild;
     recalcStats();
     saveCoursDatesLocal();
     _adminDataReady = true;
@@ -4560,7 +4568,7 @@ function handleAction(action, btn) {
       (function(em,nom){ ouvrirModalConfirm('Supprimer la carte 10 de '+nom+' ?', function(){ confirmerSupprimerCarte(em,nom); }); })(btn.dataset.email||'', btn.dataset.nom||'');
       break;
     case 'qr-carte':
-      ouvrirModalQR(id, btn.dataset.nom||'', btn.dataset.cours||'');
+      ouvrirModalQR(id, btn.dataset.nom||'', btn.dataset.cours||'', btn.dataset.email||'');
       break;
     case 'filt-stage-slot':
       filtreStageSlot=btn.dataset.slot; renderTab(); break;
@@ -6767,6 +6775,8 @@ function renderCartesDetails(d) {
     var bient=!fini&&days!==null&&days<14;
     var sLbl=fini?'À renouveler':bient?'Expire dans '+days+'j':'Active';
     var sCls=fini?'pill-err':bient?'pill-warn':'pill-ok';
+    var _todayDet=today();
+    var _dpDet=adminData._dailyCounts?(adminData._dailyCounts[(c.email||'').toLowerCase()+'|'+_todayDet]||0):0;
     var miniDots='<div style="display:flex;gap:5px;margin:8px 0;flex-wrap:wrap;align-items:flex-start;">';
     for(var i=0;i<totalSlots;i++){
       var ds=datesCours[i]||null;
@@ -6793,9 +6803,9 @@ function renderCartesDetails(d) {
       +'<div class="point-sub" style="font-size:10px;">'+nbUtil+'/'+totalSlots+' cours · '+expTxt+'</div>'
       +miniDots
       +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">'
-      +(fini?'':'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer</button>')
+      +(_dpDet>=2?'<span class="pill pill-ok" style="font-size:9px;padding:3px 8px;">✓ 2/2 pointés</span>':fini?'':'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer'+(_dpDet===1?' ×2':'')+'</button>')
       +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="edit-carte-dates" data-id="'+c.id+'">✏️ Modifier</button>'
-      +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="qr-carte" data-id="'+c.id+'" data-nom="'+c.nom+'" data-cours="'+(c.cours||'').replace(/"/g,'&quot;')+'">📱 QR</button>'
+      +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="qr-carte" data-id="'+c.id+'" data-nom="'+c.nom+'" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-cours="'+(c.cours||'').replace(/"/g,'&quot;')+'">📱 QR</button>'
       +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="renouveler-carte" data-id="'+c.id+'" data-nom="'+c.nom+'">↻ Renouveler</button>'
       +(isReportPeriod&&!fini&&!c.isReport&&(c.restants||0)>0?'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="reporter-carte" data-id="'+c.id+'">↩ Reporter</button>':'')
       +btnEmail(c.email,c.nom)

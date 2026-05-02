@@ -54,67 +54,107 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'He
   <div id="state-ok" style="display:none;">
     <div class="status-icon">✅</div>
     <div class="status-title" style="color:var(--ok-text);">Présence enregistrée !</div>
-    <div class="status-sub">Votre présence a bien été pointée pour ce cours. À bientôt sur la piste !</div>
+    <div class="status-sub" id="ok-sub">Votre présence a bien été pointée pour ce cours. À bientôt sur la piste !</div>
     <div class="info-box" id="ok-info"></div>
+  </div>
+
+  <!-- État: déjà pointé -->
+  <div id="state-deja" style="display:none;">
+    <div class="status-icon">✔️</div>
+    <div class="status-title" style="color:var(--gold);">Déjà pointé·e</div>
+    <div class="status-sub">Vous avez déjà atteint le maximum de 2 cours pointés pour aujourd'hui. À bientôt !</div>
   </div>
 
   <!-- État: erreur -->
   <div id="state-err" style="display:none;">
     <div class="status-icon">⚠️</div>
     <div class="status-title" style="color:var(--err-text);">Problème de pointage</div>
-    <div class="status-sub" id="err-msg">Ce QR code n'est pas reconnu ou a déjà été utilisé. Demandez à l'encadrant de vous pointer manuellement.</div>
+    <div class="status-sub" id="err-msg">Ce QR code n'est pas reconnu. Demandez à l'encadrant de vous pointer manuellement.</div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
-  var params = new URLSearchParams(window.location.search);
-  var id  = params.get('id')  || '';
-  var nom = params.get('nom') || '';
-  var today = new Date();
+  var SUPABASE_URL = 'https://qhngqzvvllktuwspojxc.supabase.co';
+  var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFobmdxenZ2bGxrdHV3c3BvanhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MjQ0NDYsImV4cCI6MjA5MjMwMDQ0Nn0.j-yMQryi3qoImIf6vyiqQ3SKzHeJoPsrJuP1YwaSyLs';
+
+  var params  = new URLSearchParams(window.location.search);
+  var email   = (params.get('email') || '').trim().toLowerCase();
+  var nom     = params.get('nom')   || '';
+  var today   = new Date();
   var dateStr = today.toISOString().split('T')[0];
   var heureStr = today.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
 
   function show(s) {
-    ['loading','confirm','ok','err'].forEach(function(x){ document.getElementById('state-'+x).style.display = x===s?'':'none'; });
+    ['loading','confirm','ok','deja','err'].forEach(function(x){
+      document.getElementById('state-'+x).style.display = x===s?'':'none';
+    });
   }
-
   function fmtDate(d) {
-    var parts = d.split('-');
-    return parseInt(parts[2])+' / '+(parseInt(parts[1]))+' / '+parts[0];
+    var p = d.split('-');
+    return parseInt(p[2])+' / '+parseInt(p[1])+' / '+p[0];
   }
+  function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  if(!id) {
-    document.getElementById('err-msg').textContent = 'QR code invalide — identifiant manquant.';
+  if (!email) {
+    document.getElementById('err-msg').textContent = 'QR code invalide — lien expiré ou incomplet. Demandez à l\'encadrant de vous pointer manuellement.';
     show('err');
     return;
   }
 
-  function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   document.getElementById('confirm-sub').textContent = 'Bonjour ' + (nom||'') + ' ! Confirmez votre présence au cours d\'aujourd\'hui.';
   document.getElementById('confirm-info').innerHTML =
-    '<div class="info-row"><span class="info-lbl">Élève :</span><span class="info-val">'+escHtml(nom||id)+'</span></div>'
+    '<div class="info-row"><span class="info-lbl">Élève :</span><span class="info-val">'+escHtml(nom||email)+'</span></div>'
     +'<div class="info-row"><span class="info-lbl">Date :</span><span class="info-val">'+fmtDate(dateStr)+'</span></div>'
     +'<div class="info-row"><span class="info-lbl">Heure :</span><span class="info-val">'+heureStr+'</span></div>';
   show('confirm');
 
   document.getElementById('btn-confirm').addEventListener('click', function(){
-    this.disabled = true;
-    this.textContent = '⏳ Enregistrement…';
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = '⏳ Enregistrement…';
 
-    // En production : appel Apps Script pour enregistrer le pointage
-    // fetch(APPS_SCRIPT_URL + '?action=pointer&id=' + id + '&date=' + dateStr)
-    //   .then(r => r.json()).then(d => { ... })
+    if (!window.supabase) {
+      document.getElementById('err-msg').textContent = 'Erreur de connexion — réessayez ou demandez à l\'encadrant.';
+      document.getElementById('card').classList.add('state-err');
+      show('err');
+      return;
+    }
 
-    // Simulation (demo)
-    setTimeout(function(){
-      document.getElementById('ok-info').innerHTML =
-        '<div class="info-row"><span class="info-lbl">Élève :</span><span class="info-val">'+escHtml(nom||id)+'</span></div>'
-        +'<div class="info-row"><span class="info-lbl">Date :</span><span class="info-val">'+fmtDate(dateStr)+'</span></div>'
-        +'<div class="info-row"><span class="info-lbl">Heure :</span><span class="info-val">'+heureStr+'</span></div>';
-      document.getElementById('card').classList.add('state-ok');
-      show('ok');
-    }, 1000);
+    var _tev = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Appel RPC pointer_cours_qr (SECURITY DEFINER — accessible anon)
+    _tev.rpc('pointer_cours_qr', { p_email: email, p_date: dateStr, p_nb: 1 })
+      .then(function(res) {
+        if (res.error) {
+          document.getElementById('err-msg').textContent = 'Erreur : ' + (res.error.message || res.error.code || 'Problème serveur');
+          document.getElementById('card').classList.add('state-err');
+          show('err');
+          return;
+        }
+        var d = res.data || {};
+        if (d.skipped) {
+          show('deja');
+          return;
+        }
+        var restants = d.restants !== undefined ? d.restants : '—';
+        var okMsg = d.renouvAuto
+          ? '🎉 Carte renouvelée automatiquement — nouvelle carte démarrée (' + (d.overflow||1) + '/10). Pensez à régler la prochaine carte !'
+          : 'Votre présence a bien été pointée. Il vous reste ' + restants + ' cours sur votre carte.';
+        document.getElementById('ok-sub').textContent = okMsg;
+        document.getElementById('ok-info').innerHTML =
+          '<div class="info-row"><span class="info-lbl">Élève :</span><span class="info-val">'+escHtml(nom||email)+'</span></div>'
+          +'<div class="info-row"><span class="info-lbl">Date :</span><span class="info-val">'+fmtDate(dateStr)+'</span></div>'
+          +'<div class="info-row"><span class="info-lbl">Heure :</span><span class="info-val">'+heureStr+'</span></div>';
+        document.getElementById('card').classList.add('state-ok');
+        show('ok');
+      })
+      .catch(function(e) {
+        document.getElementById('err-msg').textContent = 'Erreur réseau — vérifiez votre connexion et réessayez.';
+        document.getElementById('card').classList.add('state-err');
+        show('err');
+      });
   });
 
   document.getElementById('btn-cancel').addEventListener('click', function(){

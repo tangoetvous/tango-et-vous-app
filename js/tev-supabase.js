@@ -606,13 +606,22 @@ function tevUnsubscribe(channel) {
 // ================================================================
 // UTILITAIRES
 // ================================================================
+const _SANS_COURS_PARIS     = ['2026-04-30','2026-05-14','2026-07-02','2026-07-09','2026-07-16','2026-07-23','2026-07-30','2026-08-06','2026-08-13','2026-08-20','2026-08-27','2026-10-29','2026-12-24','2026-12-31','2027-02-11','2027-04-08','2027-05-06'];
+const _SANS_COURS_VINCENNES = ['2026-04-06','2026-04-20','2026-04-27','2026-05-25','2026-06-22','2026-07-06','2026-07-13','2026-07-20','2026-07-27','2026-08-03','2026-08-10','2026-08-17','2026-08-24','2026-08-31','2026-10-19','2026-10-26','2026-12-21','2026-12-28','2027-02-08','2027-02-15','2027-03-29','2027-04-05','2027-04-12','2027-05-17'];
+
 function _calcExpirationSb(dateStr, ville) {
   if (!dateStr) return null;
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setMonth(d.getMonth() + 3);
-  // Vacances scolaires : +2 semaines (approximation)
-  d.setDate(d.getDate() + 14);
-  return d.toISOString().slice(0, 10);
+  const debut = new Date(dateStr + 'T00:00:00');
+  const fin   = new Date(debut.getTime());
+  fin.setMonth(fin.getMonth() + 3);
+  const sansCours = ville === 'vincennes' ? _SANS_COURS_VINCENNES : _SANS_COURS_PARIS;
+  let bonus = 0;
+  sansCours.forEach(ds => {
+    const d = new Date(ds + 'T00:00:00');
+    if (d >= debut && d <= fin) bonus++;
+  });
+  fin.setDate(fin.getDate() + bonus * 7);
+  return fin.toISOString().slice(0, 10);
 }
 
 // ================================================================
