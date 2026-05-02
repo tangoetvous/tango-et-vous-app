@@ -6010,6 +6010,7 @@ function renderEssai() {
     +'<button class="sub-tab'+(filtreEssai==='inscrire'?' active':'')+'" data-filt-essai="inscrire">&#43; Inscrire</button>'
     +'</div>'
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" data-action="rafraichir-essais">&#8635; Rafraîchir</button>':'')
+    +(filtreEssai==='pointage'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerEssaiTango()">🖨️ Imprimer</button>':'')
     +'</div>';
   if(filtreEssai!=='inscrire') h+=_tevSearchBar();
   // Trier : date ASC, puis niveau (debutant avant intermediaire), puis rôle
@@ -6728,6 +6729,140 @@ function confirmerSupprimerCarte(email, nom) {
     Promise.all(ops).then(function(){ chargerDonnees(); }).catch(function(e){ afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
   }
 }
+// ================================================================
+// IMPRESSION / PDF
+// ================================================================
+function _tevPrint(titre, sections) {
+  var dateAff = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  var css = [
+    'body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:24px 28px;}',
+    'h1{font-size:17px;margin:0 0 2px;letter-spacing:1px;}',
+    '.sub{font-size:11px;color:#555;margin-bottom:18px;}',
+    'table{width:100%;border-collapse:collapse;margin-bottom:22px;page-break-inside:avoid;}',
+    'th{background:#f0f0f0;border:1px solid #bbb;padding:6px 8px;text-align:left;font-size:11px;font-weight:700;}',
+    'td{border:1px solid #ccc;padding:5px 8px;font-size:11px;vertical-align:top;}',
+    '.grp{font-weight:700;background:#e8e8e8;padding:6px 10px;border:1px solid #bbb;font-size:12px;margin-top:14px;}',
+    '.chk{text-align:center;width:28px;min-width:28px;}',
+    '.btn-print{position:fixed;top:12px;right:12px;padding:8px 18px;background:#D4AF37;border:none;font-size:13px;font-weight:700;cursor:pointer;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2);}',
+    '.footer{font-size:10px;color:#aaa;margin-top:32px;border-top:1px solid #ddd;padding-top:6px;}',
+    '@media print{.btn-print{display:none;}}'
+  ].join('');
+  var body = '<button class="btn-print" onclick="window.print()">🖨️ Imprimer / PDF</button>';
+  body += '<h1>Tango &amp; Vous — ' + titre + '</h1>';
+  body += '<div class="sub">Imprimé le ' + dateAff + '</div>';
+  sections.forEach(function(s) {
+    if (s.title) body += '<div class="grp">' + s.title + '</div>';
+    body += '<table><tr>';
+    (s.headers||[]).forEach(function(h) {
+      body += '<th' + (h === '✓' ? ' class="chk"' : '') + '>' + h + '</th>';
+    });
+    body += '</tr>';
+    (s.rows||[]).forEach(function(r) {
+      body += '<tr>';
+      r.forEach(function(c, i) {
+        body += '<td' + (s.headers && s.headers[i] === '✓' ? ' class="chk"' : '') + '>' + (c === null || c === undefined ? '' : c) + '</td>';
+      });
+      body += '</tr>';
+    });
+    body += '</table>';
+  });
+  body += '<div class="footer">Tango &amp; Vous · app.tangoetvous.fr · ' + dateAff + '</div>';
+  var w = window.open('', '_blank');
+  if (!w) { afficherToast('⚠️ Autorisez les popups pour imprimer'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + titre + '</title><style>' + css + '</style></head><body>' + body + '</body></html>');
+  w.document.close();
+}
+
+function imprimerCartesPointage() {
+  var d = _buildCartesData();
+  var now = d.now;
+  var grps = {}, order = [];
+  d.cartes.forEach(function(c) {
+    var k = d.coursKey(c);
+    if (!grps[k]) { grps[k] = []; order.push(k); }
+    grps[k].push(c);
+  });
+  var sections = [];
+  order.forEach(function(k) {
+    var rows = grps[k].map(function(c) {
+      var nbUtil = c.utilises || 0;
+      var totalSlots = c.isReport ? (c.classesReportees || c.restants || 10) : 10;
+      var expAff = c.expiration || (c.datePremierCours ? calcExpiration(c.datePremierCours, c.ville||'paris') : '');
+      var exp = expAff ? new Date(expAff + 'T00:00:00') : null;
+      var days = exp ? Math.ceil((exp - now) / 86400000) : null;
+      var statut = nbUtil >= totalSlots ? 'À renouveler' : (days !== null && days < 0) ? 'Expirée' : (days !== null && days < 14) ? 'Expire bientôt' : 'Active';
+      return [c.nom, nbUtil + '/' + totalSlots, expAff ? fmtDate(expAff) : '—', statut, ''];
+    });
+    sections.push({ title: k, headers: ['Nom', 'Cours utilisés', 'Expiration', 'Statut', '✓'], rows: rows });
+  });
+  _tevPrint('Pointage Cartes 10 · ' + fmtDate(today()), sections);
+}
+
+function imprimerEssaiTango() {
+  var sai = saisonActive();
+  var listeAll = (adminData.essai || []).filter(function(e) { return dateAppartientSaison(e.date, sai); });
+  var grps = {};
+  listeAll.forEach(function(e) {
+    var isVinc = (COURS_VINCENNES||[]).indexOf(e.date) >= 0;
+    var ville = isVinc ? 'vincennes' : 'paris';
+    var k = e.date + '|' + (e.niveau||'debutant') + '|' + ville;
+    if (!grps[k]) grps[k] = { date: e.date, niveau: e.niveau||'debutant', ville: ville, conf: [], att: [] };
+    if (e.statut === 'attente') grps[k].att.push(e); else grps[k].conf.push(e);
+  });
+  var sections = [];
+  Object.keys(grps).sort().forEach(function(k) {
+    var g = grps[k];
+    var nivLbl = g.niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
+    var villeLbl = g.ville === 'vincennes' ? 'Vincennes' : 'Paris';
+    var absJour = adminData.absencesJour || [];
+    var elevesReg = (adminData.coursTango||[]).filter(function(c) {
+      return c.statut === 'inscrit' && c.ville === g.ville && c.niveau === g.niveau
+        && !absJour.some(function(a) { return a.date === g.date && a.email === c.email; });
+    });
+    var rows = [];
+    g.conf.forEach(function(e) { rows.push([e.prenom + ' ' + e.nom, e.role, e.partenaire||'—', 'Essai', '']); });
+    elevesReg.forEach(function(c) { rows.push([c.prenom + ' ' + c.nom, c.role||'—', c.partenaire||'—', 'Élève ★', '']); });
+    g.att.forEach(function(e) { rows.push([e.prenom + ' ' + e.nom, e.role, e.partenaire||'—', 'Attente', '']); });
+    if (!rows.length) return;
+    sections.push({ title: fmtDate(g.date) + ' — ' + nivLbl + ' ' + villeLbl + ' (' + rows.length + ' pers.)', headers: ['Nom', 'Rôle', 'Partenaire', 'Statut', '✓'], rows: rows });
+  });
+  if (!sections.length) { afficherToast('Aucune donnée à imprimer'); return; }
+  _tevPrint('Pointage Essai Tango', sections);
+}
+
+function imprimerStage() {
+  if (!filtreStage) return;
+  var st = (adminData.stages || {})[filtreStage];
+  if (!st) return;
+  var ins = (st.inscrits || []).slice().sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom,'fr'); });
+  var conf = ins.filter(function(i) { return !i.attente; });
+  var att  = ins.filter(function(i) { return i.attente; });
+  var toRows = function(arr, statut) {
+    return arr.map(function(i) {
+      return [i.prenom + ' ' + i.nom, i.role||'—', (i.slots||[]).map(slotLabel).join(', '), i.paiement||'—', statut, ''];
+    });
+  };
+  var rows = toRows(conf, 'Confirmé').concat(toRows(att, 'Attente'));
+  _tevPrint('Pointage Stage · ' + (st.label || fmtDate(filtreStage)), [{ headers: ['Nom', 'Rôle', 'Créneaux', 'Paiement', 'Statut', '✓'], rows: rows }]);
+}
+
+function imprimerEssaiYoga() {
+  var sai = saisonActive();
+  var liste = (adminData.essaiYoga || []).filter(function(e) { return dateAppartientSaison(e.date, sai); });
+  liste.sort(function(a,b) { return a.date !== b.date ? a.date.localeCompare(b.date) : a.prenom.localeCompare(b.prenom); });
+  var grps = {};
+  liste.forEach(function(e) { if (!grps[e.date]) grps[e.date] = []; grps[e.date].push(e); });
+  var sections = Object.keys(grps).sort().map(function(d) {
+    return {
+      title: fmtDate(d) + ' (' + grps[d].length + ' pers.)',
+      headers: ['Nom', 'Cours', 'Tél', 'Statut', '✓'],
+      rows: grps[d].map(function(e) { return [e.prenom + ' ' + e.nom, e.cours||'—', e.tel||'—', e.statut||'—', '']; })
+    };
+  });
+  if (!sections.length) { afficherToast('Aucune donnée à imprimer'); return; }
+  _tevPrint('Pointage Essai Yoga', sections);
+}
+
 function renderCartes() {
   var d=_buildCartesData();
   var cartes=d.cartes;
@@ -6748,7 +6883,8 @@ function renderCartes() {
 }
 function renderCartesPointage(d) {
   var cartes=d.cartes, coursKey=d.coursKey, now=d.now;
-  var h=_tevSearchBar();
+  var h='<div style="display:flex;justify-content:flex-end;padding:4px 12px 0;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerCartesPointage()">🖨️ Imprimer / PDF</button></div>';
+  h+=_tevSearchBar();
   h+='<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Cliquez "Pointer" pour enregistrer le cours d\'aujourd\'hui. Max 2 par jour.</div>';
   function _carteRowPtg(c){
     var nbUtil=c.utilises||0;
@@ -7224,7 +7360,10 @@ function renderStages() {
   h+='</div>';
 
   var st=stages[filtreStage], ins=st.inscrits||[];
-  h+='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:10px;">'+(st.label||fmtDate(filtreStage))+'</div>';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'
+    +'<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);">'+(st.label||fmtDate(filtreStage))+'</div>'
+    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerStage()">🖨️ Imprimer / PDF</button>'
+    +'</div>';
 
   // Trouver l'entrée STAGES pour la date active → créneaux dynamiques
   var _stRawEntry=STAGES.find(function(s){return s.date===filtreStage;})||{technique:true,nStages:2,themes:[]};
@@ -8514,7 +8653,8 @@ function renderYoga() {
 function renderYogaEssai() {
   var sai = saisonActive();
   var liste = (adminData.essaiYoga||[]).filter(function(e){ return dateAppartientSaison(e.date, sai); });
-  var h = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">'
+  var h = '<div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px;">'
+    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerEssaiYoga()">🖨️ Imprimer / PDF</button>'
     +'<a href="essai-yoga.html" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:4px 10px;text-decoration:none;">🔗 Formulaire essai</a>'
     +'</div>';
   liste.sort(function(a,b){ return a.date!==b.date?a.date.localeCompare(b.date):a.prenom.localeCompare(b.prenom); });
