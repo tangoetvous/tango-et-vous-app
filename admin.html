@@ -4473,7 +4473,15 @@ function handleAction(action, btn) {
       valYogaEssai(btn.dataset.email||'', btn.dataset.date||'', btn);
       break;
     case 'ouvrir-yoga-inscr':
-      ouvrirModalYogaEnrollement(btn.dataset.email||'', btn.dataset.prenom||'', btn.dataset.nom||'');
+      sousOngletYoga = 'inscrire-eleve';
+      renderTab();
+      setTimeout(function() {
+        if (gel('diy-prenom')) gel('diy-prenom').value = btn.dataset.prenom || '';
+        if (gel('diy-nom'))    gel('diy-nom').value    = btn.dataset.nom    || '';
+        if (gel('diy-email'))  gel('diy-email').value  = btn.dataset.email  || '';
+        if (gel('diy-tel'))    gel('diy-tel').value    = btn.dataset.tel    || '';
+        if (gel('diy-cours'))  gel('diy-cours').value  = btn.dataset.cours  || 'yin';
+      }, 0);
       break;
     case 'confirmer-yoga-inscr':
       (function(){
@@ -8377,7 +8385,7 @@ function renderYogaEssai() {
         return '<div class="point-row">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
-          +nomCliquable(e.prenom+' '+e.nom,e.email||'','','yoga')
+          +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','yoga')
           +(e.cours==='forfait'?'<span class="pill pill-info" style="font-size:8px;padding:1px 5px;">Forfait</span>':'')
           +'</div>'
           +'</div>'
@@ -8385,7 +8393,7 @@ function renderYogaEssai() {
           +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Conf.</span>':'')
           +(estDejaEleveYoga(e.email)
             ?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>'
-            :'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" title="Inscrire comme élève">💳 Inscrire</button>')
+            :'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" data-tel="'+(e.tel||'')+'" data-cours="'+(e.cours||'yin')+'" title="Inscrire comme élève">💳 Inscrire</button>')
           +btnEmail(e.email,e.prenom+' '+e.nom)
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
