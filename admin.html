@@ -5743,15 +5743,21 @@ function validerChangementCours(id) {
   e.niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   e.paiement=paiement;
   e.montant=montant;
+  // Propager ville+niveau dans adminData.cartes pour que les cartes 10 reflètent le nouveau cours
+  var carteLocale=(adminData.cartes||[]).find(function(c){return c.email===e.email;});
+  if(carteLocale){ carteLocale.ville=e.ville; carteLocale.niveau=e.niveau; }
   fermerContact();
   afficherToast('✓ '+e.prenom+' '+e.nom+' mis à jour');
   renderTab();
   if (!IS_DEMO) {
-    TEV.client.from('inscriptions_cours').update({
-      ville: e.ville, niveau: e.niveau,
-      paiement: paiement, montant: montant
-    }).eq('id', id)
-    .then(function(){ chargerDonnees(); })
+    var ops=[
+      Promise.resolve(TEV.client.from('inscriptions_cours').update({
+        ville: e.ville, niveau: e.niveau,
+        paiement: paiement, montant: montant
+      }).eq('id', id))
+    ];
+    if(carteLocale) ops.push(Promise.resolve(TEV.client.from('eleves').update({ville:e.ville,niveau:e.niveau}).eq('email',(e.email||'').toLowerCase())));
+    Promise.all(ops).then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur sauvegarde: ' + ((err&&err.message)||'')); });
   }
 }
