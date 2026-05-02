@@ -511,6 +511,28 @@ function calcExpiration(datePremierCours, ville) {
     if (d >= debut && d <= fin) bonus++;
   });
   fin.setDate(fin.getDate() + bonus * 7);
+  // Coupure estivale : si la fin dépasse le dernier cours de la saison,
+  // rajouter les semaines séparant ce dernier cours du premier cours de la saison suivante
+  var coursArr = ville === 'vincennes' ? COURS_VINCENNES : COURS_PARIS;
+  var seasonEndYear = debut.getMonth() >= 8 ? debut.getFullYear() + 1 : debut.getFullYear();
+  var septStart = seasonEndYear + '-09-01';
+  var seasonStartBound = (seasonEndYear - 1) + '-09-01';
+  var lastSaisonCours = '';
+  coursArr.forEach(function(d) {
+    if (d >= seasonStartBound && d < septStart && d > lastSaisonCours) lastSaisonCours = d;
+  });
+  var firstNextCours = '';
+  for (var i = 0; i < coursArr.length; i++) {
+    if (coursArr[i] >= septStart) { firstNextCours = coursArr[i]; break; }
+  }
+  if (lastSaisonCours && firstNextCours) {
+    var lastD = new Date(lastSaisonCours + 'T00:00:00');
+    var firstD = new Date(firstNextCours + 'T00:00:00');
+    if (fin > lastD) {
+      var pauseWeeks = Math.ceil((firstD - lastD) / (7 * 24 * 60 * 60 * 1000));
+      fin.setDate(fin.getDate() + pauseWeeks * 7);
+    }
+  }
   return fin.toISOString().slice(0, 10);
 }
 
@@ -6633,12 +6655,20 @@ function _buildCartesData() {
   (adminData.coursTango||[]).filter(function(ct){
     return ct.statut==='inscrit' && ct.type && ct.type.indexOf('carte')>=0 && !emailsCartes[ct.email] && (ct.saison||saisonCourante())===sai;
   }).forEach(function(ct){
+    var donneesObj = ct.donnees && typeof ct.donnees === 'object' ? ct.donnees : {};
+    try { if (typeof ct.donnees === 'string' && ct.donnees) donneesObj = JSON.parse(ct.donnees); } catch(e) {}
+    var isRep = !!(donneesObj.isReport);
+    var reportedRestants = isRep ? (donneesObj.reportedRestants || 0) : 0;
     var newCarte = {
       id:ct.id, nom:ct.prenom+' '+ct.nom, niveau:ct.niveau,
-      email:ct.email, statutEleve:'Actif', utilises:0, restants:10,
+      email:ct.email, statutEleve:'Actif',
+      utilises:0, restants: isRep ? reportedRestants : 10,
       datePremierCours:'', expiration:'', statut:'Nouvelle carte',
       source:'inscription', ville:ct.ville, datesCours:[], partenaire:ct.partenaire||'', paye:true,
-      _fromCoursTango: true
+      _fromCoursTango: true,
+      isReport: isRep,
+      classesReportees: isRep ? reportedRestants : 0,
+      saisonOrigine: isRep ? (donneesObj.saisonOrigine || '') : ''
     };
     cartesEleves.push(newCarte);
     if(!adminData.cartes)adminData.cartes=[];
@@ -6980,26 +7010,76 @@ function reporterCarteJs(id, btn) {
   var c=(adminData.cartes||[]).find(function(x){return x.id===id;});
   if(!c){btn.disabled=false;btn.textContent='↩ Reporter';return;}
   var sai=saisonActive();
-  var saiArr=sai.split('-');
-  var saiProch=(parseInt(saiArr[0])+1)+'-'+(parseInt(saiArr[1])+1);
+  var saiArr=sai.split('-'), saiEndYear=parseInt(saiArr[1]);
+  var saiProch=(parseInt(saiArr[0])+1)+'-'+(saiEndYear+1);
+  var restants=Math.max(0,c.restants||0);
+  // Chercher l'entrée coursTango pour avoir prenom/nom/tel séparément
+  var ct=(adminData.coursTango||[]).find(function(x){
+    return x.email===c.email && (x.saison||saisonCourante())===sai && x.type&&x.type.indexOf('carte')>=0 && x.statut==='inscrit';
+  });
+  var prenom=c.prenom||(ct?ct.prenom:c.nom.split(' ')[0]);
+  var nomFam=ct?ct.nom:(c.nom.split(' ').slice(1).join(' ')||c.nom);
+  var buildNewCarte=function(newId){
+    return {
+      id:newId, nom:c.nom, prenom:prenom, niveau:c.niveau,
+      email:c.email, statutEleve:'Actif',
+      utilises:0, restants:restants,
+      datePremierCours:'', expiration:'', statut:'Nouvelle carte',
+      source:'report', ville:c.ville||'paris', datesCours:[],
+      partenaire:c.partenaire||'', paye:true,
+      _fromCoursTango:true,
+      isReport:true, classesReportees:restants, saisonOrigine:sai, saison:saiProch
+    };
+  };
+  var buildNewCT=function(newId){
+    var base=ct||{prenom:prenom,nom:nomFam,email:c.email,tel:c.tel||'',role:c.role||'',ville:c.ville||'paris',niveau:c.niveau||'debutant'};
+    return Object.assign({},base,{
+      id:newId,statut:'inscrit',saison:saiProch,type:'carte10',dateInscription:today(),
+      isReport:true,donnees:{reportedRestants:restants,isReport:true,saisonOrigine:sai}
+    });
+  };
   if(IS_DEMO){
-    c.isReport=true;
-    c.saisonOrigine=sai;
-    c.saison=saiProch;
-    c.statut='Active';
-    c.datePremierCours='';
-    c.expiration='';
-    afficherToast('↩ Carte de '+c.nom+' reportée sur '+saiProch);
+    // Conserver la carte actuelle, créer de nouvelles entrées pour la saison prochaine
+    var newId='CRD'+Date.now();
+    if(!adminData.cartes)adminData.cartes=[];
+    adminData.cartes.push(buildNewCarte(newId));
+    if(!adminData.coursTango)adminData.coursTango=[];
+    adminData.coursTango.push(buildNewCT('CTRD'+Date.now()));
+    afficherToast('↩ Carte de '+c.nom+' reportée sur '+saiProch+' ('+restants+' cours reportés)');
     renderTab();return;
   }
-  TEV.client.from('eleves').update({saison:saiProch,carte_utilises:0,carte_restants:10,carte_date_achat:null,carte_expiration:null})
-    .eq('id',id)
-    .then(function(){
-      c.isReport=true;c.saisonOrigine=sai;c.saison=saiProch;c.statut='Active';c.datePremierCours='';c.expiration='';
-      afficherToast('↩ Carte reportée sur '+saiProch);
-      chargerDonnees();
-    })
-    .catch(function(){btn.disabled=false;btn.textContent='↩ Reporter';});
+  // Production : INSERT nouveau inscriptions_cours pour la saison prochaine
+  // eleves reste inchangé (saison actuelle conservée)
+  var ctBase=ct||{prenom:prenom,nom:nomFam,email:c.email,tel:c.tel||'',role:c.role||'',ville:c.ville||'paris',niveau:c.niveau||'debutant'};
+  var coursVal=(ctBase.ville||'paris')+'—'+(ctBase.niveau||'debutant');
+  Promise.resolve(TEV.client.from('inscriptions_cours').insert({
+    prenom:ctBase.prenom||prenom, nom:ctBase.nom||nomFam,
+    email:(c.email||'').toLowerCase(),
+    tel:ctBase.tel||c.tel||'',
+    role:ctBase.role||c.role||'',
+    ville:ctBase.ville||c.ville||'paris',
+    niveau:ctBase.niveau||c.niveau||'debutant',
+    cours:coursVal,
+    type:'carte10', statut:'inscrit', saison:saiProch,
+    donnees:{reportedRestants:restants,isReport:true,saisonOrigine:sai}
+  }))
+  .then(function(res){
+    if(res&&res.error){
+      afficherToast('⚠️ Erreur: '+(res.error.message||res.error.code||'Erreur serveur'));
+      btn.disabled=false;btn.textContent='↩ Reporter';return;
+    }
+    var newDbId=(res&&res.data&&res.data[0]&&res.data[0].id)||('CRD'+Date.now());
+    if(!adminData.cartes)adminData.cartes=[];
+    adminData.cartes.push(buildNewCarte(newDbId));
+    if(!adminData.coursTango)adminData.coursTango=[];
+    adminData.coursTango.push(buildNewCT(newDbId));
+    afficherToast('↩ Carte de '+c.nom+' reportée sur '+saiProch+' ('+restants+' cours reportés)');
+    chargerDonnees();
+  })
+  .catch(function(e){
+    afficherToast('⚠️ Erreur réseau: '+((e&&e.message)||''));
+    btn.disabled=false;btn.textContent='↩ Reporter';
+  });
 }
 function proposerReport(carteId, btn) {
   btn.disabled=true; btn.textContent='⏳';
@@ -7038,32 +7118,53 @@ function validerReport(reportId, btn) {
   var coursArr=rep.ville==='vincennes'?COURS_VINCENNES:COURS_PARIS;
   var firstNext=coursArr.find(function(d){return d>=(saiEndYear+'-09-01');})||'';
   var expProvisoire=firstNext?calcExpiration(firstNext,rep.ville||'paris'):'';
+  var ctSrc=(adminData.coursTango||[]).find(function(x){return x.email===(rep.email||'').toLowerCase()&&(x.saison||saisonCourante())===sai&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='inscrit';});
   if(IS_DEMO){
     rep.statut='valide'; rep.dateValidation=today();
     if(!adminData.cartes)adminData.cartes=[];
     var newId='CR'+Date.now();
     adminData.cartes.push({id:newId,nom:c.nom,niveau:c.niveau,email:c.email,
       statutEleve:'Actif',utilises:0,restants:rep.classesRestantes,
-      datePremierCours:'',expiration:expProvisoire,statut:'Report',
+      datePremierCours:'',expiration:'',statut:'Nouvelle carte',
       source:'report',ville:rep.ville||'paris',datesCours:[],
       partenaire:rep.partenaire||'',paye:true,
+      _fromCoursTango:true,
       isReport:true,classesReportees:rep.classesRestantes,saisonOrigine:sai,saison:saiProch});
-    var ct=(adminData.coursTango||[]).find(function(x){return x.email===rep.email&&(x.saison||saisonCourante())===sai&&x.type&&x.type.indexOf('carte')>=0;});
-    if(ct){
-      var newCT=JSON.parse(JSON.stringify(ct));
+    if(ctSrc){
+      var newCT=JSON.parse(JSON.stringify(ctSrc));
       newCT.id='CTR'+Date.now(); newCT.statut='inscrit'; newCT.saison=saiProch;
       newCT.dateInscription=today(); newCT.isReport=true;
+      newCT.donnees={reportedRestants:rep.classesRestantes,isReport:true,saisonOrigine:sai};
       if(!adminData.coursTango)adminData.coursTango=[];
       adminData.coursTango.push(newCT);
     }
-    var expAff=expProvisoire?fmtDate(expProvisoire):'à calculer dès le 1er cours';
+    var expAff='à calculer dès le 1er cours';
     afficherToast('✓ '+c.nom+' inscrit.e saison '+saiProch+' — '+rep.classesRestantes+' cours reportés (exp. '+expAff+')');
     renderTab();return;
   }
-  TEV.client.from('eleves').update({saison:saiProch,carte_restants:rep.classesRestantes,carte_utilises:Math.max(0,10-rep.classesRestantes),carte_date_achat:null,carte_expiration:expProvisoire||null})
-    .eq('email',(rep.email||'').toLowerCase())
-    .then(function(){chargerDonnees();})
-    .catch(function(){btn.disabled=false;btn.textContent='✓ Valider l\'inscription';});
+  // Production : INSERT nouveau inscriptions_cours — ne pas toucher eleves (saison actuelle préservée)
+  var coursVal=(rep.ville||'paris')+'—'+(rep.niveau||c.niveau||'debutant');
+  Promise.resolve(TEV.client.from('inscriptions_cours').insert({
+    prenom:ctSrc?ctSrc.prenom:(c.prenom||''),
+    nom:ctSrc?ctSrc.nom:(c.nom||''),
+    email:(rep.email||'').toLowerCase(),
+    tel:ctSrc?ctSrc.tel:c.tel||'',
+    role:ctSrc?ctSrc.role:c.role||'',
+    ville:rep.ville||'paris',
+    niveau:rep.niveau||c.niveau||'debutant',
+    cours:coursVal,
+    type:'carte10', statut:'inscrit', saison:saiProch,
+    donnees:{reportedRestants:rep.classesRestantes,isReport:true,saisonOrigine:sai}
+  }))
+  .then(function(res){
+    if(res&&res.error){
+      afficherToast('⚠️ Erreur: '+(res.error.message||res.error.code||'Erreur serveur'));
+      btn.disabled=false;btn.textContent='✓ Valider l\'inscription';return;
+    }
+    afficherToast('✓ '+c.nom+' inscrit.e saison '+saiProch+' — '+rep.classesRestantes+' cours reportés');
+    chargerDonnees();
+  })
+  .catch(function(){btn.disabled=false;btn.textContent='✓ Valider l\'inscription';});
 }
 
 // ================================================================
