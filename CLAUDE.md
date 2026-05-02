@@ -30,7 +30,8 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
   - `cours` : `'hatha'`, `'yin'`, `'forfait'` (forfait = hatha + yin)
   - RLS activé avec policies `allow_select/insert/update/delete` (USING true)
 - **`inscriptions_stages`** : inscriptions aux stages — ⚠️ colonne `telephone` (pas `tel`)
-- **`inscriptions_essai`** : cours d'essai tango et yoga — colonne `tel`
+- **`inscriptions_essai`** : cours d'essai tango — colonne `tel`
+- **`inscriptions_essai_yoga`** : cours d'essai yoga — table séparée. Colonnes : `prenom, nom, email, tel, date_essai, cours, gratuit, statut, presence_confirmee`. `statut` toujours `'demande'` à l'inscription (admin valide manuellement). ⚠️ Table distincte de `inscriptions_essai` — ne pas confondre.
 - **`presences`** : pointage des présences
 - **`cours_particuliers`** : cours particuliers
 - **`publications`** : publications/annonces
@@ -78,6 +79,13 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **`.field input { width:100% }` écrase les checkboxes** : la règle CSS globale s'applique à tous les inputs dans `.field`, y compris `input[type=checkbox]`, les rendant pleine largeur et poussant le texte hors du flex container. Toujours ajouter `style="width:auto;padding:0;margin:0;flex-shrink:0;"` sur chaque checkbox dans un `.field`. Pattern utilisé dans VP, DI et discussions.
 - **Publications — colonne `donnees` JSONB** : la table `publications` ne stockait que `titre, contenu, publiee`. Tous les autres champs (image, cat, extrait, vidéo, dates, cours) sont stockés dans une colonne `donnees JSONB` ajoutée via `ALTER TABLE publications ADD COLUMN IF NOT EXISTS donnees JSONB NOT NULL DEFAULT '{}';`. Dans `tevGetAdminData`, chaque publication est enrichie via `Object.assign({}, p.donnees || {}, p)` pour remonter les champs au niveau racine. `tevSauvegarderPublication` reçoit et persiste tous les champs.
 - **Erreurs Supabase silencieuses dans les fonctions async** : le client Supabase JS v2 retourne `{ data, error }` sans jamais lever d'exception. Si on destructure seulement `{ data }` en ignorant `error`, un INSERT/UPDATE raté laisse croire à un succès — le `.then()` s'exécute, le formulaire se ferme, `chargerDonnees()` recharge depuis la DB vide. **Toujours** vérifier : `const { data, error } = await ...; if (error) throw new Error(error.message || error.code || JSON.stringify(error));`
+- **`await` dans une fonction non-`async` = SyntaxError silencieux** : un `await` dans une fonction non déclarée `async` provoque une SyntaxError au parse-time — tout le bloc `<script>` échoue à s'exécuter silencieusement (aucune erreur visible dans la console sur certains navigateurs). Symptômes : fonctions d'initialisation (`_initCoursYoga()`, `init()`) ne s'exécutent jamais, interface vide. **Toujours** déclarer `async function soumettre()` (et toute fonction qui contient `await`) avec le mot-clé `async`.
+- **Cartes 10 — suppression** : `confirmerSupprimerCarte(email, nom)` fait UPDATE `inscriptions_cours SET statut='supprimé'` (filtre `type='carte10'` et `statut='inscrit'`) ET UPDATE `eleves SET carte_statut='supprimé'`. `_buildCartesData()` filtre `c.statut!=='supprimé'` pour exclure les cartes supprimées de la vue active. L'onglet "Supprimées" (`renderCartesSupprimees()`) affiche les cartes archivées dédupliquées par email. Le marqueur `_fromCoursTango: true/false` distingue la source de l'ID (inscriptions_cours vs eleves) dans les objets carte.
+- **`confirmerSupprimerEleve()` supprime aussi les cartes** : en plus du `UPDATE inscriptions_cours SET statut='supprimé'` sur l'ID de l'inscription, la suppression d'un élève tango fait aussi UPDATE toutes ses entrées `inscriptions_cours type='carte10' statut='inscrit'` ET `eleves.carte_statut='supprimé'` en parallèle via `Promise.all`.
+- **`_renderTabSiPasFormulaire()` — garde Essai Yoga** : le polling 15s ferme les accordéons de la vue « essai yoga ». Ajouter : `if (currentTab === 'yoga' && sousOngletYoga === 'essai') return;`
+- **Bouton "Inscrire" depuis Essai Yoga** : naviguer vers le sous-onglet `inscrire-eleve` (pas ouvrir un modal). Après `renderTab()`, pré-remplir via `setTimeout(function(){ gel('diy-prenom').value = ...; }, 0)` — le setTimeout est nécessaire car le DOM de l'onglet n'est pas encore disponible au moment de l'appel.
+- **Formulaires publics — compte à rebours après succès** : après soumission réussie d'un formulaire essai, afficher un écran de succès avec un compte à rebours automatique (ex: 8s) qui appelle `restart()`. Toujours inclure un bouton "← Retour" manuel en plus du compte à rebours automatique. Pattern : `setInterval` avec compteur décrémenté, `setTimeout` final qui appelle `restart()`, bouton onclick=`restart()`.
+- **`_initCoursYoga()` — garde dates futures** : localStorage `tev_cours_dates.yoga` peut contenir des dates passées. Toujours filtrer `d >= todayISO()` avant d'utiliser les dates. Fallback secondaire : `tev_dates_yoga_<saison>`. Si `localStorage.tev_cours_dates` change de clé (ex: `tev_dates_yoga_*`), détecter les deux dans le listener `storage` pour recharger le dropdown.
 
 ## Architecture temps réel — admin.html
 
@@ -210,6 +218,13 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [x] Liste d'attente dans Pointage Essai Tango avec bouton ✓ Valider — FAIT
 - [x] Publications : double création, photo non sauvegardée, champs perdus — CORRIGÉ (listener redondant, colonne donnees JSONB, propagation erreurs Supabase)
 - [x] Yoga — inscription directe élève ne persistait pas : `soumettreInscriptionDirecteYoga` n'appelait pas Supabase, saisonPourNouvelleEntree→saisonActive — CORRIGÉ
+- [x] Essai yoga (essai-yoga.html) — dropdown dates vide : `await` dans fonction non-`async` → SyntaxError → script entier muet — CORRIGÉ (`async function soumettre()`)
+- [x] Essai yoga admin — téléphone absent dans fiche : `nomCliquable` appelé avec `''` au lieu de `e.tel||''` — CORRIGÉ
+- [x] Essai yoga admin — bouton "Inscrire" ouvre désormais le formulaire "Inscrire Élève" pré-rempli (navigate + setTimeout pre-fill) au lieu d'un modal
+- [x] Essai yoga admin — accordéons fermés toutes les 15s : garde `if (currentTab === 'yoga' && sousOngletYoga === 'essai') return;` dans `_renderTabSiPasFormulaire()` — CORRIGÉ
+- [x] Essai yoga (essai-yoga.html) — après soumission : compte à rebours 8s + bouton retour manuel — FAIT
+- [x] Cartes 10 — suppression carte + onglet « Cartes supprimées » — FAIT (confirmerSupprimerCarte, _fromCoursTango, carte_statut='supprimé')
+- [x] Suppression élève tango — supprime aussi la carte 10 associée — CORRIGÉ
 - [ ] Tester modification cours/paiement/montant → persiste après refresh
 - [ ] Installer l'appli sur Mac (PWA déjà prête) : ouvrir admin dans Chrome → icône ⊕ dans la barre d'adresse → Installer
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
@@ -300,6 +315,10 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 - Cours **gratuits** : les **2 premiers cours de septembre** de chaque saison (détectés automatiquement par `estGratuit()`)
 - Prix pour les dates non gratuites : lu depuis `localStorage.tev_tarifs_actifs`, fallback `15€`
 - Pour mettre à jour les dates : Paramètres admin → Yoga → Dates
+- **Table cible** : `inscriptions_essai_yoga` (pas `inscriptions_essai`)
+- **Saison** : déterminée depuis la date elle-même via `dateAppartientSaison()` — pas besoin de stocker un champ `saison`
+- **Après soumission** : écran de succès + compte à rebours 8s → `restart()` + bouton manuel "← Retour"
+- **Ordre impératif** : INSERT Supabase **avant** BroadcastChannel (règle iframe détaché — voir CLAUDE.md)
 
 ## Règles métier — formulaires publics
 
