@@ -427,8 +427,10 @@
       // Boutons
       const btnJePointe = $('btn-je-pointe');
       const btnRenewSelf = $('btn-renew-carte-self');
-      if (btnJePointe)  btnJePointe.style.display  = canStart ? 'none' : '';
+      // Renouveler : visible si carte épuisée OU expirée
       if (btnRenewSelf) btnRenewSelf.style.display = canStart ? '' : 'none';
+      // Je pointe : visible sauf si carte expirée non-épuisée (épuisée → visible mais bloque dans le modal)
+      if (btnJePointe)  btnJePointe.style.display  = (isExpired && !isExhausted) ? 'none' : '';
 
       // Avertissement non payé (uniquement si carte démarrée et non épuisée)
       const nonPayeWarn = $('nonpaye-warn');
@@ -1255,8 +1257,13 @@
       } else if (_isNonPayeAcc) {
         h += '<div style="text-align:right;margin-bottom:6px;"><span style="display:inline-block;background:#1a0800;border:1px solid #e65100;border-radius:20px;padding:3px 10px;font-size:11px;color:#ffb74d;font-weight:600;">⚠️ Non payée</span></div>';
       }
-      if (_canStartAcc) {
-        // Carte épuisée ou expirée → proposer de démarrer une nouvelle
+      if (_isExhAcc) {
+        // Carte épuisée (10/10) → "Renouveler" AU-DESSUS de "Je pointe"
+        h += '<button onclick="renewCarteSelf()" style="width:100%;background:rgba(255,255,255,0.08);color:var(--text,#fff);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin:12px 0 8px;font-family:inherit;letter-spacing:0.2px;">↻ Renouveler sans payer pour l\'instant</button>';
+        h += '<button onclick="ouvrirModalPointerSelf()" style="width:100%;background:var(--gold);color:#1a1a1a;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;margin:0 0 8px;font-family:inherit;">✓ Je pointe ma présence</button>';
+        h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+      } else if (_isExpAcc) {
+        // Carte expirée (pas épuisée) → proposer une nouvelle, pas de pointage
         h += '<button onclick="renewCarteSelf()" style="width:100%;background:rgba(255,255,255,0.08);color:var(--text,#fff);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin:12px 0 8px;font-family:inherit;letter-spacing:0.2px;">↻ Commencer une nouvelle carte sans payer pour l\'instant</button>';
         h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
       } else {
@@ -2341,18 +2348,27 @@
   // ================================================================
   function ouvrirModalPointerSelf() {
     const todayStr = new Date().toISOString().slice(0,10);
+    const remaining  = eleveData && eleveData.carte ? (Number(eleveData.carte.coursRestants) || 0) : 10;
+    const todayCount = eleveData && eleveData.presences ? eleveData.presences.filter(p => p.date === todayStr).length : 0;
+    const maxCanAdd  = Math.min(remaining, Math.max(0, 2 - todayCount));
+    // Bloquer si la carte est épuisée (0 cours restants) — l'élève doit d'abord renouveler
+    if (remaining === 0) {
+      const msgEl = document.getElementById('self-pointer-msg');
+      const okBtn = document.getElementById('btn-pointer-self-ok');
+      document.getElementById('self-pointer-date').value = todayStr;
+      if (msgEl) { msgEl.textContent = 'Votre carte est épuisée (10/10). Cliquez sur « Renouveler sans payer pour l\'instant » avant de pointer.'; msgEl.style.display='block'; }
+      if (okBtn) { okBtn.disabled = true; okBtn.textContent = '✓ Valider'; }
+      document.getElementById('modal-pointer-self').style.display = 'flex';
+      return;
+    }
     document.getElementById('self-pointer-date').value = todayStr;
     const r1 = document.querySelector('input[name="self-nb"][value="1"]');
     if (r1) r1.checked = true;
     const m = document.getElementById('self-pointer-msg');
     if (m) { m.style.display='none'; m.textContent=''; }
-    // Réinitialiser le bouton Valider (peut rester désactivé après une validation précédente)
     const okBtn = document.getElementById('btn-pointer-self-ok');
     if (okBtn) { okBtn.disabled = false; okBtn.textContent = '✓ Valider'; }
-    // Masquer "2 cours" si 1 restant ou déjà pointé aujourd'hui
-    const remaining  = eleveData && eleveData.carte ? (Number(eleveData.carte.coursRestants) || 0) : 10;
-    const todayCount = eleveData && eleveData.presences ? eleveData.presences.filter(p => p.date === todayStr).length : 0;
-    const maxCanAdd  = Math.min(remaining, Math.max(0, 2 - todayCount));
+    // Masquer "2 cours" si carte à 9/10 (restants=1) ou déjà 1 pointage aujourd'hui
     const wrap2 = document.getElementById('self-nb-2-wrap');
     if (wrap2) wrap2.style.display = maxCanAdd <= 1 ? 'none' : '';
     document.getElementById('modal-pointer-self').style.display = 'flex';
@@ -3650,11 +3666,11 @@ a{color:var(--gold);text-decoration:none;}
               ⚠️ Carte renouvelée, paiement en attente —
               <a id="nonpaye-asso-link" href="#" target="_blank" style="color:#ffb74d;font-weight:700;text-decoration:underline;">régler sur AssoConnect</a>
             </div>
+            <button id="btn-renew-carte-self" onclick="renewCarteSelf()" style="display:none;width:100%;background:rgba(255,255,255,0.06);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;font-family:var(--font-body);">
+              ↻ Renouveler sans payer pour l'instant
+            </button>
             <button id="btn-je-pointe" onclick="ouvrirModalPointerSelf()" style="width:100%;background:var(--gold);color:#000;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;margin-bottom:10px;font-family:var(--font-body);">
               ✓ Je pointe ma présence
-            </button>
-            <button id="btn-renew-carte-self" onclick="renewCarteSelf()" style="display:none;width:100%;background:rgba(255,255,255,0.06);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;font-family:var(--font-body);">
-              ↻ Commencer une nouvelle carte sans payer pour l'instant
             </button>
             <a id="btn-renouveler-dyn" class="btn-renouveler"
                href="https://le-regard-se-pose.assoconnect.com/collect/description/696013-j-renouvellement-de-carte-de-10-ou-20-cours-2026-2027"
