@@ -469,6 +469,19 @@ Lifecycle des statuts dans `inscriptions_cours` pour les nouvelles inscriptions 
 - Formule : `expiration = datePremierCours + 3 mois + (nb semaines sans cours dans cette période × 7 jours)`
 - Calcul : `calcExpiration(datePremierCours, ville)` dans `admin.html`
 - La carte est valable Paris ET Vincennes
+- **⚠️ Pas d'auto-renouvellement** : le renouvellement d'une carte est toujours une action manuelle — jamais automatique.
+
+### Renouvellement de carte — deux seules voies possibles
+1. **Admin** : clic sur "Renouveler" dans Cartes 10 → Détails
+2. **Élève** : clic sur "Renouveler sans payer pour l'instant" dans son espace, quand sa carte est arrivée à 10/10
+
+### QR code — règle de pointage
+- Le QR code **pointe uniquement les présences**, sans aucune logique de renouvellement.
+- Scanné **1 fois** sur une date → 1 cours ajouté sur la carte
+- Scanné **2 fois** sur une date → 2 cours ajoutés (limite journalière = 2 cours par date)
+- Si déjà 2 cours pointés ce jour-là → scan ignoré (`skipped: true`)
+- La fonction SQL `pointer_cours_qr` (Supabase RPC, SECURITY DEFINER, accessible à `anon`) gère ce pointage.
+- **Ne jamais réintroduire de logique d'auto-renouvellement dans cette fonction.**
 
 ### Règle métier — carte à 9 cours pris (espace élève index.html)
 Quand un élève a **9 cours pris** sur sa carte :
