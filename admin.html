@@ -6712,6 +6712,20 @@ function renderCartesSupprimees(d) {
   var seen={}, tous=[];
   suppEl.forEach(function(c){ seen[c.email]=true; tous.push({nom:c.nom||'', email:c.email, tel:c.tel||''}); });
   suppCt.forEach(function(ct){ if(!seen[ct.email]){ seen[ct.email]=true; tous.push({nom:(ct.prenom||'')+' '+(ct.nom||''), email:ct.email, tel:ct.tel||''}); } });
+  // Élèves supprimés d'Élèves Tango (toutes inscriptions à 'supprimé') ayant eu une carte
+  var _tgStatus={};
+  (adminData.coursTango||[]).forEach(function(ct){
+    if((ct.saison||saisonCourante())!==sai) return;
+    if(!_tgStatus[ct.email]) _tgStatus[ct.email]={allSup:true,nom:(ct.prenom||'')+' '+(ct.nom||''),tel:ct.tel||''};
+    if(ct.statut!=='supprimé') _tgStatus[ct.email].allSup=false;
+  });
+  Object.keys(_tgStatus).forEach(function(em){
+    if(seen[em]||!_tgStatus[em].allSup) return;
+    var hasCarte=(adminData.cartes||[]).some(function(c){
+      return c.email===em&&(c.utilises>0||c.restants>0||c.datePremierCours);
+    });
+    if(hasCarte){seen[em]=true;tous.push({nom:_tgStatus[em].nom,email:em,tel:_tgStatus[em].tel});}
+  });
   if(!tous.length) return '<div class="empty-state">Aucune carte supprimée pour la saison '+sai+'.</div>';
   tous.sort(function(a,b){ return a.nom.localeCompare(b.nom,'fr'); });
   var h='<div style="font-size:11px;color:var(--dim);padding:8px 12px;font-style:italic;">'+tous.length+' carte'+(tous.length>1?'s':'')+' supprimée'+(tous.length>1?'s':'')+' — saison '+sai+'</div>';
