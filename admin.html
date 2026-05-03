@@ -5796,7 +5796,7 @@ function validerChangementCours(id) {
   }
 }
 function supprimerEleve(id) {
-  var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
+  var e=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
   if(!e) return;
   var box=gel('modal-contact-box');
   if(!box) return;
@@ -5812,7 +5812,7 @@ function supprimerEleve(id) {
   gel('modal-contact').classList.add('vis');
 }
 function confirmerSupprimerEleve(id) {
-  var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
+  var e=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
   if(!e){fermerContact();return;}
   var nom=e.prenom+' '+e.nom, email=e.email;
   e.statut='supprimé';
@@ -6646,9 +6646,16 @@ function renderReportSection(sai, cartes) {
 }
 function _buildCartesData() {
   var sai = saisonActive();
+  // Emails dont toutes les inscriptions tango de la saison sont supprimées
+  var _emailsSupprimés = {};
+  (adminData.coursTango||[]).forEach(function(ct){
+    if ((ct.saison||saisonCourante())!==sai) return;
+    if (!_emailsSupprimés[ct.email]) _emailsSupprimés[ct.email] = true;
+    if (ct.statut!=='supprimé') _emailsSupprimés[ct.email] = false;
+  });
   var cartesEleves = (adminData.cartes||[]).filter(function(c){
     var carteS = c.saison || saisonCourante();
-    return carteS===sai && c.statut!=='supprimé' && (c.utilises>0||c.restants>0||c.datePremierCours||c.statut==='Nouvelle carte');
+    return carteS===sai && c.statut!=='supprimé' && !_emailsSupprimés[c.email] && (c.utilises>0||c.restants>0||c.datePremierCours||c.statut==='Nouvelle carte');
   });
   cartesEleves.forEach(function(c){
     c._fromCoursTango = false;
