@@ -231,7 +231,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <div class="modal-titre">✏️ Modifier les cours — <span id="modal-ec-nom"></span></div>
     <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:8px;display:block;">Cours pris sur la carte (0–10)</label>
     <input type="number" id="modal-ec-utilises" min="0" max="10" class="modal-input" style="margin-top:6px;width:90px;" oninput="updateModalEcDates()"/>
-    <div style="font-size:11px;color:var(--dim);margin-top:8px;">Dates de chaque cours :</div>
+    <div style="font-size:11px;color:var(--dim);margin-top:8px;">Dates de chaque cours <span style="font-style:italic;">(facultatif)</span> :</div>
     <div id="modal-ec-dates" style="margin-top:6px;display:flex;flex-direction:column;gap:6px;"></div>
     <div class="modal-btns" style="margin-top:14px;">
       <button class="modal-cancel" id="modal-ec-cancel">Annuler</button>
@@ -4569,7 +4569,7 @@ function handleAction(action, btn) {
       renderTab();
       break;
     case 'edit-carte-dates':
-      (function(){ var c=adminData.cartes.find(function(x){return x.id===id;}); ouvrirModalEditCarte(c); })();
+      (function(){ var c=adminData.cartes.find(function(x){return String(x.id)===id;}); ouvrirModalEditCarte(c); })();
       break;
     case 'renouveler-carte':
       ouvrirModalRenouveler(id, btn.dataset.nom||'');
@@ -7120,28 +7120,41 @@ function updateModalEcDates() {
   _renderModalEcDates(current.length ? current : existing, n);
 }
 function sauvegarderEditCarte() {
-  var c = (adminData.cartes||[]).find(function(x){return x.id===_editCarteId;});
+  var c = (adminData.cartes||[]).find(function(x){return String(x.id)===String(_editCarteId);});
   if(!c){fermerModalEditCarte();return;}
   var n = Math.max(0, Math.min(10, parseInt(gel('modal-ec-utilises').value)||0));
   var dates = [];
   gel('modal-ec-dates').querySelectorAll('input[type=date]').forEach(function(inp){
     if(inp.value) dates.push(inp.value);
   });
-  // Sort dates chronologically
   dates.sort();
   c.utilises = n;
   c.restants = Math.max(0, 10 - n);
   c.datesCours = dates;
-  c.datePremierCours = dates[0] || c.datePremierCours || '';
+  if(dates[0]) c.datePremierCours = dates[0];
   if(c.datePremierCours && !c.expiration) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris');
   _broadcastAdminSync('carteUpdate', {email:c.email, utilises:c.utilises, restants:c.restants, datesCours:c.datesCours, datePremierCours:c.datePremierCours, expiration:c.expiration});
-  if(!IS_DEMO){
-    var upd={carte_utilises:n,carte_restants:Math.max(0,10-n)};
-    if(dates[0])upd.carte_date_achat=dates[0];
-    TEV.client.from('eleves').update(upd).eq('id',c.id).catch(function(){});
-  }
   fermerModalEditCarte();
   renderTab();
+  if(!IS_DEMO){
+    var promise;
+    if(c._fromCoursTango) {
+      // Carte reportée : mettre à jour inscriptions_cours.donnees
+      var donneesUpd = {reportedRestants:n, isReport:true, saisonOrigine:c.saisonOrigine||''};
+      promise = Promise.resolve(TEV.client.from('inscriptions_cours').update({donnees:donneesUpd}).eq('id',c.id));
+    } else {
+      // Carte standard : mettre à jour eleves
+      var upd = {carte_utilises:n, carte_restants:Math.max(0,10-n)};
+      if(dates[0]) upd.carte_date_achat = dates[0];
+      if(c.expiration) upd.carte_expiration = c.expiration;
+      promise = Promise.resolve(TEV.client.from('eleves').update(upd).eq('id',c.id));
+    }
+    promise.then(function(res){
+      if(res && res.error) afficherToast('⚠️ Erreur sauvegarde : ' + (res.error.message || res.error.code || ''));
+      else afficherToast('✓ Carte de '+c.nom+' mise à jour');
+      chargerDonnees();
+    }).catch(function(e){ afficherToast('⚠️ Erreur : '+((e&&e.message)||'')); });
+  }
 }
 function reporterCarteJs(id, btn) {
   btn.disabled=true; btn.textContent='⏳';
