@@ -237,6 +237,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [x] Rubrique Devis : formulaire public + générateur PDF + admin complet — TERMINÉ (voir section Devis)
 - [ ] Devis : envoyer le PDF par email directement depuis l'appli (actuellement via Gmail ouvert manuellement)
 - [ ] Devis : ajouter Turnstile sur demande-devis.html quand intégré en iframe Wix
+- [ ] **Assistant vocal/texte dans l'admin** : champ texte (ou micro) qui envoie une commande en langage naturel à Claude via l'API Anthropic, avec `adminData` en contexte. Claude interprète l'intention et appelle la fonction JS correspondante. Exemples : "pointer la carte de Dupont", "inscrire Untel au cours de mercredi", "combien d'élèves ont une carte qui expire ce mois-ci ?". Étapes : définir les actions autorisées, demander confirmation avant exécution ("Pointer 1 cours pour Felipe Diaz aujourd'hui — confirmer ?"), gérer les ambiguïtés ("2 Dupont trouvés, lequel ?").
 
 ## Keep-alive automatique — mis en place, rien à faire
 - **Supabase** : mise en pause après 7 jours sans requête → workflow GitHub Actions ping toutes les 5 jours
