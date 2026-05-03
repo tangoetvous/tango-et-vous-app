@@ -470,6 +470,14 @@ Lifecycle des statuts dans `inscriptions_cours` pour les nouvelles inscriptions 
 - Calcul : `calcExpiration(datePremierCours, ville)` dans `admin.html`
 - La carte est valable Paris ET Vincennes
 
+### Règle métier — carte à 9 cours pris (espace élève index.html)
+Quand un élève a **9 cours pris** sur sa carte :
+1. Il ne peut pointer qu'**1 seul cours** ce jour-là (pas 2 — ce serait dépasser la limite de 2 cours par date).
+2. Après ce pointage → carte à **10/10** → un bouton **"Renouveler sans payer pour l'instant"** s'affiche au-dessus de "Je pointe ma présence".
+3. Si ce bouton est cliqué → nouvelle carte créée avec statut **"non payé"** (visible dans admin → Cartes 10 → Détails).
+4. L'élève peut alors pointer **1 cours supplémentaire** ce jour-là sur sa nouvelle carte (pas plus : 1+1 = 2 cours sur la même date = maximum autorisé).
+- ⚠️ **À faire plus tard** : notification push + email à l'élève quand la carte est renouvelée sans payer (pour l'inviter à payer sur AssoConnect).
+
 ### Pointage / présences
 - Table `presences` : une ligne par (eleve_id, date, cours)
 - Un élève peut être marqué présent/absent sur chaque date de cours
