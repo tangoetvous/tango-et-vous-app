@@ -462,35 +462,54 @@ Lifecycle des statuts dans `inscriptions_cours` pour les nouvelles inscriptions 
 - Condition `ins.partenaire` suffit (pas besoin de `emailPartenaire`)
 - Lookup du tel partenaire : par email si dispo, sinon par `_normNom()` dans le même cours
 
-### Cartes 10 cours (tango)
-- Une carte 10 cours = type `'carte10'` dans `inscriptions_cours`
-- Durée de validité : **3 mois** à compter du **premier cours utilisé** (pas de la date d'achat)
-- **Bonus** : pour chaque semaine sans cours (vacances, jours fériés) qui tombe dans les 3 mois, la date d'expiration est repoussée d'une semaine
+### Cartes 10 cours (tango) — règles complètes
+
+**Structure**
+- Type `'carte10'` dans `inscriptions_cours` (ou données dans table `eleves` : `carte_utilises`, `carte_restants`, `carte_date_achat`, `carte_expiration`, `carte_statut`, `carte_paye`)
+- Valable **Paris ET Vincennes** (pas de restriction par ville)
+- `carte_statut` : `'Nouvelle carte'` | `'Active'` | `'supprimé'`
+- `carte_paye` : `true` = payée, `false` = non payée (renouvellement sans payer en attente)
+
+**Durée de validité**
+- **3 mois** à compter du **premier cours utilisé** (pas de la date d'achat)
+- **Bonus coupures** : pour chaque semaine sans cours (vacances, jours fériés) dans ces 3 mois → expiration repoussée d'1 semaine
+- **Bonus inter-saison** : si la carte court sur l'été (fin juin → début septembre), toutes les semaines estivales sans cours sont aussi comptées
+- Formule : `expiration = datePremierCours + 3 mois + (nb semaines sans cours × 7 jours)`
+- Calcul : `calcExpiration(datePremierCours, ville)` dans `admin.html` et `_calcExpirationSb()` dans `tev-supabase.js`
 - Les semaines sans cours sont dans `SANS_COURS_PARIS` et `SANS_COURS_VINCENNES` dans `admin.html` — à mettre à jour chaque saison
-- Formule : `expiration = datePremierCours + 3 mois + (nb semaines sans cours dans cette période × 7 jours)`
-- Calcul : `calcExpiration(datePremierCours, ville)` dans `admin.html`
-- La carte est valable Paris ET Vincennes
-- **⚠️ Pas d'auto-renouvellement** : le renouvellement d'une carte est toujours une action manuelle — jamais automatique.
 
-### Renouvellement de carte — deux seules voies possibles
+**Limite journalière de pointage**
+- Maximum **2 cours par date** (toutes sources confondues : admin, espace élève, QR code)
+- Le 3ᵉ scan ou pointage sur la même date est ignoré
+
+**⚠️ Pas d'auto-renouvellement — jamais**
+Le renouvellement est **toujours une action manuelle**. Il n'existe que deux voies :
 1. **Admin** : clic sur "Renouveler" dans Cartes 10 → Détails
-2. **Élève** : clic sur "Renouveler sans payer pour l'instant" dans son espace, quand sa carte est arrivée à 10/10
+2. **Élève** : clic sur "Renouveler sans payer pour l'instant" dans son espace, quand sa carte est à 10/10
 
-### QR code — règle de pointage
-- Le QR code **pointe uniquement les présences**, sans aucune logique de renouvellement.
-- Scanné **1 fois** sur une date → 1 cours ajouté sur la carte
-- Scanné **2 fois** sur une date → 2 cours ajoutés (limite journalière = 2 cours par date)
+**QR code — pointage uniquement**
+- Scanné **1 fois** sur une date → 1 cours ajouté
+- Scanné **2 fois** sur une date → 2 cours ajoutés
 - Si déjà 2 cours pointés ce jour-là → scan ignoré (`skipped: true`)
-- La fonction SQL `pointer_cours_qr` (Supabase RPC, SECURITY DEFINER, accessible à `anon`) gère ce pointage.
-- **Ne jamais réintroduire de logique d'auto-renouvellement dans cette fonction.**
+- Fonction SQL `pointer_cours_qr` (RPC Supabase, SECURITY DEFINER, accessible à `anon`) — **ne jamais y réintroduire de logique de renouvellement**
 
-### Règle métier — carte à 9 cours pris (espace élève index.html)
-Quand un élève a **9 cours pris** sur sa carte :
-1. Il ne peut pointer qu'**1 seul cours** ce jour-là (pas 2 — ce serait dépasser la limite de 2 cours par date).
-2. Après ce pointage → carte à **10/10** → un bouton **"Renouveler sans payer pour l'instant"** s'affiche au-dessus de "Je pointe ma présence".
-3. Si ce bouton est cliqué → nouvelle carte créée avec statut **"non payé"** (visible dans admin → Cartes 10 → Détails).
-4. L'élève peut alors pointer **1 cours supplémentaire** ce jour-là sur sa nouvelle carte (pas plus : 1+1 = 2 cours sur la même date = maximum autorisé).
-- ⚠️ **À faire plus tard** : notification push + email à l'élève quand la carte est renouvelée sans payer (pour l'inviter à payer sur AssoConnect).
+**Règle à 9 cours pris (espace élève `index.html`)**
+1. L'élève ne peut pointer qu'**1 seul cours** ce jour-là (pas 2 — limite journalière = 2, et 1 cours ce jour ne peut donc pas en faire 2)
+2. Après ce pointage → carte à **10/10** → bouton **"↻ Renouveler sans payer pour l'instant"** apparaît **au-dessus** de "✓ Je pointe ma présence"
+3. Cliquer "Je pointe" sans renouveler d'abord → modal s'ouvre avec message d'erreur + bouton Valider désactivé
+4. Si "Renouveler" cliqué → nouvelle carte : `utilises=0`, `restants=10`, `paye=false`, `statut='Nouvelle carte'` → badge "⚠️ Non payée" visible dans admin (Cartes 10 → Détails) ET dans l'espace élève
+5. L'élève peut alors pointer **1 cours de plus** ce jour-là sur sa nouvelle carte (= 2 cours au total sur la date = maximum)
+- ⚠️ **À faire** : notification push + email à l'élève quand carte renouvelée sans payer
+
+**Carte expirée (pas épuisée)**
+- Dans l'espace élève : seul le bouton "Renouveler" est affiché, "Je pointe" est masqué
+- Dans l'admin : la carte reste visible dans Cartes 10 → Détails avec la date d'expiration en rouge
+
+**Reporter une carte en fin de saison**
+- Bouton "↩ Reporter" dans Cartes 10 → Détails (visible en juillet-août)
+- INSERT nouveau `inscriptions_cours` pour la saison suivante avec `donnees.isReport=true` et `donnees.reportedRestants=N`
+- La ligne `eleves` reste **inchangée** (saison courante préservée)
+- La carte reportée apparaît dans la vue de la saison suivante avec les cours restants préservés
 
 ### Pointage / présences
 - Table `presences` : une ligne par (eleve_id, date, cours)
@@ -573,8 +592,8 @@ Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Co
 | Code | Déclencheur | Destinataire | Objet |
 |------|-------------|--------------|-------|
 | **Bienvenue** | Premier pointage de la saison | Élève | "Bienvenue dans votre cours !" + instructions PWA |
-| **Auto-renouvelée** | Débordement sur 11ᵉ cours (carte épuisée au pointage) | Élève | "Nouvelle carte ouverte" + lien AssoConnect renouvellement |
-| **E10** | Admin renouvelle manuellement | Élève | "Carte renouvelée, à bientôt !" |
+| **Renouvelée sans payer** | Élève clique "Renouveler sans payer" dans son espace (carte à 10/10) | Élève | "Nouvelle carte ouverte, pensez à payer sur AssoConnect" + lien renouvellement |
+| **E10** | Admin renouvelle manuellement depuis Cartes 10 → Détails | Élève | "Carte renouvelée, à bientôt !" |
 | **Fin saison J+1** | Déclencheur : lendemain dernier cours Paris juin | Élèves avec cours restants | "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" |
 | **Fin saison 25 août** | Déclencheur quotidien le 25 août | Élèves avec cours restants non ré-inscrits | "Dernier rappel : vos cours expirent" |
 
