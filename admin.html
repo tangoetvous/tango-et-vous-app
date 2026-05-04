@@ -2308,10 +2308,10 @@ function _iAccord(type, section) {
 }
 
 var DEFAULTS_ADRESSES = {
-  paris:    {nom:'Espace Danse Studio', rue:'24 villa Riberolle, Paris 20e',          gps:'48.8568,2.3960', transport:'M° Alexandre Dumas (L2)'},
-  vincennes:{nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)'},
-  yoga:     {nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)'},
-  stages:   {nom:'Centre Kim Kan',      rue:'64 rue Orfila, Paris 20e',               gps:'48.8616,2.3970', transport:'M° Gambetta (L3)'},
+  paris:    {nom:'Espace Danse Studio', rue:'24 villa Riberolle, Paris 20e',          gps:'48.8568,2.3960', transport:'M° Alexandre Dumas (L2)',             metrogps:'48.8566,2.3944'},
+  vincennes:{nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)', metrogps:'48.8490,2.4393'},
+  yoga:     {nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)', metrogps:'48.8490,2.4393'},
+  stages:   {nom:'Centre Kim Kan',      rue:'64 rue Orfila, Paris 20e',               gps:'48.8616,2.3970', transport:'M° Gambetta (L3)',                      metrogps:'48.8652,2.3988'},
 };
 var DEFAULTS_HORAIRES = {
   paris:    {deb:'20h30', deb_fin:'21h45', int:'21h45', int_fin:'23h00'},
@@ -2964,8 +2964,9 @@ function _renderSecAdresseContent(type, sai) {
   return '<div style="margin-bottom:4px;">'
     + field('Nom de la salle', 'pm-'+type+'-adr-nom', 'text', 'ex : Espace Danse Studio')
     + field('Adresse complète', 'pm-'+type+'-adr-rue', 'text', 'ex : 24 villa Riberolle, Paris 20e')
-    + field('Coordonnées GPS (lat,lng)', 'pm-'+type+'-adr-gps', 'text', 'ex : 48.8568,2.3960')
+    + field('Coordonnées GPS salle (lat,lng)', 'pm-'+type+'-adr-gps', 'text', 'ex : 48.8568,2.3960')
     + field('Transport le plus proche', 'pm-'+type+'-adr-transport', 'text', 'ex : M° Alexandre Dumas (L2)')
+    + field('Coordonnées GPS station (lat,lng)', 'pm-'+type+'-adr-metrogps', 'text', 'ex : 48.8566,2.3944')
     + '</div>'
     + mapsPreview
     +'<div class="btn-row">'
@@ -2981,6 +2982,7 @@ function sauverAdresseType(type, sai) {
     rue:       (gel('pm-'+type+'-adr-rue')||{}).value||'',
     gps:       (gel('pm-'+type+'-adr-gps')||{}).value||'',
     transport: (gel('pm-'+type+'-adr-transport')||{}).value||'',
+    metrogps:  (gel('pm-'+type+'-adr-metrogps')||{}).value||'',
   };
   _saveParam(type, sai, 'adresse', data);
   afficherToast('✓ Adresse '+type+' '+sai+' enregistrée');

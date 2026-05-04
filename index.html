@@ -4147,6 +4147,11 @@ if('serviceWorker' in navigator){
   var _gpV  = _pg(_apV.gps,  {lat:48.8471, lng:2.4395});
   var _gpY  = _pg(_apY.gps,  {lat:48.8471, lng:2.4395});
   var _gpSt = _pg(_apSt.gps, {lat:48.8616, lng:2.3970});
+  // GPS station (metrogps) : Paramètres admin en priorité, sinon fallback précis
+  var _gmP  = _pg(_apP.metrogps,  {lat:48.8566, lng:2.3944});
+  var _gmV  = _pg(_apV.metrogps,  {lat:48.8490, lng:2.4393});
+  var _gmSt = _pg(_apSt.metrogps, {lat:48.8652, lng:2.3988});
+  var _gmY  = _pg(_apY.metrogps,  {lat:48.8490, lng:2.4393});
   var LIEUX = [
     {
       id: 'paris',
@@ -4156,7 +4161,7 @@ if('serviceWorker' in navigator){
       geocodeQuery: _apP.rue || '24 villa Riberolle, 75020 Paris',
       sub: 'Jeudi soir \u00b7 ' + (_apP.transport || 'M\u00b0 Alexandre Dumas (L2)'),
       lat: _gpP.lat, lng: _gpP.lng, hasExplicitGps: _gpP.hasGps,
-      metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas Paris', lat: 48.85644, lng: 2.39443, name: _apP.transport || 'M\u00b0 Alexandre Dumas (L2)' },
+      metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas Paris', lat: _gmP.lat, lng: _gmP.lng, hasExplicitGps: _gmP.hasGps, name: _apP.transport || 'M\u00b0 Alexandre Dumas (L2)' },
       color: '#60b0ff',
       mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apP.gps || _apP.rue || '24 villa Riberolle 75020 Paris')
     },
@@ -4168,7 +4173,7 @@ if('serviceWorker' in navigator){
       geocodeQuery: _apV.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
       sub: 'Lundi soir \u00b7 ' + (_apV.transport || 'RER A Vincennes (pl. Pierre S\u00e9mard)'),
       lat: _gpV.lat, lng: _gpV.lng, hasExplicitGps: _gpV.hasGps,
-      metro: { geocodeQuery: 'gare RER Vincennes place Pierre S\u00e9mard', lat: 48.8478, lng: 2.4342, name: _apV.transport || 'RER A \u2014 Vincennes' },
+      metro: { geocodeQuery: 'station RER A Vincennes 94300', lat: _gmV.lat, lng: _gmV.lng, hasExplicitGps: _gmV.hasGps, name: _apV.transport || 'RER A \u2014 Vincennes' },
       color: '#40d8c0',
       mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apV.gps || _apV.rue || '16 rue Charles Pathé 94300 Vincennes')
     },
@@ -4180,7 +4185,7 @@ if('serviceWorker' in navigator){
       geocodeQuery: _apSt.rue || '64 rue Orfila, 75020 Paris',
       sub: 'Samedi \u00b7 ' + (_apSt.transport || 'M\u00b0 Gambetta (L3)'),
       lat: _gpSt.lat, lng: _gpSt.lng, hasExplicitGps: _gpSt.hasGps,
-      metro: { geocodeQuery: 'station m\u00e9tro Gambetta Paris', lat: 48.86515, lng: 2.39868, name: _apSt.transport || 'M\u00b0 Gambetta (L3)' },
+      metro: { geocodeQuery: 'station m\u00e9tro Gambetta Paris', lat: _gmSt.lat, lng: _gmSt.lng, hasExplicitGps: _gmSt.hasGps, name: _apSt.transport || 'M\u00b0 Gambetta (L3)' },
       color: '#D4AF37',
       mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apSt.gps || _apSt.rue || '64 rue Orfila 75020 Paris')
     },
@@ -4192,7 +4197,7 @@ if('serviceWorker' in navigator){
       geocodeQuery: _apY.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
       sub: 'Mardi matin \u00b7 Yin '+(_hYpl.yin||'10h30')+' / Hatha '+(_hYpl.hatha||'11h30')+' \u00b7 '+(_apY.transport||'RER A Ch\u00e2teau de Vincennes'),
       lat: _gpY.lat, lng: _gpY.lng, hasExplicitGps: _gpY.hasGps,
-      metro: { geocodeQuery: 'gare RER Vincennes place Pierre S\u00e9mard', lat: 48.8478, lng: 2.4342, name: _apY.transport || 'RER A \u2014 Vincennes' },
+      metro: { geocodeQuery: 'station RER A Vincennes 94300', lat: _gmY.lat, lng: _gmY.lng, hasExplicitGps: _gmY.hasGps, name: _apY.transport || 'RER A \u2014 Vincennes' },
       color: '#a78bfa',
       mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apY.gps || _apY.rue || '16 rue Charles Pathé 94300 Vincennes')
     },
@@ -4250,7 +4255,7 @@ if('serviceWorker' in navigator){
   })();
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v10';
+  var CACHE_KEY = 'tev_plan_coords_v11';
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
