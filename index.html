@@ -4208,53 +4208,36 @@ if('serviceWorker' in navigator){
       mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apY.gps || _apY.rue || '16 rue Charles Pathé 94300 Vincennes')
     },
   ];
-  // Ajout dynamique des entrées milonga depuis tev_milongas
+  // Ajout dynamique des entrées milonga depuis tev_milongas (GPS requis — pas de valeur par défaut)
   (function() {
-    var MILONGAS_FB = [
-      { id:'milonga-dolce-vita', label:'Milonga La Dolce Vita', nom:'La Dolce Vita',
-        lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)', metroGps:'48.8428,2.3701'},
-        color:'#ff8c00', horaire_debut:'17h30', horaire_fin:'23h30' },
-      { id:'milonga-colectivo', label:'Milonga Le Colectivo', nom:'Le Colectivo',
-        lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)', metroGps:'48.8774,2.3897'},
-        color:'#4dd0e1', horaire_debut:'20h30', horaire_fin:'2h' }
-    ];
-    var milSrc = MILONGAS_FB;
+    var milSrc = [];
     try {
-      // Essayer saison courante ET suivante (l'admin peut avoir sauvé depuis la vue 2026-2027)
       var rCurr = JSON.parse(localStorage.getItem('tev_milongas_'+_sai())||'null');
       var rNxt  = JSON.parse(localStorage.getItem('tev_milongas_'+_saiPlNext())||'null');
-      var r = (rCurr && rCurr.milongas && rCurr.milongas.length) ? rCurr : rNxt;
-      if (r && r.milongas && r.milongas.length) {
-        // Merger GPS depuis la saison suivante si absents de la courante
-        var milsCurr = (rCurr && rCurr.milongas) || [];
-        milSrc = r.milongas.map(function(m, i) {
-          var fbMatch = MILONGAS_FB.find(function(fb){ return fb.id==='milonga-'+m.id||fb.nom===m.nom; });
-          m = JSON.parse(JSON.stringify(m));
-          // Merger depuis l'autre saison si GPS manquant
-          var mOther = (r === rCurr ? (rNxt && rNxt.milongas && rNxt.milongas[i]) : milsCurr[i]);
-          if (mOther && mOther.lieu && m.lieu) {
-            if (!m.lieu.gps      && mOther.lieu.gps)      m.lieu.gps      = mOther.lieu.gps;
-            if (!m.lieu.metroGps && mOther.lieu.metroGps) m.lieu.metroGps = mOther.lieu.metroGps;
-          }
-          // Fallback MILONGAS_FB
-          if (fbMatch && fbMatch.lieu && m.lieu) {
-            if (!m.lieu.gps      && fbMatch.lieu.gps)      m.lieu.gps      = fbMatch.lieu.gps;
-            if (!m.lieu.metroGps && fbMatch.lieu.metroGps) m.lieu.metroGps = fbMatch.lieu.metroGps;
-          }
-          return Object.assign({}, m, {id:'milonga-'+m.id, label:'Milonga '+m.nom, nom:m.nom});
-        });
-      }
-    } catch(e){}
+      var milsCurr = (rCurr && rCurr.milongas) || [];
+      var milsNxt  = (rNxt  && rNxt.milongas)  || [];
+      var base = milsCurr.length ? milsCurr : milsNxt;
+      milSrc = base.map(function(m, i) {
+        m = JSON.parse(JSON.stringify(m));
+        var other = base === milsCurr ? milsNxt[i] : milsCurr[i];
+        if (other && other.lieu && m.lieu) {
+          if (!m.lieu.gps      && other.lieu.gps)      m.lieu.gps      = other.lieu.gps;
+          if (!m.lieu.metroGps && other.lieu.metroGps) m.lieu.metroGps = other.lieu.metroGps;
+        }
+        return Object.assign({}, m, {id:'milonga-'+m.id, label:'Milonga '+m.nom, nom:m.nom});
+      });
+    } catch(e) {}
     milSrc.forEach(function(mil) {
       var gps = (mil.lieu||{}).gps||'';
       var pts = gps.split(',');
-      var lat = pts[0] ? parseFloat(pts[0]) : 0;
-      var lng = pts[1] ? parseFloat(pts[1]) : 0;
+      var lat = parseFloat(pts[0]||'') || 0;
+      var lng = parseFloat(pts[1]||'') || 0;
+      if (!lat || !lng) return;
       var rue = (mil.lieu||{}).rue||'';
       var tpt = (mil.lieu||{}).transport||'';
       var metroGpsRaw = ((mil.lieu||{}).metroGps||'').split(',');
-      var metroLat = metroGpsRaw[0] ? parseFloat(metroGpsRaw[0]) : 0;
-      var metroLng = metroGpsRaw[1] ? parseFloat(metroGpsRaw[1]) : 0;
+      var metroLat = parseFloat(metroGpsRaw[0]||'') || 0;
+      var metroLng = parseFloat(metroGpsRaw[1]||'') || 0;
       LIEUX.push({
         id: mil.id,
         label: mil.label||mil.nom,
@@ -4262,18 +4245,16 @@ if('serviceWorker' in navigator){
         addr: rue,
         geocodeQuery: rue,
         sub: (mil.horaire_debut||'17h30')+'\u2013'+(mil.horaire_fin||'23h30')+' \u00b7 '+tpt,
-        lat: lat||0, lng: lng||0, hasExplicitGps: !!(lat && lng),
+        lat: lat, lng: lng, hasExplicitGps: true,
         metro: { geocodeQuery: tpt, lat: metroLat, lng: metroLng, name: tpt, hasExplicitGps: !!(metroLat && metroLng) },
         color: mil.color||'#ff8c00',
-        mapsUrl: gps
-          ? 'https://maps.google.com/?q='+encodeURIComponent(gps)
-          : 'https://maps.google.com/?q='+encodeURIComponent(rue)
+        mapsUrl: 'https://maps.google.com/?q='+encodeURIComponent(gps)
       });
     });
   })();
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v12';
+  var CACHE_KEY = 'tev_plan_coords_v13';
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
