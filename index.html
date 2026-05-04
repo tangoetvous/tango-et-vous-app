@@ -564,8 +564,8 @@
     if (tab === 'yoga') renderYogaPane();
     if (tab === 'whatsapp') renderWhatsapp();
     if (tab === 'avis') renderAvis();
-    if (tab === 'discussions') renderDiscussions();
-    if (tab !== 'discussions') { _discStopPoll(); if (_discView === 'new') _discView = 'list'; }
+    if (tab === 'discussions') { renderDiscussions(); _discStartListPoll(); }
+    if (tab !== 'discussions') { _discStopPoll(); _discStopListPoll(); if (_discView === 'new') _discView = 'list'; }
     window.scrollTo(0, 0);
   };
 
@@ -615,6 +615,7 @@
   let _discCurrentTitle = '';
   let _discMsgs        = [];
   let _discPollTO      = null;
+  let _discListPollTO  = null;
 
   function _discGetMonGroupe() {
     if (!eleveData || !eleveData.eleve) return [];
@@ -851,6 +852,22 @@
 
   function _discStopPoll() {
     if (_discPollTO) { clearTimeout(_discPollTO); _discPollTO = null; }
+  }
+
+  function _discStartListPoll() {
+    _discStopListPoll();
+    if (IS_DEMO) return;
+    function doListPoll() {
+      if (currentTab !== 'discussions' || _discView !== 'list') return;
+      _discDiscList = null;
+      renderDiscussions();
+      _discListPollTO = setTimeout(doListPoll, 30000);
+    }
+    _discListPollTO = setTimeout(doListPoll, 30000);
+  }
+
+  function _discStopListPoll() {
+    if (_discListPollTO) { clearTimeout(_discListPollTO); _discListPollTO = null; }
   }
 
   // ── Formulaire création de discussion (élève) ─────────────────
@@ -2504,6 +2521,10 @@
           }
           if (currentTab === 'carte') renderDashboard();
           if (currentTab === 'accueil') renderAccueil();
+        }
+        if (type === 'discussionCreated' || type === 'discussionUpdated') {
+          _discDiscList = null;
+          if (currentTab === 'discussions' && _discView === 'list') renderDiscussions();
         }
       });
     }

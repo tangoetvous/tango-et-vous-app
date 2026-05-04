@@ -584,6 +584,12 @@ function tevSubscribeEleve(eleveId, callback) {
     .on('postgres_changes', {
       event: 'INSERT', schema: 'public', table: 'presences', filter: `eleve_id=eq.${eleveId}`,
     }, payload => callback('presenceAdded', payload.new))
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'discussions',
+    }, payload => callback('discussionCreated', payload.new))
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'discussions',
+    }, payload => callback('discussionUpdated', payload.new))
     .subscribe();
 }
 
