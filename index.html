@@ -1407,7 +1407,7 @@
         + '<span style="font-size:13px;font-weight:600;color:#fff;text-align:right;">' + fmtLong(prochaineMilonga) + '</span>'
         + '</div>'
         + '<div style="font-size:12px;color:#fff;margin-top:3px;">'+_mn+' \u00b7 '+_mh+'</div>'
-        + '<div style="margin-top:8px;text-align:right;">'
+        + '<div id="acc-mil-btn" data-date="'+prochaineMilonga+'" data-mid="'+_midsA+'" data-mn="'+_mnsA+'" data-mc="'+_mc+'" style="margin-top:8px;text-align:right;">'
         + (_isComingAcc
             ? '<span style="display:inline-block;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;border-radius:20px;background:'+_mc+';color:#000;">J\'y vais\u00a0!</span>'
               + ' <button onclick="_milCancelAcc(\'' + prochaineMilonga + '\',\'' + _midsA + '\',\'' + _mnsA + '\')" style="padding:3px 9px;font-size:10px;font-weight:600;border-radius:20px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;background:transparent;color:rgba(255,255,255,0.42);font-family:inherit;">Annuler</button>'
@@ -2008,21 +2008,36 @@
     }
   }
 
+  // Met à jour uniquement le bouton milonga dans la carte accueil (sans re-rendre tout)
+  function _updateAccMilBtn(date, milId, milNom, isComing) {
+    var el = document.getElementById('acc-mil-btn');
+    if (!el) return;
+    var mc = el.dataset.mc || '#ff8c00';
+    var midsA = (milId||'').replace(/'/g,"\\'");
+    var mnsA  = (milNom||'').replace(/'/g,"\\'");
+    el.innerHTML = isComing
+      ? '<span style="display:inline-block;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;border-radius:20px;background:'+mc+';color:#000;">J\'y vais !</span>'
+        + ' <button onclick="_milCancelAcc(\''+date+'\',\''+midsA+'\',\''+mnsA+'\')' + '" style="padding:3px 9px;font-size:10px;font-weight:600;border-radius:20px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;background:transparent;color:rgba(255,255,255,0.42);font-family:inherit;">Annuler</button>'
+      : '<button onclick="_milJeViens(\''+date+'\',\''+midsA+'\',\''+mnsA+'\')' + '" style="padding:7px 13px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:6px;border:2px solid '+mc+';cursor:pointer;white-space:nowrap;background:transparent;color:'+mc+';font-family:inherit;">Je pense venir</button>';
+  }
+
   // Fonctions globales milonga (inline onclick — robustes après innerHTML)
   window._milJeViens = function(date, milId, milNom) {
     _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, true);
     const _d = new Date(date + 'T00:00:00');
     const _df = _d.getDate() + '\u00a0' + MOIS_LONG[_d.getMonth()];
     _showInAppNotif('\u2705 Noté\u00a0! Votre venue à ' + (milNom || 'la milonga') + ' le ' + _df + ' est enregistrée.');
-    if (currentTab === 'milonga') renderMilonga(); else renderAccueil();
+    _updateAccMilBtn(date, milId, milNom, true);
+    if (currentTab === 'milonga') renderMilonga();
   };
   window._milAnnuler = function(date, milId, milNom) {
     _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, false);
-    if (currentTab === 'milonga') renderMilonga(); else renderAccueil();
+    _updateAccMilBtn(date, milId, milNom, false);
+    if (currentTab === 'milonga') renderMilonga();
   };
   window._milCancelAcc = function(date, milId, milNom) {
     _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, false);
-    renderAccueil();
+    _updateAccMilBtn(date, milId, milNom, false);
     if (currentTab === 'milonga') renderMilonga();
   };
 
