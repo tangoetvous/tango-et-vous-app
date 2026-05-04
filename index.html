@@ -4450,31 +4450,74 @@ if('serviceWorker' in navigator){
     });
   }
 
-  // Relit les GPS depuis localStorage (sync) puis Supabase (async, cross-device)
+  // Relit tous les GPS du Plan depuis localStorage (sync) puis Supabase (async, cross-device)
   function _refreshMilongasGps() {
-    // 1. localStorage : immédiat
+    function _pg2(str) {
+      var p = (str||'').split(',');
+      return (p[0] && p[1]) ? { lat: parseFloat(p[0].trim()), lng: parseFloat(p[1].trim()) } : null;
+    }
+    // Applique le GPS d'un lieu statique (paris/vincennes/stage/yoga)
+    function _applyStatic(venueId, adresse) {
+      var lieu = null;
+      for (var i = 0; i < LIEUX.length; i++) { if (LIEUX[i].id === venueId) { lieu = LIEUX[i]; break; } }
+      if (!lieu || !adresse) return;
+      var vp = _pg2(adresse.gps);
+      var mp = _pg2(adresse.metrogps);
+      if (vp) {
+        lieu.lat = vp.lat; lieu.lng = vp.lng; lieu.hasExplicitGps = true;
+        if (_markers[venueId]) _markers[venueId].setLatLng([vp.lat, vp.lng]);
+      }
+      if (mp) {
+        lieu.metro.lat = mp.lat; lieu.metro.lng = mp.lng; lieu.metro.hasExplicitGps = true;
+        if (_metroMarkers[venueId]) _metroMarkers[venueId].setLatLng([mp.lat, mp.lng]);
+      }
+    }
+    // Fetch une clé Supabase et applique la valeur
+    function _fetchAndApply(cle, cb) {
+      try {
+        TEV.client.from('parametres').select('valeur').eq('cle', cle).maybeSingle()
+          .then(function(res) {
+            if (res && res.data && res.data.valeur) cb(res.data.valeur, cle);
+          });
+      } catch(e) {}
+    }
+
+    // 1. localStorage : immédiat (milongas)
     try {
       var r = JSON.parse(localStorage.getItem('tev_milongas_'+_saiPl())||'null');
       if (!r || !r.milongas || !r.milongas.length)
         r = JSON.parse(localStorage.getItem('tev_milongas_'+_saiPlNext())||'null');
       if (r && r.milongas && r.milongas.length) _applyMilongasGps(r.milongas);
     } catch(e) {}
-
-    // 2. Supabase : async, pour sync cross-appareils (admin ordi → élève téléphone)
-    var _fetchSai = function(sai) {
+    // localStorage : lieux statiques
+    var _staticMap = [{k:'paris',v:'paris'},{k:'vincennes',v:'vincennes'},{k:'stages',v:'stage'},{k:'yoga',v:'yoga'}];
+    _staticMap.forEach(function(s) {
       try {
-        TEV.client.from('parametres').select('valeur').eq('cle', 'tev_milongas_'+sai).maybeSingle()
-          .then(function(res) {
-            if (!res || !res.data || !res.data.valeur) return;
-            var d = res.data.valeur;
-            if (!d || !d.milongas || !d.milongas.length) return;
-            try { localStorage.setItem('tev_milongas_'+sai, JSON.stringify(d)); } catch(e) {}
-            _applyMilongasGps(d.milongas);
-          });
+        var r2 = JSON.parse(localStorage.getItem('tev_params_'+s.k+'_'+_saiPl())||'null');
+        if (!r2) r2 = JSON.parse(localStorage.getItem('tev_params_'+s.k+'_'+_saiPlNext())||'null');
+        if (r2 && r2.adresse) _applyStatic(s.v, r2.adresse);
       } catch(e) {}
-    };
-    _fetchSai(_saiPl());
-    _fetchSai(_saiPlNext());
+    });
+
+    // 2. Supabase : async, cross-appareils — milongas
+    [_saiPl(), _saiPlNext()].forEach(function(sai) {
+      _fetchAndApply('tev_milongas_'+sai, function(d, cle) {
+        if (!d.milongas || !d.milongas.length) return;
+        try { localStorage.setItem(cle, JSON.stringify(d)); } catch(e) {}
+        _applyMilongasGps(d.milongas);
+      });
+    });
+    // Supabase : lieux statiques
+    _staticMap.forEach(function(s) {
+      [_saiPl(), _saiPlNext()].forEach(function(sai) {
+        var cle = 'tev_params_'+s.k+'_'+sai;
+        _fetchAndApply(cle, function(d, c) {
+          if (!d.adresse) return;
+          try { localStorage.setItem(c, JSON.stringify(d)); } catch(e) {}
+          _applyStatic(s.v, d.adresse);
+        });
+      });
+    });
   }
 
   function initPlan() {
