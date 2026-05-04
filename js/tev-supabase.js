@@ -486,10 +486,12 @@ async function tevSupprimerPublication(id) {
 // DISCUSSIONS
 // ================================================================
 async function tevGetDiscussions({ eleveEmail } = {}) {
-  let q = _tev.from('discussions').select('*').order('last_message_at', { ascending: false });
-  if (eleveEmail) q = q.eq('eleve_email', eleveEmail.toLowerCase());
-  const { data } = await q;
-  return data || [];
+  const { data } = await _tev.from('discussions').select('*').order('last_message_at', { ascending: false });
+  const all = data || [];
+  if (!eleveEmail) return all; // admin : toutes les discussions
+  const email = eleveEmail.toLowerCase();
+  // Élève : discussions publiques (créées par admin, eleve_email vide/null) + ses propres discussions
+  return all.filter(d => !d.eleve_email || d.eleve_email === email);
 }
 
 async function tevGetMessages(discussionId) {
