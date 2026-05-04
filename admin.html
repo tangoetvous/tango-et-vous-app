@@ -10647,15 +10647,15 @@ function _discStartPoll() {
       var mapped=msgs.map(function(m){return{id:m.id,discussion_id:m.discussion_id,auteur_email:m.auteur_email,auteur_nom:m.auteur_nom||m.auteur_email,message:m.contenu,date:m.created_at};});
       var realCount=_discMsgs.filter(function(m){return !String(m.id).startsWith('tmp');}).length;
       if(mapped.length!==realCount){
-        var dbIds=new Set(mapped.map(function(x){return String(x.id);}));
         var pendingTmp=_discMsgs.filter(function(m){return String(m.id).startsWith('tmp');});
-        _discMsgs=mapped.concat(pendingTmp.filter(function(t){return !dbIds.has(t.id);}));
+        var unconfirmed=pendingTmp.filter(function(t){return !mapped.some(function(r){return r.auteur_email===t.auteur_email&&r.message===t.message;});});
+        _discMsgs=mapped.concat(unconfirmed).sort(function(a,b){return new Date(a.date)-new Date(b.date);});
         _discRenderMsgs();
       }
       _discPollTO=setTimeout(doPoll,15000);
     }).catch(function(){ _discPollTO=setTimeout(doPoll,20000); });
   }
-  _discPollTO=setTimeout(doPoll,3000);
+  _discPollTO=setTimeout(doPoll,15000);
 }
 
 function _discStopPoll() { if(_discPollTO){ clearTimeout(_discPollTO); _discPollTO=null; } }

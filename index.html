@@ -814,7 +814,7 @@
           id: m.id, discussion_id: m.discussion_id,
           auteur_email: m.auteur_email, auteur_nom: m.auteur_nom || m.auteur_email,
           message: m.contenu, date: m.created_at,
-        }));
+        })).sort((a, b) => new Date(a.date) - new Date(b.date));
         _discRenderMsgs();
       })
       .catch(() => {});
@@ -838,16 +838,17 @@
           }));
           const realCount = _discMsgs.filter(m => !String(m.id).startsWith('tmp')).length;
           if (mapped.length !== realCount) {
-            const dbIds = new Set(mapped.map(x => String(x.id)));
             const pendingTmp = _discMsgs.filter(m => String(m.id).startsWith('tmp'));
-            _discMsgs = mapped.concat(pendingTmp.filter(t => !dbIds.has(t.id)));
+            const unconfirmed = pendingTmp.filter(t =>
+              !mapped.some(r => r.auteur_email === t.auteur_email && r.message === t.message));
+            _discMsgs = [...mapped, ...unconfirmed].sort((a, b) => new Date(a.date) - new Date(b.date));
             _discRenderMsgs();
           }
           _discPollTO = setTimeout(doPoll, 15000);
         })
         .catch(() => { _discPollTO = setTimeout(doPoll, 20000); });
     }
-    _discPollTO = setTimeout(doPoll, 3000);
+    _discPollTO = setTimeout(doPoll, 15000);
   }
 
   function _discStopPoll() {
@@ -2525,6 +2526,22 @@
         if (type === 'discussionCreated' || type === 'discussionUpdated') {
           _discDiscList = null;
           if (currentTab === 'discussions' && _discView === 'list') renderDiscussions();
+        }
+        if (type === 'newMessage') {
+          if (String(newRow.discussion_id) !== String(_discCurrentId)) return;
+          if (_discMsgs.some(m => String(m.id) === String(newRow.id))) return;
+          const incoming = {
+            id: newRow.id, discussion_id: newRow.discussion_id,
+            auteur_email: newRow.auteur_email, auteur_nom: newRow.auteur_nom || newRow.auteur_email,
+            message: newRow.contenu, date: newRow.created_at,
+          };
+          const tmpIdx = _discMsgs.findIndex(m =>
+            String(m.id).startsWith('tmp') &&
+            m.auteur_email === newRow.auteur_email && m.message === newRow.contenu);
+          if (tmpIdx >= 0) _discMsgs[tmpIdx] = incoming;
+          else _discMsgs.push(incoming);
+          _discMsgs.sort((a, b) => new Date(a.date) - new Date(b.date));
+          if (currentTab === 'discussions' && _discView === 'chat') _discRenderMsgs();
         }
       });
     }
