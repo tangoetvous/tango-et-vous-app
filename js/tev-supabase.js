@@ -508,9 +508,10 @@ async function tevCreateDiscussion({ titre, eleveEmail, eleveNom }) {
   return { ok: true, id: data.id };
 }
 
-async function tevPostMessage({ discussionId, auteur, auteurEmail, contenu }) {
+async function tevPostMessage({ discussionId, auteur, auteurEmail, auteurNom, contenu }) {
   await _tev.from('discussion_messages').insert({
-    discussion_id: discussionId, auteur, auteur_email: auteurEmail || '', contenu,
+    discussion_id: discussionId, auteur, auteur_email: auteurEmail || '',
+    auteur_nom: auteurNom || '', contenu,
   });
   await _tev.from('discussions').update({ last_message_at: new Date().toISOString() })
     .eq('id', discussionId);

@@ -10627,7 +10627,7 @@ function _discLoadMessages() {
   }
   TEV.getMessages(_discCurrentId).then(function(msgs) {
     _discMsgs = msgs.map(function(m) {
-      return {id:m.id, discussion_id:m.discussion_id, auteur_email:m.auteur_email, auteur_nom:m.auteur_email, message:m.contenu, date:m.created_at};
+      return {id:m.id, discussion_id:m.discussion_id, auteur_email:m.auteur_email, auteur_nom:m.auteur_nom||m.auteur_email, message:m.contenu, date:m.created_at};
     });
     _discRenderMsgs();
   }).catch(function(){});
@@ -10643,8 +10643,14 @@ function _discStartPoll() {
       return;
     }
     TEV.getMessages(_discCurrentId).then(function(msgs) {
-      var mapped=msgs.map(function(m){return{id:m.id,discussion_id:m.discussion_id,auteur_email:m.auteur_email,auteur_nom:m.auteur_email,message:m.contenu,date:m.created_at};});
-      if(mapped.length!==_discMsgs.length){ _discMsgs=mapped; _discRenderMsgs(); }
+      var mapped=msgs.map(function(m){return{id:m.id,discussion_id:m.discussion_id,auteur_email:m.auteur_email,auteur_nom:m.auteur_nom||m.auteur_email,message:m.contenu,date:m.created_at};});
+      var realCount=_discMsgs.filter(function(m){return !String(m.id).startsWith('tmp');}).length;
+      if(mapped.length!==realCount){
+        var dbIds=new Set(mapped.map(function(x){return String(x.id);}));
+        var pendingTmp=_discMsgs.filter(function(m){return String(m.id).startsWith('tmp');});
+        _discMsgs=mapped.concat(pendingTmp.filter(function(t){return !dbIds.has(t.id);}));
+        _discRenderMsgs();
+      }
       _discPollTO=setTimeout(doPoll,15000);
     }).catch(function(){ _discPollTO=setTimeout(doPoll,20000); });
   }
@@ -10668,7 +10674,7 @@ function _discEnvoyerMsg() {
     try{var m=JSON.parse(localStorage.getItem('tev_demo_msgs_'+_discCurrentId)||'[]');m.push(newMsg);localStorage.setItem('tev_demo_msgs_'+_discCurrentId,JSON.stringify(m));}catch(e){}
     return;
   }
-  TEV.postMessage({discussionId:_discCurrentId,auteur:'admin',auteurEmail:adminData._email||'',contenu:msg}).catch(function(){});
+  TEV.postMessage({discussionId:_discCurrentId,auteur:'admin',auteurEmail:adminData._email||'',auteurNom:nom,contenu:msg}).catch(function(){});
 }
 
 function renderCompta() {
