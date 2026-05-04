@@ -2539,6 +2539,8 @@ function renderTarifs() {
 function renderParametres() {
   if (!saisonParametres) saisonParametres = saisonCourante();
   var sai = saisonParametres;
+  // Sync silencieux : pousser les données stages locales vers Supabase à chaque ouverture
+  if (!IS_DEMO) sauverStagesLocal(sai);
   var sc  = saisonCourante();
   var saisons = [saisonPrecedente(), sc, saisonSuivante()];
   var saiLabels = {};
