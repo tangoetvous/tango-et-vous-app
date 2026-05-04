@@ -4142,6 +4142,22 @@ async function chargerDonnees() {
     _adminDataReady = true;
     _renderTabSiPasFormulaire();
     syncStageInscritsToLocal();
+    // Sync présences milonga depuis Supabase (fire-and-forget)
+    if (!IS_DEMO) {
+      Promise.resolve(TEV.client.from('milonga_presences').select('*').gte('date', today())).then(function(res) {
+        var fromDB = (res.data || []).map(function(p) {
+          return { date:p.date, milongaId:p.milonga_id, milongaNom:p.milonga_nom, email:p.email, prenom:p.prenom, nom:p.nom };
+        });
+        var local = [];
+        try { local = JSON.parse(localStorage.getItem('tev_milonga_presences') || '[]') || []; } catch(e) {}
+        local.forEach(function(lp) {
+          if (!fromDB.some(function(dp) { return dp.date===lp.date && (dp.email||'').toLowerCase()===(lp.email||'').toLowerCase(); })) fromDB.push(lp);
+        });
+        adminData.milongaPresences = fromDB;
+        try { localStorage.setItem('tev_milonga_presences', JSON.stringify(fromDB)); } catch(e) {}
+        if (currentTab === 'milonga') renderTab();
+      }).catch(function(){});
+    }
   } catch(e) { console.error('Erreur chargerDonnees:', e.message); }
 }
 
@@ -4965,6 +4981,10 @@ function handleAction(action, btn) {
         });
         list.push({ date:date, milongaId:'', milongaNom:milNom, email:email, prenom:prenom, nom:nom, ts:Date.now() });
         _saveMilPresencesAdmin(list);
+        if (!IS_DEMO) Promise.resolve(TEV.client.from('milonga_presences').upsert(
+          { date:date, milonga_id:'', milonga_nom:milNom, email:email, prenom:prenom, nom:nom },
+          { onConflict:'date,email' }
+        )).catch(function(){});
         if (prenomEl) prenomEl.value = '';
         if (nomEl)    nomEl.value = '';
         if (emailEl)  emailEl.value = '';
@@ -4981,6 +5001,7 @@ function handleAction(action, btn) {
           return !(p.date === date && (p.email||'').toLowerCase() === email);
         });
         _saveMilPresencesAdmin(list);
+        if (!IS_DEMO) Promise.resolve(TEV.client.from('milonga_presences').delete().eq('date', date).eq('email', email)).catch(function(){});
         renderTab();
       })();
       break;
@@ -8434,10 +8455,12 @@ var CAT_ICON = {actu:'📰',article:'📝',event:'🎉',media:'🎬',video:'🎬
 // MILONGA PRESENCES
 // ================================================================
 function _loadMilPresencesAdmin() {
+  if (adminData && adminData.milongaPresences) return adminData.milongaPresences;
   try { return JSON.parse(localStorage.getItem('tev_milonga_presences') || '[]') || []; } catch(e) { return []; }
 }
 function _saveMilPresencesAdmin(list) {
   try { localStorage.setItem('tev_milonga_presences', JSON.stringify(list)); } catch(e) {}
+  if (adminData) adminData.milongaPresences = list;
 }
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

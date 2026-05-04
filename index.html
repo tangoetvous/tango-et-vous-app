@@ -1955,13 +1955,23 @@
     var list = _loadMilPresences();
     var emailLow = (elv.email || '').toLowerCase().trim();
     list = list.filter(function(p) { return !(p.date === date && (p.email || '').toLowerCase() === emailLow); });
+    var pren = '', nomFam = '';
     if (present) {
       var nomParts = (elv.nom || '').trim().split(' ');
-      var pren = elv.prenom || (nomParts.length > 1 ? nomParts[0] : elv.nom || '');
-      var nomFam = elv.prenom ? elv.nom : (nomParts.length > 1 ? nomParts.slice(1).join(' ') : '');
+      pren = elv.prenom || (nomParts.length > 1 ? nomParts[0] : elv.nom || '');
+      nomFam = elv.prenom ? elv.nom : (nomParts.length > 1 ? nomParts.slice(1).join(' ') : '');
       list.push({ date, milongaId:milId, milongaNom:milNom, email:elv.email||'', prenom:pren, nom:nomFam, ts:Date.now() });
     }
     _saveMilPresences(list);
+    // Sync Supabase (cross-device)
+    if (present) {
+      Promise.resolve(TEV.client.from('milonga_presences').upsert(
+        { date:date, milonga_id:milId||'', milonga_nom:milNom||'', email:elv.email||'', prenom:pren, nom:nomFam },
+        { onConflict:'date,email' }
+      )).catch(function(){});
+    } else {
+      Promise.resolve(TEV.client.from('milonga_presences').delete().eq('date', date).eq('email', elv.email||'')).catch(function(){});
+    }
   }
 
   // Fonctions globales milonga (inline onclick — robustes après innerHTML)
