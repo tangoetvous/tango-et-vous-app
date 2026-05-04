@@ -2044,13 +2044,11 @@
     var _q = TEV.client.from('inscriptions_stages');
     _q = dbId ? _q.delete().eq('id', dbId) : _q.delete().eq('email', (email||'').toLowerCase()).eq('stage_date', date);
     Promise.resolve(_q).then(function() {
-      // Notifier l'admin
       try { var _bc = new BroadcastChannel('tev_inscriptions'); _bc.postMessage({ type:'stageAnnulation', data:{email:email, date:date} }); _bc.close(); } catch(e) {}
     }).catch(function(){});
   };
 
-
-    const todayStr = new Date().toISOString().slice(0,10);
+  function renderMilonga() {
     const elv = eleveData.eleve || {};
     const emailLow = (elv.email || '').toLowerCase().trim();
     const presences = _loadMilPresences();
