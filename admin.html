@@ -7492,33 +7492,6 @@ function renderStages() {
       +'<div class="stat"><div class="stat-n">'+conf0.filter(function(i){return i.role==='guidee';}).length+'</div><div class="stat-l">Guidées</div></div>'
       +'<div class="stat"><div class="stat-n n-warn">'+att0.length+'</div><div class="stat-l">Attente</div></div>'
       +'</div>';
-    if (_dynSlots.length>1) {
-      h+='<div style="overflow-x:auto;margin-bottom:12px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
-      h+='<thead><tr style="border-bottom:1px solid var(--s3);">'
-       +'<th style="text-align:left;padding:5px 8px;color:var(--dim);font-weight:600;">Créneau</th>'
-       +'<th style="text-align:center;padding:5px 8px;color:var(--dim);font-weight:600;">Guideurs</th>'
-       +'<th style="text-align:center;padding:5px 8px;color:var(--dim);font-weight:600;">Guidées</th>'
-       +'<th style="text-align:center;padding:5px 8px;color:var(--dim);font-weight:600;">Attente</th>'
-       +'<th style="text-align:center;padding:5px 8px;color:var(--dim);font-weight:600;">Confirmés</th>'
-       +'</tr></thead><tbody>';
-      _dynSlots.forEach(function(sl){
-        var gui=0,gde=0,att=0;
-        ins.forEach(function(i){
-          if(!(i.slots||[]).includes(sl.id)) return;
-          if(i.attente){att++;return;}
-          if(i.role==='guideur') gui++; else gde++;
-        });
-        var conf=gui+gde;
-        h+='<tr style="border-bottom:1px solid var(--s2);">'
-         +'<td style="padding:5px 8px;font-weight:600;">'+sl.lbl+'</td>'
-         +'<td style="padding:5px 8px;text-align:center;">'+gui+'</td>'
-         +'<td style="padding:5px 8px;text-align:center;">'+gde+'</td>'
-         +'<td style="padding:5px 8px;text-align:center;color:var(--dim);">'+(att||'—')+'</td>'
-         +'<td style="padding:5px 8px;text-align:center;font-weight:700;color:var(--gold);">'+conf+'</td>'
-         +'</tr>';
-      });
-      h+='</tbody></table></div>';
-    }
     if(!ins.length) return h+'<div class="empty-state">Aucun inscrit pour ce stage.</div>';
     var allSorted=ins.slice().sort(function(a,b){return (a.nom+a.prenom).localeCompare(b.nom+b.prenom,'fr');});
     function _cardTous(i, noMargin){
