@@ -53,6 +53,33 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
   - `chargerDonnees()` : recharge depuis Supabase et merge dans adminData
   - `PAI_LBL` : `{cb1x:'CB 1×', cb3x:'CB 3×', especes:'Espèces', cheque:'Chèque', virement1x:'Virement 1×', virement3x:'Virement 3×'}`
 
+## Onglet Plan des lieux (index.html — Plan IIFE, ligne ~4130)
+
+### Architecture GPS
+- **Problème fondamental** : admin sauvegarde les Paramètres dans son localStorage (ordinateur), mais l'espace élève tourne sur un autre appareil (téléphone) avec un localStorage différent — pas de partage possible. **Règle : toujours lire les Paramètres depuis Supabase, pas depuis localStorage.**
+- **Table Supabase** : `parametres` (clé/valeur) — accessible en lecture par les clients anon sans auth (via `tevGetParam` / `TEV.client.from('parametres')`)
+- **Clés des params Plan** :
+  - `tev_params_paris_<sai>`, `tev_params_vincennes_<sai>`, `tev_params_yoga_<sai>`, `tev_params_stages_<sai>` → `{ adresse: { gps, metrogps, nom, rue, transport } }`
+  - `tev_milongas_<sai>` → `{ milongas: [{ id, nom, lieu: { gps, metroGps, ... }, color, ... }] }`
+
+### Fonctions clés dans le Plan IIFE
+- **`_applyMilongasGps(mils)`** : applique les GPS milonga sur LIEUX + markers existants. Crée le marker si absent (GPS manquant au page-load). Appeler à chaque fois que des données milonga fraîches arrivent.
+- **`_applyStatic(venueId, adresse)`** (dans `_refreshMilongasGps`) : applique GPS + metroGPS d'un lieu statique (paris/vincennes/stage/yoga) sur LIEUX + markers.
+- **`_refreshMilongasGps()`** : appelée dans `initPlan()`. Lit d'abord localStorage (sync, immédiat), puis fetch Supabase (async) pour tous les lieux — milongas + statiques. Met à jour localStorage + LIEUX + markers à l'arrivée. ⚠️ Ne pas supprimer la partie Supabase sinon les GPS ne fonctionnent plus cross-device.
+- **`_applyMilongasGps`** doit rester distincte de `_refreshMilongasGps` car appelée depuis les deux endroits (localStorage sync + Supabase async).
+
+### LIEUX statiques — GPS et fallbacks
+- GPS lus depuis `_lpPl('paris'|'vincennes'|'yoga'|'stages').adresse.gps` au page-load (localStorage)
+- Fallbacks hardcodés en cas d'absence de GPS dans localStorage/Supabase (lignes ~4152-4160)
+- **`_pg(str, fb)`** : parse une string `'lat,lng'` → retourne `{lat, lng, hasGps:true}` ou `fb` si vide
+- `hasExplicitGps: _gpX.hasGps` : empêche le cache Nominatim et `affinerCoordsEnBackground` d'écraser le GPS admin
+
+### Migration admin.html
+- `chargerMilongas()` contient une migration auto : si `gps === '48.8465,2.3870'` (ancien défaut erroné pour La Dolce Vita), remplace par `48.83894517744268,2.3913407796525115` et sauvegarde immédiatement. S'exécute au chargement de l'admin.
+
+### Cache Plan
+- Clé cache : `tev_plan_coords_v13` — stocker les coords géocodées Nominatim pour les lieux sans GPS explicite. Incrémenter la version pour forcer re-géocodage si nécessaire.
+
 ## Décisions techniques importantes
 - **`cours` non stockée** dans `inscriptions_cours` — calculée depuis ville+niveau dans `tev-supabase.js`
 - **Saison dans les formulaires admin directs** : toujours utiliser `saisonActive()` (saison affichée dans l'admin), jamais `saisonPourNouvelleEntree()` qui renvoie la saison suivante en mai-août. `saisonPourNouvelleEntree()` est réservé aux formulaires publics (inscription-cours.html, etc.)
