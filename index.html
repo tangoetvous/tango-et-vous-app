@@ -4273,17 +4273,14 @@ if('serviceWorker' in navigator){
   })();
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v12';
+  var CACHE_KEY = 'tev_plan_coords_v13';
+  // Cache uniquement les positions des lieux (pas des métros — ils viennent toujours de l'admin)
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
       if (c) LIEUX.forEach(function(l) {
-        if (c[l.id]) {
-          // Ne pas écraser les coords venant des Paramètres admin
-          if (!l.hasExplicitGps) { l.lat = c[l.id].lat; l.lng = c[l.id].lng; }
-          if (c[l.id].metro && !(l.metro && l.metro.hasExplicitGps)) {
-            l.metro.lat = c[l.id].metro.lat; l.metro.lng = c[l.id].metro.lng;
-          }
+        if (c[l.id] && !l.hasExplicitGps && c[l.id].lat && c[l.id].lng) {
+          l.lat = c[l.id].lat; l.lng = c[l.id].lng;
         }
       });
     } catch(e) {}
@@ -4291,7 +4288,7 @@ if('serviceWorker' in navigator){
   function sauverCache() {
     try {
       var c = {};
-      LIEUX.forEach(function(l){ c[l.id] = { lat: l.lat, lng: l.lng, metro: { lat: l.metro.lat, lng: l.metro.lng } }; });
+      LIEUX.forEach(function(l){ if (l.lat && l.lng) c[l.id] = { lat: l.lat, lng: l.lng }; });
       localStorage.setItem(CACHE_KEY, JSON.stringify(c));
     } catch(e) {}
   }
@@ -4308,19 +4305,18 @@ if('serviceWorker' in navigator){
       }).catch(function(){ return null; });
   }
 
-  // Affine les coordonnées en arrière-plan via Nominatim, séquentiellement
-  // Les lieux statiques (paris/vincennes/yoga/stage) sont toujours géocodés par Nominatim
-  // pour garantir la précision. Les milongas utilisent le GPS admin tel quel.
+  // Géocode uniquement les milongas sans GPS admin via Nominatim.
+  // Lieux statiques et métros : jamais géocodés, toujours GPS admin ou fallback dur.
   var STATIC_VENUES = { paris:1, vincennes:1, yoga:1, stage:1 };
   function affinerCoordsEnBackground(lieux) {
     var i = 0;
     function next() {
       if (i >= lieux.length) { sauverCache(); return; }
       var lieu = lieux[i++];
-      // Lieux statiques toujours géocodés; milongas respectent le GPS admin
-      var skipGeocode = lieu.hasExplicitGps && !STATIC_VENUES[lieu.id];
-      var lieuGeocode = skipGeocode ? Promise.resolve(null) : geocode(lieu.geocodeQuery);
-      lieuGeocode.then(function(pos) {
+      // Lieux statiques, GPS admin présent → pas de géocodage
+      if (STATIC_VENUES[lieu.id] || lieu.hasExplicitGps) { next(); return; }
+      // Milonga sans GPS admin → Nominatim
+      geocode(lieu.geocodeQuery).then(function(pos) {
         if (pos) {
           lieu.lat = pos.lat; lieu.lng = pos.lng;
           if (_markers[lieu.id]) {
@@ -4331,16 +4327,7 @@ if('serviceWorker' in navigator){
             _markers[lieu.id] = mk;
           }
         }
-        return new Promise(function(r){ setTimeout(r, skipGeocode ? 0 : 1200); });
-      }).then(function() {
-        if (lieu.metro && lieu.metro.hasExplicitGps) return Promise.resolve(null);
-        return geocode(lieu.metro.geocodeQuery);
-      }).then(function(pos) {
-        if (pos) {
-          lieu.metro.lat = pos.lat; lieu.metro.lng = pos.lng;
-          if (_metroMarkers[lieu.id]) _metroMarkers[lieu.id].setLatLng([pos.lat, pos.lng]);
-        }
-        return new Promise(function(r){ setTimeout(r, (skipGeocode && lieu.metro && lieu.metro.hasExplicitGps) ? 0 : 1200); });
+        return new Promise(function(r){ setTimeout(r, 1200); });
       }).then(next);
     }
     next();
