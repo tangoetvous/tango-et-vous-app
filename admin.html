@@ -4165,11 +4165,6 @@ async function chargerDonnees() {
         var fromDB = (res.data || []).map(function(p) {
           return { date:p.date, milongaId:p.milonga_id, milongaNom:p.milonga_nom, email:p.email, prenom:p.prenom, nom:p.nom };
         });
-        var local = [];
-        try { local = JSON.parse(localStorage.getItem('tev_milonga_presences') || '[]') || []; } catch(e) {}
-        local.forEach(function(lp) {
-          if (!fromDB.some(function(dp) { return dp.date===lp.date && (dp.email||'').toLowerCase()===(lp.email||'').toLowerCase(); })) fromDB.push(lp);
-        });
         adminData.milongaPresences = fromDB;
         try { localStorage.setItem('tev_milonga_presences', JSON.stringify(fromDB)); } catch(e) {}
         if (currentTab === 'milonga') renderTab();
