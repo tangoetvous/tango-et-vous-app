@@ -2014,13 +2014,11 @@
     const _d = new Date(date + 'T00:00:00');
     const _df = _d.getDate() + '\u00a0' + MOIS_LONG[_d.getMonth()];
     _showInAppNotif('\u2705 Noté\u00a0! Votre venue à ' + (milNom || 'la milonga') + ' le ' + _df + ' est enregistrée.');
-    renderMilonga();
-    if (currentTab === 'accueil') renderAccueil();
+    if (currentTab === 'milonga') renderMilonga(); else renderAccueil();
   };
   window._milAnnuler = function(date, milId, milNom) {
     _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, false);
-    renderMilonga();
-    if (currentTab === 'accueil') renderAccueil();
+    if (currentTab === 'milonga') renderMilonga(); else renderAccueil();
   };
   window._milCancelAcc = function(date, milId, milNom) {
     _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, false);
@@ -2052,6 +2050,7 @@
     const elv = eleveData.eleve || {};
     const emailLow = (elv.email || '').toLowerCase().trim();
     const presences = _loadMilPresences();
+    const todayStr = new Date().toLocaleDateString('sv');
 
     // Dates à venir depuis MILONGAS_OBJ ou fallback dates brutes
     const upcoming = [];
