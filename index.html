@@ -4130,7 +4130,15 @@ if('serviceWorker' in navigator){
 (function() {
   // Paramètres dynamiques depuis admin.html
   function _saiPl() { var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); }
-  function _lpPl(t) { try{return JSON.parse(localStorage.getItem('tev_params_'+t+'_'+_saiPl())||'{}');}catch(e){return{};} }
+  function _saiPlNext() { var s=_saiPl().split('-'),n=parseInt(s[0]); return (n+1)+'-'+(n+2); }
+  // Cherche dans la saison courante ET suivante (si admin a sauvé depuis la vue 2026-2027 en mai)
+  function _lpPl(t) {
+    function _r(sai){try{return JSON.parse(localStorage.getItem('tev_params_'+t+'_'+sai)||'null');}catch(e){return null;}}
+    var curr=_r(_saiPl()), nxt=_r(_saiPlNext());
+    if(curr&&curr.adresse&&curr.adresse.gps) return curr;
+    if(nxt&&nxt.adresse&&nxt.adresse.gps) return nxt;
+    return curr||nxt||{};
+  }
   var _ypY=_lpPl('yoga'); var _apP=_lpPl('paris').adresse||{}, _apV=_lpPl('vincennes').adresse||{};
   var _apY=_ypY.adresse||{}, _hYpl=_ypY.horaires||{}, _apSt=_lpPl('stages').adresse||{};
   // GPS depuis Paramètres, fallback sur coordonnées de référence OSM
@@ -4242,7 +4250,7 @@ if('serviceWorker' in navigator){
   })();
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v8';
+  var CACHE_KEY = 'tev_plan_coords_v9';
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
