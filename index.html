@@ -4133,7 +4133,12 @@ if('serviceWorker' in navigator){
   function _lpPl(t) { try{return JSON.parse(localStorage.getItem('tev_params_'+t+'_'+_saiPl())||'{}');}catch(e){return{};} }
   var _ypY=_lpPl('yoga'); var _apP=_lpPl('paris').adresse||{}, _apV=_lpPl('vincennes').adresse||{};
   var _apY=_ypY.adresse||{}, _hYpl=_ypY.horaires||{}, _apSt=_lpPl('stages').adresse||{};
-  // Coordonnées exactes vérifiées (OSM) + géocodage Nominatim en arrière-plan pour affinage
+  // GPS depuis Paramètres, fallback sur coordonnées de référence OSM
+  function _pg(str, fb) { var p=(str||'').split(','); return (p[0]&&p[1])?{lat:parseFloat(p[0]),lng:parseFloat(p[1])}:fb; }
+  var _gpP  = _pg(_apP.gps,  {lat:48.8568, lng:2.3960});
+  var _gpV  = _pg(_apV.gps,  {lat:48.8471, lng:2.4395});
+  var _gpY  = _pg(_apY.gps,  {lat:48.8471, lng:2.4395});
+  var _gpSt = _pg(_apSt.gps, {lat:48.8616, lng:2.3970});
   var LIEUX = [
     {
       id: 'paris',
@@ -4142,10 +4147,10 @@ if('serviceWorker' in navigator){
       addr: _apP.rue || '24 villa Riberolle, Paris 20e',
       geocodeQuery: _apP.rue || '24 villa Riberolle, 75020 Paris',
       sub: 'Jeudi soir \u00b7 ' + (_apP.transport || 'M\u00b0 Alexandre Dumas (L2)'),
-      lat: 48.8534, lng: 2.3991,
+      lat: _gpP.lat, lng: _gpP.lng,
       metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas Paris', lat: 48.85644, lng: 2.39443, name: _apP.transport || 'M\u00b0 Alexandre Dumas (L2)' },
       color: '#60b0ff',
-      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apP.rue || '24 villa Riberolle 75020 Paris')
+      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apP.gps || _apP.rue || '24 villa Riberolle 75020 Paris')
     },
     {
       id: 'vincennes',
@@ -4154,10 +4159,10 @@ if('serviceWorker' in navigator){
       addr: _apV.rue || '16 rue Charles Path\u00e9, Vincennes',
       geocodeQuery: _apV.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
       sub: 'Lundi soir \u00b7 ' + (_apV.transport || 'RER A Vincennes (pl. Pierre S\u00e9mard)'),
-      lat: 48.8480, lng: 2.4413,
+      lat: _gpV.lat, lng: _gpV.lng,
       metro: { geocodeQuery: 'gare RER Vincennes place Pierre S\u00e9mard', lat: 48.8478, lng: 2.4342, name: _apV.transport || 'RER A \u2014 Vincennes' },
       color: '#40d8c0',
-      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apV.rue || '16 rue Charles Pathé 94300 Vincennes')
+      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apV.gps || _apV.rue || '16 rue Charles Pathé 94300 Vincennes')
     },
     {
       id: 'stage',
@@ -4166,10 +4171,10 @@ if('serviceWorker' in navigator){
       addr: _apSt.rue || '64 rue Orfila, Paris 20e',
       geocodeQuery: _apSt.rue || '64 rue Orfila, 75020 Paris',
       sub: 'Samedi \u00b7 ' + (_apSt.transport || 'M\u00b0 Gambetta (L3)'),
-      lat: 48.8671, lng: 2.3977,
+      lat: _gpSt.lat, lng: _gpSt.lng,
       metro: { geocodeQuery: 'station m\u00e9tro Gambetta Paris', lat: 48.86515, lng: 2.39868, name: _apSt.transport || 'M\u00b0 Gambetta (L3)' },
       color: '#D4AF37',
-      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apSt.rue || '64 rue Orfila 75020 Paris')
+      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apSt.gps || _apSt.rue || '64 rue Orfila 75020 Paris')
     },
     {
       id: 'yoga',
@@ -4178,17 +4183,17 @@ if('serviceWorker' in navigator){
       addr: _apY.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
       geocodeQuery: _apY.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
       sub: 'Mardi matin \u00b7 Yin '+(_hYpl.yin||'10h30')+' / Hatha '+(_hYpl.hatha||'11h30')+' \u00b7 '+(_apY.transport||'RER A Ch\u00e2teau de Vincennes'),
-      lat: 48.8482, lng: 2.4416,
+      lat: _gpY.lat, lng: _gpY.lng,
       metro: { geocodeQuery: 'gare RER Vincennes place Pierre S\u00e9mard', lat: 48.8478, lng: 2.4342, name: _apY.transport || 'RER A \u2014 Vincennes' },
       color: '#a78bfa',
-      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apY.rue || '16 rue Charles Pathé 94300 Vincennes')
+      mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apY.gps || _apY.rue || '16 rue Charles Pathé 94300 Vincennes')
     },
   ];
   // Ajout dynamique des entrées milonga depuis tev_milongas
   (function() {
     var MILONGAS_FB = [
       { id:'milonga-dolce-vita', label:'Milonga La Dolce Vita', nom:'La Dolce Vita',
-        lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)', metroGps:'48.8462,2.3872'},
+        lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)', metroGps:'48.8428,2.3701'},
         color:'#ff8c00', horaire_debut:'17h30', horaire_fin:'23h30' },
       { id:'milonga-colectivo', label:'Milonga Le Colectivo', nom:'Le Colectivo',
         lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)', metroGps:'48.8773,2.3892'},
@@ -4197,7 +4202,17 @@ if('serviceWorker' in navigator){
     var milSrc = MILONGAS_FB;
     try {
       var r = JSON.parse(localStorage.getItem('tev_milongas_'+_sai())||'null');
-      if (r && r.milongas && r.milongas.length) milSrc = r.milongas.map(function(m,i){ return Object.assign({id:'milonga-'+m.id, label:'Milonga '+m.nom, nom:m.nom}, m); });
+      if (r && r.milongas && r.milongas.length) {
+        milSrc = r.milongas.map(function(m) {
+          var fbMatch = MILONGAS_FB.find(function(fb){ return fb.id==='milonga-'+m.id||fb.nom===m.nom; });
+          // Fallback metroGps depuis MILONGAS_FB si non sauvegardé par l'admin
+          if (m.lieu && !m.lieu.metroGps && fbMatch && fbMatch.lieu && fbMatch.lieu.metroGps) {
+            m = JSON.parse(JSON.stringify(m));
+            m.lieu.metroGps = fbMatch.lieu.metroGps;
+          }
+          return Object.assign({id:'milonga-'+m.id, label:'Milonga '+m.nom, nom:m.nom}, m);
+        });
+      }
     } catch(e){}
     milSrc.forEach(function(mil) {
       var gps = (mil.lieu||{}).gps||'';

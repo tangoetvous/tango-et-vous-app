@@ -2186,10 +2186,10 @@ function chargerDatesYogaStages() {
 
 var MILONGAS_DEFAULTS = [
   { id:'dolce-vita', nom:'LA DOLCE VITA',
-    lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)'},
+    lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)', metroGps:'48.8428,2.3701'},
     color:'#ff8c00', horaire_debut:'17h30', horaire_fin:'23h30', dates:[] },
   { id:'colectivo', nom:'LE COLECTIVO',
-    lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)'},
+    lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)', metroGps:'48.8774,2.3897'},
     color:'#f472b6', horaire_debut:'20h30', horaire_fin:'2h', dates:[] }
 ];
 var MILONGAS = null;
@@ -2794,8 +2794,9 @@ function _renderMilongaInfoContent(mil, idx) {
   return field('Nom de la milonga', 'mil-nom-'+idx, mil.nom, 'ex : La Dolce Vita')
     + field('Salle', 'mil-lieu-nom-'+idx, mil.lieu.nom, 'ex : Centre Re-Corps')
     + field('Adresse', 'mil-lieu-rue-'+idx, mil.lieu.rue, 'ex : 16A boulevard de Reuilly, Paris 12e')
-    + field('Coordonn\u00e9es GPS (lat,lng)', 'mil-lieu-gps-'+idx, mil.lieu.gps, 'ex : 48.8465,2.3870')
+    + field('Coordonn\u00e9es GPS lieu (lat,lng)', 'mil-lieu-gps-'+idx, mil.lieu.gps, 'ex : 48.8465,2.3870')
     + field('Transport le plus proche', 'mil-lieu-transport-'+idx, mil.lieu.transport, 'ex : M\u00b0 Dugommier (L6)')
+    + field('Coordonn\u00e9es GPS m\u00e9tro (lat,lng)', 'mil-lieu-metrogps-'+idx, mil.lieu.metroGps||'', 'ex : 48.8428,2.3701')
     + mapsPreview
     + '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-end;flex-wrap:wrap;">'
     + '<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Horaire d\u00e9but (d\u00e9faut)</label>'
@@ -3446,6 +3447,7 @@ function sauverMilongaInfo(idx) {
   mil.lieu.nom = (gel('mil-lieu-nom-'+idx)||{}).value || mil.lieu.nom;
   mil.lieu.rue = (gel('mil-lieu-rue-'+idx)||{}).value || mil.lieu.rue;
   mil.lieu.gps = (gel('mil-lieu-gps-'+idx)||{}).value || '';
+  mil.lieu.metroGps = (gel('mil-lieu-metrogps-'+idx)||{}).value || '';
   mil.lieu.transport = (gel('mil-lieu-transport-'+idx)||{}).value || mil.lieu.transport;
   mil.horaire_debut = (gel('mil-hdeb-'+idx)||{}).value || mil.horaire_debut;
   mil.horaire_fin   = (gel('mil-hfin-'+idx)||{}).value || mil.horaire_fin;
