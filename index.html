@@ -4149,9 +4149,9 @@ if('serviceWorker' in navigator){
   var _gpSt = _pg(_apSt.gps, {lat:48.8616, lng:2.3970});
   // GPS station (metrogps) : Paramètres admin en priorité, sinon fallback précis
   var _gmP  = _pg(_apP.metrogps,  {lat:48.8566, lng:2.3944});
-  var _gmV  = _pg(_apV.metrogps,  {lat:48.8490, lng:2.4393});
+  var _gmV  = _pg(_apV.metrogps,  {lat:48.8479, lng:2.4392});
   var _gmSt = _pg(_apSt.metrogps, {lat:48.8652, lng:2.3988});
-  var _gmY  = _pg(_apY.metrogps,  {lat:48.8490, lng:2.4393});
+  var _gmY  = _pg(_apY.metrogps,  {lat:48.8479, lng:2.4392});
   var LIEUX = [
     {
       id: 'paris',
@@ -4209,7 +4209,7 @@ if('serviceWorker' in navigator){
         lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)', metroGps:'48.8428,2.3701'},
         color:'#ff8c00', horaire_debut:'17h30', horaire_fin:'23h30' },
       { id:'milonga-colectivo', label:'Milonga Le Colectivo', nom:'Le Colectivo',
-        lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)', metroGps:'48.8773,2.3892'},
+        lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)', metroGps:'48.8774,2.3897'},
         color:'#4dd0e1', horaire_debut:'20h30', horaire_fin:'2h' }
     ];
     var milSrc = MILONGAS_FB;
@@ -4218,10 +4218,11 @@ if('serviceWorker' in navigator){
       if (r && r.milongas && r.milongas.length) {
         milSrc = r.milongas.map(function(m) {
           var fbMatch = MILONGAS_FB.find(function(fb){ return fb.id==='milonga-'+m.id||fb.nom===m.nom; });
-          // Fallback metroGps depuis MILONGAS_FB si non sauvegardé par l'admin
-          if (m.lieu && !m.lieu.metroGps && fbMatch && fbMatch.lieu && fbMatch.lieu.metroGps) {
+          // Fallback depuis MILONGAS_FB si non sauvegardé par l'admin
+          if (fbMatch && fbMatch.lieu && m.lieu) {
             m = JSON.parse(JSON.stringify(m));
-            m.lieu.metroGps = fbMatch.lieu.metroGps;
+            if (!m.lieu.gps && fbMatch.lieu.gps) m.lieu.gps = fbMatch.lieu.gps;
+            if (!m.lieu.metroGps && fbMatch.lieu.metroGps) m.lieu.metroGps = fbMatch.lieu.metroGps;
           }
           return Object.assign({id:'milonga-'+m.id, label:'Milonga '+m.nom, nom:m.nom}, m);
         });
@@ -4255,7 +4256,7 @@ if('serviceWorker' in navigator){
   })();
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v11';
+  var CACHE_KEY = 'tev_plan_coords_v12';
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
@@ -4306,14 +4307,23 @@ if('serviceWorker' in navigator){
       lieuGeocode.then(function(pos) {
         if (pos) {
           lieu.lat = pos.lat; lieu.lng = pos.lng;
-          if (_markers[lieu.id]) _markers[lieu.id].setLatLng([pos.lat, pos.lng]);
+          if (_markers[lieu.id]) {
+            _markers[lieu.id].setLatLng([pos.lat, pos.lng]);
+          } else if (_map) {
+            var mk = L.marker([pos.lat, pos.lng], { icon: makePinIcon(lieu.color) }).addTo(_map);
+            mk.bindPopup(popupContent(lieu));
+            _markers[lieu.id] = mk;
+          }
         }
         return new Promise(function(r){ setTimeout(r, skipGeocode ? 0 : 1200); });
       }).then(function() {
         if (lieu.metro && lieu.metro.hasExplicitGps) return Promise.resolve(null);
         return geocode(lieu.metro.geocodeQuery);
       }).then(function(pos) {
-        if (pos) { lieu.metro.lat = pos.lat; lieu.metro.lng = pos.lng; }
+        if (pos) {
+          lieu.metro.lat = pos.lat; lieu.metro.lng = pos.lng;
+          if (_metroMarkers[lieu.id]) _metroMarkers[lieu.id].setLatLng([pos.lat, pos.lng]);
+        }
         return new Promise(function(r){ setTimeout(r, (skipGeocode && lieu.metro && lieu.metro.hasExplicitGps) ? 0 : 1200); });
       }).then(next);
     }
@@ -4322,6 +4332,7 @@ if('serviceWorker' in navigator){
 
   var _map = null;
   var _markers = {};
+  var _metroMarkers = {};
 
   function makePinIcon(color) {
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 40" width="28" height="40">'
@@ -4368,9 +4379,10 @@ if('serviceWorker' in navigator){
       _markers[lieu.id] = marker;
       // Marqueur transport permanent
       if (lieu.metro.lat) {
-        L.marker([lieu.metro.lat, lieu.metro.lng], { icon: makeTransportIcon(lieu.metro.name) })
+        var mMarker = L.marker([lieu.metro.lat, lieu.metro.lng], { icon: makeTransportIcon(lieu.metro.name) })
           .addTo(_map)
           .bindTooltip(lieu.metro.name, { permanent: true, direction: 'top', offset: [0,-16], className: 'transport-tooltip' });
+        _metroMarkers[lieu.id] = mMarker;
       }
     });
 
