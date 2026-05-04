@@ -369,6 +369,7 @@ CREATE POLICY "params_delete" ON parametres FOR DELETE USING (is_admin());
 ALTER PUBLICATION supabase_realtime ADD TABLE eleves;
 ALTER PUBLICATION supabase_realtime ADD TABLE presences;
 ALTER PUBLICATION supabase_realtime ADD TABLE publications;
+ALTER PUBLICATION supabase_realtime ADD TABLE discussions;
 ALTER PUBLICATION supabase_realtime ADD TABLE discussion_messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE agenda_modifs;
 -- Formulaires publics (inserts déclenchent chargerDonnees() dans admin.html)

@@ -4,3 +4,7 @@
 
 ALTER TABLE discussions
   ADD COLUMN IF NOT EXISTS groupes TEXT[] NOT NULL DEFAULT '{}';
+
+-- Ajouter discussions à la publication Supabase Realtime
+-- (sans ça, les élèves ne reçoivent pas les événements en temps réel)
+ALTER PUBLICATION supabase_realtime ADD TABLE discussions;
