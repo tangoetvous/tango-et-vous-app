@@ -3500,7 +3500,9 @@ function sauverStagesLocal(sai) {
   var y1 = parseInt(sai.split('-')[0]);
   var debut = y1+'-09-01', fin = (y1+1)+'-08-31';
   var saiStages = STAGES.filter(function(s){return s.date>=debut&&s.date<=fin;});
-  try { localStorage.setItem('tev_dates_stages_'+sai, JSON.stringify({saison:sai, stages:saiStages, modifie:today()})); } catch(e){}
+  var val = {saison:sai, stages:saiStages, modifie:today()};
+  try { localStorage.setItem('tev_dates_stages_'+sai, JSON.stringify(val)); } catch(e){}
+  if (!IS_DEMO) TEV.setParam('tev_dates_stages_'+sai, val).catch(function(){});
 }
 
 // Bascule Technique pour une date de stage
@@ -4074,6 +4076,11 @@ async function chargerDonnees() {
           }
         });
       }
+    });
+    // Injecter toutes les dates STAGES connues dans stagesReels (même sans inscrits)
+    STAGES.forEach(function(st){
+      if (!stagesReels[st.date]) stagesReels[st.date] = {label:st.label, inscrits:[]};
+      else if (st.label) stagesReels[st.date].label = st.label;
     });
     adminData = Object.assign({}, adminData, {
       _email:            emailSaved,
@@ -7612,8 +7619,13 @@ function renderStages() {
   var _slotHor=_slotHoraire[slotId]||'';
 
   h+='<div class="card" style="margin-bottom:12px;"><div style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">'+_slotHor+'</div>'
-    +'<div style="font-size:16px;font-weight:600;color:var(--text);">'+_slotNom+'</div>'
-    +'<div class="card-sub">'+insSlot.length+' inscrits'+(attSlot.length?' · '+attSlot.length+' en attente':'')+'</div></div>';
+    +'<div style="font-size:16px;font-weight:600;color:var(--text);">'+_slotNom+'</div></div>';
+  h+='<div class="stats-row stats-4">'
+    +'<div class="stat"><div class="stat-n n-gold">'+(insSlot.length+attSlot.length)+'</div><div class="stat-l">Total</div></div>'
+    +'<div class="stat"><div class="stat-n">'+insSlot.filter(function(i){return i.role==='guideur';}).length+'</div><div class="stat-l">Guideurs</div></div>'
+    +'<div class="stat"><div class="stat-n">'+insSlot.filter(function(i){return i.role==='guidee';}).length+'</div><div class="stat-l">Guidées</div></div>'
+    +'<div class="stat"><div class="stat-n n-warn">'+attSlot.length+'</div><div class="stat-l">Attente</div></div>'
+    +'</div>';
 
   if(attSlot.length){
     h+='<div class="section-hdr">En attente de confirmation</div>';
