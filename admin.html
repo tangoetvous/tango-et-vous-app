@@ -9775,6 +9775,12 @@ async function chargerParamsRemote() {
       chargerTarifs();
       chargerLivrets();
       chargerDatesYogaStages();
+      // Propager les dates STAGES fraîches dans adminData.stages (sync cross-device)
+      if (!adminData.stages) adminData.stages = {};
+      STAGES.forEach(function(st){
+        if (!adminData.stages[st.date]) adminData.stages[st.date] = {label:st.label, inscrits:[]};
+        else if (st.label) adminData.stages[st.date].label = st.label;
+      });
       chargerMilongas();
       if (_adminDataReady) _renderTabSiPasFormulaire(); // ne pas rendre avant que les vraies données soient chargées
     }
