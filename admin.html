@@ -2119,7 +2119,7 @@ function sauverTarifs(btn) {
     // Tarifs futurs (prochaine saison) : stocker pour les formulaires de pré-inscription publics
     try { localStorage.setItem('tev_tarifs_prochaine_saison', JSON.stringify(tarifs)); } catch(e){}
   }
-  if (!IS_DEMO) { TEV.setParam('tarifs', payload).catch(function(){}); }
+  if (!IS_DEMO) { TEV.setParam('tev_tarifs', payload).catch(function(){}); }
   if(btn) { btn.textContent='✓ Enregistré'; btn.disabled=true; setTimeout(function(){btn.textContent='💾 Enregistrer';btn.disabled=false;renderTab();},1800); }
 }
 function resetTarifs() {
@@ -2539,8 +2539,8 @@ function renderTarifs() {
 function renderParametres() {
   if (!saisonParametres) saisonParametres = saisonCourante();
   var sai = saisonParametres;
-  // Sync silencieux : pousser les données stages locales vers Supabase à chaque ouverture
-  if (!IS_DEMO) sauverStagesLocal(sai);
+  // Sync silencieux : pousser les données locales vers Supabase à chaque ouverture
+  if (!IS_DEMO) { sauverStagesLocal(sai); saveResaSalles(loadResaSalles()); }
   var sc  = saisonCourante();
   var saisons = [saisonPrecedente(), sc, saisonSuivante()];
   var saiLabels = {};
@@ -9751,7 +9751,7 @@ function loadResaSalles() {
 }
 function saveResaSalles(salles) {
   try { localStorage.setItem('tev_resa_salles', JSON.stringify(salles)); } catch(e) {}
-  if (!IS_DEMO) TEV.setParam('resa_salles', salles).catch(function(){});
+  if (!IS_DEMO) TEV.setParam('tev_resa_salles', salles).catch(function(){});
 }
 async function chargerParamsRemote() {
   if (IS_DEMO) return;
@@ -9762,8 +9762,9 @@ async function chargerParamsRemote() {
     Object.keys(params).forEach(function(cle) {
       var val = params[cle];
       if (val === null || val === undefined) return;
-      // clés préfixées tev_ stockées directement, sinon reconstruire
-      var localKey = (cle.indexOf('tev_')===0) ? cle : cle;
+      // Remapper les clés Supabase sans préfixe vers leur clé localStorage avec préfixe
+      var _KEY_REMAP = {'tarifs':'tev_tarifs', 'resa_salles':'tev_resa_salles'};
+      var localKey = _KEY_REMAP[cle] || cle;
       try {
         var current = localStorage.getItem(localKey);
         var incoming = JSON.stringify(val);
