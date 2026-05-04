@@ -995,6 +995,7 @@ var compYogaCours     = 'hatha';      // hatha | yin
 var comptaSort        = 'nom';        // 'nom' | 'paiement' | 'montant'
 var _comptaEditId     = null;
 var _comptaEditCtx    = '';
+var _mceEchStatus     = [null, null, null]; // null=auto, true=encaissé, false=non-encaissé
 var _discView          = 'list';     // 'list' | 'new' | 'chat'
 var _discCurrentId     = null;
 var _discCurrentTitle  = '';
@@ -10509,15 +10510,26 @@ function _fmtJour(s) {
   return (p[2]||'')+'/'+(p[1]||'')+'/'+(p[0]||'');
 }
 
-function _cb3xEcheances(montant, dateStr) {
+function _cb3xEcheances(montant, dateStr, statusOverride) {
+  // statusOverride: null or [null|true|false, null|true|false, null|true|false]
   if (!dateStr) return [];
   var d0=new Date(dateStr+'T00:00:00');
   if (isNaN(d0)) return [];
   var part=Math.round(montant/3), today=new Date(); today.setHours(0,0,0,0);
   return [0,1,2].map(function(i){
     var d=new Date(d0.getFullYear(), d0.getMonth()+i*2, d0.getDate());
-    return {date:d.toISOString().slice(0,10), montant:(i===2?montant-part*2:part), encaisse:d<=today};
+    var autoEnc=d<=today;
+    var ov=statusOverride&&statusOverride[i]!==null&&statusOverride[i]!==undefined;
+    var encaisse=ov?statusOverride[i]:autoEnc;
+    return {date:d.toISOString().slice(0,10), montant:(i===2?montant-part*2:part), encaisse:encaisse, overridden:ov};
   });
+}
+
+function _getCartePaye(email) {
+  var carte=(adminData.cartes||[]).find(function(c){return c.email===email;});
+  if (carte) return carte.paye!==false;
+  try { if(localStorage.getItem('tev_nonpayee_'+email)==='1') return false; } catch(e) {}
+  return true; // défaut : payée
 }
 
 function _comptaEncaisse(liste) {
@@ -10526,8 +10538,11 @@ function _comptaEncaisse(liste) {
     var m=Number(e.montant)||0;
     var p=e.paiement||'';
     var dt=e.datePremierPaiement||(e.donnees&&e.donnees.datePremierPaiement)||'';
+    var statusOv=(e.donnees&&Array.isArray(e.donnees.echeancesStatus))?e.donnees.echeancesStatus:null;
+    // Carte10 non payée → tout en prévisionnel
+    if (e.type==='carte10' && !_getCartePaye(e.email)) { prev+=m; return; }
     if ((p==='cb3x'||p==='virement3x')&&dt) {
-      _cb3xEcheances(m,dt).forEach(function(ech){if(ech.encaisse)enc+=ech.montant;else prev+=ech.montant;});
+      _cb3xEcheances(m,dt,statusOv).forEach(function(ech){if(ech.encaisse)enc+=ech.montant;else prev+=ech.montant;});
     } else {enc+=m;}
   });
   return {encaisse:enc, previsionnel:prev, total:enc+prev};
@@ -10609,14 +10624,23 @@ function _comptaBlock(liste, titre, ctx) {
   sorted.forEach(function(e){
     var dt=e.datePremierPaiement||(e.donnees&&e.donnees.datePremierPaiement)||'';
     var isX3=e.paiement==='cb3x'||e.paiement==='virement3x';
-    var echs=isX3&&dt?_cb3xEcheances(Number(e.montant)||0,dt):[];
+    var statusOv=(e.donnees&&Array.isArray(e.donnees.echeancesStatus))?e.donnees.echeancesStatus:null;
+    var echs=isX3&&dt?_cb3xEcheances(Number(e.montant)||0,dt,statusOv):[];
     var encE=0,prevE=0;
     echs.forEach(function(ech){if(ech.encaisse)encE+=ech.montant;else prevE+=ech.montant;});
-    h+='<div style="padding:7px 8px;border-bottom:1px solid var(--s2);">';
+    var isSup=e.statut==='supprimé';
+    var isNonPaye=e.type==='carte10'&&!_getCartePaye(e.email);
+    h+='<div style="padding:7px 8px;border-bottom:1px solid var(--s2);'+(isSup?'opacity:.65;':'')+(isNonPaye?'border-left:3px solid #fb923c;padding-left:6px;':'')+'\">';
     h+='<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">';
+    h+='<div style="min-width:0;">';
     h+='<a href="javascript:void(0)" onclick="ouvrirComptaEdit(\''+e.id+'\',\''+ctx+'\')" style="color:var(--fg);font-size:13px;text-decoration:none;border-bottom:1px dashed var(--border);">'+(e.prenom||'')+' '+(e.nom||'')+'</a>';
+    if (isSup) h+='<span style="font-size:9px;color:var(--dim);margin-left:5px;">supprimé</span>';
+    if (isNonPaye) h+='<span style="font-size:9px;color:#fb923c;margin-left:5px;">non payée</span>';
+    h+='</div>';
     h+='<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--s3);white-space:nowrap;">'+(PAI_LBL[e.paiement]||e.paiement||'—')+'</span>';
-    if (isX3&&echs.length&&prevE>0) {
+    if (isNonPaye) {
+      h+='<span style="font-size:13px;font-weight:700;color:#fb923c;text-align:right;">'+(e.montant?e.montant+'€':'—')+'</span>';
+    } else if (isX3&&echs.length&&prevE>0) {
       h+='<div style="text-align:right;line-height:1.3;">';
       h+='<span style="font-size:12px;font-weight:700;color:#4ade80;">'+encE+'€</span><br>';
       h+='<span style="font-size:10px;color:var(--dim);">/ '+e.montant+'€</span>';
@@ -10625,11 +10649,13 @@ function _comptaBlock(liste, titre, ctx) {
       h+='<span style="font-size:13px;font-weight:700;color:'+(e.montant?'#4ade80':'var(--dim)')+';text-align:right;">'+(e.montant?e.montant+'€':'—')+'</span>';
     }
     h+='</div>';
-    if (isX3) {
+    if (isX3&&!isNonPaye) {
       h+='<div style="margin-top:4px;padding-left:4px;">';
       if (echs.length) {
         echs.forEach(function(ech,i){
-          h+='<span style="font-size:11px;color:'+(ech.encaisse?'#4ade80':'#fb923c')+';margin-right:10px;">'+(i+1)+'ᵉ '+_fmtJour(ech.date)+' — '+ech.montant+'€ '+(ech.encaisse?'✓':'⏳')+'</span>';
+          var icon=ech.encaisse?'✓':'✗';
+          var clr=ech.encaisse?'#4ade80':(ech.overridden?'#ef4444':'#fb923c');
+          h+='<span style="font-size:11px;color:'+clr+';margin-right:10px;">'+(i+1)+'ᵉ '+_fmtJour(ech.date)+' — '+ech.montant+'€ '+icon+'</span>';
         });
       } else {
         h+='<a href="javascript:void(0)" onclick="ouvrirComptaEdit(\''+e.id+'\',\''+ctx+'\')" style="font-size:11px;color:var(--gold);">⚠ Saisir la date du 1er paiement</a>';
@@ -10673,7 +10699,11 @@ function _renderComptaTango() {
     {key:'vincennes-int', label:'Vincennes Intermédiaire', ville:'vincennes', niveau:'intermediaire'}
   ];
   var tous=(adminData.coursTango||[]).filter(function(e){
-    return (e.saison||saisonCourante())===sai && e.statut==='inscrit';
+    if ((e.saison||saisonCourante())!==sai) return false;
+    if (e.statut==='inscrit') return true;
+    // Inclure les cartes10 supprimées payées (l'argent reste en compta)
+    if (e.statut==='supprimé' && e.type==='carte10' && _getCartePaye(e.email)) return true;
+    return false;
   });
   var h='';
   h+=_comptaGrandTotalBox(_comptaEncaisse(tous), 'TOTAL ÉLÈVES TANGO — '+sai);
@@ -10779,6 +10809,10 @@ function ouvrirComptaEdit(id, ctx) {
   gel('mce-montant').value=e.montant||'';
   gel('mce-paiement').value=e.paiement||'';
   gel('mce-date').value=e.datePremierPaiement||(e.donnees&&e.donnees.datePremierPaiement)||'';
+  _mceEchStatus=[null,null,null];
+  if (e.donnees&&Array.isArray(e.donnees.echeancesStatus)) {
+    e.donnees.echeancesStatus.forEach(function(s,i){if(i<3)_mceEchStatus[i]=s;});
+  }
   _mceUpdateEcheances();
   gel('modal-compta-edit').classList.add('vis');
 }
@@ -10788,19 +10822,37 @@ function fermerComptaEdit() {
   _comptaEditId=null; _comptaEditCtx='';
 }
 
+function toggleMceEcheance(i, val) {
+  _mceEchStatus[i]=val; // null=auto, true=encaissé, false=non-encaissé
+  _mceUpdateEcheances();
+}
+
 function _mceUpdateEcheances() {
   var pai=gel('mce-paiement')&&gel('mce-paiement').value;
   var m=Number(gel('mce-montant')&&gel('mce-montant').value)||0;
   var dt=gel('mce-date')&&gel('mce-date').value;
   var el=gel('mce-echeances'); if (!el) return;
   if ((pai==='cb3x'||pai==='virement3x')&&m) {
-    var echs=dt?_cb3xEcheances(m,dt):[];
+    var echs=dt?_cb3xEcheances(m,dt,_mceEchStatus):[];
     var h='<div style="background:var(--s2);border-radius:6px;padding:10px 12px;">';
     h+='<div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--dim);margin-bottom:8px;">ÉCHÉANCES (espacement 2 mois)</div>';
-    if (echs.length) {
+    if (dt&&echs.length) {
       echs.forEach(function(ech,i){
-        h+='<div style="font-size:13px;margin-bottom:4px;color:'+(ech.encaisse?'#4ade80':'#fb923c')+'">'
-         +(i+1)+'ᵉ &nbsp;'+_fmtJour(ech.date)+' — '+ech.montant+'€ '+(ech.encaisse?'✓ encaissé':'⏳ prévisionnel')+'</div>';
+        var ov=_mceEchStatus[i]!==null&&_mceEchStatus[i]!==undefined;
+        h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">';
+        h+='<span style="flex:1;font-size:12px;color:'+(ech.encaisse?'#4ade80':'#ef4444')+'">';
+        h+=(i+1)+'ᵉ &nbsp;'+_fmtJour(ech.date)+' — '+ech.montant+'€ &nbsp;'+(ech.encaisse?'✓ encaissé':'✗ non encaissé');
+        if (ov) h+=' <span style="font-size:10px;color:var(--dim);">(manuel)</span>';
+        h+='</span>';
+        if (ech.encaisse) {
+          h+='<button onclick="toggleMceEcheance('+i+',false)" style="padding:2px 8px;border-radius:4px;border:none;cursor:pointer;font-size:10px;background:#ef444420;color:#ef4444;white-space:nowrap;">CB expirée</button>';
+        } else {
+          h+='<button onclick="toggleMceEcheance('+i+',true)" style="padding:2px 8px;border-radius:4px;border:none;cursor:pointer;font-size:10px;background:#4ade8020;color:#4ade80;white-space:nowrap;">Marquer encaissé</button>';
+        }
+        if (ov) {
+          h+='<button onclick="toggleMceEcheance('+i+',null)" style="padding:2px 8px;border-radius:4px;border:none;cursor:pointer;font-size:10px;background:var(--s3);color:var(--dim);">↩ Auto</button>';
+        }
+        h+='</div>';
       });
     } else {
       h+='<div style="font-size:12px;color:var(--dim);">Saisir la date du 1er paiement pour voir les échéances.</div>';
@@ -10816,19 +10868,21 @@ async function sauverComptaEdit() {
   var montant=Number(gel('mce-montant').value)||0;
   var paiement=gel('mce-paiement').value;
   var dateP=gel('mce-date').value;
+  var echSt=_mceEchStatus.slice();
   var liste=ctx==='tango'?(adminData.coursTango||[]):(adminData.coursYoga||[]);
   var e=liste.find(function(x){return String(x.id)===String(id);});
   if (e) {
     e.montant=montant; e.paiement=paiement; e.datePremierPaiement=dateP;
     if (!e.donnees) e.donnees={};
     e.donnees.datePremierPaiement=dateP;
+    e.donnees.echeancesStatus=echSt;
   }
   fermerComptaEdit();
   renderTab();
   if (IS_DEMO||!TEV||!TEV.client) return;
   var table=ctx==='tango'?'inscriptions_cours':'cours_yoga';
-  var upd={paiement:paiement, montant:montant, donnees:Object.assign({},(e&&e.donnees)||{},{datePremierPaiement:dateP})};
-  var res=await Promise.resolve(TEV.client.from(table).update(upd).eq('id',id));
+  var newDonnees=Object.assign({},(e&&e.donnees)||{},{datePremierPaiement:dateP,echeancesStatus:echSt});
+  var res=await Promise.resolve(TEV.client.from(table).update({paiement:paiement,montant:montant,donnees:newDonnees}).eq('id',id));
   if (res.error) alert('Erreur sauvegarde : '+(res.error.message||JSON.stringify(res.error)));
 }
 </script>
