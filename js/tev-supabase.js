@@ -455,7 +455,7 @@ async function tevInscriptionStage(body) {
 async function tevGetPublications() {
   const { data } = await _tev.from('publications').select('*')
     .eq('publiee', true).order('created_at', { ascending: false });
-  return data || [];
+  return (data || []).map(p => Object.assign({}, p.donnees || {}, p));
 }
 
 async function tevSauvegarderPublication({ id, cat, titre, extrait, contenu, image, video, dateProgrammee, datesProgrammees, publiee, cours }) {

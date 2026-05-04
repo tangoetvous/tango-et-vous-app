@@ -2204,11 +2204,15 @@
     if (!IS_DEMO) {
       try {
         const serverPubs = await TEV.getPublications();
+        // tevGetPublications() aplatit déjà p.donnees → les champs sont au niveau racine
         if (serverPubs.length) pubs = serverPubs.map(p => ({
           id: p.id, titre: p.titre, contenu: p.contenu,
-          publiee: p.publiee, dateProgrammee: p.created_at,
+          publiee: p.publiee,
+          dateProgrammee: p.dateProgrammee || p.created_at,
+          datesProgrammees: p.datesProgrammees || [],
           cat: p.cat || '', extrait: p.extrait || '',
           image: p.image || '', video: p.video || '',
+          cours: p.cours || [],
         }));
       } catch(e) {}
     }
@@ -3637,7 +3641,7 @@ a{color:var(--gold);text-decoration:none;}
   flex-direction:column;gap:6px;
 }
 </style>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 </head>
 <body>
 
@@ -4121,7 +4125,7 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 (function() {
   // Paramètres dynamiques depuis admin.html
