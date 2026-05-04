@@ -4134,7 +4134,7 @@ if('serviceWorker' in navigator){
   var _ypY=_lpPl('yoga'); var _apP=_lpPl('paris').adresse||{}, _apV=_lpPl('vincennes').adresse||{};
   var _apY=_ypY.adresse||{}, _hYpl=_ypY.horaires||{}, _apSt=_lpPl('stages').adresse||{};
   // GPS depuis Paramètres, fallback sur coordonnées de référence OSM
-  function _pg(str, fb) { var p=(str||'').split(','); return (p[0]&&p[1])?{lat:parseFloat(p[0]),lng:parseFloat(p[1])}:fb; }
+  function _pg(str, fb) { var p=(str||'').split(','); return (p[0]&&p[1])?{lat:parseFloat(p[0]),lng:parseFloat(p[1]),hasGps:true}:Object.assign({hasGps:false},fb); }
   var _gpP  = _pg(_apP.gps,  {lat:48.8568, lng:2.3960});
   var _gpV  = _pg(_apV.gps,  {lat:48.8471, lng:2.4395});
   var _gpY  = _pg(_apY.gps,  {lat:48.8471, lng:2.4395});
@@ -4147,7 +4147,7 @@ if('serviceWorker' in navigator){
       addr: _apP.rue || '24 villa Riberolle, Paris 20e',
       geocodeQuery: _apP.rue || '24 villa Riberolle, 75020 Paris',
       sub: 'Jeudi soir \u00b7 ' + (_apP.transport || 'M\u00b0 Alexandre Dumas (L2)'),
-      lat: _gpP.lat, lng: _gpP.lng,
+      lat: _gpP.lat, lng: _gpP.lng, hasExplicitGps: _gpP.hasGps,
       metro: { geocodeQuery: 'station m\u00e9tro Alexandre Dumas Paris', lat: 48.85644, lng: 2.39443, name: _apP.transport || 'M\u00b0 Alexandre Dumas (L2)' },
       color: '#60b0ff',
       mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apP.gps || _apP.rue || '24 villa Riberolle 75020 Paris')
@@ -4159,7 +4159,7 @@ if('serviceWorker' in navigator){
       addr: _apV.rue || '16 rue Charles Path\u00e9, Vincennes',
       geocodeQuery: _apV.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
       sub: 'Lundi soir \u00b7 ' + (_apV.transport || 'RER A Vincennes (pl. Pierre S\u00e9mard)'),
-      lat: _gpV.lat, lng: _gpV.lng,
+      lat: _gpV.lat, lng: _gpV.lng, hasExplicitGps: _gpV.hasGps,
       metro: { geocodeQuery: 'gare RER Vincennes place Pierre S\u00e9mard', lat: 48.8478, lng: 2.4342, name: _apV.transport || 'RER A \u2014 Vincennes' },
       color: '#40d8c0',
       mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apV.gps || _apV.rue || '16 rue Charles Pathé 94300 Vincennes')
@@ -4171,7 +4171,7 @@ if('serviceWorker' in navigator){
       addr: _apSt.rue || '64 rue Orfila, Paris 20e',
       geocodeQuery: _apSt.rue || '64 rue Orfila, 75020 Paris',
       sub: 'Samedi \u00b7 ' + (_apSt.transport || 'M\u00b0 Gambetta (L3)'),
-      lat: _gpSt.lat, lng: _gpSt.lng,
+      lat: _gpSt.lat, lng: _gpSt.lng, hasExplicitGps: _gpSt.hasGps,
       metro: { geocodeQuery: 'station m\u00e9tro Gambetta Paris', lat: 48.86515, lng: 2.39868, name: _apSt.transport || 'M\u00b0 Gambetta (L3)' },
       color: '#D4AF37',
       mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apSt.gps || _apSt.rue || '64 rue Orfila 75020 Paris')
@@ -4183,7 +4183,7 @@ if('serviceWorker' in navigator){
       addr: _apY.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
       geocodeQuery: _apY.rue || '16 rue Charles Path\u00e9, 94300 Vincennes',
       sub: 'Mardi matin \u00b7 Yin '+(_hYpl.yin||'10h30')+' / Hatha '+(_hYpl.hatha||'11h30')+' \u00b7 '+(_apY.transport||'RER A Ch\u00e2teau de Vincennes'),
-      lat: _gpY.lat, lng: _gpY.lng,
+      lat: _gpY.lat, lng: _gpY.lng, hasExplicitGps: _gpY.hasGps,
       metro: { geocodeQuery: 'gare RER Vincennes place Pierre S\u00e9mard', lat: 48.8478, lng: 2.4342, name: _apY.transport || 'RER A \u2014 Vincennes' },
       color: '#a78bfa',
       mapsUrl: 'https://maps.google.com/?q=' + encodeURIComponent(_apY.gps || _apY.rue || '16 rue Charles Pathé 94300 Vincennes')
@@ -4231,8 +4231,8 @@ if('serviceWorker' in navigator){
         addr: rue,
         geocodeQuery: rue,
         sub: (mil.horaire_debut||'17h30')+'\u2013'+(mil.horaire_fin||'23h30')+' \u00b7 '+tpt,
-        lat: lat||0, lng: lng||0,
-        metro: { geocodeQuery: tpt, lat: metroLat, lng: metroLng, name: tpt },
+        lat: lat||0, lng: lng||0, hasExplicitGps: !!(lat && lng),
+        metro: { geocodeQuery: tpt, lat: metroLat, lng: metroLng, name: tpt, hasExplicitGps: !!(metroLat && metroLng) },
         color: mil.color||'#ff8c00',
         mapsUrl: gps
           ? 'https://maps.google.com/?q='+encodeURIComponent(gps)
@@ -4242,14 +4242,17 @@ if('serviceWorker' in navigator){
   })();
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v7';
+  var CACHE_KEY = 'tev_plan_coords_v8';
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
       if (c) LIEUX.forEach(function(l) {
         if (c[l.id]) {
-          l.lat = c[l.id].lat; l.lng = c[l.id].lng;
-          if (c[l.id].metro) { l.metro.lat = c[l.id].metro.lat; l.metro.lng = c[l.id].metro.lng; }
+          // Ne pas écraser les coords venant des Paramètres admin
+          if (!l.hasExplicitGps) { l.lat = c[l.id].lat; l.lng = c[l.id].lng; }
+          if (c[l.id].metro && !(l.metro && l.metro.hasExplicitGps)) {
+            l.metro.lat = c[l.id].metro.lat; l.metro.lng = c[l.id].metro.lng;
+          }
         }
       });
     } catch(e) {}
@@ -4280,17 +4283,22 @@ if('serviceWorker' in navigator){
     function next() {
       if (i >= lieux.length) { sauverCache(); return; }
       var lieu = lieux[i++];
-      geocode(lieu.geocodeQuery).then(function(pos) {
+      // Ne pas géocoder si les coords viennent des Paramètres admin
+      var lieuGeocode = lieu.hasExplicitGps
+        ? Promise.resolve(null)
+        : geocode(lieu.geocodeQuery);
+      lieuGeocode.then(function(pos) {
         if (pos) {
           lieu.lat = pos.lat; lieu.lng = pos.lng;
           if (_markers[lieu.id]) _markers[lieu.id].setLatLng([pos.lat, pos.lng]);
         }
-        return new Promise(function(r){ setTimeout(r, 1200); });
+        return new Promise(function(r){ setTimeout(r, lieu.hasExplicitGps ? 0 : 1200); });
       }).then(function() {
+        if (lieu.metro && lieu.metro.hasExplicitGps) return Promise.resolve(null);
         return geocode(lieu.metro.geocodeQuery);
       }).then(function(pos) {
         if (pos) { lieu.metro.lat = pos.lat; lieu.metro.lng = pos.lng; }
-        return new Promise(function(r){ setTimeout(r, 1200); });
+        return new Promise(function(r){ setTimeout(r, (lieu.hasExplicitGps && lieu.metro && lieu.metro.hasExplicitGps) ? 0 : 1200); });
       }).then(next);
     }
     next();
