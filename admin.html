@@ -1984,6 +1984,7 @@ function traiterMsgInscription(msg, doRender) {
   if (msg.type === 'essaiInscription') _appliquerEssaiInscription(msg.data);
   if (msg.type === 'yogaEssaiInscription') _appliquerYogaEssaiInscription(msg.data);
   if (msg.type === 'yogaConfirmerPresence') _appliquerYogaConfirmPresence(msg.data);
+  if (msg.type === 'coursParticulierInscription') { if(!IS_DEMO){chargerDonnees();return;} }
   if (msg.type === 'cartePointage') {
     var d = msg.data || {};
     var c = (adminData.cartes||[]).find(function(x){return x.email===d.email;});
@@ -2048,7 +2049,7 @@ function traiterInscriptionsEnAttente() {
 window.addEventListener('message', function(ev) {
   if (ev.origin && ev.origin !== 'null' && ev.origin !== window.location.origin) return;
   var t = ev.data && ev.data.type;
-  if (t !== 'stageInscription' && t !== 'coursInscription' && t !== 'essaiInscription' && t !== 'yogaEssaiInscription' && t !== 'yogaConfirmerPresence') return;
+  if (t !== 'stageInscription' && t !== 'coursInscription' && t !== 'essaiInscription' && t !== 'yogaEssaiInscription' && t !== 'yogaConfirmerPresence' && t !== 'coursParticulierInscription') return;
   traiterMsgInscription(ev.data, true);
 });
 
@@ -5153,6 +5154,28 @@ function handleAction(action, btn) {
       _cpFormOuvert = false;
       chargerDonnees();
       break;
+    case 'cp-vue-recentes':
+      _cpAnciennes = false;
+      renderTab();
+      break;
+    case 'cp-vue-anciennes':
+      _cpAnciennes = true;
+      renderTab();
+      break;
+    case 'supprimer-cp':
+      (function() {
+        var id = btn.dataset.id;
+        if (IS_DEMO) { afficherToast('Mode démo — action désactivée'); return; }
+        if (!confirm('Supprimer définitivement cette demande de cours particulier ?')) return;
+        btn.disabled = true;
+        TEV.client.from('cours_particuliers').delete().eq('id', id)
+          .then(function(res) {
+            if (res.error) { btn.disabled=false; afficherToast('Erreur: '+(res.error.message||'')); return; }
+            afficherToast('🗑️ Demande supprimée');
+            chargerDonnees();
+          }).catch(function(e) { btn.disabled=false; afficherToast('Erreur: '+e.message); });
+      })();
+      break;
     case 'toggle-cp-cal':
       (function(){
         var sid = String(btn.dataset.id);
@@ -5200,6 +5223,28 @@ function handleAction(action, btn) {
     case 'toggle-devis-vue':
       _devisVue = (_devisVue === 'demandes') ? 'liste' : 'demandes';
       renderTab();
+      break;
+    case 'devis-vue-recentes':
+      _devisAnciennes = false;
+      renderTab();
+      break;
+    case 'devis-vue-anciennes':
+      _devisAnciennes = true;
+      renderTab();
+      break;
+    case 'supprimer-demande-devis':
+      (function() {
+        var id = btn.dataset.id;
+        if (IS_DEMO) { afficherToast('Mode démo — action désactivée'); return; }
+        if (!confirm('Supprimer définitivement cette demande de devis ?')) return;
+        btn.disabled = true;
+        TEV.client.from('demandes_devis').delete().eq('id', id)
+          .then(function(res) {
+            if (res.error) { btn.disabled=false; afficherToast('Erreur: '+(res.error.message||'')); return; }
+            afficherToast('🗑️ Demande supprimée');
+            chargerDonnees();
+          }).catch(function(e) { btn.disabled=false; afficherToast('Erreur: '+e.message); });
+      })();
       break;
     case 'toggle-demande-detail':
       (function() {
@@ -7939,14 +7984,26 @@ function renderSorano() {
   function cardRow(s){
     var nomQ=s.nom.replace(/"/g,'&quot;');
     var snomQ=s.nom.toLowerCase().replace(/"/g,'&quot;');
+    var supprTag=s.supprime?'<span class="pill" style="font-size:10px;opacity:.65;margin-left:4px;">supprimé</span>':'';
     if(s.paiementSorano){
-      return '<div class="card hl-ok" data-snom="'+snomQ+'"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-ok">✓ Réglé</span></div><div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button><button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
+      return '<div class="card hl-ok" data-snom="'+snomQ+'"'+(s.supprime?' style="opacity:.7;"':'')+'>'+
+        '<div class="card-top"><div>'+
+        '<div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+supprTag+'</div>'+
+        '</div><span class="pill pill-ok">✓ Réglé</span></div>'+
+        '<div class="btn-row"><button class="btn btn-ghost" style="font-size:10px;" data-action="sorano-nonpaye" data-id="'+s.id+'">Annuler</button>'+
+        '<button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
     }
-    return '<div class="card hl-warn" data-snom="'+snomQ+'"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+'</div></div><span class="pill pill-warn">Non réglé</span></div><div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button><button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+nomQ+'" data-id="'+s.id+'">✉️ Relance</button><button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
+    return '<div class="card hl-warn" data-snom="'+snomQ+'"'+(s.supprime?' style="opacity:.7;"':'')+'>'+
+      '<div class="card-top"><div>'+
+      '<div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+supprTag+'</div>'+
+      '</div><span class="pill pill-warn">Non réglé</span></div>'+
+      '<div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button>'+
+      '<button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+nomQ+'" data-id="'+s.id+'">✉️ Relance</button>'+
+      '<button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
   }
   var groups=[
-    {lbl:'Tango Vincennes Débutants',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return ct.statut==='inscrit'&&ct.ville==='vincennes'&&ct.niveau==='debutant'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email]};}).sort(alpha)},
-    {lbl:'Tango Vincennes Intermédiaires',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return ct.statut==='inscrit'&&ct.ville==='vincennes'&&ct.niveau==='intermediaire'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email]};}).sort(alpha)},
+    {lbl:'Tango Vincennes Débutants',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return (ct.statut==='inscrit'||ct.statut==='supprimé')&&ct.ville==='vincennes'&&ct.niveau==='debutant'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email],supprime:ct.statut==='supprimé'};}).sort(alpha)},
+    {lbl:'Tango Vincennes Intermédiaires',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return (ct.statut==='inscrit'||ct.statut==='supprimé')&&ct.ville==='vincennes'&&ct.niveau==='intermediaire'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email],supprime:ct.statut==='supprimé'};}).sort(alpha)},
     {lbl:'🌙 Yin Yoga 10h30',color:'#a78bfa',list:(adminData.coursYoga||[]).filter(function(cy){return (cy.cours==='yin'||cy.cours==='forfait')&&cy.statut==='inscrit'&&(cy.saison||saisonCourante())===sai;}).map(function(cy){return{id:cy.id,nom:cy.prenom+' '+cy.nom,email:cy.email||'',paiementSorano:!!reg[cy.email]};}).sort(alpha)},
     {lbl:'☀️ Hatha Yoga 11h30',color:'#a78bfa',list:(adminData.coursYoga||[]).filter(function(cy){return (cy.cours==='hatha'||cy.cours==='forfait')&&cy.statut==='inscrit'&&(cy.saison||saisonCourante())===sai;}).map(function(cy){return{id:cy.id,nom:cy.prenom+' '+cy.nom,email:cy.email||'',paiementSorano:!!reg[cy.email]};}).sort(alpha)}
   ];
@@ -9901,11 +9958,13 @@ var _devisVue = 'demandes'; // 'demandes' | 'liste'
 var _demandesExpanded = new Set();
 var _devisGenerateurNumero = null; // null=liste, ''=nouveau vierge, 'DEVIS-...'=devis existant
 var _autoBrouillonCreating = new Set(); // IDs demandes en cours de création automatique
+var _devisAnciennes = false; // true = afficher les demandes >6 mois
 
 // ── Cours particuliers
 var _cpFormOuvert  = false;  // formulaire ouvert en iframe
 var _cpRecherche   = '';     // filtre nom/prénom
 var _cpCalExpanded = new Set(); // IDs avec formulaire événement ouvert
+var _cpAnciennes   = false;  // true = afficher les demandes >6 mois
 
 function _autoCreerBrouillon(demande) {
   return TEV.getSession().then(function(session) {
@@ -10050,20 +10109,35 @@ function renderCoursParticuliers() {
   var STATUTS_OPTS = ['nouveau','en_cours','termine','annule'];
 
   var tous = (adminData.coursParticuliers || []);
-  var q = _cpRecherche.toLowerCase().trim();
-  var liste = q ? tous.filter(function(cp){
-    return ((cp.prenom||'')+' '+(cp.nom||'')+' '+(cp.email||'')).toLowerCase().indexOf(q) >= 0;
-  }) : tous;
+  var _cpCutoff = (function(){ var d=new Date(); d.setMonth(d.getMonth()-6); return d.toISOString().split('T')[0]; })();
+  var tousRecents   = tous.filter(function(cp){ return (cp.created_at||'') >= _cpCutoff; });
+  var tousAnciens   = tous.filter(function(cp){ return (cp.created_at||'') < _cpCutoff; });
+  var nbAnciens = tousAnciens.length;
 
-  var nb = tous.filter(function(cp){ return !cp.statut || cp.statut==='nouveau'; }).length;
+  var q = _cpRecherche.toLowerCase().trim();
+  var listeBase = _cpAnciennes ? tousAnciens : tousRecents;
+  var liste = q ? listeBase.filter(function(cp){
+    return ((cp.prenom||'')+' '+(cp.nom||'')+' '+(cp.email||'')).toLowerCase().indexOf(q) >= 0;
+  }) : listeBase;
+
+  var nb = tousRecents.filter(function(cp){ return !cp.statut || cp.statut==='nouveau'; }).length;
   var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px;flex-wrap:wrap;">'
     + '<h2 style="margin:0;font-size:16px;">🎵 Cours particuliers'+(nb?' <span style="font-size:13px;color:#f9a8d4;">('+nb+' nouveau'+(nb>1?'x':'')+')</span>':'')+'</h2>'
     + '<button class="btn btn-ghost" style="font-size:13px;" data-action="ouvrir-cp-form">🔗 Nouveau formulaire</button>'
     + '</div>';
 
+  h += '<div style="display:flex;gap:6px;margin-bottom:12px;">'
+    + '<button class="btn'+((!_cpAnciennes)?' btn-gold':' btn-ghost')+'" style="font-size:12px;" data-action="cp-vue-recentes">6 derniers mois ('+(tousRecents.length)+')</button>'
+    + (nbAnciens>0 ? '<button class="btn'+((_cpAnciennes)?' btn-gold':' btn-ghost')+'" style="font-size:12px;" data-action="cp-vue-anciennes">Anciennes ('+(nbAnciens)+')</button>' : '')
+    + '</div>';
+
   h += '<div style="margin-bottom:12px;">'
     + '<input type="search" value="'+escHtml(_cpRecherche)+'" placeholder="🔍 Rechercher par nom..." '
-    + 'oninput="_cpRecherche=this.value;var z=document.getElementById(\'cp-liste\');if(z){var tous2=(adminData.coursParticuliers||[]);var q2=this.value.toLowerCase().trim();var res=q2?tous2.filter(function(cp){return((cp.prenom||\'\')+\' \'+(cp.nom||\'\')+\' \'+(cp.email||\'\')).toLowerCase().indexOf(q2)>=0;}):tous2;z.innerHTML=_renderCPListe(res,'+JSON.stringify(STATUTS).replace(/"/g,"'")+','+JSON.stringify(STATUTS_OPTS).replace(/"/g,"'")+');}" '
+    + 'oninput="_cpRecherche=this.value;var z=document.getElementById(\'cp-liste\');if(z){var _lb=_cpAnciennes?'
+    + '(adminData.coursParticuliers||[]).filter(function(cp){return(cp.created_at||\'\')<\''+_cpCutoff+'\';}):'
+    + '(adminData.coursParticuliers||[]).filter(function(cp){return(cp.created_at||\'\')>=\''+_cpCutoff+'\';});'
+    + 'var q2=this.value.toLowerCase().trim();var res=q2?_lb.filter(function(cp){return((cp.prenom||\'\')+\' \'+(cp.nom||\'\')+\' \'+(cp.email||\'\')).toLowerCase().indexOf(q2)>=0;}):_lb;'
+    + 'z.innerHTML=_renderCPListe(res,'+JSON.stringify(STATUTS).replace(/"/g,"'")+','+JSON.stringify(STATUTS_OPTS).replace(/"/g,"'")+');}" '
     + 'style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;" autocomplete="off">'
     + '</div>';
 
@@ -10078,9 +10152,17 @@ function renderCoursParticuliers() {
 function _renderCPListe(liste, STATUTS, STATUTS_OPTS) {
   if (!liste.length) return '<div class="empty-state">Aucun résultat.</div>';
 
-  var nouveaux = liste.filter(function(cp){ return !cp.statut||cp.statut==='nouveau'; });
-  var enCours  = liste.filter(function(cp){ return cp.statut==='en_cours'; });
-  var termines = liste.filter(function(cp){ return cp.statut==='termine'||cp.statut==='annule'; });
+  // Grouper par mois (plus récent en premier)
+  var _MOIS_CP = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  var _cpGroups = {};
+  var _cpOrder  = [];
+  liste.forEach(function(cp) {
+    var dt = new Date(cp.created_at || 0);
+    var key = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+    if (!_cpGroups[key]) { _cpGroups[key] = []; _cpOrder.push(key); }
+    _cpGroups[key].push(cp);
+  });
+  _cpOrder.sort(function(a,b){ return b.localeCompare(a); });
 
   function cardCP(cp) {
     var dt = cp.created_at ? _discRelDate(cp.created_at) : '';
@@ -10140,15 +10222,20 @@ function _renderCPListe(liste, STATUTS, STATUTS_OPTS) {
     if (cp.email) card += '<a href="'+mailtoGmail(cp.email,'Tango &amp; Vous')+'" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Gmail</a>';
     if (cp.tel)   card += '<a href="tel:'+cp.tel+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📞 Appel</a>';
     if (cp.tel)   card += '<a href="sms:'+cp.tel+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">💬 SMS</a>';
-    card += '<button class="btn btn-ghost" data-action="toggle-cp-cal" data-id="'+cp.id+'" style="font-size:12px;margin-left:auto;">'+(calOpen?'▴ Fermer':'📅 Calendrier')+'</button>';
+    card += '<button class="btn btn-ghost" data-action="toggle-cp-cal" data-id="'+cp.id+'" style="font-size:12px;">'+(calOpen?'▴ Fermer':'📅 Calendrier')+'</button>';
+    card += '<button class="btn btn-ghost" data-action="supprimer-cp" data-id="'+cp.id+'" style="font-size:12px;color:#e55;margin-left:auto;">🗑️</button>';
     card += '</div></div>';
     return card;
   }
 
   var r = '';
-  if (nouveaux.length) { r += '<div class="section-hdr">Nouvelles demandes ('+nouveaux.length+')</div>';         nouveaux.forEach(function(cp){ r+=cardCP(cp); }); }
-  if (enCours.length)  { r += '<div class="section-hdr" style="margin-top:16px;">En cours ('+enCours.length+')</div>'; enCours.forEach(function(cp){ r+=cardCP(cp); }); }
-  if (termines.length) { r += '<div class="section-hdr" style="margin-top:16px;">Terminées / Annulées ('+termines.length+')</div>'; termines.forEach(function(cp){ r+=cardCP(cp); }); }
+  _cpOrder.forEach(function(key) {
+    var parts = key.split('-');
+    var lbl = _MOIS_CP[parseInt(parts[1])-1]+' '+parts[0];
+    var grp = _cpGroups[key];
+    r += '<div class="section-hdr">'+lbl+' ('+grp.length+')</div>';
+    grp.forEach(function(cp){ r += cardCP(cp); });
+  });
   return r;
 }
 
@@ -10222,11 +10309,17 @@ function renderDevis() {
     'refuse':       { cls:'pill-err',  lbl:'Refusé' },
   };
 
+  // Cutoff 6 mois
+  var _dvCutoff = (function(){ var d=new Date(); d.setMonth(d.getMonth()-6); return d.toISOString().split('T')[0]; })();
+  var demandesRecentes  = demandes.filter(function(d){ return (d.created_at||'') >= _dvCutoff; });
+  var demandesAnciennes = demandes.filter(function(d){ return (d.created_at||'') < _dvCutoff; });
+  var nbAnciennes = demandesAnciennes.length;
+
   var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap;">'
     + '<h2 style="margin:0;font-size:16px;">📋 Devis</h2>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
     + '<button class="btn btn-ghost" style="font-size:13px;" data-action="toggle-devis-vue">'
-    + (_devisVue === 'demandes' ? '📂 Voir les devis générés ('+devisList.length+')' : '📥 Voir les demandes ('+demandes.length+')')
+    + (_devisVue === 'demandes' ? '📂 Devis générés ('+devisList.length+')' : '📥 Demandes ('+demandes.length+')')
     + '</button>'
     + '<a href="/demande-devis.html" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:13px;">🔗 Formulaire client</a>'
     + '<button class="btn btn-gold" style="font-size:13px;" data-action="ouvrir-generateur" data-numero="">📄 Nouveau devis</button>'
@@ -10363,20 +10456,42 @@ function renderDevis() {
     if (d.email) card += '<a href="mailto:'+d.email+'" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Email</a>';
     if (d.telephone) card += '<a href="tel:'+d.telephone+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📞</a>';
     card += '<button class="btn btn-ghost" data-action="creer-devis" data-id="'+d.id+'" style="font-size:12px;">📋 Créer un devis</button>';
-    card += '<button class="btn btn-ghost" data-action="toggle-demande-detail" data-id="'+d.id+'" style="font-size:12px;margin-left:auto;">'
+    card += '<button class="btn btn-ghost" data-action="toggle-demande-detail" data-id="'+d.id+'" style="font-size:12px;">'
       + (expanded ? '▴ Réduire' : '▾ Voir tout') + '</button>';
+    card += '<button class="btn btn-ghost" data-action="supprimer-demande-devis" data-id="'+d.id+'" style="font-size:12px;color:#e55;margin-left:auto;">🗑️</button>';
     card += '</div></div>';
     return card;
   }
 
-  // Sections par statut
-  var recues    = demandes.filter(function(d){ return d.statut==='reçue'; });
-  var enCours   = demandes.filter(function(d){ return d.statut==='devis_envoyé'||d.statut==='signé'||d.statut==='acompte_payé'; });
-  var terminees = demandes.filter(function(d){ return d.statut==='réalisée'||d.statut==='soldée'||d.statut==='refusée'; });
+  // Onglet anciennes / récentes
+  h += '<div style="display:flex;gap:6px;margin-bottom:14px;">'
+    + '<button class="btn'+((!_devisAnciennes)?' btn-gold':' btn-ghost')+'" style="font-size:12px;" data-action="devis-vue-recentes">6 derniers mois ('+(demandesRecentes.length)+')</button>'
+    + (nbAnciennes>0 ? '<button class="btn'+((_devisAnciennes)?' btn-gold':' btn-ghost')+'" style="font-size:12px;" data-action="devis-vue-anciennes">Anciennes ('+(nbAnciennes)+')</button>' : '')
+    + '</div>';
 
-  if (recues.length)    { h += '<div class="section-hdr">Nouvelles demandes ('+recues.length+')</div>'; recues.forEach(function(d){ h += cardDemande(d); }); }
-  if (enCours.length)   { h += '<div class="section-hdr" style="margin-top:16px;">En cours ('+enCours.length+')</div>'; enCours.forEach(function(d){ h += cardDemande(d); }); }
-  if (terminees.length) { h += '<div class="section-hdr" style="margin-top:16px;">Terminées ('+terminees.length+')</div>'; terminees.forEach(function(d){ h += cardDemande(d); }); }
+  var listeAffichee = _devisAnciennes ? demandesAnciennes : demandesRecentes;
+  if (!listeAffichee.length) {
+    h += '<div class="empty-state">Aucune demande' + (_devisAnciennes ? ' ancienne' : ' dans les 6 derniers mois') + '.</div>';
+  } else {
+    // Grouper par mois (plus récent en premier)
+    var _MOIS_DV = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    var _dvGroups = {};
+    var _dvOrder  = [];
+    listeAffichee.forEach(function(d) {
+      var dt = new Date(d.created_at || 0);
+      var key = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+      if (!_dvGroups[key]) { _dvGroups[key] = []; _dvOrder.push(key); }
+      _dvGroups[key].push(d);
+    });
+    _dvOrder.sort(function(a,b){ return b.localeCompare(a); }); // plus récent en premier
+    _dvOrder.forEach(function(key) {
+      var parts = key.split('-');
+      var lbl = _MOIS_DV[parseInt(parts[1])-1]+' '+parts[0];
+      var grp = _dvGroups[key];
+      h += '<div class="section-hdr">'+lbl+' ('+grp.length+')</div>';
+      grp.forEach(function(d){ h += cardDemande(d); });
+    });
+  }
 
   // Devis sans demande associée
   var devisSansDemande = devisList.filter(function(dv){ return !dv.demande_id; });
