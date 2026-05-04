@@ -4887,7 +4887,8 @@ function handleAction(action, btn) {
           _discView='chat'; renderTab();
           return;
         }
-        TEV.createDiscussion({titre:titre, eleveEmail:'', eleveNom:nom})
+        var groupes=Array.from(document.querySelectorAll('.disc-grp-cb:checked')).map(function(cb){return cb.value;});
+        TEV.createDiscussion({titre:titre, eleveEmail:'', eleveNom:nom, groupes:groupes})
           .then(function(r){
             if(r.error) throw new Error(r.error);
             afficherToast('\uD83D\uDCAC Discussion ouverte\u00a0!');
@@ -9819,7 +9820,7 @@ function chargerDiscussions(callback) {
         id: d.id, titre: d.titre,
         createur_email: d.eleve_email, createur_nom: d.eleve_nom,
         statut: d.fermee ? 'ferme' : 'ouvert',
-        groupes: [],
+        groupes: d.groupes || [],
         date: d.last_message_at || d.created_at,
       };
     });

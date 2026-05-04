@@ -673,8 +673,8 @@
           createur_email: disc.eleve_email, createur_nom: disc.eleve_nom,
           statut: disc.fermee ? 'ferme' : 'ouvert',
           date: disc.last_message_at || disc.created_at,
-          groupes: [],
-        }));
+          groupes: disc.groupes || [],
+        })).filter(disc => _discPeutVoir(disc));
       } catch(e) {
         _discDiscList = _discDiscList || [];
       }

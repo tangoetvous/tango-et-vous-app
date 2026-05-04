@@ -500,9 +500,10 @@ async function tevGetMessages(discussionId) {
   return data || [];
 }
 
-async function tevCreateDiscussion({ titre, eleveEmail, eleveNom }) {
+async function tevCreateDiscussion({ titre, eleveEmail, eleveNom, groupes }) {
   const { data, error } = await _tev.from('discussions').insert({
     titre, eleve_email: eleveEmail.toLowerCase(), eleve_nom: eleveNom || '',
+    groupes: groupes || [],
   }).select('id').single();
   if (error) throw error;
   return { ok: true, id: data.id };
