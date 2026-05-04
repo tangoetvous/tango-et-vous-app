@@ -4422,10 +4422,44 @@ if('serviceWorker' in navigator){
     }
   }
 
+  // Relit le GPS des milongas depuis localStorage au moment où l'onglet Plan est ouvert.
+  // Cela permet de prendre en compte les GPS saisis dans admin après le chargement de la page.
+  function _refreshMilongasGps() {
+    function _pg(str) {
+      var p = (str||'').split(',');
+      return (p[0] && p[1]) ? { lat: parseFloat(p[0]), lng: parseFloat(p[1]) } : null;
+    }
+    var mils = [];
+    try {
+      var r = JSON.parse(localStorage.getItem('tev_milongas_'+_saiPl())||'null');
+      if (!r || !r.milongas || !r.milongas.length) {
+        r = JSON.parse(localStorage.getItem('tev_milongas_'+_saiPlNext())||'null');
+      }
+      if (r && r.milongas) mils = r.milongas;
+    } catch(e) {}
+
+    LIEUX.forEach(function(lieu) {
+      if (lieu.id.indexOf('milonga-') !== 0) return; // seulement les milongas
+      var rawId = lieu.id.replace('milonga-', '');
+      var m = mils.find(function(x){ return x.id === rawId; });
+      if (!m || !m.lieu) return;
+      var vp = _pg(m.lieu.gps);
+      var mp = _pg(m.lieu.metroGps);
+      if (vp) { lieu.lat = vp.lat; lieu.lng = vp.lng; lieu.hasExplicitGps = true; }
+      if (mp) { lieu.metro.lat = mp.lat; lieu.metro.lng = mp.lng; lieu.metro.hasExplicitGps = true; }
+      if (_markers[lieu.id]) _markers[lieu.id].setLatLng([lieu.lat, lieu.lng]);
+      if (_metroMarkers[lieu.id]) _metroMarkers[lieu.id].setLatLng([lieu.metro.lat, lieu.metro.lng]);
+    });
+  }
+
   function initPlan() {
-    if (_map) { _map.invalidateSize(); return; }
     var mapEl = document.getElementById('plan-map');
     if (!mapEl) return;
+
+    // Rafraîchir le GPS des milongas depuis localStorage (au cas où l'admin a modifié après le chargement)
+    _refreshMilongasGps();
+
+    if (_map) { _map.invalidateSize(); return; }
 
     // Charger le cache localStorage (coordonnées de la visite précédente)
     chargerCache();
