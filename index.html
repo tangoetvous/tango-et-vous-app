@@ -4403,34 +4403,78 @@ if('serviceWorker' in navigator){
     }
   }
 
-  // Relit le GPS des milongas depuis localStorage au moment où l'onglet Plan est ouvert.
-  // Cela permet de prendre en compte les GPS saisis dans admin après le chargement de la page.
-  function _refreshMilongasGps() {
+  // Applique les GPS milonga sur LIEUX + markers existants
+  function _applyMilongasGps(mils) {
     function _pg(str) {
       var p = (str||'').split(',');
-      return (p[0] && p[1]) ? { lat: parseFloat(p[0]), lng: parseFloat(p[1]) } : null;
+      return (p[0] && p[1]) ? { lat: parseFloat(p[0].trim()), lng: parseFloat(p[1].trim()) } : null;
     }
-    var mils = [];
-    try {
-      var r = JSON.parse(localStorage.getItem('tev_milongas_'+_saiPl())||'null');
-      if (!r || !r.milongas || !r.milongas.length) {
-        r = JSON.parse(localStorage.getItem('tev_milongas_'+_saiPlNext())||'null');
-      }
-      if (r && r.milongas) mils = r.milongas;
-    } catch(e) {}
-
-    LIEUX.forEach(function(lieu) {
-      if (lieu.id.indexOf('milonga-') !== 0) return; // seulement les milongas
-      var rawId = lieu.id.replace('milonga-', '');
-      var m = mils.find(function(x){ return x.id === rawId; });
-      if (!m || !m.lieu) return;
+    mils.forEach(function(m) {
+      if (!m.lieu) return;
+      var lid = 'milonga-' + m.id;
       var vp = _pg(m.lieu.gps);
       var mp = _pg(m.lieu.metroGps);
-      if (vp) { lieu.lat = vp.lat; lieu.lng = vp.lng; lieu.hasExplicitGps = true; }
-      if (mp) { lieu.metro.lat = mp.lat; lieu.metro.lng = mp.lng; lieu.metro.hasExplicitGps = true; }
-      if (_markers[lieu.id]) _markers[lieu.id].setLatLng([lieu.lat, lieu.lng]);
-      if (_metroMarkers[lieu.id]) _metroMarkers[lieu.id].setLatLng([lieu.metro.lat, lieu.metro.lng]);
+      if (!vp) return;
+      // Chercher dans LIEUX
+      var lieu = null;
+      for (var i = 0; i < LIEUX.length; i++) { if (LIEUX[i].id === lid) { lieu = LIEUX[i]; break; } }
+      if (!lieu) {
+        // GPS absent au chargement — ajouter maintenant
+        var tpt = (m.lieu.transport)||'';
+        lieu = {
+          id: lid, label: 'Milonga '+(m.nom||m.id), name: (m.lieu.nom||m.nom||m.id),
+          addr: m.lieu.rue||'', geocodeQuery: m.lieu.rue||'',
+          sub: (m.horaire_debut||'17h30')+'\u2013'+(m.horaire_fin||'23h30')+' \u00b7 '+tpt,
+          lat: vp.lat, lng: vp.lng, hasExplicitGps: true,
+          metro: { geocodeQuery: tpt, lat: mp?mp.lat:0, lng: mp?mp.lng:0, name: tpt, hasExplicitGps: !!mp },
+          color: m.color||'#ff8c00',
+          mapsUrl: 'https://maps.google.com/?q='+encodeURIComponent(m.lieu.gps)
+        };
+        LIEUX.push(lieu);
+        if (_map) {
+          var mk = L.marker([vp.lat, vp.lng], { icon: makePinIcon(lieu.color) }).addTo(_map);
+          mk.bindPopup(popupContent(lieu));
+          _markers[lid] = mk;
+          if (mp) {
+            var mm = L.marker([mp.lat, mp.lng], { icon: makeTransportIcon(tpt) }).addTo(_map)
+              .bindTooltip(tpt, { permanent:true, direction:'top', offset:[0,-16], className:'transport-tooltip' });
+            _metroMarkers[lid] = mm;
+          }
+        }
+      } else {
+        lieu.lat = vp.lat; lieu.lng = vp.lng; lieu.hasExplicitGps = true;
+        if (mp) { lieu.metro.lat = mp.lat; lieu.metro.lng = mp.lng; lieu.metro.hasExplicitGps = true; }
+        if (_markers[lid]) _markers[lid].setLatLng([vp.lat, vp.lng]);
+        if (_metroMarkers[lid] && mp) _metroMarkers[lid].setLatLng([mp.lat, mp.lng]);
+      }
     });
+  }
+
+  // Relit les GPS depuis localStorage (sync) puis Supabase (async, cross-device)
+  function _refreshMilongasGps() {
+    // 1. localStorage : immédiat
+    try {
+      var r = JSON.parse(localStorage.getItem('tev_milongas_'+_saiPl())||'null');
+      if (!r || !r.milongas || !r.milongas.length)
+        r = JSON.parse(localStorage.getItem('tev_milongas_'+_saiPlNext())||'null');
+      if (r && r.milongas && r.milongas.length) _applyMilongasGps(r.milongas);
+    } catch(e) {}
+
+    // 2. Supabase : async, pour sync cross-appareils (admin ordi → élève téléphone)
+    var _fetchSai = function(sai) {
+      try {
+        TEV.client.from('parametres').select('valeur').eq('cle', 'tev_milongas_'+sai).maybeSingle()
+          .then(function(res) {
+            if (!res || !res.data || !res.data.valeur) return;
+            var d = res.data.valeur;
+            if (!d || !d.milongas || !d.milongas.length) return;
+            try { localStorage.setItem('tev_milongas_'+sai, JSON.stringify(d)); } catch(e) {}
+            _applyMilongasGps(d.milongas);
+          });
+      } catch(e) {}
+    };
+    _fetchSai(_saiPl());
+    _fetchSai(_saiPlNext());
   }
 
   function initPlan() {
