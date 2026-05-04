@@ -3857,6 +3857,19 @@ function demarrerRealtime() {
       clearTimeout(_reloadTimer);
       _reloadTimer = setTimeout(function() { chargerDonnees(); }, 600);
     }
+    function _onMilongaPresence() {
+      clearTimeout(_reloadTimer);
+      _reloadTimer = setTimeout(function() {
+        Promise.resolve(TEV.client.from('milonga_presences').select('*').gte('date', today())).then(function(res) {
+          var fromDB = (res.data || []).map(function(p) {
+            return { date:p.date, milongaId:p.milonga_id, milongaNom:p.milonga_nom, email:p.email, prenom:p.prenom, nom:p.nom };
+          });
+          adminData.milongaPresences = fromDB;
+          try { localStorage.setItem('tev_milonga_presences', JSON.stringify(fromDB)); } catch(e) {}
+          if (currentTab === 'milonga') renderTab();
+        }).catch(function(){});
+      }, 300);
+    }
     _realtimeChannel = TEV.client
       .channel('tev-admin-inserts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_stages' },    _onInsert)
@@ -3865,6 +3878,8 @@ function demarrerRealtime() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cours_particuliers' },     _onInsert)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_cours' },     _onInsert)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cours_yoga' },             _onInsert)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'milonga_presences' }, _onMilongaPresence)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'milonga_presences' }, _onMilongaPresence)
       .subscribe(function(status) { console.log('[TEV Realtime]', status); });
   }
 }
