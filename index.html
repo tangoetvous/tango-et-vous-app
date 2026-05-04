@@ -1325,10 +1325,14 @@
     if (prochainStage) {
       const ds = new Date(prochainStage.date + 'T00:00:00');
       const stageLbl = (cap(JOURS_LONG[ds.getDay()]) + ' ' + ds.getDate() + ' ' + MOIS_LOC[ds.getMonth()]).toUpperCase();
-      const _psDebut = prochainStage.technique ? HST.tech_deb : HST.s1_deb;
-      const _psFin = ({1:HST.s1_fin,2:HST.s2_fin,3:HST.s3_fin,4:HST.s4_fin}[prochainStage.nStages||2]) || HST.s2_fin;
+      const ph = prochainStage.horaires || {};
+      const hv = k => ph[k] || HST[k] || '';
+      const _psDebut = prochainStage.technique ? hv('tech_deb') : hv('s1_deb');
+      const _psFin = ({1:hv('s1_fin'),2:hv('s2_fin'),3:hv('s3_fin'),4:hv('s4_fin')}[prochainStage.nStages||2]) || hv('s2_fin');
       const _psH = (_psDebut + '\u2013' + _psFin).toUpperCase();
-      const thème = prochainStage.s1 ? (prochainStage.s1 + (prochainStage.s2 ? ' \u00b7 ' + prochainStage.s2 : '')).toUpperCase() : '';
+      const themes = [prochainStage.s1, prochainStage.s2, prochainStage.s3, prochainStage.s4]
+        .slice(0, prochainStage.nStages || 2).filter(Boolean);
+      const thème = themes.length ? themes.join(' \u00b7 ').toUpperCase() : '';
       h += '<div style="background:rgba(181,123,238,0.07);border:1px solid rgba(181,123,238,0.2);border-left:3px solid #b57bee;border-radius:8px;padding:9px 12px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
         + '<span style="font-size:10px;font-weight:700;color:#b57bee;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">PROCHAIN STAGE</span>'
