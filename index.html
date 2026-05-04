@@ -1326,7 +1326,8 @@
       const ds = new Date(prochainStage.date + 'T00:00:00');
       const stageLbl = (cap(JOURS_LONG[ds.getDay()]) + ' ' + ds.getDate() + ' ' + MOIS_LOC[ds.getMonth()]).toUpperCase();
       const ph = prochainStage.horaires || {};
-      const hv = k => ph[k] || HST[k] || '';
+      const _hStFrais = _lp('stages').horaires || {};
+      const hv = k => ph[k] || _hStFrais[k] || HST[k] || '';
       const _psDebut = prochainStage.technique ? hv('tech_deb') : hv('s1_deb');
       const _psFin = ({1:hv('s1_fin'),2:hv('s2_fin'),3:hv('s3_fin'),4:hv('s4_fin')}[prochainStage.nStages||2]) || hv('s2_fin');
       const _psH = (_psDebut + '\u2013' + _psFin).toUpperCase();
@@ -1517,18 +1518,30 @@
   (async function() {
     try {
       var sai = _sai();
+      var needsRender = false;
+      // Sync dates stages
       var remote = await TEV.getParam('tev_dates_stages_' + sai);
       if (remote && remote.stages && remote.stages.length) {
         var remoteStr = JSON.stringify(remote);
         if (localStorage.getItem('tev_dates_stages_' + sai) !== remoteStr) {
           try { localStorage.setItem('tev_dates_stages_' + sai, remoteStr); } catch(e){}
           STAGES_DATA = _loadStagesData();
-          if (eleveData) {
-            if (currentTab === 'stages') renderStages();
-            else if (currentTab === 'agenda') renderAgenda();
-            else if (currentTab === 'accueil') renderAccueil();
-          }
+          needsRender = true;
         }
+      }
+      // Sync params stages (horaires, tarifs, adresse)
+      var remoteParams = await TEV.getParam('tev_params_stages_' + sai);
+      if (remoteParams) {
+        var rpStr = JSON.stringify(remoteParams);
+        if (localStorage.getItem('tev_params_stages_' + sai) !== rpStr) {
+          try { localStorage.setItem('tev_params_stages_' + sai, rpStr); } catch(e){}
+          needsRender = true;
+        }
+      }
+      if (needsRender && eleveData) {
+        if (currentTab === 'stages') renderStages();
+        else if (currentTab === 'agenda') renderAgenda();
+        else if (currentTab === 'accueil') renderAccueil();
       }
     } catch(e){}
   })();
