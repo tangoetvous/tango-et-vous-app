@@ -1487,7 +1487,7 @@
     {date:'2027-05-22',label:'Sam. 22 Mai 2027',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''},
     {date:'2027-06-19',label:'Sam. 19 Juin 2027',nom:'',technique:true,nStages:2,s1:'\u00c0 venir',s2:'\u00c0 venir',s3:'',s4:''}
   ];
-  const STAGES_DATA = (function() {
+  function _loadStagesData() {
     try {
       var arr = [];
       for (var i=0; i<localStorage.length; i++) {
@@ -1507,6 +1507,26 @@
                  horaires:s.horaires||null, tarifs:s.tarifs||null, adresse:s.adresse||null };
       });
     } catch(e) { return STAGES_DATA_FB; }
+  }
+  let STAGES_DATA = _loadStagesData();
+  // Sync silencieux depuis Supabase (parametres.SELECT autorisé à anon)
+  (async function() {
+    try {
+      var sai = _sai();
+      var remote = await TEV.getParam('tev_dates_stages_' + sai);
+      if (remote && remote.stages && remote.stages.length) {
+        var remoteStr = JSON.stringify(remote);
+        if (localStorage.getItem('tev_dates_stages_' + sai) !== remoteStr) {
+          try { localStorage.setItem('tev_dates_stages_' + sai, remoteStr); } catch(e){}
+          STAGES_DATA = _loadStagesData();
+          if (eleveData) {
+            if (currentTab === 'stages') renderStages();
+            else if (currentTab === 'agenda') renderAgenda();
+            else if (currentTab === 'accueil') renderAccueil();
+          }
+        }
+      }
+    } catch(e){}
   })();
   const MILONGAS_DATA_FB = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
   const MILONGAS_OBJ = (function() {

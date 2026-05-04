@@ -1307,7 +1307,15 @@ function recommencer(){
 }
 
 // ── Init ─────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function(){
+document.addEventListener('DOMContentLoaded', async function(){
+  // Sync silencieux depuis Supabase (parametres.SELECT autorisé à anon)
+  try {
+    var _sai = saisonCourante();
+    var _remote = await TEV.getParam('tev_dates_stages_' + _sai);
+    if (_remote && _remote.stages && _remote.stages.length) {
+      try { localStorage.setItem('tev_dates_stages_' + _sai, JSON.stringify(_remote)); } catch(e){}
+    }
+  } catch(e){}
   chargerDonnees();
   renderTarifsBloc();
   construireAccordeon('accordionInscrit','inscrit');
