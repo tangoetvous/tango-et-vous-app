@@ -1463,54 +1463,12 @@
       });
     }
 
-    // ── Milongas confirmées ────────────────────────────────────
-    const _milPres = _loadMilPresences().filter(p =>
-      (p.email || '').toLowerCase() === (emailEleve || '').toLowerCase() && p.date >= todayStr
-    );
-    if (_milPres.length) {
-      _milPres.sort((a,b) => a.date.localeCompare(b.date));
-      h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#e87eb0;font-weight:700;margin-bottom:10px;">🎶 Mes prochaines milongas</div>';
-      const _today0 = new Date(todayStr + 'T00:00:00');
-      _milPres.forEach(p => {
-        let _mColor = '#ff8c00';
-        let _mhDebut = '17h30', _mhFin = '23h30';
-        if (MILONGAS_OBJ) {
-          const _mObj = MILONGAS_OBJ.find(m => m.id === p.milongaId);
-          if (_mObj) {
-            _mColor = _mObj.color || '#ff8c00';
-            const _mDE = (_mObj.dates||[]).find(d => d.date === p.date);
-            _mhDebut = (_mDE && _mDE.horaire_debut) || _mObj.horaire_debut || '17h30';
-            _mhFin   = (_mDE && _mDE.horaire_fin)   || _mObj.horaire_fin   || '23h30';
-          }
-        }
-        const _mHoraire = (_mhDebut + '\u2013' + _mhFin).toUpperCase();
-        const _mCr = _mColor.replace(/^#/,'');
-        const _mr = parseInt(_mCr.slice(0,2),16), _mg = parseInt(_mCr.slice(2,4),16), _mb = parseInt(_mCr.slice(4,6),16);
-        const dmp = new Date(p.date + 'T00:00:00');
-        const _dLeft = Math.round((dmp - _today0) / 86400000);
-        const _ctdwn = _dLeft === 0 ? "Auj.\u00a0!" : _dLeft === 1 ? 'Demain\u00a0!' : 'Dans\u00a0' + _dLeft + '\u00a0j';
-        const _mlbl = (cap(JOURS_LONG[dmp.getDay()]) + ' ' + dmp.getDate() + ' ' + MOIS_LOC[dmp.getMonth()]).toUpperCase();
-        const _mNomSafe = (p.milongaNom || 'Milonga').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-        const _mIdSafe  = (p.milongaId  || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-        const _mDateSafe = p.date.replace(/'/g,"\\'");
-        h += '<div style="background:rgba('+_mr+','+_mg+','+_mb+',0.07);border:1px solid rgba('+_mr+','+_mg+','+_mb+',0.2);border-left:3px solid '+_mColor+';border-radius:8px;padding:9px 12px;margin-bottom:6px;">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
-          +   '<div style="min-width:0;">'
-          +     '<span style="font-size:12px;font-weight:700;color:'+_mColor+';">'+(p.milongaNom||'Milonga')+'</span>'
-          +   '</div>'
-          +   '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">'
-          +     '<span style="font-size:10px;font-weight:700;color:'+_mColor+';background:rgba('+_mr+','+_mg+','+_mb+',0.18);border-radius:20px;padding:2px 7px;white-space:nowrap;">'+_ctdwn+'</span>'
-          +     '<span style="font-size:10px;font-weight:700;background:'+_mColor+';color:#000;border-radius:20px;padding:2px 8px;white-space:nowrap;">J\'y vais\u00a0!</span>'
-          +     '<button onclick="_milCancelAcc(\''+_mDateSafe+'\',\''+_mIdSafe+'\',\''+_mNomSafe+'\')" style="padding:2px 7px;font-size:10px;font-weight:600;border-radius:20px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:rgba(255,255,255,0.7);cursor:pointer;white-space:nowrap;">✕</button>'
-          +   '</div>'
-          + '</div>'
-          + '<div style="font-size:12px;color:#fff;margin-top:3px;">'+_mlbl+' \u00b7 '+_mHoraire+'</div>'
-          + '</div>';
-      });
-    }
+    // ── Milongas confirmées (rendu par _renderAccMilList) ───────────
+    h += '<div id="acc-mil-list"></div>';
 
     h += '</div>'; // padding
     pane.innerHTML = h;
+    _renderAccMilList();
   }
 
   // Déclarer/annuler une absence depuis l'espace élève
@@ -2008,6 +1966,58 @@
     }
   }
 
+  // Rend la section "Mes prochaines milongas" dans l'accueil (peut être appelé sans re-rendre tout)
+  function _renderAccMilList() {
+    var el = document.getElementById('acc-mil-list');
+    if (!el || !eleveData) return;
+    var elv = eleveData.eleve || {};
+    var emailLow = (elv.email || '').toLowerCase().trim();
+    var todayS = new Date().toLocaleDateString('sv');
+    var JOURS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+    var cap = function(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; };
+    var pres = _loadMilPresences().filter(function(p) {
+      return (p.email||'').toLowerCase() === emailLow && p.date >= todayS;
+    });
+    if (!pres.length) { el.innerHTML = ''; return; }
+    pres.sort(function(a,b){ return a.date.localeCompare(b.date); });
+    var today0 = new Date(todayS + 'T00:00:00');
+    var h = '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#e87eb0;font-weight:700;margin-bottom:10px;">🎶 Mes prochaines milongas</div>';
+    pres.forEach(function(p) {
+      var mColor = '#ff8c00', mhDeb = '17h30', mhFin = '23h30';
+      if (MILONGAS_OBJ) {
+        var mObj = MILONGAS_OBJ.find(function(m){ return m.id === p.milongaId; });
+        if (mObj) {
+          mColor = mObj.color || '#ff8c00';
+          var mDE = (mObj.dates||[]).find(function(d){ return d.date === p.date; });
+          mhDeb = (mDE && mDE.horaire_debut) || mObj.horaire_debut || '17h30';
+          mhFin = (mDE && mDE.horaire_fin)   || mObj.horaire_fin   || '23h30';
+        }
+      }
+      var mHoraire = (mhDeb + '–' + mhFin).toUpperCase();
+      var mCr = mColor.replace(/^#/,'');
+      var mr = parseInt(mCr.slice(0,2),16), mg = parseInt(mCr.slice(2,4),16), mb = parseInt(mCr.slice(4,6),16);
+      var dmp = new Date(p.date + 'T00:00:00');
+      var dLeft = Math.round((dmp - today0) / 86400000);
+      var ctdwn = dLeft === 0 ? 'Auj. !' : dLeft === 1 ? 'Demain !' : 'Dans ' + dLeft + ' j';
+      var mlbl = (cap(JOURS[dmp.getDay()]) + ' ' + dmp.getDate() + ' ' + MOIS_LONG[dmp.getMonth()]).toUpperCase();
+      var mNomSafe  = (p.milongaNom||'Milonga').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      var mIdSafe   = (p.milongaId ||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      var mDateSafe = p.date.replace(/'/g,"\\'");
+      h += '<div style="background:rgba('+mr+','+mg+','+mb+',0.07);border:1px solid rgba('+mr+','+mg+','+mb+',0.2);border-left:3px solid '+mColor+';border-radius:8px;padding:9px 12px;margin-bottom:6px;">'
+         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+         +   '<div style="min-width:0;"><span style="font-size:12px;font-weight:700;color:'+mColor+';">'+(p.milongaNom||'Milonga')+'</span></div>'
+         +   '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">'
+         +     '<span style="font-size:10px;font-weight:700;color:'+mColor+';background:rgba('+mr+','+mg+','+mb+',0.18);border-radius:20px;padding:2px 7px;white-space:nowrap;">'+ctdwn+'</span>'
+         +     '<span style="font-size:10px;font-weight:700;background:'+mColor+';color:#000;border-radius:20px;padding:2px 8px;white-space:nowrap;">J\'y vais !</span>'
+         +     '<button onclick="_milCancelAcc(\''+mDateSafe+'\',\''+mIdSafe+'\',\''+mNomSafe+'\')" style="padding:2px 7px;font-size:10px;font-weight:600;border-radius:20px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:rgba(255,255,255,0.7);cursor:pointer;white-space:nowrap;">✕</button>'
+         +   '</div>'
+         + '</div>'
+         + '<div style="font-size:12px;color:#fff;margin-top:3px;">'+mlbl+' · '+mHoraire+'</div>'
+         + '</div>';
+    });
+    el.innerHTML = h;
+  }
+
   // Met à jour uniquement le bouton milonga dans la carte accueil (sans re-rendre tout)
   function _updateAccMilBtn(date, milId, milNom, isComing) {
     var el = document.getElementById('acc-mil-btn');
@@ -2028,16 +2038,19 @@
     const _df = _d.getDate() + '\u00a0' + MOIS_LONG[_d.getMonth()];
     _showInAppNotif('\u2705 Noté\u00a0! Votre venue à ' + (milNom || 'la milonga') + ' le ' + _df + ' est enregistrée.');
     _updateAccMilBtn(date, milId, milNom, true);
+    _renderAccMilList();
     if (currentTab === 'milonga') renderMilonga();
   };
   window._milAnnuler = function(date, milId, milNom) {
     _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, false);
     _updateAccMilBtn(date, milId, milNom, false);
+    _renderAccMilList();
     if (currentTab === 'milonga') renderMilonga();
   };
   window._milCancelAcc = function(date, milId, milNom) {
     _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, false);
     _updateAccMilBtn(date, milId, milNom, false);
+    _renderAccMilList();
     if (currentTab === 'milonga') renderMilonga();
   };
 
