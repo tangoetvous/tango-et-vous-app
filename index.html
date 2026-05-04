@@ -525,7 +525,7 @@
     if (_navLbl) {
       const _TAB_LABELS = {
         accueil:'Accueil', agenda:'Agenda', carte:'Carte', stages:'Stages',
-        milonga:'Milonga', 'cours-particuliers':'Cours privé', 'carte-lieux':'Plan',
+        milonga:'Milonga', 'cours-particuliers':'Cours privé', 'carte-lieux':'Plan', lieux:'Lieux',
         actu:'Actu', contact:'Contact', yoga:'Yoga', preinscription:'Pré-inscription',
         hypnose:'Hypnose', whatsapp:'WhatsApp', avis:'Avis'
       };
@@ -541,6 +541,7 @@
     if (tab === 'actu')   renderActu();
     if (tab === 'contact') renderContact();
     if (tab === 'carte-lieux') { setTimeout(function(){ if(window._initPlan) window._initPlan(); }, 60); }
+    if (tab === 'lieux') { setTimeout(function(){ if(window._initLieux) window._initLieux(); }, 60); }
     if (tab === 'cours-particuliers') {
       // Envoyer les coords de l'élève via postMessage à l'iframe cours-particuliers
       const _cpIframe = document.querySelector('#cours-particuliers-pane iframe');
@@ -1005,6 +1006,7 @@
     preinscription:       {label:'Pré-inscr.',  color:'#fde68a', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>'},
     agenda:               {label:'Agenda',       color:'#60b0ff', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>'},
     'carte-lieux':        {label:'Plan',         color:'#2dd4bf', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>'},
+    'lieux':              {label:'Lieux',        color:'#2dd4bf', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>'},
     actu:                 {label:'Actu',         color:'#fbbf24', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg>'},
     avis:                 {label:'Avis',         color:'#e879f9', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>'},
     yoga:                 {label:'Yoga',         color:'#a78bfa', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm8 7H4v2h3.5l-1.43 7.16A1 1 0 0 0 7 19.5l.07.5h2.02l.3-1.5H14.6l.3 1.5h2.02l.07-.5a1 1 0 0 0-.07-.34L15.5 11H20V9z"/></svg>'},
@@ -1023,7 +1025,7 @@
     const rows = [
       ['accueil'],
       ['carte', 'stages', 'cours-particuliers', 'milonga', ...(isPreinscPeriod ? ['preinscription'] : [])],
-      ['agenda', 'carte-lieux', 'actu'],
+      ['agenda', 'lieux', 'actu'],
       ['yoga', 'hypnose'],
       ['contact', 'whatsapp', 'discussions', 'avis']
     ];
@@ -3978,6 +3980,14 @@ a{color:var(--gold);text-decoration:none;}
     <div class="dash-sig" style="padding:8px 20px 20px;">Florencia &amp; Jérémy</div>
   </div>
 
+  <!-- ── ONGLET LIEUX ─────────────────────────────────────── -->
+  <div class="tab-pane" id="lieux-pane">
+    <div class="tab-section-title" style="padding-bottom:10px;">Nos lieux</div>
+    <div id="lieux-map" style="height:340px;border-radius:12px;overflow:hidden;margin-bottom:14px;"></div>
+    <div id="lieux-btns" style="display:flex;flex-direction:column;gap:10px;padding:0 4px 20px;"></div>
+    <div class="dash-sig" style="padding:8px 20px 20px;">Florencia &amp; Jérémy</div>
+  </div>
+
   <!-- ── ONGLET COURS PARTICULIERS ────────────────────────── -->
   <div class="tab-pane" id="cours-particuliers-pane">
     <div style="margin:-14px;">
@@ -4445,6 +4455,126 @@ if('serviceWorker' in navigator){
   window._initPlan = initPlan;
 })();
 
+</script>
+
+<script>
+// ── ONGLET LIEUX — GPS uniquement depuis Paramètres admin ──────────────────
+(function() {
+  var _map = null, _mk = {}, _mMk = {};
+
+  function _sai() {
+    var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1;
+    return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y);
+  }
+  function _pr(type) {
+    try { return JSON.parse(localStorage.getItem('tev_params_'+type+'_'+_sai())||'{}'); } catch(e) { return {}; }
+  }
+  function _pg(str) {
+    var p=(str||'').split(',');
+    return (p[0]&&p[1]) ? {lat:parseFloat(p[0]),lng:parseFloat(p[1])} : null;
+  }
+
+  function _activites() {
+    var ap=(_pr('paris').adresse)||{}, av=(_pr('vincennes').adresse)||{};
+    var as=(_pr('stages').adresse)||{},  ay=(_pr('yoga').adresse)||{};
+    var mils=[];
+    try { var r=JSON.parse(localStorage.getItem('tev_milongas_'+_sai())||'null'); if(r&&r.milongas) mils=r.milongas; } catch(e){}
+    var mD=(mils.find(function(m){return m.id==='dolce-vita';})||{}).lieu||{};
+    var mC=(mils.find(function(m){return m.id==='colectivo';})||{}).lieu||{};
+    return [
+      { id:'paris',    label:'Tango Paris',          color:'#60b0ff',
+        nom:ap.nom||'Espace Danse Studio', rue:ap.rue||'24 villa Riberolle, Paris 20e',
+        transport:ap.transport||'M° Alexandre Dumas (L2)',
+        vGps:_pg(ap.gps)||{lat:48.8568,lng:2.3960}, mGps:_pg(ap.metrogps)||{lat:48.8600,lng:2.3890} },
+      { id:'vincennes',label:'Tango Vincennes',       color:'#40d8c0',
+        nom:av.nom||'Espace Sorano', rue:av.rue||'16 rue Charles Pathé, Vincennes',
+        transport:av.transport||'RER A — Vincennes',
+        vGps:_pg(av.gps)||{lat:48.8471,lng:2.4395}, mGps:_pg(av.metrogps)||{lat:48.8471,lng:2.4395} },
+      { id:'stage',    label:'Stages',                color:'#D4AF37',
+        nom:as.nom||'Centre Kim Kan', rue:as.rue||'64 rue Orfila, Paris 20e',
+        transport:as.transport||'M° Gambetta (L3)',
+        vGps:_pg(as.gps)||{lat:48.8616,lng:2.3970}, mGps:_pg(as.metrogps)||{lat:48.8641,lng:2.3969} },
+      { id:'yoga',     label:'Yoga',                  color:'#a78bfa',
+        nom:ay.nom||'Espace Sorano', rue:ay.rue||'16 rue Charles Pathé, Vincennes',
+        transport:ay.transport||'RER A — Vincennes',
+        vGps:_pg(ay.gps)||{lat:48.8471,lng:2.4395}, mGps:_pg(ay.metrogps)||{lat:48.8471,lng:2.4395} },
+      { id:'dolce-vita',label:'Milonga La Dolce Vita',color:'#ff8c00',
+        nom:mD.nom||'Centre Re-Corps', rue:mD.rue||'16A bd de Reuilly, Paris 12e',
+        transport:mD.transport||'M° Dugommier (L6)',
+        vGps:_pg(mD.gps)||{lat:48.8465,lng:2.3870}, mGps:_pg(mD.metroGps)||{lat:48.8428,lng:2.3701} },
+      { id:'colectivo', label:'Milonga Le Colectivo', color:'#4dd0e1',
+        nom:mC.nom||'Studio des Rigoles', rue:mC.rue||'46 rue des Rigoles, Paris 20e',
+        transport:mC.transport||'M° Jourdain (L11)',
+        vGps:_pg(mC.gps)||{lat:48.8732,lng:2.3920}, mGps:_pg(mC.metroGps)||{lat:48.8774,lng:2.3897} },
+    ];
+  }
+
+  function _pinIcon(color) {
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 40" width="28" height="40">'
+      +'<path d="M14 0C6.3 0 0 6.3 0 14c0 9.3 14 26 14 26S28 23.3 28 14C28 6.3 21.7 0 14 0z"'
+      +' fill="'+color+'" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/>'
+      +'<circle cx="14" cy="14" r="6" fill="white" opacity=".92"/></svg>';
+    return L.divIcon({html:svg,className:'',iconSize:[28,40],iconAnchor:[14,40],popupAnchor:[0,-38]});
+  }
+  function _metroIcon(transport) {
+    var isRER=transport.indexOf('RER')>=0, lbl=isRER?'RER':'M', fs=isRER?'9':'13';
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30">'
+      +'<circle cx="15" cy="15" r="14" fill="#1a3a6e" stroke="white" stroke-width="2"/>'
+      +'<text x="15" y="'+(isRER?'19':'20')+'" text-anchor="middle" fill="white"'
+      +' font-family="Arial,sans-serif" font-weight="bold" font-size="'+fs+'">'+lbl+'</text></svg>';
+    return L.divIcon({html:svg,className:'',iconSize:[30,30],iconAnchor:[15,15],tooltipAnchor:[0,-16]});
+  }
+
+  function _initLieux() {
+    var acts = _activites();
+    var mapEl = document.getElementById('lieux-map');
+    if (!mapEl) return;
+
+    if (_map) { _map.invalidateSize(); _renderBtns(acts); return; }
+
+    _map = L.map('lieux-map', {zoomControl:true,attributionControl:false}).setView([48.856,2.406],12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(_map);
+    L.control.attribution({prefix:'© <a href="https://openstreetmap.org">OSM</a>'}).addTo(_map);
+
+    acts.forEach(function(a) {
+      var vm = L.marker([a.vGps.lat,a.vGps.lng],{icon:_pinIcon(a.color)}).addTo(_map);
+      vm.bindPopup('<strong style="color:'+a.color+'">'+a.label+'</strong><br>'+a.nom+'<br><small style="color:#aaa;">'+a.rue+'</small>');
+      _mk[a.id] = vm;
+      var mm = L.marker([a.mGps.lat,a.mGps.lng],{icon:_metroIcon(a.transport)}).addTo(_map);
+      mm.bindTooltip(a.transport,{permanent:true,direction:'top',offset:[0,-16],className:'transport-tooltip'});
+      _mMk[a.id] = mm;
+    });
+
+    _renderBtns(acts);
+  }
+
+  function _renderBtns(acts) {
+    var el = document.getElementById('lieux-btns');
+    if (!el) return;
+    el.innerHTML = '';
+    acts.forEach(function(a) {
+      var btn = document.createElement('button');
+      btn.style.cssText = 'display:flex;align-items:center;gap:12px;width:100%;'
+        +'background:rgba(255,255,255,0.04);border:2px solid '+a.color+';border-radius:12px;'
+        +'padding:12px 14px;cursor:pointer;text-align:left;';
+      btn.innerHTML = '<div style="width:12px;height:12px;border-radius:50%;background:'+a.color+';flex-shrink:0;"></div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:13px;font-weight:700;color:'+a.color+';">'+a.label+'</div>'
+        +'<div style="font-size:12px;color:var(--text);opacity:.85;">'+a.nom+'</div>'
+        +'<div style="font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+a.rue+'</div>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--dim);text-align:right;flex-shrink:0;max-width:110px;line-height:1.3;">'+a.transport+'</div>';
+      (function(act){ btn.addEventListener('click', function() {
+        if (!_map) return;
+        _map.flyTo([act.vGps.lat,act.vGps.lng],16,{duration:0.8});
+        if (_mk[act.id]) setTimeout(function(){ _mk[act.id].openPopup(); },900);
+      }); })(a);
+      el.appendChild(btn);
+    });
+  }
+
+  window._initLieux = _initLieux;
+})();
 </script>
 
 <!-- Modal pointage élève -->
