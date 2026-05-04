@@ -4131,13 +4131,19 @@ if('serviceWorker' in navigator){
   // Paramètres dynamiques depuis admin.html
   function _saiPl() { var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); }
   function _saiPlNext() { var s=_saiPl().split('-'),n=parseInt(s[0]); return (n+1)+'-'+(n+2); }
-  // Cherche dans la saison courante ET suivante (si admin a sauvé depuis la vue 2026-2027 en mai)
+  // Merge des deux saisons : chaque champ prend la valeur courante, sinon la suivante
   function _lpPl(t) {
     function _r(sai){try{return JSON.parse(localStorage.getItem('tev_params_'+t+'_'+sai)||'null');}catch(e){return null;}}
     var curr=_r(_saiPl()), nxt=_r(_saiPlNext());
-    if(curr&&curr.adresse&&curr.adresse.gps) return curr;
-    if(nxt&&nxt.adresse&&nxt.adresse.gps) return nxt;
-    return curr||nxt||{};
+    var ca=(curr&&curr.adresse)||{}, na=(nxt&&nxt.adresse)||{};
+    var adresse={
+      nom:      ca.nom      ||na.nom      ||'',
+      rue:      ca.rue      ||na.rue      ||'',
+      gps:      ca.gps      ||na.gps      ||'',
+      transport:ca.transport||na.transport||'',
+      metrogps: ca.metrogps ||na.metrogps ||''
+    };
+    return Object.assign({}, curr||nxt||{}, {adresse:adresse});
   }
   var _ypY=_lpPl('yoga'); var _apP=_lpPl('paris').adresse||{}, _apV=_lpPl('vincennes').adresse||{};
   var _apY=_ypY.adresse||{}, _hYpl=_ypY.horaires||{}, _apSt=_lpPl('stages').adresse||{};
@@ -4214,17 +4220,28 @@ if('serviceWorker' in navigator){
     ];
     var milSrc = MILONGAS_FB;
     try {
-      var r = JSON.parse(localStorage.getItem('tev_milongas_'+_sai())||'null');
+      // Essayer saison courante ET suivante (l'admin peut avoir sauvé depuis la vue 2026-2027)
+      var rCurr = JSON.parse(localStorage.getItem('tev_milongas_'+_sai())||'null');
+      var rNxt  = JSON.parse(localStorage.getItem('tev_milongas_'+_saiPlNext())||'null');
+      var r = (rCurr && rCurr.milongas && rCurr.milongas.length) ? rCurr : rNxt;
       if (r && r.milongas && r.milongas.length) {
-        milSrc = r.milongas.map(function(m) {
+        // Merger GPS depuis la saison suivante si absents de la courante
+        var milsCurr = (rCurr && rCurr.milongas) || [];
+        milSrc = r.milongas.map(function(m, i) {
           var fbMatch = MILONGAS_FB.find(function(fb){ return fb.id==='milonga-'+m.id||fb.nom===m.nom; });
-          // Fallback depuis MILONGAS_FB si non sauvegardé par l'admin
+          m = JSON.parse(JSON.stringify(m));
+          // Merger depuis l'autre saison si GPS manquant
+          var mOther = (r === rCurr ? (rNxt && rNxt.milongas && rNxt.milongas[i]) : milsCurr[i]);
+          if (mOther && mOther.lieu && m.lieu) {
+            if (!m.lieu.gps      && mOther.lieu.gps)      m.lieu.gps      = mOther.lieu.gps;
+            if (!m.lieu.metroGps && mOther.lieu.metroGps) m.lieu.metroGps = mOther.lieu.metroGps;
+          }
+          // Fallback MILONGAS_FB
           if (fbMatch && fbMatch.lieu && m.lieu) {
-            m = JSON.parse(JSON.stringify(m));
-            if (!m.lieu.gps && fbMatch.lieu.gps) m.lieu.gps = fbMatch.lieu.gps;
+            if (!m.lieu.gps      && fbMatch.lieu.gps)      m.lieu.gps      = fbMatch.lieu.gps;
             if (!m.lieu.metroGps && fbMatch.lieu.metroGps) m.lieu.metroGps = fbMatch.lieu.metroGps;
           }
-          return Object.assign({id:'milonga-'+m.id, label:'Milonga '+m.nom, nom:m.nom}, m);
+          return Object.assign({}, m, {id:'milonga-'+m.id, label:'Milonga '+m.nom, nom:m.nom});
         });
       }
     } catch(e){}
@@ -4300,8 +4317,7 @@ if('serviceWorker' in navigator){
     function next() {
       if (i >= lieux.length) { sauverCache(); return; }
       var lieu = lieux[i++];
-      // Lieux statiques : toujours géocoder (l'adresse est plus fiable que le GPS Paramètres)
-      // Milongas : respecter le GPS admin (hasExplicitGps) car l'adresse peut être introuvable
+      // Lieux statiques toujours géocodés; milongas respectent le GPS admin
       var skipGeocode = lieu.hasExplicitGps && !STATIC_VENUES[lieu.id];
       var lieuGeocode = skipGeocode ? Promise.resolve(null) : geocode(lieu.geocodeQuery);
       lieuGeocode.then(function(pos) {
