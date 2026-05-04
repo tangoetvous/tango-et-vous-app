@@ -3974,7 +3974,6 @@ a{color:var(--gold);text-decoration:none;}
   <div class="tab-pane" id="carte-lieux-pane">
     <div class="tab-section-title" style="padding-bottom:10px;">Plan des lieux</div>
     <div id="plan-map"></div>
-    <div id="plan-debug" style="font-size:11px;font-family:monospace;padding:8px 16px;color:#aaa;"></div>
     <div class="plan-btns" id="plan-btns"></div>
     <div class="dash-sig" style="padding:8px 20px 20px;">Florencia &amp; Jérémy</div>
   </div>
@@ -4441,21 +4440,6 @@ if('serviceWorker' in navigator){
     // Rafraîchir le GPS des milongas depuis localStorage (au cas où l'admin a modifié après le chargement)
     _refreshMilongasGps();
 
-    // Diagnostic: afficher les GPS lus depuis localStorage
-    var dbg = document.getElementById('plan-debug');
-    if (dbg) {
-      var dbgLines = ['<b>Diagnostic GPS localStorage</b>'];
-      var k1 = 'tev_milongas_'+_sai(), k2 = 'tev_milongas_'+_saiPlNext();
-      var r1 = null, r2 = null;
-      try { r1 = JSON.parse(localStorage.getItem(k1)||'null'); } catch(e){}
-      try { r2 = JSON.parse(localStorage.getItem(k2)||'null'); } catch(e){}
-      dbgLines.push('Clé lue: ' + k1 + ' → ' + (r1 ? (r1.milongas ? r1.milongas.length+' milonga(s)' : 'pas de milongas') : 'null'));
-      if (r1 && r1.milongas) r1.milongas.forEach(function(m){ dbgLines.push('  '+m.id+': gps='+((m.lieu&&m.lieu.gps)||'(vide)')); });
-      dbgLines.push('Clé lue: ' + k2 + ' → ' + (r2 ? (r2.milongas ? r2.milongas.length+' milonga(s)' : 'pas de milongas') : 'null'));
-      if (r2 && r2.milongas) r2.milongas.forEach(function(m){ dbgLines.push('  '+m.id+': gps='+((m.lieu&&m.lieu.gps)||'(vide)')); });
-      dbgLines.push('LIEUX milongas: '+LIEUX.filter(function(l){return l.id.indexOf('milonga-')===0;}).map(function(l){return l.id+'='+l.lat+','+l.lng;}).join(' | '));
-      dbg.innerHTML = dbgLines.join('<br>');
-    }
 
     if (_map) { _map.invalidateSize(); return; }
 

@@ -2186,7 +2186,7 @@ function chargerDatesYogaStages() {
 
 var MILONGAS_DEFAULTS = [
   { id:'dolce-vita', nom:'LA DOLCE VITA',
-    lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.8465,2.3870', transport:'M\u00b0 Dugommier (L6)', metroGps:'48.8428,2.3701'},
+    lieu:{nom:'Centre Re-Corps', rue:'16A boulevard de Reuilly, Paris 12e', gps:'48.83894517744268,2.3913407796525115', transport:'M\u00b0 Dugommier (L6)', metroGps:'48.8428,2.3701'},
     color:'#ff8c00', horaire_debut:'17h30', horaire_fin:'23h30', dates:[] },
   { id:'colectivo', nom:'LE COLECTIVO',
     lieu:{nom:'Studio des Rigoles', rue:'46 rue des Rigoles, Paris 20e', gps:'48.87317,2.39197', transport:'M\u00b0 Jourdain (L11)', metroGps:'48.8774,2.3897'},
@@ -2206,10 +2206,17 @@ function chargerMilongas(sai) {
     MILONGAS = MILONGAS_DEFAULTS.map(function(m){return JSON.parse(JSON.stringify(m));});
   }
   // Normalise names and colors for known milongas regardless of what was stored
+  var _migrated = false;
   if (MILONGAS) MILONGAS.forEach(function(mil) {
     if (mil.id === 'dolce-vita') { mil.nom = 'LA DOLCE VITA'; mil.color = '#ff8c00'; }
     if (mil.id === 'colectivo')  { mil.nom = 'LE COLECTIVO';  mil.color = '#f472b6'; }
+    // Migration: corriger l'ancien GPS erroné de La Dolce Vita
+    if (mil.id === 'dolce-vita' && mil.lieu && mil.lieu.gps === '48.8465,2.3870') {
+      mil.lieu.gps = '48.83894517744268,2.3913407796525115';
+      _migrated = true;
+    }
   });
+  if (_migrated) sauverMilongas(sai || saisonParametres || saisonCourante());
 }
 function sauverMilongas(sai) {
   var key = 'tev_milongas_' + (sai || saisonParametres || saisonCourante());
