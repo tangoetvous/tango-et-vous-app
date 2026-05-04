@@ -1328,8 +1328,15 @@
       const ph = prochainStage.horaires || {};
       const _hStFrais = _lp('stages').horaires || {};
       const hv = k => ph[k] || _hStFrais[k] || HST[k] || '';
-      const _psDebut = prochainStage.technique ? hv('tech_deb') : hv('s1_deb');
-      const _psFin = ({1:hv('s1_fin'),2:hv('s2_fin'),3:hv('s3_fin'),4:hv('s4_fin')}[prochainStage.nStages||2]) || hv('s2_fin');
+      // Trouver début le plus tôt et fin le plus tard parmi tous les créneaux
+      function _tMin(t) { var m=t&&t.match(/^(\d+)h(\d+)?/i); return m?parseInt(m[1])*60+(parseInt(m[2])||0):9999; }
+      var _slotTimes = [];
+      if (prochainStage.technique) _slotTimes.push({d:hv('tech_deb'),f:hv('tech_fin')});
+      for (var _si=1; _si<=(prochainStage.nStages||2); _si++) _slotTimes.push({d:hv('s'+_si+'_deb'),f:hv('s'+_si+'_fin')});
+      _slotTimes = _slotTimes.filter(function(s){return s.d||s.f;});
+      _slotTimes.sort(function(a,b){return _tMin(a.d)-_tMin(b.d);});
+      const _psDebut = _slotTimes.length ? _slotTimes[0].d : '';
+      const _psFin   = _slotTimes.length ? _slotTimes[_slotTimes.length-1].f : '';
       const _psH = (_psDebut + '\u2013' + _psFin).toUpperCase();
       const themes = [prochainStage.s1, prochainStage.s2, prochainStage.s3, prochainStage.s4]
         .slice(0, prochainStage.nStages || 2).filter(Boolean);
@@ -1383,8 +1390,18 @@
         const ateliers = s.ateliers || s.slots || [];
         const _theme = ateliers.length ? ateliers.join(' \u00b7 ').toUpperCase() : '';
         const _sdRef = STAGES_DATA.find(x => x.date === _dateStr);
-        const _sDebut = _sdRef ? (_sdRef.technique ? HST.tech_deb : HST.s1_deb) : HST.tech_deb;
-        const _sFin = ({1:HST.s1_fin,2:HST.s2_fin,3:HST.s3_fin,4:HST.s4_fin}[(_sdRef&&_sdRef.nStages)||2]) || HST.s2_fin;
+        const _phSd = (_sdRef && _sdRef.horaires) || {};
+        const _hpFr = _lp('stages').horaires || {};
+        const _hvSd = k => _phSd[k] || _hpFr[k] || HST[k] || '';
+        const _hasTechSd = _sdRef ? _sdRef.technique !== false : true;
+        const _nStageSd = (_sdRef && _sdRef.nStages) || 2;
+        var _sdSlots = [];
+        if (_hasTechSd) _sdSlots.push({d:_hvSd('tech_deb'),f:_hvSd('tech_fin')});
+        for (var _sj=1; _sj<=_nStageSd; _sj++) _sdSlots.push({d:_hvSd('s'+_sj+'_deb'),f:_hvSd('s'+_sj+'_fin')});
+        _sdSlots = _sdSlots.filter(function(sl){return sl.d||sl.f;});
+        _sdSlots.sort(function(a,b){var _mf=function(t){var m=t&&t.match(/^(\d+)h(\d+)?/i);return m?+m[1]*60+(+m[2]||0):9999;};return _mf(a.d)-_mf(b.d);});
+        const _sDebut = _sdSlots.length ? _sdSlots[0].d : '';
+        const _sFin = _sdSlots.length ? _sdSlots[_sdSlots.length-1].f : '';
         const _sHoraire = (_sDebut + '\u2013' + _sFin).toUpperCase();
         h += '<div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.25);border-left:3px solid var(--gold);border-radius:8px;padding:9px 12px;margin-bottom:6px;">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
