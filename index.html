@@ -4250,7 +4250,7 @@ if('serviceWorker' in navigator){
   })();
 
   // Cache localStorage : évite de re-géocoder à chaque visite
-  var CACHE_KEY = 'tev_plan_coords_v9';
+  var CACHE_KEY = 'tev_plan_coords_v10';
   function chargerCache() {
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
@@ -4286,27 +4286,30 @@ if('serviceWorker' in navigator){
   }
 
   // Affine les coordonnées en arrière-plan via Nominatim, séquentiellement
+  // Les lieux statiques (paris/vincennes/yoga/stage) sont toujours géocodés par Nominatim
+  // pour garantir la précision. Les milongas utilisent le GPS admin tel quel.
+  var STATIC_VENUES = { paris:1, vincennes:1, yoga:1, stage:1 };
   function affinerCoordsEnBackground(lieux) {
     var i = 0;
     function next() {
       if (i >= lieux.length) { sauverCache(); return; }
       var lieu = lieux[i++];
-      // Ne pas géocoder si les coords viennent des Paramètres admin
-      var lieuGeocode = lieu.hasExplicitGps
-        ? Promise.resolve(null)
-        : geocode(lieu.geocodeQuery);
+      // Lieux statiques : toujours géocoder (l'adresse est plus fiable que le GPS Paramètres)
+      // Milongas : respecter le GPS admin (hasExplicitGps) car l'adresse peut être introuvable
+      var skipGeocode = lieu.hasExplicitGps && !STATIC_VENUES[lieu.id];
+      var lieuGeocode = skipGeocode ? Promise.resolve(null) : geocode(lieu.geocodeQuery);
       lieuGeocode.then(function(pos) {
         if (pos) {
           lieu.lat = pos.lat; lieu.lng = pos.lng;
           if (_markers[lieu.id]) _markers[lieu.id].setLatLng([pos.lat, pos.lng]);
         }
-        return new Promise(function(r){ setTimeout(r, lieu.hasExplicitGps ? 0 : 1200); });
+        return new Promise(function(r){ setTimeout(r, skipGeocode ? 0 : 1200); });
       }).then(function() {
         if (lieu.metro && lieu.metro.hasExplicitGps) return Promise.resolve(null);
         return geocode(lieu.metro.geocodeQuery);
       }).then(function(pos) {
         if (pos) { lieu.metro.lat = pos.lat; lieu.metro.lng = pos.lng; }
-        return new Promise(function(r){ setTimeout(r, (lieu.hasExplicitGps && lieu.metro && lieu.metro.hasExplicitGps) ? 0 : 1200); });
+        return new Promise(function(r){ setTimeout(r, (skipGeocode && lieu.metro && lieu.metro.hasExplicitGps) ? 0 : 1200); });
       }).then(next);
     }
     next();
