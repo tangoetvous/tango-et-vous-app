@@ -10759,8 +10759,9 @@ function _renderComptaStages() {
   var grandTotal=0, grandCount=0;
   dates.forEach(function(d){
     var jour=stages[d];
-    var inscrits=(jour.inscrits||[]).filter(function(i){return !i.attente;});
-    var attente=(jour.inscrits||[]).filter(function(i){return !!i.attente;});
+    var tous=(jour.inscrits||[]);
+    var inscrits=tous.filter(function(i){return !i.attente;});
+    var attente=tous.filter(function(i){return !!i.attente;});
     var tot=_comptaTotaux(inscrits);
     grandTotal+=tot.total; grandCount+=inscrits.length;
     h+='<div style="margin-bottom:24px;">';
@@ -10768,6 +10769,55 @@ function _renderComptaStages() {
     h+='<div style="font-weight:700;font-size:13px;color:var(--gold);">'+jour.label+'</div>';
     if (attente.length) h+='<div style="font-size:11px;color:var(--dim);">'+attente.length+' en attente</div>';
     h+='</div>';
+
+    // Per-slot breakdown
+    var allSlots={};
+    tous.forEach(function(i){
+      (i.slots||[]).forEach(function(s){ allSlots[s]=true; });
+    });
+    var slotIds=Object.keys(allSlots).sort(function(a,b){
+      function slotOrder(s){ if(s==='technique') return 0; var m=s.match(/^stage(\d+)$/); return m?parseInt(m[1]):99; }
+      return slotOrder(a)-slotOrder(b);
+    });
+    if (slotIds.length) {
+      h+='<div style="overflow-x:auto;margin-bottom:10px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+      h+='<thead><tr style="border-bottom:1px solid var(--s3);">'
+       +'<th style="text-align:left;padding:5px 8px;color:var(--dim);font-weight:600;">Créneau</th>'
+       +'<th style="text-align:center;padding:5px 8px;color:var(--dim);font-weight:600;">Guideurs</th>'
+       +'<th style="text-align:center;padding:5px 8px;color:var(--dim);font-weight:600;">Guidées</th>'
+       +'<th style="text-align:center;padding:5px 8px;color:var(--dim);font-weight:600;">Attente</th>'
+       +'<th style="text-align:center;padding:5px 8px;color:var(--dim);font-weight:600;">Total</th>'
+       +'</tr></thead><tbody>';
+      var totGui=0, totGde=0, totAtt=0, totAll=0;
+      slotIds.forEach(function(s){
+        var gui=0, gde=0, att=0;
+        tous.forEach(function(i){
+          if (!(i.slots||[]).includes(s)) return;
+          if (i.attente) { att++; return; }
+          if ((i.role||'').toLowerCase().startsWith('guideur')) gui++;
+          else if ((i.role||'').toLowerCase().startsWith('guid')) gde++;
+          else gui++;
+        });
+        var conf=gui+gde;
+        totGui+=gui; totGde+=gde; totAtt+=att; totAll+=conf;
+        h+='<tr style="border-bottom:1px solid var(--s2);">'
+         +'<td style="padding:5px 8px;font-weight:600;">'+slotLabel(s)+'</td>'
+         +'<td style="padding:5px 8px;text-align:center;">'+gui+'</td>'
+         +'<td style="padding:5px 8px;text-align:center;">'+gde+'</td>'
+         +'<td style="padding:5px 8px;text-align:center;color:var(--dim);">'+(att||'—')+'</td>'
+         +'<td style="padding:5px 8px;text-align:center;font-weight:700;">'+conf+'</td>'
+         +'</tr>';
+      });
+      h+='<tr style="border-top:2px solid var(--s3);background:var(--s2);">'
+       +'<td style="padding:5px 8px;font-weight:700;font-size:11px;color:var(--dim);">TOTAL JOURNÉE</td>'
+       +'<td style="padding:5px 8px;text-align:center;font-weight:700;">'+totGui+'</td>'
+       +'<td style="padding:5px 8px;text-align:center;font-weight:700;">'+totGde+'</td>'
+       +'<td style="padding:5px 8px;text-align:center;font-weight:700;color:var(--dim);">'+(totAtt||'—')+'</td>'
+       +'<td style="padding:5px 8px;text-align:center;font-weight:700;color:var(--gold);">'+totAll+'</td>'
+       +'</tr>';
+      h+='</tbody></table></div>';
+    }
+
     if (!inscrits.length) {
       h+='<div style="color:var(--dim);font-size:13px;padding:6px 0 0;">Aucun inscrit.</div>';
     } else {
@@ -10780,7 +10830,7 @@ function _renderComptaStages() {
       inscrits.forEach(function(i){
         h+='<tr style="border-bottom:1px solid var(--s2);">'
          +'<td style="padding:6px 8px;">'+(i.prenom||'')+' '+(i.nom||'')+'</td>'
-         +'<td style="padding:6px 8px;color:var(--dim);font-size:12px;">'+(i.slots||[]).join(', ')+'</td>'
+         +'<td style="padding:6px 8px;color:var(--dim);font-size:12px;">'+(i.slots||[]).map(slotLabel).join(', ')+'</td>'
          +'<td style="padding:6px 8px;text-align:right;">'+(i.montant?i.montant+'€':'—')+'</td>'
          +'</tr>';
       });
