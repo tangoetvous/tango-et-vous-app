@@ -378,3 +378,22 @@ ALTER PUBLICATION supabase_realtime ADD TABLE inscriptions_essai_yoga;
 ALTER PUBLICATION supabase_realtime ADD TABLE cours_particuliers;
 ALTER PUBLICATION supabase_realtime ADD TABLE inscriptions_cours;
 ALTER PUBLICATION supabase_realtime ADD TABLE cours_yoga;
+-- RSVP milongas (élèves → admin temps réel)
+CREATE TABLE IF NOT EXISTS milonga_presences (
+  id bigserial PRIMARY KEY,
+  created_at timestamptz DEFAULT now(),
+  date date NOT NULL,
+  milonga_id text NOT NULL DEFAULT '',
+  milonga_nom text NOT NULL DEFAULT '',
+  email text NOT NULL DEFAULT '',
+  prenom text NOT NULL DEFAULT '',
+  nom text NOT NULL DEFAULT '',
+  UNIQUE(date, email)
+);
+ALTER TABLE milonga_presences ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_select" ON milonga_presences FOR SELECT USING (true);
+CREATE POLICY "allow_insert" ON milonga_presences FOR INSERT WITH CHECK (true);
+CREATE POLICY "allow_delete" ON milonga_presences FOR DELETE USING (true);
+GRANT SELECT, INSERT, DELETE ON milonga_presences TO anon, authenticated;
+GRANT USAGE, SELECT ON SEQUENCE milonga_presences_id_seq TO anon, authenticated;
+ALTER PUBLICATION supabase_realtime ADD TABLE milonga_presences;
