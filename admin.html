@@ -1979,6 +1979,7 @@ function traiterMsgInscription(msg, doRender) {
   setTimeout(function(){ delete _msgDedup[_fp]; }, 10000);
 
   if (msg.type === 'stageInscription') { _appliquerStageInscription(msg.data); if(!IS_DEMO){chargerDonnees();return;} }
+  if (msg.type === 'stageAnnulation') { if(!IS_DEMO){chargerDonnees();return;} }
   if (msg.type === 'coursInscription') { _appliquerCoursInscription(msg.data); if(!IS_DEMO){setTimeout(chargerDonnees,500);} }
   if (msg.type === 'essaiInscription') _appliquerEssaiInscription(msg.data);
   if (msg.type === 'yogaEssaiInscription') _appliquerYogaEssaiInscription(msg.data);
@@ -3873,6 +3874,7 @@ function demarrerRealtime() {
     _realtimeChannel = TEV.client
       .channel('tev-admin-inserts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_stages' },    _onInsert)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'inscriptions_stages' },    _onInsert)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_essai' },     _onInsert)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_essai_yoga' },_onInsert)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cours_particuliers' },     _onInsert)
