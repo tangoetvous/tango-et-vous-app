@@ -1294,6 +1294,7 @@
     const _nextMilEvt = MILONGAS_OBJ
       ? MILONGAS_OBJ.flatMap(m => (m.dates||[]).map(d => ({
           date: d.date,
+          id: m.id || '',
           nom: m.nom,
           hdeb: d.horaire_debut || m.horaire_debut || '17h30',
           hfin: d.horaire_fin  || m.horaire_fin  || '23h30',
@@ -1346,7 +1347,10 @@
         + '<span style="font-size:10px;font-weight:700;color:#b57bee;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">PROCHAIN STAGE</span>'
         + '<span style="font-size:13px;font-weight:600;color:#fff;text-align:right;">' + stageLbl + ' \u00b7 ' + _psH + '</span>'
         + '</div>'
-        + (thème ? '<div style="font-size:12px;color:#fff;margin-top:3px;text-align:right;">' + thème + '</div>' : '')
+        + (thème ? '<div style="font-size:12px;color:#fff;margin-top:3px;">' + thème + '</div>' : '')
+        + '<div style="margin-top:8px;text-align:right;">'
+        + '<button onclick="switchTab(\'stages\')" style="padding:7px 13px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:6px;border:2px solid #b57bee;cursor:pointer;white-space:nowrap;background:transparent;color:#b57bee;font-family:inherit;">S\'inscrire</button>'
+        + '</div>'
         + '</div>';
     }
 
@@ -1357,12 +1361,24 @@
       const _mh  = (_nextMilEvt ? _nextMilEvt.hdeb+'\u2013'+_nextMilEvt.hfin : '17h30\u201323h30').toUpperCase();
       const _mcR = _mc.replace(/^#/,'');
       const _r   = parseInt(_mcR.slice(0,2),16), _g = parseInt(_mcR.slice(2,4),16), _b = parseInt(_mcR.slice(4,6),16);
+      const _milIdAcc = (_nextMilEvt && _nextMilEvt.id) || '';
+      const _emailLowA = emailEleve.toLowerCase().trim();
+      const _milPresAcc = _loadMilPresences();
+      const _isComingAcc = _milPresAcc.some(function(p){ return p.date === prochaineMilonga && (p.email||'').toLowerCase() === _emailLowA; });
+      const _midsA = _milIdAcc.replace(/'/g,"\\'");
+      const _mnsA = _mn.replace(/'/g,"\\'");
       h += '<div style="background:rgba('+_r+','+_g+','+_b+',0.07);border:1px solid rgba('+_r+','+_g+','+_b+',0.2);border-left:3px solid '+_mc+';border-radius:8px;padding:9px 12px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
         + '<span style="font-size:10px;font-weight:700;color:'+_mc+';text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">PROCHAINE MILONGA</span>'
         + '<span style="font-size:13px;font-weight:600;color:#fff;text-align:right;">' + fmtLong(prochaineMilonga) + '</span>'
         + '</div>'
-        + '<div style="font-size:12px;color:#fff;margin-top:3px;text-align:right;">'+_mn+' \u00b7 '+_mh+'</div>'
+        + '<div style="font-size:12px;color:#fff;margin-top:3px;">'+_mn+' \u00b7 '+_mh+'</div>'
+        + '<div style="margin-top:8px;text-align:right;">'
+        + (_isComingAcc
+            ? '<span style="display:inline-block;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;border-radius:20px;background:'+_mc+';color:#000;">J\'y vais\u00a0!</span>'
+              + ' <button onclick="_milCancelAcc(\'' + prochaineMilonga + '\',\'' + _midsA + '\',\'' + _mnsA + '\')" style="padding:3px 9px;font-size:10px;font-weight:600;border-radius:20px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;background:transparent;color:rgba(255,255,255,0.42);font-family:inherit;">Annuler</button>'
+            : '<button onclick="_milJeViens(\'' + prochaineMilonga + '\',\'' + _midsA + '\',\'' + _mnsA + '\')" style="padding:7px 13px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:6px;border:2px solid '+_mc+';cursor:pointer;white-space:nowrap;background:transparent;color:'+_mc+';font-family:inherit;">Je pense venir</button>')
+        + '</div>'
         + '</div>';
     }
 
