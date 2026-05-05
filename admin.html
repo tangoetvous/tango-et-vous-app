@@ -5445,7 +5445,7 @@ var REP_GROUPES = [
 function repGetListeByGroupe(id, sai) {
   var sai = sai||saisonActive();
   var inscrits = (adminData.coursTango||[]).filter(function(e){ return e.statut==='inscrit'&&(e.saison||saisonCourante())===sai; });
-  var yoga     = (adminData.coursYoga  ||[]).filter(function(e){ return (e.saison||saisonCourante())===sai; });
+  var yoga     = (adminData.coursYoga  ||[]).filter(function(e){ return (e.saison||saisonCourante())===sai && e.statut!=='supprimé'; });
   if (id==='paris-deb')     return inscrits.filter(function(e){ return e.ville==='paris'&&e.niveau==='debutant'; });
   if (id==='paris-int')     return inscrits.filter(function(e){ return e.ville==='paris'&&e.niveau==='intermediaire'; });
   if (id==='vincennes-deb') return inscrits.filter(function(e){ return e.ville==='vincennes'&&e.niveau==='debutant'; });
@@ -5577,7 +5577,7 @@ function renderRepertoire() {
           +'</div></div>';
       });
     }
-    // ── Archivés (tango uniquement — yoga = suppression réelle en DB) ──
+    // ── Archivés ──
     if (isTango) {
       var ong = _elevesOnglets().find(function(o){ return o.id === g.id; });
       if (ong) {
@@ -5598,11 +5598,35 @@ function renderRepertoire() {
               +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
               +btnEmail(e.email,e.prenom+' '+e.nom)
               +(tel?'<a href="tel:'+tel.replace(/\s/g,'')+'" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;text-decoration:none;" title="Appeler">📞</a>':'')
-              +'<a href="javascript:void(0)" onclick="repSupprimerDefinitif(\''+e.id+'\')" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;color:#ff6b6b;" title="Supprimer définitivement">🗑</a>'
+              +'<a href="javascript:void(0)" onclick="repSupprimerDefinitif(\''+e.id+'\',true)" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;color:#ff6b6b;" title="Supprimer définitivement">🗑</a>'
               +'</div></div>';
           });
           h += '</div>';
         }
+      }
+    } else {
+      // Yoga archivés par groupe (yin-yoga ou hatha-yoga)
+      var yogaArch = repSort((adminData.coursYoga||[]).filter(function(e){
+        return e.statut==='supprimé' && (e.saison||saisonCourante())===sai
+          && (g.id==='yin-yoga' ? (e.cours==='yin'||e.cours==='forfait') : (e.cours==='hatha'||e.cours==='forfait'));
+      }));
+      if (yogaArch.length) {
+        h += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);">'
+          +'<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🗑 Archivés ('+yogaArch.length+')</div>';
+        yogaArch.forEach(function(e) {
+          var tel = e.tel||'';
+          h += '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'">'
+            +'<div style="flex:1;min-width:0;">'
+            +'<div class="point-nom" style="color:#ff6b6b;">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',tel,'yoga')+'</div>'
+            +'<div class="point-sub">'+(tel||'<span style="color:var(--dim);font-style:italic;">pas de tél.</span>')+'</div>'
+            +'</div>'
+            +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
+            +btnEmail(e.email,e.prenom+' '+e.nom)
+            +(tel?'<a href="tel:'+tel.replace(/\s/g,'')+'" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;text-decoration:none;" title="Appeler">📞</a>':'')
+            +'<a href="javascript:void(0)" onclick="repSupprimerDefinitif(\''+e.id+'\',false)" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;color:#ff6b6b;" title="Supprimer définitivement">🗑</a>'
+            +'</div></div>';
+        });
+        h += '</div>';
       }
     }
     h += '</div>';
@@ -5617,15 +5641,22 @@ window.repSupprimer = function(id, isTango) {
   if (isTango) confirmerSupprimerEleve(id);
   else confirmerSupprimerEleveYoga(id);
 };
-window.repSupprimerDefinitif = function(id) {
-  var e = (adminData.coursTango||[]).find(function(x){ return String(x.id)===String(id); });
+window.repSupprimerDefinitif = function(id, isTango) {
+  if (isTango === undefined) isTango = true;
+  var src = isTango ? (adminData.coursTango||[]) : (adminData.coursYoga||[]);
+  var e = src.find(function(x){ return String(x.id)===String(id); });
   var nom = e ? (e.prenom+' '+e.nom) : 'cet élève';
   if (!confirm('Supprimer définitivement '+nom+' ? Cette action est irréversible.')) return;
-  adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return String(x.id)!==String(id); });
+  if (isTango) {
+    adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return String(x.id)!==String(id); });
+  } else {
+    adminData.coursYoga = (adminData.coursYoga||[]).filter(function(x){ return String(x.id)!==String(id); });
+  }
   afficherToast('🗑 '+nom+' supprimé·e définitivement');
   renderTab();
   if (!IS_DEMO) {
-    Promise.resolve(TEV.client.from('inscriptions_cours').delete().eq('id', id))
+    var table = isTango ? 'inscriptions_cours' : 'cours_yoga';
+    Promise.resolve(TEV.client.from(table).delete().eq('id', id))
       .then(function(){ chargerDonnees(); })
       .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
   }
@@ -6122,12 +6153,12 @@ function supprimerEleveYoga(id) {
 function confirmerSupprimerEleveYoga(id) {
   var e=(adminData.coursYoga||[]).find(function(x){return String(x.id)===String(id);});
   var nom=e?(e.prenom+' '+e.nom):'';
-  adminData.coursYoga=(adminData.coursYoga||[]).filter(function(x){return String(x.id)!==String(id);});
+  (adminData.coursYoga||[]).forEach(function(x){if(String(x.id)===String(id))x.statut='supprimé';});
   fermerContact();
-  afficherToast('🗑 '+nom+' supprimé·e');
+  afficherToast('🗑 '+nom+' archivé·e');
   renderTab();
   if (!IS_DEMO) {
-    TEV.client.from('cours_yoga').delete().eq('id', id)
+    Promise.resolve(TEV.client.from('cours_yoga').update({statut:'supprimé'}).eq('id', id))
     .then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur suppression: ' + ((err&&err.message)||'')); });
   }
@@ -8928,15 +8959,19 @@ function supprimerPub(id, btn) {
 var COURS_YOGA_LBL = {yin:'Yin Yoga 10h30', hatha:'Hatha Yoga 11h30', forfait:'Yin Yoga+Hatha Yoga 10h30–12h30'};
 
 function renderYoga() {
-  var h = '<div class="sub-tabs">'
+  var sai = saisonActive();
+  var nbSuppr = (adminData.coursYoga||[]).filter(function(e){ return e.statut==='supprimé'&&(e.saison||saisonCourante())===sai; }).length;
+  var h = '<div class="sub-tabs" style="flex-wrap:wrap;">'
     +'<button class="sub-tab'+(sousOngletYoga==='essai'?' active':'')+'" data-sous-yoga="essai">Essai Yoga</button>'
     +'<button class="sub-tab'+(sousOngletYoga==='eleves'?' active':'')+'" data-sous-yoga="eleves">Élèves Yoga</button>'
     +'<button class="sub-tab'+(sousOngletYoga==='inscrire-essai'?' active':'')+'" data-sous-yoga="inscrire-essai">✏️ Inscrire Essai</button>'
     +'<button class="sub-tab'+(sousOngletYoga==='inscrire-eleve'?' active':'')+'" data-sous-yoga="inscrire-eleve">✏️ Inscrire Élève</button>'
+    +'<button class="sub-tab'+(sousOngletYoga==='supprimes'?' active':'')+'" data-sous-yoga="supprimes" style="'+(nbSuppr?'color:#ff6b6b;':'')+'">🗑 Supprimés'+(nbSuppr?' ('+nbSuppr+')':'')+'</button>'
     +'</div>';
   if (sousOngletYoga==='eleves')          return h + renderYogaEleves();
   if (sousOngletYoga==='inscrire-essai')  return h + renderYogaInscrireEssai();
   if (sousOngletYoga==='inscrire-eleve')  return h + renderYogaInscrireEleve();
+  if (sousOngletYoga==='supprimes')       return h + renderYogaSupprimes();
   return h + renderYogaEssai();
 }
 
@@ -9037,7 +9072,7 @@ function renderYogaEssai() {
 
 function renderYogaEleves() {
   var sai = saisonActive();
-  var liste = (adminData.coursYoga||[]).filter(function(e){ return (e.saison||saisonCourante())===sai; });
+  var liste = (adminData.coursYoga||[]).filter(function(e){ return (e.saison||saisonCourante())===sai && e.statut!=='supprimé'; });
   if (!liste.length) return '<div class="empty-state">Aucun élève yoga inscrit pour la saison '+sai+'.</div>';
   var sorted = liste.slice().sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom); });
   var yin   = sorted.filter(function(e){ return e.cours==='yin'||e.cours==='forfait'; });
@@ -9069,6 +9104,58 @@ function renderYogaEleves() {
   if (hatha.length) hatha.forEach(function(e){ h += eleveRow(e); });
   else h += '<div style="font-size:11px;color:var(--dim);padding:4px 0 8px;">Aucun élève inscrit.</div>';
   return h;
+}
+
+function renderYogaSupprimes() {
+  var sai = saisonActive();
+  var liste = (adminData.coursYoga||[]).filter(function(e){ return e.statut==='supprimé' && (e.saison||saisonCourante())===sai; });
+  if (!liste.length) return '<div class="empty-state">Aucun élève yoga archivé pour la saison '+sai+'.</div>';
+  var sorted = liste.slice().sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom,'fr'); });
+  var h = '<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">'+liste.length+' élève'+(liste.length>1?'s':'')+' archivé'+(liste.length>1?'s':'')+' — saison '+sai+'</div>';
+  sorted.forEach(function(e) {
+    var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
+    var paiLbl = PAI_LBL[e.paiement]||e.paiement||'';
+    h += '<div class="point-row" style="opacity:.75;">'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div class="point-nom" style="color:#ff6b6b;">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','yoga')+'</div>'
+      +'<div class="point-sub"><span class="pill pill-info" style="font-size:8px;">'+coursLbl+'</span>'
+      +(paiLbl?' · <span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+(e.montant?' · '+e.montant+'€':'')+'</span>':'')
+      +'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
+      +btnEmail(e.email,e.prenom+' '+e.nom)
+      +'<button class="btn-point btn-ok" onclick="retablirEleveYoga(\''+e.id+'\')" style="font-size:11px;">↩ Rétablir</button>'
+      +'<button class="btn-point btn-danger" onclick="supprimerDefinitivementEleveYoga(\''+e.id+'\')" style="font-size:11px;background:var(--danger);color:#fff;">🗑 Définitif</button>'
+      +'</div></div>';
+  });
+  return h;
+}
+function retablirEleveYoga(id) {
+  var e = (adminData.coursYoga||[]).find(function(x){ return String(x.id)===String(id); });
+  if (!e) return;
+  var nom = e.prenom + ' ' + e.nom;
+  e.statut = 'inscrit';
+  afficherToast('✓ '+nom+' rétabli·e');
+  renderTab();
+  if (!IS_DEMO) {
+    Promise.resolve(TEV.client.from('cours_yoga').update({statut:'inscrit'}).eq('id', id))
+    .then(function(){ chargerDonnees(); })
+    .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
+  }
+}
+function supprimerDefinitivementEleveYoga(id) {
+  var e = (adminData.coursYoga||[]).find(function(x){ return String(x.id)===String(id); });
+  if (!e) return;
+  var nom = (e.prenom||'')+' '+(e.nom||'');
+  if (!confirm('Supprimer définitivement '+nom+' ? Cette action est irréversible.')) return;
+  adminData.coursYoga = (adminData.coursYoga||[]).filter(function(x){ return String(x.id)!==String(id); });
+  afficherToast('🗑 '+nom+' supprimé·e définitivement');
+  renderTab();
+  if (!IS_DEMO) {
+    Promise.resolve(TEV.client.from('cours_yoga').delete().eq('id', id))
+    .then(function(){ chargerDonnees(); })
+    .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
+  }
 }
 
 // Retourne true si cet email est déjà inscrit en yoga pour la saison active
