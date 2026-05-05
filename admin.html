@@ -8996,17 +8996,29 @@ function renderYogaInscrireEleve() {
     +'<div class="field" style="margin:0;"><label>Email *</label><input type="email" id="diy-email" autocapitalize="none"/></div>'
     +'<div class="field" style="margin:0;"><label>Téléphone</label><input type="tel" id="diy-tel"/></div>'
     +'</div>'
-    +'<div class="field"><label>Cours *</label><select id="diy-cours">'
+    +'<div class="field"><label>Cours *</label><select id="diy-cours" onchange="diyUpdateMontant()">'
     +'<option value="yin">🌙 Yin Yoga 10h30</option>'
     +'<option value="hatha">☀️ Hatha Yoga 11h30</option>'
     +'<option value="forfait">🌙☀️ Yin + Hatha Yoga 10h30–12h30</option>'
     +'</select></div>'
-    +'<div class="field"><label>Paiement *</label><select id="diy-paie">'+PAI_OPT+'</select></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+    +'<div class="field" style="margin:0;"><label>Paiement *</label><select id="diy-paie">'+PAI_OPT+'</select></div>'
+    +'<div class="field" style="margin:0;"><label>Montant (€)</label><input type="number" id="diy-montant" min="0" step="1"/></div>'
+    +'</div>'
+    +'<div class="field"><label>Date du 1er paiement</label><input type="date" id="diy-dateP" style="font-size:13px;"/></div>'
     +'<div id="diy-err" style="display:none;background:#1a0000;border-left:3px solid var(--danger);padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#ff6b6b;margin-bottom:10px;"></div>'
     +'<div id="diy-ok"  style="display:none;background:#001a00;border-left:3px solid #4ade80;padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#4ade80;margin-bottom:10px;">✓ Élève inscrit·e !</div>'
     +'<button class="btn btn-gold" style="width:100%;" onclick="soumettreInscriptionDirecteYoga()">✓ Inscrire</button>'
     +'</div>';
 }
+
+window.diyUpdateMontant = function() {
+  var cours = ((gel('diy-cours')||{}).value||'yin');
+  var mt = cours==='forfait' ? (TARIFS.yoga_forfait_2cours||0) : (TARIFS.yoga_forfait_1cours||0);
+  var inp = gel('diy-montant'); if(inp && !inp._touched) inp.value = mt;
+};
+// Pré-remplir montant au rendu
+setTimeout(function(){ if(gel('diy-montant')&&!gel('diy-montant').value) window.diyUpdateMontant(); }, 50);
 
 window.soumettreInscriptionDirecteYoga = function() {
   var prenom = ((gel('diy-prenom')||{}).value||'').trim();
@@ -9015,23 +9027,28 @@ window.soumettreInscriptionDirecteYoga = function() {
   var tel    = ((gel('diy-tel')||{}).value||'').trim();
   var cours  = ((gel('diy-cours')||{}).value||'yin');
   var paie   = ((gel('diy-paie')||{}).value||'cb1x');
+  var dateP  = ((gel('diy-dateP')||{}).value||'');
   var err = gel('diy-err'), ok = gel('diy-ok');
   if(err) err.style.display='none'; if(ok) ok.style.display='none';
   if (!prenom||!nom||!email) { if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';} return; }
   var sai = saisonActive();
   var ts  = Date.now();
-  var montant = cours==='forfait' ? (TARIFS.yoga_forfait_2cours||0) : (TARIFS.yoga_forfait_1cours||0);
+  var defMt = cours==='forfait' ? (TARIFS.yoga_forfait_2cours||0) : (TARIFS.yoga_forfait_1cours||0);
+  var montant = parseFloat(((gel('diy-montant')||{}).value)||defMt) || defMt;
+  var donnees = dateP ? {datePremierPaiement: dateP} : {};
   if (!adminData.coursYoga) adminData.coursYoga=[];
   var existing = adminData.coursYoga.find(function(e){ return e.email===email && (e.saison||saisonCourante())===sai; });
-  if (existing) { existing.cours=cours; existing.paiement=paie; existing.montant=montant; if(tel) existing.tel=tel; }
-  else { adminData.coursYoga.push({id:'CY'+ts,prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,statut:'inscrit',paiement:paie,montant:montant,saison:sai,dateInscription:today()}); }
+  if (existing) { existing.cours=cours; existing.paiement=paie; existing.montant=montant; if(tel) existing.tel=tel; if(dateP){existing.datePremierPaiement=dateP; if(!existing.donnees)existing.donnees={}; existing.donnees.datePremierPaiement=dateP;} }
+  else { adminData.coursYoga.push({id:'CY'+ts,prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,statut:'inscrit',paiement:paie,montant:montant,datePremierPaiement:dateP,donnees:donnees,saison:sai,dateInscription:today()}); }
   if(ok) ok.style.display='block';
   if (!IS_DEMO) {
     var dbOp;
     if (existing) {
-      dbOp = Promise.resolve(TEV.client.from('cours_yoga').update({cours:cours,paiement:paie,montant:montant}).eq('id', String(existing.id)));
+      var upd={cours:cours,paiement:paie,montant:montant};
+      if(dateP) upd.donnees=Object.assign({},(existing.donnees||{}),{datePremierPaiement:dateP});
+      dbOp = Promise.resolve(TEV.client.from('cours_yoga').update(upd).eq('id', String(existing.id)));
     } else {
-      dbOp = Promise.resolve(TEV.client.from('cours_yoga').insert({prenom:prenom,nom:nom,email:email,cours:cours,paiement:paie,montant:montant,statut:'inscrit',saison:sai}));
+      dbOp = Promise.resolve(TEV.client.from('cours_yoga').insert({prenom:prenom,nom:nom,email:email,cours:cours,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:donnees}));
     }
     dbOp.then(function(res){
       if (res && res.error) { if(err){err.textContent='Erreur DB : '+(res.error.message||res.error.code||'');err.style.display='block';} return; }
