@@ -114,6 +114,13 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Bouton "Inscrire" depuis Essai Yoga** : naviguer vers le sous-onglet `inscrire-eleve` (pas ouvrir un modal). Après `renderTab()`, pré-remplir via `setTimeout(function(){ gel('diy-prenom').value = ...; }, 0)` — le setTimeout est nécessaire car le DOM de l'onglet n'est pas encore disponible au moment de l'appel.
 - **Formulaires publics — compte à rebours après succès** : après soumission réussie d'un formulaire essai, afficher un écran de succès avec un compte à rebours automatique (ex: 8s) qui appelle `restart()`. Toujours inclure un bouton "← Retour" manuel en plus du compte à rebours automatique. Pattern : `setInterval` avec compteur décrémenté, `setTimeout` final qui appelle `restart()`, bouton onclick=`restart()`.
 - **`_initCoursYoga()` — garde dates futures** : localStorage `tev_cours_dates.yoga` peut contenir des dates passées. Toujours filtrer `d >= todayISO()` avant d'utiliser les dates. Fallback secondaire : `tev_dates_yoga_<saison>`. Si `localStorage.tev_cours_dates` change de clé (ex: `tev_dates_yoga_*`), détecter les deux dans le listener `storage` pour recharger le dropdown.
+- **Section "Ma carte de 10 cours" — race condition forfait vs carte10 (index.html)** : `tevGetEleve()` ne retourne pas de champ `type` sur l'objet `carte` — le type ('forfait' ou 'carte10') est déterminé UNIQUEMENT de façon asynchrone depuis `inscriptions_cours`. Règles impératives :
+  1. `showScreen('screen-dashboard')` doit être appelé EXCLUSIVEMENT dans le callback `inscriptions_cours` (et son `.catch()`), jamais de façon synchrone avant — sinon l'écran est visible avec `carte.type = undefined`.
+  2. Condition dans `renderAccueil()` : `carte.type === 'carte10'` (stricte, pas `!== 'forfait'`) — la section ne s'affiche que si le type est explicitement connu.
+  3. Détection du type dans le callback : `hasCarte10 = res.data.some(i => i.type === 'carte10')` puis `carte.type = hasCarte10 ? 'carte10' : 'forfait'` — ne jamais dépendre de `hasForfait` seul (le type en DB peut être null/vide, rendant `hasForfait` faussement false).
+  4. Fallback si `res.data` est vide ou si le `.catch()` se déclenche : déduire depuis `eleves` — `coursUtilises > 0` ou `statut === 'Active'/'Nouvelle carte'` → carte10, sinon → forfait.
+  5. Les callbacks secondaires (absences_jour, stages) appellent `renderAccueil()` si `currentTab === 'accueil'` — ce n'est pas un problème car ils s'exécutent toujours APRÈS `showScreen` (qui lui-même suit inscriptions_cours), donc `carte.type` est déjà positionné.
+- **`renderSorano()` dans index.html — tarifs depuis Supabase** : lit `parametres` table, clé `tev_params_adhesions_<sai>`, champ `valeur.sorano` (`{ m16_vinc, m16_ext, p16_vinc, p16_ext }`). Fallback DEFAUT = `{ m16_vinc:26, m16_ext:35, p16_vinc:36, p16_ext:45 }`. ⚠️ L'admin sauvegarde ces tarifs depuis Paramètres → Adhésion Sorano → cela écrit dans le localStorage admin ET dans Supabase (table `parametres`). Si la clé Supabase est absente (admin n'a jamais sauvegardé sur cet appareil), l'espace élève affiche les valeurs par défaut.
 
 ## Architecture temps réel — admin.html
 
@@ -253,6 +260,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [x] Essai yoga (essai-yoga.html) — après soumission : compte à rebours 8s + bouton retour manuel — FAIT
 - [x] Cartes 10 — suppression carte + onglet « Cartes supprimées » — FAIT (confirmerSupprimerCarte, _fromCoursTango, carte_statut='supprimé')
 - [x] Suppression élève tango — supprime aussi la carte 10 associée — CORRIGÉ
+- [x] Section "Ma carte de 10 cours" s'affichait pour les élèves forfait dans Accueil et Carte (espace élève) — CORRIGÉ (condition `=== 'carte10'` stricte + `showScreen` uniquement dans callback inscriptions_cours + détection binaire `hasCarte10 ? 'carte10' : 'forfait'` + fallback eleves)
 - [ ] Tester modification cours/paiement/montant → persiste après refresh
 - [ ] Installer l'appli sur Mac (PWA déjà prête) : ouvrir admin dans Chrome → icône ⊕ dans la barre d'adresse → Installer
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
