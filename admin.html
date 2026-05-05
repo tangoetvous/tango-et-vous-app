@@ -8080,21 +8080,15 @@ function soranoAction(id, paye, btn) {
   // Mise à jour DB par email (toutes les lignes vincennes + yoga)
   var p1=Promise.resolve(TEV.client.from('inscriptions_cours').update({paiement_sorano:paye}).eq('email',email).eq('ville','vincennes'));
   var p2=Promise.resolve(TEV.client.from('cours_yoga').update({paiement_sorano:paye}).eq('email',email));
+  // _pendingSoranoPayé[email] reste jusqu'à confirmation DB — jamais supprimé sur erreur
   Promise.all([p1,p2]).then(function(results){
     var tErr=results[0]&&results[0].error, yErr=results[1]&&results[1].error;
     if(!tErr || !yErr) {
-      // Au moins une mise à jour DB réussie — lever la protection (la DB a maintenant la bonne valeur)
+      // Au moins une mise à jour DB réussie — la DB a la bonne valeur, lever la protection
       delete _pendingSoranoPayé[email];
     }
-    if(tErr&&yErr){
-      // Les deux ont échoué — restaurer l'état local et nettoyer le pending
-      delete _pendingSoranoPayé[email];
-      (adminData.coursTango||[]).forEach(function(c){if(c.email===email&&(c.ville||'')==='vincennes')c.paiement_sorano=!paye;});
-      (adminData.coursYoga||[]).forEach(function(c){if(c.email===email)c.paiement_sorano=!paye;});
-      renderTab();
-      afficherToast('❌ Erreur lors de la mise à jour');
-    }
-    // Ne pas appeler chargerDonnees() ici — le polling 15s synchronisera
+    // Si les deux échouent : le pending reste actif → le polling ne peut pas écraser
+    // Ne pas appeler chargerDonnees() — le polling 15s synchronisera
   });
 }
 function relanceSorano(email, nom, btn) {
