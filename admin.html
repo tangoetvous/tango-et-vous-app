@@ -1280,7 +1280,7 @@ function sauverContact(btn) {
     Promise.resolve(TEV.client.from('eleves').update(updatePayload).eq('email',emailOld)),
     Promise.resolve(TEV.client.from('inscriptions_essai').update({prenom:pr,nom:no,tel:tel,email:emailNew}).eq('email',emailOld)),
     Promise.resolve(TEV.client.from('inscriptions_stages').update({prenom:pr,nom:no,telephone:tel,email:emailNew}).eq('email',emailOld)),
-    Promise.resolve(TEV.client.from('cours_yoga').update({prenom:pr,nom:no,email:emailNew}).eq('email',emailOld)),
+    Promise.resolve(TEV.client.from('cours_yoga').update({prenom:pr,nom:no,tel:tel,email:emailNew}).eq('email',emailOld)),
   ])
     .then(function(res){
       var anyErr=res.find(function(r){return r&&r.error;});
@@ -9229,10 +9229,11 @@ window.soumettreInscriptionDirecteYoga = function() {
     var dbOp;
     if (existing) {
       var upd={cours:cours,paiement:paie,montant:montant};
+      if(tel) upd.tel=tel;
       if(dateP) upd.donnees=Object.assign({},(existing.donnees||{}),{datePremierPaiement:dateP});
       dbOp = Promise.resolve(TEV.client.from('cours_yoga').update(upd).eq('id', String(existing.id)));
     } else {
-      dbOp = Promise.resolve(TEV.client.from('cours_yoga').insert({prenom:prenom,nom:nom,email:email,cours:cours,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:donnees}));
+      dbOp = Promise.resolve(TEV.client.from('cours_yoga').insert({prenom:prenom,nom:nom,email:email,tel:tel,cours:cours,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:donnees}));
     }
     dbOp.then(function(res){
       if (res && res.error) { if(err){err.textContent='Erreur DB : '+(res.error.message||res.error.code||'');err.style.display='block';} return; }

@@ -27,7 +27,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
   - `cours` : format `'paris—debutant'` (stockée en DB, calculée depuis ville+niveau lors de l'insert)
   - `paiement_sorano` : `BOOLEAN DEFAULT false` — règlement adhésion Sorano (Vincennes uniquement)
   - ⚠️ Dans `tev-supabase.js`, `role` est prioritairement lu depuis `inscriptions_cours`, avec fallback sur `eleves.role`
-- **`cours_yoga`** : inscriptions yoga (email, prenom, nom, cours, paiement, montant, statut, saison, **paiement_sorano**) — ⚠️ PAS de colonne `tel`
+- **`cours_yoga`** : inscriptions yoga (email, prenom, nom, **tel**, cours, paiement, montant, statut, saison, **paiement_sorano**) — colonne `tel TEXT DEFAULT ''` à créer via SQL si absente : `ALTER TABLE cours_yoga ADD COLUMN IF NOT EXISTS tel TEXT DEFAULT '';`
   - `cours` : `'hatha'`, `'yin'`, `'forfait'` (forfait = hatha + yin)
   - `paiement_sorano` : `BOOLEAN DEFAULT false` — même champ que tango pour les élèves faisant les deux
   - RLS activé avec policies `allow_select/insert/update/delete` (USING true)
@@ -256,7 +256,13 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] **Activer sauvegardes Supabase** : Dashboard Supabase → Settings → Database → Backups → activer (7 jours rétention sur plan gratuit)
 - [ ] **Configurer email backup CSV** : GitHub → Settings → Secrets → Actions → ajouter `SMTP_USERNAME` (Gmail), `SMTP_PASSWORD` (mot de passe application Gmail — myaccount.google.com/apppasswords), `BACKUP_EMAIL` (destinataire). Le workflow `backup-csv.yml` tourne déjà chaque soir à 23h et stocke les CSV dans le repo + artifacts GitHub.
 - [ ] **Septembre 2026 — mettre à jour les actions GitHub** : remplacer `actions/checkout@v4`, `actions/upload-artifact@v4`, `dawidd6/action-send-mail@v3` par leurs versions Node.js 24 dans `backup-csv.yml` (et `keep-alive.yml` si concerné). Signaler à Claude à ce moment-là.
-- [ ] **Exécuter SQL colonnes paiement_sorano** dans Supabase SQL Editor (sinon le marquage Sorano ne persiste pas après rechargement de page) : `ALTER TABLE inscriptions_cours ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false; ALTER TABLE cours_yoga ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false;`
+- [ ] **Exécuter SQL colonnes paiement_sorano + tel yoga** dans Supabase SQL Editor :
+  ```sql
+  ALTER TABLE inscriptions_cours ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false;
+  ALTER TABLE cours_yoga ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false;
+  ALTER TABLE cours_yoga ADD COLUMN IF NOT EXISTS tel TEXT DEFAULT '';
+  ```
+  Sans `paiement_sorano` : le marquage Sorano ne persiste pas après rechargement. Sans `tel` : le téléphone des élèves yoga n'est pas sauvegardé en DB.
 - [x] Tester suppression élève tango → persiste après refresh — CORRIGÉ (approche `_pendingSupprimes`)
 - [x] Transfert essai → inscriptions tango (boutons Validé·e / Demande en att. / Inscrit·e) — CORRIGÉ (saison `saisonActive()`, INSERT au lieu de `upsert`, `_pendingCoursInserts`, partenaire sans email)
 - [x] Pointage Essai Tango : scroll to top toutes les 15s — CORRIGÉ (garde `_renderTabSiPasFormulaire` + `requestAnimationFrame`)
