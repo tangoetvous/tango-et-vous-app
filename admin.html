@@ -5550,7 +5550,9 @@ function renderRepertoire() {
     +'</div></div>';
   // ── Listes par groupe ──
   h += _tevSearchBar();
+  var _tangoIds = ['paris-deb','paris-int','vincennes-deb','vincennes-int'];
   REP_GROUPES.forEach(function(g) {
+    var isTango = _tangoIds.indexOf(g.id) >= 0;
     var liste = repSort(repDedup(repGetListeByGroupe(g.id,sai)));
     h += '<div style="margin-bottom:20px;">'
       +'<div style="font-size:12px;font-weight:700;color:'+g.color+';padding:10px 0 6px;border-bottom:1px solid var(--border);margin-bottom:6px;">'
@@ -5562,21 +5564,54 @@ function renderRepertoire() {
     } else {
       liste.forEach(function(e) {
         var tel = e.tel||'';
+        var ctx = isTango ? 'ct' : 'yoga';
         h += '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'">'
           +'<div style="flex:1;min-width:0;">'
-          +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',tel,'ct')+'</div>'
+          +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',tel,ctx)+'</div>'
           +'<div class="point-sub">'+(tel||'<span style="color:var(--dim);font-style:italic;">pas de tél.</span>')+'</div>'
           +'</div>'
           +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
           +btnEmail(e.email,e.prenom+' '+e.nom)
           +(tel?'<a href="tel:'+tel.replace(/\s/g,'')+'" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;text-decoration:none;" title="Appeler">📞</a>':'')
+          +'<a href="javascript:void(0)" onclick="repSupprimer(\''+e.id+'\','+isTango+')" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;color:#ff6b6b;" title="Supprimer">🗑</a>'
           +'</div></div>';
       });
+    }
+    // ── Archivés (tango uniquement — yoga = suppression réelle en DB) ──
+    if (isTango) {
+      var ong = _elevesOnglets().find(function(o){ return o.id === g.id; });
+      if (ong) {
+        var arch = repSort(repDedup((adminData.coursTango||[]).filter(function(e){
+          return e.statut==='supprimé' && (e.saison||saisonCourante())===sai
+            && e.ville===ong.ville && e.niveau===ong.niv;
+        })));
+        if (arch.length) {
+          h += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);">'
+            +'<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🗑 Archivés ('+arch.length+')</div>';
+          arch.forEach(function(e) {
+            var tel = e.tel||'';
+            h += '<div class="point-row" style="opacity:0.45;">'
+              +'<div style="flex:1;min-width:0;">'
+              +'<div class="point-nom" style="text-decoration:line-through;color:var(--dim);">'+e.prenom+' '+e.nom+'</div>'
+              +'<div class="point-sub">'+(e.email||'')+(tel?' · '+tel:'')+'</div>'
+              +'</div></div>';
+          });
+          h += '</div>';
+        }
+      }
     }
     h += '</div>';
   });
   return h;
 }
+window.repSupprimer = function(id, isTango) {
+  var src = isTango ? (adminData.coursTango||[]) : (adminData.coursYoga||[]);
+  var e = src.find(function(x){ return String(x.id)===String(id); });
+  var nom = e ? (e.prenom+' '+e.nom) : 'cet élève';
+  if (!confirm('Supprimer '+nom+' du répertoire ?')) return;
+  if (isTango) confirmerSupprimerEleve(id);
+  else confirmerSupprimerEleveYoga(id);
+};
 
 function renderElevesTango() {
   var sai = saisonActive();
