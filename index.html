@@ -330,7 +330,6 @@
         .then(function(res) {
           if (res && res.data) {
             eleveData.inscriptionsTango = res.data;
-            var hasForfait = res.data.some(function(i){ return i.type === 'forfait'; });
             var hasCarte10 = res.data.some(function(i){ return i.type === 'carte10'; });
             eleveData.hasVincennes = eleveData.hasVincennes ||
               res.data.some(function(i){ return (i.ville||'').toLowerCase() === 'vincennes'; });
@@ -338,12 +337,14 @@
               return (i.ville||'').toLowerCase() === 'vincennes' && i.paiement_sorano === true;
             });
             if (eleveData.carte) {
-              if (hasForfait && !hasCarte10) {
-                eleveData.carte.type = 'forfait';
-              } else if (hasCarte10) {
-                eleveData.carte.type = 'carte10';
-              }
+              // Si au moins une inscription carte10 existe → carte10, sinon forfait
+              eleveData.carte.type = hasCarte10 ? 'carte10' : 'forfait';
             }
+          } else if (eleveData.carte && !eleveData.carte.type) {
+            // Pas de données inscriptions — déduire depuis eleves
+            var c = eleveData.carte;
+            var actif = Number(c.coursUtilises) > 0 || c.statut === 'Active' || c.statut === 'Nouvelle carte';
+            eleveData.carte.type = actif ? 'carte10' : 'forfait';
           }
           renderDashboard();
           renderAccueil();
@@ -352,6 +353,11 @@
           _initAdminSync();
           if (currentTab === 'sorano') renderSorano();
         }).catch(function(){
+          if (eleveData && eleveData.carte && !eleveData.carte.type) {
+            var c = eleveData.carte;
+            var actif = Number(c.coursUtilises) > 0 || c.statut === 'Active' || c.statut === 'Nouvelle carte';
+            eleveData.carte.type = actif ? 'carte10' : 'forfait';
+          }
           renderDashboard();
           renderAccueil();
           renderNavOverlay();
@@ -1355,7 +1361,7 @@
     h += '<div style="padding:0 16px 28px;">';
 
     // ── Carte de 10 cours (mini jauge SVG) ────────────────────
-    if (carte && carte.type !== 'forfait' && (carte.coursUtilises != null || carte.coursRestants != null)) {
+    if (carte && carte.type === 'carte10' && (carte.coursUtilises != null || carte.coursRestants != null)) {
       const used      = Number(carte.coursUtilises) || 0;
       const remaining = Number(carte.coursRestants)  || 0;
       const pct       = Math.min(100, (used / 10) * 100);
