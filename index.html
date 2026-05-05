@@ -328,26 +328,32 @@
         .eq('email', _stEmail)
         .neq('statut', 'supprimé')
         .then(function(res) {
-          if (!res || !res.data) return;
-          eleveData.inscriptionsTango = res.data;
-          var hasForfait = res.data.some(function(i){ return i.type === 'forfait'; });
-          var hasCarte10 = res.data.some(function(i){ return i.type === 'carte10'; });
-          eleveData.hasVincennes = eleveData.hasVincennes ||
-            res.data.some(function(i){ return (i.ville||'').toLowerCase() === 'vincennes'; });
-          eleveData.soranoPayé = res.data.some(function(i){
-            return (i.ville||'').toLowerCase() === 'vincennes' && i.paiement_sorano === true;
-          });
-          if (hasForfait && !hasCarte10 && eleveData.carte) {
-            eleveData.carte.type = 'forfait';
+          if (res && res.data) {
+            eleveData.inscriptionsTango = res.data;
+            var hasForfait = res.data.some(function(i){ return i.type === 'forfait'; });
+            var hasCarte10 = res.data.some(function(i){ return i.type === 'carte10'; });
+            eleveData.hasVincennes = eleveData.hasVincennes ||
+              res.data.some(function(i){ return (i.ville||'').toLowerCase() === 'vincennes'; });
+            eleveData.soranoPayé = res.data.some(function(i){
+              return (i.ville||'').toLowerCase() === 'vincennes' && i.paiement_sorano === true;
+            });
+            if (hasForfait && !hasCarte10 && eleveData.carte) {
+              eleveData.carte.type = 'forfait';
+            }
           }
           renderDashboard();
           renderAccueil();
           renderNavOverlay();
+          showScreen('screen-dashboard');
+          _initAdminSync();
           if (currentTab === 'sorano') renderSorano();
-        }).catch(function(){});
-      renderDashboard();
-      showScreen('screen-dashboard');
-      _initAdminSync();
+        }).catch(function(){
+          renderDashboard();
+          renderAccueil();
+          renderNavOverlay();
+          showScreen('screen-dashboard');
+          _initAdminSync();
+        });
     } catch(e) {
       $('notfound-icon').textContent = '📡';
       $('notfound-title').textContent = 'Connexion impossible';
