@@ -5598,7 +5598,7 @@ function renderRepertoire() {
               +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
               +btnEmail(e.email,e.prenom+' '+e.nom)
               +(tel?'<a href="tel:'+tel.replace(/\s/g,'')+'" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;text-decoration:none;" title="Appeler">📞</a>':'')
-              +'<a href="javascript:void(0)" onclick="repSupprimer(\''+e.id+'\',true)" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;color:#ff6b6b;" title="Supprimer">🗑</a>'
+              +'<a href="javascript:void(0)" onclick="repSupprimerDefinitif(\''+e.id+'\')" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;color:#ff6b6b;" title="Supprimer définitivement">🗑</a>'
               +'</div></div>';
           });
           h += '</div>';
@@ -5616,6 +5616,19 @@ window.repSupprimer = function(id, isTango) {
   if (!confirm('Supprimer '+nom+' du répertoire ?')) return;
   if (isTango) confirmerSupprimerEleve(id);
   else confirmerSupprimerEleveYoga(id);
+};
+window.repSupprimerDefinitif = function(id) {
+  var e = (adminData.coursTango||[]).find(function(x){ return String(x.id)===String(id); });
+  var nom = e ? (e.prenom+' '+e.nom) : 'cet élève';
+  if (!confirm('Supprimer définitivement '+nom+' ? Cette action est irréversible.')) return;
+  adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return String(x.id)!==String(id); });
+  afficherToast('🗑 '+nom+' supprimé·e définitivement');
+  renderTab();
+  if (!IS_DEMO) {
+    Promise.resolve(TEV.client.from('inscriptions_cours').delete().eq('id', id))
+      .then(function(){ chargerDonnees(); })
+      .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
+  }
 };
 
 function renderElevesTango() {
