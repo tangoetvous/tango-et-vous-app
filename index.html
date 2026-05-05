@@ -324,7 +324,7 @@
       eleveData.hasVincennes = ((data.eleve&&data.eleve.ville)||'').toLowerCase() === 'vincennes';
       // Inscriptions tango — détecter forfait/Vincennes (async, affine les valeurs ci-dessus)
       TEV.client.from('inscriptions_cours')
-        .select('type, ville, statut, saison')
+        .select('type, ville, statut, saison, paiement_sorano')
         .eq('email', _stEmail)
         .neq('statut', 'supprimé')
         .then(function(res) {
@@ -334,12 +334,16 @@
           var hasCarte10 = res.data.some(function(i){ return i.type === 'carte10'; });
           eleveData.hasVincennes = eleveData.hasVincennes ||
             res.data.some(function(i){ return (i.ville||'').toLowerCase() === 'vincennes'; });
+          eleveData.soranoPayé = res.data.some(function(i){
+            return (i.ville||'').toLowerCase() === 'vincennes' && i.paiement_sorano === true;
+          });
           if (hasForfait && !hasCarte10 && eleveData.carte) {
             eleveData.carte.type = 'forfait';
           }
           renderDashboard();
           renderAccueil();
           renderNavOverlay();
+          if (currentTab === 'sorano') renderSorano();
         }).catch(function(){});
       renderDashboard();
       showScreen('screen-dashboard');
@@ -1164,15 +1168,22 @@
       } catch(e) { return DEFAUT; }
     }
     function _renderContent(t) {
-      return '<div class="tab-section-title">🏛 Adhésion Espace Sorano</div>'
+      var paye = !!(eleveData && eleveData.soranoPayé);
+      return '<div class="tab-section-title" style="color:#fff;">🏛️ Adhésion Espace Sorano</div>'
         + '<div style="padding:0 2px;">'
-        + '<div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:18px;">'
+        + (paye
+          ? '<div style="background:rgba(45,212,191,0.12);border:1.5px solid rgba(45,212,191,0.4);border-radius:12px;padding:16px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">'
+            + '<span style="font-size:24px;">✅</span>'
+            + '<div><div style="font-size:14px;font-weight:700;color:#2dd4bf;margin-bottom:2px;">Adhésion réglée</div>'
+            + '<div style="font-size:12px;color:rgba(255,255,255,0.7);">Votre adhésion à l\'Espace Sorano est bien enregistrée pour la saison ' + _sai + '.</div></div></div>'
+          : '')
+        + '<div style="font-size:13px;color:#fff;line-height:1.6;margin-bottom:18px;">'
         + 'Toutes les activités au sein de l\'Espace Sorano (cours de tango à Vincennes, yoga…) '
         + 'sont soumises à cette adhésion annuelle à régler directement à Sorano.'
         + '</div>'
         + '<div style="background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.25);border-left:3px solid #2dd4bf;border-radius:10px;padding:14px 16px;margin-bottom:20px;">'
         + '<div style="font-size:12px;font-weight:700;color:#2dd4bf;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ce que donne votre adhésion</div>'
-        + '<div style="font-size:13px;color:var(--text);line-height:1.65;">'
+        + '<div style="font-size:13px;color:#fff;line-height:1.65;">'
         + 'L\'adhésion vous permet d\'être membre actif de l\'association Espace Daniel-Sorano, '
         + 'de participer à l\'Assemblée Générale annuelle, de suivre les différentes activités, '
         + 'de bénéficier de réductions sur tous les spectacles proposés au Théâtre Sorano '
@@ -1187,18 +1198,19 @@
             ['Non résident·e — 16 ans et plus',        t.p16_ext]
           ].map(function(row, i) {
             return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;'
-              + (i > 0 ? 'border-top:1px solid rgba(255,255,255,0.06);' : '') + '">'
-              + '<span style="font-size:13px;color:var(--text);">' + row[0] + '</span>'
-              + '<span style="font-size:16px;font-weight:700;color:var(--gold);">' + row[1] + ' €</span>'
+              + (i > 0 ? 'border-top:1px solid rgba(255,255,255,0.06);' : '') + '">'  
+              + '<span style="font-size:13px;color:#fff;">' + row[0] + '</span>'
+              + '<span style="font-size:16px;font-weight:700;color:var(--gold);">' + row[1] + ' €</span>'
               + '</div>';
           }).join('')
         + '</div>'
-        + '<a href="https://urls.fr/i3KQ7b" target="_blank" style="display:block;text-align:center;background:#2dd4bf;color:#0a2a28;border:none;border-radius:10px;padding:13px 24px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;text-decoration:none;margin-bottom:6px;">💳 Payer mon adhésion Sorano</a>'
-        + '<div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px;">À régler directement à Sorano — indépendant de votre inscription Tango & Vous</div>'
+        + (!paye
+          ? '<a href="https://urls.fr/i3KQ7b" target="_blank" style="display:block;text-align:center;background:#2dd4bf;color:#0a2a28;border:none;border-radius:10px;padding:13px 24px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;text-decoration:none;margin-bottom:6px;">💳 Régler mon adhésion Sorano</a>'
+            + '<div style="font-size:11px;color:rgba(255,255,255,0.5);text-align:center;margin-top:6px;">À régler directement à Sorano — indépendant de votre inscription Tango & Vous</div>'
+          : '')
         + '</div>';
     }
     pane.innerHTML = _renderContent(_sorTarifs());
-    // Rafraîchir les tarifs depuis Supabase
     TEV.client.from('parametres').select('valeur').eq('cle', 'tev_params_adhesions_'+_sai).single()
       .then(function(res) {
         if (res && res.data && res.data.valeur && res.data.valeur.sorano) {
@@ -1415,12 +1427,17 @@
 
     // ── Rappel adhésion Sorano (Vincennes uniquement) ─────────────
     if (eleveData.hasVincennes) {
-      h += '<div style="margin-bottom:20px;background:rgba(45,212,191,0.07);border:1px solid rgba(45,212,191,0.25);border-left:3px solid #2dd4bf;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+      var _sorPayé = !!(eleveData.soranoPayé);
+      h += '<div style="margin-bottom:20px;background:rgba(45,212,191,0.07);border:1px solid '
+        + (_sorPayé ? 'rgba(45,212,191,0.4)' : 'rgba(45,212,191,0.25)')
+        + ';border-left:3px solid #2dd4bf;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">'
         + '<div>'
         + '<div style="font-size:12px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">🏛 Adhésion Sorano</div>'
-        + '<div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.4;">Obligatoire pour les cours à Vincennes.</div>'
+        + (_sorPayé
+          ? '<div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.4;">✅ Réglée pour cette saison.</div>'
+          : '<div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.4;">Obligatoire pour les cours à Vincennes.</div>')
         + '</div>'
-        + '<button onclick="switchTab(\'sorano\')" style="flex-shrink:0;background:#2dd4bf;color:#0a2a28;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Voir →</button>'
+        + (!_sorPayé ? '<button onclick="switchTab(\'sorano\')" style="flex-shrink:0;background:#2dd4bf;color:#0a2a28;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Régler →</button>' : '')
         + '</div>';
     }
 
@@ -1439,7 +1456,9 @@
     // ── Prochains rendez-vous ──────────────────────────────────
     const coursArr = (ville === 'vincennes') ? COURS_VINCENNES : COURS_PARIS;
     const prochainCours = coursArr.find(d => d >= todayStr) || null;
-    const prochainStage = STAGES_DATA.find(s => s.date >= todayStr) || null;
+    const _saiEndYear = parseInt((function(){ var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); })().split('-')[1]);
+    const _saiEndLimit = _saiEndYear + '-09-01';
+    const prochainStage = STAGES_DATA.find(s => s.date >= todayStr && s.date < _saiEndLimit) || null;
     // Prochaine milonga : objet avec nom + horaire si MILONGAS_OBJ dispo, sinon date brute
     const _nextMilEvt = MILONGAS_OBJ
       ? MILONGAS_OBJ.flatMap(m => (m.dates||[]).map(d => ({
@@ -2993,6 +3012,8 @@
     }
     // Ignorer le cache plan (géocodage), la file de notifications admin et la synchro inscrits stages pour ne pas boucler
     if (e.key.startsWith('tev_') && !e.key.startsWith('tev_plan_') && !e.key.startsWith('tev_nonpayee_') && !e.key.startsWith('tev_demo_msgs_') && e.key !== 'tev_demo_discussions' && e.key !== 'tev_pending_inscriptions' && e.key !== 'tev_stages_inscrits') {
+      var _iframeTabs = ['preinscription', 'stages', 'cours-particuliers', 'yoga'];
+      if (_iframeTabs.indexOf(currentTab) >= 0) return;
       location.reload();
     }
   });
