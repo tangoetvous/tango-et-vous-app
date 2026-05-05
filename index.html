@@ -1540,12 +1540,11 @@
       const _sDbId = _stInscr && _stInscr._dbId ? String(_stInscr._dbId) : '';
       const _sIsAtt = _stInscr && _stInscr.type_confirmation === 'attente';
       const _sEmailSafe = (emailEleve||'').replace(/'/g,"\\'");
-      h += '<div style="background:' + (_sIsAtt ? 'rgba(224,123,0,0.08)' : 'rgba(181,123,238,0.07)') + ';border:1px solid ' + (_sIsAtt ? 'rgba(224,123,0,0.3)' : 'rgba(181,123,238,0.2)') + ';border-left:3px solid ' + (_sIsAtt ? '#e07b00' : '#b57bee') + ';border-radius:8px;padding:9px 12px;">'
+      h += '<div style="background:rgba(181,123,238,0.07);border:1px solid rgba(181,123,238,0.2);border-left:3px solid #b57bee;border-radius:8px;padding:9px 12px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-        + '<span style="font-size:10px;font-weight:700;color:' + (_sIsAtt ? '#e07b00' : '#b57bee') + ';text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">' + (_sIsAtt ? '\u23f3 LISTE D\'ATTENTE' : 'PROCHAIN STAGE') + '</span>'
+        + '<span style="font-size:10px;font-weight:700;color:#b57bee;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">PROCHAIN STAGE</span>'
         + '<span style="font-size:13px;font-weight:600;color:#fff;text-align:right;">' + stageLbl + ' \u00b7 ' + _psH + '</span>'
         + '</div>'
-        + (_sIsAtt ? '<div style="font-size:12px;color:#e07b00;margin-top:4px;">Votre inscription est en attente de confirmation.</div>' : '')
         + (thème ? '<div style="font-size:12px;color:#fff;margin-top:3px;">' + thème + '</div>' : '')
         + '<div style="margin-top:8px;display:flex;align-items:center;justify-content:flex-end;gap:8px;">'
         + (_stInscr
@@ -1620,11 +1619,15 @@
         const _sDebut = _sdSlots.length ? _sdSlots[0].d : '';
         const _sFin = _sdSlots.length ? _sdSlots[_sdSlots.length-1].f : '';
         const _sHoraire = (_sDebut + '\u2013' + _sFin).toUpperCase();
-        h += '<div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.25);border-left:3px solid var(--gold);border-radius:8px;padding:9px 12px;margin-bottom:6px;">'
+        const _sIsAttSd = s.type_confirmation === 'attente';
+        h += '<div style="background:' + (_sIsAttSd ? 'rgba(224,123,0,0.08)' : 'rgba(212,175,55,0.07)') + ';border:1px solid ' + (_sIsAttSd ? 'rgba(224,123,0,0.3)' : 'rgba(212,175,55,0.25)') + ';border-left:3px solid ' + (_sIsAttSd ? '#e07b00' : 'var(--gold)') + ';border-radius:8px;padding:9px 12px;margin-bottom:6px;">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
           + '<span style="font-size:13px;font-weight:600;color:#fff;">' + lbl + ' \u00b7 ' + _sHoraire + '</span>'
-          + '<span style="font-size:11px;font-weight:700;color:var(--gold);background:rgba(212,175,55,0.15);border-radius:20px;padding:2px 9px;white-space:nowrap;">' + _ctdwn + '</span>'
+          + (_sIsAttSd
+              ? '<span style="font-size:11px;font-weight:700;color:#e07b00;background:rgba(224,123,0,0.15);border-radius:20px;padding:2px 9px;white-space:nowrap;">\u23f3 Attente</span>'
+              : '<span style="font-size:11px;font-weight:700;color:var(--gold);background:rgba(212,175,55,0.15);border-radius:20px;padding:2px 9px;white-space:nowrap;">' + _ctdwn + '</span>')
           + '</div>'
+          + (_sIsAttSd ? '<div style="font-size:12px;color:#e07b00;margin-top:4px;">Votre inscription est en attente de confirmation.</div>' : '')
           + (_theme ? '<div style="font-size:12px;color:#fff;margin-top:3px;">' + _theme + '</div>' : '')
           + '</div>';
       });
