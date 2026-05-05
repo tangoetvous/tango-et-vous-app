@@ -17,7 +17,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 
 ## Structure Supabase (tables principales)
 - **`eleves`** : profils élèves (nom, prenom, email, tel, role, statut_eleve, notes, saison...)
-- **`inscriptions_cours`** : inscriptions tango (email, prenom, nom, tel, role, ville, niveau, cours, type, paiement, montant, statut, partenaire, email_partenaire, saison, donnees)
+- **`inscriptions_cours`** : inscriptions tango (email, prenom, nom, tel, role, ville, niveau, cours, type, paiement, montant, statut, partenaire, email_partenaire, saison, donnees, **paiement_sorano**)
   - `ville` : `'paris'` ou `'vincennes'`
   - `niveau` : `'debutant'` ou `'intermediaire'`
   - `role` : `'guideur'`, `'guidee'`, `'double'`
@@ -25,10 +25,13 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
   - `paiement` : `'cb1x'`, `'cb3x'`, `'especes'`, `'cheque'`, `'virement1x'`, `'virement3x'`
   - `statut` : `'inscrit'`, `'supprimé'`, `'valide'`, `'attente'`, `'demande'`, `'attente_paiement'`
   - `cours` : format `'paris—debutant'` (stockée en DB, calculée depuis ville+niveau lors de l'insert)
+  - `paiement_sorano` : `BOOLEAN DEFAULT false` — règlement adhésion Sorano (Vincennes uniquement)
   - ⚠️ Dans `tev-supabase.js`, `role` est prioritairement lu depuis `inscriptions_cours`, avec fallback sur `eleves.role`
-- **`cours_yoga`** : inscriptions yoga (email, prenom, nom, cours, paiement, montant, statut, saison) — ⚠️ PAS de colonne `tel`
+- **`cours_yoga`** : inscriptions yoga (email, prenom, nom, cours, paiement, montant, statut, saison, **paiement_sorano**) — ⚠️ PAS de colonne `tel`
   - `cours` : `'hatha'`, `'yin'`, `'forfait'` (forfait = hatha + yin)
+  - `paiement_sorano` : `BOOLEAN DEFAULT false` — même champ que tango pour les élèves faisant les deux
   - RLS activé avec policies `allow_select/insert/update/delete` (USING true)
+  - SQL à exécuter si colonnes absentes : `ALTER TABLE inscriptions_cours ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false; ALTER TABLE cours_yoga ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false;`
 - **`inscriptions_stages`** : inscriptions aux stages — ⚠️ colonne `telephone` (pas `tel`)
 - **`inscriptions_essai`** : cours d'essai tango — colonne `tel`
 - **`inscriptions_essai_yoga`** : cours d'essai yoga — table séparée. Colonnes : `prenom, nom, email, tel, date_essai, cours, gratuit, statut, presence_confirmee`. `statut` toujours `'demande'` à l'inscription (admin valide manuellement). ⚠️ Table distincte de `inscriptions_essai` — ne pas confondre.
@@ -121,6 +124,9 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
   4. Fallback si `res.data` est vide ou si le `.catch()` se déclenche : déduire depuis `eleves` — `coursUtilises > 0` ou `statut === 'Active'/'Nouvelle carte'` → carte10, sinon → forfait.
   5. Les callbacks secondaires (absences_jour, stages) appellent `renderAccueil()` si `currentTab === 'accueil'` — ce n'est pas un problème car ils s'exécutent toujours APRÈS `showScreen` (qui lui-même suit inscriptions_cours), donc `carte.type` est déjà positionné.
 - **`renderSorano()` dans index.html — tarifs depuis Supabase** : lit `parametres` table, clé `tev_params_adhesions_<sai>`, champ `valeur.sorano` (`{ m16_vinc, m16_ext, p16_vinc, p16_ext }`). Fallback DEFAUT = `{ m16_vinc:26, m16_ext:35, p16_vinc:36, p16_ext:45 }`. ⚠️ L'admin sauvegarde ces tarifs depuis Paramètres → Adhésion Sorano → cela écrit dans le localStorage admin ET dans Supabase (table `parametres`). Si la clé Supabase est absente (admin n'a jamais sauvegardé sur cet appareil), l'espace élève affiche les valeurs par défaut.
+- **Sorano admin — `renderSorano()` (admin.html)** : construit `reg[email]=bool` depuis `adminData.coursTango` (filtre `ville==='vincennes'`) ET `adminData.coursYoga` — jamais depuis `adminData.sorano` (n'existe que dans DEMO_DATA). Logique : si `paiement_sorano===true` dans tango vincennes → `reg[email]=true`; yoga ne peut qu'écraser si `reg[email]===undefined` → tango prime pour les élèves inscrits aux deux.
+- **Sorano admin — `soranoAction()` + pattern `_pendingSoranoPayé`** : problème classique polling 15s. `chargerDonnees()` recharge `coursTango` et `coursYoga` depuis la DB toutes les 15s et écrase l'état optimiste. Solution identique à `_pendingSupprimes`/`_pendingCoursInserts` : `_pendingSoranoPayé[email]=bool` est positionné au clic et re-appliqué dans chaque `chargerDonnees()` sur `coursTango` (vincennes) et `coursYoga`. Le pending est levé seulement quand au moins un UPDATE DB réussit sans erreur (Supabase retourne `{error:null}`). Si les deux échouent (colonne inexistante), le pending reste actif indéfiniment → l'état persiste jusqu'au rechargement de page. **Ne jamais supprimer le pending sur erreur DB.**
+- **Sorano — espace élève accueil** : dans `renderAccueil()`, si `eleveData.hasVincennes===true` et `eleveData.soranoPayé===true` → afficher une ligne discrète "🏛 Adhésion Sorano réglée ✓". Si non réglé → afficher le bloc complet avec bouton "Régler →" vers l'onglet Sorano. `eleveData.soranoPayé` est calculé dans le callback `inscriptions_cours` : `res.data.some(i => ville==='vincennes' && i.paiement_sorano===true)`. `eleveData.hasVincennes` : `res.data.some(i => ville==='vincennes')`.
 
 ## Architecture temps réel — admin.html
 
@@ -261,6 +267,8 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [x] Cartes 10 — suppression carte + onglet « Cartes supprimées » — FAIT (confirmerSupprimerCarte, _fromCoursTango, carte_statut='supprimé')
 - [x] Suppression élève tango — supprime aussi la carte 10 associée — CORRIGÉ
 - [x] Section "Ma carte de 10 cours" s'affichait pour les élèves forfait dans Accueil et Carte (espace élève) — CORRIGÉ (condition `=== 'carte10'` stricte + `showScreen` uniquement dans callback inscriptions_cours + détection binaire `hasCarte10 ? 'carte10' : 'forfait'` + fallback eleves)
+- [x] Sorano admin — bouton "Marquer réglé" revertait après 15s — CORRIGÉ (pattern `_pendingSoranoPayé` anti-polling, re-appliqué dans `chargerDonnees()` sur coursTango + coursYoga, jamais supprimé sur erreur DB) + colonnes `paiement_sorano BOOLEAN DEFAULT false` à créer via SQL
+- [x] Sorano espace élève — bloc "Adhésion Sorano" disparaît et remplacé par note discrète quand réglé — FAIT (`eleveData.soranoPayé` depuis callback inscriptions_cours)
 - [ ] Tester modification cours/paiement/montant → persiste après refresh
 - [ ] Installer l'appli sur Mac (PWA déjà prête) : ouvrir admin dans Chrome → icône ⊕ dans la barre d'adresse → Installer
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
