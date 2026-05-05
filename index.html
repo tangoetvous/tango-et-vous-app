@@ -1212,14 +1212,12 @@
         + '</div>';
     }
     pane.innerHTML = _renderContent(_sorTarifsCache());
-    TEV.client.from('parametres').select('valeur').eq('cle', 'tev_params_adhesions_'+_sai).single()
-      .then(function(res) {
-        if (res && res.data && res.data.valeur && res.data.valeur.sorano) {
-          var t = res.data.valeur.sorano;
-          try { localStorage.setItem('tev_params_adhesions_'+_sai, JSON.stringify(res.data.valeur)); } catch(e) {}
-          pane.innerHTML = _renderContent(t);
-        }
-      }).catch(function(){});
+    TEV.getParam('tev_params_adhesions_'+_sai).then(function(valeur) {
+      if (valeur && valeur.sorano) {
+        try { localStorage.setItem('tev_params_adhesions_'+_sai, JSON.stringify(valeur)); } catch(e) {}
+        pane.innerHTML = _renderContent(valeur.sorano);
+      }
+    }).catch(function(){});
   }
 
   function renderAvis() {

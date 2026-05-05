@@ -2549,7 +2549,18 @@ function renderParametres() {
   if (!saisonParametres) saisonParametres = saisonCourante();
   var sai = saisonParametres;
   // Sync silencieux : pousser les données locales vers Supabase à chaque ouverture
-  if (!IS_DEMO) { sauverStagesLocal(sai); saveResaSalles(loadResaSalles()); }
+  if (!IS_DEMO) {
+    sauverStagesLocal(sai);
+    saveResaSalles(loadResaSalles());
+    // Sync adhésion Sorano : ancienne clé localStorage → nouveau format Supabase
+    (function(){
+      var sor = _loadParam('adhesions', sai, 'sorano');
+      if (!sor || sor.p16_vinc === undefined) {
+        try { sor = JSON.parse(localStorage.getItem('tev_adhesion_sorano')||'null'); } catch(e){ sor = null; }
+      }
+      if (sor && sor.p16_vinc !== undefined) _saveParam('adhesions', sai, 'sorano', sor);
+    })();
+  }
   var sc  = saisonCourante();
   var saisons = [saisonPrecedente(), sc, saisonSuivante()];
   var saiLabels = {};
