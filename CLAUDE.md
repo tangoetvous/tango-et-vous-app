@@ -253,6 +253,9 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 ## À faire / en suspens
 - [ ] **Tester déclaration d'absence depuis espace élève** : bouton 🚫 Absent sur la carte "PROCHAIN COURS" → vérifier que l'absence apparaît bien dans admin → Essai Tango → Pointage sur la bonne date et le bon cours
 - [ ] Vérifier correction Sandrine Billot (hatha uniquement) / Myriam Bloch (hatha+yin) dans Supabase — SQL généré mais pas confirmé exécuté
+- [ ] **Activer sauvegardes Supabase** : Dashboard Supabase → Settings → Database → Backups → activer (7 jours rétention sur plan gratuit)
+- [ ] **Configurer email backup CSV** : GitHub → Settings → Secrets → Actions → ajouter `SMTP_USERNAME` (Gmail), `SMTP_PASSWORD` (mot de passe application Gmail — myaccount.google.com/apppasswords), `BACKUP_EMAIL` (destinataire). Le workflow `backup-csv.yml` tourne déjà chaque soir à 23h et stocke les CSV dans le repo + artifacts GitHub.
+- [ ] **Exécuter SQL colonnes paiement_sorano** dans Supabase SQL Editor (sinon le marquage Sorano ne persiste pas après rechargement de page) : `ALTER TABLE inscriptions_cours ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false; ALTER TABLE cours_yoga ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false;`
 - [x] Tester suppression élève tango → persiste après refresh — CORRIGÉ (approche `_pendingSupprimes`)
 - [x] Transfert essai → inscriptions tango (boutons Validé·e / Demande en att. / Inscrit·e) — CORRIGÉ (saison `saisonActive()`, INSERT au lieu de `upsert`, `_pendingCoursInserts`, partenaire sans email)
 - [x] Pointage Essai Tango : scroll to top toutes les 15s — CORRIGÉ (garde `_renderTabSiPasFormulaire` + `requestAnimationFrame`)
