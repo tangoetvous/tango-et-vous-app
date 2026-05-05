@@ -1333,6 +1333,18 @@
         + '<div class="forfait-badge" style="margin:0;">✅ Forfait annuel actif</div></div></div>';
     }
 
+    // ── Bannière réinscription (visible du 1er mai au 31 août) ────
+    (function() {
+      var _nowM = new Date().getMonth(); // 0=jan … 4=mai … 7=août
+      if (_nowM >= 4 && _nowM <= 7) {
+        h += '<div style="margin-bottom:20px;background:linear-gradient(135deg,rgba(212,175,55,0.12) 0%,rgba(212,175,55,0.05) 100%);border:1.5px solid rgba(212,175,55,0.4);border-radius:14px;padding:18px 18px 16px;text-align:center;">'
+          + '<div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">🎉 Pré-inscriptions 2026-2027 ouvertes !</div>'
+          + '<div style="font-size:13px;color:rgba(255,255,255,0.85);line-height:1.55;margin-bottom:14px;">Réservez votre place pour la prochaine saison dès maintenant — les places sont limitées.</div>'
+          + '<button onclick="switchTab(\'preinscription\')" style="background:var(--gold);color:#1a1a1a;border:none;border-radius:10px;padding:11px 24px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;font-family:inherit;">Se pré-inscrire →</button>'
+          + '</div>';
+      }
+    })();
+
     // ── Prochains rendez-vous ──────────────────────────────────
     const coursArr = (ville === 'vincennes') ? COURS_VINCENNES : COURS_PARIS;
     const prochainCours = coursArr.find(d => d >= todayStr) || null;
@@ -1491,18 +1503,6 @@
 
     // ── Milongas confirmées (rendu par _renderAccMilList) ───────────
     h += '<div id="acc-mil-list"></div>';
-
-    // ── Bannière réinscription (visible du 1er mai au 31 août) ────
-    (function() {
-      var _nowM = new Date().getMonth(); // 0=jan … 4=mai … 7=août
-      if (_nowM >= 4 && _nowM <= 7) {
-        h += '<div style="margin-top:24px;background:linear-gradient(135deg,rgba(212,175,55,0.12) 0%,rgba(212,175,55,0.05) 100%);border:1.5px solid rgba(212,175,55,0.4);border-radius:14px;padding:18px 18px 16px;text-align:center;">'
-          + '<div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">🎉 Pré-inscriptions 2026-2027 ouvertes !</div>'
-          + '<div style="font-size:13px;color:rgba(255,255,255,0.85);line-height:1.55;margin-bottom:14px;">Réservez votre place pour la prochaine saison dès maintenant — les places sont limitées.</div>'
-          + '<button onclick="switchTab(\'preinscription\')" style="background:var(--gold);color:#1a1a1a;border:none;border-radius:10px;padding:11px 24px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;font-family:inherit;">Se pré-inscrire →</button>'
-          + '</div>';
-      }
-    })();
 
     h += '</div>'; // padding
     pane.innerHTML = h;
