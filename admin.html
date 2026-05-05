@@ -2549,18 +2549,7 @@ function renderParametres() {
   if (!saisonParametres) saisonParametres = saisonCourante();
   var sai = saisonParametres;
   // Sync silencieux : pousser les données locales vers Supabase à chaque ouverture
-  if (!IS_DEMO) {
-    sauverStagesLocal(sai);
-    saveResaSalles(loadResaSalles());
-    // Sync adhésion Sorano : ancienne clé localStorage → nouveau format Supabase
-    (function(){
-      var sor = _loadParam('adhesions', sai, 'sorano');
-      if (!sor || sor.p16_vinc === undefined) {
-        try { sor = JSON.parse(localStorage.getItem('tev_adhesion_sorano')||'null'); } catch(e){ sor = null; }
-      }
-      if (sor && sor.p16_vinc !== undefined) _saveParam('adhesions', sai, 'sorano', sor);
-    })();
-  }
+  if (!IS_DEMO) { sauverStagesLocal(sai); saveResaSalles(loadResaSalles()); }
   var sc  = saisonCourante();
   var saisons = [saisonPrecedente(), sc, saisonSuivante()];
   var saiLabels = {};
@@ -9917,15 +9906,6 @@ async function chargerParamsRemote() {
       chargerMilongas();
       if (_adminDataReady) _renderTabSiPasFormulaire(); // ne pas rendre avant que les vraies données soient chargées
     }
-    // Sync silencieux : pousser l'adhésion Sorano depuis localStorage vers Supabase
-    (function(){
-      var sai = saisonCourante();
-      var sor = _loadParam('adhesions', sai, 'sorano');
-      if (!sor || sor.p16_vinc === undefined) {
-        try { sor = JSON.parse(localStorage.getItem('tev_adhesion_sorano')||'null'); } catch(e){ sor = null; }
-      }
-      if (sor && sor.p16_vinc !== undefined) _saveParam('adhesions', sai, 'sorano', sor);
-    })();
   } catch(e) {}
 }
 function renderResaSalles() {

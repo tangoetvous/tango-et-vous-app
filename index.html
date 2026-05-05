@@ -322,40 +322,32 @@
       } catch(e) {}
       // Initialisation immédiate depuis eleve.ville (avant la réponse async)
       eleveData.hasVincennes = ((data.eleve&&data.eleve.ville)||'').toLowerCase() === 'vincennes';
-      // Inscriptions tango — détecter forfait/Vincennes AVANT le premier render
-      // (évite le flash « Ma carte de 10 cours » pour les élèves forfait)
+      // Inscriptions tango — détecter forfait/Vincennes (async, affine les valeurs ci-dessus)
       TEV.client.from('inscriptions_cours')
         .select('type, ville, statut, saison, paiement_sorano')
         .eq('email', _stEmail)
         .neq('statut', 'supprimé')
         .then(function(res) {
-          if (res && res.data) {
-            eleveData.inscriptionsTango = res.data;
-            var hasForfait = res.data.some(function(i){ return i.type === 'forfait'; });
-            var hasCarte10 = res.data.some(function(i){ return i.type === 'carte10'; });
-            eleveData.hasVincennes = eleveData.hasVincennes ||
-              res.data.some(function(i){ return (i.ville||'').toLowerCase() === 'vincennes'; });
-            eleveData.soranoPayé = res.data.some(function(i){
-              return (i.ville||'').toLowerCase() === 'vincennes' && i.paiement_sorano === true;
-            });
-            if (hasForfait && !hasCarte10 && eleveData.carte) {
-              eleveData.carte.type = 'forfait';
-            }
+          if (!res || !res.data) return;
+          eleveData.inscriptionsTango = res.data;
+          var hasForfait = res.data.some(function(i){ return i.type === 'forfait'; });
+          var hasCarte10 = res.data.some(function(i){ return i.type === 'carte10'; });
+          eleveData.hasVincennes = eleveData.hasVincennes ||
+            res.data.some(function(i){ return (i.ville||'').toLowerCase() === 'vincennes'; });
+          eleveData.soranoPayé = res.data.some(function(i){
+            return (i.ville||'').toLowerCase() === 'vincennes' && i.paiement_sorano === true;
+          });
+          if (hasForfait && !hasCarte10 && eleveData.carte) {
+            eleveData.carte.type = 'forfait';
           }
           renderDashboard();
           renderAccueil();
           renderNavOverlay();
-          showScreen('screen-dashboard');
-          _initAdminSync();
           if (currentTab === 'sorano') renderSorano();
-        }).catch(function(){
-          // En cas d'erreur réseau : render quand même (carte10 par défaut)
-          renderDashboard();
-          renderAccueil();
-          renderNavOverlay();
-          showScreen('screen-dashboard');
-          _initAdminSync();
-        });
+        }).catch(function(){});
+      renderDashboard();
+      showScreen('screen-dashboard');
+      _initAdminSync();
     } catch(e) {
       $('notfound-icon').textContent = '📡';
       $('notfound-title').textContent = 'Connexion impossible';
@@ -1168,11 +1160,12 @@
     const pane = $('sorano-pane');
     if (!pane) return;
     const _sai = (function(){ var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); })();
-    function _sorTarifsCache() {
+    const DEFAUT = { m16_vinc:26, m16_ext:35, p16_vinc:36, p16_ext:45 };
+    function _sorTarifs() {
       try {
         var raw = JSON.parse(localStorage.getItem('tev_params_adhesions_'+_sai)||'{}');
-        return (raw.sorano && raw.sorano.p16_vinc != null) ? raw.sorano : null;
-      } catch(e) { return null; }
+        return Object.assign({}, DEFAUT, raw.sorano||{});
+      } catch(e) { return DEFAUT; }
     }
     function _renderContent(t) {
       var paye = !!(eleveData && eleveData.soranoPayé);
@@ -1196,36 +1189,36 @@
         + 'de bénéficier de réductions sur tous les spectacles proposés au Théâtre Sorano '
         + 'ainsi que sur ceux programmés par les services culturels de la Ville de Vincennes.'
         + '</div></div>'
-        + (t
-          ? '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px;">Tarifs ' + _sai + '</div>'
-            + '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;margin-bottom:20px;">'
-            + [
-                ['Résident·e Vincennes — moins de 16 ans', t.m16_vinc],
-                ['Non résident·e — moins de 16 ans',       t.m16_ext],
-                ['Résident·e Vincennes — 16 ans et plus',  t.p16_vinc],
-                ['Non résident·e — 16 ans et plus',        t.p16_ext]
-              ].map(function(row, i) {
-                return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;'
-                  + (i > 0 ? 'border-top:1px solid rgba(255,255,255,0.06);' : '') + '">'  
-                  + '<span style="font-size:13px;color:#fff;">' + row[0] + '</span>'
-                  + '<span style="font-size:16px;font-weight:700;color:var(--gold);">' + row[1] + ' €</span>'
-                  + '</div>';
-              }).join('')
-            + '</div>'
-          : '')
+        + '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px;">Tarifs ' + _sai + '</div>'
+        + '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;margin-bottom:20px;">'
+        + [
+            ['Résident·e Vincennes — moins de 16 ans', t.m16_vinc],
+            ['Non résident·e — moins de 16 ans',       t.m16_ext],
+            ['Résident·e Vincennes — 16 ans et plus',  t.p16_vinc],
+            ['Non résident·e — 16 ans et plus',        t.p16_ext]
+          ].map(function(row, i) {
+            return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;'
+              + (i > 0 ? 'border-top:1px solid rgba(255,255,255,0.06);' : '') + '">'  
+              + '<span style="font-size:13px;color:#fff;">' + row[0] + '</span>'
+              + '<span style="font-size:16px;font-weight:700;color:var(--gold);">' + row[1] + ' €</span>'
+              + '</div>';
+          }).join('')
+        + '</div>'
         + (!paye
           ? '<a href="https://urls.fr/i3KQ7b" target="_blank" style="display:block;text-align:center;background:#2dd4bf;color:#0a2a28;border:none;border-radius:10px;padding:13px 24px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;text-decoration:none;margin-bottom:6px;">💳 Régler mon adhésion Sorano</a>'
             + '<div style="font-size:11px;color:rgba(255,255,255,0.5);text-align:center;margin-top:6px;">À régler directement à Sorano — indépendant de votre inscription Tango & Vous</div>'
           : '')
         + '</div>';
     }
-    pane.innerHTML = _renderContent(_sorTarifsCache());
-    TEV.getParam('tev_params_adhesions_'+_sai).then(function(valeur) {
-      if (valeur && valeur.sorano) {
-        try { localStorage.setItem('tev_params_adhesions_'+_sai, JSON.stringify(valeur)); } catch(e) {}
-        pane.innerHTML = _renderContent(valeur.sorano);
-      }
-    }).catch(function(){});
+    pane.innerHTML = _renderContent(_sorTarifs());
+    TEV.client.from('parametres').select('valeur').eq('cle', 'tev_params_adhesions_'+_sai).single()
+      .then(function(res) {
+        if (res && res.data && res.data.valeur && res.data.valeur.sorano) {
+          var t = Object.assign({}, DEFAUT, res.data.valeur.sorano);
+          try { localStorage.setItem('tev_params_adhesions_'+_sai, JSON.stringify(res.data.valeur)); } catch(e) {}
+          pane.innerHTML = _renderContent(t);
+        }
+      }).catch(function(){});
   }
 
   function renderAvis() {
