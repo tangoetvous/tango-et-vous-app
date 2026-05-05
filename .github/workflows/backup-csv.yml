@@ -1,0 +1,89 @@
+name: Backup Données CSV
+
+on:
+  schedule:
+    - cron: '0 22 * * *'  # 23h heure de Paris (CET = UTC+1)
+  workflow_dispatch:       # déclenchable manuellement depuis GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/dance-school-app-RTqb5
+
+      - name: Exporter les tables Supabase en CSV
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          mkdir -p "backups/${DATE}"
+
+          SUPABASE_URL="https://qhngqzvvllktuwspojxc.supabase.co"
+          SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFobmdxenZ2bGxrdHV3c3BvanhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MjQ0NDYsImV4cCI6MjA5MjMwMDQ0Nn0.j-yMQryi3qoImIf6vyiqQ3SKzHeJoPsrJuP1YwaSyLs"
+
+          TABLES="eleves inscriptions_cours cours_yoga inscriptions_stages inscriptions_essai inscriptions_essai_yoga presences cours_particuliers parametres"
+
+          for TABLE in $TABLES; do
+            STATUS=$(curl -s -o "backups/${DATE}/${TABLE}.csv" -w "%{http_code}" \
+              -H "apikey: ${SUPABASE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_KEY}" \
+              -H "Accept: text/csv" \
+              "${SUPABASE_URL}/rest/v1/${TABLE}?select=*")
+            if [ "$STATUS" = "200" ]; then
+              LINES=$(wc -l < "backups/${DATE}/${TABLE}.csv")
+              echo "✓ ${TABLE} (${LINES} lignes)"
+            else
+              echo "⚠️ ${TABLE} — statut HTTP ${STATUS}"
+            fi
+          done
+
+          zip -j "backups/backup_${DATE}.zip" "backups/${DATE}"/*.csv
+          echo "DATE=${DATE}" >> "$GITHUB_ENV"
+          echo "✓ ZIP créé : backup_${DATE}.zip"
+
+      - name: Upload artifact (téléchargeable 90 jours depuis GitHub)
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ env.DATE }}
+          path: backups/backup_${{ env.DATE }}.zip
+          retention-days: 90
+
+      - name: Envoyer par email
+        if: ${{ secrets.SMTP_PASSWORD != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "Tango & Vous — Backup ${{ env.DATE }}"
+          to: ${{ secrets.BACKUP_EMAIL }}
+          from: "Tango & Vous <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            Backup automatique du ${{ env.DATE }}.
+
+            Tables exportées : eleves, inscriptions_cours, cours_yoga,
+            inscriptions_stages, inscriptions_essai, inscriptions_essai_yoga,
+            presences, cours_particuliers, parametres.
+
+            Le fichier ZIP est en pièce jointe.
+          attachments: backups/backup_${{ env.DATE }}.zip
+
+      - name: Supprimer les anciens backups (garder 30 jours)
+        run: |
+          cd backups
+          find . -maxdepth 1 -type d -name "20*" | sort | head -n -30 | xargs -r rm -rf
+          find . -maxdepth 1 -name "backup_*.zip" | sort | head -n -30 | xargs -r rm -f
+
+      - name: Commit des backups CSV dans le repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backups/
+          git diff --staged --quiet || git commit -m "backup: données CSV du ${{ env.DATE }} [skip ci]"
+          git push
