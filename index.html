@@ -320,6 +320,27 @@
         if (localStorage.getItem('tev_nonpayee_'+(data.eleve.email||'').toLowerCase()) === '1')
           eleveData.carte.paye = false;
       } catch(e) {}
+      // Initialisation immédiate depuis eleve.ville (avant la réponse async)
+      eleveData.hasVincennes = ((data.eleve&&data.eleve.ville)||'').toLowerCase() === 'vincennes';
+      // Inscriptions tango — détecter forfait/Vincennes (async, affine les valeurs ci-dessus)
+      TEV.client.from('inscriptions_cours')
+        .select('type, ville, statut, saison')
+        .eq('email', _stEmail)
+        .neq('statut', 'supprimé')
+        .then(function(res) {
+          if (!res || !res.data) return;
+          eleveData.inscriptionsTango = res.data;
+          var hasForfait = res.data.some(function(i){ return i.type === 'forfait'; });
+          var hasCarte10 = res.data.some(function(i){ return i.type === 'carte10'; });
+          eleveData.hasVincennes = eleveData.hasVincennes ||
+            res.data.some(function(i){ return (i.ville||'').toLowerCase() === 'vincennes'; });
+          if (hasForfait && !hasCarte10 && eleveData.carte) {
+            eleveData.carte.type = 'forfait';
+          }
+          renderDashboard();
+          renderAccueil();
+          renderNavOverlay();
+        }).catch(function(){});
       renderDashboard();
       showScreen('screen-dashboard');
       _initAdminSync();
@@ -527,7 +548,7 @@
         accueil:'Accueil', agenda:'Agenda', carte:'Carte', stages:'Stages',
         milonga:'Milonga', 'cours-particuliers':'Cours privé', 'carte-lieux':'Plan',
         actu:'Actu', contact:'Contact', yoga:'Yoga', preinscription:'Pré-inscription',
-        hypnose:'Hypnose', whatsapp:'WhatsApp', avis:'Avis'
+        hypnose:'Hypnose', whatsapp:'WhatsApp', avis:'Avis', sorano:'Sorano'
       };
       _navLbl.textContent = _TAB_LABELS[tab] || tab;
     }
@@ -565,6 +586,7 @@
     if (tab === 'whatsapp') renderWhatsapp();
     if (tab === 'avis') renderAvis();
     if (tab === 'discussions') { renderDiscussions(); _discStartListPoll(); }
+    if (tab === 'sorano') renderSorano();
     if (tab !== 'actu') _actuStopPoll();
     if (tab !== 'discussions') { _discStopPoll(); _discStopListPoll(); if (_discView === 'new') _discView = 'list'; }
     window.scrollTo(0, 0);
@@ -1037,19 +1059,20 @@
     hypnose:              {label:'Hypnose',      color:'#38bdf8', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-12.5c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 5.5c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg>'},
     contact:              {label:'Contact',      color:'#f97316', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>'},
     whatsapp:             {label:'WhatsApp',     color:'#25d366', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>'},
-    discussions:          {label:'Discussions',  color:'#e879f9', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>'}
+    discussions:          {label:'Discussions',  color:'#e879f9', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>'},
+    sorano:               {label:'Sorano',       color:'#2dd4bf', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 3L2 12h3v8h6v-5h2v5h6v-8h3L12 3zm0 12.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>'}
   };
 
   function renderNavOverlay() {
     const grid = $('nav-overlay-grid');
     if (!grid) return;
-    const hasCarte = !!(eleveData && eleveData.carte && (eleveData.carte.id || eleveData.carte.restants >= 0 || eleveData.carte.coursRestants >= 0));
     const m = new Date().getMonth() + 1;
     const isPreinscPeriod = m >= 5 && m <= 8;
+    const hasVincennesNav = !!(eleveData && eleveData.hasVincennes);
     const rows = [
       ['accueil'],
       ['carte', 'stages', 'cours-particuliers', 'milonga', ...(isPreinscPeriod ? ['preinscription'] : [])],
-      ['agenda', 'carte-lieux', 'actu'],
+      ['agenda', 'carte-lieux', 'actu', ...(hasVincennesNav ? ['sorano'] : [])],
       ['yoga', 'hypnose'],
       ['contact', 'whatsapp', 'discussions', 'avis']
     ];
@@ -1127,6 +1150,63 @@
       h += '</div></div>';
     });
     pane.innerHTML = h;
+  }
+
+  function renderSorano() {
+    const pane = $('sorano-pane');
+    if (!pane) return;
+    const _sai = (function(){ var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); })();
+    const DEFAUT = { m16_vinc:26, m16_ext:35, p16_vinc:36, p16_ext:45 };
+    function _sorTarifs() {
+      try {
+        var raw = JSON.parse(localStorage.getItem('tev_params_adhesions_'+_sai)||'{}');
+        return Object.assign({}, DEFAUT, raw.sorano||{});
+      } catch(e) { return DEFAUT; }
+    }
+    function _renderContent(t) {
+      return '<div class="tab-section-title">🏛 Adhésion Espace Sorano</div>'
+        + '<div style="padding:0 2px;">'
+        + '<div style="font-size:13px;color:var(--text-dim);line-height:1.6;margin-bottom:18px;">'
+        + 'Toutes les activités au sein de l\'Espace Sorano (cours de tango à Vincennes, yoga…) '
+        + 'sont soumises à cette adhésion annuelle à régler directement à Sorano.'
+        + '</div>'
+        + '<div style="background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.25);border-left:3px solid #2dd4bf;border-radius:10px;padding:14px 16px;margin-bottom:20px;">'
+        + '<div style="font-size:12px;font-weight:700;color:#2dd4bf;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ce que donne votre adhésion</div>'
+        + '<div style="font-size:13px;color:var(--text);line-height:1.65;">'
+        + 'L\'adhésion vous permet d\'être membre actif de l\'association Espace Daniel-Sorano, '
+        + 'de participer à l\'Assemblée Générale annuelle, de suivre les différentes activités, '
+        + 'de bénéficier de réductions sur tous les spectacles proposés au Théâtre Sorano '
+        + 'ainsi que sur ceux programmés par les services culturels de la Ville de Vincennes.'
+        + '</div></div>'
+        + '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px;">Tarifs ' + _sai + '</div>'
+        + '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;margin-bottom:20px;">'
+        + [
+            ['Résident·e Vincennes — moins de 16 ans', t.m16_vinc],
+            ['Non résident·e — moins de 16 ans',       t.m16_ext],
+            ['Résident·e Vincennes — 16 ans et plus',  t.p16_vinc],
+            ['Non résident·e — 16 ans et plus',        t.p16_ext]
+          ].map(function(row, i) {
+            return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;'
+              + (i > 0 ? 'border-top:1px solid rgba(255,255,255,0.06);' : '') + '">'
+              + '<span style="font-size:13px;color:var(--text);">' + row[0] + '</span>'
+              + '<span style="font-size:16px;font-weight:700;color:var(--gold);">' + row[1] + ' €</span>'
+              + '</div>';
+          }).join('')
+        + '</div>'
+        + '<a href="https://urls.fr/i3KQ7b" target="_blank" style="display:block;text-align:center;background:#2dd4bf;color:#0a2a28;border:none;border-radius:10px;padding:13px 24px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;text-decoration:none;margin-bottom:6px;">💳 Payer mon adhésion Sorano</a>'
+        + '<div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:6px;">À régler directement à Sorano — indépendant de votre inscription Tango & Vous</div>'
+        + '</div>';
+    }
+    pane.innerHTML = _renderContent(_sorTarifs());
+    // Rafraîchir les tarifs depuis Supabase
+    TEV.client.from('parametres').select('valeur').eq('cle', 'tev_params_adhesions_'+_sai).single()
+      .then(function(res) {
+        if (res && res.data && res.data.valeur && res.data.valeur.sorano) {
+          var t = Object.assign({}, DEFAUT, res.data.valeur.sorano);
+          try { localStorage.setItem('tev_params_adhesions_'+_sai, JSON.stringify(res.data.valeur)); } catch(e) {}
+          pane.innerHTML = _renderContent(t);
+        }
+      }).catch(function(){});
   }
 
   function renderAvis() {
@@ -1331,6 +1411,17 @@
       h += '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#fff;margin-bottom:12px;text-align:center;">🎫 Mon inscription</div>';
       h += '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px;">'
         + '<div class="forfait-badge" style="margin:0;">✅ Forfait annuel actif</div></div></div>';
+    }
+
+    // ── Rappel adhésion Sorano (Vincennes uniquement) ─────────────
+    if (eleveData.hasVincennes) {
+      h += '<div style="margin-bottom:20px;background:rgba(45,212,191,0.07);border:1px solid rgba(45,212,191,0.25);border-left:3px solid #2dd4bf;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+        + '<div>'
+        + '<div style="font-size:12px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">🏛 Adhésion Sorano</div>'
+        + '<div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.4;">Obligatoire pour les cours à Vincennes.</div>'
+        + '</div>'
+        + '<button onclick="switchTab(\'sorano\')" style="flex-shrink:0;background:#2dd4bf;color:#0a2a28;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Voir →</button>'
+        + '</div>';
     }
 
     // ── Bannière réinscription (visible du 1er mai au 31 août) ────
@@ -4180,6 +4271,7 @@ a{color:var(--gold);text-decoration:none;}
 
   <!-- ── ONGLET DISCUSSIONS ───────────────────────────────── -->
   <div class="tab-pane" id="discussions-pane"></div>
+  <div class="tab-pane" id="sorano-pane"></div>
 
   <!-- ── PUBLICATION MODAL ──────────────────────────────────── -->
   <div id="pub-modal-backdrop" class="pub-modal-backdrop"></div>
