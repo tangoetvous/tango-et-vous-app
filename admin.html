@@ -9547,6 +9547,7 @@ window.diUpdatePaieZone = function() {
     h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Paiement</label><select id="di-paie-'+ci+'">'+PAI_OPT_Z+'</select></div>';
     h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Montant (€)</label><input type="number" id="di-montant-'+ci+'" value="'+defMt+'" min="0" step="1"/></div>';
     h += '</div>';
+    h += '<div class="field" style="margin:0 0 8px;"><label style="font-size:10px;">Date du 1er paiement</label><input type="date" id="di-dateP-'+ci+'" style="font-size:13px;"/></div>';
     h += '<div style="display:flex;gap:12px;margin-bottom:4px;">';
     h += '<label '+lbl+'><input type="radio" name="di-part-'+ci+'" value="solo" checked onchange="diTogglePartCours('+ci+')" '+inp+'/> Solo</label>';
     h += '<label '+lbl+'><input type="radio" name="di-part-'+ci+'" value="avec" onchange="diTogglePartCours('+ci+')" '+inp+'/> Avec partenaire</label>';
@@ -9649,13 +9650,14 @@ window.soumettreInscriptionDirecte = function(force) {
     var paie = ((gel('di-paie-'+ci)||{}).value||'cb1x');
     var mf = gel('di-montant-'+ci);
     var montant = mf?(parseFloat(mf.value)||0):(formule==='carte10'?(TARIFS.carte10||0):(ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0);
+    var dateP = ((gel('di-dateP-'+ci)||{}).value||'');
     var paiePart = avecC?((gel('di-paie-p-'+ci)||{}).value||paie):paie;
     var mpf = avecC?gel('di-montant-p-'+ci):null;
     var montantP = mpf?(parseFloat(mpf.value)||0):(formulePart==='carte10'?(TARIFS.carte10||0):(ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0);
     var ts_c = ts+idx*2, ts_p = ts+idx*2+1;
     var existing = adminData.coursTango.find(function(e){return e.email===email&&e.cours===cours&&(e.nom||'').toLowerCase()===(nom||'').toLowerCase();});
-    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.ville=ville;existing.niveau=niveau;existing.partenaire=partNomC;existing.emailPartenaire=pEmailC;if(tel)existing.tel=tel;}
-    else{adminData.coursTango.push({id:'CT'+ts_c,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',partenaire:partNomC,emailPartenaire:pEmailC,type:formule,paiement:paie,montant:montant,dateInscription:today(),saison:sai});}
+    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.ville=ville;existing.niveau=niveau;existing.partenaire=partNomC;existing.emailPartenaire=pEmailC;if(tel)existing.tel=tel;if(dateP)existing.datePremierPaiement=dateP;}
+    else{adminData.coursTango.push({id:'CT'+ts_c,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',partenaire:partNomC,emailPartenaire:pEmailC,type:formule,paiement:paie,montant:montant,datePremierPaiement:dateP,dateInscription:today(),saison:sai});}
     if(avecC){
       var existingP=adminData.coursTango.find(function(e){return pEmailC&&e.email===pEmailC&&e.cours===cours&&(e.nom||'').toLowerCase()===(pNomC||'').toLowerCase();});
       if(existingP){existingP.statut='inscrit';existingP.type=formulePart;existingP.paiement=paiePart;existingP.montant=montantP;existingP.ville=ville;existingP.niveau=niveau;existingP.partenaire=prenom+' '+nom;existingP.emailPartenaire=email;if(pTelC)existingP.tel=pTelC;}
@@ -9663,8 +9665,8 @@ window.soumettreInscriptionDirecte = function(force) {
       if(formulePart==='carte10'&&pEmailC&&!partenairesCartes[pEmailC])
         partenairesCartes[pEmailC]={prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,ville:ville,niveau:niveau};
     }
-    insRows.push({prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,ville:ville,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,partenaire:partNomC,email_partenaire:pEmailC});
-    if(avecC&&pPrenomC&&pNomC){insRows.push({prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,role:roleP,niveau:niveau,ville:ville,cours:cours,type:formulePart,paiement:paiePart,montant:montantP,statut:'inscrit',saison:sai,partenaire:prenom+' '+nom,email_partenaire:email});}
+    insRows.push({prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,ville:ville,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,partenaire:partNomC,email_partenaire:pEmailC,donnees:dateP?{datePremierPaiement:dateP}:{}});
+    if(avecC&&pPrenomC&&pNomC){insRows.push({prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,role:roleP,niveau:niveau,ville:ville,cours:cours,type:formulePart,paiement:paiePart,montant:montantP,statut:'inscrit',saison:sai,partenaire:prenom+' '+nom,email_partenaire:email,donnees:dateP?{datePremierPaiement:dateP}:{}});}
   });
   // Cartes 10
   var cours0=coursCoches[0], ville0=cours0.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
@@ -10821,6 +10823,7 @@ function _comptaBlock(liste, titre, ctx) {
     h+='<a href="javascript:void(0)" onclick="ouvrirComptaEdit(\''+e.id+'\',\''+ctx+'\')" style="color:var(--fg);font-size:13px;text-decoration:none;border-bottom:1px dashed var(--border);">'+(e.prenom||'')+' '+(e.nom||'')+'</a>';
     if (isSup) h+='<span style="font-size:9px;color:var(--dim);margin-left:5px;">supprimé</span>';
     if (isNonPaye) h+='<span style="font-size:9px;color:#fb923c;margin-left:5px;">non payée</span>';
+    if (dt&&!isX3) h+='<span style="font-size:10px;color:var(--dim);margin-left:6px;">· '+_fmtJour(dt)+'</span>';
     h+='</div>';
     h+='<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--s3);white-space:nowrap;">'+(PAI_LBL[e.paiement]||e.paiement||'—')+'</span>';
     if (isNonPaye) {
