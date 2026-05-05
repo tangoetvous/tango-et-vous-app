@@ -5590,10 +5590,14 @@ function renderRepertoire() {
             +'<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🗑 Archivés ('+arch.length+')</div>';
           arch.forEach(function(e) {
             var tel = e.tel||'';
-            h += '<div class="point-row" style="opacity:0.45;">'
+            h += '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'">'
               +'<div style="flex:1;min-width:0;">'
-              +'<div class="point-nom" style="text-decoration:line-through;color:var(--dim);">'+e.prenom+' '+e.nom+'</div>'
-              +'<div class="point-sub">'+(e.email||'')+(tel?' · '+tel:'')+'</div>'
+              +'<div class="point-nom" style="color:#ff6b6b;">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',tel,'ct')+'</div>'
+              +'<div class="point-sub">'+(tel||'<span style="color:var(--dim);font-style:italic;">pas de tél.</span>')+'</div>'
+              +'</div>'
+              +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
+              +btnEmail(e.email,e.prenom+' '+e.nom)
+              +(tel?'<a href="tel:'+tel.replace(/\s/g,'')+'" class="btn btn-ghost" style="padding:4px 8px;font-size:13px;text-decoration:none;" title="Appeler">📞</a>':'')
               +'</div></div>';
           });
           h += '</div>';
