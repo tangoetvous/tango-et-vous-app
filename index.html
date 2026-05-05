@@ -1540,16 +1540,16 @@
       const _sDbId = _stInscr && _stInscr._dbId ? String(_stInscr._dbId) : '';
       const _sIsAtt = _stInscr && _stInscr.type_confirmation === 'attente';
       const _sEmailSafe = (emailEleve||'').replace(/'/g,"\\'");
-      h += '<div style="background:rgba(181,123,238,0.07);border:1px solid rgba(181,123,238,0.2);border-left:3px solid #b57bee;border-radius:8px;padding:9px 12px;">'
+      h += '<div style="background:' + (_sIsAtt ? 'rgba(224,123,0,0.08)' : 'rgba(181,123,238,0.07)') + ';border:1px solid ' + (_sIsAtt ? 'rgba(224,123,0,0.3)' : 'rgba(181,123,238,0.2)') + ';border-left:3px solid ' + (_sIsAtt ? '#e07b00' : '#b57bee') + ';border-radius:8px;padding:9px 12px;">'
         + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-        + '<span style="font-size:10px;font-weight:700;color:#b57bee;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">PROCHAIN STAGE</span>'
+        + '<span style="font-size:10px;font-weight:700;color:' + (_sIsAtt ? '#e07b00' : '#b57bee') + ';text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">' + (_sIsAtt ? '\u23f3 LISTE D\'ATTENTE' : 'PROCHAIN STAGE') + '</span>'
         + '<span style="font-size:13px;font-weight:600;color:#fff;text-align:right;">' + stageLbl + ' \u00b7 ' + _psH + '</span>'
         + '</div>'
+        + (_sIsAtt ? '<div style="font-size:12px;color:#e07b00;margin-top:4px;">Votre inscription est en attente de confirmation.</div>' : '')
         + (thème ? '<div style="font-size:12px;color:#fff;margin-top:3px;">' + thème + '</div>' : '')
         + '<div style="margin-top:8px;display:flex;align-items:center;justify-content:flex-end;gap:8px;">'
         + (_stInscr
-            ? '<span style="padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.5px;border-radius:20px;background:' + (_sIsAtt ? '#e07b00' : '#388e3c') + ';color:#fff;">' + (_sIsAtt ? '\u23f3 Liste d\'attente' : '\u2713 Inscrit') + '</span>'
-              + '<a href="javascript:void(0)" onclick="_annulerStageEleve(\'' + prochainStage.date + '\',\'' + _sDbId + '\',\'' + _sEmailSafe + '\')" style="padding:4px 10px;font-size:11px;font-weight:600;border-radius:20px;border:1px solid rgba(200,60,60,0.5);color:#e05252;text-decoration:none;white-space:nowrap;">Annuler</a>'
+            ? '<a href="javascript:void(0)" onclick="_annulerStageEleve(\'' + prochainStage.date + '\',\'' + _sDbId + '\',\'' + _sEmailSafe + '\')" style="padding:4px 10px;font-size:11px;font-weight:600;border-radius:20px;border:1px solid rgba(200,60,60,0.5);color:#e05252;text-decoration:none;white-space:nowrap;">Annuler</a>'
             : '<a href="javascript:void(0)" onclick="switchTab(\'stages\')" style="padding:7px 13px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:6px;border:2px solid #b57bee;white-space:nowrap;background:transparent;color:#b57bee;text-decoration:none;">S\'inscrire</a>')
         + '</div>'
         + '</div>';
