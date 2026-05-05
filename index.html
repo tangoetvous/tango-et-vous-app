@@ -538,7 +538,7 @@
     if (tab === 'agenda') renderAgenda('tous');
     if (tab === 'stages') renderStages();
     if (tab === 'milonga') renderMilonga();
-    if (tab === 'actu')   renderActu();
+    if (tab === 'actu')   { renderActu(); _actuStartPoll(); }
     if (tab === 'contact') renderContact();
     if (tab === 'carte-lieux') { setTimeout(function(){ if(window._initPlan) window._initPlan(); }, 60); }
     if (tab === 'cours-particuliers') {
@@ -565,6 +565,7 @@
     if (tab === 'whatsapp') renderWhatsapp();
     if (tab === 'avis') renderAvis();
     if (tab === 'discussions') { renderDiscussions(); _discStartListPoll(); }
+    if (tab !== 'actu') _actuStopPoll();
     if (tab !== 'discussions') { _discStopPoll(); _discStopListPoll(); if (_discView === 'new') _discView = 'list'; }
     window.scrollTo(0, 0);
   };
@@ -2221,6 +2222,21 @@
   // ================================================================
   // PUBLICATIONS
   // ================================================================
+  let _actuPollTO = null;
+  function _actuStartPoll() {
+    _actuStopPoll();
+    if (IS_DEMO) return;
+    function doPoll() {
+      if (currentTab !== 'actu') return;
+      renderActu();
+      _actuPollTO = setTimeout(doPoll, 15000);
+    }
+    _actuPollTO = setTimeout(doPoll, 15000);
+  }
+  function _actuStopPoll() {
+    if (_actuPollTO) { clearTimeout(_actuPollTO); _actuPollTO = null; }
+  }
+
   async function renderActu() {
     const container = $('actu-list');
     container.innerHTML = '<p class="empty-msg">Chargement…</p>';
