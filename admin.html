@@ -5614,7 +5614,7 @@ function renderRepertoire() {
         h += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);">'
           +'<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🗑 Archivés ('+yogaArch.length+')</div>';
         yogaArch.forEach(function(e) {
-          var tel = e.tel||'';
+          var tel = _yogaTel(e);
           h += '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'">'
             +'<div style="flex:1;min-width:0;">'
             +'<div class="point-nom" style="color:#ff6b6b;">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',tel,'yoga')+'</div>'
@@ -8957,6 +8957,12 @@ function supprimerPub(id, btn) {
 // TAB YOGA
 // ================================================================
 var COURS_YOGA_LBL = {yin:'Yin Yoga 10h30', hatha:'Hatha Yoga 11h30', forfait:'Yin Yoga+Hatha Yoga 10h30–12h30'};
+// Tel d'un élève yoga : cours_yoga.tel (si colonne existe) → eleves.tel (via cartes) → ''
+function _yogaTel(e) {
+  if (e.tel) return e.tel;
+  var c = (adminData.cartes||[]).find(function(x){ return x.email===e.email; });
+  return (c&&c.tel) || '';
+}
 
 function renderYoga() {
   var sai = saisonActive();
@@ -9081,9 +9087,10 @@ function renderYogaEleves() {
   function eleveRow(e) {
     var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
     var paiLbl = PAI_LBL[e.paiement]||e.paiement||'';
+    var tel = _yogaTel(e);
     return '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'">'
       +'<div style="flex:1;min-width:0;">'
-      +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','yoga')+'</div>'
+      +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',tel,'yoga')+'</div>'
       +'<div class="point-sub"><span class="pill pill-info" style="font-size:8px;">'+coursLbl+'</span>'
       +(paiLbl?' · <span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+(e.montant?' · '+e.montant+'€':'')+'</span>':'')
       +(e.dateInscription?' · Inscrit le '+fmtDate(e.dateInscription):'')
@@ -9115,15 +9122,18 @@ function renderYogaSupprimes() {
   sorted.forEach(function(e) {
     var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
     var paiLbl = PAI_LBL[e.paiement]||e.paiement||'';
+    var tel = _yogaTel(e);
     h += '<div class="point-row" style="opacity:.75;">'
       +'<div style="flex:1;min-width:0;">'
-      +'<div class="point-nom" style="color:#ff6b6b;">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','yoga')+'</div>'
+      +'<div class="point-nom" style="color:#ff6b6b;">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',tel,'yoga')+'</div>'
       +'<div class="point-sub"><span class="pill pill-info" style="font-size:8px;">'+coursLbl+'</span>'
       +(paiLbl?' · <span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+(e.montant?' · '+e.montant+'€':'')+'</span>':'')
+      +(tel?' · '+escHtml(tel):'')
       +'</div>'
       +'</div>'
       +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
       +btnEmail(e.email,e.prenom+' '+e.nom)
+      +(tel?'<a href="tel:'+tel.replace(/\s/g,'')+'" class="btn-point btn-ghost" style="font-size:11px;text-decoration:none;" title="Appeler">📞</a>':'')
       +'<button class="btn-point btn-ok" onclick="retablirEleveYoga(\''+e.id+'\')" style="font-size:11px;">↩ Rétablir</button>'
       +'<button class="btn-point btn-danger" onclick="supprimerDefinitivementEleveYoga(\''+e.id+'\')" style="font-size:11px;background:var(--danger);color:#fff;">🗑 Définitif</button>'
       +'</div></div>';
