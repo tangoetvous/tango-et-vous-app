@@ -2255,12 +2255,11 @@
     const seasonStart = new Date(now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear()-1, 8, 1);
     pubs = pubs.filter(p => new Date(p.dateProgrammee || p.date || 0) >= seasonStart);
 
-    // Filtrer les publications programmées pour le futur (non encore publiées)
+    // Filtrer par date de programmation (publiee n'est plus un critère — toujours true)
     pubs = pubs.filter(p => {
-      if (p.publiee === true) return true;
       const dates = p.datesProgrammees && p.datesProgrammees.length ? p.datesProgrammees
         : (p.dateProgrammee ? [p.dateProgrammee] : []);
-      if (!dates.length) return true; // pas de contrainte de date → publier maintenant
+      if (!dates.length) return true; // pas de date → visible maintenant
       return dates.some(d => new Date(d) <= now);
     });
 
@@ -2449,7 +2448,7 @@
       else eleveData.publications.unshift(pub);
       const now = new Date();
       const dates = pub.datesProgrammees && pub.datesProgrammees.length ? pub.datesProgrammees : (pub.dateProgrammee ? [pub.dateProgrammee] : []);
-      const isVisible = pub.publiee || !dates.length || dates.some(d => new Date(d) <= now);
+      const isVisible = !dates.length || dates.some(d => new Date(d) <= now);
       if (isVisible) {
         _showNotifDot('actu', '\uD83D\uDD14 Nouvelle publication : ' + pub.titre);
         if (currentTab === 'actu') renderActu();
@@ -2526,6 +2525,10 @@
         if (type === 'discussionCreated' || type === 'discussionUpdated') {
           _discDiscList = null;
           if (currentTab === 'discussions' && _discView === 'list') renderDiscussions();
+        }
+        if (type === 'publicationChanged') {
+          if (currentTab === 'actu') renderActu();
+          else _showNotifDot('actu', '🔔 Nouvelle publication');
         }
         if (type === 'newMessage') {
           if (String(newRow.discussion_id) !== String(_discCurrentId)) return;

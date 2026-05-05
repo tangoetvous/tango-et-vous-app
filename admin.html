@@ -8660,12 +8660,10 @@ function renderPublications() {
   var h='<button class="btn btn-gold" data-action="nouvelle-pub" style="width:100%;margin-bottom:14px;">✏️ Nouvelle publication</button><div id="pub-ed"></div>';
   if(!pubs.length)return h+'<div class="empty-state">Aucune publication.</div>';
   pubs.forEach(function(p,i){
-    var publiee=p.publiee;
     var dates=p.datesProgrammees&&p.datesProgrammees.length?p.datesProgrammees:(p.dateProgrammee?[p.dateProgrammee]:[]);
     var futur=dates.filter(function(d){return new Date(d)>new Date();});
     var passe=dates.filter(function(d){return new Date(d)<=new Date();});
-    var prog=!publiee&&futur.length>0;
-    var est=publiee?'pill-ok':prog?'pill-warn':'', lbl=publiee?'Publiée':prog?'Programmée':'Brouillon';
+    var est=futur.length>0&&!passe.length?'pill-warn':'pill-ok', lbl=futur.length>0&&!passe.length?'Programmée':'Publiée';
     var icon=CAT_ICON[p.cat]||'📄';
     var dateAff='';
     if(passe.length)dateAff+='<span style="color:var(--ok-text);">✓ '+passe.map(function(d){return fmtDate(d.slice(0,10));}).join(', ')+'</span> ';
@@ -8680,7 +8678,6 @@ function renderPublications() {
       +'<div class="btn-row">'
       +'<button class="btn btn-ghost" data-action="editer-pub" data-idx="'+i+'">✏️ Modifier</button>'
       +'<button class="btn btn-ghost" data-action="dupliquer-pub" data-idx="'+i+'">⧉ Dupliquer</button>'
-      +(!publiee?'<button class="btn btn-ok" data-action="publier-pub" data-id="'+p.id+'">🚀 Publier</button>':'')
       +'<button class="btn btn-err" data-action="supprimer-pub" data-id="'+p.id+'">🗑</button>'
       +'</div></div>';
   });
@@ -8799,10 +8796,9 @@ function savePub(existingId) {
   var err=gel('ed-err');
   if(!titre.trim()){if(err){err.textContent='Titre requis.';err.style.display='block';}return;}
   if(err)err.style.display='none';
-  var publiee=dates.length===0||(dates.length===1&&new Date(dates[0])<=new Date());
   var coursIds=['paris-deb','paris-int','vincennes-deb','vincennes-int','yin-yoga','hatha-yoga'];
   var cours=coursIds.filter(function(id){var el=document.getElementById('ed-cours-'+id);return el&&el.checked;});
-  var payload={action:'sauvegarderPublication',id:existingId,cat:cat,titre:titre.trim(),extrait:extrait,contenu:contenu,image:image,video:video,dateProgrammee:dates[0]||new Date().toISOString(),datesProgrammees:dates,publiee:publiee,cours:cours};
+  var payload={action:'sauvegarderPublication',id:existingId,cat:cat,titre:titre.trim(),extrait:extrait,contenu:contenu,image:image,video:video,dateProgrammee:dates[0]||new Date().toISOString(),datesProgrammees:dates,cours:cours};
   if(IS_DEMO){
     if(!adminData.publications)adminData.publications=[];
     var newId = existingId || ('p'+Date.now());

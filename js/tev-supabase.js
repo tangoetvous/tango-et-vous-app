@@ -454,13 +454,13 @@ async function tevInscriptionStage(body) {
 // ================================================================
 async function tevGetPublications() {
   const { data } = await _tev.from('publications').select('*')
-    .eq('publiee', true).order('created_at', { ascending: false });
+    .order('created_at', { ascending: false });
   return (data || []).map(p => Object.assign({}, p.donnees || {}, p));
 }
 
-async function tevSauvegarderPublication({ id, cat, titre, extrait, contenu, image, video, dateProgrammee, datesProgrammees, publiee, cours }) {
+async function tevSauvegarderPublication({ id, cat, titre, extrait, contenu, image, video, dateProgrammee, datesProgrammees, cours }) {
   const donnees = { cat: cat||'actu', extrait: extrait||'', image: image||'', video: video||'', dateProgrammee: dateProgrammee||'', datesProgrammees: datesProgrammees||[], cours: cours||[] };
-  const fields = { titre, contenu, publiee: !!publiee, donnees };
+  const fields = { titre, contenu, publiee: true, donnees };
   if (id) {
     const { error } = await _tev.from('publications').update(fields).eq('id', id);
     if (error) throw new Error(error.message || error.code || JSON.stringify(error));
@@ -593,6 +593,9 @@ function tevSubscribeEleve(eleveId, callback) {
     .on('postgres_changes', {
       event: 'INSERT', schema: 'public', table: 'discussion_messages',
     }, payload => callback('newMessage', payload.new))
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'publications',
+    }, payload => callback('publicationChanged', payload.new || payload.old))
     .subscribe();
 }
 
