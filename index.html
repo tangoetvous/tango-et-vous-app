@@ -1444,17 +1444,20 @@
     // ── Rappel adhésion Sorano (Vincennes uniquement) ─────────────
     if (eleveData.hasVincennes) {
       var _sorPayé = !!(eleveData.soranoPayé);
-      h += '<div style="margin-bottom:20px;background:rgba(45,212,191,0.07);border:1px solid '
-        + (_sorPayé ? 'rgba(45,212,191,0.4)' : 'rgba(45,212,191,0.25)')
-        + ';border-left:3px solid #2dd4bf;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">'
-        + '<div>'
-        + '<div style="font-size:12px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">🏛 Adhésion Sorano</div>'
-        + (_sorPayé
-          ? '<div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.4;">✅ Réglée pour cette saison.</div>'
-          : '<div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.4;">Obligatoire pour les cours à Vincennes.</div>')
-        + '</div>'
-        + (!_sorPayé ? '<button onclick="switchTab(\'sorano\')" style="flex-shrink:0;background:#2dd4bf;color:#0a2a28;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Régler →</button>' : '')
-        + '</div>';
+      if (_sorPayé) {
+        h += '<div style="margin-bottom:16px;display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,0.45);">'
+          + '<span style="color:#2dd4bf;font-size:13px;">🏛</span>'
+          + 'Adhésion Sorano réglée ✓'
+          + '</div>';
+      } else {
+        h += '<div style="margin-bottom:20px;background:rgba(45,212,191,0.07);border:1px solid rgba(45,212,191,0.25);border-left:3px solid #2dd4bf;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+          + '<div>'
+          + '<div style="font-size:12px;font-weight:700;color:#2dd4bf;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">🏛 Adhésion Sorano</div>'
+          + '<div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.4;">Obligatoire pour les cours à Vincennes.</div>'
+          + '</div>'
+          + '<button onclick="switchTab(\'sorano\')" style="flex-shrink:0;background:#2dd4bf;color:#0a2a28;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Régler →</button>'
+          + '</div>';
+      }
     }
 
     // ── Bannière réinscription (visible du 1er mai au 31 août) ────

@@ -7989,8 +7989,19 @@ function pointerStage(date, idx, present) {
 function renderSorano() {
   var sai=saisonActive();
   var reg={};
-  (adminData.sorano||[]).forEach(function(s){
-    if((s.saison||saisonCourante())===sai) reg[s.email]=s.paiementSorano;
+  // Tango Vincennes : lire paiement_sorano depuis inscriptions_cours directement
+  (adminData.coursTango||[]).forEach(function(ct){
+    if((ct.ville||'')==='vincennes'&&(ct.saison||saisonCourante())===sai&&ct.email){
+      if(ct.paiement_sorano===true) reg[ct.email]=true;
+      else if(reg[ct.email]===undefined) reg[ct.email]=false;
+    }
+  });
+  // Yoga : lire paiement_sorano depuis cours_yoga (colonne ajoutée)
+  (adminData.coursYoga||[]).forEach(function(cy){
+    if((cy.saison||saisonCourante())===sai&&cy.email){
+      if(cy.paiement_sorano===true) reg[cy.email]=true;
+      else if(reg[cy.email]===undefined) reg[cy.email]=false;
+    }
   });
   function alpha(a,b){return (a.nom+' '+a.prenom).localeCompare(b.nom+' '+b.prenom,'fr');}
   function cardRow(s){
@@ -8035,17 +8046,21 @@ function renderSorano() {
 function soranoAction(id, paye, btn) {
   btn.disabled=true;
   var sai=saisonActive();
-  // Retrouver l'email depuis coursTango ou coursYoga
-  var ct=(adminData.coursTango||[]).find(function(c){return c.id===id;})
-      ||(adminData.coursYoga||[]).find(function(c){return c.id===id;});
+  var isTango=(adminData.coursTango||[]).some(function(c){return String(c.id)===String(id);});
+  var ct=isTango
+    ?(adminData.coursTango||[]).find(function(c){return String(c.id)===String(id);})
+    :(adminData.coursYoga||[]).find(function(c){return String(c.id)===String(id);});
   if(!ct){btn.disabled=false;return;}
-  if(IS_DEMO){
-    var s=(adminData.sorano||[]).find(function(x){return x.email===ct.email&&(x.saison||saisonCourante())===sai;});
-    if(s){s.paiementSorano=paye;}
-    else{if(!adminData.sorano)adminData.sorano=[];adminData.sorano.push({id:id,email:ct.email,paiementSorano:paye,saison:sai});}
-    renderTab();return;
-  }
-  TEV.client.from('inscriptions_cours').update({paiement_sorano:paye}).eq('id',id).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+  var email=ct.email;
+  // Mise à jour locale optimiste (réaffichage immédiat)
+  (adminData.coursTango||[]).forEach(function(c){if(c.email===email&&(c.ville||'')==='vincennes')c.paiement_sorano=paye;});
+  (adminData.coursYoga||[]).forEach(function(c){if(c.email===email)c.paiement_sorano=paye;});
+  renderTab();
+  if(IS_DEMO){return;}
+  // Mise à jour DB par email (toutes les lignes vincennes + yoga)
+  var p1=Promise.resolve(TEV.client.from('inscriptions_cours').update({paiement_sorano:paye}).eq('email',email).eq('ville','vincennes'));
+  var p2=Promise.resolve(TEV.client.from('cours_yoga').update({paiement_sorano:paye}).eq('email',email));
+  Promise.all([p1,p2]).then(function(){chargerDonnees();}).catch(function(){});
 }
 function relanceSorano(email, nom, btn) {
   btn.disabled=true; btn.textContent='⏳';
