@@ -9514,7 +9514,7 @@ window.vpUpdatePaieZone = function() {
     var cours = cb.value;
     var ci = COURS_VALS_Z.indexOf(cours);
     var isVinc = cours.toLowerCase().indexOf('vincennes')>=0;
-    var defMt = formule==='carte10'?(TARIFS.carte10||170):(isVinc?(TARIFS.forfait_vincennes||210):(TARIFS.forfait_paris||200));
+    var defMt = formule==='carte10' ? TARIFS.carte10 : (isVinc ? TARIFS.forfait_vincennes : TARIFS.forfait_paris);
     h += '<div style="margin-bottom:8px;padding:8px 10px;background:var(--s2);border-radius:6px;">';
     h += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;">'+cours+'</div>';
     h += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">';
@@ -9779,7 +9779,7 @@ window.diUpdatePaieZone = function() {
     h += '<div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:700;">Formule</div>';
     h += '<div style="display:flex;flex-direction:column;gap:6px;">';
     h += '<label '+lbl+'><input type="radio" name="di-formule2" value="parcours" '+(forfait2sel?'':'checked')+' onchange="diUpdatePaieZone()" '+inp+'/> Par cours (choisir pour chacun)</label>';
-    h += '<label '+lbl+'><input type="radio" name="di-formule2" value="forfait2" '+(forfait2sel?'checked':'')+' onchange="diUpdatePaieZone()" '+inp+'/> Forfait 2 cours — '+(TARIFS.forfait_2cours||760)+'€</label>';
+    h += '<label '+lbl+'><input type="radio" name="di-formule2" value="forfait2" '+(forfait2sel?'checked':'')+' onchange="diUpdatePaieZone()" '+inp+'/> Forfait 2 cours — '+TARIFS.forfait_2cours+'€</label>';
     h += '</div></div>';
   }
 
@@ -9791,10 +9791,10 @@ window.diUpdatePaieZone = function() {
     // Formule de ce cours
     var formule = forfait2sel ? 'forfait'
       : ((document.querySelector('input[name="di-formule-c-'+ci+'"]:checked')||{}).value||'carte10');
-    // Montant par défaut
-    var defMt = forfait2sel && idx === 0 ? (TARIFS.forfait_2cours||760)
+    // Montant par défaut — toujours depuis TARIFS (chargé depuis Paramètres)
+    var defMt = forfait2sel && idx === 0 ? TARIFS.forfait_2cours
       : forfait2sel ? 0
-      : formule==='carte10'?(TARIFS.carte10||170):(isVinc?(TARIFS.forfait_vincennes||210):(TARIFS.forfait_paris||200));
+      : formule==='carte10' ? TARIFS.carte10 : (isVinc ? TARIFS.forfait_vincennes : TARIFS.forfait_paris);
     h += '<div style="margin-bottom:8px;padding:8px 10px;background:var(--s2);border-radius:6px;">';
     h += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;">'+cours+'</div>';
     // Formule par cours (uniquement si pas forfait2 global)
@@ -9912,9 +9912,9 @@ window.soumettreInscriptionDirecte = function(force) {
     var ci = COURS_VALS_REF.indexOf(cours);
     var formule = forfait2Checked ? 'forfait'
       : ((document.querySelector('input[name="di-formule-c-'+ci+'"]:checked')||{}).value||'carte10');
-    var montantDefault = forfait2Checked && idx === 0 ? (TARIFS.forfait_2cours||760)
+    var montantDefault = forfait2Checked && idx === 0 ? TARIFS.forfait_2cours
       : forfait2Checked ? 0
-      : formule==='carte10' ? (TARIFS.carte10||0) : ((ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0);
+      : formule==='carte10' ? TARIFS.carte10 : (ville==='vincennes' ? TARIFS.forfait_vincennes : TARIFS.forfait_paris);
     var role = ((document.querySelector('input[name="di-role-'+ci+'"]:checked')||{}).value)||'guideur';
     var roleP = role==='guideur'?'guidee':'guideur';
     var avecC = (document.querySelector('input[name="di-part-'+ci+'"]:checked')||{}).value==='avec';
