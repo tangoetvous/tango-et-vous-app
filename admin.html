@@ -2121,7 +2121,15 @@ function sauverTarifs(btn) {
     // Tarifs futurs (prochaine saison) : stocker pour les formulaires de pré-inscription publics
     try { localStorage.setItem('tev_tarifs_prochaine_saison', JSON.stringify(tarifs)); } catch(e){}
   }
-  if (!IS_DEMO) { TEV.setParam('tev_tarifs', payload).catch(function(){}); }
+  if (!IS_DEMO) {
+    TEV.setParam('tev_tarifs', payload).catch(function(){});
+    // Sauvegarder aussi les clés dérivées dans Supabase pour cross-device (formulaires publics)
+    if (today() >= dateEffet) {
+      TEV.setParam('tev_tarifs_actifs', tarifs).catch(function(){});
+    } else {
+      TEV.setParam('tev_tarifs_prochaine_saison', tarifs).catch(function(){});
+    }
+  }
   if(btn) { btn.textContent='✓ Enregistré'; btn.disabled=true; setTimeout(function(){btn.textContent='💾 Enregistrer';btn.disabled=false;renderTab();},1800); }
 }
 function resetTarifs() {
