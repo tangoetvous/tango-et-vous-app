@@ -4794,8 +4794,14 @@ function handleAction(action, btn) {
     case 'suppr-essai-inscr':
       (function(em,dt,rid){ ouvrirModalConfirm('Supprimer cet essai ?', function(){ supprimerEssaiInscr(em,dt,rid); }); })(btn.dataset.email, btn.dataset.date, btn.dataset.id||'');
       break;
+    case 'editer-essai':
+      ouvrirEditEssai(btn.dataset.id);
+      break;
     case 'suppr-yoga-inscr':
       (function(em,dt){ ouvrirModalConfirm('Supprimer cet essai yoga ?', function(){ supprimerYogaEssaiInscr(em,dt); }); })(btn.dataset.email, btn.dataset.date);
+      break;
+    case 'editer-essai-yoga':
+      ouvrirEditEssaiYoga(btn.dataset.id);
       break;
     case 'suppr-sorano-inscr':
       (function(id){ ouvrirModalConfirm('Supprimer cette inscription (cours + Sorano) ?', function(){ supprimerSoranoInscr(id); }); })(btn.dataset.id);
@@ -6409,6 +6415,7 @@ function renderEssai() {
           +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
           +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="email-attente" data-email="'+e.email+'" data-date="'+grp.date+'" data-niveau="'+grp.niveau+'" data-role="'+e.role+'">✉️</button>'
           +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
+          +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
           +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +'</div></div>';
       }
@@ -6486,6 +6493,7 @@ function renderEssai() {
           +'<button class="btn-heart'+(e.interesse?' on':'')+'" data-action="toggle-interet" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'" title="Élève intéressant·e">'+(e.interesse?'❤️':'🤍')+'</button>'
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
+          +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
           +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +'</div></div>';
       };
@@ -6510,6 +6518,7 @@ function renderEssai() {
               +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
               +'<span class="pill" style="font-size:8px;background:rgba(255,152,0,0.2);color:var(--warn-text);">attente</span>'
               +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
+              +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
               +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
               +'</div></div>';
           };
@@ -6641,6 +6650,7 @@ function renderEssai() {
               ?'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
               :'<span class="pill pill-ok" style="font-size:8px;">Validé.e</span>')
             +btnEmail(e.email,e.prenom+' '+e.nom)
+            +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
             +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
             +'</div></div>';
         };
@@ -8000,6 +8010,84 @@ function supprimerYogaEssaiInscr(email, date) {
   }
   renderTab();
 }
+function ouvrirEditEssai(id) {
+  var e = (adminData.essai||[]).find(function(x){ return String(x.id)===String(id); });
+  if (!e) { afficherToast('Inscription introuvable'); return; }
+  var box = gel('modal-contact-box'); if(!box) return;
+  var selStyle = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:13px;';
+  var h = '<div class="modal-titre">✏️ Modifier l\'essai tango</div>'
+    +'<div style="font-size:13px;font-weight:600;margin-bottom:12px;">'+escHtml((e.prenom||'')+' '+(e.nom||''))+'</div>'
+    +'<div class="field"><label>Date</label><input type="date" id="ee-date" value="'+(e.date||'')+'" style="width:100%;box-sizing:border-box;"></div>'
+    +'<div class="field"><label>Ville</label><select id="ee-ville" style="'+selStyle+'">'
+    +'<option value="paris"'+(e.ville==='paris'?' selected':'')+'>Paris</option>'
+    +'<option value="vincennes"'+(e.ville==='vincennes'?' selected':'')+'>Vincennes</option>'
+    +'</select></div>'
+    +'<div class="field"><label>Niveau</label><select id="ee-niveau" style="'+selStyle+'">'
+    +'<option value="debutant"'+(e.niveau==='debutant'?' selected':'')+'>Débutant</option>'
+    +'<option value="intermediaire"'+(e.niveau==='intermediaire'?' selected':'')+'>Intermédiaire</option>'
+    +'</select></div>'
+    +'<div class="btn-row" style="margin-top:14px;">'
+    +'<button class="btn btn-gold" style="flex:2;" onclick="validerEditEssai(\''+escHtml(String(id))+'\')">✓ Enregistrer</button>'
+    +'<button class="btn btn-ghost" data-action="fermer-contact">Annuler</button>'
+    +'</div>';
+  box.innerHTML = h;
+  gel('modal-contact').classList.add('vis');
+}
+function validerEditEssai(id) {
+  var newDate = gel('ee-date') && gel('ee-date').value;
+  var newVille = gel('ee-ville') && gel('ee-ville').value;
+  var newNiveau = gel('ee-niveau') && gel('ee-niveau').value;
+  if (!newDate || !newVille || !newNiveau) { afficherToast('⚠️ Remplissez tous les champs'); return; }
+  var e = (adminData.essai||[]).find(function(x){ return String(x.id)===String(id); });
+  if (!e) { afficherToast('Inscription introuvable'); return; }
+  fermerContact();
+  e.date = newDate; e.ville = newVille; e.niveau = newNiveau;
+  renderTab();
+  if (IS_DEMO) return;
+  Promise.resolve(TEV.client.from('inscriptions_essai').update({date_essai:newDate,ville:newVille,niveau:newNiveau}).eq('id',id))
+  .then(function(res){
+    if (res&&res.error){ afficherToast('⚠️ Erreur : '+(res.error.message||res.error.code||'')); chargerDonnees(); return; }
+    afficherToast('✓ Modifié');
+  })
+  .catch(function(){ afficherToast('⚠️ Erreur réseau'); chargerDonnees(); });
+}
+function ouvrirEditEssaiYoga(id) {
+  var e = (adminData.essaiYoga||[]).find(function(x){ return String(x.id)===String(id); });
+  if (!e) { afficherToast('Inscription introuvable'); return; }
+  var box = gel('modal-contact-box'); if(!box) return;
+  var selStyle = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:13px;';
+  var h = '<div class="modal-titre">✏️ Modifier l\'essai yoga</div>'
+    +'<div style="font-size:13px;font-weight:600;margin-bottom:12px;">'+escHtml((e.prenom||'')+' '+(e.nom||''))+'</div>'
+    +'<div class="field"><label>Date</label><input type="date" id="eey-date" value="'+(e.date||'')+'" style="width:100%;box-sizing:border-box;"></div>'
+    +'<div class="field"><label>Cours</label><select id="eey-cours" style="'+selStyle+'">'
+    +'<option value="yin"'+(e.cours==='yin'?' selected':'')+'>Yin Yoga</option>'
+    +'<option value="hatha"'+(e.cours==='hatha'?' selected':'')+'>Hatha Yoga</option>'
+    +'<option value="forfait"'+(e.cours==='forfait'?' selected':'')+'>Forfait (Yin + Hatha)</option>'
+    +'</select></div>'
+    +'<div class="btn-row" style="margin-top:14px;">'
+    +'<button class="btn btn-gold" style="flex:2;" onclick="validerEditEssaiYoga(\''+escHtml(String(id))+'\')">✓ Enregistrer</button>'
+    +'<button class="btn btn-ghost" data-action="fermer-contact">Annuler</button>'
+    +'</div>';
+  box.innerHTML = h;
+  gel('modal-contact').classList.add('vis');
+}
+function validerEditEssaiYoga(id) {
+  var newDate = gel('eey-date') && gel('eey-date').value;
+  var newCours = gel('eey-cours') && gel('eey-cours').value;
+  if (!newDate || !newCours) { afficherToast('⚠️ Remplissez tous les champs'); return; }
+  var e = (adminData.essaiYoga||[]).find(function(x){ return String(x.id)===String(id); });
+  if (!e) { afficherToast('Inscription introuvable'); return; }
+  fermerContact();
+  e.date = newDate; e.cours = newCours;
+  renderTab();
+  if (IS_DEMO) return;
+  Promise.resolve(TEV.client.from('inscriptions_essai_yoga').update({date_essai:newDate,cours:newCours}).eq('id',id))
+  .then(function(res){
+    if (res&&res.error){ afficherToast('⚠️ Erreur : '+(res.error.message||res.error.code||'')); chargerDonnees(); return; }
+    afficherToast('✓ Modifié');
+  })
+  .catch(function(){ afficherToast('⚠️ Erreur réseau'); chargerDonnees(); });
+}
 function supprimerSoranoInscr(id) {
   var done = false;
   if (adminData.coursTango) {
@@ -9164,6 +9252,7 @@ function renderYogaEssai() {
           +btnEmail(e.email,e.prenom+' '+e.nom)
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
+          +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai-yoga" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
           +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-yoga-inscr" data-date="'+date+'" data-email="'+e.email+'" title="Supprimer">✕</button>'
           +'</div></div>';
       }

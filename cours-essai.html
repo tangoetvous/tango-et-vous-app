@@ -964,6 +964,14 @@ async function soumettre(){
       });
     }
 
+    // Anti-doublon
+    const {data:_exEssai}=await TEV.client.from('inscriptions_essai').select('prenom,nom').eq('date_essai',dateIso).eq('niveau',niveauNorm);
+    const _exEL=(_exEssai||[]).map(function(r){return{p:(r.prenom||'').toLowerCase().trim(),n:(r.nom||'').toLowerCase().trim()};});
+    const _duplE=rowsToInsert.filter(function(r){return _exEL.some(function(x){return x.p===r.prenom.toLowerCase().trim()&&x.n===r.nom.toLowerCase().trim();});});
+    if(_duplE.length>0){
+      err.textContent='⚠️ '+_duplE.map(function(r){return r.prenom+' '+r.nom;}).join(' et ')+' est déjà inscrit·e à ce cours d\'essai.';
+      err.style.display='block';btn.disabled=false;btn.textContent='ENVOYER MON INSCRIPTION';return;
+    }
     const {error}=await TEV.client.from('inscriptions_essai').insert(rowsToInsert);
     if(error) throw error;
     _showSuccess();
