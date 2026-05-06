@@ -262,6 +262,7 @@ function _computeT() {
   try {
     const today = new Date().toISOString().slice(0,10);
     const prog = JSON.parse(localStorage.getItem('tev_tarifs')||'null');
+    // Tarif programmé avec date d'effet atteinte
     if (prog && prog.tarifs && prog.dateEffet && today >= prog.dateEffet) {
       return Object.assign({}, TARIFS_BASE, prog.tarifs);
     }
@@ -270,7 +271,10 @@ function _computeT() {
       if (next) return Object.assign({}, TARIFS_BASE, next);
     }
     const stored = JSON.parse(localStorage.getItem('tev_tarifs_actifs')||'null');
-    return stored ? Object.assign({}, TARIFS_BASE, stored) : Object.assign({}, TARIFS_BASE);
+    if (stored) return Object.assign({}, TARIFS_BASE, stored);
+    // Dernier recours : tev_tarifs sans dateEffet (tarifs Supabase bruts)
+    if (prog && prog.tarifs) return Object.assign({}, TARIFS_BASE, prog.tarifs);
+    return Object.assign({}, TARIFS_BASE);
   } catch(e) { return Object.assign({}, TARIFS_BASE); }
 }
 var T = _computeT();
@@ -1049,13 +1053,18 @@ function restart(){
 
 // Render immédiat avec les valeurs en cache (pas de blocage sur réseau)
 render();
-// Sync params depuis Supabase en arrière-plan — met à jour le cache pour la prochaine visite
+// Sync params depuis Supabase — met à jour localStorage puis recompute les tarifs
 (async function() {
   try {
     var all = await TEV.getAllParams();
     Object.keys(all).forEach(function(k) {
       if (k.startsWith('tev_')) { try { localStorage.setItem(k, typeof all[k]==='string' ? all[k] : JSON.stringify(all[k])); } catch(e) {} }
     });
+    // Recomputer T avec les tarifs Supabase maintenant disponibles
+    T = _computeT();
+    // Rafraîchir l'étape tarif si elle est actuellement affichée
+    var steps = getSteps();
+    if (steps[S.step-1] && steps[S.step-1].id === 'tarif') calcTarif();
   } catch(e) {}
 })();
 
