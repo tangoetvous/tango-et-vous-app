@@ -1168,25 +1168,32 @@ async function soumettre(){
     });
     var personnesAVerifier = [{ prenom: data.prenom, nom: data.nom }];
     if (avecPart) personnesAVerifier.push({ prenom: data.partenairePrenom||'', nom: data.partenaireNom||'' });
-    var conflits = [];
-    personnesAVerifier.forEach(function(pers) {
-      var pL = pers.prenom.toLowerCase().trim(), nL = pers.nom.toLowerCase().trim();
-      datesAVerifier.forEach(function(d) {
-        if (existantsLower.some(function(r){ return r.p===pL && r.n===nL && r.d===d; })) {
-          conflits.push(pers.prenom+' '+pers.nom+' le '+new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long'}));
-        }
+    // Filtrer les dates déjà inscrites (doublon) — les autres passent quand même
+    var datesOK = data.inscriptionsParDate.filter(function(di) {
+      return !personnesAVerifier.some(function(pers) {
+        var pL = pers.prenom.toLowerCase().trim(), nL = pers.nom.toLowerCase().trim();
+        return existantsLower.some(function(r){ return r.p===pL && r.n===nL && r.d===di.date; });
       });
     });
-    if (conflits.length > 0) {
+    var datesDoublon = data.inscriptionsParDate.filter(function(di){
+      return datesOK.indexOf(di) < 0;
+    }).map(function(di){
+      return new Date(di.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
+    });
+    if (datesOK.length === 0) {
       btn.disabled=false; btn.textContent="Je m'inscris";
-      document.getElementById('err-global-2').textContent='⚠️ Inscription déjà enregistrée : '+conflits.join(', ')+'.';
+      document.getElementById('err-global-2').textContent='⚠️ Vous êtes déjà inscrit·e à tous les stages sélectionnés.';
       document.getElementById('err-global-2').classList.add('visible');
       return;
+    }
+    if (datesDoublon.length > 0) {
+      document.getElementById('err-global-2').textContent='ℹ️ Déjà inscrit·e le '+datesDoublon.join(' et ')+' — ces dates ont été ignorées.';
+      document.getElementById('err-global-2').classList.add('visible');
     }
 
     var typeConfPrincipal = avecPart ? 'confirme' : data.typeConfirmation;
     var rowsToInsert = [];
-    data.inscriptionsParDate.forEach(function(di) {
+    datesOK.forEach(function(di) {
       var slotsId = (di.stagesDetail || []).map(function(s){ return s.type || s.id; }).join('|');
       rowsToInsert.push({
         prenom: data.prenom, nom: data.nom,
@@ -1218,7 +1225,7 @@ async function soumettre(){
     });
     var { error: insErr } = await TEV.client.from('inscriptions_stages').insert(rowsToInsert);
     if (insErr) { console.error('Insert error:', insErr); throw new Error(insErr.message || insErr.code || JSON.stringify(insErr)); }
-    afficherConfirmation(data);
+    afficherConfirmation(Object.assign({}, data, {inscriptionsParDate: datesOK}));
     // Notifier admin — BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
     var msg = {type:'stageInscription', data:data};
     try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}

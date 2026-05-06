@@ -240,6 +240,18 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   </div>
 </div>
 
+<!-- Modal édition créneaux stage -->
+<div class="modal-overlay" id="modal-edit-stage-slots">
+  <div class="modal-box">
+    <div class="modal-titre">✏️ Créneaux — <span id="modal-ess-nom"></span></div>
+    <div id="modal-ess-slots" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;"></div>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="modal-cancel" onclick="document.getElementById('modal-edit-stage-slots').classList.remove('vis')">Annuler</button>
+      <button class="modal-ok" id="modal-ess-ok">✓ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal renouvellement carte -->
 <div class="modal-overlay" id="modal-renouveler">
   <div class="modal-box">
@@ -4768,6 +4780,9 @@ function handleAction(action, btn) {
     case 'inscrire-stage-admin':
       soumettreInscriptionStageAdmin();
       break;
+    case 'editer-slots-stage':
+      ouvrirModalEditerSlotsStage(btn.dataset.date, parseInt(btn.dataset.idx));
+      break;
     case 'annuler-stage-inscrit':
       ouvrirModalConfirm('Annuler ce créneau ?', function(){
         annulerStageInscrit(btn.dataset.date, parseInt(btn.dataset.idx), btn.dataset.slot||'', btn);
@@ -7756,7 +7771,10 @@ function renderStages() {
         +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span>'+statPill+'</div>'
         +'<div class="card-sub" style="margin-top:3px;">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.montant?' · '+(i.montant)+'€':'')+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</div>'
         +'</div>'
-        +'<button class="btn btn-err" style="padding:4px 8px;font-size:11px;flex-shrink:0;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="all">✕</button>'
+        +'<div style="display:flex;gap:4px;flex-shrink:0;">'
+        +'<button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" data-action="editer-slots-stage" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✏️</button>'
+        +'<button class="btn btn-err" style="padding:4px 8px;font-size:11px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="all">✕</button>'
+        +'</div>'
         +'</div></div>';
     }
     _groupCouples(allSorted).forEach(function(g){
@@ -8028,6 +8046,59 @@ function annulerStageInscrit(date, idx, slot, btn) {
   }
 }
 
+function ouvrirModalEditerSlotsStage(date, idx) {
+  var st = adminData.stages && adminData.stages[date];
+  if (!st) return;
+  var person = st.inscrits[idx];
+  if (!person) return;
+  var _stEntry = _migrateStageItem(STAGES.find(function(s){ return s.date===date; }) || {technique:true,nStages:2,themes:[]});
+  var _nStages = _stEntry.nStages || 2;
+  var _avecTech = _stEntry.technique !== false;
+  var dynSlots = [];
+  if (_avecTech) dynSlots.push({id:'technique', lbl:'Technique'});
+  for (var si=1; si<=_nStages; si++) {
+    var theme = (_stEntry.themes && _stEntry.themes[si-1]) || '';
+    dynSlots.push({id:'stage'+si, lbl:'Stage '+si+(theme?' — '+theme:'')});
+  }
+  document.getElementById('modal-ess-nom').textContent = person.prenom+' '+person.nom;
+  var slotsDiv = document.getElementById('modal-ess-slots');
+  slotsDiv.innerHTML = dynSlots.map(function(sl) {
+    var checked = (person.slots||[]).indexOf(sl.id) >= 0;
+    return '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">'
+      +'<input type="checkbox" name="ess-slot" value="'+sl.id+'"'+(checked?' checked':'')
+      +' style="width:auto;padding:0;margin:0;flex-shrink:0;cursor:pointer;"> '+sl.lbl+'</label>';
+  }).join('');
+  var okBtn = document.getElementById('modal-ess-ok');
+  okBtn.disabled = false; okBtn.textContent = '✓ Enregistrer';
+  okBtn.onclick = function(){ sauverSlotsStage(date, idx); };
+  document.getElementById('modal-edit-stage-slots').classList.add('vis');
+}
+function sauverSlotsStage(date, idx) {
+  var st = adminData.stages && adminData.stages[date];
+  if (!st) return;
+  var person = st.inscrits[idx];
+  if (!person) return;
+  var newSlots = [];
+  document.querySelectorAll('#modal-ess-slots input[name="ess-slot"]:checked').forEach(function(cb){ newSlots.push(cb.value); });
+  if (!newSlots.length) { afficherToast('⚠️ Sélectionnez au moins un créneau'); return; }
+  var newMontant = calcMontantStage(newSlots);
+  document.getElementById('modal-edit-stage-slots').classList.remove('vis');
+  if (IS_DEMO) {
+    person.slots = newSlots; person.montant = newMontant;
+    syncStageInscritsToLocal(); renderTab(); return;
+  }
+  var dbId = person._dbId;
+  if (!dbId) { afficherToast('⚠️ ID manquant — rechargez la page'); return; }
+  Promise.resolve(TEV.client.from('inscriptions_stages')
+    .update({stage_nom: newSlots.join('|'), total_inscrit: newMontant})
+    .eq('id', dbId))
+  .then(function(res){
+    if (res && res.error) { afficherToast('⚠️ Erreur : '+(res.error.message||res.error.code||'')); return; }
+    afficherToast('✓ Créneaux mis à jour');
+    chargerDonnees();
+  })
+  .catch(function(){ afficherToast('⚠️ Erreur réseau'); });
+}
 function stageMoveInsrit(date, idx, dir) {
   var ins = adminData.stages && adminData.stages[date] && adminData.stages[date].inscrits;
   if(!ins) return;
