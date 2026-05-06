@@ -671,23 +671,24 @@ function sTarif() {
   const P1=S.c1.ville==='paris', V1=S.c1.ville==='vincennes';
   const P2=nb===2&&S.c2.ville==='paris', V2=nb===2&&S.c2.ville==='vincennes';
   const hasParis=P1||P2, hasVinc=V1||V2;
-  const bothParis=P1&&P2&&!V1&&!V2;
   const avecP = S.venue==='avec-part';
 
+  // Tarif réduit : options selon les villes inscrites
   const redSel = (idSel, cur, lbl, onchg) =>
     `<div class="field"><label>${lbl}</label><select id="${idSel}" onchange="${onchg}">
       <option value="non"${cur==='non'?' selected':''}>Non</option>
-      ${hasParis?`<option value="etudiant"${cur==='etudiant'?' selected':''}>Étudiant·e</option>
-      <option value="demandeur"${cur==='demandeur'?' selected':''}>Demandeur·euse d'emploi</option>`:''}
-      ${hasVinc?`<option value="moins25"${cur==='moins25'?' selected':''}>Moins de 25 ans (Vincennes)</option>`:''}
+      ${hasParis?`<option value="etudiant"${cur==='etudiant'?' selected':''}>Étudiant·e${hasParis&&hasVinc?' (Paris)':''}</option>
+      <option value="demandeur"${cur==='demandeur'?' selected':''}>Demandeur·euse d'emploi${hasParis&&hasVinc?' (Paris)':''}</option>`:''}
+      ${hasVinc?`<option value="moins25"${cur==='moins25'?' selected':''}>Moins de 25 ans${hasParis&&hasVinc?' (Vincennes)':''}</option>
+      <option value="carte_jeune"${cur==='carte_jeune'?' selected':''}>Carte Jeune Vincennes</option>`:''}
     </select></div>`;
 
+  // Formule : Paris = forfait ou carte10 ; Vincennes = forfait uniquement
   const formuleSel = (idSel, cur, onchg) =>
     `<div class="field"><label>Formule</label><select id="${idSel}" onchange="${onchg}">
       <option value="">— Choisir —</option>
       ${hasParis?`<option value="forfait"${cur==='forfait'?' selected':''}>Forfait annuel</option>
-      <option value="carte"${cur==='carte'?' selected':''}>Carte de 10 cours</option>
-      <option value="unitaire"${cur==='unitaire'?' selected':''}>Cours à l'unité</option>`:''}
+      <option value="carte"${cur==='carte'?' selected':''}>Carte de 10 cours</option>`:''}
       ${!hasParis&&hasVinc?`<option value="forfait"${cur==='forfait'?' selected':''}>Forfait annuel</option>`:''}
     </select></div>`;
 
@@ -720,7 +721,12 @@ function sTarif() {
   if(avecP) {
     h += `<div class="cadre"><div class="cadre-titre">Profil de ${S.pPrenom||'votre partenaire'}</div>
       ${redSel('t-pred',S.pReduit,'Tarif réduit','S.pReduit=this.value;calcTarif()')}
-      ${formuleSel('t-pformule',S.pFormule,'S.pFormule=this.value;calcTarif()')}
+      ${(hasParis&&hasVinc)
+        ? `<div class="field"><label>Formule</label><select id="t-pmixte" onchange="S.pFormule=this.value;calcTarif()">
+            <option value="forfait2"${S.pFormule==='forfait2'?' selected':''}>Forfait annuel 2 cours</option>
+            <option value="vincarte"${S.pFormule==='vincarte'?' selected':''}>Forfait Vincennes + Carte Paris</option>
+          </select></div>`
+        : formuleSel('t-pformule',S.pFormule,'S.pFormule=this.value;calcTarif()')}
       ${hasVinc?vincBloc('t-pvinc','t-page','t-psorano',S.pVincennois,S.pAgeVinc,S.pDejaSorano,
         'S.pVincennois=this.value;calcTarif()','S.pAgeVinc=this.value;calcTarif()','S.pDejaSorano=this.value;calcTarif()'):''}
     </div>`;
@@ -737,59 +743,81 @@ function sTarif() {
 // ================================================================
 function calcTarif() {
   const nb=S.nbCours||1;
-  const P1=S.c1.ville==='paris',V1=S.c1.ville==='vincennes';
-  const P2=nb===2&&S.c2.ville==='paris',V2=nb===2&&S.c2.ville==='vincennes';
-  const hasParis=P1||P2,hasVinc=V1||V2;
-  const bothParis=P1&&P2&&!V1&&!V2,bothVinc=V1&&V2&&!P1&&!P2;
+  const P1=S.c1.ville==='paris', V1=S.c1.ville==='vincennes';
+  const P2=nb===2&&S.c2.ville==='paris', V2=nb===2&&S.c2.ville==='vincennes';
+  const hasParis=P1||P2, hasVinc=V1||V2;
   const avecP=S.venue==='avec-part';
-  const isRed=v=>v==='etudiant'||v==='demandeur'||v==='moins25';
 
-  function calcPersonne(red,formule,villes,vinc,age,sorano) {
-    const r=isRed(red); const lines=[]; let total=0;
-    const add=(k,v)=>{lines.push({k,v});total+=v;};
-    const addFree=(k,v)=>{lines.push({k,v,free:true});};
-    const hasP=villes.includes('paris'),hasV=villes.includes('vincennes');
-    const nb2=villes.length,both2P=nb2===2&&hasP&&!hasV,both2V=nb2===2&&hasV&&!hasP,mix=hasP&&hasV;
+  function calcPersonne(red, formule, villes, vinc, age, sorano) {
+    // Réductions : Paris → étudiant/demandeur ; Vincennes → moins25/carte_jeune
+    const rP = red==='etudiant' || red==='demandeur';
+    const rV = red==='moins25'  || red==='carte_jeune';
+    const lines=[]; let total=0;
+    const add    = (k,v) => { lines.push({k,v}); total+=v; };
+    const addFree= (k,v) => { lines.push({k,v,free:true}); };
 
-    if(both2P){
-      if(formule==='carte') add('Carte 10 cours (couvre 2 cours) — Paris',r?T.carte10_reduit:T.carte10);
-      else if(formule==='unitaire'){ add('Cours à l\'unité Paris (×2)',r?T.unitaire_paris_reduit*2:T.unitaire_paris*2); }
-      else add('Forfait annuel 2 cours — Paris',r?T.forfait_2cours_reduit:T.forfait_2cours);
-    }
-    else if(both2V){ add('Forfait annuel 2 cours — Vincennes',r?T.forfait_2cours_reduit:T.forfait_2cours); }
-    else if(mix){
-      const fm=formule==='vincarte'?'vincarte':'forfait2';
-      if(fm==='vincarte'){ add('Carte 10 cours — Paris',r?T.carte10_reduit:T.carte10); add('Forfait annuel — Vincennes',r?T.forfait_vincennes_reduit:T.forfait_vincennes); }
-      else add('Forfait annuel 2 cours — Paris + Vincennes',r?T.forfait_2cours_reduit:T.forfait_2cours);
-    }
-    else if(hasP){
-      if(formule==='carte') add('Carte 10 cours — Paris',r?T.carte10_reduit:T.carte10);
-      else if(formule==='unitaire') add('Cours à l\'unité — Paris',r?T.unitaire_paris_reduit:T.unitaire_paris);
-      else add('Forfait annuel — Paris',r?T.forfait_paris_reduit:T.forfait_paris);
-    }
-    else if(hasV){ add('Forfait annuel — Vincennes',r?T.forfait_vincennes_reduit:T.forfait_vincennes); }
+    const hasP=villes.includes('paris'), hasV=villes.includes('vincennes');
+    const nb2=villes.length;
+    const both2P=nb2===2&&hasP&&!hasV;
+    const both2V=nb2===2&&hasV&&!hasP;
+    const mix=hasP&&hasV;
 
-    if(formule!=='unitaire') add('Adhésion Le Regard Se Pose',T.adhesion_lrp);
-    if(hasV){ const s=soranoCot(vinc,age); if(s!==null){ sorano==='oui'?addFree('Adhésion Sorano','Déjà réglée ✓'):add('Adhésion Sorano (à régler à Sorano)',s); }}
+    if(both2P) {
+      if(formule==='carte') {
+        // Carte 10 calculée indépendamment pour chaque cours Paris
+        add('Carte 10 cours — Paris (cours 1)', rP?T.carte10_reduit:T.carte10);
+        add('Carte 10 cours — Paris (cours 2)', rP?T.carte10_reduit:T.carte10);
+      } else {
+        add('Forfait annuel 2 cours — Paris', rP?T.forfait_2cours_reduit:T.forfait_2cours);
+      }
+    } else if(both2V) {
+      add('Forfait annuel 2 cours — Vincennes', rV?T.forfait_2cours_reduit:T.forfait_2cours);
+    } else if(mix) {
+      if(formule==='vincarte') {
+        // Carte 10 Paris + Forfait Vincennes calculés indépendamment
+        add('Carte 10 cours — Paris', rP?T.carte10_reduit:T.carte10);
+        add('Forfait annuel — Vincennes', rV?T.forfait_vincennes_reduit:T.forfait_vincennes);
+      } else {
+        // Forfait 2 cours Paris + Vincennes — réduit si l'une ou l'autre condition
+        add('Forfait annuel 2 cours — Paris + Vincennes', (rP||rV)?T.forfait_2cours_reduit:T.forfait_2cours);
+      }
+    } else if(hasP) {
+      if(formule==='carte') add('Carte 10 cours — Paris', rP?T.carte10_reduit:T.carte10);
+      else                   add('Forfait annuel — Paris', rP?T.forfait_paris_reduit:T.forfait_paris);
+    } else if(hasV) {
+      add('Forfait annuel — Vincennes', rV?T.forfait_vincennes_reduit:T.forfait_vincennes);
+    }
+
+    // Une seule adhésion Le Regard Se Pose par personne
+    add('Adhésion Le Regard Se Pose', T.adhesion_lrp);
+
+    // Une seule adhésion Sorano par personne si au moins un cours à Vincennes
+    if(hasV) {
+      const s=soranoCot(vinc,age);
+      if(s!==null) { sorano==='oui' ? addFree('Adhésion Sorano','Déjà réglée ✓') : add('Adhésion Sorano (à régler à Sorano)',s); }
+    }
     return {lines,total};
   }
 
-  const villes = nb===1?[S.c1.ville]:[S.c1.ville,S.c2.ville];
-  const moiF = (S.c1.ville&&S.c2&&S.c2.ville&&S.c1.ville!==S.c2.ville)?(S.mixteFormule||'forfait2'):(S.formule||'forfait');
-  const moi  = calcPersonne(S.reduit,moiF,villes,S.vincennois,S.ageVinc,S.dejaSorano);
+  const villes = nb===1 ? [S.c1.ville] : [S.c1.ville, S.c2.ville];
+  const isMix  = hasParis && hasVinc;
+  const moiF   = isMix ? (S.mixteFormule||'forfait2') : (S.formule||'forfait');
+  const moi    = calcPersonne(S.reduit, moiF, villes, S.vincennois, S.ageVinc, S.dejaSorano);
   let part=null;
-  if(avecP){ const pF=(hasParis&&hasVinc)?(S.pFormule||S.mixteFormule||'forfait2'):(S.pFormule||'forfait');
-    part=calcPersonne(S.pReduit,pF,villes,S.pVincennois,S.pAgeVinc,S.pDejaSorano); }
+  if(avecP) {
+    const pF = isMix ? (S.pFormule||'forfait2') : (S.pFormule||'forfait');
+    part = calcPersonne(S.pReduit, pF, villes, S.pVincennois, S.pAgeVinc, S.pDejaSorano);
+  }
   S.tarifData={moi,part};
 
-  const el=$('t-result'); if(!el)return;
+  const el=$('t-result'); if(!el) return;
   const bloc=(data,nom)=>`<div class="tarif-bloc"><div class="tarif-titre">💶 Estimation — ${nom}</div>
     ${data.lines.map(l=>`<div class="tarif-ligne"><span>${l.k}</span><span>${l.free?l.v:l.v+' €'}</span></div>`).join('')}
     <div class="tarif-ligne"><span>TOTAL ESTIMÉ</span><span>${data.total} €</span></div></div>`;
 
-  let h=bloc(moi,S.prenom||'vous');
+  let h=bloc(moi, S.prenom||'vous');
   let gt=moi.total;
-  if(part){h+=bloc(part,S.pPrenom||'partenaire');gt+=part.total;}
+  if(part) { h+=bloc(part, S.pPrenom||'partenaire'); gt+=part.total; }
   if(part) h+=`<div class="tarif-total-global"><span>Total ensemble</span><span>${gt} €</span></div>`;
   h+=`<div class="info-note">Estimation indicative — montant définitif confirmé sur AssoConnect.</div>`;
   el.innerHTML=h;
