@@ -9744,11 +9744,6 @@ function renderFormulaireInscriptionDirecteAdmin() {
     +'<div style="display:flex;flex-direction:column;gap:6px;padding:4px 0;">'
     +COURS_VALS.map(function(c){ return '<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="checkbox" name="di-cours" value="'+c+'" onchange="diUpdatePaieZone()" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> '+c+'</label>'; }).join('')
     +'</div></div>'
-    +'<div class="field"><label>Formule *</label>'
-    +'<div style="display:flex;gap:12px;padding:4px 0;">'
-    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="radio" name="di-formule" value="carte10" checked onchange="diUpdatePaieZone()" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> Carte 10</label>'
-    +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="radio" name="di-formule" value="forfait" onchange="diUpdatePaieZone()" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> Forfait</label>'
-    +'</div></div>'
     +'<div id="di-cours-paie-zone"></div>'
     +'<div id="di-err" style="display:none;background:#1a0000;border-left:3px solid var(--danger);padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#ff6b6b;margin-bottom:10px;"></div>'
     +'<div id="di-ok"  style="display:none;background:#001a00;border-left:3px solid #4ade80;padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#4ade80;margin-bottom:10px;">✓ Élève inscrit·e !</div>'
@@ -9772,25 +9767,59 @@ window.diUpdatePaieZone = function() {
   var z = gel('di-cours-paie-zone');
   if(!z) return;
   if(!checked.length){ z.innerHTML=''; return; }
-  var formule = (document.querySelector('input[name="di-formule"]:checked')||{}).value||'carte10';
+  var is2cours = checked.length >= 2;
+  var forfait2sel = is2cours && (document.querySelector('input[name="di-formule2"]:checked')||{}).value === 'forfait2';
   var h = '';
-  checked.forEach(function(cb){
+
+  // ── Toggle formule (2 cours uniquement) ──
+  if (is2cours) {
+    h += '<div style="margin-bottom:10px;padding:10px;background:var(--s2);border-radius:8px;">';
+    h += '<div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:700;">Formule</div>';
+    h += '<div style="display:flex;flex-direction:column;gap:6px;">';
+    h += '<label '+lbl+'><input type="radio" name="di-formule2" value="parcours" '+(forfait2sel?'':'checked')+' onchange="diUpdatePaieZone()" '+inp+'/> Par cours (choisir pour chacun)</label>';
+    h += '<label '+lbl+'><input type="radio" name="di-formule2" value="forfait2" '+(forfait2sel?'checked':'')+' onchange="diUpdatePaieZone()" '+inp+'/> Forfait 2 cours — '+(TARIFS.forfait_2cours||760)+'€</label>';
+    h += '</div></div>';
+  }
+
+  checked.forEach(function(cb, idx){
     var cours = cb.value;
     var ci = COURS_VALS_Z.indexOf(cours);
     var isVinc = cours.toLowerCase().indexOf('vincennes')>=0;
-    var defMt = formule==='carte10'?(TARIFS.carte10||170):(isVinc?(TARIFS.forfait_vincennes||210):(TARIFS.forfait_paris||200));
+    var inclus = forfait2sel && idx > 0; // 2e cours inclus dans le forfait 2 cours
+    // Formule de ce cours
+    var formule = forfait2sel ? 'forfait'
+      : ((document.querySelector('input[name="di-formule-c-'+ci+'"]:checked')||{}).value||'carte10');
+    // Montant par défaut
+    var defMt = forfait2sel && idx === 0 ? (TARIFS.forfait_2cours||760)
+      : forfait2sel ? 0
+      : formule==='carte10'?(TARIFS.carte10||170):(isVinc?(TARIFS.forfait_vincennes||210):(TARIFS.forfait_paris||200));
     h += '<div style="margin-bottom:8px;padding:8px 10px;background:var(--s2);border-radius:6px;">';
     h += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;">'+cours+'</div>';
+    // Formule par cours (uniquement si pas forfait2 global)
+    if (!forfait2sel) {
+      h += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">';
+      h += '<span style="font-size:10px;color:var(--dim);">Formule :</span>';
+      h += '<label '+lbl+'><input type="radio" name="di-formule-c-'+ci+'" value="carte10" '+(formule==='carte10'?'checked':'')+' onchange="diUpdatePaieZone()" '+inp+'/> Carte 10</label>';
+      h += '<label '+lbl+'><input type="radio" name="di-formule-c-'+ci+'" value="forfait" '+(formule==='forfait'?'checked':'')+' onchange="diUpdatePaieZone()" '+inp+'/> Forfait</label>';
+      h += '</div>';
+    } else if (inclus) {
+      h += '<div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.25);border-radius:6px;padding:5px 10px;margin-bottom:8px;font-size:12px;color:var(--gold);">✅ Inclus dans le forfait 2 cours</div>';
+    }
+    // Rôle
     h += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">';
     h += '<span style="font-size:10px;color:var(--dim);">Rôle :</span>';
     h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guideur" checked onchange="diUpdateRolePartLabel(\'guideur\','+ci+')" '+inp+'/> Guideur</label>';
     h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guidee" onchange="diUpdateRolePartLabel(\'guidee\','+ci+')" '+inp+'/> Guidée</label>';
     h += '</div>';
-    h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
-    h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Paiement</label><select id="di-paie-'+ci+'">'+PAI_OPT_Z+'</select></div>';
-    h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Montant (€)</label><input type="number" id="di-montant-'+ci+'" value="'+defMt+'" min="0" step="1"/></div>';
-    h += '</div>';
-    h += '<div class="field" style="margin:0 0 8px;"><label style="font-size:10px;">Date du 1er paiement</label><input type="date" id="di-dateP-'+ci+'" style="font-size:13px;"/></div>';
+    // Paiement/montant/date (masqués pour le 2e cours du forfait 2 cours)
+    if (!inclus) {
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
+      h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Paiement</label><select id="di-paie-'+ci+'">'+PAI_OPT_Z+'</select></div>';
+      h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Montant (€)</label><input type="number" id="di-montant-'+ci+'" value="'+defMt+'" min="0" step="1"/></div>';
+      h += '</div>';
+      h += '<div class="field" style="margin:0 0 8px;"><label style="font-size:10px;">Date du 1er paiement</label><input type="date" id="di-dateP-'+ci+'" style="font-size:13px;"/></div>';
+    }
+    // Partenaire
     h += '<div style="display:flex;gap:12px;margin-bottom:4px;">';
     h += '<label '+lbl+'><input type="radio" name="di-part-'+ci+'" value="solo" checked onchange="diTogglePartCours('+ci+')" '+inp+'/> Solo</label>';
     h += '<label '+lbl+'><input type="radio" name="di-part-'+ci+'" value="avec" onchange="diTogglePartCours('+ci+')" '+inp+'/> Avec partenaire</label>';
@@ -9828,8 +9857,7 @@ window.soumettreInscriptionDirecte = function(force) {
   var email   = ((gel('di-email')||{}).value||'').trim().toLowerCase();
   var tel     = ((gel('di-tel')||{}).value||'').trim();
   var coursCoches = Array.from(document.querySelectorAll('input[name="di-cours"]:checked')).map(function(cb){ return cb.value; });
-  var formEl  = document.querySelector('input[name="di-formule"]:checked');
-  var formule = formEl ? formEl.value : 'carte10';
+  var forfait2Checked = coursCoches.length >= 2 && (document.querySelector('input[name="di-formule2"]:checked')||{}).value === 'forfait2';
   if (!prenom||!nom||!email) { if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';} return; }
   if (!coursCoches.length) { if(err){err.textContent='Choisissez au moins un cours.';err.style.display='block';} return; }
   var COURS_VALS_REF = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
@@ -9880,6 +9908,11 @@ window.soumettreInscriptionDirecte = function(force) {
     var ville  = cours.toLowerCase().indexOf('vincennes')>=0 ? 'vincennes' : 'paris';
     var niveau = cours.toLowerCase().indexOf('inter')>=0 ? 'intermediaire' : 'debutant';
     var ci = COURS_VALS_REF.indexOf(cours);
+    var formule = forfait2Checked ? 'forfait'
+      : ((document.querySelector('input[name="di-formule-c-'+ci+'"]:checked')||{}).value||'carte10');
+    var montantDefault = forfait2Checked && idx === 0 ? (TARIFS.forfait_2cours||760)
+      : forfait2Checked ? 0
+      : formule==='carte10' ? (TARIFS.carte10||0) : ((ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0);
     var role = ((document.querySelector('input[name="di-role-'+ci+'"]:checked')||{}).value)||'guideur';
     var roleP = role==='guideur'?'guidee':'guideur';
     var avecC = (document.querySelector('input[name="di-part-'+ci+'"]:checked')||{}).value==='avec';
@@ -9892,7 +9925,7 @@ window.soumettreInscriptionDirecte = function(force) {
     var partNomC = avecC?(pPrenomC+' '+pNomC).trim():'';
     var paie = ((gel('di-paie-'+ci)||{}).value||'cb1x');
     var mf = gel('di-montant-'+ci);
-    var montant = mf?(parseFloat(mf.value)||0):(formule==='carte10'?(TARIFS.carte10||0):(ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0);
+    var montant = mf?(parseFloat(mf.value)||0):montantDefault;
     var dateP = ((gel('di-dateP-'+ci)||{}).value||'');
     var paiePart = avecC?((gel('di-paie-p-'+ci)||{}).value||paie):paie;
     var mpf = avecC?gel('di-montant-p-'+ci):null;
@@ -9912,10 +9945,11 @@ window.soumettreInscriptionDirecte = function(force) {
     if(avecC&&pPrenomC&&pNomC){insRows.push({prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,role:roleP,niveau:niveau,ville:ville,cours:cours,type:formulePart,paiement:paiePart,montant:montantP,statut:'inscrit',saison:sai,partenaire:prenom+' '+nom,email_partenaire:email,donnees:dateP?{datePremierPaiement:dateP}:{}});}
   });
   // Cartes 10
+  var anyMainCarte10 = insRows.some(function(r){ return r.email===email && r.type==='carte10'; });
   var cours0=coursCoches[0], ville0=cours0.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   var niveau0=cours0.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   var niveauLbl0=niveau0==='debutant'?'Débutant':'Intermédiaire';
-  if(formule==='carte10'&&!adminData.cartes.find(function(c){return c.email===email;})){
+  if(anyMainCarte10&&!adminData.cartes.find(function(c){return c.email===email;})){
     adminData.cartes.push({id:'C'+ts,nom:prenom+' '+nom,prenom:prenom,niveau:niveauLbl0,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville0,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
     recalcStats();
   }
@@ -9939,7 +9973,7 @@ window.soumettreInscriptionDirecte = function(force) {
   };
   if(!IS_DEMO && insRows.length){
     // Eleves upserts (fire and forget)
-    Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:formule==='carte10'?10:0,carte_statut:formule==='carte10'?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
+    Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?10:0,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     Object.keys(partenairesCartes).forEach(function(pem){
       var pd=partenairesCartes[pem];
       Promise.resolve(TEV.client.from('eleves').upsert({prenom:pd.prenom,nom:pd.nom,email:pem,tel:pd.tel,niveau:pd.niveau,ville:pd.ville,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:10,carte_statut:'Nouvelle carte',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
