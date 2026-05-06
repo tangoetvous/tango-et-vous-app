@@ -282,6 +282,18 @@ function _computeT() {
       var tPar = pPar.tarifs || {};
       var tVin = pVin.tarifs || {};
       var merged = Object.assign({}, tVin, tPar); // Paris prime sur les clés communes
+      // Adhésion LRS — Paramètres → Adhésion Le Regard Se Pose
+      try {
+        var pAdh = JSON.parse(localStorage.getItem('tev_params_adhesions_'+sai)||'{}');
+        if (pAdh.lrp && pAdh.lrp.montant !== undefined) merged.adhesion_lrp = pAdh.lrp.montant;
+        // Tarifs Sorano dans T pour fallback de soranoCot()
+        if (pAdh.sorano) {
+          if (pAdh.sorano.p16_vinc !== undefined) merged.sorano_vinc     = pAdh.sorano.p16_vinc;
+          if (pAdh.sorano.m16_vinc !== undefined) merged.sorano_vinc_m16 = pAdh.sorano.m16_vinc;
+          if (pAdh.sorano.p16_ext  !== undefined) merged.sorano_ext      = pAdh.sorano.p16_ext;
+          if (pAdh.sorano.m16_ext  !== undefined) merged.sorano_ext_m16  = pAdh.sorano.m16_ext;
+        }
+      } catch(e3) {}
       if (Object.keys(merged).length > 0) return Object.assign({}, TARIFS_BASE, merged);
     } catch(e2) {}
     // 5. Dernier recours : tev_tarifs sans dateEffet
@@ -410,15 +422,24 @@ function isWaitlist() {
 
 function soranoCot(vinc, age) {
   if(!vinc||!age) return null;
-  // Lire depuis tev_adhesion_sorano (Paramètres) en priorité
+  // 1. Paramètres → Adhésion Sorano (clé par saison — source principale)
   try {
-    var _sor = JSON.parse(localStorage.getItem('tev_adhesion_sorano')||'null');
+    var pAdh = JSON.parse(localStorage.getItem('tev_params_adhesions_'+getSaisonCible())||'{}');
+    var _sor = pAdh.sorano || null;
     if (_sor) {
       if (vinc==='oui') return age==='m16' ? _sor.m16_vinc : _sor.p16_vinc;
       return age==='m16' ? _sor.m16_ext : _sor.p16_ext;
     }
   } catch(e) {}
-  // Fallback tev_tarifs
+  // 2. Ancienne clé legacy tev_adhesion_sorano
+  try {
+    var _sorOld = JSON.parse(localStorage.getItem('tev_adhesion_sorano')||'null');
+    if (_sorOld) {
+      if (vinc==='oui') return age==='m16' ? _sorOld.m16_vinc : _sorOld.p16_vinc;
+      return age==='m16' ? _sorOld.m16_ext : _sorOld.p16_ext;
+    }
+  } catch(e2) {}
+  // 3. Fallback T (populé depuis tev_params_adhesions ou TARIFS_BASE)
   return vinc==='oui' ? (age==='m16'?T.sorano_vinc_m16:T.sorano_vinc) : (age==='m16'?T.sorano_ext_m16:T.sorano_ext);
 }
 
