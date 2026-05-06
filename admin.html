@@ -6902,6 +6902,7 @@ function renderReportSection(sai, cartes) {
   var reports=adminData.carteReports||[];
   var h='<div class="section-hdr" style="color:var(--gold);margin-top:4px;">↩ Report saison '+saiProch+'</div>';
   h+='<div style="font-size:11px;color:var(--dim);padding:4px 12px 10px;font-style:italic;">Cartes non terminées pouvant être reportées sur la saison suivante'+(IS_DEMO&&todayStr<reportFrom?' <span style="color:var(--warn-text)">(démo — actif à partir du 01/07)</span>':'')+'</div>';
+  h+='<div style="font-size:11px;background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.25);border-radius:6px;padding:8px 10px;margin:0 12px 10px;color:var(--warn-text);">⚠️ Avant de reporter une carte, vérifiez que l\'élève a bien payé son adhésion AssoConnect pour la saison '+saiProch+'.</div>';
   eligibles.forEach(function(c){
     var rep=reports.find(function(r){return r.carteId===c.id&&r.saisonOrigine===sai;});
     var statut=rep?rep.statut:null;
@@ -7473,6 +7474,9 @@ function reporterCarteJs(id, btn) {
   var sai=saisonActive();
   var saiArr=sai.split('-'), saiEndYear=parseInt(saiArr[1]);
   var saiProch=(parseInt(saiArr[0])+1)+'-'+(saiEndYear+1);
+  if(!IS_DEMO&&!confirm('Avez-vous vérifié que '+c.nom+' a bien payé son adhésion AssoConnect pour la saison '+saiProch+' ?\n\nCliquez OK pour confirmer le report.')){
+    btn.disabled=false;btn.textContent='↩ Reporter';return;
+  }
   var restants=Math.max(0,c.restants||0);
   // Chercher l'entrée coursTango pour avoir prenom/nom/tel séparément
   var ct=(adminData.coursTango||[]).find(function(x){

@@ -1429,6 +1429,19 @@
       const _isExpAcc = _daysExp !== null && _daysExp < 0;
       const _canStartAcc = _isExhAcc || _isExpAcc;
       const _isNonPayeAcc = carte.paye === false;
+      // Période pré-inscription (juillet–août de la fin de saison)
+      const _preinscEndYear = parseInt(_sai().split('-')[1]);
+      const _nowMonth = new Date().getMonth() + 1;
+      const _isPreinscPeriod = new Date().getFullYear() === _preinscEndYear && (_nowMonth === 7 || _nowMonth === 8);
+      const _nextSaiStr = _preinscEndYear + '-' + (_preinscEndYear + 1);
+      const _preinscBlock = '<div style="margin-top:8px;background:linear-gradient(135deg,rgba(212,175,55,0.12) 0%,rgba(212,175,55,0.05) 100%);border:1.5px solid rgba(212,175,55,0.4);border-radius:12px;padding:14px 16px;text-align:center;">'
+        + '<div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:0.5px;margin-bottom:6px;">🎉 Pré-inscriptions ' + _nextSaiStr + '</div>'
+        + '<div style="font-size:12px;color:rgba(255,255,255,0.8);line-height:1.5;margin-bottom:10px;">Réservez votre place pour la prochaine saison — les places sont limitées.</div>'
+        + '<a href="inscription-cours.html" style="display:block;background:var(--gold);color:#1a1a1a;border-radius:9px;padding:10px;font-size:13px;font-weight:700;text-decoration:none;">Se pré-inscrire →</a>'
+        + '</div>';
+      const _reportInfoBlock = remaining > 0 ? '<div style="margin-top:8px;background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.25);border-radius:10px;padding:10px 14px;font-size:12px;color:rgba(255,255,255,0.75);line-height:1.5;">'
+        + '💡 Il vous reste <strong style="color:var(--gold);">' + remaining + ' cours</strong> sur votre carte — en vous pré-inscrivant pour ' + _nextSaiStr + ', vous pourrez en bénéficier grâce au report de votre carte !'
+        + '</div>' : '';
 
       // Pastille paiement (visible dans tous les états)
       if (carte.paye === true) {
@@ -1440,11 +1453,19 @@
         // Carte épuisée (10/10) → "Renouveler" AU-DESSUS de "Je pointe"
         h += '<button onclick="renewCarteSelf()" style="width:100%;background:rgba(255,255,255,0.08);color:var(--text,#fff);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin:12px 0 8px;font-family:inherit;letter-spacing:0.2px;">↻ Renouveler sans payer pour l\'instant</button>';
         h += '<button onclick="ouvrirModalPointerSelf()" style="width:100%;background:var(--gold);color:#1a1a1a;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;margin:0 0 8px;font-family:inherit;">✓ Je pointe ma présence</button>';
-        h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+        if (_isPreinscPeriod) {
+          h += _preinscBlock;
+        } else {
+          h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+        }
       } else if (_isExpAcc) {
         // Carte expirée (pas épuisée) → proposer une nouvelle, pas de pointage
         h += '<button onclick="renewCarteSelf()" style="width:100%;background:rgba(255,255,255,0.08);color:var(--text,#fff);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin:12px 0 8px;font-family:inherit;letter-spacing:0.2px;">↻ Commencer une nouvelle carte sans payer pour l\'instant</button>';
-        h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+        if (_isPreinscPeriod) {
+          h += _preinscBlock + _reportInfoBlock;
+        } else {
+          h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+        }
       } else {
         // Carte en cours
         if (_isNonPayeAcc) {
@@ -1453,9 +1474,13 @@
             + '</div>';
         }
         h += '<button onclick="ouvrirModalPointerSelf()" style="width:100%;background:var(--gold);color:#1a1a1a;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;margin:0 0 8px;font-family:inherit;">✓ Je pointe ma présence</button>';
-        h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;'
-          + (_isNonPayeAcc ? 'background:#e65100;color:#fff;font-weight:700;' : 'border:1px solid rgba(212,175,55,0.45);color:var(--gold);font-weight:600;')
-          + 'border-radius:10px;padding:11px;font-size:13px;text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+        if (_isPreinscPeriod) {
+          h += _preinscBlock + _reportInfoBlock;
+        } else {
+          h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;'
+            + (_isNonPayeAcc ? 'background:#e65100;color:#fff;font-weight:700;' : 'border:1px solid rgba(212,175,55,0.45);color:var(--gold);font-weight:600;')
+            + 'border-radius:10px;padding:11px;font-size:13px;text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+        }
       }
       h += '</div>';
       // Forfait(s) en complément d'une carte10 (ex: Paris carte10 + Vincennes forfait)
