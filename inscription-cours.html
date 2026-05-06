@@ -261,18 +261,30 @@ const TARIFS_BASE = {
 function _computeT() {
   try {
     const today = new Date().toISOString().slice(0,10);
+    const sai = getSaisonCible();
     const prog = JSON.parse(localStorage.getItem('tev_tarifs')||'null');
-    // Tarif programmé avec date d'effet atteinte
+    // 1. Tarif programmé avec date d'effet atteinte
     if (prog && prog.tarifs && prog.dateEffet && today >= prog.dateEffet) {
       return Object.assign({}, TARIFS_BASE, prog.tarifs);
     }
+    // 2. Pré-inscription → tarifs prochaine saison (clé globale)
     if (MODE === 'preinscription') {
       const next = JSON.parse(localStorage.getItem('tev_tarifs_prochaine_saison')||'null');
       if (next) return Object.assign({}, TARIFS_BASE, next);
     }
+    // 3. Tarifs actifs (clé globale)
     const stored = JSON.parse(localStorage.getItem('tev_tarifs_actifs')||'null');
     if (stored) return Object.assign({}, TARIFS_BASE, stored);
-    // Dernier recours : tev_tarifs sans dateEffet (tarifs Supabase bruts)
+    // 4. Tarifs par ville — Paramètres → Tango Paris / Tango Vincennes → Tarifs
+    try {
+      var pPar = JSON.parse(localStorage.getItem('tev_params_paris_'+sai)||'{}');
+      var pVin = JSON.parse(localStorage.getItem('tev_params_vincennes_'+sai)||'{}');
+      var tPar = pPar.tarifs || {};
+      var tVin = pVin.tarifs || {};
+      var merged = Object.assign({}, tVin, tPar); // Paris prime sur les clés communes
+      if (Object.keys(merged).length > 0) return Object.assign({}, TARIFS_BASE, merged);
+    } catch(e2) {}
+    // 5. Dernier recours : tev_tarifs sans dateEffet
     if (prog && prog.tarifs) return Object.assign({}, TARIFS_BASE, prog.tarifs);
     return Object.assign({}, TARIFS_BASE);
   } catch(e) { return Object.assign({}, TARIFS_BASE); }
@@ -861,7 +873,23 @@ function validateInfos(){
 }
 
 function goCours2(){ saveStep(); if(!validateInfos())return; next(); }
-function goTarif(){ saveStep(); if(!validateInfos())return; S.wantTarif=true; next(); }
+async function goTarif() {
+  saveStep();
+  if (!validateInfos()) return;
+  S.wantTarif = true;
+  // Fetch des tarifs depuis Supabase au moment du clic — garantit les valeurs admin même cross-device
+  try {
+    var all = await TEV.getAllParams();
+    var sai = getSaisonCible();
+    Object.keys(all).forEach(function(k) {
+      if (k.startsWith('tev_')) {
+        try { localStorage.setItem(k, typeof all[k]==='string' ? all[k] : JSON.stringify(all[k])); } catch(e) {}
+      }
+    });
+    T = _computeT();
+  } catch(e) {}
+  next();
+}
 function next(){ S.step++; render(); }
 function prev(){ saveStep(); if(S.step>1){S.step--;render();} }
 
