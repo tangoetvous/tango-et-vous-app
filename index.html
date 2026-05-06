@@ -324,7 +324,7 @@
       eleveData.hasVincennes = ((data.eleve&&data.eleve.ville)||'').toLowerCase() === 'vincennes';
       // Inscriptions tango — détecter forfait/Vincennes (async, affine les valeurs ci-dessus)
       TEV.client.from('inscriptions_cours')
-        .select('type, ville, statut, saison, paiement_sorano')
+        .select('type, ville, niveau, statut, saison, paiement_sorano')
         .eq('email', _stEmail)
         .neq('statut', 'supprimé')
         .then(function(res) {
@@ -1349,12 +1349,36 @@
 
     var h = '';
 
-    // ── Bandeau d'accueil ──────────────────────────────────────
+    // ── Bandeau d'accueil ───────────────────────────────
+    // Construction des lignes de cours (multi-cours si disponible)
+    var _inscrActives = (eleveData.inscriptionsTango || []).filter(function(i){ return i.statut === 'inscrit'; });
+    function _coursLine(vill, niv) {
+      var nL = (niv||'').toLowerCase().includes('interm') ? 'Intermédiaire' : 'Débutant';
+      var vL = (vill||'').toLowerCase();
+      var jr = vL === 'vincennes' ? 'Lundi' : 'Jeudi';
+      var hr = vL === 'vincennes' ? ((niv||'').toLowerCase().includes('interm') ? HV_INT : HV_DEB) : ((niv||'').toLowerCase().includes('interm') ? HP_INT : HP_DEB);
+      return nL + ' à ' + cap(vL) + ' — les ' + jr + 's à ' + hr;
+    }
+    var _coursLines;
+    if (_inscrActives.length >= 2 && _inscrActives.every(function(i){ return i.niveau; })) {
+      var _sortedInscr = _inscrActives.slice().sort(function(a, b) {
+        if (a.ville !== b.ville) return a.ville === 'paris' ? -1 : 1;
+        return (a.niveau||'').localeCompare(b.niveau||'');
+      });
+      _coursLines = _sortedInscr.map(function(i){ return _coursLine(i.ville, i.niveau); });
+    } else {
+      _coursLines = [_coursLine(ville, niveau)];
+    }
+    var _coursIntro = _coursLines.length >= 2 ? 'Tes cours :' : 'Ton cours :';
+    var _coursBody = _coursLines.length >= 2
+      ? _coursLines.map(function(l){ return '<div style="margin-top:3px;">· ' + l + '</div>'; }).join('')
+      : ' ' + _coursLines[0];
+
     h += '<div style="background:linear-gradient(160deg,#1a1020 0%,#2a1535 50%,#1a1820 100%);padding:18px 20px 14px;text-align:center;position:relative;overflow:hidden;">'
       + '<div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(212,175,55,0.12) 0%,transparent 70%);pointer-events:none;"></div>'
       + '<div style="font-family:var(--font-display,serif);font-size:26px;font-weight:300;color:var(--gold);letter-spacing:1px;margin-bottom:4px;position:relative;">Bonjour ' + prenom + ' !</div>'
-      + '<div style="font-size:14px;color:#fff;line-height:1.6;position:relative;">Ton cours : ' + niveauLbl + ' à ' + cap(ville) + ' — les ' + coursJour + 's à ' + coursHeure
-      + (yogaInscrit ? '<br><span style="color:#fff;font-size:14px;">' + ({yin:'\uD83C\uDF19 Yin Yoga \u00b7 Mardi '+HY_YIN, hatha:'\u2600\uFE0F Hatha Yoga \u00b7 Mardi '+HY_HTH, forfait:'\uD83C\uDF19\u2600\uFE0F Yin + Hatha Yoga \u00b7 Mardi '+HY_YIN}[yogaInscrit.cours] || '') + '</span>' : '')
+      + '<div style="font-size:14px;color:#fff;line-height:1.6;position:relative;">' + _coursIntro + _coursBody
+      + (yogaInscrit ? '<div style="margin-top:3px;"><span style="color:#fff;font-size:14px;">' + ({yin:'\uD83C\uDF19 Yin Yoga \u00b7 Mardi '+HY_YIN, hatha:'\u2600\uFE0F Hatha Yoga \u00b7 Mardi '+HY_HTH, forfait:'\uD83C\uDF19\u2600\uFE0F Yin + Hatha Yoga \u00b7 Mardi '+HY_YIN}[yogaInscrit.cours] || '') + '</span></div>' : '')
       + '</div>'
       + '</div>';
 
@@ -1434,10 +1458,27 @@
           + 'border-radius:10px;padding:11px;font-size:13px;text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
       }
       h += '</div>';
+      // Forfait(s) en complément d'une carte10 (ex: Paris carte10 + Vincennes forfait)
+      var _inscForfait = _inscrActives.filter(function(i){ return i.type === 'forfait'; });
+      _inscForfait.forEach(function(insc) {
+        var _vL = cap((insc.ville||'').toLowerCase());
+        h += '<div style="margin-top:12px;">'
+          + '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:14px 18px;">'
+          + '<div class="forfait-badge" style="margin:0;">✅ Forfait annuel — ' + _vL + ' actif</div></div></div>';
+      });
     } else if (carte && carte.type === 'forfait') {
+      var _inscForfaitAll = _inscrActives.filter(function(i){ return i.type === 'forfait'; });
       h += '<div style="margin-top:20px;margin-bottom:20px;">';
-      h += '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px;">'
-        + '<div class="forfait-badge" style="margin:0;">✅ Forfait annuel actif</div></div></div>';
+      h += '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px;">';
+      if (_inscForfaitAll.length >= 2) {
+        _inscForfaitAll.forEach(function(insc) {
+          var _vL = cap((insc.ville||'').toLowerCase());
+          h += '<div class="forfait-badge" style="margin:0 0 6px;">✅ Forfait annuel — ' + _vL + ' actif</div>';
+        });
+      } else {
+        h += '<div class="forfait-badge" style="margin:0;">✅ Forfait annuel actif</div>';
+      }
+      h += '</div></div>';
     }
 
     // ── Rappel adhésion Sorano (Vincennes uniquement) ─────────────

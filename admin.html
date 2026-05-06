@@ -6104,14 +6104,27 @@ function majRechercheEleve(val) {
   zone.innerHTML = _elevesResultatsHTML(inscrits);
 }
 function basculerRole(id) {
-  var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
+  var e=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
   if(!e) return;
   e.role = e.role==='guideur' ? 'guidee' : 'guideur';
   afficherToast('✓ '+e.prenom+' '+e.nom+' → '+(e.role==='guideur'?'Guideur':'Guidée'));
   renderTab();
   if (!IS_DEMO) {
-    TEV.client.from('eleves').update({role: e.role}).eq('email', e.email)
-    .then(function(){ chargerDonnees(); })
+    // Sauvegarder dans inscriptions_cours par ID — rôle indépendant par cours
+    Promise.resolve(TEV.client.from('inscriptions_cours').update({role: e.role}).eq('id', e.id))
+    .then(function(res) {
+      if (res && res.error) { afficherToast('⚠️ Erreur sauvegarde rôle: ' + (res.error.message||'')); return; }
+      // Mettre à jour eleves.role seulement si c'est le seul cours actif de la saison
+      var sai = saisonActive();
+      var autresInsc = (adminData.coursTango||[]).filter(function(x){
+        return x.email===e.email && String(x.id)!==String(id) && x.statut==='inscrit'
+          && (x.saison||saisonCourante())===sai;
+      });
+      if (autresInsc.length === 0) {
+        Promise.resolve(TEV.client.from('eleves').update({role: e.role}).eq('email', e.email)).catch(function(){});
+      }
+      chargerDonnees();
+    })
     .catch(function(err){ afficherToast('⚠️ Erreur sauvegarde rôle: ' + ((err&&err.message)||'')); });
   }
 }
