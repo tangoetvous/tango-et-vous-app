@@ -282,7 +282,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] Tester modification cours/paiement/montant → persiste après refresh
 - [ ] Installer l'appli sur Mac (PWA déjà prête) : ouvrir admin dans Chrome → icône ⊕ dans la barre d'adresse → Installer
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
-- [ ] Implémenter emails automatiques via Brevo + Supabase Edge Functions (remplace Code.gs/MailApp qui est inactif)
+- [ ] Implémenter emails automatiques via Brevo + Supabase Edge Functions (remplace Code.gs/MailApp qui est inactif) — **inclut la relance absences carte10** (voir section Emails → Cartes 10 → Relance 2 absences)
 - [ ] Implémenter notifications push via FCM + Supabase Edge Functions — IMPORTANT : inclure nettoyage automatique des tokens invalides (FCM retourne les échecs dans la réponse → DELETE FROM fcm_tokens WHERE token IN (échecs))
 - [ ] Étendre icône 🔔 (badge rouge) + push aux événements suivants : essai tango, essai yoga, demande d'inscription tango, inscription stage, cours particuliers, demande de devis, RSVP milonga depuis espace élève — d'autres cas à lister par l'utilisateur
 - [ ] Revoir le formulaire cours particuliers
@@ -649,6 +649,7 @@ Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Co
 | **E10** | Admin renouvelle manuellement depuis Cartes 10 → Détails | Élève | "Carte renouvelée, à bientôt !" |
 | **Fin saison J+1** | Déclencheur : lendemain dernier cours Paris juin | Élèves avec cours restants | "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" |
 | **Fin saison 25 août** | Déclencheur quotidien le 25 août | Élèves avec cours restants non ré-inscrits | "Dernier rappel : vos cours expirent" |
+| **Relance 2 absences** | Vendredi matin (Paris) / mardi matin (Vincennes) via GitHub Actions cron | Élève carte10 absent aux 2 derniers cours d'affilée | "On prend de tes nouvelles…" — déclenché même si l'élève a déclaré son absence via 🚫. Logique : dates cours depuis `parametres` (`tev_cours_dates`) − présences (`presences` table) = absences. Anti-doublon : colonne `derniere_relance_abs DATE` sur `eleves` (ne renvoie pas si déjà envoyé pour ces 2 mêmes dates). Script Node.js dans `.github/scripts/relance-absences.js` + workflow `relance-absences.yml`. **À implémenter en même temps que les autres emails Brevo.** |
 
 ### Cours particuliers
 | Déclencheur | Destinataire | Objet |
