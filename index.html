@@ -294,6 +294,9 @@
             if(currentTab==='accueil')renderAccueil();
           }
         }).catch(function(){});
+      // Notifications élève
+      eleveData.notifications = [];
+      _loadEleveNotifications(((data.eleve&&data.eleve.email)||'').toLowerCase());
       // Inscriptions stages futures — chargées depuis Supabase pour statut et ID
       var _stEmail = ((data.eleve&&data.eleve.email)||'').toLowerCase();
       var _stToday = new Date().toISOString().slice(0,10);
@@ -568,7 +571,8 @@
         accueil:'Accueil', agenda:'Agenda', carte:'Carte', stages:'Stages',
         milonga:'Milonga', 'cours-particuliers':'Cours privé', 'carte-lieux':'Plan',
         actu:'Actu', contact:'Contact', yoga:'Yoga', preinscription:'Pré-inscription',
-        hypnose:'Hypnose', whatsapp:'WhatsApp', avis:'Avis', sorano:'Sorano'
+        hypnose:'Hypnose', whatsapp:'WhatsApp', avis:'Avis', sorano:'Sorano',
+        notifications:'Notifications'
       };
       _navLbl.textContent = _TAB_LABELS[tab] || tab;
     }
@@ -607,6 +611,7 @@
     if (tab === 'avis') renderAvis();
     if (tab === 'discussions') { renderDiscussions(); _discStartListPoll(); }
     if (tab === 'sorano') renderSorano();
+    if (tab === 'notifications') { renderNotificationsPane(); _markNotificationsRead(); }
     if (tab !== 'actu') _actuStopPoll();
     if (tab !== 'discussions') { _discStopPoll(); _discStopListPoll(); if (_discView === 'new') _discView = 'list'; }
     window.scrollTo(0, 0);
@@ -2630,6 +2635,66 @@
     _showInAppNotif(message);
   }
 
+  function _loadEleveNotifications(email) {
+    if (!email || IS_DEMO) return;
+    TEV.client.from('notifications_eleve').select('*')
+      .eq('email', email)
+      .order('created_at', {ascending: false})
+      .limit(50)
+      .then(function(res) {
+        if (res && res.data && eleveData) {
+          eleveData.notifications = res.data;
+          _updateEleveNotifBadge();
+          if (currentTab === 'notifications') renderNotificationsPane();
+        }
+      }).catch(function(){});
+  }
+
+  function _updateEleveNotifBadge() {
+    var badge = $('eleve-notif-badge');
+    if (!badge) return;
+    var notifs = (eleveData && eleveData.notifications) || [];
+    var unread = notifs.filter(function(n){ return !n.lu; }).length;
+    badge.style.display = unread ? 'inline-block' : 'none';
+  }
+
+  function _markNotificationsRead() {
+    if (!eleveData || !eleveData.notifications) return;
+    var hadUnread = eleveData.notifications.some(function(n){ return !n.lu; });
+    if (!hadUnread) return;
+    eleveData.notifications.forEach(function(n){ n.lu = true; });
+    _updateEleveNotifBadge();
+    var email = ((eleveData.eleve&&eleveData.eleve.email)||'').toLowerCase();
+    if (!IS_DEMO && email) {
+      TEV.client.from('notifications_eleve').update({lu:true}).eq('email', email).eq('lu', false).catch(function(){});
+    }
+  }
+
+  function renderNotificationsPane() {
+    var pane = $('notifications-pane');
+    if (!pane) return;
+    var notifs = (eleveData && eleveData.notifications) || [];
+    var h = '<div class="dash-wrap">';
+    h += '<div class="tab-section-title">🔔 Notifications</div>';
+    if (!notifs.length) {
+      h += '<div style="text-align:center;color:rgba(255,255,255,.4);font-size:14px;padding:40px 0;">Aucune notification pour l\'instant.</div>';
+    } else {
+      notifs.forEach(function(n) {
+        var dt = n.created_at ? new Date(n.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}) : '';
+        h += '<div style="background:var(--card-bg,#1a1a1a);border-radius:10px;padding:12px 14px;margin-bottom:8px;'
+          + (!n.lu ? 'border-left:3px solid #ef4444;' : 'opacity:.7;border-left:3px solid transparent;') + '">'
+          + '<div style="display:flex;align-items:flex-start;gap:8px;">'
+          + (!n.lu ? '<span style="width:8px;height:8px;min-width:8px;background:#ef4444;border-radius:50%;margin-top:5px;display:inline-block;"></span>' : '<span style="width:8px;min-width:8px;"></span>')
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:13px;color:var(--text,#fff);line-height:1.5;">' + (n.message||'') + '</div>'
+          + (dt ? '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:5px;">' + dt + '</div>' : '')
+          + '</div></div></div>';
+      });
+    }
+    h += '</div>';
+    pane.innerHTML = h;
+  }
+
   function _appliquerAgendaUpdate(upd) {
     if (!eleveData || !eleveData.agenda) return;
     if (upd.action === 'annule') {
@@ -4007,6 +4072,7 @@ a{color:var(--gold);text-decoration:none;}
     <button class="top-nav-brand" onclick="switchTab('accueil')" title="Accueil">T&amp;V</button>
     <span class="nav-active-lbl" id="nav-active-lbl">Accueil</span>
     <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <button id="eleve-notif-btn" class="top-nav-icon-btn" onclick="switchTab('notifications')" title="Notifications" style="position:relative;font-size:16px;line-height:1;padding:6px 9px;">🔔<span id="eleve-notif-badge" style="display:none;position:absolute;top:3px;right:3px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:1.5px solid #0f0f0f;pointer-events:none;"></span></button>
       <button class="btn-logout top-nav-icon-btn" title="Déconnexion">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="17" height="17"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
@@ -4383,6 +4449,7 @@ a{color:var(--gold);text-decoration:none;}
   <!-- ── ONGLET DISCUSSIONS ───────────────────────────────── -->
   <div class="tab-pane" id="discussions-pane"></div>
   <div class="tab-pane" id="sorano-pane"></div>
+  <div class="tab-pane" id="notifications-pane"></div>
 
   <!-- ── PUBLICATION MODAL ──────────────────────────────────── -->
   <div id="pub-modal-backdrop" class="pub-modal-backdrop"></div>
