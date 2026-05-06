@@ -268,6 +268,13 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
         </label>
       </div>
     </div>
+    <div id="modal-ren-montant-row" style="display:none;margin:10px 0;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:8px;">Montant</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="number" id="modal-ren-montant" min="0" step="1" style="width:90px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:14px;">
+        <span style="color:var(--dim);font-size:13px;">€</span>
+      </div>
+    </div>
     <div class="modal-btns">
       <button class="modal-cancel" id="modal-ren-cancel">Annuler</button>
       <button class="modal-ok" id="modal-ren-ok">↻ Renouveler</button>
@@ -1720,6 +1727,16 @@ function ouvrirModalRenouveler(id, nom) {
   gel('modal-ren-nom').textContent = nom || '';
   var radios = document.querySelectorAll('input[name="ren-paye"]');
   radios.forEach(function(r){ r.checked = r.value==='non'; });
+  var montantEl = gel('modal-ren-montant');
+  if (montantEl) montantEl.value = TARIFS.carte10_renouv || 150;
+  var montantRow = gel('modal-ren-montant-row');
+  if (montantRow) montantRow.style.display = 'none';
+  radios.forEach(function(r) {
+    r.onchange = function() {
+      var sel = document.querySelector('input[name="ren-paye"]:checked');
+      if (montantRow) montantRow.style.display = (sel && sel.value==='oui') ? 'block' : 'none';
+    };
+  });
   gel('modal-renouveler').classList.add('vis');
   _renewModalId = id;
 }
@@ -1782,8 +1799,10 @@ function confirmerModalRenouveler() {
   var id = _renewModalId;
   var el = document.querySelector('input[name="ren-paye"]:checked');
   var paye = el ? el.value==='oui' : false;
+  var montantEl = gel('modal-ren-montant');
+  var montant = montantEl ? (Number(montantEl.value) || TARIFS.carte10_renouv || 150) : (TARIFS.carte10_renouv || 150);
   fermerModalRenouveler();
-  if (id) renouvelerCarteAction(id, null, paye);
+  if (id) renouvelerCarteAction(id, null, paye, montant);
 }
 
 // Attacher les boutons des modals une seule fois
@@ -7392,14 +7411,33 @@ function pointerCoursAction(id, date, nbCours, btn) {
     })
     .catch(function(e){if(btn)btn.disabled=false;});
 }
-function renouvelerCarteAction(id, btn, paye) {
+function renouvelerCarteAction(id, btn, paye, montant) {
   if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=10;c.datePremierCours='';c.expiration='';c.datesCours=[];c.paye=paye===true;
-// Sync coursTango statut: non payé → attente_paiement, payé → inscrit
 var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='inscrit';});
 if(cte){cte.statut=paye===true?'inscrit':'attente_paiement';}
 _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCours:[],datePremierCours:'',expiration:''});}renderTab();return;}
   if(btn){btn.disabled=true;btn.textContent='⏳';}
-  TEV.renouvelerCarte({eleveId:id,paye:paye===true}).then(function(){chargerDonnees();}).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
+  var _mont = Number(montant) || TARIFS.carte10_renouv || 150;
+  TEV.renouvelerCarte({eleveId:id,paye:paye===true}).then(function(){
+    var _carteObj = (adminData.cartes||[]).find(function(x){return x.id===id;});
+    var _email = _carteObj ? (_carteObj.email||'') : '';
+    var _orig = _email ? (adminData.coursTango||[]).find(function(x){
+      return x.email===_email && x.type==='carte10' && (x.saison||'')===(saisonActive()) && !(x.donnees&&x.donnees.isRenewal);
+    }) : null;
+    if (_email && _orig) {
+      var _renewRow = {
+        prenom:_orig.prenom||'', nom:_orig.nom||'', email:_email,
+        tel:_orig.tel||'', role:_orig.role||'',
+        ville:_orig.ville||'', niveau:_orig.niveau||'',
+        cours:_orig.cours||'', saison:saisonActive(),
+        type:'carte10', statut:'inscrit',
+        montant:_mont, paiement:_orig.paiement||'',
+        donnees:{isRenewal:true, renewalPaye:paye===true}
+      };
+      Promise.resolve(TEV.client.from('inscriptions_cours').insert(_renewRow)).catch(function(){});
+    }
+    chargerDonnees();
+  }).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
 }
 function toggleCartePaye(id) {
   var c=(adminData.cartes||[]).find(function(x){return x.id===id;});
@@ -11242,6 +11280,17 @@ function _getCartePaye(email) {
   return true; // défaut : payée
 }
 
+function _toggleRenewalPaye(id) {
+  var e=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
+  if (!e||!(e.donnees&&e.donnees.isRenewal)) return;
+  e.donnees.renewalPaye=true;
+  renderTab();
+  if (!IS_DEMO&&TEV&&TEV.client) {
+    var newDonnees=Object.assign({},e.donnees,{renewalPaye:true});
+    Promise.resolve(TEV.client.from('inscriptions_cours').update({donnees:newDonnees}).eq('id',id)).catch(function(){});
+  }
+}
+
 function _comptaEncaisse(liste) {
   var enc=0, prev=0;
   liste.forEach(function(e){
@@ -11249,7 +11298,12 @@ function _comptaEncaisse(liste) {
     var p=e.paiement||'';
     var dt=e.datePremierPaiement||(e.donnees&&e.donnees.datePremierPaiement)||'';
     var statusOv=(e.donnees&&Array.isArray(e.donnees.echeancesStatus))?e.donnees.echeancesStatus:null;
-    // Carte10 non payée → tout en prévisionnel
+    // Renouvellement : état de paiement propre à cette entrée
+    if (e.donnees && e.donnees.isRenewal) {
+      if (e.donnees.renewalPaye===true) enc+=m; else prev+=m;
+      return;
+    }
+    // Carte10 originale non payée → tout en prévisionnel
     if (e.type==='carte10' && !_getCartePaye(e.email)) { prev+=m; return; }
     if ((p==='cb3x'||p==='virement3x')&&dt) {
       _cb3xEcheances(m,dt,statusOv).forEach(function(ech){if(ech.encaisse)enc+=ech.montant;else prev+=ech.montant;});
@@ -11339,13 +11393,16 @@ function _comptaBlock(liste, titre, ctx) {
     var encE=0,prevE=0;
     echs.forEach(function(ech){if(ech.encaisse)encE+=ech.montant;else prevE+=ech.montant;});
     var isSup=e.statut==='supprimé';
-    var isNonPaye=e.type==='carte10'&&!_getCartePaye(e.email);
+    var isRenew=!!(e.donnees&&e.donnees.isRenewal);
+    var isNonPaye=isRenew ? (e.donnees.renewalPaye!==true) : (e.type==='carte10'&&!_getCartePaye(e.email));
     h+='<div style="padding:7px 8px;border-bottom:1px solid var(--s2);'+(isSup?'opacity:.65;':'')+(isNonPaye?'border-left:3px solid #fb923c;padding-left:6px;':'')+'\">';
     h+='<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">';
     h+='<div style="min-width:0;">';
     h+='<a href="javascript:void(0)" onclick="ouvrirComptaEdit(\''+e.id+'\',\''+ctx+'\')" style="color:var(--fg);font-size:13px;text-decoration:none;border-bottom:1px dashed var(--border);">'+(e.prenom||'')+' '+(e.nom||'')+'</a>';
+    if (isRenew) h+='<span style="font-size:9px;color:var(--dim);margin-left:5px;">↻ renouvellement</span>';
     if (isSup) h+='<span style="font-size:9px;color:var(--dim);margin-left:5px;">supprimé</span>';
-    if (isNonPaye) h+='<span style="font-size:9px;color:#fb923c;margin-left:5px;">non payée</span>';
+    if (isNonPaye && isRenew) h+='<span style="font-size:9px;color:#fb923c;margin-left:5px;">non payée &nbsp;<a href="javascript:void(0)" onclick="_toggleRenewalPaye(\''+e.id+'\')" style="color:#4ade80;text-decoration:none;">✓ Réglé</a></span>';
+    else if (isNonPaye) h+='<span style="font-size:9px;color:#fb923c;margin-left:5px;">non payée</span>';
     if (dt&&!isX3) h+='<span style="font-size:10px;color:var(--dim);margin-left:6px;">· '+_fmtJour(dt)+'</span>';
     h+='</div>';
     h+='<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--s3);white-space:nowrap;">'+(PAI_LBL[e.paiement]||e.paiement||'—')+'</span>';
