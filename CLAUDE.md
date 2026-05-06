@@ -351,6 +351,28 @@ Override possible via URL : `?mode=preinscription` ou `?mode=regulier`
 
 En mode préinscription, les tarifs de la prochaine saison sont lus depuis les Paramètres admin (`localStorage` clé `tev_tarifs_prochaine_saison`). Les liens AssoConnect changent aussi selon la saison détectée.
 
+#### Section "Évaluer mon tarif" — règles de calcul
+`var T = _computeT()` est calculé **une fois au chargement** selon la priorité suivante :
+1. `tev_tarifs` (si `dateEffet` atteinte — tarif programmé)
+2. `tev_tarifs_prochaine_saison` — si `MODE === 'preinscription'`
+3. `tev_tarifs_actifs` — sinon (saison courante)
+4. `TARIFS_BASE` — fallback uniquement si l'admin n'a jamais sauvegardé de tarifs
+
+**Les tarifs ne sont pas codés en dur** — `TARIFS_BASE` n'est qu'un filet de sécurité. Dès que l'admin sauvegarde dans Paramètres → Tarifs, les vraies valeurs s'appliquent. La saison du formulaire (`MODE`) détermine automatiquement quelle grille utiliser.
+
+**Règles métier du calcul :**
+- **Paris + forfait** → Adhésion LRS + Forfait annuel Paris
+- **Paris + carte10** → Adhésion LRS + Carte 10 cours (une seule carte, valable pour 2 cours si 2 cours Paris)
+- **Vincennes** → Adhésion LRS + Forfait annuel Vincennes + Adhésion Sorano (selon résidence et âge)
+- **2 cours** → une seule Adhésion LRS, une seule Adhésion Sorano si au moins un cours Vincennes
+  - 2 Paris + carte10 → **une seule carte** couvre les deux cours
+  - 2 Paris + forfait → Forfait 2 cours
+  - 2 Vincennes → Forfait 2 cours Vincennes
+  - Mix Paris+Vincennes → Forfait 2 cours (ou Carte Paris + Forfait Vincennes calculés séparément)
+- **Tarifs réduits** : Paris → étudiant·e / demandeur·euse d'emploi ; Vincennes → moins de 25 ans / Carte Jeune Vincennes
+- **Adhésion LRS** : une seule par personne par an, quel que soit le nombre de cours
+- **Adhésion Sorano** : uniquement si au moins un cours à Vincennes, une seule par personne
+
 ### `cours-essai.html` (cours d'essai tango)
 - Les dates viennent de **localStorage `tev_cours_dates`** (mis à jour par l'admin via Paramètres → Dates)
 - Fallback hardcodé dans le fichier si localStorage absent
