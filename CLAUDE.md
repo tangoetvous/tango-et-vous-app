@@ -356,14 +356,16 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 1. `tev_tarifs` (si `dateEffet` atteinte — tarif programmé)
 2. `tev_tarifs_prochaine_saison` — si `MODE === 'preinscription'`
 3. `tev_tarifs_actifs` — sinon (saison courante)
-4. `tev_params_paris_<sai>.tarifs` + `tev_params_vincennes_<sai>.tarifs` mergés — **source principale** configurée via Paramètres → Tango Paris/Vincennes → Tarifs
+4. `tev_params_paris_<sai>.tarifs` + `tev_params_vincennes_<sai>.tarifs` + `tev_params_yoga_<sai>.tarifs` mergés — **source principale** configurée via Paramètres → Tango Paris / Vincennes / Yoga → Tarifs
 5. `TARIFS_BASE` — fallback uniquement si l'admin n'a jamais rien sauvegardé
 
 `goTarif()` est `async` et recharge tous les params Supabase au moment du clic, garantissant les valeurs fraîches même cross-device.
 
-**Même logique dans `admin.html`** : `chargerTarifs()` applique le même fallback sur `tev_params_paris_<sai>.tarifs` / `tev_params_vincennes_<sai>.tarifs` pour pré-remplir les montants dans les formulaires "Inscrire" (Élèves Tango) et "Inscrire Élève" (Yoga).
+**Règle universelle — tous les tarifs viennent des Paramètres** : `TARIFS_BASE` est uniquement un filet de sécurité de dernier recours. Dès que l'admin sauvegarde un tarif dans Paramètres (quelle que soit la section : Tango Paris, Vincennes, Yoga, Adhésion LRS, Adhésion Sorano…), c'est cette valeur qui s'applique partout — formulaires publics ET formulaires admin. Ne jamais hardcoder un montant dans un formulaire en contournant `TARIFS`.
 
-**Les tarifs ne sont pas codés en dur** — `TARIFS_BASE` n'est qu'un filet de sécurité. Dès que l'admin sauvegarde dans Paramètres → Tango Paris/Vincennes → Tarifs, les vraies valeurs s'appliquent. La saison du formulaire (`MODE`) détermine automatiquement quelle grille utiliser.
+**`chargerTarifs()` dans `admin.html`** : applique le fallback sur `tev_params_paris_<sai>.tarifs` / `tev_params_vincennes_<sai>.tarifs` / `tev_params_yoga_<sai>.tarifs` pour pré-remplir les montants dans tous les formulaires admin : "Inscrire" (Élèves Tango), "Inscrire Élève" (Yoga), "Valider Paiement". Les clés yoga (`yoga_essai`, `yoga_forfait_1cours`, `yoga_forfait_2cours`) sont sans conflit avec les clés tango.
+
+La saison du formulaire (`MODE`) détermine automatiquement quelle grille utiliser.
 
 **Règles métier du calcul :**
 - **Paris + forfait** → Adhésion LRS + Forfait annuel Paris
