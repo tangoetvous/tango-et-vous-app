@@ -2073,18 +2073,28 @@ window.addEventListener('storage', function(e) {
 function chargerTarifs() {
   try {
     var stored = JSON.parse(localStorage.getItem('tev_tarifs')||'null');
-    if (!stored || !stored.tarifs) return;
-    var dateEffet = stored.dateEffet||'';
-    if (!dateEffet || today() >= dateEffet) {
-      // Tarifs actifs : appliquer
-      Object.assign(TARIFS, stored.tarifs);
-      try { localStorage.setItem('tev_tarifs_actifs', JSON.stringify(stored.tarifs)); } catch(e){}
-      // Ces tarifs sont maintenant actifs → supprimer la clé prochaine saison
-      try { localStorage.removeItem('tev_tarifs_prochaine_saison'); } catch(e){}
-    } else {
-      // Tarifs futurs : stocker pour les formulaires de pré-inscription
-      try { localStorage.setItem('tev_tarifs_prochaine_saison', JSON.stringify(stored.tarifs)); } catch(e){}
+    if (stored && stored.tarifs) {
+      var dateEffet = stored.dateEffet||'';
+      if (!dateEffet || today() >= dateEffet) {
+        Object.assign(TARIFS, stored.tarifs);
+        try { localStorage.setItem('tev_tarifs_actifs', JSON.stringify(stored.tarifs)); } catch(e){}
+        try { localStorage.removeItem('tev_tarifs_prochaine_saison'); } catch(e){}
+      } else {
+        try { localStorage.setItem('tev_tarifs_prochaine_saison', JSON.stringify(stored.tarifs)); } catch(e){}
+      }
     }
+    // Fallback : tarifs par ville (Paramètres → Tango Paris/Vincennes → Tarifs)
+    // Ces clés sont la source principale quand le bloc "Tarifs" global n'a jamais été sauvegardé
+    var sai = saisonCourante();
+    try {
+      var pPar = JSON.parse(localStorage.getItem('tev_params_paris_'+sai)||'{}');
+      var pVin = JSON.parse(localStorage.getItem('tev_params_vincennes_'+sai)||'{}');
+      var tPar = pPar.tarifs || {};
+      var tVin = pVin.tarifs || {};
+      // Paris prime pour les clés communes (carte10, forfait_paris, etc.)
+      var merged = Object.assign({}, tVin, tPar);
+      if (Object.keys(merged).length > 0) Object.assign(TARIFS, merged);
+    } catch(e2) {}
   } catch(e) {}
 }
 function sauverTarifs(btn) {

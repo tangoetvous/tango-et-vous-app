@@ -356,9 +356,14 @@ En mode préinscription, les tarifs de la prochaine saison sont lus depuis les P
 1. `tev_tarifs` (si `dateEffet` atteinte — tarif programmé)
 2. `tev_tarifs_prochaine_saison` — si `MODE === 'preinscription'`
 3. `tev_tarifs_actifs` — sinon (saison courante)
-4. `TARIFS_BASE` — fallback uniquement si l'admin n'a jamais sauvegardé de tarifs
+4. `tev_params_paris_<sai>.tarifs` + `tev_params_vincennes_<sai>.tarifs` mergés — **source principale** configurée via Paramètres → Tango Paris/Vincennes → Tarifs
+5. `TARIFS_BASE` — fallback uniquement si l'admin n'a jamais rien sauvegardé
 
-**Les tarifs ne sont pas codés en dur** — `TARIFS_BASE` n'est qu'un filet de sécurité. Dès que l'admin sauvegarde dans Paramètres → Tarifs, les vraies valeurs s'appliquent. La saison du formulaire (`MODE`) détermine automatiquement quelle grille utiliser.
+`goTarif()` est `async` et recharge tous les params Supabase au moment du clic, garantissant les valeurs fraîches même cross-device.
+
+**Même logique dans `admin.html`** : `chargerTarifs()` applique le même fallback sur `tev_params_paris_<sai>.tarifs` / `tev_params_vincennes_<sai>.tarifs` pour pré-remplir les montants dans les formulaires "Inscrire" (Élèves Tango) et "Inscrire Élève" (Yoga).
+
+**Les tarifs ne sont pas codés en dur** — `TARIFS_BASE` n'est qu'un filet de sécurité. Dès que l'admin sauvegarde dans Paramètres → Tango Paris/Vincennes → Tarifs, les vraies valeurs s'appliquent. La saison du formulaire (`MODE`) détermine automatiquement quelle grille utiliser.
 
 **Règles métier du calcul :**
 - **Paris + forfait** → Adhésion LRS + Forfait annuel Paris
