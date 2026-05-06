@@ -71,7 +71,8 @@ export default {
 
       return env.ASSETS.fetch(request);
     } catch (e) {
-      return jsonError(500, `Erreur interne: ${e.message || String(e)}`);
+      console.error('Worker error:', e);
+      return jsonError(500, 'Une erreur est survenue');
     }
   },
 };
@@ -133,12 +134,13 @@ async function handleDemandeDevis(request, env) {
   try {
     insertRes = await sbFetch('demandes_devis', 'POST', row, SUPABASE_ANON);
   } catch (e) {
-    return jsonError(500, `Erreur réseau Supabase: ${e.message || String(e)}`);
+    console.error('Supabase network error:', e);
+    return jsonError(500, 'Une erreur est survenue');
   }
 
   if (!insertRes.ok) {
-    const err = await insertRes.text();
-    return jsonError(500, `Erreur DB: ${err}`);
+    console.error('Supabase insert error:', await insertRes.text());
+    return jsonError(500, 'Une erreur est survenue');
   }
 
   if (env.BREVO_API_KEY) {
@@ -165,10 +167,12 @@ async function handleCreerDevis(request, jwt) {
       body: JSON.stringify({}),
     });
   } catch (e) {
-    return jsonError(500, `Erreur réseau: ${e.message}`);
+    console.error('RPC network error:', e);
+    return jsonError(500, 'Une erreur est survenue');
   }
   if (!rpcRes.ok) {
-    return jsonError(500, `Erreur réservation numéro: ${await rpcRes.text()}`);
+    console.error('RPC error:', await rpcRes.text());
+    return jsonError(500, 'Une erreur est survenue');
   }
   const numero = await rpcRes.json();
   const match = numero.match(/^DEVIS-(\d{4})-(\d{4})$/);
@@ -202,7 +206,8 @@ async function handleCreerDevis(request, jwt) {
 
   const insertRes = await sbFetch('devis', 'POST', row, jwt, 'return=representation');
   if (!insertRes.ok) {
-    return jsonError(500, `Erreur création devis: ${await insertRes.text()}`);
+    console.error('Devis insert error:', await insertRes.text());
+    return jsonError(500, 'Une erreur est survenue');
   }
   const [devis] = await insertRes.json();
 
@@ -235,7 +240,7 @@ async function handleCreerDevis(request, jwt) {
 async function handleEmettreDevis(id, jwt) {
   const r = await sbFetch(`devis?id=eq.${id}&statut=eq.brouillon`, 'PATCH',
     { statut: 'emis' }, jwt, 'return=representation');
-  if (!r.ok) return jsonError(500, await r.text());
+  if (!r.ok) { console.error('Supabase error:', await r.text()); return jsonError(500, 'Une erreur est survenue'); }
   const rows = await r.json();
   if (!rows.length) return jsonError(409, 'Devis non en brouillon ou introuvable');
   return corsResponse(rows[0], 200);
@@ -248,7 +253,7 @@ async function handleEmettreDevis(id, jwt) {
 async function handleAnnulerDevis(id, jwt) {
   const r = await sbFetch(`devis?id=eq.${id}`, 'PATCH',
     { statut: 'annule' }, jwt, 'return=representation');
-  if (!r.ok) return jsonError(500, await r.text());
+  if (!r.ok) { console.error('Supabase error:', await r.text()); return jsonError(500, 'Une erreur est survenue'); }
   const rows = await r.json();
   return corsResponse(rows[0] || { id }, 200);
 }
@@ -265,7 +270,7 @@ async function handleUpdateDemande(request, id, jwt) {
   if (!Object.keys(patch).length) return jsonError(400, 'Aucun champ modifiable');
 
   const r = await sbFetch(`demandes_devis?id=eq.${id}`, 'PATCH', patch, jwt, 'return=representation');
-  if (!r.ok) return jsonError(500, await r.text());
+  if (!r.ok) { console.error('Supabase error:', await r.text()); return jsonError(500, 'Une erreur est survenue'); }
   const rows = await r.json();
   return corsResponse(rows[0] || { id }, 200);
 }
@@ -274,19 +279,21 @@ async function handleUpdateDemande(request, id, jwt) {
 // ================================================================
 // Brevo — notification email admin (optionnel)
 // ================================================================
+function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 async function sendBrevoNotification(apiKey, body) {
-  const prestations = (body.prestations_labels || []).join(', ') || '(non précisé)';
-  const nom = `${body.civilite || ''} ${body.prenom || ''} ${body.nom || ''}`.trim();
+  const prestations = (body.prestations_labels || []).map(_esc).join(', ') || '(non précisé)';
+  const nom = _esc(`${body.civilite || ''} ${body.prenom || ''} ${body.nom || ''}`.trim());
   const html = `
     <h2>Nouvelle demande de devis</h2>
-    <p><strong>Contact :</strong> ${nom} &lt;${body.email}&gt; ${body.telephone ? '· ' + body.telephone : ''}</p>
+    <p><strong>Contact :</strong> ${nom} &lt;${_esc(body.email)}&gt; ${body.telephone ? '· ' + _esc(body.telephone) : ''}</p>
     <p><strong>Mode :</strong> ${body.mode === 'event' ? 'Événement' : 'Cours privé'}</p>
     <p><strong>Prestations :</strong> ${prestations}</p>
-    ${body.type_evenement ? `<p><strong>Type :</strong> ${body.type_evenement}</p>` : ''}
-    ${body.date_evenement ? `<p><strong>Date :</strong> ${body.date_evenement}</p>` : ''}
-    ${body.lieu ? `<p><strong>Lieu :</strong> ${body.lieu} ${body.code_postal ? '(' + body.code_postal + ')' : ''}</p>` : ''}
-    ${body.nombre_invites ? `<p><strong>Invités :</strong> ${body.nombre_invites}</p>` : ''}
-    ${body.message ? `<p><strong>Message :</strong></p><p style="white-space:pre-wrap">${body.message}</p>` : ''}
+    ${body.type_evenement ? `<p><strong>Type :</strong> ${_esc(body.type_evenement)}</p>` : ''}
+    ${body.date_evenement ? `<p><strong>Date :</strong> ${_esc(body.date_evenement)}</p>` : ''}
+    ${body.lieu ? `<p><strong>Lieu :</strong> ${_esc(body.lieu)} ${body.code_postal ? '(' + _esc(body.code_postal) + ')' : ''}</p>` : ''}
+    ${body.nombre_invites ? `<p><strong>Invités :</strong> ${_esc(body.nombre_invites)}</p>` : ''}
+    ${body.message ? `<p><strong>Message :</strong></p><p style="white-space:pre-wrap">${_esc(body.message)}</p>` : ''}
     <hr><p><a href="https://app.tangoetvous.fr/admin.html">→ Voir dans l'admin</a></p>
   `;
   await fetch('https://api.brevo.com/v3/smtp/email', {

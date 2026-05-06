@@ -1,5 +1,26 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Audit sécurité — 2026-05-06
+
+### Corrigés
+- **C1** ✅ Backups CSV retirés du repo git + `.gitignore backups/` + `worker.js` route `/backups/*` → 403 + workflow backup ne commit plus dans le repo (GitHub Artifacts uniquement)
+- **H3** ✅ XSS Discussions admin : `auteur_nom` échappé via `escHtml()` dans `_discRenderMsgs()`
+- **H4** ✅ XSS Devis admin : `_dvRow()` échappe maintenant `val` via `escHtml()` + `d.message` échappé dans le bloc message
+- **M1** ✅ Erreurs DB brutes supprimées des réponses HTTP du worker → `console.error` interne + message générique `'Une erreur est survenue'`
+- **M2** ✅ HTML injection email Brevo : tous les champs utilisateur échappés via `_esc()` dans `sendBrevoNotification`
+
+### À traiter (avec tests utilisateur)
+- **H1** 🔴 Élève peut modifier sa propre ligne `eleves` directement (marquer carte payée, remettre compteur) — RLS UPDATE trop permissif (`email = auth.email()` sans restriction de colonnes). Fix : remplacer par des RPC SECURITY DEFINER pour `renouvelerCarte` et `toggleCartePaye`. ⚠️ Risque de casser le pointage élève et le renouvellement — tester sur téléphone
+- **H2** 🔴 Élève peut insérer des présences arbitraires, contournant la limite 2/jour — seule la validation client-side dans `tevPointerCours`. Fix : supprimer le droit INSERT direct sur `presences` et forcer le passage par le RPC `pointer_cours_qr` (déjà SECURITY DEFINER). ⚠️ Même risque — tester avant
+- **H5** 🟠 Turnstile contourné en production (retiré quand en iframe Wix, jamais vérifié côté serveur). Fix : vérification côté serveur dans worker.js. Note : Turnstile avait été retiré des iframes car Wix est cross-origin — à tester soigneusement
+- **M6** 🟡 `milonga_presences` INSERT/DELETE sans authentification (`WITH CHECK (true)`) — n'importe qui peut supprimer tous les RSVPs. Fix : restreindre à `auth.email() = email`. Vérifier d'abord si les élèves sont authentifiés quand ils RSVPent
+- **M3** 🟡 RLS non documenté dans `schema.sql` pour `cours_yoga`, `absences_jour`, `demandes_devis`, `devis`, `compteurs_devis` — exporter depuis Dashboard Supabase → Database → Policies et ajouter au fichier
+- **L2** 🔵 Emails admin visibles dans le JS côté client (`_TEV_ADMIN_EMAILS` dans `tev-supabase.js`) — risque faible (phishing), la vraie sécurité est dans `is_admin()` côté Supabase
+
+### Notes
+- La clé anon Supabase est intentionnellement publique (design Supabase) — sécurité dépend du RLS
+- `unsafe-inline` dans CSP inévitable tant que les scripts sont inline dans les HTML — accepté comme risque résiduel
+
 ## Vue d'ensemble
 Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Frontend** : HTML/CSS/JS vanilla (admin.html, index.html, etc.)

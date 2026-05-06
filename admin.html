@@ -10580,7 +10580,7 @@ function _dvRow(label, val) {
   if (!val) return '';
   return '<div style="display:flex;gap:6px;font-size:12px;margin-top:3px;">'
     + '<span style="color:var(--dim);min-width:130px;flex-shrink:0;">' + label + '</span>'
-    + '<span style="color:var(--text);word-break:break-word;">' + val + '</span></div>';
+    + '<span style="color:var(--text);word-break:break-word;">' + escHtml(String(val)) + '</span></div>';
 }
 
 function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
@@ -10970,7 +10970,7 @@ function renderDevis() {
       card += '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">';
       if (d.mode === 'event') {
         card += _dvRow('Type d\'événement', d.type_evenement);
-        card += _dvRow('Date', d.date_evenement ? d.date_evenement + (d.date_flexible ? ' <em style="color:var(--faint)">(flexible)</em>' : '') : '');
+        card += _dvRow('Date', d.date_evenement ? d.date_evenement + (d.date_flexible ? ' (flexible)' : '') : '');
         card += _dvRow('Horaire', d.horaire_evenement);
         card += _dvRow('Lieu', (d.lieu||'') + (d.code_postal ? ' ('+d.code_postal+')' : ''));
         card += _dvRow('Nombre d\'invités', d.nombre_invites ? d.nombre_invites + ' personnes' : '');
@@ -10979,7 +10979,7 @@ function renderDevis() {
         card += _dvRow('Type de demande', d.type_demande);
         card += _dvRow('Pour qui', d.pour_qui);
         card += _dvRow('Niveau tango', d.niveau_tango);
-        card += _dvRow('Date butoir', d.date_butoir ? d.date_butoir + (d.date_butoir_flexible ? ' <em style="color:var(--faint)">(flexible)</em>' : '') : '');
+        card += _dvRow('Date butoir', d.date_butoir ? d.date_butoir + (d.date_butoir_flexible ? ' (flexible)' : '') : '');
         card += _dvRow('Professeur souhaité', d.professeur);
         card += _dvRow('Lieu des cours', d.lieu_cours);
         card += _dvRow('Commune domicile', d.commune_domicile);
@@ -10991,7 +10991,7 @@ function renderDevis() {
       if (d.message) {
         card += '<div style="margin-top:8px;">'
           + '<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Message</div>'
-          + '<div style="font-size:13px;color:var(--text);white-space:pre-wrap;background:var(--s3);border-radius:6px;padding:8px 10px;border:1px solid var(--border);">' + d.message + '</div>'
+          + '<div style="font-size:13px;color:var(--text);white-space:pre-wrap;background:var(--s3);border-radius:6px;padding:8px 10px;border:1px solid var(--border);">' + escHtml(d.message) + '</div>'
           + '</div>';
       }
       if (d.comment_connu) card += _dvRow('Comment connu', '💬 ' + d.comment_connu);
@@ -11168,7 +11168,7 @@ function _discRenderMsgs() {
     var isMine=(m.auteur_email||'').toLowerCase()===myEmail;
     var d=m.date?new Date(m.date):null;
     var t=d?d.getHours()+':'+(('0'+d.getMinutes()).slice(-2)):'';
-    var name=isMine?'Vous':(m.auteur_nom||m.auteur_email||'?');
+    var name=isMine?'Vous':escHtml(m.auteur_nom||m.auteur_email||'?');
     h+='<div class="disc-msg-wrap '+(isMine?'mine':'other')+'">'
       +'<div class="disc-msg-meta">'+name+(t?' · '+t:'')+'</div>'
       +'<div class="disc-msg-bubble">'+m.message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')+'</div>'
