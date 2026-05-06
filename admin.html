@@ -2097,6 +2097,17 @@ function chargerTarifs() {
       var merged = Object.assign({}, tVin, tPar, tYog);
       if (Object.keys(merged).length > 0) Object.assign(TARIFS, merged);
     } catch(e2) {}
+    // Adhésions (Paramètres → Adhésion LRS / Adhésion Sorano)
+    try {
+      var pAdh = JSON.parse(localStorage.getItem('tev_params_adhesions_'+sai)||'{}');
+      if (pAdh.lrp && pAdh.lrp.montant !== undefined) TARIFS.adhesion_lrp = pAdh.lrp.montant;
+      if (pAdh.sorano) {
+        if (pAdh.sorano.p16_vinc !== undefined) TARIFS.sorano_vinc     = pAdh.sorano.p16_vinc;
+        if (pAdh.sorano.m16_vinc !== undefined) TARIFS.sorano_vinc_m16 = pAdh.sorano.m16_vinc;
+        if (pAdh.sorano.p16_ext  !== undefined) TARIFS.sorano_ext      = pAdh.sorano.p16_ext;
+        if (pAdh.sorano.m16_ext  !== undefined) TARIFS.sorano_ext_m16  = pAdh.sorano.m16_ext;
+      }
+    } catch(e3) {}
   } catch(e) {}
 }
 function sauverTarifs(btn) {
@@ -9506,6 +9517,10 @@ window.vpUpdatePaieZone = function() {
   var is2cours = checked.length >= 2;
   var forfait2sel = is2cours && (document.querySelector('input[name="vp-formule2"]:checked')||{}).value === 'forfait2';
   var h = '';
+  var hasVincVp = checked.some(function(cb){ return cb.value.toLowerCase().indexOf('vincennes')>=0; });
+  var _lrsVp = TARIFS.adhesion_lrp||0;
+  var _sorVp  = hasVincVp ? (TARIFS.sorano_vinc||0) : 0;
+  var _p10Vp  = false;
   if (is2cours) {
     h += '<div style="margin-bottom:10px;padding:10px;background:var(--s2);border-radius:8px;">';
     h += '<div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:700;">Formule</div>';
@@ -9521,9 +9536,13 @@ window.vpUpdatePaieZone = function() {
     var inclus = forfait2sel && idx > 0;
     var formule = forfait2sel ? 'forfait'
       : ((document.querySelector('input[name="vp-formule-c-'+ci+'"]:checked')||{}).value||'carte10');
-    var defMt = forfait2sel && idx === 0 ? TARIFS.forfait_2cours
+    var _cVp;
+    if (formule==='carte10' && !isVinc) { if (!_p10Vp) { _p10Vp=true; _cVp=TARIFS.carte10; } else { _cVp=0; } }
+    else if (formule==='carte10') { _cVp=TARIFS.carte10; }
+    else { _cVp=isVinc?TARIFS.forfait_vincennes:TARIFS.forfait_paris; }
+    var defMt = forfait2sel && idx===0 ? TARIFS.forfait_2cours+_lrsVp+_sorVp
       : forfait2sel ? 0
-      : formule==='carte10' ? TARIFS.carte10 : (isVinc ? TARIFS.forfait_vincennes : TARIFS.forfait_paris);
+      : _cVp + (idx===0 ? _lrsVp+_sorVp : 0);
     h += '<div style="margin-bottom:8px;padding:8px 10px;background:var(--s2);border-radius:6px;">';
     h += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;">'+cours+'</div>';
     if (!forfait2sel) {
@@ -9665,12 +9684,20 @@ window.soumettreValiderPaiement = function(force) {
   }
   var partenairesCartes={};
   if(!adminData.coursTango)adminData.coursTango=[];
+  var _hvVp=coursCoches.some(function(c){return c.toLowerCase().indexOf('vincennes')>=0;});
+  var _lVp=TARIFS.adhesion_lrp||0;
+  var _sVp=_hvVp?(TARIFS.sorano_vinc||0):0;
+  var _p10Vp2=false;
   coursCoches.forEach(function(cours,idx){
     var ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
     var niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
     var ci=COURS_VALS_REF.indexOf(cours);
     var formule=forfait2Checked?'forfait':((document.querySelector('input[name="vp-formule-c-'+ci+'"]:checked')||{}).value||'carte10');
-    var montantDefault=forfait2Checked&&idx===0?TARIFS.forfait_2cours:forfait2Checked?0:formule==='carte10'?TARIFS.carte10:(ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris);
+    var _cVp2;
+    if(formule==='carte10'&&ville!=='vincennes'){if(!_p10Vp2){_p10Vp2=true;_cVp2=TARIFS.carte10;}else{_cVp2=0;}}
+    else if(formule==='carte10'){_cVp2=TARIFS.carte10;}
+    else{_cVp2=ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris;}
+    var montantDefault=forfait2Checked&&idx===0?TARIFS.forfait_2cours+_lVp+_sVp:forfait2Checked?0:_cVp2+(idx===0?_lVp+_sVp:0);
     var role=((document.querySelector('input[name="vp-role-'+ci+'"]:checked')||{}).value)||'guideur';
     var roleP=role==='guideur'?'guidee':'guideur';
     var avecC=(document.querySelector('input[name="vp-part-'+ci+'"]:checked')||{}).value==='avec';
@@ -9808,6 +9835,10 @@ window.diUpdatePaieZone = function() {
   var is2cours = checked.length >= 2;
   var forfait2sel = is2cours && (document.querySelector('input[name="di-formule2"]:checked')||{}).value === 'forfait2';
   var h = '';
+  var hasVincDi = checked.some(function(cb){ return cb.value.toLowerCase().indexOf('vincennes')>=0; });
+  var _lrsDi = TARIFS.adhesion_lrp||0;
+  var _sorDi  = hasVincDi ? (TARIFS.sorano_vinc||0) : 0;
+  var _p10Di  = false; // Paris carte10 déjà compté (partagée entre plusieurs cours Paris)
 
   // ── Toggle formule (2 cours uniquement) ──
   if (is2cours) {
@@ -9827,10 +9858,15 @@ window.diUpdatePaieZone = function() {
     // Formule de ce cours
     var formule = forfait2sel ? 'forfait'
       : ((document.querySelector('input[name="di-formule-c-'+ci+'"]:checked')||{}).value||'carte10');
-    // Montant par défaut — toujours depuis TARIFS (chargé depuis Paramètres)
-    var defMt = forfait2sel && idx === 0 ? TARIFS.forfait_2cours
+    // Coût du cours (Paris carte10 partagée : comptée une seule fois)
+    var _cDi;
+    if (formule==='carte10' && !isVinc) { if (!_p10Di) { _p10Di=true; _cDi=TARIFS.carte10; } else { _cDi=0; } }
+    else if (formule==='carte10') { _cDi=TARIFS.carte10; }
+    else { _cDi=isVinc?TARIFS.forfait_vincennes:TARIFS.forfait_paris; }
+    // Montant = coût cours + adhésions (LRS toujours + Sorano si Vincennes) sur le 1er cours seulement
+    var defMt = forfait2sel && idx===0 ? TARIFS.forfait_2cours+_lrsDi+_sorDi
       : forfait2sel ? 0
-      : formule==='carte10' ? TARIFS.carte10 : (isVinc ? TARIFS.forfait_vincennes : TARIFS.forfait_paris);
+      : _cDi + (idx===0 ? _lrsDi+_sorDi : 0);
     h += '<div style="margin-bottom:8px;padding:8px 10px;background:var(--s2);border-radius:6px;">';
     h += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;">'+cours+'</div>';
     // Formule par cours (uniquement si pas forfait2 global)
@@ -9942,15 +9978,23 @@ window.soumettreInscriptionDirecte = function(force) {
   if(!adminData.coursTango) adminData.coursTango=[];
   var partenairesCartes = {};
   var insRows = [];
+  var _hvDi = coursCoches.some(function(c){ return c.toLowerCase().indexOf('vincennes')>=0; });
+  var _lDi = TARIFS.adhesion_lrp||0;
+  var _sDi = _hvDi?(TARIFS.sorano_vinc||0):0;
+  var _p10Di2 = false;
   coursCoches.forEach(function(cours, idx) {
     var ville  = cours.toLowerCase().indexOf('vincennes')>=0 ? 'vincennes' : 'paris';
     var niveau = cours.toLowerCase().indexOf('inter')>=0 ? 'intermediaire' : 'debutant';
     var ci = COURS_VALS_REF.indexOf(cours);
     var formule = forfait2Checked ? 'forfait'
       : ((document.querySelector('input[name="di-formule-c-'+ci+'"]:checked')||{}).value||'carte10');
-    var montantDefault = forfait2Checked && idx === 0 ? TARIFS.forfait_2cours
+    var _cDi2;
+    if (formule==='carte10'&&ville!=='vincennes'){if(!_p10Di2){_p10Di2=true;_cDi2=TARIFS.carte10;}else{_cDi2=0;}}
+    else if(formule==='carte10'){_cDi2=TARIFS.carte10;}
+    else{_cDi2=ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris;}
+    var montantDefault = forfait2Checked&&idx===0 ? TARIFS.forfait_2cours+_lDi+_sDi
       : forfait2Checked ? 0
-      : formule==='carte10' ? TARIFS.carte10 : (ville==='vincennes' ? TARIFS.forfait_vincennes : TARIFS.forfait_paris);
+      : _cDi2+(idx===0?_lDi+_sDi:0);
     var role = ((document.querySelector('input[name="di-role-'+ci+'"]:checked')||{}).value)||'guideur';
     var roleP = role==='guideur'?'guidee':'guideur';
     var avecC = (document.querySelector('input[name="di-part-'+ci+'"]:checked')||{}).value==='avec';
