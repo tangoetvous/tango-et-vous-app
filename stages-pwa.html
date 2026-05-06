@@ -1156,6 +1156,34 @@ async function soumettre(){
   try {
     // Une ligne par date (permet confirmation date par date côté admin)
     var avecPart = data.situation === 'avec-partenaire' && !data.memePersonne && (data.partenairePrenom || data.partenaireNom);
+
+    // Vérification doublons : (prenom, nom, stage_date)
+    var datesAVerifier = data.inscriptionsParDate.map(function(di){ return di.date; });
+    var { data: existants } = await TEV.client
+      .from('inscriptions_stages')
+      .select('prenom,nom,stage_date')
+      .in('stage_date', datesAVerifier);
+    var existantsLower = (existants || []).map(function(r){
+      return { p:(r.prenom||'').toLowerCase().trim(), n:(r.nom||'').toLowerCase().trim(), d:r.stage_date };
+    });
+    var personnesAVerifier = [{ prenom: data.prenom, nom: data.nom }];
+    if (avecPart) personnesAVerifier.push({ prenom: data.partenairePrenom||'', nom: data.partenaireNom||'' });
+    var conflits = [];
+    personnesAVerifier.forEach(function(pers) {
+      var pL = pers.prenom.toLowerCase().trim(), nL = pers.nom.toLowerCase().trim();
+      datesAVerifier.forEach(function(d) {
+        if (existantsLower.some(function(r){ return r.p===pL && r.n===nL && r.d===d; })) {
+          conflits.push(pers.prenom+' '+pers.nom+' le '+new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long'}));
+        }
+      });
+    });
+    if (conflits.length > 0) {
+      btn.disabled=false; btn.textContent="Je m'inscris";
+      document.getElementById('err-global-2').textContent='⚠️ Inscription déjà enregistrée : '+conflits.join(', ')+'.';
+      document.getElementById('err-global-2').classList.add('visible');
+      return;
+    }
+
     var typeConfPrincipal = avecPart ? 'confirme' : data.typeConfirmation;
     var rowsToInsert = [];
     data.inscriptionsParDate.forEach(function(di) {
