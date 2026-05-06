@@ -74,16 +74,5 @@ jobs:
             Le fichier ZIP est en pièce jointe.
           attachments: backups/backup_${{ env.DATE }}.zip
 
-      - name: Supprimer les anciens backups (garder 30 jours)
-        run: |
-          cd backups
-          find . -maxdepth 1 -type d -name "20*" | sort | head -n -30 | xargs -r rm -rf
-          find . -maxdepth 1 -name "backup_*.zip" | sort | head -n -30 | xargs -r rm -f
-
-      - name: Commit des backups CSV dans le repo
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backups/
-          git diff --staged --quiet || git commit -m "backup: données CSV du ${{ env.DATE }} [skip ci]"
-          git push
+      # Les backups ne sont PAS commités dans le repo (données personnelles RGPD)
+      # Ils sont disponibles 90 jours via GitHub Artifacts (étape ci-dessus)

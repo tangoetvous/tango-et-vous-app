@@ -33,6 +33,11 @@ export default {
         return corsResponse(null, 204, {}, request);
       }
 
+      // Bloquer l'accès aux backups (données personnelles RGPD)
+      if (pathname.startsWith('/backups/')) {
+        return new Response('Forbidden', { status: 403 });
+      }
+
       // POST /admin/api/devis — formulaire public (clé anon)
       if (pathname === '/admin/api/devis' && method === 'POST') {
         return handleDemandeDevis(request, env);
