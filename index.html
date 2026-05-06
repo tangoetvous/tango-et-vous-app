@@ -1490,6 +1490,16 @@
       : null;
     const prochaineMilonga = _nextMilEvt ? _nextMilEvt.date : (MILONGAS_DATA.find(d => d >= todayStr) || null);
 
+    // ── Alerte pas de cours la semaine prochaine ──────────────
+    (function() {
+      var _hier = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      var _hierEstCours = coursArr.indexOf(_hier) >= 0;
+      var _joursAvantProchain = prochainCours ? Math.round((new Date(prochainCours) - new Date(todayStr)) / 86400000) : 0;
+      if (_hierEstCours && prochainCours && _joursAvantProchain > 7) {
+        h += '<div style="background:rgba(255,160,0,0.1);border:1px solid rgba(255,160,0,0.35);border-left:3px solid #ffa000;border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:13px;color:#ffd54f;line-height:1.5;">⚠️ <strong>Attention !</strong> Pas de cours la semaine prochaine. Le prochain cours est indiqué ci-dessous !</div>';
+      }
+    })();
+
     h += '<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#e05252;font-weight:700;margin-bottom:10px;">📅 Prochains rendez-vous</div>';
     h += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">';
 
