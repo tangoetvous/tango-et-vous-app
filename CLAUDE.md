@@ -759,6 +759,14 @@ $$;
 GRANT EXECUTE ON FUNCTION compter_inscrits_essai(date, text, text) TO anon, authenticated;
 ```
 
+### Index unique inscriptions_stages (anti-doublon)
+**Déjà exécuté.** Empêche qu'une même personne soit inscrite deux fois à la même date de stage.
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS idx_stages_no_double
+  ON inscriptions_stages (lower(trim(prenom)), lower(trim(nom)), stage_date);
+```
+Côté formulaire (`stages-pwa.html`) : vérification préalable qui filtre les dates en doublon et insère uniquement les nouvelles, avec message d'avertissement.
+
 ## Rubrique Devis — architecture complète
 
 ### Fichiers
