@@ -284,6 +284,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
 - [ ] Implémenter emails automatiques via Brevo + Supabase Edge Functions (remplace Code.gs/MailApp qui est inactif) — **inclut la relance absences carte10** (voir section Emails → Cartes 10 → Relance 2 absences)
 - [ ] Implémenter notifications push via FCM + Supabase Edge Functions — IMPORTANT : inclure nettoyage automatique des tokens invalides (FCM retourne les échecs dans la réponse → DELETE FROM fcm_tokens WHERE token IN (échecs))
+- [ ] **Notifications + emails lors des modifications ✏️ essai** : quand l'admin modifie un essai tango (date/ville/niveau) ou yoga (date/cours) via ✏️, envoyer à l'élève : (1) email Brevo "Votre cours d'essai a été modifié : [détails]" + (2) notification dans `notifications_eleve`. Table `notifications_eleve` à créer (SQL dans section "SQL utiles"). L'UI côté élève (icône 🔔 header, panneau) est déjà prête dans index.html.
 - [ ] Étendre icône 🔔 (badge rouge) + push aux événements suivants : essai tango, essai yoga, demande d'inscription tango, inscription stage, cours particuliers, demande de devis, RSVP milonga depuis espace élève — d'autres cas à lister par l'utilisateur
 - [ ] **Push élève — pas de cours la semaine prochaine** : le lendemain d'un cours, si le prochain cours est à plus de 7 jours, envoyer une notification push à tous les élèves inscrits à ce cours (Paris ou Vincennes). Même logique que le bandeau d'alerte dans l'accueil. Déclencheur : GitHub Actions cron le lendemain de chaque jour de cours (vendredi matin Paris / mardi matin Vincennes), ou Supabase Edge Function. À implémenter en même temps que l'infrastructure FCM.
 - [ ] **Compléter lien cours d'essai dans `inscription-cours.html`** : remplacer `LIEN_ESSAI_A_COMPLETER` (ligne du bandeau au-dessus de la barre de progression) par l'URL Wix du formulaire cours d'essai — l'utilisateur doit fournir cette URL.
@@ -701,6 +702,23 @@ Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Co
 
 ## SQL utiles — à exécuter dans Supabase SQL Editor
 
+### Table `notifications_eleve` (notifications élève)
+**À créer.** Requise pour que l'icône 🔔 de l'espace élève fonctionne. L'UI est déjà en place dans index.html.
+```sql
+CREATE TABLE IF NOT EXISTS notifications_eleve (
+  id BIGSERIAL PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  email TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'info',
+  message TEXT NOT NULL DEFAULT '',
+  lu BOOLEAN NOT NULL DEFAULT false
+);
+ALTER TABLE notifications_eleve ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all_notif_eleve" ON notifications_eleve FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON notifications_eleve TO anon, authenticated;
+GRANT USAGE, SELECT ON SEQUENCE notifications_eleve_id_seq TO anon, authenticated;
+```
+
 ### Fonction `compter_inscrits_essai` (quota cours d'essai)
 **À créer/remplacer dans Supabase.** Compte guideurs+guidées confirmés = inscriptions essai + élèves réguliers du cours.
 
@@ -766,6 +784,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_stages_no_double
   ON inscriptions_stages (lower(trim(prenom)), lower(trim(nom)), stage_date);
 ```
 Côté formulaire (`stages-pwa.html`) : vérification préalable qui filtre les dates en doublon et insère uniquement les nouvelles, avec message d'avertissement.
+
+### Index unique essais et cours régulier (anti-doublon)
+**Déjà exécutés.**
+```sql
+-- Cours d'essai tango
+CREATE UNIQUE INDEX IF NOT EXISTS idx_essai_no_double
+  ON inscriptions_essai (lower(trim(prenom)), lower(trim(nom)), date_essai, niveau);
+
+-- Inscriptions cours régulier (exclut les supprimés)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cours_no_double
+  ON inscriptions_cours (lower(trim(prenom)), lower(trim(nom)), ville, niveau, saison)
+  WHERE statut != 'supprimé';
+
+-- Cours d'essai yoga
+CREATE UNIQUE INDEX IF NOT EXISTS idx_essai_yoga_no_double
+  ON inscriptions_essai_yoga (lower(trim(prenom)), lower(trim(nom)), date_essai, cours);
+```
+Côté formulaires : vérification client-side avant INSERT (cours-essai.html, inscription-cours.html, essai-yoga.html) avec message d'erreur explicite. L'index DB est le filet de sécurité en cas de race condition.
 
 ## Rubrique Devis — architecture complète
 
