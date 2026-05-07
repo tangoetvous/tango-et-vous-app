@@ -23,9 +23,9 @@ jobs:
           mkdir -p "backups/${DATE}"
 
           SUPABASE_URL="https://qhngqzvvllktuwspojxc.supabase.co"
-          SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFobmdxenZ2bGxrdHV3c3BvanhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MjQ0NDYsImV4cCI6MjA5MjMwMDQ0Nn0.j-yMQryi3qoImIf6vyiqQ3SKzHeJoPsrJuP1YwaSyLs"
+          SUPABASE_KEY="${{ secrets.SUPABASE_SERVICE_KEY }}"
 
-          TABLES="eleves inscriptions_cours cours_yoga inscriptions_stages inscriptions_essai inscriptions_essai_yoga presences cours_particuliers parametres"
+          TABLES="eleves inscriptions_cours cours_yoga inscriptions_stages inscriptions_essai inscriptions_essai_yoga presences cours_particuliers parametres publications agenda_modifs demandes_devis devis absences_jour milonga_presences"
 
           for TABLE in $TABLES; do
             STATUS=$(curl -s -o "backups/${DATE}/${TABLE}.csv" -w "%{http_code}" \
@@ -69,7 +69,8 @@ jobs:
 
             Tables exportées : eleves, inscriptions_cours, cours_yoga,
             inscriptions_stages, inscriptions_essai, inscriptions_essai_yoga,
-            presences, cours_particuliers, parametres.
+            presences, cours_particuliers, parametres, publications,
+            agenda_modifs, demandes_devis, devis, absences_jour, milonga_presences.
 
             Le fichier ZIP est en pièce jointe.
           attachments: backups/backup_${{ env.DATE }}.zip
