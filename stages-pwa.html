@@ -763,7 +763,7 @@ function autoResizeIframe() {
   // Petit délai pour laisser les transitions CSS se terminer
   setTimeout(function() {
     try {
-      window.parent.postMessage({ type: 'tevHeight', height: document.body.scrollHeight }, '*');
+      window.parent.postMessage({ type: 'iframeResize', height: document.body.scrollHeight }, window.location.origin);
     } catch(e) {}
   }, 380);
 }
@@ -1417,11 +1417,10 @@ window.addEventListener('storage', function(e) {
 </script>
 <script>
 (function(){
-  function _tevH(){requestAnimationFrame(function(){var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight,document.body.offsetHeight);window.parent.postMessage({type:'tevHeight',height:h},'*');});}
-  window._tevH=_tevH;
+  function _tevH(){var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);window.parent.postMessage({type:'tevHeight',height:h},'*');}
   window.addEventListener('load',_tevH);
   window.addEventListener('resize',_tevH);
-  new MutationObserver(function(){setTimeout(_tevH,150);}).observe(document.body,{subtree:true,childList:true,attributes:true});
+  new MutationObserver(function(){setTimeout(_tevH,60);}).observe(document.body,{subtree:true,childList:true,attributes:true});
 })();
 </script>
 </body>
