@@ -174,6 +174,22 @@ select option{background:var(--s2);color:var(--text);}
 }
 .btn-nouveau:hover{background:var(--gold);color:#000;}
 
+/* ── Jours dispo ── */
+.jours-grp{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+.jour-btn{
+  width:44px;height:44px;border-radius:8px;
+  border:2px solid var(--gold-border);color:#c9a84c;
+  font-size:12px;font-weight:700;letter-spacing:.5px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .2s;background:#100d00;
+  font-family:var(--font-b);
+}
+.jour-btn.sel{border-color:var(--gold);background:#261d00;color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.25);}
+.horaire-row{display:flex;align-items:flex-end;gap:10px;}
+.horaire-row .field{flex:1;margin-bottom:0;}
+.horaire-sep{color:var(--gold);font-size:20px;padding-bottom:10px;flex-shrink:0;}
+.opt-lbl{font-size:10px;font-weight:400;color:#8a7040;margin-left:6px;letter-spacing:0;}
+
 /* ── Footer ── */
 .footer{font-size:11px;color:var(--faint);text-align:center;padding:14px 24px 18px;border-top:1px solid var(--border);line-height:1.7;}
 .footer a{color:var(--gold);}
@@ -331,16 +347,16 @@ const SVG = {
 function freshState() {
   return {
     step: 1,
-    // Pré-rempli depuis PWA (optionnel)
     pwaMode: false, eleveId: '',
-    // Étape 1 — Qui
     prenom: '', nom: '', email: '', tel: '',
     // Étape 2 — Le cours
-    prof: null, duree: '', lieu: null, lieuDetail: '',
+    prof: null, lieux: [], lieuDetail: '',
     // Étape 3 — L'objectif
-    objectifs: [], // tableau d'IDs
+    objectifs: [],
     niveauEleve: '', remarque: '',
     // Étape 4 — Disponibilités
+    duree: '',
+    jours: [], heureDebut: '', heureFin: '', propositionsDates: '',
     dispoTexte: '', urgence: '',
   };
 }
@@ -396,10 +412,9 @@ function showErr(m) { const e=$('errmsg'); e.textContent=m; e.style.display='blo
 function hideErr()  { const e=$('errmsg'); e.style.display='none'; }
 function v(id)      { const el=document.getElementById(id); return el ? el.value.trim() : ''; }
 function profNom(id){ const p=PROFESSEURS.find(x=>x.id===id); return p?p.nom:''; }
-function lieuLabel(id){
-  const l = LIEUX.find(x=>x.id===id);
-  if (!l) return '';
-  return l.cp && S.lieuDetail ? `${l.label} (${S.lieuDetail})` : l.label;
+function lieuLabel(lieux){
+  if (!lieux || !lieux.length) return '';
+  return lieux.map(id => { const l=LIEUX.find(x=>x.id===id); return l?l.label:id; }).join(' / ');
 }
 
 // ================================================================
@@ -484,27 +499,18 @@ function nextQui() {
 // ÉTAPE 2 — LE COURS
 // ================================================================
 function sCours() {
-  // Boutons professeurs
   const profBtns = PROFESSEURS.map(p => `
     <button type="button" class="btn-choix${S.prof===p.id?' sel':''}" onclick="setProf('${p.id}')">
       ${SVG[p.id]}<span>${p.nom}</span>
     </button>`).join('');
 
-  // Boutons durée
-  const dureeBtns = DUREES.map(d => `
-    <button type="button" class="btn-choix${S.duree===d?' sel':''}" onclick="setDuree('${d}')">
-      <span style="font-size:18px;">⏱</span><span>${d}</span>
-    </button>`).join('');
-
-  // Boutons lieu
   const lieuBtns = LIEUX.map(l => `
-    <button type="button" class="btn-choix${S.lieu===l.id?' sel':''}" onclick="setLieu('${l.id}')">
+    <button type="button" class="btn-choix${S.lieux.includes(l.id)?' sel':''}" onclick="setLieu('${l.id}')">
       <span style="font-size:18px;">${l.id==='domicile'?'🏠':l.id==='vos-locaux'?'🏢':'📍'}</span>
       <span>${l.label}</span>
     </button>`).join('');
 
-  const lieuSelectionne = LIEUX.find(l => l.id === S.lieu);
-  const showCP = lieuSelectionne && lieuSelectionne.cp;
+  const showCP = S.lieux.some(id => { const l=LIEUX.find(x=>x.id===id); return l&&l.cp; });
 
   return `
     <div class="etape-lbl">Étape 2 — Le cours</div>
@@ -516,12 +522,7 @@ function sCours() {
     </div>
 
     <div class="cadre">
-      <div class="cadre-titre">Durée souhaitée</div>
-      <div class="btn-choix-grp">${dureeBtns}</div>
-    </div>
-
-    <div class="cadre">
-      <div class="cadre-titre">Lieu</div>
+      <div class="cadre-titre">Lieu(x) souhaité(s) <span class="opt-lbl">— plusieurs choix possibles</span></div>
       <div style="display:flex;flex-direction:column;gap:8px;">${lieuBtns}</div>
       ${showCP ? `
       <div class="field" style="margin-top:12px;margin-bottom:0;">
@@ -537,16 +538,35 @@ function sCours() {
     </div>`;
 }
 
-function setProf(id)  { S.prof  = id; render(); }
-function setDuree(d)  { S.duree = d;  render(); }
-function setLieu(id)  { S.lieu  = id; S.lieuDetail = ''; render(); }
+function setProf(id) {
+  const cpEl = document.getElementById('i-lieu-detail');
+  if (cpEl) S.lieuDetail = cpEl.value;
+  S.prof = id; render();
+}
+function setLieu(id) {
+  const cpEl = document.getElementById('i-lieu-detail');
+  if (cpEl) S.lieuDetail = cpEl.value;
+  const idx = S.lieux.indexOf(id);
+  if (idx === -1) S.lieux.push(id); else S.lieux.splice(idx, 1);
+  render();
+}
+function toggleDuree(btn) {
+  const d = btn.dataset.duree;
+  S.duree = S.duree === d ? '' : d;
+  document.querySelectorAll('.duree-btn').forEach(b => b.classList.toggle('sel', b.dataset.duree === S.duree));
+}
+function toggleJour(btn) {
+  const j = btn.dataset.jour;
+  const idx = S.jours.indexOf(j);
+  if (idx === -1) S.jours.push(j); else S.jours.splice(idx, 1);
+  btn.classList.toggle('sel', S.jours.includes(j));
+}
 
 function nextCours() {
-  const lieuSel = LIEUX.find(l => l.id === S.lieu);
-  if (lieuSel && lieuSel.cp) S.lieuDetail = v('i-lieu-detail');
-  if (!S.prof)  { showErr('Merci de choisir un(e) professeur(e).'); return; }
-  if (!S.duree) { showErr('Merci de choisir une durée.'); return; }
-  if (!S.lieu)  { showErr('Merci de choisir un lieu.'); return; }
+  const hasCp = S.lieux.some(id => { const l=LIEUX.find(x=>x.id===id); return l&&l.cp; });
+  if (hasCp) S.lieuDetail = v('i-lieu-detail');
+  if (!S.prof)        { showErr('Merci de choisir un(e) professeur(e).'); return; }
+  if (!S.lieux.length){ showErr('Merci de choisir au moins un lieu.'); return; }
   S.step++; render();
 }
 
@@ -598,21 +618,51 @@ function nextObj() {
 // ================================================================
 // ÉTAPE 4 — DISPONIBILITÉS
 // ================================================================
+const JOURS_LIST = [
+  {id:'Lu',lbl:'Lu'},{id:'Ma',lbl:'Ma'},{id:'Me',lbl:'Me'},
+  {id:'Je',lbl:'Je'},{id:'Ve',lbl:'Ve'}
+];
+
 function sDispos() {
   const recap = buildRecap();
+
+  const dureeBtns = DUREES.map(d =>
+    `<button type="button" class="btn-choix duree-btn${S.duree===d?' sel':''}" data-duree="${d}" onclick="toggleDuree(this)">
+      <span style="font-size:16px;">⏱</span><span>${d}</span>
+    </button>`).join('');
+
+  const joursBtns = JOURS_LIST.map(j =>
+    `<button type="button" class="jour-btn${S.jours.includes(j.id)?' sel':''}" data-jour="${j.id}" onclick="toggleJour(this)">${j.lbl}</button>`
+  ).join('');
+
   return `
     <div class="etape-lbl">Étape 4 — Vos disponibilités</div>
     <div class="etape-sous">Indiquez-nous quand vous êtes disponible — nous trouverons un créneau ensemble.</div>
-    <div style="background:#100d00;border:1px solid var(--gold-border);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#e8c84a;line-height:1.6;">
-      💡 Proposez plusieurs jours et horaires qui vous conviendraient pour un premier cours.
+
+    <div class="cadre">
+      <div class="cadre-titre">Durée souhaitée</div>
+      <div class="btn-choix-grp">${dureeBtns}</div>
     </div>
 
     <div class="cadre">
-      <div class="cadre-titre">Créneaux préférés</div>
+      <div class="cadre-titre">Créneaux préférés <span class="opt-lbl">— facultatif</span></div>
       <div class="field">
-        <label>Jours et horaires qui vous conviennent</label>
-        <textarea id="i-dispo" rows="3" placeholder="Ex: lundi ou mardi en journée, mercredi après 18h…">${S.dispoTexte}</textarea>
+        <label>Jours disponibles</label>
+        <div class="jours-grp">${joursBtns}</div>
       </div>
+      <div class="horaire-row">
+        <div class="field"><label>À partir de</label><input type="text" id="i-hdeb" value="${S.heureDebut}" placeholder="ex : 10h"/></div>
+        <div class="horaire-sep">→</div>
+        <div class="field"><label>Jusqu'à</label><input type="text" id="i-hfin" value="${S.heureFin}" placeholder="ex : 17h"/></div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Propositions de dates</label>
+        <textarea id="i-pdates" rows="2" placeholder="Ex : semaine du 16 juin, ou 25 juin après-midi…">${S.propositionsDates}</textarea>
+      </div>
+    </div>
+
+    <div class="cadre">
+      <div class="cadre-titre">Informations complémentaires <span class="opt-lbl">— facultatif</span></div>
       <div class="field">
         <label>Délai souhaité</label>
         <select id="i-urgence">
@@ -622,6 +672,10 @@ function sDispos() {
           <option value="flexible" ${S.urgence==='flexible'?'selected':''}>Flexible — on s'adapte</option>
           <option value="mariage"  ${S.urgence==='mariage'?'selected':''}>Date fixe (mariage, spectacle…)</option>
         </select>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Autres précisions</label>
+        <textarea id="i-dispo" rows="2" placeholder="Tout autre élément qui nous aiderait à planifier…">${S.dispoTexte}</textarea>
       </div>
     </div>
 
@@ -645,7 +699,9 @@ function buildRecap() {
     const o = OBJECTIFS.find(x=>x.id===id); return o ? o.label : id;
   }).join(', ');
 
-  const lieuFull = lieuLabel(S.lieu) + (S.lieuDetail ? ` — ${S.lieuDetail}` : '');
+  const lieuFull = lieuLabel(S.lieux) + (S.lieuDetail ? ` (${S.lieuDetail})` : '');
+  const joursLbl = {Lu:'Lundi',Ma:'Mardi',Me:'Mercredi',Je:'Jeudi',Ve:'Vendredi'};
+  const joursStr = S.jours.map(j => joursLbl[j]||j).join(', ');
 
   return `
     <div class="recap-sec">Récapitulatif de votre demande</div>
@@ -653,9 +709,12 @@ function buildRecap() {
     <div class="recap-row"><span class="rk">📧 Email</span><span class="rv">${S.email}</span></div>
     <div class="recap-row"><span class="rk">📞 Téléphone</span><span class="rv">${S.tel}</span></div>
     <div class="recap-row"><span class="rk">🎓 Professeur(e)</span><span class="rv">${profNom(S.prof)}</span></div>
-    <div class="recap-row"><span class="rk">⏱ Durée</span><span class="rv">${S.duree}</span></div>
-    <div class="recap-row"><span class="rk">📍 Lieu</span><span class="rv">${lieuFull}</span></div>
+    <div class="recap-row"><span class="rk">📍 Lieu(x)</span><span class="rv">${lieuFull}</span></div>
     <div class="recap-row"><span class="rk">🎯 Objectif(s)</span><span class="rv">${objLabels}</span></div>
+    ${S.duree ? `<div class="recap-row"><span class="rk">⏱ Durée</span><span class="rv">${S.duree}</span></div>` : ''}
+    ${joursStr ? `<div class="recap-row"><span class="rk">📅 Jours</span><span class="rv">${joursStr}</span></div>` : ''}
+    ${(S.heureDebut||S.heureFin) ? `<div class="recap-row"><span class="rk">🕐 Horaire</span><span class="rv">${S.heureDebut||'?'} – ${S.heureFin||'?'}</span></div>` : ''}
+    ${S.propositionsDates ? `<div class="recap-row"><span class="rk">📆 Dates</span><span class="rv" style="font-size:12px;">${S.propositionsDates}</span></div>` : ''}
     ${S.remarque ? `<div class="recap-row"><span class="rk">💬 Remarque</span><span class="rv" style="font-size:12px;">${S.remarque}</span></div>` : ''}`;
 }
 
@@ -663,10 +722,11 @@ function buildRecap() {
 // SOUMISSION
 // ================================================================
 async function soumettre() {
-  S.dispoTexte = v('i-dispo');
-  S.urgence    = v('i-urgence');
-
-  if (!S.dispoTexte) { showErr('Merci d\'indiquer vos disponibilités.'); return; }
+  S.heureDebut       = v('i-hdeb');
+  S.heureFin         = v('i-hfin');
+  S.propositionsDates= v('i-pdates');
+  S.dispoTexte       = v('i-dispo');
+  S.urgence          = v('i-urgence');
 
   if (!_inIframe) {
     const tsToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
@@ -675,6 +735,13 @@ async function soumettre() {
 
   const btn = $('btn-sub');
   btn.disabled = true; btn.classList.add('loading');
+
+  const joursLbl = {Lu:'Lundi',Ma:'Mardi',Me:'Mercredi',Je:'Jeudi',Ve:'Vendredi'};
+  const dispoParts = [];
+  if (S.jours.length) dispoParts.push('Jours : ' + S.jours.map(j=>joursLbl[j]||j).join(', '));
+  if (S.heureDebut||S.heureFin) dispoParts.push('Horaires : '+(S.heureDebut||'?')+' – '+(S.heureFin||'?'));
+  if (S.propositionsDates) dispoParts.push('Dates proposées : '+S.propositionsDates);
+  if (S.dispoTexte) dispoParts.push('Autres : '+S.dispoTexte);
 
   const payload = {
     eleveId:    S.eleveId,
@@ -685,11 +752,11 @@ async function soumettre() {
     niveauEleve:S.niveauEleve,
     prof:       S.prof,
     duree:      S.duree,
-    lieu:       lieuLabel(S.lieu),
+    lieu:       lieuLabel(S.lieux) + (S.lieuDetail ? ` (${S.lieuDetail})` : ''),
     lieuDetail: S.lieuDetail,
     objectifs:  S.objectifs.join(', '),
     remarque:   S.remarque,
-    dispoTexte: S.dispoTexte,
+    dispoTexte: dispoParts.join('\n'),
     urgence:    S.urgence,
     source:     S.pwaMode ? 'pwa' : 'wix',
   };
@@ -726,7 +793,7 @@ function afficherSucces() {
   }).join(' · ');
 
   $('success-recap').innerHTML = `
-    <div class="s-line"><span class="s-ico">🎓</span><span>Cours avec <strong>${profNom(S.prof)}</strong>, ${S.duree}, ${lieuLabel(S.lieu)}</span></div>
+    <div class="s-line"><span class="s-ico">🎓</span><span>Cours avec <strong>${profNom(S.prof)}</strong>${S.duree?' — '+S.duree:''} — ${lieuLabel(S.lieux)}</span></div>
     <div class="s-line"><span class="s-ico">🎯</span><span>${objLabels}</span></div>
     <div class="s-line"><span class="s-ico">📞</span><span>Florencia &amp; Jérémy vous recontacteront à l'adresse <strong>${S.email}</strong> ou au <strong>${S.tel}</strong> pour fixer un créneau.</span></div>
     <div class="s-line"><span class="s-ico">💬</span><span>Vous pouvez aussi nous joindre directement sur <a href="tel:+33661727998" style="color:var(--gold);">06 61 72 79 98</a> ou <a href="mailto:tangoetvous@gmail.com" style="color:var(--gold);">tangoetvous@gmail.com</a></span></div>`;
