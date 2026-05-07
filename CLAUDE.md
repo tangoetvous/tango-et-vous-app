@@ -316,13 +316,45 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [x] Email admin → sync Supabase Auth — CORRIGÉ : `sauverContact()` appelle `PATCH /api/admin/update-auth-email` (non-bloquant) quand l'email change. Worker utilise `env.SUPABASE_SERVICE_KEY` (secret Cloudflare, déjà configuré) pour appeler l'Admin Auth API Supabase et mettre à jour l'email sans déconnecter l'élève.
 - [ ] **Tester sync email Auth** : dans admin, changer l'email d'un élève → F12 → Network → chercher `update-auth-email` → vérifier réponse `{"ok":true,"userId":"..."}` → vérifier dans Supabase Dashboard → Authentication → Users
 - [x] Téléphone et photo modifiables depuis espace élève — CORRIGÉS : `tevUpdateEleveTel` n'écrit que dans `eleves` (RLS interdit UPDATE sur `inscriptions_cours` aux non-admins). Priorité inversée dans `tevGetAdminData()` : `elv.tel || ic.tel` (au lieu de `ic.tel || elv.tel`) pour que la valeur fraîche de `eleves` prime sur l'ancienne de `inscriptions_cours`. Photo : même logique, `eleves.photo_url` mis à jour via `tevUpdateElevePhoto`. ⚠️ Règle à retenir : tout champ modifiable depuis l'espace élève doit écrire dans `eleves` et être lu en priorité depuis `eleves` dans l'admin.
-- [ ] **Module Trésorerie (Compta)** : nouvelle section dans l'admin pour gérer les remises en banque espèces/chèques. Fonctionnalités prévues :
-  - Vue "À déposer" : liste de tous les paiements `especes`/`cheque` non encore déposés (depuis `inscriptions_cours`, `cours_yoga`, `inscriptions_stages`, `devis`)
-  - Pour chaque chèque : saisie numéro, banque, émetteur + photo uploadée (Cloudinary)
-  - Sélection des paiements → bouton "Créer une remise" → récap total espèces + liste chèques
-  - Historique des remises passées
-  - Tables DB à créer : `remises_banque` (date, montant_especes, montant_cheques, notes) + `cheques` (numéro, banque, émetteur, montant, photo_url, remise_id) + colonne `remise_id` sur les tables de paiements
-  - Votre part : exécuter le SQL (~5 min) + tester (~15 min) — zéro risque sur l'existant
+- [x] **Module Trésorerie (Compta)** — UI complète implémentée dans admin.html (onglet Compta → Trésorerie). **⚠️ Reste à faire : exécuter le SQL ci-dessous dans Supabase SQL Editor avant utilisation.**
+
+### SQL Trésorerie — à exécuter dans Supabase SQL Editor
+```sql
+CREATE TABLE IF NOT EXISTS remises_banque (
+  id               BIGSERIAL PRIMARY KEY,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  date             DATE NOT NULL DEFAULT CURRENT_DATE,
+  montant_especes  NUMERIC(10,2) NOT NULL DEFAULT 0,
+  montant_cheques  NUMERIC(10,2) NOT NULL DEFAULT 0,
+  notes            TEXT NOT NULL DEFAULT '',
+  statut           TEXT NOT NULL DEFAULT 'deposee' CHECK (statut IN ('brouillon','deposee'))
+);
+CREATE TABLE IF NOT EXISTS cheques_depot (
+  id           BIGSERIAL PRIMARY KEY,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  remise_id    BIGINT REFERENCES remises_banque(id) ON DELETE SET NULL,
+  source_table TEXT NOT NULL,
+  source_id    BIGINT NOT NULL,
+  emetteur     TEXT NOT NULL DEFAULT '',
+  montant      NUMERIC(10,2) NOT NULL DEFAULT 0,
+  numero       TEXT NOT NULL DEFAULT '',
+  banque       TEXT NOT NULL DEFAULT '',
+  photo_url    TEXT NOT NULL DEFAULT '',
+  notes        TEXT NOT NULL DEFAULT ''
+);
+ALTER TABLE inscriptions_cours ADD COLUMN IF NOT EXISTS remise_id BIGINT REFERENCES remises_banque(id) ON DELETE SET NULL;
+ALTER TABLE cours_yoga          ADD COLUMN IF NOT EXISTS remise_id BIGINT REFERENCES remises_banque(id) ON DELETE SET NULL;
+ALTER TABLE remises_banque ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "remises_admin" ON remises_banque;
+CREATE POLICY "remises_admin" ON remises_banque FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+ALTER TABLE cheques_depot ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "cheques_admin" ON cheques_depot;
+CREATE POLICY "cheques_admin" ON cheques_depot FOR ALL USING (is_admin()) WITH CHECK (is_admin());
+GRANT ALL ON remises_banque TO authenticated;
+GRANT ALL ON cheques_depot  TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE remises_banque_id_seq TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE cheques_depot_id_seq  TO authenticated;
+```
 - [ ] Rappels emails automatiques pour paiements CB en plusieurs fois (cb3x) — relances aux échéances
 - [x] Rubrique Devis : formulaire public + générateur PDF + admin complet — TERMINÉ (voir section Devis)
 - [ ] Devis : envoyer le PDF par email directement depuis l'appli (actuellement via Gmail ouvert manuellement)

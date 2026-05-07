@@ -1008,7 +1008,12 @@ var sousOngletCoursTango = 'tous'; // tous|attente_validation|valide|attente_pai
 var sousOngletEleves     = 'paris-deb'; // paris-deb|paris-int|vincennes-deb|vincennes-int
 var rechercheEleve       = '';
 var sousOngletYoga    = 'essai';      // essai | eleves
-var sousOngletCompta  = 'tango';      // tango | yoga | stages
+var sousOngletCompta  = 'tango';      // tango | yoga | stages | tresorerie
+var _tresoSelected    = {};  // key→{source_table,source_id,type,montant,nom,prenom,email,saison,chqEmetteur,chqNumero,chqBanque,chqPhotoUrl}
+var _tresoVue         = 'deposer'; // 'deposer' | 'remises'
+var _tresoFiltre      = 'tout';    // 'tout' | 'especes' | 'cheque'
+var _tresoRemises     = null;      // cache historique
+var _tresoLoading     = false;
 var compTangoCours    = 'paris-deb';  // paris-deb | paris-int | vincennes-deb | vincennes-int | tous
 var compYogaCours     = 'hatha';      // hatha | yin
 var comptaSort        = 'nom';        // 'nom' | 'paiement' | 'montant'
@@ -1240,8 +1245,8 @@ function basculerEditContact() {
   gel('ec-save').addEventListener('click',function(){sauverContact(this);});
   gel('ec-cancel').addEventListener('click',function(){ouvrirContact(c.nom,c.tel,c.email,c.ctx);});
 }
-function _photoLightbox() {
-  var url=(_contactCtx&&_contactCtx.photo_url)||'';
+function _photoLightbox(urlOverride) {
+  var url=urlOverride||(_contactCtx&&_contactCtx.photo_url)||'';
   if(!url)return;
   var nom=(_contactCtx&&_contactCtx.nom)||'';
   var overlay=document.createElement('div');
@@ -11287,14 +11292,15 @@ function _discEnvoyerMsg() {
 function renderCompta() {
   var h = '<div style="padding:0 0 32px;">';
   h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">';
-  [{key:'tango',label:'🕺 Élèves Tango'},{key:'yoga',label:'🧘 Yoga'},{key:'stages',label:'🎭 Stages'}].forEach(function(t){
+  [{key:'tango',label:'🕺 Élèves Tango'},{key:'yoga',label:'🧘 Yoga'},{key:'stages',label:'🎭 Stages'},{key:'tresorerie',label:'🏦 Trésorerie'}].forEach(function(t){
     var act=sousOngletCompta===t.key;
     h+='<button onclick="sousOngletCompta=\''+t.key+'\';renderTab();" style="padding:8px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;'+(act?'background:var(--gold);color:#000;':'background:var(--s2);color:var(--fg);')+'">'+t.label+'</button>';
   });
   h += '</div>';
-  if (sousOngletCompta==='tango')       h += _renderComptaTango();
-  else if (sousOngletCompta==='yoga')   h += _renderComptaYoga();
-  else                                  h += _renderComptaStages();
+  if (sousOngletCompta==='tango')            h += _renderComptaTango();
+  else if (sousOngletCompta==='yoga')        h += _renderComptaYoga();
+  else if (sousOngletCompta==='stages')      h += _renderComptaStages();
+  else if (sousOngletCompta==='tresorerie')  h += _renderComptaTresorerie();
   h += '</div>';
   return h;
 }
@@ -11412,6 +11418,277 @@ function _comptaSortBar() {
   [{key:'nom',lbl:'Nom'},{key:'paiement',lbl:'Mode de paiement'},{key:'montant',lbl:'Montant'}].forEach(function(s){
     var act=comptaSort===s.key;
     h+='<button onclick="comptaSort=\''+s.key+'\';renderTab();" style="padding:3px 10px;border-radius:4px;border:none;cursor:pointer;font-size:11px;'+(act?'background:var(--gold);color:#000;':'background:var(--s2);color:var(--fg);')+'">'+s.lbl+'</button>';
+  });
+  h+='</div>';
+  return h;
+}
+
+// ================================================================
+// TRÉSORERIE — remises espèces / chèques en banque
+// ================================================================
+function _buildADeposer() {
+  var liste=[], sai=saisonActive();
+  (adminData.coursTango||[]).forEach(function(e){
+    var pai=(e.paiement||'').toLowerCase();
+    if((pai==='especes'||pai==='cheque')&&!e.remise_id&&e.statut!=='supprimé'&&e.statut!=='demande'&&e.saison===sai){
+      var coursLbl=e.cours||(e.ville==='vincennes'?'Vincennes':'Paris');
+      var typeLbl=e.type==='carte10'?' (Carte 10)':' (Forfait)';
+      liste.push({_key:'ic:'+e.id,source_table:'inscriptions_cours',source_id:e.id,
+        type:pai,montant:Number(e.montant)||0,nom:e.nom||'',prenom:e.prenom||'',email:e.email||'',
+        label:(e.prenom||'')+' '+(e.nom||'')+' — '+coursLbl+typeLbl,saison:sai});
+    }
+  });
+  (adminData.coursYoga||[]).forEach(function(e){
+    var pai=(e.paiement||'').toLowerCase();
+    if((pai==='especes'||pai==='cheque')&&!e.remise_id&&e.statut!=='supprimé'&&e.saison===sai){
+      var coursLbl={hatha:'Hatha Yoga',yin:'Yin Yoga',forfait:'Forfait Yoga'}[e.cours]||e.cours||'Yoga';
+      liste.push({_key:'cy:'+e.id,source_table:'cours_yoga',source_id:e.id,
+        type:pai,montant:Number(e.montant)||0,nom:e.nom||'',prenom:e.prenom||'',email:e.email||'',
+        label:(e.prenom||'')+' '+(e.nom||'')+' — '+coursLbl,saison:sai});
+    }
+  });
+  liste.sort(function(a,b){return (a.nom+a.prenom).localeCompare(b.nom+b.prenom);});
+  return liste;
+}
+
+function _tresoToggle(key){
+  if(_tresoSelected[key]){
+    delete _tresoSelected[key];
+  } else {
+    var item=_buildADeposer().find(function(e){return e._key===key;});
+    if(!item)return;
+    _tresoSelected[key]=Object.assign({},item,{chqEmetteur:(item.prenom+' '+item.nom).trim(),chqNumero:'',chqBanque:'',chqPhotoUrl:''});
+  }
+  renderTab();
+}
+
+function _tresoChqUpdate(key,field,value){
+  if(!_tresoSelected[key])return;
+  var map={emetteur:'chqEmetteur',numero:'chqNumero',banque:'chqBanque',photo:'chqPhotoUrl'};
+  if(map[field])_tresoSelected[key][map[field]]=value;
+}
+
+function _tresoSelectAll(doSelect){
+  var liste=_buildADeposer();
+  if(_tresoFiltre!=='tout') liste=liste.filter(function(e){return e.type===_tresoFiltre;});
+  if(doSelect){
+    liste.forEach(function(item){
+      if(!_tresoSelected[item._key])
+        _tresoSelected[item._key]=Object.assign({},item,{chqEmetteur:(item.prenom+' '+item.nom).trim(),chqNumero:'',chqBanque:'',chqPhotoUrl:''});
+    });
+  } else {
+    liste.forEach(function(item){delete _tresoSelected[item._key];});
+  }
+  renderTab();
+}
+
+function _tresoUploadPhoto(key,input){
+  var file=input.files[0]; if(!file)return;
+  var progId='tprog-'+key.replace(/[^a-z0-9]/gi,'_');
+  var progEl=gel(progId);
+  if(progEl){progEl.textContent='⏳ Upload…';progEl.style.color='var(--gold)';}
+  var fd=new FormData(); fd.append('file',file); fd.append('upload_preset','tango_uploads');
+  fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_NAME+'/image/upload',{method:'POST',body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.secure_url){
+        _tresoChqUpdate(key,'photo',d.secure_url);
+        if(progEl){progEl.textContent='✅ Photo chargée';progEl.style.color='#4caf50';}
+        renderTab();
+      } else {
+        if(progEl){progEl.textContent='❌ Échec';progEl.style.color='#e53935';}
+      }
+    })
+    .catch(function(){if(progEl){progEl.textContent='❌ Erreur réseau';progEl.style.color='#e53935';}});
+}
+
+function _creerRemise(){
+  var selected=Object.values(_tresoSelected);
+  if(!selected.length)return;
+  var totEsp=0,totChq=0;
+  selected.forEach(function(s){if(s.type==='especes')totEsp+=s.montant;else totChq+=s.montant;});
+  var espN=selected.filter(function(s){return s.type==='especes';}).length;
+  var chqN=selected.filter(function(s){return s.type==='cheque';}).length;
+  var msg='🏦 Créer une remise en banque ?\n\n';
+  if(espN) msg+='💵 '+espN+' paiement(s) espèces : '+totEsp+'€\n';
+  if(chqN) msg+='📄 '+chqN+' chèque(s) : '+totChq+'€\n';
+  msg+='\nTotal : '+(totEsp+totChq)+'€';
+  if(!confirm(msg))return;
+  if(IS_DEMO){afficherToast('✅ Remise créée (mode démo)');_tresoSelected={};renderTab();return;}
+
+  var dateAuj=new Date().toISOString().slice(0,10);
+  Promise.resolve(TEV.client.from('remises_banque')
+    .insert({date:dateAuj,montant_especes:totEsp,montant_cheques:totChq,notes:'',statut:'deposee'})
+    .select())
+    .then(function(r){
+      if(r.error||!r.data||!r.data[0]){alert('Erreur création remise : '+(r.error&&r.error.message||'réponse vide'));return;}
+      var remiseId=r.data[0].id;
+      var updates=[];
+      var chqRows=[];
+      selected.forEach(function(s){
+        updates.push(Promise.resolve(TEV.client.from(s.source_table).update({remise_id:remiseId}).eq('id',s.source_id)));
+        if(s.type==='cheque'){
+          chqRows.push({remise_id:remiseId,source_table:s.source_table,source_id:s.source_id,
+            emetteur:s.chqEmetteur||'',montant:s.montant,numero:s.chqNumero||'',banque:s.chqBanque||'',
+            photo_url:s.chqPhotoUrl||'',notes:''});
+        }
+      });
+      if(chqRows.length) updates.push(Promise.resolve(TEV.client.from('cheques_depot').insert(chqRows)));
+      return Promise.all(updates).then(function(){
+        // Mise à jour locale pour que les items disparaissent de "À déposer"
+        selected.forEach(function(s){
+          var arr=s.source_table==='inscriptions_cours'?(adminData.coursTango||[]):(adminData.coursYoga||[]);
+          var item=arr.find(function(x){return String(x.id)===String(s.source_id);});
+          if(item)item.remise_id=remiseId;
+        });
+        _tresoSelected={};
+        _tresoRemises=null; // invalider cache historique
+        _tresoVue='remises';
+        afficherToast('✅ Remise '+(totEsp+totChq)+'€ enregistrée');
+        renderTab();
+      });
+    })
+    .catch(function(e){alert('Erreur réseau : '+(e.message||e));});
+}
+
+function _renderTresoHistorique(){
+  if(_tresoLoading) return '<div style="text-align:center;padding:40px;color:var(--dim);">⏳ Chargement…</div>';
+  if(!_tresoRemises){
+    _tresoLoading=true;
+    Promise.resolve(TEV.client.from('remises_banque').select('*, cheques_depot(*)').order('date',{ascending:false}).limit(100))
+      .then(function(r){_tresoLoading=false;_tresoRemises=r.data||[];renderTab();})
+      .catch(function(){_tresoLoading=false;_tresoRemises=[];renderTab();});
+    return '<div style="text-align:center;padding:40px;color:var(--dim);">⏳ Chargement…</div>';
+  }
+  if(!_tresoRemises.length)
+    return '<div style="text-align:center;padding:40px;color:var(--dim);font-size:14px;">📭 Aucune remise enregistrée</div>';
+
+  var h='<div style="display:flex;flex-direction:column;gap:10px;">';
+  _tresoRemises.forEach(function(r){
+    var total=(Number(r.montant_especes)||0)+(Number(r.montant_cheques)||0);
+    var cheques=r.cheques_depot||[];
+    h+='<div style="background:var(--s2);border-radius:8px;border:1px solid var(--border);overflow:hidden;">';
+    h+='<div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">';
+    h+='<div><div style="font-size:14px;font-weight:700;">'+escHtml(_fmtJour(r.date))+'</div>';
+    h+='<div style="font-size:11px;color:var(--dim);margin-top:2px;">';
+    if(r.montant_especes>0) h+='💵 '+r.montant_especes+'€ espèces';
+    if(r.montant_especes>0&&r.montant_cheques>0) h+=' · ';
+    if(r.montant_cheques>0) h+='📄 '+r.montant_cheques+'€ chèques ('+cheques.length+')';
+    h+='</div>';
+    if(r.notes) h+='<div style="font-size:11px;color:var(--dim);font-style:italic;margin-top:2px;">'+escHtml(r.notes)+'</div>';
+    h+='</div><div style="font-size:22px;font-weight:800;color:var(--gold);">'+total+'€</div></div>';
+    if(cheques.length){
+      h+='<div style="border-top:1px solid var(--border);padding:10px 16px;">';
+      h+='<div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--dim);margin-bottom:6px;">CHÈQUES</div>';
+      cheques.forEach(function(c){
+        h+='<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);">';
+        if(c.photo_url) h+='<img src="'+escHtml(c.photo_url)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;cursor:pointer;flex-shrink:0;" onclick="_photoLightbox(\''+escHtml(c.photo_url)+'\')">';
+        else h+='<div style="width:36px;height:36px;border-radius:4px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">📄</div>';
+        h+='<div style="flex:1;min-width:0;">';
+        h+='<div style="font-size:13px;font-weight:600;">'+escHtml(c.emetteur||'—')+'</div>';
+        h+='<div style="font-size:11px;color:var(--dim);">';
+        if(c.numero) h+='N°'+escHtml(c.numero);
+        if(c.numero&&c.banque) h+=' · ';
+        if(c.banque) h+=escHtml(c.banque);
+        h+='</div></div>';
+        h+='<div style="font-size:14px;font-weight:700;color:#60b0ff;flex-shrink:0;">'+c.montant+'€</div>';
+        h+='</div>';
+      });
+      h+='</div>';
+    }
+    h+='</div>';
+  });
+  h+='</div>';
+  return h;
+}
+
+function _renderComptaTresorerie(){
+  var aDeposer=_buildADeposer();
+  var liste=_tresoFiltre==='tout'?aDeposer:aDeposer.filter(function(e){return e.type===_tresoFiltre;});
+  var h='';
+
+  // Barre de navigation
+  h+='<div style="display:flex;gap:8px;margin-bottom:16px;">';
+  [{key:'deposer',lbl:'📥 À déposer'+(aDeposer.length?' ('+aDeposer.length+')':'')},{key:'remises',lbl:'🏦 Historique'}].forEach(function(v){
+    var act=_tresoVue===v.key;
+    h+='<button onclick="_tresoVue=\''+v.key+'\';_tresoRemises=null;renderTab();" style="padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;'+(act?'background:var(--gold);color:#000;':'background:var(--s2);color:var(--fg);')+'">'+v.lbl+'</button>';
+  });
+  h+='</div>';
+
+  if(_tresoVue==='remises') return h+_renderTresoHistorique();
+
+  // Filtres
+  h+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">';
+  h+='<span style="font-size:11px;color:var(--dim);">Filtrer :</span>';
+  [{key:'tout',lbl:'Tout'},{key:'especes',lbl:'💵 Espèces'},{key:'cheque',lbl:'📄 Chèques'}].forEach(function(f){
+    var act=_tresoFiltre===f.key;
+    h+='<button onclick="_tresoFiltre=\''+f.key+'\';renderTab();" style="padding:3px 10px;border-radius:4px;border:none;cursor:pointer;font-size:11px;'+(act?'background:var(--gold);color:#000;':'background:var(--s2);color:var(--fg);')+'">'+f.lbl+'</button>';
+  });
+  h+='</div>';
+
+  if(!liste.length){
+    h+='<div style="text-align:center;padding:40px 20px;color:var(--dim);font-size:14px;">✅ Aucun paiement espèces/chèque en attente de dépôt</div>';
+    return h;
+  }
+
+  // Récap + bouton créer remise
+  var nbSel=Object.keys(_tresoSelected).length;
+  if(nbSel>0){
+    var totEsp=0,totChq=0;
+    Object.values(_tresoSelected).forEach(function(s){if(s.type==='especes')totEsp+=s.montant;else totChq+=s.montant;});
+    h+='<div style="background:var(--s3);border:1px solid var(--gold-border);border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">';
+    h+='<div style="font-size:13px;font-weight:600;">';
+    if(totEsp>0) h+='<span style="color:#4ade80;">💵 '+totEsp+'€ espèces</span>';
+    if(totEsp>0&&totChq>0) h+='<span style="color:var(--dim);margin:0 8px;">+</span>';
+    if(totChq>0) h+='<span style="color:#60b0ff;">📄 '+totChq+'€ chèques</span>';
+    h+='</div>';
+    h+='<button onclick="_creerRemise();" style="padding:8px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:700;background:var(--gold);color:#000;">🏦 Déposer ('+(totEsp+totChq)+'€)</button>';
+    h+='</div>';
+  }
+
+  // Bouton tout sélectionner
+  var allSel=liste.length>0&&liste.every(function(e){return !!_tresoSelected[e._key];});
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">';
+  h+='<button onclick="_tresoSelectAll('+(allSel?'false':'true')+');" style="font-size:11px;padding:3px 10px;border-radius:4px;background:var(--s2);border:none;color:var(--dim);cursor:pointer;">'+(allSel?'Tout désélectionner':'Tout sélectionner')+'</button>';
+  h+='</div>';
+
+  // Liste des paiements
+  h+='<div style="display:flex;flex-direction:column;gap:6px;">';
+  liste.forEach(function(e){
+    var key=e._key, sel=!!_tresoSelected[key], sd=_tresoSelected[key]||{};
+    var isCheque=e.type==='cheque', keySafe=escHtml(key);
+    h+='<div style="background:var(--s2);border-radius:8px;border:1px solid '+(sel?'var(--gold)':'var(--border)')+';overflow:hidden;">';
+    // Ligne principale
+    h+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;" onclick="_tresoToggle(\''+keySafe+'\');">';
+    h+='<input type="checkbox" '+(sel?'checked':'')+' style="width:auto;padding:0;margin:0;flex-shrink:0;accent-color:var(--gold);" onclick="event.stopPropagation();_tresoToggle(\''+keySafe+'\');">';
+    h+='<div style="flex:1;min-width:0;">';
+    h+='<div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escHtml(e.label)+'</div>';
+    h+='<div style="font-size:11px;color:var(--dim);margin-top:1px;">'+escHtml(e.saison)+'</div>';
+    h+='</div>';
+    h+='<div style="text-align:right;flex-shrink:0;">';
+    h+='<div style="font-size:15px;font-weight:700;color:'+(isCheque?'#60b0ff':'#4ade80')+';">'+e.montant+'€</div>';
+    h+='<div style="font-size:10px;color:var(--dim);">'+(isCheque?'Chèque':'Espèces')+'</div>';
+    h+='</div></div>';
+    // Détails chèque (visible si sélectionné)
+    if(sel&&isCheque){
+      var progId='tprog-'+keySafe.replace(/[^a-z0-9]/gi,'_');
+      h+='<div style="border-top:1px solid var(--border);padding:10px 14px;background:rgba(96,176,255,.05);">';
+      h+='<div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--dim);margin-bottom:8px;">DÉTAILS DU CHÈQUE</div>';
+      h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">';
+      h+='<div class="field" style="flex:2;min-width:130px;margin-bottom:0;"><label style="font-size:11px;">Émetteur</label><input type="text" value="'+escHtml(sd.chqEmetteur||'')+'" placeholder="Nom sur le chèque" oninput="_tresoChqUpdate(\''+keySafe+'\',\'emetteur\',this.value)" style="font-size:13px;"></div>';
+      h+='<div class="field" style="flex:1;min-width:90px;margin-bottom:0;"><label style="font-size:11px;">N° chèque</label><input type="text" value="'+escHtml(sd.chqNumero||'')+'" placeholder="XXXXXXX" oninput="_tresoChqUpdate(\''+keySafe+'\',\'numero\',this.value)" style="font-size:13px;"></div>';
+      h+='<div class="field" style="flex:1;min-width:90px;margin-bottom:0;"><label style="font-size:11px;">Banque</label><input type="text" value="'+escHtml(sd.chqBanque||'')+'" placeholder="CIC, BNP…" oninput="_tresoChqUpdate(\''+keySafe+'\',\'banque\',this.value)" style="font-size:13px;"></div>';
+      h+='</div>';
+      h+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
+      h+='<span id="'+escHtml(progId)+'" style="font-size:11px;color:var(--dim);"></span>';
+      if(sd.chqPhotoUrl){
+        h+='<img src="'+escHtml(sd.chqPhotoUrl)+'" style="width:44px;height:44px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:pointer;flex-shrink:0;" onclick="_photoLightbox(\''+escHtml(sd.chqPhotoUrl)+'\')">';
+        h+='<button onclick="_tresoChqUpdate(\''+keySafe+'\',\'photo\',\'\');renderTab();" style="font-size:11px;padding:3px 8px;border-radius:4px;background:var(--s3);border:none;color:var(--dim);cursor:pointer;">✕ Retirer</button>';
+      }
+      h+='<label style="cursor:pointer;font-size:11px;padding:5px 12px;border-radius:4px;background:var(--s3);border:1px solid var(--border);color:var(--fg);">📷 '+(sd.chqPhotoUrl?'Changer':'Ajouter photo')+'<input type="file" accept="image/*" style="display:none;" onchange="_tresoUploadPhoto(\''+keySafe+'\',this)"></label>';
+      h+='</div></div>';
+    }
+    h+='</div>';
   });
   h+='</div>';
   return h;
