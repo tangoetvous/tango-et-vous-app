@@ -991,3 +991,82 @@ Les opérations admin utilisent le JWT de l'utilisateur connecté passé en `Aut
 `BREVO_API_KEY` reste optionnel (notification non bloquante si absent).
 
 **Ne plus jamais configurer SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY dans Cloudflare** — ils ne sont plus utilisés.
+
+---
+
+## Session 2026-05-07 — Formulaires Wix + corrections inscription-cours
+
+### ✅ Corrections inscription-cours.html (2 cours / 2 partenaires différents)
+- **`buildRecapCours()`** : affiche désormais "Partenaire cours 1" et "Partenaire cours 2" séparément au lieu de n'en montrer qu'un seul
+- **`sTarif()`** : deux blocs de profil distincts (tarif réduit + formule + Sorano) chacun adapté à la ville du cours concerné uniquement — partenaire 1 → ville cours 1, partenaire 2 → ville cours 2
+- **`calcTarif()`** : chaque partenaire évalué sur sa seule ville ; état `S.p2Reduit`, `S.p2Formule`, `S.p2Vincennois`, `S.p2AgeVinc`, `S.p2DejaSorano` ajoutés pour profil partenaire 2
+- **Insertion Supabase** : déjà correct avant cette session — 4 lignes créées (principal×2 + part1 + part2), toutes en `attente_paiement`
+
+### ✅ Hint "remontez en haut" dans les formulaires publics
+Ajouté juste avant chaque bouton "Continuer →" / "Suivant" qui déclenche une transition d'étape :
+- `inscription-cours.html` : dans `sInfos()`, avant les boutons d'action (affiché uniquement si rôle sélectionné)
+- `cours-particuliers.html` : avant les 3 boutons `nextQui()`, `nextCours()`, `nextObj()`
+- `stages-pwa.html` : avant le bouton `btnContinuer` (étape 1→2)
+- `cours-essai.html` : **non modifié** — étapes 1-3 auto-avancent au clic (pas de scroll problématique)
+- `essai-yoga.html` : **non modifié** — formulaire une seule page, pas de transition
+
+### ✅ Bug stages-pwa.html — niveau "Avancé" invisible sur iPhone
+Cause : `.radio-group.horizontal { flex-direction: row }` + 3 items `flex:1` → trop étroit sur 375px.
+Fix : ajout de `flex-wrap: wrap` → les items passent à la ligne si écran trop étroit.
+
+### ❌ Scroll automatique vers le haut à chaque étape — IMPOSSIBLE dans ce contexte Wix
+Problème fondamental : les formulaires sont dans un **iframe dans un iframe** (form `app.tangoetvous.fr` → parastorage Wix → page Wix). Chaque tentative a échoué :
+
+| Approche | Résultat | Raison de l'échec |
+|---|---|---|
+| `window.scrollTo(0,0)` dans la form | ❌ | Iframe full-height (scrolling="no") → rien à scroller dans l'iframe |
+| `f.scrollIntoView()` depuis parastorage | ❌ desktop OK, ❌ iOS | iOS Safari bloque scrollIntoView cross-origin sur 2 niveaux d'iframe |
+| `window.parent.postMessage` + Velo `$w('#html').onMessage()` | ❌ | `onMessage` ne reçoit que les messages via `window.Wix.postMessage()` ; `window.Wix` est undefined avec wix-code-sdk |
+| `window.addEventListener('message')` dans Velo | ❌ | Velo sandbox : `ReferenceError: Can't find variable: window` |
+| `location.hash = '#top'` dans parastorage | ❌ | `overflow:hidden` sur le body parastorage empêche tout scroll interne |
+| `window.top.location.hash` | ❌ | Cross-origin bloqué par le navigateur |
+| `window.Wix.setHeight()` | ❌ | `window.Wix` undefined avec `wix-code-sdk/dist/sdk.js` |
+
+**Règle** : ne pas réessayer ces approches. La solution retenue est le **message texte visible** dans le formulaire avant les boutons de transition.
+
+**SDK Wix** : seul `https://static.parastorage.com/services/wix-code-sdk/dist/sdk.js` fonctionne sans "Forbidden". Il n'expose pas `window.Wix`. L'ancien SDK (`unpkg/wix-sdk/dist/js/Wix.js`) qui exposait `window.Wix.setHeight()` cause "Forbidden" dans Wix.
+
+### 📋 État des formulaires publics — PRÊTS (2026-05-07)
+Tous testés et fonctionnels dans la PWA. Intégrés dans Wix en iframe :
+- `inscription-cours.html` ✅
+- `cours-essai.html` ✅
+- `essai-yoga.html` ✅
+- `stages-pwa.html` ✅
+- `cours-particuliers.html` ✅
+
+**Limitation connue acceptée** : pas de scroll automatique vers le haut entre étapes dans Wix (impossible techniquement). Compensé par le message texte doré "↑ Après avoir cliqué, remontez en haut de la page pour continuer".
+
+**Code Wix HTML element (identique pour tous les formulaires)** :
+```html
+<script>
+  var f = document.getElementById('f');
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'tevHeight') {
+      f.style.height = e.data.height + 'px';
+      try { window.Wix.setHeight(e.data.height); } catch(err) {}
+    }
+    if (e.data && e.data.type === 'tevScrollTop') {
+      f.scrollIntoView({behavior:'smooth', block:'start'});
+      try { window.parent.postMessage({type:'tevScrollTop'}, '*'); } catch(err) {}
+    }
+  });
+</script>
+```
+Le code Velo Wix doit rester **vide** (`$w.onReady(function(){});`) — toutes les tentatives Velo ont échoué.
+
+### 💡 Pistes de migration hors Wix (évoquées, non décidées)
+Si l'utilisateur veut quitter Wix à terme, options envisagées :
+- **Framer** : design moderne, bon support iframe/code custom, export vers domaine propre
+- **Webflow** : plus contrôle code, hosting propre, sans sandbox iframe restrictif
+- **Page HTML statique hébergée sur Cloudflare** (`app.tangoetvous.fr/accueil.html`) : contrôle total, même domaine que les formulaires → plus de cross-origin, scroll automatique fonctionnerait nativement, CSP maîtrisée — migration progressive possible
+- **Avantage clé d'une page Cloudflare** : formulaires et page d'accueil sur le même domaine → `postMessage` same-origin → scroll, Turnstile, et toute communication JS fonctionnent sans restriction Wix
+
+### 🔧 Autres corrections techniques de la session
+- **`postMessage({type:'tevScrollTop'})` ajouté dans `render()`** de `inscription-cours.html` (ligne ~489) — notifie le parent à chaque changement d'étape
+- **Bug `+ '5944px'`** dans le code Wix HTML des Stages corrigé → `+ 'px'`
+- **Turnstile** : problème "impossible de se connecter" résolu en ajoutant `app.tangoetvous.fr` aux domaines autorisés dans le dashboard Cloudflare Turnstile
