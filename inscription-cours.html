@@ -1143,10 +1143,11 @@ window.addEventListener('storage', function(e) {
 </script>
 <script>
 (function(){
-  function _tevH(){var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);window.parent.postMessage({type:'tevHeight',height:h},'*');}
+  function _tevH(){requestAnimationFrame(function(){var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight,document.body.offsetHeight);window.parent.postMessage({type:'tevHeight',height:h},'*');});}
+  window._tevH=_tevH;
   window.addEventListener('load',_tevH);
   window.addEventListener('resize',_tevH);
-  new MutationObserver(function(){setTimeout(_tevH,60);}).observe(document.body,{subtree:true,childList:true,attributes:true});
+  new MutationObserver(function(){setTimeout(_tevH,150);}).observe(document.body,{subtree:true,childList:true,attributes:true});
 })();
 </script>
 </body>
