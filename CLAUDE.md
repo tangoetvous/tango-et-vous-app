@@ -309,7 +309,14 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] Étendre icône 🔔 (badge rouge) + push aux événements suivants : essai tango, essai yoga, demande d'inscription tango, inscription stage, cours particuliers, demande de devis, RSVP milonga depuis espace élève — d'autres cas à lister par l'utilisateur
 - [ ] **Push élève — pas de cours la semaine prochaine** : le lendemain d'un cours, si le prochain cours est à plus de 7 jours, envoyer une notification push à tous les élèves inscrits à ce cours (Paris ou Vincennes). Même logique que le bandeau d'alerte dans l'accueil. Déclencheur : GitHub Actions cron le lendemain de chaque jour de cours (vendredi matin Paris / mardi matin Vincennes), ou Supabase Edge Function. À implémenter en même temps que l'infrastructure FCM.
 - [ ] **Compléter lien cours d'essai dans `inscription-cours.html`** : remplacer `LIEN_ESSAI_A_COMPLETER` (ligne du bandeau au-dessus de la barre de progression) par l'URL Wix du formulaire cours d'essai — l'utilisateur doit fournir cette URL.
-- [ ] Revoir le formulaire cours particuliers
+- [x] Revoir le formulaire cours particuliers — FAIT (lisibilité textes, multi-lieux étape 2, durée déplacée étape 4, cases jours Lu/Ma/Me/Je/Ve, créneau horaire début→fin, propositions de dates)
+- [ ] **Module Trésorerie (Compta)** : nouvelle section dans l'admin pour gérer les remises en banque espèces/chèques. Fonctionnalités prévues :
+  - Vue "À déposer" : liste de tous les paiements `especes`/`cheque` non encore déposés (depuis `inscriptions_cours`, `cours_yoga`, `inscriptions_stages`, `devis`)
+  - Pour chaque chèque : saisie numéro, banque, émetteur + photo uploadée (Cloudinary)
+  - Sélection des paiements → bouton "Créer une remise" → récap total espèces + liste chèques
+  - Historique des remises passées
+  - Tables DB à créer : `remises_banque` (date, montant_especes, montant_cheques, notes) + `cheques` (numéro, banque, émetteur, montant, photo_url, remise_id) + colonne `remise_id` sur les tables de paiements
+  - Votre part : exécuter le SQL (~5 min) + tester (~15 min) — zéro risque sur l'existant
 - [ ] Rappels emails automatiques pour paiements CB en plusieurs fois (cb3x) — relances aux échéances
 - [x] Rubrique Devis : formulaire public + générateur PDF + admin complet — TERMINÉ (voir section Devis)
 - [ ] Devis : envoyer le PDF par email directement depuis l'appli (actuellement via Gmail ouvert manuellement)
