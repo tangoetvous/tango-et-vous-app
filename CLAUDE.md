@@ -9,15 +9,13 @@
 - **M1** ✅ Erreurs DB brutes supprimées des réponses HTTP du worker → `console.error` interne + message générique `'Une erreur est survenue'`
 - **M2** ✅ HTML injection email Brevo : tous les champs utilisateur échappés via `_esc()` dans `sendBrevoNotification`
 
-### À traiter (avec tests utilisateur)
-- **H1** 🔴 Élève peut modifier sa propre ligne `eleves` directement (marquer carte payée, remettre compteur) — RLS UPDATE trop permissif (`email = auth.email()` sans restriction de colonnes). Fix : remplacer par des RPC SECURITY DEFINER pour `renouvelerCarte` et `toggleCartePaye`. ⚠️ Risque de casser le pointage élève et le renouvellement — tester sur téléphone
-- **H2** 🔴 Élève peut insérer des présences arbitraires, contournant la limite 2/jour — seule la validation client-side dans `tevPointerCours`. Fix : supprimer le droit INSERT direct sur `presences` et forcer le passage par le RPC `pointer_cours_qr` (déjà SECURITY DEFINER). ⚠️ Même risque — tester avant
-- **H5** 🟠 Turnstile — deux problèmes distincts :
-  - ✅ Widget ne s'affichait pas : résolu en ajoutant `app.tangoetvous.fr` aux domaines autorisés dans le dashboard Cloudflare Turnstile (2026-05-07)
-  - ❌ Token jamais vérifié côté serveur : `worker.js` accepte les soumissions sans appeler l'API Cloudflare pour valider le token. Fix : dans chaque handler POST du worker, extraire `cf-turnstile-response` du body et appeler `https://challenges.cloudflare.com/turnstile/v0/siteverify` avec la secret key avant de traiter la requête
-- **M6** 🟡 `milonga_presences` INSERT/DELETE sans authentification (`WITH CHECK (true)`) — n'importe qui peut supprimer tous les RSVPs. Fix : restreindre à `auth.email() = email`. Vérifier d'abord si les élèves sont authentifiés quand ils RSVPent
-- **M3** 🟡 RLS non documenté dans `schema.sql` pour `cours_yoga`, `absences_jour`, `demandes_devis`, `devis`, `compteurs_devis` — exporter depuis Dashboard Supabase → Database → Policies et ajouter au fichier
-- **L2** 🔵 Emails admin visibles dans le JS côté client (`_TEV_ADMIN_EMAILS` dans `tev-supabase.js`) — risque faible (phishing), la vraie sécurité est dans `is_admin()` côté Supabase
+### Risque résiduel accepté — clôturé le 2026-05-07
+- **H1** — Élève modifie sa ligne `eleves` (carte payée, compteur) : cross-vérifié AssoConnect, aucun intérêt pratique à tricher
+- **H2** — Élève insère de fausses présences : contre-productif (consomme sa propre carte)
+- **H5** — Token Turnstile jamais vérifié côté serveur : spam improbable sur formulaires d'une petite école. Widget côté client + index UNIQUE en DB + validation manuelle admin = protection suffisante. ✅ Widget opérationnel (hostname `app.tangoetvous.fr` ajouté au dashboard Cloudflare Turnstile)
+- **M6** — `milonga_presences` sans auth : RSVPs milonga peu critiques
+- **M3** — RLS non documenté dans `schema.sql` : cosmétique, pas de risque opérationnel
+- **L2** — Emails admin dans le JS client : la vraie sécurité est dans `is_admin()` Supabase
 
 ### Notes
 - La clé anon Supabase est intentionnellement publique (design Supabase) — sécurité dépend du RLS
