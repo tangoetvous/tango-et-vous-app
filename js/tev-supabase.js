@@ -668,6 +668,13 @@ async function tevUpdateElevePhoto(email, photo_url) {
   return { ok: true };
 }
 
+async function tevUpdateEleveTel(email, tel) {
+  email = (email || '').trim().toLowerCase();
+  const { error } = await _tev.from('eleves').update({ tel }).eq('email', email);
+  if (error) throw error;
+  return { ok: true };
+}
+
 // Export global pour usage dans les HTML
 window.TEV = {
   // Auth
@@ -718,6 +725,7 @@ window.TEV = {
   unsubscribe:    tevUnsubscribe,
   // Photo
   updateElevePhoto: tevUpdateElevePhoto,
+  updateEleveTel:   tevUpdateEleveTel,
   // Client brut (pour requêtes custom)
   client: _tev,
 };
