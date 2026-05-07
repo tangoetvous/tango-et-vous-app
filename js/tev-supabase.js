@@ -294,7 +294,7 @@ async function tevGetAdminData() {
     const elv = elevesMap[ic.email] || {};
     return {
       ...ic,
-      tel:              ic.tel  || elv.tel  || '',
+      tel:              elv.tel || ic.tel   || '',
       role:             ic.role || elv.role || '',
       emailPartenaire:  ic.email_partenaire || ic.emailPartenaire || '',
       cours:            ic.cours || _coursLabel(ic.ville, ic.niveau),
@@ -670,14 +670,9 @@ async function tevUpdateElevePhoto(email, photo_url) {
 
 async function tevUpdateEleveTel(email, tel) {
   email = (email || '').trim().toLowerCase();
-  const [r1, r2, r3, r4] = await Promise.all([
-    _tev.from('eleves').update({ tel }).eq('email', email),
-    _tev.from('inscriptions_cours').update({ tel }).eq('email', email),
-    _tev.from('cours_yoga').update({ tel }).eq('email', email),
-    _tev.from('inscriptions_essai').update({ tel }).eq('email', email),
-  ]);
-  const err = r1.error || r2.error || r3.error || r4.error;
-  if (err) throw err;
+  // RLS inscriptions_cours interdit UPDATE aux non-admins — seule eleves est accessible à l'élève
+  const { error } = await _tev.from('eleves').update({ tel }).eq('email', email);
+  if (error) throw error;
   return { ok: true };
 }
 
