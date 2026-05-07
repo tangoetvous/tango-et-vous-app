@@ -670,8 +670,14 @@ async function tevUpdateElevePhoto(email, photo_url) {
 
 async function tevUpdateEleveTel(email, tel) {
   email = (email || '').trim().toLowerCase();
-  const { error } = await _tev.from('eleves').update({ tel }).eq('email', email);
-  if (error) throw error;
+  const [r1, r2, r3, r4] = await Promise.all([
+    _tev.from('eleves').update({ tel }).eq('email', email),
+    _tev.from('inscriptions_cours').update({ tel }).eq('email', email),
+    _tev.from('cours_yoga').update({ tel }).eq('email', email),
+    _tev.from('inscriptions_essai').update({ tel }).eq('email', email),
+  ]);
+  const err = r1.error || r2.error || r3.error || r4.error;
+  if (err) throw err;
   return { ok: true };
 }
 
