@@ -695,8 +695,17 @@ function buildRecapCours(incl2) {
   if(S.prenom&&S.nom) h+=`<div class="recap-row"><span class="rk">👤 ${S.prenom} ${S.nom}</span><span class="rv">${ROLE_LBL[S.role]||'—'}</span></div>`;
   if(c1i) h+=`<div class="recap-row"><span class="rk">🏫 Cours 1</span><span class="rv">${cap(S.c1.ville)} — ${NIV_LBL[S.c1.niveau]}<br/><span style="font-size:11px;color:var(--dim);">${c1i.jour} ${c1i.h}</span></span></div>`;
   if(c2i) h+=`<div class="recap-row"><span class="rk">🏫 Cours 2</span><span class="rv">${cap(S.c2.ville)} — ${NIV_LBL[S.c2.niveau]}<br/><span style="font-size:11px;color:var(--dim);">${c2i.jour} ${c2i.h}</span></span></div>`;
-  const pNomAff = S.venue==='avec-part' ? (S.pPrenom+' '+S.pNom).trim() : S.venue2==='avec-part' ? (S.p2Prenom+' '+S.p2Nom).trim() : '';
-  if(pNomAff) h+=`<div class="recap-row"><span class="rk">🤝 Partenaire</span><span class="rv">${pNomAff}</span></div>`;
+  const _h1p = S.venue === 'avec-part';
+  const _h2p = S.venue2 === 'avec-part';
+  const _sameP = S.samePartner === true;
+  if(_h1p && _h2p && !_sameP) {
+    const p1=(S.pPrenom+' '+S.pNom).trim(), p2=(S.p2Prenom+' '+S.p2Nom).trim();
+    if(p1) h+=`<div class="recap-row"><span class="rk">🤝 Partenaire cours 1</span><span class="rv">${p1}</span></div>`;
+    if(p2) h+=`<div class="recap-row"><span class="rk">🤝 Partenaire cours 2</span><span class="rv">${p2}</span></div>`;
+  } else {
+    const pNomAff = _h1p ? (S.pPrenom+' '+S.pNom).trim() : _h2p ? (S.p2Prenom+' '+S.p2Nom).trim() : '';
+    if(pNomAff) h+=`<div class="recap-row"><span class="rk">🤝 Partenaire</span><span class="rv">${pNomAff}</span></div>`;
+  }
   return h;
 }
 
@@ -755,17 +764,57 @@ function sTarif() {
         'S.vincennois=this.value;calcTarif()','S.ageVinc=this.value;calcTarif()','S.dejaSorano=this.value;calcTarif()'):''}
     </div>`;
 
+  const avecP2 = S.venue2==='avec-part';
+  const sameP = S.samePartner===true;
+  const twoDiffP = avecP && avecP2 && !sameP;
+
   if(avecP) {
-    h += `<div class="cadre"><div class="cadre-titre">Profil de ${S.pPrenom||'votre partenaire'}</div>
-      ${redSel('t-pred',S.pReduit,'Tarif réduit','S.pReduit=this.value;calcTarif()')}
-      ${(hasParis&&hasVinc)
+    // Quand 2 partenaires différents, le partenaire 1 ne fait que le cours 1
+    const p1P = twoDiffP ? P1 : hasParis;
+    const p1V = twoDiffP ? V1 : hasVinc;
+    const p1Mix = p1P && p1V;
+    const p1Lbl = twoDiffP ? `${S.pPrenom||'Partenaire'} — cours 1 uniquement` : (S.pPrenom||'votre partenaire');
+    h += `<div class="cadre"><div class="cadre-titre">Profil de ${p1Lbl}</div>
+      <div class="field"><label>Tarif réduit</label><select id="t-pred" onchange="S.pReduit=this.value;calcTarif()">
+        <option value="non"${(!S.pReduit||S.pReduit==='non')?' selected':''}>Non</option>
+        ${p1P?`<option value="etudiant"${S.pReduit==='etudiant'?' selected':''}>Étudiant·e</option>
+        <option value="demandeur"${S.pReduit==='demandeur'?' selected':''}>Demandeur·euse d'emploi</option>`:''}
+        ${p1V?`<option value="moins25"${S.pReduit==='moins25'?' selected':''}>Moins de 25 ans</option>
+        <option value="carte_jeune"${S.pReduit==='carte_jeune'?' selected':''}>Carte Jeune Vincennes</option>`:''}
+      </select></div>
+      ${p1Mix
         ? `<div class="field"><label>Formule</label><select id="t-pmixte" onchange="S.pFormule=this.value;calcTarif()">
             <option value="forfait2"${S.pFormule==='forfait2'?' selected':''}>Forfait annuel 2 cours</option>
             <option value="vincarte"${S.pFormule==='vincarte'?' selected':''}>Forfait Vincennes + Carte Paris</option>
           </select></div>`
-        : formuleSel('t-pformule',S.pFormule,'S.pFormule=this.value;calcTarif()')}
-      ${hasVinc?vincBloc('t-pvinc','t-page','t-psorano',S.pVincennois,S.pAgeVinc,S.pDejaSorano,
+        : `<div class="field"><label>Formule</label><select id="t-pformule" onchange="S.pFormule=this.value;calcTarif()">
+            <option value="">— Choisir —</option>
+            ${p1P?`<option value="forfait"${S.pFormule==='forfait'?' selected':''}>Forfait annuel</option>
+            <option value="carte"${S.pFormule==='carte'?' selected':''}>Carte de 10 cours</option>`:''}
+            ${!p1P&&p1V?`<option value="forfait"${S.pFormule==='forfait'?' selected':''}>Forfait annuel</option>`:''}
+          </select></div>`}
+      ${p1V?vincBloc('t-pvinc','t-page','t-psorano',S.pVincennois,S.pAgeVinc,S.pDejaSorano,
         'S.pVincennois=this.value;calcTarif()','S.pAgeVinc=this.value;calcTarif()','S.pDejaSorano=this.value;calcTarif()'):''}
+    </div>`;
+  }
+  if(avecP2 && !sameP) {
+    const p2Lbl = twoDiffP ? `${S.p2Prenom||'Partenaire'} — cours 2 uniquement` : (S.p2Prenom||'votre partenaire');
+    h += `<div class="cadre"><div class="cadre-titre">Profil de ${p2Lbl}</div>
+      <div class="field"><label>Tarif réduit</label><select id="t-p2red" onchange="S.p2Reduit=this.value;calcTarif()">
+        <option value="non"${(!S.p2Reduit||S.p2Reduit==='non')?' selected':''}>Non</option>
+        ${P2?`<option value="etudiant"${S.p2Reduit==='etudiant'?' selected':''}>Étudiant·e</option>
+        <option value="demandeur"${S.p2Reduit==='demandeur'?' selected':''}>Demandeur·euse d'emploi</option>`:''}
+        ${V2?`<option value="moins25"${S.p2Reduit==='moins25'?' selected':''}>Moins de 25 ans</option>
+        <option value="carte_jeune"${S.p2Reduit==='carte_jeune'?' selected':''}>Carte Jeune Vincennes</option>`:''}
+      </select></div>
+      <div class="field"><label>Formule</label><select id="t-p2formule" onchange="S.p2Formule=this.value;calcTarif()">
+        <option value="">— Choisir —</option>
+        ${P2?`<option value="forfait"${S.p2Formule==='forfait'?' selected':''}>Forfait annuel</option>
+        <option value="carte"${S.p2Formule==='carte'?' selected':''}>Carte de 10 cours</option>`:''}
+        ${V2?`<option value="forfait"${S.p2Formule==='forfait'?' selected':''}>Forfait annuel</option>`:''}
+      </select></div>
+      ${V2?vincBloc('t-p2vinc','t-p2age','t-p2sorano',S.p2Vincennois,S.p2AgeVinc,S.p2DejaSorano,
+        'S.p2Vincennois=this.value;calcTarif()','S.p2AgeVinc=this.value;calcTarif()','S.p2DejaSorano=this.value;calcTarif()'):''}
     </div>`;
   }
 
@@ -784,6 +833,9 @@ function calcTarif() {
   const P2=nb===2&&S.c2.ville==='paris', V2=nb===2&&S.c2.ville==='vincennes';
   const hasParis=P1||P2, hasVinc=V1||V2;
   const avecP=S.venue==='avec-part';
+  const avecP2=S.venue2==='avec-part';
+  const sameP=S.samePartner===true;
+  const twoDiffP=avecP&&avecP2&&!sameP;
 
   function calcPersonne(red, formule, villes, vinc, age, sorano) {
     // Réductions : Paris → étudiant/demandeur ; Vincennes → moins25/carte_jeune
@@ -839,12 +891,21 @@ function calcTarif() {
   const isMix  = hasParis && hasVinc;
   const moiF   = isMix ? (S.mixteFormule||'forfait2') : (S.formule||'forfait');
   const moi    = calcPersonne(S.reduit, moiF, villes, S.vincennois, S.ageVinc, S.dejaSorano);
-  let part=null;
+  let part=null, part2=null;
   if(avecP) {
-    const pF = isMix ? (S.pFormule||'forfait2') : (S.pFormule||'forfait');
-    part = calcPersonne(S.pReduit, pF, villes, S.pVincennois, S.pAgeVinc, S.pDejaSorano);
+    // Quand 2 partenaires différents, le partenaire 1 ne fait que le cours 1
+    const pVilles = twoDiffP ? [S.c1.ville] : villes;
+    const pMix = pVilles.length===2 && pVilles.includes('paris') && pVilles.includes('vincennes');
+    const pF = pMix ? (S.pFormule||'forfait2') : (S.pFormule||'forfait');
+    part = calcPersonne(S.pReduit||'non', pF, pVilles, S.pVincennois, S.pAgeVinc, S.pDejaSorano);
   }
-  S.tarifData={moi,part};
+  if(avecP2 && !sameP) {
+    // Le partenaire 2 ne fait que le cours 2
+    const p2Villes = [S.c2.ville];
+    const p2F = S.p2Formule||'forfait';
+    part2 = calcPersonne(S.p2Reduit||'non', p2F, p2Villes, S.p2Vincennois||'', S.p2AgeVinc||'', S.p2DejaSorano||'');
+  }
+  S.tarifData={moi,part,part2};
 
   const el=$('t-result'); if(!el) return;
   const bloc=(data,nom)=>`<div class="tarif-bloc"><div class="tarif-titre">💶 Estimation — ${nom}</div>
@@ -853,8 +914,12 @@ function calcTarif() {
 
   let h=bloc(moi, S.prenom||'vous');
   let gt=moi.total;
-  if(part) { h+=bloc(part, S.pPrenom||'partenaire'); gt+=part.total; }
-  if(part) h+=`<div class="tarif-total-global"><span>Total ensemble</span><span>${gt} €</span></div>`;
+  if(part) {
+    const pNom=twoDiffP?`${S.pPrenom||'Partenaire'} (cours 1)`:(S.pPrenom||'partenaire');
+    h+=bloc(part, pNom); gt+=part.total;
+  }
+  if(part2) { h+=bloc(part2, `${S.p2Prenom||'Partenaire'} (cours 2)`); gt+=part2.total; }
+  if(part||part2) h+=`<div class="tarif-total-global"><span>Total ensemble</span><span>${gt} €</span></div>`;
   h+=`<div class="info-note">Estimation indicative — montant définitif confirmé sur AssoConnect.</div>`;
   el.innerHTML=h;
 }
