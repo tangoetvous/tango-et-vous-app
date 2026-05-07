@@ -37,7 +37,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - Après chaque déploiement : demander à l'utilisateur de faire **Cmd+Shift+R** pour vider le cache
 
 ## Structure Supabase (tables principales)
-- **`eleves`** : profils élèves (nom, prenom, email, tel, role, statut_eleve, notes, saison...)
+- **`eleves`** : profils élèves (nom, prenom, email, tel, role, statut_eleve, notes, saison, **photo_url**...) — `photo_url TEXT` ajoutée via `ALTER TABLE eleves ADD COLUMN IF NOT EXISTS photo_url TEXT;` (déjà exécuté)
 - **`inscriptions_cours`** : inscriptions tango (email, prenom, nom, tel, role, ville, niveau, cours, type, paiement, montant, statut, partenaire, email_partenaire, saison, donnees, **paiement_sorano**)
   - `ville` : `'paris'` ou `'vincennes'`
   - `niveau` : `'debutant'` ou `'intermediaire'`
@@ -71,11 +71,14 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
   - Enrichit `coursTango` avec `tel`, `role`, `cours` (calculé) depuis la table `eleves`
   - Enrichit `coursYoga` avec `tel` depuis la table `eleves`
   - Charge `cours_yoga` et retourne comme `coursYoga`
+  - `tevUpdateEleveTel(email, tel)` : met à jour `tel` dans `eleves` (appelée depuis `saveTel()` dans index.html)
+  - `tevUpdateElevePhoto(email, photoUrl)` : met à jour `photo_url` dans `eleves`
 - **`admin.html`** : interface admin complète (~8000 lignes)
   - `IS_DEMO` : mode démo vs réel
   - `adminData` : état global de l'appli
   - `chargerDonnees()` : recharge depuis Supabase et merge dans adminData
   - `PAI_LBL` : `{cb1x:'CB 1×', cb3x:'CB 3×', especes:'Espèces', cheque:'Chèque', virement1x:'Virement 1×', virement3x:'Virement 3×'}`
+- **`index.html`** (espace élève) : onglets `carte` et `actu` renommés → labels affichés **"Forfait"** et **"Publications"** (dans `NAV_TABS` et `_TAB_LABELS`). Section "📋 Mes coordonnées" dans `renderAccueil()` : téléphone éditable + bouton "Enregistrer" (`saveTel()`) + mailto pour changement d'email.
 
 ## Onglet Plan des lieux (index.html — Plan IIFE, ligne ~4130)
 
@@ -131,6 +134,8 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Publications — colonne `donnees` JSONB** : la table `publications` ne stockait que `titre, contenu, publiee`. Tous les autres champs (image, cat, extrait, vidéo, dates, cours) sont stockés dans une colonne `donnees JSONB` ajoutée via `ALTER TABLE publications ADD COLUMN IF NOT EXISTS donnees JSONB NOT NULL DEFAULT '{}';`. Dans `tevGetAdminData`, chaque publication est enrichie via `Object.assign({}, p.donnees || {}, p)` pour remonter les champs au niveau racine. `tevSauvegarderPublication` reçoit et persiste tous les champs.
 - **Erreurs Supabase silencieuses dans les fonctions async** : le client Supabase JS v2 retourne `{ data, error }` sans jamais lever d'exception. Si on destructure seulement `{ data }` en ignorant `error`, un INSERT/UPDATE raté laisse croire à un succès — le `.then()` s'exécute, le formulaire se ferme, `chargerDonnees()` recharge depuis la DB vide. **Toujours** vérifier : `const { data, error } = await ...; if (error) throw new Error(error.message || error.code || JSON.stringify(error));`
 - **`await` dans une fonction non-`async` = SyntaxError silencieux** : un `await` dans une fonction non déclarée `async` provoque une SyntaxError au parse-time — tout le bloc `<script>` échoue à s'exécuter silencieusement (aucune erreur visible dans la console sur certains navigateurs). Symptômes : fonctions d'initialisation (`_initCoursYoga()`, `init()`) ne s'exécutent jamais, interface vide. **Toujours** déclarer `async function soumettre()` (et toute fonction qui contient `await`) avec le mot-clé `async`.
+- **Changement d'email admin → sync Supabase Auth** : `sauverContact()` met à jour toutes les tables DB PUIS appelle `PATCH /api/admin/update-auth-email` (non-bloquant, dans un `.then()` séparé). Le worker utilise `env.SUPABASE_SERVICE_KEY` (secret Cloudflare) pour : (1) `GET /auth/v1/admin/users?email=oldEmail` → trouver l'userId Auth, (2) `PUT /auth/v1/admin/users/:id` avec `{email:newEmail, email_confirm:true}`. Retourne `{ok:true,skipped:true,reason:'no_auth_account'}` si l'élève n'a jamais activé son espace (pas de compte Auth) — sans erreur. **Sans ce fix** : les DB sont mises à jour mais le magic link continue d'arriver à l'ancien email → l'élève perd l'accès.
+- **`photo_url` dans `eleves`** : champ `TEXT` activé via `ALTER TABLE eleves ADD COLUMN IF NOT EXISTS photo_url TEXT;` (exécuté le 2026-05-07). Photo uploadée depuis admin (fiche ✏️ → upload Cloudinary) ET depuis espace élève (section "Mes coordonnées" → `renderAccueil()`). Sync via `tevUpdateElevePhoto(email, url)` (tev-supabase.js). Aucun code supplémentaire requis — la colonne existait dans le code, seule la DB manquait.
 - **Cartes 10 — suppression** : `confirmerSupprimerCarte(email, nom)` fait UPDATE `inscriptions_cours SET statut='supprimé'` (filtre `type='carte10'` et `statut='inscrit'`) ET UPDATE `eleves SET carte_statut='supprimé'`. `_buildCartesData()` filtre `c.statut!=='supprimé'` pour exclure les cartes supprimées de la vue active. L'onglet "Supprimées" (`renderCartesSupprimees()`) affiche les cartes archivées dédupliquées par email. Le marqueur `_fromCoursTango: true/false` distingue la source de l'ID (inscriptions_cours vs eleves) dans les objets carte.
 - **`confirmerSupprimerEleve()` supprime aussi les cartes** : en plus du `UPDATE inscriptions_cours SET statut='supprimé'` sur l'ID de l'inscription, la suppression d'un élève tango fait aussi UPDATE toutes ses entrées `inscriptions_cours type='carte10' statut='inscrit'` ET `eleves.carte_statut='supprimé'` en parallèle via `Promise.all`. **Important** : utiliser `String(x.id)===String(id)` pour trouver l'entrée (bigint Supabase vs string HTML).
 - **Cartes 10 — élèves supprimés d'Élèves Tango** : un élève supprimé d'Élèves Tango doit disparaître de Cartes 10 → Pointage et Détails, et apparaître dans Cartes 10 → Supprimées. Implémenté via deux mécanismes : (1) `_buildCartesData()` construit `_emailsSupprimés` (emails dont toutes les `inscriptions_cours` de la saison sont `statut='supprimé'`) et les exclut des cartes actives ; (2) `renderCartesSupprimees()` parcourt `_tgStatus` pour ajouter ces mêmes emails dans la liste supprimées si la personne avait des données de carte (`utilises>0 || restants>0 || datePremierCours`).
@@ -275,15 +280,9 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] **Tester déclaration d'absence depuis espace élève** : bouton 🚫 Absent sur la carte "PROCHAIN COURS" → vérifier que l'absence apparaît bien dans admin → Essai Tango → Pointage sur la bonne date et le bon cours
 - [ ] Vérifier correction Sandrine Billot (hatha uniquement) / Myriam Bloch (hatha+yin) dans Supabase — SQL généré mais pas confirmé exécuté
 - [ ] **Activer sauvegardes Supabase** : Dashboard Supabase → Settings → Database → Backups → activer (7 jours rétention sur plan gratuit)
-- [ ] **Configurer email backup CSV** : GitHub → Settings → Secrets → Actions → ajouter `SMTP_USERNAME` (Gmail), `SMTP_PASSWORD` (mot de passe application Gmail — myaccount.google.com/apppasswords), `BACKUP_EMAIL` (destinataire). Le workflow `backup-csv.yml` tourne déjà chaque soir à 23h et stocke les CSV dans le repo + artifacts GitHub.
+- [x] **Configurer email backup CSV** — FAIT (`SMTP_USERNAME`, `SMTP_PASSWORD`, `BACKUP_EMAIL` ajoutés dans GitHub Actions secrets). Workflow tourne chaque soir à 23h, exporte 15 tables en CSV + ZIP → artifact GitHub 90 jours + email.
 - [ ] **Septembre 2026 — mettre à jour les actions GitHub** : remplacer `actions/checkout@v4`, `actions/upload-artifact@v4`, `dawidd6/action-send-mail@v3` par leurs versions Node.js 24 dans `backup-csv.yml` (et `keep-alive.yml` si concerné). Signaler à Claude à ce moment-là.
-- [ ] **Exécuter SQL colonnes paiement_sorano + tel yoga** dans Supabase SQL Editor :
-  ```sql
-  ALTER TABLE inscriptions_cours ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false;
-  ALTER TABLE cours_yoga ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false;
-  ALTER TABLE cours_yoga ADD COLUMN IF NOT EXISTS tel TEXT DEFAULT '';
-  ```
-  Sans `paiement_sorano` : le marquage Sorano ne persiste pas après rechargement. Sans `tel` : le téléphone des élèves yoga n'est pas sauvegardé en DB.
+- [x] **Exécuter SQL colonnes paiement_sorano + tel yoga** — FAIT (exécuté dans Supabase SQL Editor)
 - [x] Tester suppression élève tango → persiste après refresh — CORRIGÉ (approche `_pendingSupprimes`)
 - [x] Transfert essai → inscriptions tango (boutons Validé·e / Demande en att. / Inscrit·e) — CORRIGÉ (saison `saisonActive()`, INSERT au lieu de `upsert`, `_pendingCoursInserts`, partenaire sans email)
 - [x] Pointage Essai Tango : scroll to top toutes les 15s — CORRIGÉ (garde `_renderTabSiPasFormulaire` + `requestAnimationFrame`)
@@ -310,6 +309,11 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] **Push élève — pas de cours la semaine prochaine** : le lendemain d'un cours, si le prochain cours est à plus de 7 jours, envoyer une notification push à tous les élèves inscrits à ce cours (Paris ou Vincennes). Même logique que le bandeau d'alerte dans l'accueil. Déclencheur : GitHub Actions cron le lendemain de chaque jour de cours (vendredi matin Paris / mardi matin Vincennes), ou Supabase Edge Function. À implémenter en même temps que l'infrastructure FCM.
 - [ ] **Compléter lien cours d'essai dans `inscription-cours.html`** : remplacer `LIEN_ESSAI_A_COMPLETER` (ligne du bandeau au-dessus de la barre de progression) par l'URL Wix du formulaire cours d'essai — l'utilisateur doit fournir cette URL.
 - [x] Revoir le formulaire cours particuliers — FAIT (lisibilité textes, multi-lieux étape 2, durée déplacée étape 4, cases jours Lu/Ma/Me/Je/Ve, créneau horaire début→fin, propositions de dates)
+- [x] Photo de profil élève — FAIT : colonne `photo_url TEXT` ajoutée dans `eleves` (SQL exécuté). Upload depuis admin (fiche ✏️) ET depuis espace élève (section "Mes coordonnées"). Synchronisation bidirectionnelle via `tevUpdateElevePhoto()`.
+- [x] Téléphone modifiable depuis espace élève — FAIT : section "📋 Mes coordonnées" dans `renderAccueil()`, bouton "Enregistrer" → `saveTel()` → `TEV.updateEleveTel()` → UPDATE `eleves`.
+- [x] Onglets espace élève renommés — FAIT : "Carte" → "Forfait", "Actu" → "Publications" (dans `NAV_TABS` et `_TAB_LABELS` dans index.html)
+- [x] Email admin → sync Supabase Auth — CORRIGÉ : `sauverContact()` appelle `PATCH /api/admin/update-auth-email` (non-bloquant) quand l'email change. Worker utilise `env.SUPABASE_SERVICE_KEY` (secret Cloudflare, déjà configuré) pour appeler l'Admin Auth API Supabase et mettre à jour l'email sans déconnecter l'élève.
+- [ ] **Tester sync email Auth** : dans admin, changer l'email d'un élève → F12 → Network → chercher `update-auth-email` → vérifier réponse `{"ok":true,"userId":"..."}` → vérifier dans Supabase Dashboard → Authentication → Users
 - [ ] **Module Trésorerie (Compta)** : nouvelle section dans l'admin pour gérer les remises en banque espèces/chèques. Fonctionnalités prévues :
   - Vue "À déposer" : liste de tous les paiements `especes`/`cheque` non encore déposés (depuis `inscriptions_cours`, `cours_yoga`, `inscriptions_stages`, `devis`)
   - Pour chaque chèque : saisie numéro, banque, émetteur + photo uploadée (Cloudinary)
