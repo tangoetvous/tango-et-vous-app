@@ -12,6 +12,7 @@
 //   PATCH /api/devis/:id/emettre       — admin → passer brouillon → emis
 //   PATCH /api/devis/:id/annuler       — admin → annuler devis
 //   PATCH /api/demandes-devis/:id      — admin → changer statut demande
+//   PATCH /api/admin/update-auth-email — admin → sync email dans Supabase Auth (service role)
 //   *                                  — assets statiques (Cloudflare Static Assets)
 
 const SUPABASE_URL  = 'https://qhngqzvvllktuwspojxc.supabase.co';
@@ -67,6 +68,12 @@ export default {
       if (demandeM && method === 'PATCH') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
         return handleUpdateDemande(request, demandeM[1], jwt);
+      }
+
+      if (pathname === '/api/admin/update-auth-email' && method === 'PATCH') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!env.SUPABASE_SERVICE_KEY) return jsonError(503, 'Service non configuré');
+        return handleUpdateAuthEmail(request, env.SUPABASE_SERVICE_KEY);
       }
 
       return env.ASSETS.fetch(request);
@@ -273,6 +280,71 @@ async function handleUpdateDemande(request, id, jwt) {
   if (!r.ok) { console.error('Supabase error:', await r.text()); return jsonError(500, 'Une erreur est survenue'); }
   const rows = await r.json();
   return corsResponse(rows[0] || { id }, 200);
+}
+
+
+// ================================================================
+// PATCH /api/admin/update-auth-email — sync email dans Supabase Auth
+// Utilise la service role key (env.SUPABASE_SERVICE_KEY) pour accéder
+// à l'Admin Auth API et mettre à jour l'email sans déconnecter l'élève.
+// ================================================================
+async function handleUpdateAuthEmail(request, serviceKey) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const oldEmail = (body.oldEmail || '').trim().toLowerCase();
+  const newEmail = (body.newEmail || '').trim().toLowerCase();
+  if (!oldEmail || !newEmail || oldEmail === newEmail) {
+    return corsResponse({ ok: true, skipped: true }, 200);
+  }
+
+  const serviceHeaders = {
+    'Content-Type': 'application/json',
+    'apikey': serviceKey,
+    'Authorization': `Bearer ${serviceKey}`,
+  };
+
+  // Trouver l'utilisateur par son ancien email
+  let listRes;
+  try {
+    listRes = await fetch(
+      `${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(oldEmail)}&page=1&per_page=1`,
+      { headers: serviceHeaders }
+    );
+  } catch (e) {
+    console.error('Auth admin list error:', e);
+    return jsonError(500, 'Une erreur est survenue');
+  }
+  if (!listRes.ok) {
+    console.error('Auth admin list HTTP error:', listRes.status, await listRes.text());
+    return jsonError(500, 'Une erreur est survenue');
+  }
+  const listData = await listRes.json();
+  const users = listData.users || [];
+  if (!users.length) {
+    // Pas de compte Auth (l'élève ne s'est jamais connecté) — pas d'erreur
+    return corsResponse({ ok: true, skipped: true, reason: 'no_auth_account' }, 200);
+  }
+  const userId = users[0].id;
+
+  // Mettre à jour l'email dans Auth
+  let updateRes;
+  try {
+    updateRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: serviceHeaders,
+      body: JSON.stringify({ email: newEmail, email_confirm: true }),
+    });
+  } catch (e) {
+    console.error('Auth admin update error:', e);
+    return jsonError(500, 'Une erreur est survenue');
+  }
+  if (!updateRes.ok) {
+    console.error('Auth admin update HTTP error:', updateRes.status, await updateRes.text());
+    return jsonError(500, 'Une erreur est survenue');
+  }
+
+  return corsResponse({ ok: true, userId }, 200);
 }
 
 
