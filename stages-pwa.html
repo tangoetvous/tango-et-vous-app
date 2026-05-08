@@ -579,6 +579,7 @@ body { background: #111; color: #fff; font-family: Arial, sans-serif; font-size:
     <button type="button" class="btn-submit" id="btnSubmit">Je m'inscris</button>
     <p style="font-size:11px;color:#666;text-align:center;margin-top:10px;">En envoyant ce formulaire, vous acceptez notre <a href="/confidentialite.html" target="_blank" style="color:#D4AF37;">politique de confidentialité</a>.</p>
   </div>
+  <div id="scroll-hint-2"></div>
 </div>
 
 <!-- CONFIRMATION -->
@@ -1342,8 +1343,16 @@ function recommencer(){
   autoResizeIframe();
 }
 
+function _scrollHint() {
+  const txt = '<span style="font-size:32px;">↑</span> Remonter pour terminer de remplir le formulaire';
+  const reps = Array(67).fill(txt).join('<br><br><br>');
+  return '<div style="text-align:center;color:#f0c030;font-size:16px;font-weight:700;line-height:2;padding:24px 0 12px;">' + reps + '</div>';
+}
+
 // ── Init ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async function(){
+  var _sh = document.getElementById('scroll-hint-2');
+  if (_sh) _sh.innerHTML = _scrollHint();
   // Sync silencieux depuis Supabase (parametres.SELECT autorisé à anon)
   try {
     var _sai = saisonCourante();

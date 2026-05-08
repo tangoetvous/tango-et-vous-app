@@ -335,6 +335,7 @@ select option{background:#1a1a1a;color:#fff;}
       <div class="nav" style="margin-top:12px;">
         <button class="btn-back" onclick="goEtape(3)">← Modifier la date</button>
       </div>
+      <div id="scroll-hint-e4"></div>
     </div>
 
   </div>
@@ -1147,6 +1148,14 @@ function reinitialiser() {
   document.querySelectorAll(".choix-btn").forEach(el=>el.classList.remove("selected"));
   goEtape(1);
 }
+
+function _scrollHint() {
+  const txt = '<span style="font-size:32px;">↑</span> Remonter pour terminer de remplir le formulaire';
+  const reps = Array(67).fill(txt).join('<br><br><br>');
+  return '<div style="text-align:center;color:#f0c030;font-size:16px;font-weight:700;line-height:2;padding:24px 0 12px;">' + reps + '</div>';
+}
+var _sh4 = document.getElementById('scroll-hint-e4');
+if (_sh4) _sh4.innerHTML = _scrollHint();
 
 // Sync params depuis Supabase au chargement (source de vérité)
 (async function() {
