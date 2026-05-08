@@ -381,6 +381,17 @@ let S = fresh();
 // ================================================================
 // STEPS
 // ================================================================
+function _liveRecap(num) {
+  const is2 = num === 2;
+  const g = id => { const el = document.getElementById(id); return el ? el.value : null; };
+  if (g('i-pre') !== null) { S.prenom = g('i-pre') || S.prenom; S.nom = g('i-nom') || S.nom; }
+  if (document.getElementById('p-pre') && S.samePartner !== true) {
+    if (!is2) { S.pPrenom = g('p-pre') || ''; S.pNom = g('p-nom') || ''; }
+    else      { S.p2Prenom = g('p-pre') || ''; S.p2Nom = g('p-nom') || ''; }
+  }
+  const el = document.getElementById('recap-live');
+  if (el) el.innerHTML = buildRecapCours(is2);
+}
 function _scrollHint() {
   const txt = '<span style="font-size:32px;">↑</span> Remonter pour terminer de remplir le formulaire';
   const reps = Array(67).fill(txt).join('<br><br><br>');
@@ -665,8 +676,8 @@ function sInfos(num) {
       ${sameBtn}
       <div id="part-fields" style="${partDisabled?'opacity:.55;pointer-events:none;':''}">
         <div class="row2">
-          <div class="field"><label>Prénom</label><input id="p-pre" type="text" value="${pPre}" placeholder="Prénom"/></div>
-          <div class="field"><label>Nom</label><input id="p-nom" type="text" value="${pNom}" placeholder="Nom"/></div>
+          <div class="field"><label>Prénom</label><input id="p-pre" type="text" value="${pPre}" placeholder="Prénom" oninput="_liveRecap(${num})"/></div>
+          <div class="field"><label>Nom</label><input id="p-nom" type="text" value="${pNom}" placeholder="Nom" oninput="_liveRecap(${num})"/></div>
         </div>
         <div class="row2">
           <div class="field"><label>Email <span style="font-weight:300;text-transform:none">(facultatif)</span></label><input id="p-eml" type="email" value="${pEml}" placeholder="email"/></div>
@@ -676,7 +687,7 @@ function sInfos(num) {
       <div class="field"><label>Rôle</label><div class="role-auto">${getRoleAutoLbl(role)}</div></div>
     </div>`:''}
 
-    <div class="recap">${buildRecapCours(is2)}</div>
+    <div class="recap" id="recap-live">${buildRecapCours(is2)}</div>
     `:''}
 
     ${role ? `<p style="text-align:center;color:var(--gold);font-size:13px;font-weight:600;margin:18px 0 10px;letter-spacing:.3px;">↑ Après avoir cliqué, remontez en haut de la page pour continuer</p>` : ''}
