@@ -1046,6 +1046,8 @@ Les opérations admin utilisent le JWT de l'utilisateur connecté passé en `Aut
 - **`sTarif()`** : deux blocs de profil distincts (tarif réduit + formule + Sorano) chacun adapté à la ville du cours concerné uniquement — partenaire 1 → ville cours 1, partenaire 2 → ville cours 2
 - **`calcTarif()`** : chaque partenaire évalué sur sa seule ville ; état `S.p2Reduit`, `S.p2Formule`, `S.p2Vincennois`, `S.p2AgeVinc`, `S.p2DejaSorano` ajoutés pour profil partenaire 2
 - **Insertion Supabase** : déjà correct avant cette session — 4 lignes créées (principal×2 + part1 + part2), toutes en `attente_paiement`
+- **Récap live partenaire** : `_liveRecap(num)` mise à jour du récap en temps réel à la saisie des champs nom/prénom (utilisateur + partenaire). `oninput="_liveRecap(${num})"` sur `p-pre` et `p-nom`. Recap div a `id="recap-live"`. Appelée aussi sur `i-pre`/`i-nom` pour le nom de l'utilisateur.
+- **Bloc ↑ répété** (scroll hint Wix) : `_scrollHint()` génère 67 répétitions de "↑ Remonter…" toutes les 3 lignes (200 lignes au total), texte doré 16px gras, flèche 32px. Injecté en bas des étapes 4 (`sCours(2)`) et 6 (`sTarif()`). **À faire pour les autres formulaires** (cours-particuliers, stages-pwa, cours-essai) — pas encore fait.
 
 ### ✅ Hint "remontez en haut" dans les formulaires publics
 Ajouté juste avant chaque bouton "Continuer →" / "Suivant" qui déclenche une transition d'étape :
