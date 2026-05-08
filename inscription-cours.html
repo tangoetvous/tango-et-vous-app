@@ -381,6 +381,11 @@ let S = fresh();
 // ================================================================
 // STEPS
 // ================================================================
+function _scrollHint() {
+  const txt = '↑ Remonter pour terminer de remplir le formulaire';
+  const reps = Array(67).fill(txt).join('<br><br><br>');
+  return `<div style="text-align:center;color:rgba(212,175,55,.45);font-size:12px;line-height:1.8;padding:24px 0 12px;">${reps}</div>`;
+}
 function getSteps() {
   const a = [];
   a.push({ id:'nbcours', lbl:'Nb cours' });
@@ -569,7 +574,8 @@ function sCours(num) {
     ${sous}
     <div class="cadre"><div class="cadre-titre">Ville</div><div class="btn-grp">${villeBtns}</div></div>
     ${nH}
-    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>`;
+    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>
+    ${is2 ? _scrollHint() : ''}`;
 }
 function pickVille(n,v){ if(n===1){S.c1.ville=v;S.c1.niveau=null;}else{S.c2.ville=v;S.c2.niveau=null;} render(); }
 function pickNiveau(n,v){ if(n===1)S.c1.niveau=v;else S.c2.niveau=v; setTimeout(next,280); }
@@ -823,7 +829,8 @@ function sTarif() {
 
   h += `<div id="t-result"></div>
     <button class="btn-next" style="width:100%;margin-top:14px;" onclick="soumettre()">ENVOYER MA DEMANDE</button>
-    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>`;
+    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>
+    ${_scrollHint()}`;
   return h;
 }
 
