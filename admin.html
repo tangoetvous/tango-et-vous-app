@@ -7558,26 +7558,44 @@ function sauvegarderEditCarte() {
   c.restants = Math.max(0, 10 - n);
   c.datesCours = dates;
   if(dates[0]) c.datePremierCours = dates[0];
-  if(c.datePremierCours && !c.expiration) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris');
+  // Toujours recalculer l'expiration quand datePremierCours change
+  if(c.datePremierCours) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris');
   _broadcastAdminSync('carteUpdate', {email:c.email, utilises:c.utilises, restants:c.restants, datesCours:c.datesCours, datePremierCours:c.datePremierCours, expiration:c.expiration});
   fermerModalEditCarte();
   renderTab();
   if(!IS_DEMO){
     var promise;
+    var _cRef = c;
     if(c._fromCoursTango) {
       // Carte reportée : mettre à jour inscriptions_cours.donnees
       var donneesUpd = {reportedRestants:n, isReport:true, saisonOrigine:c.saisonOrigine||''};
       promise = Promise.resolve(TEV.client.from('inscriptions_cours').update({donnees:donneesUpd}).eq('id',c.id));
     } else {
-      // Carte standard : mettre à jour eleves
+      // Carte standard : mettre à jour eleves + presences
       var upd = {carte_utilises:n, carte_restants:Math.max(0,10-n)};
       if(dates[0]) upd.carte_date_achat = dates[0];
       if(c.expiration) upd.carte_expiration = c.expiration;
-      promise = Promise.resolve(TEV.client.from('eleves').update(upd).eq('id',c.id));
+      var _eleveId = c.id;
+      var _dates = dates.slice();
+      var _nom = c.nom;
+      var _niveau = c.niveau || '';
+      promise = Promise.resolve(TEV.client.from('eleves').update(upd).eq('id', _eleveId))
+        .then(function(res) {
+          if(res && res.error) return res;
+          // Supprimer toutes les présences existantes puis réinsérer
+          return Promise.resolve(TEV.client.from('presences').delete().eq('eleve_id', _eleveId))
+            .then(function() {
+              if(!_dates.length) return {error: null};
+              var presRows = _dates.map(function(d){
+                return {eleve_id: _eleveId, eleve_nom: _nom, date: d, niveau: _niveau, note: 'Correction admin'};
+              });
+              return Promise.resolve(TEV.client.from('presences').insert(presRows));
+            });
+        });
     }
     promise.then(function(res){
       if(res && res.error) afficherToast('⚠️ Erreur sauvegarde : ' + (res.error.message || res.error.code || ''));
-      else afficherToast('✓ Carte de '+c.nom+' mise à jour');
+      else afficherToast('✓ Carte de '+_cRef.nom+' mise à jour');
       chargerDonnees();
     }).catch(function(e){ afficherToast('⚠️ Erreur : '+((e&&e.message)||'')); });
   }
