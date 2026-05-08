@@ -1149,10 +1149,14 @@ function reinitialiser() {
   goEtape(1);
 }
 
+function _tevScrollTop() {
+  window.scrollTo({top:0,behavior:'smooth'});
+  try{window.parent.postMessage({type:'tevScrollTop'},'*');}catch(e){}
+}
 function _scrollHint() {
-  const txt = '<span style="font-size:32px;">↑</span> Remonter pour terminer de remplir le formulaire';
-  const reps = Array(67).fill(txt).join('<br><br><br>');
-  return '<div style="text-align:center;color:#f0c030;font-size:16px;font-weight:700;line-height:2;padding:24px 0 12px;">' + reps + '</div>';
+  var txt = '<span style="font-size:32px;">↑</span> Remonter pour terminer de remplir le formulaire';
+  var reps = Array(67).fill(txt).join('<br><br><br>');
+  return '<div style="text-align:center;color:#f0c030;font-size:16px;font-weight:700;line-height:2;padding:24px 0 12px;cursor:pointer;" onclick="_tevScrollTop()">' + reps + '</div>';
 }
 var _sh4 = document.getElementById('scroll-hint-e4');
 if (_sh4) _sh4.innerHTML = _scrollHint();
