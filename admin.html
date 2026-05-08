@@ -7564,37 +7564,39 @@ function sauvegarderEditCarte() {
   fermerModalEditCarte();
   renderTab();
   if(!IS_DEMO){
-    var promise;
     var _cRef = c;
-    if(c._fromCoursTango) {
-      // Carte reportée : mettre à jour inscriptions_cours.donnees
-      var donneesUpd = {reportedRestants:n, isReport:true, saisonOrigine:c.saisonOrigine||''};
-      promise = Promise.resolve(TEV.client.from('inscriptions_cours').update({donnees:donneesUpd}).eq('id',c.id));
-    } else {
-      // Carte standard : mettre à jour eleves + presences
-      var upd = {carte_utilises:n, carte_restants:Math.max(0,10-n)};
-      if(dates[0]) upd.carte_date_achat = dates[0];
-      if(c.expiration) upd.carte_expiration = c.expiration;
-      var _eleveId = c.id;
-      var _dates = dates.slice();
-      var _nom = c.nom;
-      var _niveau = c.niveau || '';
-      promise = Promise.resolve(TEV.client.from('eleves').update(upd).eq('id', _eleveId))
-        .then(function(res) {
-          if(res && res.error) return res;
-          // Supprimer toutes les présences existantes puis réinsérer
-          return Promise.resolve(TEV.client.from('presences').delete().eq('eleve_id', _eleveId))
-            .then(function() {
-              if(!_dates.length) return {error: null};
-              var presRows = _dates.map(function(d){
-                return {eleve_id: _eleveId, eleve_nom: _nom, date: d, niveau: _niveau, note: 'Correction admin'};
+    var _dates = dates.slice();
+    var _nom = c.nom;
+    var _niveau = c.niveau || '';
+    // Pour les cartes _fromCoursTango (reportées), la personne a un eleves.id trouvable par email
+    var _eleveRow = (adminData.cartes||[]).find(function(x){ return x.email && x.email===c.email; });
+    var _eleveId = c._fromCoursTango ? (_eleveRow ? _eleveRow.id : null) : c.id;
+    var _upd = {carte_utilises:n, carte_restants:Math.max(0,10-n)};
+    if(dates[0]) _upd.carte_date_achat = dates[0];
+    if(c.expiration) _upd.carte_expiration = c.expiration;
+    var _saveEleves = _eleveId
+      ? Promise.resolve(TEV.client.from('eleves').update(_upd).eq('id', _eleveId))
+          .then(function(res) {
+            if(res && res.error) return res;
+            // Supprimer toutes les présences puis réinsérer
+            return Promise.resolve(TEV.client.from('presences').delete().eq('eleve_id', _eleveId))
+              .then(function() {
+                if(!_dates.length) return {error: null};
+                var presRows = _dates.map(function(d){
+                  return {eleve_id: _eleveId, eleve_nom: _nom, date: d, niveau: _niveau, note: 'Correction admin'};
+                });
+                return Promise.resolve(TEV.client.from('presences').insert(presRows));
               });
-              return Promise.resolve(TEV.client.from('presences').insert(presRows));
-            });
-        });
-    }
-    promise.then(function(res){
-      if(res && res.error) afficherToast('⚠️ Erreur sauvegarde : ' + (res.error.message || res.error.code || ''));
+          })
+      : Promise.resolve({error: null});
+    var _saveCoursTango = c._fromCoursTango
+      ? Promise.resolve(TEV.client.from('inscriptions_cours')
+          .update({donnees:{reportedRestants:n, isReport:true, saisonOrigine:c.saisonOrigine||''}})
+          .eq('id', c.id))
+      : Promise.resolve({error: null});
+    Promise.all([_saveEleves, _saveCoursTango]).then(function(results){
+      var err = (results[0]&&results[0].error) || (results[1]&&results[1].error);
+      if(err) afficherToast('⚠️ Erreur sauvegarde : ' + (err.message || err.code || ''));
       else afficherToast('✓ Carte de '+_cRef.nom+' mise à jour');
       chargerDonnees();
     }).catch(function(e){ afficherToast('⚠️ Erreur : '+((e&&e.message)||'')); });
