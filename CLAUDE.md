@@ -278,7 +278,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - Durée de conservation : durée relation + 1 an
 
 ## À faire / en suspens
-- [ ] **Mettre à jour les cartes de 10 des élèves actuels** : corriger manuellement via ✏️ dans Cartes 10 → Détails le nombre de cours utilisés, cours restants, et date du premier cours (qui conditionne le calcul d'expiration). Peut aussi nécessiter une correction de `calcExpiration` si les dates calculées sont fausses.
+- [ ] **Mettre à jour les cartes de 10 des élèves actuels** : corriger manuellement via ✏️ dans Cartes 10 → Détails → Modifier le nombre de cours utilisés, les dates, et la date du premier cours. Le modal **persiste désormais correctement** (fix 2026-05-08). L'expiration est recalculée automatiquement à la sauvegarde.
 - [ ] **Tester déclaration d'absence depuis espace élève** : bouton 🚫 Absent sur la carte "PROCHAIN COURS" → vérifier que l'absence apparaît bien dans admin → Essai Tango → Pointage sur la bonne date et le bon cours
 - [ ] Vérifier correction Sandrine Billot (hatha uniquement) / Myriam Bloch (hatha+yin) dans Supabase — SQL généré mais pas confirmé exécuté
 - [ ] **Activer sauvegardes Supabase** : Dashboard Supabase → Settings → Database → Backups → activer (7 jours rétention sur plan gratuit)
@@ -318,6 +318,8 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] **Tester sync email Auth** : dans admin, changer l'email d'un élève → F12 → Network → chercher `update-auth-email` → vérifier réponse `{"ok":true,"userId":"..."}` → vérifier dans Supabase Dashboard → Authentication → Users
 - [x] Téléphone et photo modifiables depuis espace élève — CORRIGÉS : `tevUpdateEleveTel` n'écrit que dans `eleves` (RLS interdit UPDATE sur `inscriptions_cours` aux non-admins). Priorité inversée dans `tevGetAdminData()` : `elv.tel || ic.tel` (au lieu de `ic.tel || elv.tel`) pour que la valeur fraîche de `eleves` prime sur l'ancienne de `inscriptions_cours`. Photo : même logique, `eleves.photo_url` mis à jour via `tevUpdateElevePhoto`. ⚠️ Règle à retenir : tout champ modifiable depuis l'espace élève doit écrire dans `eleves` et être lu en priorité depuis `eleves` dans l'admin.
 - [x] **Module Trésorerie (Compta)** — UI complète implémentée dans admin.html (onglet Compta → Trésorerie). SQL exécuté dans Supabase le 2026-05-08. ✅ Testé et fonctionnel.
+- [x] **`calcExpiration` double-comptage été** — CORRIGÉ : les dates juillet-août étaient dans `SANS_COURS_PARIS`/`SANS_COURS_VINCENNES` ET couvertes par le bonus inter-saison (step 3), ce qui doublait leur effet. Fix : suppression des dates d'été des tableaux `SANS_COURS_*` — l'été est géré exclusivement par le step 3 (gap estival).
+- [x] **`sauvegarderEditCarte` ne persistait pas** — CORRIGÉ : les dates venaient de la table `presences` (reconstruite à chaque `chargerDonnees`). Fix : DELETE des présences existantes + INSERT des nouvelles pour cet `eleve_id`. L'expiration est recalculée systématiquement (suppression de la garde `!c.expiration`). Pour les cartes reportées (`_fromCoursTango`) : l'`eleves.id` est retrouvé par email dans `adminData.cartes` (même si la saison ne correspond plus) → `Promise.all` sur `eleves` + `presences` + `inscriptions_cours.donnees`.
 
 ### SQL Trésorerie — à exécuter dans Supabase SQL Editor
 ```sql
@@ -629,6 +631,7 @@ Lifecycle des statuts dans `inscriptions_cours` pour les nouvelles inscriptions 
 - Formule : `expiration = datePremierCours + 3 mois + (nb semaines sans cours × 7 jours)`
 - Calcul : `calcExpiration(datePremierCours, ville)` dans `admin.html` et `_calcExpirationSb()` dans `tev-supabase.js`
 - Les semaines sans cours sont dans `SANS_COURS_PARIS` et `SANS_COURS_VINCENNES` dans `admin.html` — à mettre à jour chaque saison
+- ⚠️ **Ne jamais mettre les dates juillet-août dans `SANS_COURS_*`** : le bonus inter-saison (step 3) couvre déjà tout l'été — les inclure causerait un double-comptage et gonflerait l'expiration de plusieurs semaines
 
 **Limite journalière de pointage**
 - Maximum **2 cours par date** (toutes sources confondues : admin, espace élève, QR code)
@@ -656,6 +659,12 @@ Le renouvellement est **toujours une action manuelle**. Il n'existe que deux voi
 **Carte expirée (pas épuisée)**
 - Dans l'espace élève : seul le bouton "Renouveler" est affiché, "Je pointe" est masqué
 - Dans l'admin : la carte reste visible dans Cartes 10 → Détails avec la date d'expiration en rouge
+
+**`sauvegarderEditCarte()` — persistance correcte**
+- `datesCours` vient de la table `presences` (`eleve_id` = `eleves.id`) — les modifier dans le modal sans toucher `presences` les fait revenir au reload
+- Fix : DELETE toutes les présences de l'élève + INSERT une présence par date saisie (`note:'Correction admin'`)
+- L'expiration est **toujours** recalculée depuis `datePremierCours` (plus de garde `!c.expiration`)
+- Cartes reportées (`_fromCoursTango`) : `c.id` = `inscriptions_cours.id` mais l'`eleves.id` est retrouvé par email via `adminData.cartes` (la fiche existe avec l'ancienne saison) → `Promise.all` parallèle : `eleves` + `presences` + `inscriptions_cours.donnees`
 
 **Reporter une carte en fin de saison**
 - Bouton "↩ Reporter" dans Cartes 10 → Détails (visible en juillet-août)
@@ -1118,3 +1127,39 @@ Si l'utilisateur veut quitter Wix à terme, options envisagées :
 - **`postMessage({type:'tevScrollTop'})` ajouté dans `render()`** de `inscription-cours.html` (ligne ~489) — notifie le parent à chaque changement d'étape
 - **Bug `+ '5944px'`** dans le code Wix HTML des Stages corrigé → `+ 'px'`
 - **Turnstile** : problème "impossible de se connecter" résolu en ajoutant `app.tangoetvous.fr` aux domaines autorisés dans le dashboard Cloudflare Turnstile
+
+---
+
+## Session 2026-05-08 — Trésorerie + calcExpiration + sauvegarderEditCarte
+
+### ✅ Module Trésorerie
+SQL exécuté dans Supabase (tables `remises_banque`, `cheques_depot`, colonnes `remise_id` sur `inscriptions_cours` et `cours_yoga`). UI dans admin.html onglet Compta → Trésorerie. Testé et fonctionnel.
+
+### ✅ Backup CSV — cron CEST
+Cron corrigé de `0 22 * * *` → `0 21 * * *` (23h Paris en été CEST = UTC+2). L'utilisateur recevait le backup à 1h du matin.
+
+### ✅ Scroll hint "↑ Remonter" dans les formulaires publics
+`_scrollHint()` + `_tevScrollTop()` ajoutés dans :
+- `inscription-cours.html` : étapes 4 (`sCours(2)`) et 6 (`sTarif()`)
+- `cours-particuliers.html` : bas des étapes 2, 3, 4
+- `stages-pwa.html` : bas de l'étape 2
+- `cours-essai.html` : bas de l'étape 4 (`e4`)
+
+Style : texte doré `#f0c030`, 16px gras, flèche 32px, 67 répétitions toutes les 3 lignes (200 lignes au total). Clic sur la flèche → `_tevScrollTop()` → `window.scrollTo(top)` + `postMessage({type:'tevScrollTop'})` → `f.scrollIntoView()` dans le HTML Wix.
+
+### ✅ Récap live partenaire (inscription-cours.html)
+`_liveRecap(num)` met à jour le div `#recap-live` en temps réel sur `oninput` des champs `p-pre`, `p-nom`, `i-pre`, `i-nom`. Sans ça, le partenaire n'apparaissait dans le récap qu'en naviguant à l'étape suivante puis en revenant.
+
+### ✅ `calcExpiration` — double-comptage été corrigé
+**Cause** : les dates juillet-août 2026 étaient dans `SANS_COURS_PARIS`/`SANS_COURS_VINCENNES` (step 2 : +7j par semaine) ET couvertes par le bonus inter-saison (step 3 : gap complet). Résultat : expiration gonflée de ~8 semaines. Exemple : premier cours 3/05 Paris → expiration affichée 22/11 au lieu de ~19/10.
+**Fix** : suppression de toutes les dates juillet-août des deux tableaux. L'été est géré exclusivement par le step 3.
+**Règle** : ne jamais remettre des dates estivales dans `SANS_COURS_*`.
+
+### ✅ `sauvegarderEditCarte` — persistance des dates et de l'expiration
+**Cause 1** : `datesCours` est reconstruit depuis `presences` à chaque `chargerDonnees()`. La fonction ne touchait pas `presences` → les dates revenaient à l'état initial au rechargement.
+**Fix** : DELETE de toutes les présences de l'élève (`eleve_id`) + INSERT une présence par date saisie (`note:'Correction admin'`).
+
+**Cause 2** : la garde `!c.expiration` empêchait le recalcul si une expiration existait déjà → changer `datePremierCours` n'actualisait pas l'expiration.
+**Fix** : suppression de la garde → l'expiration est toujours recalculée quand `datePremierCours` est renseigné.
+
+**Cas cartes reportées (`_fromCoursTango`)** : `c.id` = `inscriptions_cours.id`, mais la personne a un vrai `eleves.id`. Il est retrouvé via `adminData.cartes.find(x => x.email === c.email)` (fiche présente avec l'ancienne saison). `Promise.all` parallèle sur : `eleves` (compteurs + dates) + `presences` (DELETE/INSERT) + `inscriptions_cours.donnees.reportedRestants`.
