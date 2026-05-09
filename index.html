@@ -552,6 +552,7 @@
   // NAVIGATION ONGLETS
   // ================================================================
   let currentTab = 'accueil';
+  let eleveAgendaTab = 'liste';
   window.switchTab = function(tab) {
     currentTab = tab;
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -1984,6 +1985,26 @@
   }
 
   function renderAgenda(filter) {
+    // Sub-tabs
+    const subTabs = $('agenda-sub-tabs');
+    if (subTabs) {
+      subTabs.innerHTML = `<button class="agenda-filter-btn${eleveAgendaTab==='liste'?' active':''}" onclick="switchAgendaSub('liste')">📅 Agenda</button>`
+        + `<button class="agenda-filter-btn${eleveAgendaTab==='abonnements'?' active':''}" onclick="switchAgendaSub('abonnements')">📲 Abonnements</button>`;
+    }
+
+    const isAbo = eleveAgendaTab === 'abonnements';
+    const filtersEl = $('agenda-filters');
+    const listEl    = $('agenda-list');
+    const calBlock  = $('agenda-cal-block');
+    if (filtersEl) filtersEl.style.display = isAbo ? 'none' : '';
+    if (listEl)    listEl.style.display    = isAbo ? 'none' : '';
+    if (calBlock)  calBlock.style.display  = isAbo ? 'block' : 'none';
+
+    if (isAbo) {
+      if (calBlock) calBlock.innerHTML = _renderCalAbonnementsEleve();
+      return;
+    }
+
     const filters = [
       { id:'tous', label:'Tous' },
       { id:'paris', label:'Paris' },
@@ -1992,12 +2013,12 @@
       { id:'stage', label:'Stages' },
       { id:'milonga', label:'Milongas' },
     ];
-    $('agenda-filters').innerHTML = filters.map(f =>
+    if (filtersEl) filtersEl.innerHTML = filters.map(f =>
       `<button class="agenda-filter-btn${f.id===filter?' active':''}" data-filter="${f.id}">${f.label}</button>`
     ).join('');
-    document.querySelectorAll('.agenda-filter-btn').forEach(btn => {
+    document.querySelectorAll('.agenda-filter-btn[data-filter]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.agenda-filter-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.agenda-filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         renderAgendaList(btn.dataset.filter);
       });
@@ -2005,11 +2026,14 @@
     renderAgendaList(filter);
   }
 
+  window.switchAgendaSub = function(tab) {
+    eleveAgendaTab = tab;
+    renderAgenda('tous');
+  };
+
   window.filterAgenda = function(filter) {
-    document.querySelectorAll('.agenda-filter-btn').forEach(b =>
-      b.classList.toggle('active', b.dataset.filter === filter)
-    );
-    renderAgendaList(filter);
+    eleveAgendaTab = 'liste';
+    renderAgenda(filter);
   };
 
   function renderAgendaList(filter) {
@@ -2078,8 +2102,46 @@
   }
 
   // ================================================================
-  // CALENDRIER ICS — abonnement
+  // CALENDRIER ICS — abonnements publics
   // ================================================================
+  const _CAL_FEEDS_ELEVE = [
+    {slug:'paris-debutant',         label:'🎓 Paris — Débutant'},
+    {slug:'paris-intermediaire',    label:'🎓 Paris — Intermédiaire'},
+    {slug:'vincennes-debutant',     label:'🎓 Vincennes — Débutant'},
+    {slug:'vincennes-intermediaire',label:'🎓 Vincennes — Intermédiaire'},
+    {slug:'stages',                 label:'💃 Stages'},
+    {slug:'milongas',               label:'🎶 Milongas'},
+    {slug:'yoga-yin',               label:'🧘 Yoga Yin'},
+    {slug:'yoga-hatha',             label:'🧘 Yoga Hatha'},
+  ];
+
+  window._copierCalIcs = function(slug) {
+    const url = 'https://app.tangoetvous.fr/calendar/' + slug + '.ics';
+    const btn = document.getElementById('cal-copy-' + slug);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function() {
+        if (btn) { btn.textContent = '✓ Copié'; setTimeout(function(){ btn.textContent = '⧉ Copier'; }, 2000); }
+      }).catch(function(){ prompt('Copiez ce lien :', url); });
+    } else { prompt('Copiez ce lien :', url); }
+  };
+
+  function _renderCalAbonnementsEleve() {
+    const rows = _CAL_FEEDS_ELEVE.map(f => {
+      const wc = 'webcal://app.tangoetvous.fr/calendar/' + f.slug + '.ics';
+      return `<div style="display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--border);">`
+        + `<span style="flex:1;font-size:14px;">${f.label}</span>`
+        + `<a href="${wc}" style="font-size:12px;padding:4px 11px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--gold);text-decoration:none;white-space:nowrap;">📅 iOS</a>`
+        + `<button id="cal-copy-${f.slug}" onclick="_copierCalIcs('${f.slug}')" style="font-size:12px;padding:4px 11px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--text-faint);cursor:pointer;white-space:nowrap;">⧉ Copier</button>`
+        + `</div>`;
+    }).join('');
+    return `<div style="padding:16px 20px;">`
+      + `<div style="font-size:13px;font-weight:700;margin-bottom:6px;">📲 S'abonner au calendrier</div>`
+      + `<div style="font-size:12px;color:var(--text-faint);margin-bottom:14px;">Recevez automatiquement les dates dans votre app Calendrier. Mise à jour toutes les 6h.</div>`
+      + `<div>${rows}</div>`
+      + `<div style="font-size:11px;color:var(--text-faint);margin-top:12px;line-height:1.6;">📱 <strong>iOS</strong> : bouton « 📅 iOS » → Calendrier vous propose de vous abonner.<br>🤖 <strong>Android / Google Agenda</strong> : « ⧉ Copier » → Google Agenda → Autres agendas → À partir d'une URL.</div>`
+      + `</div>`;
+  }
+
   window.abonnerCalendrier = async function() {
     const btn = document.getElementById('agenda-cal-btn');
     const res = document.getElementById('agenda-cal-result');
@@ -4300,46 +4362,10 @@ a{color:var(--gold);text-decoration:none;}
 
   <!-- ── ONGLET AGENDA ─────────────────────────────────────── -->
   <div class="tab-pane" id="agenda-pane">
+    <div id="agenda-sub-tabs" class="agenda-filters"></div>
     <div id="agenda-filters" class="agenda-filters"></div>
     <div id="agenda-list"></div>
-    <div id="agenda-cal-block" style="margin:24px 16px 8px;padding:14px 16px;background:var(--s2);border-radius:10px;border:1px solid var(--border);">
-      <div style="font-size:13px;font-weight:700;margin-bottom:6px;">📅 S'abonner au calendrier</div>
-      <div style="font-size:12px;color:var(--dim);margin-bottom:12px;">Abonnez-vous pour recevoir automatiquement les dates dans votre app Calendrier. Mise à jour toutes les 6h.</div>
-      <div id="agenda-cal-feeds"></div>
-      <script>
-      (function(){
-        var feeds = [
-          {slug:'paris-debutant',         label:'🎓 Paris — Débutant'},
-          {slug:'paris-intermediaire',    label:'🎓 Paris — Intermédiaire'},
-          {slug:'vincennes-debutant',     label:'🎓 Vincennes — Débutant'},
-          {slug:'vincennes-intermediaire',label:'🎓 Vincennes — Intermédiaire'},
-          {slug:'stages',                 label:'💃 Stages'},
-          {slug:'milongas',               label:'🎶 Milongas'},
-          {slug:'yoga-yin',               label:'🧘 Yoga Yin'},
-          {slug:'yoga-hatha',             label:'🧘 Yoga Hatha'},
-        ];
-        window._copierCalIcs = function(slug) {
-          var url = 'https://app.tangoetvous.fr/calendar/'+slug+'.ics';
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(url).then(function(){
-              var btn = document.getElementById('cal-copy-'+slug);
-              if (btn) { btn.textContent = '✓ Copié'; setTimeout(function(){ btn.textContent = '⧉ Copier'; }, 2000); }
-            }).catch(function(){ prompt('Copiez ce lien :', url); });
-          } else { prompt('Copiez ce lien :', url); }
-        };
-        var rows = feeds.map(function(f){
-          var wc = 'webcal://app.tangoetvous.fr/calendar/'+f.slug+'.ics';
-          return '<div style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--border);">'
-            +'<span style="flex:1;font-size:13px;">'+f.label+'</span>'
-            +'<a href="'+wc+'" style="font-size:11px;padding:4px 10px;background:var(--s3);border:1px solid var(--border);border-radius:5px;color:var(--accent);text-decoration:none;white-space:nowrap;">📅 iOS</a>'
-            +'<button id="cal-copy-'+f.slug+'" onclick="_copierCalIcs(\''+f.slug+'\')" style="font-size:11px;padding:4px 10px;background:var(--s3);border:1px solid var(--border);border-radius:5px;color:var(--dim);cursor:pointer;white-space:nowrap;">⧉ Copier</button>'
-            +'</div>';
-        }).join('');
-        document.getElementById('agenda-cal-feeds').innerHTML = rows;
-      })();
-      </script>
-      <div style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.5;">📱 <strong>iOS</strong> : bouton « 📅 iOS » → Calendrier vous demande de vous abonner.<br>🤖 <strong>Android / Google Agenda</strong> : « ⧉ Copier » → Google Agenda → Autres agendas → À partir d'une URL.</div>
-    </div>
+    <div id="agenda-cal-block" style="display:none;"></div>
   </div>
 
   <!-- ── ONGLET MILONGA ────────────────────────────────────── -->

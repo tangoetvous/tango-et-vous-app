@@ -8644,8 +8644,10 @@ function renderAgenda() {
   var h = '<div class="sub-tabs">'
     +'<button class="sub-tab'+(sousOngletAgenda==='calendrier'?' active':'')+'" data-sous-ag="calendrier">📅 Calendrier</button>'
     +'<button class="sub-tab'+(sousOngletAgenda==='modif'?' active':'')+'" data-sous-ag="modif">✏️ Modifier / Annuler</button>'
+    +'<button class="sub-tab'+(sousOngletAgenda==='abonnements'?' active':'')+'" data-sous-ag="abonnements">📲 Abonnements</button>'
     +'</div>';
-  if (sousOngletAgenda === 'modif') return h + renderAgendaModif();
+  if (sousOngletAgenda === 'modif')        return h + renderAgendaModif();
+  if (sousOngletAgenda === 'abonnements')  return h + _renderCalAbonnements();
   return h + renderAgendaCalendrier();
 }
 
@@ -8692,8 +8694,7 @@ function renderAgendaCalendrier() {
   var _saiEnd   = _saiCal.split('-')[1] + '-08-31';
   var todayStr=today();
   var _isCurrentSai = (todayStr >= _saiStart && todayStr <= _saiEnd);
-  var h=_renderCalAbonnements()
-    +'<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:12px;">Agenda — Saison '+_saiCal+(_isCurrentSai && !agendaShowPast ? ' (à venir)' : '')+'</div>'
+  var h='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:12px;">Agenda — Saison '+_saiCal+(_isCurrentSai && !agendaShowPast ? ' (à venir)' : '')+'</div>'
     +'<div class="cat-pills">'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.paris?'#122840':'transparent')+';border-color:'+(agendaCats.paris?'#60b0ff':'var(--border)')+';color:'+(agendaCats.paris?'#60b0ff':'var(--dim)')+';" data-cat-ag="paris">🎓 Paris</button>'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.vincennes?'#102828':'transparent')+';border-color:'+(agendaCats.vincennes?'#40d8c0':'var(--border)')+';color:'+(agendaCats.vincennes?'#40d8c0':'var(--dim)')+';" data-cat-ag="vincennes">🎓 Vincennes</button>'
