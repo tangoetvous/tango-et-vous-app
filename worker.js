@@ -620,18 +620,9 @@ async function handlePublicICS(slug) {
   const saiNextStart = `${y2}-09-01`;
   const headers = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
 
-  // Fetch params for both current and next season
-  const keys = [
-    'tev_cours_dates',
-    `tev_milongas_${saiCur}`,         `tev_milongas_${saiNext}`,
-    `tev_dates_stages_${saiCur}`,     `tev_dates_stages_${saiNext}`,
-    `tev_params_paris_${saiCur}`,     `tev_params_paris_${saiNext}`,
-    `tev_params_vincennes_${saiCur}`, `tev_params_vincennes_${saiNext}`,
-    `tev_params_yoga_${saiCur}`,      `tev_params_yoga_${saiNext}`,
-    `tev_params_stages_${saiCur}`,    `tev_params_stages_${saiNext}`,
-  ];
+  // Fetch all params — même approche que chargerParamsRemote() côté admin
   const paramsData = await fetch(
-    `${SUPABASE_URL}/rest/v1/parametres?cle=in.(${keys.join(',')})&select=cle,valeur`,
+    `${SUPABASE_URL}/rest/v1/parametres?select=cle,valeur`,
     { headers }
   ).then(r => r.json()).catch(() => []);
 
