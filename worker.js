@@ -745,7 +745,7 @@ async function handlePublicICS(slug) {
         if (!hdeb) return; // no start time — skip
         const l   = loc(mil.lieu);
         const uid = `milonga-${(mil.id||mil.nom||'m').replace(/[^a-z0-9]/gi,'').toLowerCase()}-${dateStr}@tangoetvous.fr`;
-        const ev  = { uid, dtstart:_calIcsDate(dateStr,hdeb), summary:mil.nom||'Milonga', location:l, description:(mil.lieu||{}).transport||'' };
+        const ev  = { uid, dtstart:_calIcsDate(dateStr,hdeb), summary:mil.nom, location:l, description:(mil.lieu||{}).transport||'' };
         if (hfin) ev.dtend = _calIcsDate(dateStr, hfin); else ev.duration = 'PT3H';
         events.push(ev);
       });
