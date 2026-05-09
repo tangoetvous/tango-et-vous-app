@@ -719,19 +719,23 @@ async function handlePublicICS(slug) {
       // Build slots exactly like the student accueil (prochain stage box)
       const hasTech = !!s.technique;
       const n       = s.nStages || 2;
-      const sDb = ['s1_deb','s2_deb','s3_deb','s4_deb'];
-      const sFn = ['s1_fin','s2_fin','s3_fin','s4_fin'];
+      const sDb     = ['s1_deb','s2_deb','s3_deb','s4_deb'];
+      const sFn     = ['s1_fin','s2_fin','s3_fin','s4_fin'];
+      const sNames  = [s.s1, s.s2, s.s3, s.s4];
       const slotTimes = [];
-      if (hasTech && hor.tech_deb && hor.tech_fin) slotTimes.push({ d:hor.tech_deb, f:hor.tech_fin });
+      if (hasTech && hor.tech_deb && hor.tech_fin)
+        slotTimes.push({ d:hor.tech_deb, f:hor.tech_fin, label: s.tech || 'Technique' });
       for (let si = 0; si < n; si++) {
-        if (hor[sDb[si]] && hor[sFn[si]]) slotTimes.push({ d:hor[sDb[si]], f:hor[sFn[si]] });
+        if (hor[sDb[si]] && hor[sFn[si]])
+          slotTimes.push({ d:hor[sDb[si]], f:hor[sFn[si]], label: sNames[si] || `Stage ${si + 1}` });
       }
       if (!slotTimes.length) return; // horaires not configured — skip
       slotTimes.sort((a, b) => _calParseTime(a.d).localeCompare(_calParseTime(b.d)));
       const startH = slotTimes[0].d;
       const endH   = slotTimes[slotTimes.length - 1].f;
       const themes = (s.themes || []).filter(t => t && t !== 'À venir').join(' · ');
-      events.push({ uid:`stage-${s.date}@tangoetvous.fr`, dtstart:_calIcsDate(s.date,startH), dtend:_calIcsDate(s.date,endH), summary: themes ? `Stage — ${themes}` : 'Stage Tango', location:loc(p.adresse), description:themes||'' });
+      const desc   = slotTimes.map(sl => `${sl.d}–${sl.f} : ${sl.label}`).join('\n');
+      events.push({ uid:`stage-${s.date}@tangoetvous.fr`, dtstart:_calIcsDate(s.date,startH), dtend:_calIcsDate(s.date,endH), summary: themes ? `Stage — ${themes}` : 'Stage Tango', location:loc(p.adresse), description:desc });
     });
 
   } else if (slug === 'milongas') {
