@@ -614,13 +614,22 @@ async function _generateEleveICS(email) {
 // ================================================================
 
 async function handlePublicICS(slug) {
-  const sai = _calSaison();
-  const saiStart = sai.slice(0, 4) + '-09-01';
-  const headers  = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
+  const saiCur = _calSaison();
+  const y2 = parseInt(saiCur.split('-')[1]);
+  const saiNext      = `${y2}-${y2 + 1}`;
+  const saiNextStart = `${y2}-09-01`;
+  const headers = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
 
-  const keys = ['tev_cours_dates', `tev_milongas_${sai}`, `tev_dates_stages_${sai}`,
-                 `tev_params_paris_${sai}`, `tev_params_vincennes_${sai}`,
-                 `tev_params_yoga_${sai}`, `tev_params_stages_${sai}`];
+  // Fetch params for both current and next season
+  const keys = [
+    'tev_cours_dates',
+    `tev_milongas_${saiCur}`,         `tev_milongas_${saiNext}`,
+    `tev_dates_stages_${saiCur}`,     `tev_dates_stages_${saiNext}`,
+    `tev_params_paris_${saiCur}`,     `tev_params_paris_${saiNext}`,
+    `tev_params_vincennes_${saiCur}`, `tev_params_vincennes_${saiNext}`,
+    `tev_params_yoga_${saiCur}`,      `tev_params_yoga_${saiNext}`,
+    `tev_params_stages_${saiCur}`,    `tev_params_stages_${saiNext}`,
+  ];
   const paramsData = await fetch(
     `${SUPABASE_URL}/rest/v1/parametres?cle=in.(${keys.join(',')})&select=cle,valeur`,
     { headers }
@@ -629,84 +638,135 @@ async function handlePublicICS(slug) {
   const P = {};
   (Array.isArray(paramsData) ? paramsData : []).forEach(p => { P[p.cle] = p.valeur; });
 
-  const cd      = P['tev_cours_dates'] || {};
-  const parDates = cd.paris      || [];
-  const vincDates= cd.vincennes  || [];
-  const yogaDates= cd.yoga       || [];
-  const mils     = (P[`tev_milongas_${sai}`]      || {}).milongas || [];
-  const stages   = (P[`tev_dates_stages_${sai}`]  || {}).stages   || [];
-  const pp  = P[`tev_params_paris_${sai}`]      || {};
-  const pv  = P[`tev_params_vincennes_${sai}`]  || {};
-  const py  = P[`tev_params_yoga_${sai}`]       || {};
-  const pst = P[`tev_params_stages_${sai}`]     || {};
+  // Cours dates — single key, contains all seasons admin has configured
+  const cd        = P['tev_cours_dates'] || {};
+  const parDates  = cd.paris      || [];
+  const vincDates = cd.vincennes  || [];
+  const yogaDates = cd.yoga       || [];
 
-  const HOR_P = { deb:'20h30', deb_fin:'21h45', int:'21h45', int_fin:'23h00' };
-  const HOR_V = { deb:'19h30', deb_fin:'21h00', int:'21h00', int_fin:'22h30' };
-  const HOR_Y = { yin:'10h30', yin_fin:'11h30', hatha:'11h30', hatha_fin:'12h30' };
-  const horP = Object.assign({}, HOR_P, pp.horaires || {});
-  const horV = Object.assign({}, HOR_V, pv.horaires || {});
-  const horY = Object.assign({}, HOR_Y, py.horaires || {});
+  // Milongas — merge both seasons (match by id then nom)
+  const milsCur  = (P[`tev_milongas_${saiCur}`]  || {}).milongas || [];
+  const milsNext = (P[`tev_milongas_${saiNext}`] || {}).milongas || [];
+  const milsAll  = [...milsCur];
+  milsNext.forEach(mn => {
+    const ex = milsAll.find(m => (m.id && m.id === mn.id) || m.nom === mn.nom);
+    if (ex) ex.dates = [...(ex.dates || []), ...(mn.dates || [])];
+    else milsAll.push(mn);
+  });
 
-  function loc(adr, defNom, defRue) {
-    const a = adr || {};
-    return [(a.nom || defNom), (a.rue || defRue)].filter(Boolean).join(' — ');
+  // Stages — merge both seasons
+  const stagesAll = [
+    ...((P[`tev_dates_stages_${saiCur}`]  || {}).stages || []),
+    ...((P[`tev_dates_stages_${saiNext}`] || {}).stages || []),
+  ];
+
+  // Select params by date — no hardcoded defaults
+  function par(type, date) {
+    return P[`tev_params_${type}_${date >= saiNextStart ? saiNext : saiCur}`] || {};
   }
-  const locP  = loc(pp.adresse,  'Espace Danse Studio',  '24 villa Riberolle, Paris 20e');
-  const locV  = loc(pv.adresse,  'Espace Sorano',        '16 rue Charles Pathé, 94300 Vincennes');
-  const locY  = loc(py.adresse,  'Espace Sorano',        '16 rue Charles Pathé, 94300 Vincennes');
-  const locSt = loc(pst.adresse, 'Centre Kim Kan',       '64 rue Orfila, Paris 20e');
 
-  const events = [];
+  // Location from adresse object — no defaults
+  function loc(adr) {
+    return adr ? [adr.nom, adr.rue].filter(Boolean).join(' — ') : '';
+  }
+
   const CAL_NAMES = {
-    'paris-debutant':        'Tango Paris — Débutant',
-    'paris-intermediaire':   'Tango Paris — Intermédiaire',
-    'vincennes-debutant':    'Tango Vincennes — Débutant',
-    'vincennes-intermediaire':'Tango Vincennes — Intermédiaire',
-    'stages':                'Stages de tango — Tango & Vous',
-    'milongas':              'Milongas — Tango & Vous',
-    'yoga-yin':              'Yoga Yin — Tango & Vous',
-    'yoga-hatha':            'Yoga Hatha — Tango & Vous',
+    'paris-debutant':         'Tango — Paris — Débutant',
+    'paris-intermediaire':    'Tango — Paris — Intermédiaire',
+    'vincennes-debutant':     'Tango — Vincennes — Débutant',
+    'vincennes-intermediaire':'Tango — Vincennes — Intermédiaire',
+    'stages':                 'Stages Tango',
+    'milongas':               'Milongas',
+    'yoga-yin':               'Yin Yoga',
+    'yoga-hatha':             'Hatha Yoga',
   };
 
+  const events = [];
+
   if (slug === 'paris-debutant') {
-    parDates.filter(d => d >= saiStart).forEach(d => events.push(
-      { uid:`paris-deb-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horP.deb), dtend:_calIcsDate(d,horP.deb_fin), summary:'Tango Paris — Débutant', location:locP }
-    ));
+    parDates.forEach(d => {
+      const p = par('paris', d); const hor = p.horaires || {};
+      if (!hor.deb || !hor.deb_fin) return;
+      events.push({ uid:`paris-deb-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.deb), dtend:_calIcsDate(d,hor.deb_fin), summary:'Tango — Paris — Débutant', location:loc(p.adresse) });
+    });
+
   } else if (slug === 'paris-intermediaire') {
-    parDates.filter(d => d >= saiStart).forEach(d => events.push(
-      { uid:`paris-int-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horP.int), dtend:_calIcsDate(d,horP.int_fin), summary:'Tango Paris — Intermédiaire', location:locP }
-    ));
+    parDates.forEach(d => {
+      const p = par('paris', d); const hor = p.horaires || {};
+      if (!hor.int || !hor.int_fin) return;
+      events.push({ uid:`paris-int-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.int), dtend:_calIcsDate(d,hor.int_fin), summary:'Tango — Paris — Intermédiaire', location:loc(p.adresse) });
+    });
+
   } else if (slug === 'vincennes-debutant') {
-    vincDates.filter(d => d >= saiStart).forEach(d => events.push(
-      { uid:`vinc-deb-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horV.deb), dtend:_calIcsDate(d,horV.deb_fin), summary:'Tango Vincennes — Débutant', location:locV }
-    ));
+    vincDates.forEach(d => {
+      const p = par('vincennes', d); const hor = p.horaires || {};
+      if (!hor.deb || !hor.deb_fin) return;
+      events.push({ uid:`vinc-deb-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.deb), dtend:_calIcsDate(d,hor.deb_fin), summary:'Tango — Vincennes — Débutant', location:loc(p.adresse) });
+    });
+
   } else if (slug === 'vincennes-intermediaire') {
-    vincDates.filter(d => d >= saiStart).forEach(d => events.push(
-      { uid:`vinc-int-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horV.int), dtend:_calIcsDate(d,horV.int_fin), summary:'Tango Vincennes — Intermédiaire', location:locV }
-    ));
+    vincDates.forEach(d => {
+      const p = par('vincennes', d); const hor = p.horaires || {};
+      if (!hor.int || !hor.int_fin) return;
+      events.push({ uid:`vinc-int-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.int), dtend:_calIcsDate(d,hor.int_fin), summary:'Tango — Vincennes — Intermédiaire', location:loc(p.adresse) });
+    });
+
   } else if (slug === 'stages') {
-    stages.filter(s => s.date >= saiStart).forEach(s => {
+    stagesAll.forEach(s => {
+      if (!s.date) return;
+      const p   = par('stages', s.date);
+      const hor = p.horaires || {};
+      // Build slots exactly like the student accueil (prochain stage box)
+      const hasTech = !!s.technique;
+      const n       = s.nStages || 2;
+      const sDb = ['s1_deb','s2_deb','s3_deb','s4_deb'];
+      const sFn = ['s1_fin','s2_fin','s3_fin','s4_fin'];
+      const slotTimes = [];
+      if (hasTech && hor.tech_deb && hor.tech_fin) slotTimes.push({ d:hor.tech_deb, f:hor.tech_fin });
+      for (let si = 0; si < n; si++) {
+        if (hor[sDb[si]] && hor[sFn[si]]) slotTimes.push({ d:hor[sDb[si]], f:hor[sFn[si]] });
+      }
+      if (!slotTimes.length) return; // horaires not configured — skip
+      slotTimes.sort((a, b) => _calParseTime(a.d).localeCompare(_calParseTime(b.d)));
+      const startH = slotTimes[0].d;
+      const endH   = slotTimes[slotTimes.length - 1].f;
       const themes = (s.themes || []).filter(t => t && t !== 'À venir').join(' · ');
-      events.push({ uid:`stage-${s.date}@tangoetvous.fr`, dtstart:_calIcsDate(s.date,'15h00'), dtend:_calIcsDate(s.date,'18h00'), summary: themes ? `Stage — ${themes}` : 'Stage de tango', location:locSt, description: themes || 'Stage de tango — Tango & Vous' });
+      events.push({ uid:`stage-${s.date}@tangoetvous.fr`, dtstart:_calIcsDate(s.date,startH), dtend:_calIcsDate(s.date,endH), summary: themes ? `Stage — ${themes}` : 'Stage Tango', location:loc(p.adresse), description:themes||'' });
     });
+
   } else if (slug === 'milongas') {
-    mils.forEach(mil => {
-      const l = [(mil.lieu||{}).nom,(mil.lieu||{}).rue].filter(Boolean).join(' — ');
-      (mil.dates||[]).filter(d => d >= saiStart).forEach(d => events.push(
-        { uid:`milonga-${(mil.id||'m').replace(/\W/g,'')}-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,mil.horaire_debut||'20h30'), duration:'PT3H', summary:mil.nom||'Milonga', location:l, description:(mil.lieu||{}).transport||'' }
-      ));
+    // mil.dates = [{date, horaire_debut, horaire_fin}, ...]
+    milsAll.forEach(mil => {
+      (mil.dates || []).forEach(de => {
+        const dateStr = de.date;
+        if (!dateStr) return;
+        const hdeb = de.horaire_debut || mil.horaire_debut;
+        const hfin = de.horaire_fin   || mil.horaire_fin;
+        if (!hdeb) return; // no start time — skip
+        const l   = loc(mil.lieu);
+        const uid = `milonga-${(mil.id||mil.nom||'m').replace(/[^a-z0-9]/gi,'').toLowerCase()}-${dateStr}@tangoetvous.fr`;
+        const ev  = { uid, dtstart:_calIcsDate(dateStr,hdeb), summary:mil.nom||'Milonga', location:l, description:(mil.lieu||{}).transport||'' };
+        if (hfin) ev.dtend = _calIcsDate(dateStr, hfin); else ev.duration = 'PT3H';
+        events.push(ev);
+      });
     });
+
   } else if (slug === 'yoga-yin') {
-    yogaDates.filter(d => d >= saiStart).forEach(d => events.push(
-      { uid:`yoga-yin-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horY.yin), dtend:_calIcsDate(d,horY.yin_fin), summary:'Yoga Yin', location:locY }
-    ));
+    yogaDates.forEach(d => {
+      const p = par('yoga', d); const hor = p.horaires || {};
+      if (!hor.yin || !hor.yin_fin) return;
+      events.push({ uid:`yoga-yin-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.yin), dtend:_calIcsDate(d,hor.yin_fin), summary:'Yin Yoga', location:loc(p.adresse) });
+    });
+
   } else if (slug === 'yoga-hatha') {
-    yogaDates.filter(d => d >= saiStart).forEach(d => events.push(
-      { uid:`yoga-hatha-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horY.hatha), dtend:_calIcsDate(d,horY.hatha_fin), summary:'Yoga Hatha', location:locY }
-    ));
+    yogaDates.forEach(d => {
+      const p = par('yoga', d); const hor = p.horaires || {};
+      if (!hor.hatha || !hor.hatha_fin) return;
+      events.push({ uid:`yoga-hatha-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.hatha), dtend:_calIcsDate(d,hor.hatha_fin), summary:'Hatha Yoga', location:loc(p.adresse) });
+    });
   }
 
-  const ics = _buildICS(CAL_NAMES[slug] || 'Tango & Vous', events);
+  const ics = _buildICS(CAL_NAMES[slug] || slug, events);
   return new Response(ics, {
     headers: { 'Content-Type':'text/calendar; charset=utf-8', 'Content-Disposition':'inline; filename="'+slug+'.ics"', 'Cache-Control':'no-cache, max-age=0' },
   });
