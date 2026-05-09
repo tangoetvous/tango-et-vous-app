@@ -686,29 +686,37 @@ async function handlePublicICS(slug) {
   if (slug === 'paris-debutant') {
     parDates.forEach(d => {
       const p = par('paris', d); const hor = p.horaires || {};
-      if (!hor.deb || !hor.deb_fin) return;
-      events.push({ uid:`paris-deb-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.deb), dtend:_calIcsDate(d,hor.deb_fin), summary:'Tango — Paris — Débutant', location:loc(p.adresse) });
+      if (!hor.deb) return;
+      const ev = { uid:`paris-deb-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.deb), summary:'Tango — Paris — Débutant', location:loc(p.adresse) };
+      if (hor.deb_fin) ev.dtend = _calIcsDate(d, hor.deb_fin); else ev.duration = 'PT1H30M';
+      events.push(ev);
     });
 
   } else if (slug === 'paris-intermediaire') {
     parDates.forEach(d => {
       const p = par('paris', d); const hor = p.horaires || {};
-      if (!hor.int || !hor.int_fin) return;
-      events.push({ uid:`paris-int-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.int), dtend:_calIcsDate(d,hor.int_fin), summary:'Tango — Paris — Intermédiaire', location:loc(p.adresse) });
+      if (!hor.int) return;
+      const ev = { uid:`paris-int-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.int), summary:'Tango — Paris — Intermédiaire', location:loc(p.adresse) };
+      if (hor.int_fin) ev.dtend = _calIcsDate(d, hor.int_fin); else ev.duration = 'PT1H30M';
+      events.push(ev);
     });
 
   } else if (slug === 'vincennes-debutant') {
     vincDates.forEach(d => {
       const p = par('vincennes', d); const hor = p.horaires || {};
-      if (!hor.deb || !hor.deb_fin) return;
-      events.push({ uid:`vinc-deb-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.deb), dtend:_calIcsDate(d,hor.deb_fin), summary:'Tango — Vincennes — Débutant', location:loc(p.adresse) });
+      if (!hor.deb) return;
+      const ev = { uid:`vinc-deb-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.deb), summary:'Tango — Vincennes — Débutant', location:loc(p.adresse) };
+      if (hor.deb_fin) ev.dtend = _calIcsDate(d, hor.deb_fin); else ev.duration = 'PT1H30M';
+      events.push(ev);
     });
 
   } else if (slug === 'vincennes-intermediaire') {
     vincDates.forEach(d => {
       const p = par('vincennes', d); const hor = p.horaires || {};
-      if (!hor.int || !hor.int_fin) return;
-      events.push({ uid:`vinc-int-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.int), dtend:_calIcsDate(d,hor.int_fin), summary:'Tango — Vincennes — Intermédiaire', location:loc(p.adresse) });
+      if (!hor.int) return;
+      const ev = { uid:`vinc-int-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.int), summary:'Tango — Vincennes — Intermédiaire', location:loc(p.adresse) };
+      if (hor.int_fin) ev.dtend = _calIcsDate(d, hor.int_fin); else ev.duration = 'PT1H30M';
+      events.push(ev);
     });
 
   } else if (slug === 'stages') {
@@ -758,15 +766,19 @@ async function handlePublicICS(slug) {
   } else if (slug === 'yoga-yin') {
     yogaDates.forEach(d => {
       const p = par('yoga', d); const hor = p.horaires || {};
-      if (!hor.yin || !hor.yin_fin) return;
-      events.push({ uid:`yoga-yin-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.yin), dtend:_calIcsDate(d,hor.yin_fin), summary:'Yin Yoga', location:loc(p.adresse) });
+      if (!hor.yin) return;
+      const ev = { uid:`yoga-yin-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.yin), summary:'Yin Yoga', location:loc(p.adresse) };
+      if (hor.yin_fin) ev.dtend = _calIcsDate(d, hor.yin_fin); else ev.duration = 'PT1H30M';
+      events.push(ev);
     });
 
   } else if (slug === 'yoga-hatha') {
     yogaDates.forEach(d => {
       const p = par('yoga', d); const hor = p.horaires || {};
-      if (!hor.hatha || !hor.hatha_fin) return;
-      events.push({ uid:`yoga-hatha-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.hatha), dtend:_calIcsDate(d,hor.hatha_fin), summary:'Hatha Yoga', location:loc(p.adresse) });
+      if (!hor.hatha) return;
+      const ev = { uid:`yoga-hatha-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.hatha), summary:'Hatha Yoga', location:loc(p.adresse) };
+      if (hor.hatha_fin) ev.dtend = _calIcsDate(d, hor.hatha_fin); else ev.duration = 'PT1H30M';
+      events.push(ev);
     });
   }
 
