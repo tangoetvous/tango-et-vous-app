@@ -8758,19 +8758,37 @@ function renderAgendaCalendrier() {
 }
 
 // Retourne la liste des occurrences futures pour un type d'agenda donné
+function _isMilongaType(type) { return type === 'milonga' || (typeof type === 'string' && type.indexOf('milonga-') === 0); }
+function _milFilter(type) {
+  if (type === 'milonga') return function() { return true; }; // rétrocompat historique
+  var milId = type.slice('milonga-'.length);
+  return function(mil) { return mil.id === milId; };
+}
+function _milNomFromType(type) {
+  if (type === 'milonga') return 'Milonga';
+  var milId = type.slice('milonga-'.length);
+  var mil = (MILONGAS||[]).find(function(m){return m.id===milId;});
+  return mil ? mil.nom : type;
+}
 function getOccurrencesPourType(type) {
   var t = today();
   if (type==='paris')     return COURS_PARIS.slice().filter(function(d){return d>=t;});
   if (type==='vincennes') return COURS_VINCENNES.slice().filter(function(d){return d>=t;});
   if (type==='stage')     return STAGES.map(function(s){return s.date;}).filter(function(d){return d>=t;});
-  if (type==='milonga') { var _mDates=[]; (MILONGAS||[]).forEach(function(mil){(mil.dates||[]).forEach(function(d){if(d.date>=t&&_mDates.indexOf(d.date)<0)_mDates.push(d.date);});}); return _mDates.sort(); }
+  if (_isMilongaType(type)) { var _mFilt=_milFilter(type),_mDates=[]; (MILONGAS||[]).filter(_mFilt).forEach(function(mil){(mil.dates||[]).forEach(function(d){if(d.date>=t&&_mDates.indexOf(d.date)<0)_mDates.push(d.date);});}); return _mDates.sort(); }
   if (type==='yoga')      return COURS_YOGA.slice().filter(function(d){return d>=t;});
   return [];
 }
 
 function renderAgendaModif() {
+  // Construire typeLbls dynamiquement selon les milongas configurées
+  var typeLbls = {paris:'Cours Paris (jeudi)', vincennes:'Cours Vincennes (lundi)', stage:'Stage', yoga:'Yoga (mardi)'};
+  (MILONGAS||[]).forEach(function(mil) { typeLbls['milonga-'+mil.id] = mil.nom; });
+  // Garantir que amTypeAgenda est une valeur valide (migration depuis l'ancien 'milonga' générique)
+  if (amTypeAgenda === 'milonga' && (MILONGAS||[]).length > 0) amTypeAgenda = 'milonga-'+MILONGAS[0].id;
+  if (!typeLbls[amTypeAgenda]) amTypeAgenda = Object.keys(typeLbls)[0];
+
   var occ = getOccurrencesPourType(amTypeAgenda);
-  var typeLbls = {paris:'Cours Paris (jeudi)',vincennes:'Cours Vincennes (lundi)',stage:'Stage',milonga:'Milonga',yoga:'Yoga (mardi)'};
   var occSelect = occ.length
     ? '<select id="am-occ-sel">'+occ.map(function(d){return '<option value="'+d+'">'+fmtDate(d)+'</option>';}).join('')+'</select>'
     : '<div style="font-size:11px;color:var(--warn-text);padding:4px 0;">Aucune occurrence future dans cet agenda.</div><select id="am-occ-sel" style="display:none;"></select>';
@@ -8805,14 +8823,12 @@ function renderAgendaModif() {
     +'</div>';
 
   // === Section 2 : Ajout en lot ===
+  var lotTypeLbls = {paris:'Cours Paris', vincennes:'Cours Vincennes', stage:'Stages', yoga:'Yoga'};
+  (MILONGAS||[]).forEach(function(mil) { lotTypeLbls['milonga-'+mil.id] = mil.nom; });
   h += '<div class="card" style="margin-bottom:12px;">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Ajouter des dates en lot</div>'
     +'<div class="field"><label>Type d\'agenda concerné</label><select id="am-lot-type-sel">'
-    +'<option value="paris">Cours Paris</option>'
-    +'<option value="vincennes">Cours Vincennes</option>'
-    +'<option value="stage">Stages</option>'
-    +'<option value="milonga">Milongas</option>'
-    +'<option value="yoga">Yoga</option>'
+    +Object.keys(lotTypeLbls).map(function(k){return '<option value="'+k+'">'+lotTypeLbls[k]+'</option>';}).join('')
     +'</select></div>'
     +'<div class="field"><label>Dates à ajouter — une par ligne (JJ/MM/AAAA ou AAAA-MM-JJ)</label>'
     +'<textarea id="am-lot-dates" rows="6" style="font-family:monospace;font-size:12px;" placeholder="09/04/2026\n16/04/2026\n23/04/2026\n..."></textarea></div>'
@@ -8829,7 +8845,7 @@ function renderAgendaModif() {
   if (agendaModifs.length) {
     h += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--dim);margin:16px 0 8px;">Historique des modifications ('+agendaModifs.length+')</div>';
     agendaModifs.slice().reverse().forEach(function(m) {
-      var typeLabel = {paris:'Cours Paris',vincennes:'Cours Vincennes',stage:'Stage',milonga:'Milonga',yoga:'Yoga'}[m.type]||m.type;
+      var typeLabel = {paris:'Cours Paris',vincennes:'Cours Vincennes',stage:'Stage',milonga:'Milonga',yoga:'Yoga'}[m.type] || _milNomFromType(m.type) || m.type;
       var actionLabel = {annule:'🚫 Annulé',reporte:'📅 Reporté',modif:'✏️ Modifié',note:'📌 Note'}[m.action]||m.action;
       var pill = m.action==='annule'?'pill-err':m.action==='reporte'?'pill-warn':m.action==='note'?'pill-info':'pill-ok';
       h += '<div class="card" style="padding:10px 12px;margin-bottom:6px;">'
@@ -8866,8 +8882,8 @@ function _mutateAgendaArray(type, action, date, newDate) {
       STAGES = STAGES.filter(function(s){return s.date!==date;});
       if (adminData.stages && adminData.stages[date]) delete adminData.stages[date];
       if (filtreStage === date) filtreStage = '';
-    } else if (type === 'milonga') {
-      (MILONGAS||[]).forEach(function(mil){mil.dates=mil.dates.filter(function(x){return x.date!==date;});});
+    } else if (_isMilongaType(type)) {
+      (MILONGAS||[]).filter(_milFilter(type)).forEach(function(mil){mil.dates=mil.dates.filter(function(x){return x.date!==date;});});
     } else if (type === 'yoga') {
       COURS_YOGA = COURS_YOGA.filter(function(d){return d!==date;});
     }
@@ -8879,9 +8895,9 @@ function _mutateAgendaArray(type, action, date, newDate) {
       COURS_PARIS.push(newDate); COURS_PARIS.sort();
     } else if (type === 'vincennes' && COURS_VINCENNES.indexOf(newDate)<0) {
       COURS_VINCENNES.push(newDate); COURS_VINCENNES.sort();
-    } else if (type === 'milonga') {
+    } else if (_isMilongaType(type)) {
       var _dd=new Date(newDate+'T12:00:00'),_mJours=['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'],_mLbl=_mJours[_dd.getDay()]+' '+_dd.getDate()+' '+MOIS_FR[_dd.getMonth()].slice(0,3)+' '+_dd.getFullYear();
-      (MILONGAS||[]).forEach(function(mil){if(!mil.dates.find(function(x){return x.date===newDate;})){mil.dates.push({date:newDate,label:_mLbl});mil.dates.sort(function(a,b){return a.date.localeCompare(b.date);});}});
+      (MILONGAS||[]).filter(_milFilter(type)).forEach(function(mil){if(!mil.dates.find(function(x){return x.date===newDate;})){mil.dates.push({date:newDate,label:_mLbl});mil.dates.sort(function(a,b){return a.date.localeCompare(b.date);});}});
     } else if (type === 'yoga' && COURS_YOGA.indexOf(newDate)<0) {
       COURS_YOGA.push(newDate); COURS_YOGA.sort();
     } else if (type === 'stage' && !STAGES.find(function(s){return s.date===newDate;})) {
@@ -8904,9 +8920,9 @@ function _undoMutateAgendaArray(m) {
       COURS_PARIS.push(m.date); COURS_PARIS.sort();
     } else if (m.type === 'vincennes' && COURS_VINCENNES.indexOf(m.date)<0) {
       COURS_VINCENNES.push(m.date); COURS_VINCENNES.sort();
-    } else if (m.type === 'milonga') {
+    } else if (_isMilongaType(m.type)) {
       var _ddU=new Date(m.date+'T12:00:00'),_mJoursU=['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'],_mLblU=_mJoursU[_ddU.getDay()]+' '+_ddU.getDate()+' '+MOIS_FR[_ddU.getMonth()].slice(0,3)+' '+_ddU.getFullYear();
-      (MILONGAS||[]).forEach(function(mil){if(!mil.dates.find(function(x){return x.date===m.date;})){mil.dates.push({date:m.date,label:_mLblU});mil.dates.sort(function(a,b){return a.date.localeCompare(b.date);});}});
+      (MILONGAS||[]).filter(_milFilter(m.type)).forEach(function(mil){if(!mil.dates.find(function(x){return x.date===m.date;})){mil.dates.push({date:m.date,label:_mLblU});mil.dates.sort(function(a,b){return a.date.localeCompare(b.date);});}});
     } else if (m.type === 'yoga' && COURS_YOGA.indexOf(m.date)<0) {
       COURS_YOGA.push(m.date); COURS_YOGA.sort();
     } else if (m.type === 'stage' && !STAGES.find(function(s){return s.date===m.date;})) {
@@ -8920,10 +8936,10 @@ function _undoMutateAgendaArray(m) {
   }
   // Enlever la date reportée
   if (m.action === 'reporte' && m.newDate) {
-    if (m.type === 'paris')     COURS_PARIS = COURS_PARIS.filter(function(d){return d!==m.newDate;});
-    if (m.type === 'vincennes') COURS_VINCENNES = COURS_VINCENNES.filter(function(d){return d!==m.newDate;});
-    if (m.type === 'milonga')   (MILONGAS||[]).forEach(function(mil){mil.dates=mil.dates.filter(function(x){return x.date!==m.newDate;});});
-    if (m.type === 'yoga')      COURS_YOGA = COURS_YOGA.filter(function(d){return d!==m.newDate;});
+    if (m.type === 'paris')       COURS_PARIS = COURS_PARIS.filter(function(d){return d!==m.newDate;});
+    if (m.type === 'vincennes')   COURS_VINCENNES = COURS_VINCENNES.filter(function(d){return d!==m.newDate;});
+    if (_isMilongaType(m.type))  (MILONGAS||[]).filter(_milFilter(m.type)).forEach(function(mil){mil.dates=mil.dates.filter(function(x){return x.date!==m.newDate;});});
+    if (m.type === 'yoga')        COURS_YOGA = COURS_YOGA.filter(function(d){return d!==m.newDate;});
     if (m.type === 'stage') {
       STAGES = STAGES.filter(function(s){return s.date!==m.newDate;});
       if (adminData.stages && adminData.stages[m.newDate]) delete adminData.stages[m.newDate];
@@ -8932,8 +8948,8 @@ function _undoMutateAgendaArray(m) {
   if (m.action === 'modif') {
     delete agendaOverrides[m.type+':'+m.date];
     // Pour milonga modif : supprimer les horaires de la date (retour aux valeurs milonga-level)
-    if (m.type === 'milonga') {
-      (MILONGAS||[]).forEach(function(mil) {
+    if (_isMilongaType(m.type)) {
+      (MILONGAS||[]).filter(_milFilter(m.type)).forEach(function(mil) {
         var _de = (mil.dates||[]).find(function(d){return d.date===m.date;});
         if (_de) { delete _de.horaire_debut; delete _de.horaire_fin; }
       });
@@ -8957,19 +8973,19 @@ function sauverModifAgenda() {
   _mutateAgendaArray(type, action, date, newDate);
 
   // Pour milonga modif : mettre à jour l'horaire dans l'entrée de date MILONGAS
-  if (type === 'milonga' && action === 'modif' && newHeure) {
+  if (_isMilongaType(type) && action === 'modif' && newHeure) {
     var _hPts = newHeure.split(/[–\-]/);
     var _hDeb = (_hPts[0]||'').trim();
     var _hFin = (_hPts[1]||'').trim();
-    (MILONGAS||[]).forEach(function(mil) {
+    (MILONGAS||[]).filter(_milFilter(type)).forEach(function(mil) {
       var _de = (mil.dates||[]).find(function(d){return d.date===date;});
       if (_de) { if (_hDeb) _de.horaire_debut=_hDeb; if (_hFin) _de.horaire_fin=_hFin; }
     });
   }
-  if (type === 'milonga') sauverMilongas(saisonActive());
+  if (_isMilongaType(type)) sauverMilongas(saisonActive());
 
   // Stocker l'override horaire/lieu (pour types non-milonga)
-  if (action === 'modif' && type !== 'milonga' && (newHeure||newLieu)) {
+  if (action === 'modif' && !_isMilongaType(type) && (newHeure||newLieu)) {
     agendaOverrides[type+':'+date] = {heure:newHeure, lieu:newLieu};
   }
 
@@ -8990,7 +9006,7 @@ function supprimerModifAgenda(id) {
   var m = agendaModifs.find(function(x){return x.id===id;});
   if (m) {
     _undoMutateAgendaArray(m);
-    if (m.type==='milonga') sauverMilongas(saisonActive());
+    if (_isMilongaType(m.type)) sauverMilongas(saisonActive());
     _broadcastAdminSync('agendaUpdate', {type:m.type, date:m.date, action:'annule_modif', origAction:m.action, newDate:m.newDate});
   }
   agendaModifs = agendaModifs.filter(function(x){return x.id!==id;});
@@ -9020,9 +9036,9 @@ function ajouterDatesLot() {
       COURS_PARIS.push(d); COURS_PARIS.sort(); added++;
     } else if (type==='vincennes' && COURS_VINCENNES.indexOf(d)<0) {
       COURS_VINCENNES.push(d); COURS_VINCENNES.sort(); added++;
-    } else if (type==='milonga') {
+    } else if (_isMilongaType(type)) {
       var _ddL=new Date(d+'T12:00:00'),_mJL=['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'],_mLL=_mJL[_ddL.getDay()]+' '+_ddL.getDate()+' '+MOIS_FR[_ddL.getMonth()].slice(0,3)+' '+_ddL.getFullYear();
-      (MILONGAS||[]).forEach(function(mil){if(!mil.dates.find(function(x){return x.date===d;})){mil.dates.push({date:d,label:_mLL});mil.dates.sort(function(a,b){return a.date.localeCompare(b.date);});}});
+      (MILONGAS||[]).filter(_milFilter(type)).forEach(function(mil){if(!mil.dates.find(function(x){return x.date===d;})){mil.dates.push({date:d,label:_mLL});mil.dates.sort(function(a,b){return a.date.localeCompare(b.date);});}});
       added++;
     } else if (type==='yoga' && COURS_YOGA.indexOf(d)<0) {
       COURS_YOGA.push(d); COURS_YOGA.sort(); added++;
@@ -9038,7 +9054,7 @@ function ajouterDatesLot() {
   });
   afficherToast(added>0 ? '✓ '+added+' date'+(added>1?'s':'')+' ajoutée'+(added>1?'s':'')+' à l\'agenda' : '⚠️ Aucune date valide reconnue');
   if (added > 0) {
-    if (type === 'milonga') sauverMilongas(saisonActive());
+    if (_isMilongaType(type)) sauverMilongas(saisonActive());
     else if (type === 'stage') sauverDatesStages(saisonActive());
     saveCoursDatesRemote();
   }
