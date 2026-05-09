@@ -8649,6 +8649,42 @@ function renderAgenda() {
   return h + renderAgendaCalendrier();
 }
 
+var _CAL_FEEDS = [
+  {slug:'paris-debutant',         label:'🎓 Paris — Débutant'},
+  {slug:'paris-intermediaire',    label:'🎓 Paris — Intermédiaire'},
+  {slug:'vincennes-debutant',     label:'🎓 Vincennes — Débutant'},
+  {slug:'vincennes-intermediaire',label:'🎓 Vincennes — Intermédiaire'},
+  {slug:'stages',                 label:'💃 Stages'},
+  {slug:'milongas',               label:'🎶 Milongas'},
+  {slug:'yoga-yin',               label:'🧘 Yoga Yin'},
+  {slug:'yoga-hatha',             label:'🧘 Yoga Hatha'},
+];
+
+function _copierLienCal(slug) {
+  var url = 'https://app.tangoetvous.fr/calendar/'+slug+'.ics';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function(){ toastMsg('Lien copié !', 2000); }).catch(function(){ prompt('Copiez ce lien :', url); });
+  } else {
+    prompt('Copiez ce lien :', url);
+  }
+}
+
+function _renderCalAbonnements() {
+  var rows = _CAL_FEEDS.map(function(f) {
+    var wc = 'webcal://app.tangoetvous.fr/calendar/'+f.slug+'.ics';
+    return '<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border);">'
+      +'<span style="flex:1;font-size:12px;color:var(--text);">'+f.label+'</span>'
+      +'<a href="'+wc+'" style="font-size:11px;padding:3px 9px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--gold);text-decoration:none;white-space:nowrap;">📅 iOS</a>'
+      +'<button onclick="_copierLienCal(\''+f.slug+'\')" style="font-size:11px;padding:3px 9px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--dim);cursor:pointer;white-space:nowrap;">⧉ Copier</button>'
+      +'</div>';
+  }).join('');
+  return '<div style="margin-bottom:18px;padding:12px 14px;background:var(--s2);border-radius:8px;border:1px solid var(--border);">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px;">📅 Abonnements calendrier</div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:10px;">iOS : cliquez « 📅 iOS » pour ouvrir directement dans Calendrier. Autres : « ⧉ Copier » → coller dans Google Agenda (Autres agendas → À partir d\'une URL).</div>'
+    +'<div>'+rows+'</div>'
+    +'</div>';
+}
+
 function renderAgendaCalendrier() {
   var _saiCal = saisonActive();
   chargerMilongas(_saiCal); // garantit que MILONGAS correspond à la saison affichée
@@ -8656,7 +8692,8 @@ function renderAgendaCalendrier() {
   var _saiEnd   = _saiCal.split('-')[1] + '-08-31';
   var todayStr=today();
   var _isCurrentSai = (todayStr >= _saiStart && todayStr <= _saiEnd);
-  var h='<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:12px;">Agenda — Saison '+_saiCal+(_isCurrentSai && !agendaShowPast ? ' (à venir)' : '')+'</div>'
+  var h=_renderCalAbonnements()
+    +'<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);margin-bottom:12px;">Agenda — Saison '+_saiCal+(_isCurrentSai && !agendaShowPast ? ' (à venir)' : '')+'</div>'
     +'<div class="cat-pills">'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.paris?'#122840':'transparent')+';border-color:'+(agendaCats.paris?'#60b0ff':'var(--border)')+';color:'+(agendaCats.paris?'#60b0ff':'var(--dim)')+';" data-cat-ag="paris">🎓 Paris</button>'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.vincennes?'#102828':'transparent')+';border-color:'+(agendaCats.vincennes?'#40d8c0':'var(--border)')+';color:'+(agendaCats.vincennes?'#40d8c0':'var(--dim)')+';" data-cat-ag="vincennes">🎓 Vincennes</button>'
