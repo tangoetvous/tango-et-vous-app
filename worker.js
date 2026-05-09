@@ -84,10 +84,17 @@ export default {
         return handleCalendarToken(jwt, env);
       }
 
-      // GET /calendar/e-{token}.ics — flux iCalendar élève
+      // GET /calendar/e-{token}.ics — flux iCalendar élève (personnalisé)
       const calM = pathname.match(/^\/calendar\/e-([A-Za-z0-9._-]+)\.ics$/);
       if (calM && method === 'GET') {
         return handleEleveICS(calM[1], env);
+      }
+
+      // GET /calendar/{slug}.ics — flux iCalendar public (sans token)
+      const CAL_SLUGS = ['paris-debutant','paris-intermediaire','vincennes-debutant','vincennes-intermediaire','stages','milongas','yoga-yin','yoga-hatha'];
+      const pubCalM = pathname.match(/^\/calendar\/([a-z-]+)\.ics$/);
+      if (pubCalM && CAL_SLUGS.includes(pubCalM[1]) && method === 'GET') {
+        return handlePublicICS(pubCalM[1]);
       }
 
       return env.ASSETS.fetch(request);
@@ -599,39 +606,142 @@ async function _generateEleveICS(email) {
     events.push({ uid: `stage-${s.stage_date}-${email.replace(/[^a-z0-9]/g,'')}@tangoetvous.fr`, dtstart: _calIcsDate(s.stage_date, '15h00'), dtend: _calIcsDate(s.stage_date, '18h00'), summary: s.stage_nom || 'Stage de tango', location: locParis, description: 'Stage de tango — Tango & Vous' });
   });
 
-  events.sort((a, b) => a.dtstart.localeCompare(b.dtstart));
+  return _buildICS('Tango & Vous', events);
+}
 
-  const stamp = new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
+// ================================================================
+// Flux ICS publics — 8 calendriers thématiques sans token
+// ================================================================
+
+async function handlePublicICS(slug) {
+  const sai = _calSaison();
+  const saiStart = sai.slice(0, 4) + '-09-01';
+  const headers  = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
+
+  const keys = ['tev_cours_dates', `tev_milongas_${sai}`, `tev_dates_stages_${sai}`,
+                 `tev_params_paris_${sai}`, `tev_params_vincennes_${sai}`,
+                 `tev_params_yoga_${sai}`, `tev_params_stages_${sai}`];
+  const paramsData = await fetch(
+    `${SUPABASE_URL}/rest/v1/parametres?cle=in.(${keys.join(',')})&select=cle,valeur`,
+    { headers }
+  ).then(r => r.json()).catch(() => []);
+
+  const P = {};
+  (Array.isArray(paramsData) ? paramsData : []).forEach(p => { P[p.cle] = p.valeur; });
+
+  const cd      = P['tev_cours_dates'] || {};
+  const parDates = cd.paris      || [];
+  const vincDates= cd.vincennes  || [];
+  const yogaDates= cd.yoga       || [];
+  const mils     = (P[`tev_milongas_${sai}`]      || {}).milongas || [];
+  const stages   = (P[`tev_dates_stages_${sai}`]  || {}).stages   || [];
+  const pp  = P[`tev_params_paris_${sai}`]      || {};
+  const pv  = P[`tev_params_vincennes_${sai}`]  || {};
+  const py  = P[`tev_params_yoga_${sai}`]       || {};
+  const pst = P[`tev_params_stages_${sai}`]     || {};
+
+  const HOR_P = { deb:'20h30', deb_fin:'21h45', int:'21h45', int_fin:'23h00' };
+  const HOR_V = { deb:'19h30', deb_fin:'21h00', int:'21h00', int_fin:'22h30' };
+  const HOR_Y = { yin:'10h30', yin_fin:'11h30', hatha:'11h30', hatha_fin:'12h30' };
+  const horP = Object.assign({}, HOR_P, pp.horaires || {});
+  const horV = Object.assign({}, HOR_V, pv.horaires || {});
+  const horY = Object.assign({}, HOR_Y, py.horaires || {});
+
+  function loc(adr, defNom, defRue) {
+    const a = adr || {};
+    return [(a.nom || defNom), (a.rue || defRue)].filter(Boolean).join(' — ');
+  }
+  const locP  = loc(pp.adresse,  'Espace Danse Studio',  '24 villa Riberolle, Paris 20e');
+  const locV  = loc(pv.adresse,  'Espace Sorano',        '16 rue Charles Pathé, 94300 Vincennes');
+  const locY  = loc(py.adresse,  'Espace Sorano',        '16 rue Charles Pathé, 94300 Vincennes');
+  const locSt = loc(pst.adresse, 'Centre Kim Kan',       '64 rue Orfila, Paris 20e');
+
+  const events = [];
+  const CAL_NAMES = {
+    'paris-debutant':        'Tango Paris — Débutant',
+    'paris-intermediaire':   'Tango Paris — Intermédiaire',
+    'vincennes-debutant':    'Tango Vincennes — Débutant',
+    'vincennes-intermediaire':'Tango Vincennes — Intermédiaire',
+    'stages':                'Stages de tango — Tango & Vous',
+    'milongas':              'Milongas — Tango & Vous',
+    'yoga-yin':              'Yoga Yin — Tango & Vous',
+    'yoga-hatha':            'Yoga Hatha — Tango & Vous',
+  };
+
+  if (slug === 'paris-debutant') {
+    parDates.filter(d => d >= saiStart).forEach(d => events.push(
+      { uid:`paris-deb-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horP.deb), dtend:_calIcsDate(d,horP.deb_fin), summary:'Tango Paris — Débutant', location:locP }
+    ));
+  } else if (slug === 'paris-intermediaire') {
+    parDates.filter(d => d >= saiStart).forEach(d => events.push(
+      { uid:`paris-int-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horP.int), dtend:_calIcsDate(d,horP.int_fin), summary:'Tango Paris — Intermédiaire', location:locP }
+    ));
+  } else if (slug === 'vincennes-debutant') {
+    vincDates.filter(d => d >= saiStart).forEach(d => events.push(
+      { uid:`vinc-deb-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horV.deb), dtend:_calIcsDate(d,horV.deb_fin), summary:'Tango Vincennes — Débutant', location:locV }
+    ));
+  } else if (slug === 'vincennes-intermediaire') {
+    vincDates.filter(d => d >= saiStart).forEach(d => events.push(
+      { uid:`vinc-int-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horV.int), dtend:_calIcsDate(d,horV.int_fin), summary:'Tango Vincennes — Intermédiaire', location:locV }
+    ));
+  } else if (slug === 'stages') {
+    stages.filter(s => s.date >= saiStart).forEach(s => {
+      const themes = (s.themes || []).filter(t => t && t !== 'À venir').join(' · ');
+      events.push({ uid:`stage-${s.date}@tangoetvous.fr`, dtstart:_calIcsDate(s.date,'15h00'), dtend:_calIcsDate(s.date,'18h00'), summary: themes ? `Stage — ${themes}` : 'Stage de tango', location:locSt, description: themes || 'Stage de tango — Tango & Vous' });
+    });
+  } else if (slug === 'milongas') {
+    mils.forEach(mil => {
+      const l = [(mil.lieu||{}).nom,(mil.lieu||{}).rue].filter(Boolean).join(' — ');
+      (mil.dates||[]).filter(d => d >= saiStart).forEach(d => events.push(
+        { uid:`milonga-${(mil.id||'m').replace(/\W/g,'')}-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,mil.horaire_debut||'20h30'), duration:'PT3H', summary:mil.nom||'Milonga', location:l, description:(mil.lieu||{}).transport||'' }
+      ));
+    });
+  } else if (slug === 'yoga-yin') {
+    yogaDates.filter(d => d >= saiStart).forEach(d => events.push(
+      { uid:`yoga-yin-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horY.yin), dtend:_calIcsDate(d,horY.yin_fin), summary:'Yoga Yin', location:locY }
+    ));
+  } else if (slug === 'yoga-hatha') {
+    yogaDates.filter(d => d >= saiStart).forEach(d => events.push(
+      { uid:`yoga-hatha-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,horY.hatha), dtend:_calIcsDate(d,horY.hatha_fin), summary:'Yoga Hatha', location:locY }
+    ));
+  }
+
+  const ics = _buildICS(CAL_NAMES[slug] || 'Tango & Vous', events);
+  return new Response(ics, {
+    headers: { 'Content-Type':'text/calendar; charset=utf-8', 'Content-Disposition':'inline; filename="'+slug+'.ics"', 'Cache-Control':'no-cache, max-age=0' },
+  });
+}
+
+// ================================================================
+// Helper : construit le texte ICS complet depuis une liste d'events
+// ================================================================
+function _buildICS(calName, events) {
+  events.sort((a, b) => a.dtstart.localeCompare(b.dtstart));
+  const stamp = new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
   const lines = [
-    'BEGIN:VCALENDAR', 'VERSION:2.0',
-    'PRODID:-//Tango & Vous//FR',
-    'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-    _calLine('X-WR-CALNAME', 'Tango & Vous'),
-    'X-WR-TIMEZONE:Europe/Paris',
-    'REFRESH-INTERVAL;VALUE=DURATION:PT6H',
-    'BEGIN:VTIMEZONE', 'TZID:Europe/Paris',
-    'BEGIN:STANDARD', 'DTSTART:19701025T030000',
-    'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10',
-    'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0100', 'TZNAME:CET', 'END:STANDARD',
-    'BEGIN:DAYLIGHT', 'DTSTART:19700329T020000',
-    'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3',
-    'TZOFFSETFROM:+0100', 'TZOFFSETTO:+0200', 'TZNAME:CEST', 'END:DAYLIGHT',
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Tango & Vous//FR',
+    'CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    _calLine('X-WR-CALNAME', calName),
+    'X-WR-TIMEZONE:Europe/Paris','REFRESH-INTERVAL;VALUE=DURATION:PT6H',
+    'BEGIN:VTIMEZONE','TZID:Europe/Paris',
+    'BEGIN:STANDARD','DTSTART:19701025T030000','RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10',
+    'TZOFFSETFROM:+0200','TZOFFSETTO:+0100','TZNAME:CET','END:STANDARD',
+    'BEGIN:DAYLIGHT','DTSTART:19700329T020000','RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3',
+    'TZOFFSETFROM:+0100','TZOFFSETTO:+0200','TZNAME:CEST','END:DAYLIGHT',
     'END:VTIMEZONE',
   ];
-
   events.forEach(ev => {
     lines.push('BEGIN:VEVENT');
     lines.push(_calLine('UID', ev.uid));
-    lines.push(`DTSTAMP:${stamp}`);
-    lines.push(`DTSTART;TZID=Europe/Paris:${ev.dtstart}`);
-    if (ev.dtend)    lines.push(`DTEND;TZID=Europe/Paris:${ev.dtend}`);
-    if (ev.duration) lines.push(`DURATION:${ev.duration}`);
+    lines.push('DTSTAMP:'+stamp);
+    lines.push('DTSTART;TZID=Europe/Paris:'+ev.dtstart);
+    if (ev.dtend)    lines.push('DTEND;TZID=Europe/Paris:'+ev.dtend);
+    if (ev.duration) lines.push('DURATION:'+ev.duration);
     lines.push(_calLine('SUMMARY', ev.summary));
     if (ev.location)    lines.push(_calLine('LOCATION', ev.location));
     if (ev.description) lines.push(_calLine('DESCRIPTION', ev.description));
     lines.push('END:VEVENT');
   });
-
   lines.push('END:VCALENDAR');
   return lines.join('\r\n');
 }
