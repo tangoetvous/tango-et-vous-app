@@ -13,6 +13,8 @@
 //   PATCH /api/devis/:id/annuler       — admin → annuler devis
 //   PATCH /api/demandes-devis/:id      — admin → changer statut demande
 //   PATCH /api/admin/update-auth-email — admin → sync email dans Supabase Auth (service role)
+//   GET   /api/calendar/token          — génère l'URL ICS personnalisée (JWT requis)
+//   GET   /calendar/e-{token}.ics      — flux iCalendar élève (token signé HMAC)
 //   *                                  — assets statiques (Cloudflare Static Assets)
 
 const SUPABASE_URL  = 'https://qhngqzvvllktuwspojxc.supabase.co';
@@ -74,6 +76,18 @@ export default {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
         if (!env.SUPABASE_SERVICE_KEY) return jsonError(503, 'Service non configuré');
         return handleUpdateAuthEmail(request, env.SUPABASE_SERVICE_KEY);
+      }
+
+      // GET /api/calendar/token — URL ICS personnalisée (JWT requis)
+      if (pathname === '/api/calendar/token' && method === 'GET') {
+        if (!jwt) return jsonError(401, 'Token manquant — connectez-vous d\'abord');
+        return handleCalendarToken(jwt, env);
+      }
+
+      // GET /calendar/e-{token}.ics — flux iCalendar élève
+      const calM = pathname.match(/^\/calendar\/e-([A-Za-z0-9._-]+)\.ics$/);
+      if (calM && method === 'GET') {
+        return handleEleveICS(calM[1], env);
       }
 
       return env.ASSETS.fetch(request);
@@ -429,4 +443,195 @@ function jsonError(status, message) {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+
+// ================================================================
+// CALENDRIER ICS — abonnement élève
+// ================================================================
+
+async function handleCalendarToken(jwt, env) {
+  let email = '';
+  try {
+    const payload = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    email = (payload.email || '').toLowerCase().trim();
+  } catch (e) {}
+  if (!email) return jsonError(400, 'Email introuvable dans le token');
+  const secret = env.SUPABASE_SERVICE_KEY || 'tev-calendar-fallback';
+  const token = await _calEncodeToken(email, secret);
+  return corsResponse({ url: `/calendar/e-${token}.ics` }, 200, {}, null);
+}
+
+async function handleEleveICS(token, env) {
+  const secret = env.SUPABASE_SERVICE_KEY || 'tev-calendar-fallback';
+  const email = await _calDecodeToken(token, secret);
+  if (!email) return new Response('Token invalide', { status: 403 });
+  const ics = await _generateEleveICS(email);
+  return new Response(ics, {
+    headers: {
+      'Content-Type': 'text/calendar; charset=utf-8',
+      'Content-Disposition': 'inline; filename="tango-et-vous.ics"',
+      'Cache-Control': 'no-cache, max-age=0',
+    },
+  });
+}
+
+async function _calHmac(email, secret) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(email));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function _calEncodeToken(email, secret) {
+  const b64 = btoa(email).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const hmac = await _calHmac(email, secret);
+  return b64 + '.' + hmac.slice(0, 20);
+}
+
+async function _calDecodeToken(token, secret) {
+  const dot = token.lastIndexOf('.');
+  if (dot < 0) return null;
+  let email;
+  try {
+    email = atob(token.slice(0, dot).replace(/-/g, '+').replace(/_/g, '/')).toLowerCase().trim();
+  } catch (e) { return null; }
+  if (!email || !email.includes('@')) return null;
+  const expected = await _calHmac(email, secret);
+  if (expected.slice(0, 20) !== token.slice(dot + 1)) return null;
+  return email;
+}
+
+function _calSaison() {
+  const now = new Date();
+  const y = now.getFullYear();
+  return (now.getMonth() + 1) >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+}
+
+function _calParseTime(str) {
+  const m = (str || '').match(/^(\d{1,2})h(\d{2})?/);
+  if (!m) return '000000';
+  return String(parseInt(m[1])).padStart(2, '0') + (m[2] || '00') + '00';
+}
+
+function _calIcsDate(isoDate, timeStr) {
+  return isoDate.replace(/-/g, '') + 'T' + _calParseTime(timeStr);
+}
+
+function _calEsc(s) {
+  return (s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+}
+
+function _calFold(line) {
+  const out = [];
+  while (line.length > 75) { out.push(line.slice(0, 75)); line = ' ' + line.slice(75); }
+  out.push(line);
+  return out.join('\r\n');
+}
+
+function _calLine(key, val) {
+  return _calFold(`${key}:${_calEsc(String(val || ''))}`);
+}
+
+async function _generateEleveICS(email) {
+  const sai = _calSaison();
+  const saiStart = sai.slice(0, 4) + '-09-01';
+
+  const headers = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
+  const [inscRes, stagesRes, paramsRes] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_cours?email=eq.${encodeURIComponent(email)}&statut=eq.inscrit&saison=eq.${sai}&select=ville,niveau`, { headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?email=eq.${encodeURIComponent(email)}&type_confirmation=eq.confirme&select=stage_date,stage_nom,slots`, { headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=in.(tev_cours_dates,tev_milongas_${sai},tev_params_paris_${sai},tev_params_vincennes_${sai})&select=cle,valeur`, { headers }),
+  ]);
+
+  const inscriptions = await inscRes.json().catch(() => []);
+  const stagesData   = await stagesRes.json().catch(() => []);
+  const paramsData   = await paramsRes.json().catch(() => []);
+
+  const params = {};
+  (Array.isArray(paramsData) ? paramsData : []).forEach(p => { params[p.cle] = p.valeur; });
+
+  const coursDates  = params['tev_cours_dates'] || {};
+  const parisDates  = coursDates.paris      || [];
+  const vincDates   = coursDates.vincennes  || [];
+  const milongasVal = params[`tev_milongas_${sai}`] || {};
+  const milongas    = milongasVal.milongas || [];
+  const pparis      = params[`tev_params_paris_${sai}`]      || {};
+  const pvinc       = params[`tev_params_vincennes_${sai}`]  || {};
+
+  const HOR_P = { deb:'20h30', deb_fin:'21h45', int:'21h45', int_fin:'23h00' };
+  const HOR_V = { deb:'19h30', deb_fin:'21h00', int:'21h00', int_fin:'22h30' };
+  const horP  = Object.assign({}, HOR_P, pparis.horaires || {});
+  const horV  = Object.assign({}, HOR_V, pvinc.horaires  || {});
+
+  const adrP = pparis.adresse || {};
+  const adrV = pvinc.adresse  || {};
+  const locParis = [adrP.nom || 'Centre Kim Kan', adrP.rue || '6 rue Borrégo, Paris 20e'].filter(Boolean).join(' — ');
+  const locVinc  = [adrV.nom || 'Centre Sorano',  adrV.rue || ''].filter(Boolean).join(' — ');
+
+  const events = [];
+
+  // 1. Cours tango de l'élève
+  (Array.isArray(inscriptions) ? inscriptions : []).forEach(ins => {
+    const isVinc   = ins.ville === 'vincennes';
+    const isInt    = ins.niveau === 'intermediaire';
+    const dates    = isVinc ? vincDates : parisDates;
+    const hor      = isVinc ? horV : horP;
+    const dKey     = isInt ? 'int' : 'deb';
+    const fKey     = isInt ? 'int_fin' : 'deb_fin';
+    const summary  = `Tango ${isVinc ? 'Vincennes' : 'Paris'} — ${isInt ? 'Intermédiaire' : 'Débutant'}`;
+    const location = isVinc ? locVinc : locParis;
+    dates.filter(d => d >= saiStart).forEach(d => {
+      events.push({ uid: `cours-${ins.ville}-${ins.niveau}-${d}@tangoetvous.fr`, dtstart: _calIcsDate(d, hor[dKey]), dtend: _calIcsDate(d, hor[fKey]), summary, location, description: 'Cours de tango — Tango & Vous' });
+    });
+  });
+
+  // 2. Milongas
+  milongas.forEach(mil => {
+    const loc = [(mil.lieu || {}).nom, (mil.lieu || {}).rue].filter(Boolean).join(' — ');
+    (mil.dates || []).filter(d => d >= saiStart).forEach(d => {
+      events.push({ uid: `milonga-${(mil.id || 'mil').replace(/\s/g, '')}-${d}@tangoetvous.fr`, dtstart: _calIcsDate(d, mil.horaire_debut || '20h30'), duration: 'PT3H', summary: mil.nom || 'Milonga', location: loc, description: `Milonga — ${(mil.lieu || {}).transport || ''}` });
+    });
+  });
+
+  // 3. Stages de l'élève
+  (Array.isArray(stagesData) ? stagesData : []).filter(s => s.stage_date).forEach(s => {
+    events.push({ uid: `stage-${s.stage_date}-${email.replace(/[^a-z0-9]/g,'')}@tangoetvous.fr`, dtstart: _calIcsDate(s.stage_date, '15h00'), dtend: _calIcsDate(s.stage_date, '18h00'), summary: s.stage_nom || 'Stage de tango', location: locParis, description: 'Stage de tango — Tango & Vous' });
+  });
+
+  events.sort((a, b) => a.dtstart.localeCompare(b.dtstart));
+
+  const stamp = new Date().toISOString().replace(/[-:.]/g, '').slice(0, 15) + 'Z';
+  const lines = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0',
+    'PRODID:-//Tango & Vous//FR',
+    'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    _calLine('X-WR-CALNAME', 'Tango & Vous'),
+    'X-WR-TIMEZONE:Europe/Paris',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT6H',
+    'BEGIN:VTIMEZONE', 'TZID:Europe/Paris',
+    'BEGIN:STANDARD', 'DTSTART:19701025T030000',
+    'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10',
+    'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0100', 'TZNAME:CET', 'END:STANDARD',
+    'BEGIN:DAYLIGHT', 'DTSTART:19700329T020000',
+    'RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3',
+    'TZOFFSETFROM:+0100', 'TZOFFSETTO:+0200', 'TZNAME:CEST', 'END:DAYLIGHT',
+    'END:VTIMEZONE',
+  ];
+
+  events.forEach(ev => {
+    lines.push('BEGIN:VEVENT');
+    lines.push(_calLine('UID', ev.uid));
+    lines.push(`DTSTAMP:${stamp}`);
+    lines.push(`DTSTART;TZID=Europe/Paris:${ev.dtstart}`);
+    if (ev.dtend)    lines.push(`DTEND;TZID=Europe/Paris:${ev.dtend}`);
+    if (ev.duration) lines.push(`DURATION:${ev.duration}`);
+    lines.push(_calLine('SUMMARY', ev.summary));
+    if (ev.location)    lines.push(_calLine('LOCATION', ev.location));
+    if (ev.description) lines.push(_calLine('DESCRIPTION', ev.description));
+    lines.push('END:VEVENT');
+  });
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
 }

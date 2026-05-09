@@ -2078,6 +2078,52 @@
   }
 
   // ================================================================
+  // CALENDRIER ICS — abonnement
+  // ================================================================
+  window.abonnerCalendrier = async function() {
+    const btn = document.getElementById('agenda-cal-btn');
+    const res = document.getElementById('agenda-cal-result');
+    btn.disabled = true;
+    btn.textContent = '⏳ Génération…';
+    try {
+      const { data: { session } } = await TEV.client.auth.getSession();
+      if (!session) throw new Error('Non connecté');
+      const r = await fetch('/api/calendar/token', { headers: { Authorization: 'Bearer ' + session.access_token } });
+      const json = await r.json();
+      if (!r.ok || !json.url) throw new Error(json.error || 'Erreur');
+      const fullUrl = 'https://app.tangoetvous.fr' + json.url;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
+      res.style.display = 'block';
+      if (isIOS) {
+        res.innerHTML = `
+          <div style="font-size:12px;color:var(--dim);margin-bottom:8px;">Sur iPhone / iPad :</div>
+          <a href="${fullUrl}" style="display:block;background:var(--accent);color:#000;text-align:center;padding:10px;border-radius:7px;font-weight:700;font-size:13px;text-decoration:none;margin-bottom:8px;">📅 Ouvrir dans Calendrier iOS</a>
+          <div style="font-size:11px;color:var(--dim);">iOS vous demande si vous voulez vous abonner — acceptez. Les mises à jour arrivent automatiquement.</div>`;
+      } else if (isAndroid) {
+        res.innerHTML = `
+          <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Votre lien d'abonnement :</div>
+          <div style="background:var(--s3);border-radius:6px;padding:8px 10px;font-size:11px;word-break:break-all;margin-bottom:8px;">${fullUrl}</div>
+          <div style="font-size:12px;color:var(--dim);margin-bottom:6px;"><strong>Google Agenda :</strong> Menu → Autres agendas → À partir d'une URL → coller le lien</div>
+          <button onclick="navigator.clipboard.writeText('${fullUrl}').then(()=>this.textContent='✓ Copié !')" style="background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;width:100%;">Copier le lien</button>`;
+      } else {
+        res.innerHTML = `
+          <div style="font-size:12px;font-weight:600;margin-bottom:6px;">Votre lien d'abonnement :</div>
+          <div style="background:var(--s3);border-radius:6px;padding:8px 10px;font-size:11px;word-break:break-all;margin-bottom:8px;">${fullUrl}</div>
+          <div style="font-size:12px;color:var(--dim);margin-bottom:4px;"><strong>iOS :</strong> copiez le lien → Calendrier → Ajouter un calendrier → S'abonner</div>
+          <div style="font-size:12px;color:var(--dim);margin-bottom:8px;"><strong>Google Agenda :</strong> Menu → Autres agendas → À partir d'une URL</div>
+          <button onclick="navigator.clipboard.writeText('${fullUrl}').then(()=>this.textContent='✓ Copié !')" style="background:var(--s3);border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;width:100%;">Copier le lien</button>`;
+      }
+      btn.textContent = '✓ Lien généré';
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = 'Obtenir mon lien d\'abonnement';
+      res.style.display = 'block';
+      res.innerHTML = `<div style="color:var(--err);font-size:12px;">Erreur : ${e.message}</div>`;
+    }
+  };
+
+  // ================================================================
   // STAGES
   // ================================================================
   function renderStages() {
@@ -4256,6 +4302,12 @@ a{color:var(--gold);text-decoration:none;}
   <div class="tab-pane" id="agenda-pane">
     <div id="agenda-filters" class="agenda-filters"></div>
     <div id="agenda-list"></div>
+    <div id="agenda-cal-block" style="margin:24px 16px 8px;padding:14px 16px;background:var(--s2);border-radius:10px;border:1px solid var(--border);">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px;">📅 Ajouter à mon calendrier</div>
+      <div style="font-size:12px;color:var(--dim);margin-bottom:10px;">Abonnez-vous pour recevoir automatiquement toutes vos dates (cours, milongas, stages) dans votre application Calendrier. Les modifications faites par l'admin apparaissent à la prochaine synchro.</div>
+      <button id="agenda-cal-btn" onclick="abonnerCalendrier()" style="background:var(--accent);color:#000;border:none;border-radius:7px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;width:100%;">Obtenir mon lien d'abonnement</button>
+      <div id="agenda-cal-result" style="display:none;margin-top:10px;"></div>
+    </div>
   </div>
 
   <!-- ── ONGLET MILONGA ────────────────────────────────────── -->
