@@ -8509,14 +8509,16 @@ function getEventsForDate(dateStr) {
   if (agendaCats.paris && COURS_PARIS.indexOf(dateStr) >= 0) {
     var _hP = _loadParam('paris', sai, 'horaires');
     var _dP = DEFAULTS_HORAIRES.paris;
-    evts.push({cat:'cours-paris', titre:'Paris \u2014 Tango \u2014 D\u00e9butant',         heure:_hP.deb||_dP.deb});
-    evts.push({cat:'cours-paris', titre:'Paris \u2014 Tango \u2014 Interm\u00e9diaire',   heure:_hP.int||_dP.int});
+    var _ovP = agendaOverrides['paris:'+dateStr] || {};
+    evts.push({cat:'cours-paris', titre:'Paris \u2014 Tango \u2014 D\u00e9butant',         heure:_ovP.heure||_hP.deb||_dP.deb, sub:_ovP.lieu||''});
+    evts.push({cat:'cours-paris', titre:'Paris \u2014 Tango \u2014 Interm\u00e9diaire',   heure:_ovP.heure||_hP.int||_dP.int, sub:_ovP.lieu||''});
   }
   if (agendaCats.vincennes && COURS_VINCENNES.indexOf(dateStr) >= 0) {
     var _hV = _loadParam('vincennes', sai, 'horaires');
     var _dV = DEFAULTS_HORAIRES.vincennes;
-    evts.push({cat:'cours-vinc', titre:'Vincennes \u2014 Tango \u2014 D\u00e9butant',      heure:_hV.deb||_dV.deb});
-    evts.push({cat:'cours-vinc', titre:'Vincennes \u2014 Tango \u2014 Interm\u00e9diaire',heure:_hV.int||_dV.int});
+    var _ovV = agendaOverrides['vincennes:'+dateStr] || {};
+    evts.push({cat:'cours-vinc', titre:'Vincennes \u2014 Tango \u2014 D\u00e9butant',      heure:_ovV.heure||_hV.deb||_dV.deb, sub:_ovV.lieu||''});
+    evts.push({cat:'cours-vinc', titre:'Vincennes \u2014 Tango \u2014 Interm\u00e9diaire',heure:_ovV.heure||_hV.int||_dV.int, sub:_ovV.lieu||''});
   }
   if (agendaCats.stage) {
     var _stRaw=STAGES.find(function(s){return s.date===dateStr;});
@@ -8539,18 +8541,20 @@ function getEventsForDate(dateStr) {
       var _aRue=(_stAdr.rue)||(_globAdr.rue)||(_defAdr.rue)||'';
       var _aTpt=(_stAdr.transport)||(_globAdr.transport)||(_defAdr.transport)||'';
       var _stageNom=_st.nom||STAGE_NOM_DEFAUT;
-      var _subSt=_stageNom+(_aNom?' \u00b7 '+_aNom+(_aRue?' \u2014 '+_aRue:''):(_aRue?' \u00b7 '+_aRue:''))+(_aTpt?' \u00b7 '+_aTpt:'');
+      var _ovSt = agendaOverrides['stage:'+dateStr] || {};
+      var _subSt=(_ovSt.lieu)||(_stageNom+(_aNom?' \u00b7 '+_aNom+(_aRue?' \u2014 '+_aRue:''):(_aRue?' \u00b7 '+_aRue:''))+(_aTpt?' \u00b7 '+_aTpt:''));
       _ord.forEach(function(_k){
         var _lbl=_k==='tech'?'Technique Leader & Follower':(_st.themes&&_st.themes[parseInt(_k.slice(1))-1])||('Stage '+_k.slice(1));
-        evts.push({cat:'stage',titre:_lbl,heure:_hv(_k+'_deb')+(_hv(_k+'_fin')?'\u2013'+_hv(_k+'_fin'):''),sub:_subSt});
+        evts.push({cat:'stage',titre:_lbl,heure:_ovSt.heure||(_hv(_k+'_deb')+(_hv(_k+'_fin')?'\u2013'+_hv(_k+'_fin'):'')),sub:_subSt});
       });
     }
   }
   if (agendaCats.milonga) {
     (MILONGAS||[]).forEach(function(mil) {
-      if ((mil.dates||[]).some(function(d){return d.date===dateStr;})) {
-        var hdeb = mil.horaire_debut||'17h30';
-        var hfin = mil.horaire_fin||'23h30';
+      var _mDe = (mil.dates||[]).find(function(d){return d.date===dateStr;});
+      if (_mDe) {
+        var hdeb = _mDe.horaire_debut || mil.horaire_debut || '17h30';
+        var hfin = _mDe.horaire_fin   || mil.horaire_fin   || '23h30';
         var lieu = mil.lieu||{};
         evts.push({cat:'milonga', titre:mil.nom, heure:hdeb+'\u2013'+hfin, color:mil.color||'#ff8c00',
           sub:(lieu.nom?lieu.nom+' \u2014 ':'')+lieu.rue+(lieu.transport?' \u00b7 '+lieu.transport:'')});
@@ -8560,8 +8564,9 @@ function getEventsForDate(dateStr) {
   if (agendaCats.yoga && COURS_YOGA.indexOf(dateStr) >= 0) {
     var _hY = _loadParam('yoga', sai, 'horaires');
     var _dY = DEFAULTS_HORAIRES.yoga;
-    evts.push({cat:'cours-yoga', titre:'Yin Yoga',   heure:_hY.yin  ||_dY.yin});
-    evts.push({cat:'cours-yoga', titre:'Hatha Yoga', heure:_hY.hatha||_dY.hatha});
+    var _ovY = agendaOverrides['yoga:'+dateStr] || {};
+    evts.push({cat:'cours-yoga', titre:'Yin Yoga',   heure:_ovY.heure||_hY.yin  ||_dY.yin,   sub:_ovY.lieu||''});
+    evts.push({cat:'cours-yoga', titre:'Hatha Yoga', heure:_ovY.heure||_hY.hatha||_dY.hatha, sub:_ovY.lieu||''});
   }
   return evts;
 }
@@ -8924,7 +8929,17 @@ function _undoMutateAgendaArray(m) {
       if (adminData.stages && adminData.stages[m.newDate]) delete adminData.stages[m.newDate];
     }
   }
-  if (m.action === 'modif') delete agendaOverrides[m.type+':'+m.date];
+  if (m.action === 'modif') {
+    delete agendaOverrides[m.type+':'+m.date];
+    // Pour milonga modif : supprimer les horaires de la date (retour aux valeurs milonga-level)
+    if (m.type === 'milonga') {
+      (MILONGAS||[]).forEach(function(mil) {
+        var _de = (mil.dates||[]).find(function(d){return d.date===m.date;});
+        if (_de) { delete _de.horaire_debut; delete _de.horaire_fin; }
+      });
+      sauverMilongas(saisonActive());
+    }
+  }
 }
 
 function sauverModifAgenda() {
@@ -8940,10 +8955,21 @@ function sauverModifAgenda() {
 
   // Appliquer la mutation sur les tableaux
   _mutateAgendaArray(type, action, date, newDate);
+
+  // Pour milonga modif : mettre à jour l'horaire dans l'entrée de date MILONGAS
+  if (type === 'milonga' && action === 'modif' && newHeure) {
+    var _hPts = newHeure.split(/[–\-]/);
+    var _hDeb = (_hPts[0]||'').trim();
+    var _hFin = (_hPts[1]||'').trim();
+    (MILONGAS||[]).forEach(function(mil) {
+      var _de = (mil.dates||[]).find(function(d){return d.date===date;});
+      if (_de) { if (_hDeb) _de.horaire_debut=_hDeb; if (_hFin) _de.horaire_fin=_hFin; }
+    });
+  }
   if (type === 'milonga') sauverMilongas(saisonActive());
 
-  // Stocker l'override horaire/lieu
-  if (action === 'modif' && (newHeure||newLieu)) {
+  // Stocker l'override horaire/lieu (pour types non-milonga)
+  if (action === 'modif' && type !== 'milonga' && (newHeure||newLieu)) {
     agendaOverrides[type+':'+date] = {heure:newHeure, lieu:newLieu};
   }
 
@@ -8954,15 +8980,23 @@ function sauverModifAgenda() {
   if (ok) { ok.style.display='block'; setTimeout(function(){ok.style.display='none';},2500); }
   if (!IS_DEMO) TEV.sauverModifAgenda({type:type, date:date, action:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu}).catch(function(){});
   saveCoursDatesRemote();
+  if (type === 'stage') sauverDatesStages(saisonActive());
+  if (!IS_DEMO) TEV.setParam('tev_agenda_overrides', agendaOverrides).catch(function(){});
   _broadcastAdminSync('agendaUpdate', {type:type, date:date, action:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu});
   renderTab();
 }
 
 function supprimerModifAgenda(id) {
   var m = agendaModifs.find(function(x){return x.id===id;});
-  if (m) { _undoMutateAgendaArray(m); if (m.type==='milonga') sauverMilongas(saisonActive()); _broadcastAdminSync('agendaUpdate', {type:m.type, date:m.date, action:'annule_modif', origAction:m.action, newDate:m.newDate}); }
+  if (m) {
+    _undoMutateAgendaArray(m);
+    if (m.type==='milonga') sauverMilongas(saisonActive());
+    _broadcastAdminSync('agendaUpdate', {type:m.type, date:m.date, action:'annule_modif', origAction:m.action, newDate:m.newDate});
+  }
   agendaModifs = agendaModifs.filter(function(x){return x.id!==id;});
   saveCoursDatesRemote();
+  if (m && m.type === 'stage') sauverDatesStages(saisonActive());
+  if (!IS_DEMO) TEV.setParam('tev_agenda_overrides', agendaOverrides).catch(function(){});
   renderTab();
 }
 
@@ -9005,6 +9039,7 @@ function ajouterDatesLot() {
   afficherToast(added>0 ? '✓ '+added+' date'+(added>1?'s':'')+' ajoutée'+(added>1?'s':'')+' à l\'agenda' : '⚠️ Aucune date valide reconnue');
   if (added > 0) {
     if (type === 'milonga') sauverMilongas(saisonActive());
+    else if (type === 'stage') sauverDatesStages(saisonActive());
     saveCoursDatesRemote();
   }
   renderTab();
@@ -10559,6 +10594,10 @@ async function chargerParamsRemote() {
       });
       chargerMilongas();
       if (_adminDataReady) _renderTabSiPasFormulaire(); // ne pas rendre avant que les vraies données soient chargées
+    }
+    // Charger les overrides agenda (indépendamment de `changed`)
+    if (params['tev_agenda_overrides'] && typeof params['tev_agenda_overrides'] === 'object') {
+      try { Object.assign(agendaOverrides, params['tev_agenda_overrides']); } catch(e) {}
     }
   } catch(e) {}
 }
