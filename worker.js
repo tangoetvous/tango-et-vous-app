@@ -90,6 +90,14 @@ export default {
         return handleEleveICS(calM[1], env);
       }
 
+      // GET /calendar/debug-milongas.json — temporaire
+      if (pathname === '/calendar/debug-milongas.json' && method === 'GET') {
+        const h = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
+        const sai = _calSaison();
+        const rows = await fetch(`${SUPABASE_URL}/rest/v1/parametres?select=cle,valeur&cle=in.(tev_milongas_${sai},tev_milongas_${sai.split('-')[1]}-${parseInt(sai.split('-')[1])+1})`, { headers: h }).then(r=>r.json()).catch(e=>({error:String(e)}));
+        return new Response(JSON.stringify({sai, rows}, null, 2), { headers: {'Content-Type':'application/json','Cache-Control':'no-cache'} });
+      }
+
       // GET /calendar/{slug}.ics — flux iCalendar public (sans token)
       const CAL_SLUGS = ['paris-debutant','paris-intermediaire','vincennes-debutant','vincennes-intermediaire','stages','milongas','yoga-yin','yoga-hatha'];
       const pubCalM = pathname.match(/^\/calendar\/([a-z-]+)\.ics$/);
