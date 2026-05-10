@@ -281,7 +281,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] **Mettre à jour les cartes de 10 des élèves actuels** : corriger manuellement via ✏️ dans Cartes 10 → Détails → Modifier le nombre de cours utilisés, les dates, et la date du premier cours. Le modal **persiste désormais correctement** (fix 2026-05-08). L'expiration est recalculée automatiquement à la sauvegarde.
 - [ ] **Renseigner les thèmes des stages** : compléter dans Paramètres les thèmes des stages à venir (saison courante) ET de la saison prochaine 2026-2027 — à faire avec l'utilisateur.
 - [ ] **Notifications stages + milongas — à préparer ensemble** : le gros du contenu (dates, lieux, thèmes, horaires) est dans Paramètres. Il faut parcourir Paramètres ensemble pour extraire et préparer les notifications de l'année complète. Ne pas implémenter seul — attendre que l'utilisateur soit disponible pour co-construire.
-- [x] **Flux iCalendar (ICS) — abonnement calendrier téléphone** — FAIT (2026-05-09). Route Cloudflare Worker `GET /calendar/e-{token}.ics` génère un ICS dynamique depuis Supabase. Token signé HMAC-SHA256 (SUPABASE_SERVICE_KEY) encodé base64url + email → URL unique par élève. `GET /api/calendar/token` (JWT requis) génère l'URL. Bouton "Ajouter à mon calendrier" dans l'espace élève → Agenda. iOS : deep link direct ; Android/desktop : copier-coller URL dans Google Agenda. `REFRESH-INTERVAL:PT6H` → synchro toutes les 6h. Contenu : cours tango de l'élève (dates depuis `tev_cours_dates`, horaires depuis `tev_params_paris/vincennes_<sai>`) + toutes les milongas + stages confirmés. ⚠️ Les dates dans ICS viennent directement de la liste `tev_cours_dates` en Supabase — pas de calcul de "sans cours", juste les dates présentes dans la liste.
+- [x] **Flux iCalendar (ICS) — abonnement calendrier téléphone** — FAIT (2026-05-09, complété 2026-05-10). Route Cloudflare Worker `GET /calendar/e-{token}.ics` génère un ICS dynamique depuis Supabase. Token signé HMAC-SHA256 (SUPABASE_SERVICE_KEY) encodé base64url + email → URL unique par élève. `GET /api/calendar/token` (JWT requis) génère l'URL. Bouton "Ajouter à mon calendrier" dans l'espace élève → Agenda. iOS : deep link direct ; Android/desktop : copier-coller URL dans Google Agenda. `REFRESH-INTERVAL:PT6H` → synchro toutes les 6h. Contenu : cours tango de l'élève (dates depuis `tev_cours_dates`, horaires depuis `tev_params_paris/vincennes_<sai>`) + toutes les milongas + stages confirmés. ⚠️ Les dates dans ICS viennent directement de la liste `tev_cours_dates` en Supabase — pas de calcul de "sans cours", juste les dates présentes dans la liste. **8 flux publics** également disponibles : `paris-debutant`, `paris-intermediaire`, `vincennes-debutant`, `vincennes-intermediaire`, `stages`, `milongas`, `yoga-yin`, `yoga-hatha` → `GET /calendar/{slug}.ics` (sans token).
 - [ ] **Articles tango — Publications** : rédiger les articles tango à diffuser dans l'espace élève (onglet Publications) et les programmer. **Rythme : 1 article par semaine, début octobre → fin juin** (~39 articles par saison). À faire avec l'utilisateur : choix des sujets, rédaction, dates de publication.
 - [ ] **Tester déclaration d'absence depuis espace élève** : bouton 🚫 Absent sur la carte "PROCHAIN COURS" → vérifier que l'absence apparaît bien dans admin → Essai Tango → Pointage sur la bonne date et le bon cours
 - [ ] Vérifier correction Sandrine Billot (hatha uniquement) / Myriam Bloch (hatha+yin) dans Supabase — SQL généré mais pas confirmé exécuté
@@ -1167,3 +1167,68 @@ Style : texte doré `#f0c030`, 16px gras, flèche 32px, 67 répétitions toutes 
 **Fix** : suppression de la garde → l'expiration est toujours recalculée quand `datePremierCours` est renseigné.
 
 **Cas cartes reportées (`_fromCoursTango`)** : `c.id` = `inscriptions_cours.id`, mais la personne a un vrai `eleves.id`. Il est retrouvé via `adminData.cartes.find(x => x.email === c.email)` (fiche présente avec l'ancienne saison). `Promise.all` parallèle sur : `eleves` (compteurs + dates) + `presences` (DELETE/INSERT) + `inscriptions_cours.donnees.reportedRestants`.
+
+## Session 2026-05-10 — Flux ICS publics + agenda milongas
+
+### ✅ Sélecteurs milonga par nom dans Agenda → Modifier/Annuler + Ajouter en lot
+- `_isMilongaType(type)` : retourne `true` pour `'milonga'` ou `'milonga-<id>'`
+- `_milFilter(type)` : retourne un filtre `(mil) => mil.id === milId` pour cibler une milonga précise ; `type='milonga'` = toutes (compat ascendante)
+- `_milNomFromType(type)` : retourne le nom affiché (`mil.nom`) depuis l'id
+- Les sélecteurs de type dans "Modifier/Annuler" et "Ajouter en lot" sont maintenant dynamiques depuis `MILONGAS` : `milonga-dolce-vita` → "LA DOLCE VITA", `milonga-colectivo` → "LE COLECTIVO"
+- Migration : les anciennes entrées `agendaOverrides` avec `type='milonga'` restent compatibles
+
+### ✅ `agendaOverrides` persistés dans Supabase
+- Clé `tev_agenda_overrides` dans `parametres`
+- `sauverModifAgenda` et `supprimerModifAgenda` appellent `TEV.setParam('tev_agenda_overrides', agendaOverrides)` après chaque modification
+- `chargerParamsRemote()` recharge `agendaOverrides` depuis Supabase → synchronisation cross-device
+
+### ✅ Abonnements Agenda (index.html) — UI
+- Textes sous-titre et instructions passés de `var(--text-faint)` à `var(--text)` (blanc au lieu de gris)
+- Instructions en bas : `font-size` passé de 11px à 13px
+
+### ✅ Flux ICS publics — horaires depuis Supabase
+**Problème** : `tev_params_paris_2025-2026` en Supabase ne contenait que `tarifs` et `adresse` — aucune section `horaires`. Worker générait 0 événement pour Paris débutant/intermédiaire.
+
+**Fix** : `chargerParamsRemote()` dans `admin.html` auto-initialise les `DEFAULTS_HORAIRES` dans Supabase au premier chargement si absents :
+```javascript
+['paris','vincennes','yoga','stages'].forEach(function(type) {
+  var key = 'tev_params_' + type + '_' + _saiAct;
+  if (DEFAULTS_HORAIRES[type] && (!params[key] || !params[key].horaires)) {
+    _saveParam(type, _saiAct, 'horaires', DEFAULTS_HORAIRES[type]);
+  }
+});
+```
+→ Dès que l'admin recharge l'appli, les horaires par défaut sont poussés dans Supabase. Les modifications via Paramètres → Horaires → Enregistrer écrasent ces défauts.
+
+**Règle** : le worker ne hardcode plus de valeurs de fallback — tout vient de Supabase. `DEFAULTS_HORAIRES` dans admin.html fait autorité.
+
+### ✅ Flux ICS milongas — deux corrections
+**1. Format des dates `mil.dates`** : peut être `[{date, label, horaire_debut?, horaire_fin?}]` (objets) ou `['YYYY-MM-DD', ...]` (strings legacy). Le worker gère maintenant les deux :
+```javascript
+const dateStr = typeof de === 'string' ? de : de.date;
+const hdeb = (typeof de === 'object' ? de.horaire_debut : null) || mil.horaire_debut;
+```
+Corrigé dans `handlePublicICS` ET `handleEleveICS`.
+
+**2. Heure de fin qui passe minuit** : Le Colectivo finit à `'2h'` (2h du matin). `DTEND: 2026-09-27T02:00` < `DTSTART: 2026-09-27T20:30` → invalide RFC 5545 → événements rejetés silencieusement par Google Calendar/iOS.
+Fix : `_calIcsDate(isoDate, timeStr, afterTime)` — si `timeStr < afterTime`, la date est avancée d'un jour :
+```javascript
+function _calIcsDate(isoDate, timeStr, afterTime) {
+  let date = isoDate;
+  if (afterTime && _calParseTime(timeStr) < _calParseTime(afterTime)) {
+    const d = new Date(isoDate + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 1);
+    date = d.toISOString().slice(0, 10);
+  }
+  return date.replace(/-/g, '') + 'T' + _calParseTime(timeStr);
+}
+```
+Appelé avec `_calIcsDate(dateStr, hfin, hdeb)` pour le DTEND des milongas.
+
+### Architecture ICS — résumé complet
+- **Flux élève personnel** (`/calendar/e-{token}.ics`) : cours de l'élève + milongas + stages. Horaires depuis `tev_params_paris/vincennes_<sai>` avec `HOR_P`/`HOR_V` hardcodés comme filet de secours ultime.
+- **Flux publics** (`/calendar/{slug}.ics`) : `handlePublicICS()` — lit TOUS les params Supabase (`?select=cle,valeur`), fusionne saison courante + saison suivante pour milongas et stages.
+- **Source des horaires** : `tev_params_{type}_{sai}.horaires` — auto-initialisé depuis `DEFAULTS_HORAIRES` par `chargerParamsRemote()`, puis modifiable via Paramètres → Horaires → Enregistrer.
+- **Source des dates milongas** : `tev_milongas_{sai}.milongas[].dates` — géré depuis Paramètres → Milongas. Ajout/suppression de dates = auto-sauvegarde (`sauverMilongas()` appelé sans bouton supplémentaire, toast de confirmation affiché). Modification info/horaires = bouton "Enregistrer" dans l'accordéon Info.
+- **Modifications Agenda** (`agendaOverrides`) : stockées dans `tev_agenda_overrides`, utilisées pour l'affichage dans l'agenda admin ET pour l'ICS (testé fonctionnel).
+- **Fusion deux saisons** : milongas et stages fusionnent `saiCur` + `saiNext` pour montrer les dates futures de la prochaine saison dans l'ICS courant.
