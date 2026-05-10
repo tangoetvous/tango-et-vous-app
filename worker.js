@@ -90,11 +90,6 @@ export default {
         return handleEleveICS(calM[1], env);
       }
 
-      // GET /calendar/debug.json — diagnostic ICS (temporaire)
-      if (pathname === '/calendar/debug.json' && method === 'GET') {
-        return handleICSDebug();
-      }
-
       // GET /calendar/{slug}.ics — flux iCalendar public (sans token)
       const CAL_SLUGS = ['paris-debutant','paris-intermediaire','vincennes-debutant','vincennes-intermediaire','stages','milongas','yoga-yin','yoga-hatha'];
       const pubCalM = pathname.match(/^\/calendar\/([a-z-]+)\.ics$/);
@@ -618,33 +613,6 @@ async function _generateEleveICS(email) {
 // Flux ICS publics — 8 calendriers thématiques sans token
 // ================================================================
 
-async function handleICSDebug() {
-  const headers = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
-  const saiCur = _calSaison();
-  const y2 = parseInt(saiCur.split('-')[1]);
-  const saiNext = `${y2}-${y2+1}`;
-  let fetchStatus, paramsData;
-  try {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/parametres?select=cle,valeur`, { headers });
-    fetchStatus = r.status;
-    paramsData = await r.json();
-  } catch(e) {
-    paramsData = { error: String(e) };
-    fetchStatus = 0;
-  }
-  const cles = Array.isArray(paramsData) ? paramsData.map(p => p.cle) : [];
-  const cdRow = Array.isArray(paramsData) ? paramsData.find(p => p.cle === 'tev_cours_dates') : null;
-  const parRow = Array.isArray(paramsData) ? paramsData.find(p => p.cle === `tev_params_paris_${saiCur}`) : null;
-  return new Response(JSON.stringify({
-    saiCur, saiNext,
-    fetchStatus,
-    totalRows: cles.length,
-    cles,
-    tev_cours_dates: cdRow ? cdRow.valeur : null,
-    tev_params_paris: parRow ? parRow.valeur : null,
-  }, null, 2), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } });
-}
-
 async function handlePublicICS(slug) {
   const saiCur = _calSaison();
   const y2 = parseInt(saiCur.split('-')[1]);
@@ -683,9 +651,16 @@ async function handlePublicICS(slug) {
     ...((P[`tev_dates_stages_${saiNext}`] || {}).stages || []),
   ];
 
-  // Select params by date — no hardcoded defaults
+  // Horaires par défaut si l'admin n'a pas encore sauvegardé les horaires dans Paramètres
+  const HOR_P_DEF = { deb:'20h30', deb_fin:'21h45', int:'21h45', int_fin:'23h00' };
+  const HOR_V_DEF = { deb:'19h30', deb_fin:'21h00', int:'21h00', int_fin:'22h30' };
+
+  // Select params by date — merge hardcoded defaults with Supabase data
   function par(type, date) {
-    return P[`tev_params_${type}_${date >= saiNextStart ? saiNext : saiCur}`] || {};
+    const p = P[`tev_params_${type}_${date >= saiNextStart ? saiNext : saiCur}`] || {};
+    const def = type === 'vincennes' ? HOR_V_DEF : (type === 'paris' ? HOR_P_DEF : null);
+    if (def) return Object.assign({}, p, { horaires: Object.assign({}, def, p.horaires || {}) });
+    return p;
   }
 
   // Location from adresse object — no defaults
