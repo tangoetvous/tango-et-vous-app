@@ -10617,6 +10617,15 @@ async function chargerParamsRemote() {
     if (params['tev_agenda_overrides'] && typeof params['tev_agenda_overrides'] === 'object') {
       try { Object.assign(agendaOverrides, params['tev_agenda_overrides']); } catch(e) {}
     }
+    // Auto-initialise les horaires par défaut dans Supabase si absents
+    // (permet aux flux ICS du worker de les lire sans fallback hardcodé)
+    var _saiAct = saisonActive();
+    ['paris','vincennes','yoga','stages'].forEach(function(type) {
+      var key = 'tev_params_' + type + '_' + _saiAct;
+      if (DEFAULTS_HORAIRES[type] && (!params[key] || !params[key].horaires)) {
+        _saveParam(type, _saiAct, 'horaires', DEFAULTS_HORAIRES[type]);
+      }
+    });
   } catch(e) {}
 }
 function renderResaSalles() {

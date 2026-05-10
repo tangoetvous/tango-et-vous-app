@@ -651,16 +651,9 @@ async function handlePublicICS(slug) {
     ...((P[`tev_dates_stages_${saiNext}`] || {}).stages || []),
   ];
 
-  // Horaires par défaut si l'admin n'a pas encore sauvegardé les horaires dans Paramètres
-  const HOR_P_DEF = { deb:'20h30', deb_fin:'21h45', int:'21h45', int_fin:'23h00' };
-  const HOR_V_DEF = { deb:'19h30', deb_fin:'21h00', int:'21h00', int_fin:'22h30' };
-
-  // Select params by date — merge hardcoded defaults with Supabase data
+  // Select params by date
   function par(type, date) {
-    const p = P[`tev_params_${type}_${date >= saiNextStart ? saiNext : saiCur}`] || {};
-    const def = type === 'vincennes' ? HOR_V_DEF : (type === 'paris' ? HOR_P_DEF : null);
-    if (def) return Object.assign({}, p, { horaires: Object.assign({}, def, p.horaires || {}) });
-    return p;
+    return P[`tev_params_${type}_${date >= saiNextStart ? saiNext : saiCur}`] || {};
   }
 
   // Location from adresse object — no defaults
