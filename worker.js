@@ -90,14 +90,6 @@ export default {
         return handleEleveICS(calM[1], env);
       }
 
-      // GET /calendar/debug-milongas.json — temporaire
-      if (pathname === '/calendar/debug-milongas.json' && method === 'GET') {
-        const h = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
-        const sai = _calSaison();
-        const rows = await fetch(`${SUPABASE_URL}/rest/v1/parametres?select=cle,valeur&cle=in.(tev_milongas_${sai},tev_milongas_${sai.split('-')[1]}-${parseInt(sai.split('-')[1])+1})`, { headers: h }).then(r=>r.json()).catch(e=>({error:String(e)}));
-        return new Response(JSON.stringify({sai, rows}, null, 2), { headers: {'Content-Type':'application/json','Cache-Control':'no-cache'} });
-      }
-
       // GET /calendar/{slug}.ics — flux iCalendar public (sans token)
       const CAL_SLUGS = ['paris-debutant','paris-intermediaire','vincennes-debutant','vincennes-intermediaire','stages','milongas','yoga-yin','yoga-hatha'];
       const pubCalM = pathname.match(/^\/calendar\/([a-z-]+)\.ics$/);
@@ -529,8 +521,15 @@ function _calParseTime(str) {
   return String(parseInt(m[1])).padStart(2, '0') + (m[2] || '00') + '00';
 }
 
-function _calIcsDate(isoDate, timeStr) {
-  return isoDate.replace(/-/g, '') + 'T' + _calParseTime(timeStr);
+function _calIcsDate(isoDate, timeStr, afterTime) {
+  // Si afterTime est fourni et que timeStr est avant afterTime → lendemain (ex: fin à 2h après début à 20h30)
+  let date = isoDate;
+  if (afterTime && _calParseTime(timeStr) < _calParseTime(afterTime)) {
+    const d = new Date(isoDate + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 1);
+    date = d.toISOString().slice(0, 10);
+  }
+  return date.replace(/-/g, '') + 'T' + _calParseTime(timeStr);
 }
 
 function _calEsc(s) {
@@ -760,7 +759,7 @@ async function handlePublicICS(slug) {
         const l   = loc(mil.lieu);
         const uid = `milonga-${(mil.id||mil.nom||'m').replace(/[^a-z0-9]/gi,'').toLowerCase()}-${dateStr}@tangoetvous.fr`;
         const ev  = { uid, dtstart:_calIcsDate(dateStr,hdeb), summary:mil.nom, location:l, description:(mil.lieu||{}).transport||'' };
-        if (hfin) ev.dtend = _calIcsDate(dateStr, hfin); else ev.duration = 'PT3H';
+        if (hfin) ev.dtend = _calIcsDate(dateStr, hfin, hdeb); else ev.duration = 'PT3H';
         events.push(ev);
       });
     });
