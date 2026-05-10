@@ -1296,8 +1296,46 @@
   function renderChaussures() {
     const pane = $('chaussures-pane');
     if (!pane) return;
-    pane.innerHTML = '<div class="tab-section-title">👠 Chaussures</div>'
-      + '<div style="padding:40px 20px;text-align:center;color:var(--text-dim);font-size:14px;">Contenu à venir…</div>';
+    function _shoeCard(o) {
+      return '<div style="background:var(--s2);border-radius:16px;padding:20px;margin-bottom:20px;">'
+        + '<div style="font-size:17px;font-weight:700;color:var(--gold);margin-bottom:4px;">' + o.name + '</div>'
+        + '<div style="font-size:13px;color:#aaa;margin-bottom:14px;">' + o.tagline + '</div>'
+        + (o.note ? '<div style="font-size:13px;color:#fff;background:rgba(255,200,0,.1);border-left:3px solid var(--gold);padding:8px 12px;border-radius:6px;margin-bottom:14px;line-height:1.6;">' + o.note + '</div>' : '')
+        + '<div style="font-size:14px;color:#fff;margin-bottom:6px;">📍 ' + o.address + '</div>'
+        + '<div style="font-size:14px;color:#fff;margin-bottom:6px;">🚇 ' + o.metro + '</div>'
+        + '<div style="font-size:14px;color:#fff;margin-bottom:6px;">📞 <a href="tel:' + o.tel.replace(/\s/g,'') + '" style="color:var(--gold);text-decoration:none;">' + o.tel + '</a>' + (o.contact ? ' <span style="color:#aaa;font-size:13px;">(' + o.contact + ')</span>' : '') + '</div>'
+        + (o.email ? '<div style="font-size:14px;color:#fff;margin-bottom:6px;">✉️ <a href="mailto:' + o.email + '" style="color:var(--gold);text-decoration:none;">' + o.email + '</a></div>' : '')
+        + (o.hours ? '<div style="font-size:13px;color:#ccc;margin-bottom:14px;">🕐 ' + o.hours + '</div>' : '')
+        + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+        + '<a href="' + o.maps + '" target="_blank" rel="noopener" style="flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--s3);color:#fff;font-size:13px;font-weight:600;padding:11px 12px;border-radius:10px;text-decoration:none;">🗺 Voir sur la carte</a>'
+        + (o.web ? '<a href="' + o.web + '" target="_blank" rel="noopener" style="flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--s3);color:#fff;font-size:13px;font-weight:600;padding:11px 12px;border-radius:10px;text-decoration:none;">🌐 Site web</a>' : '')
+        + '</div>'
+        + '</div>';
+    }
+    const SHOPS = [
+      { name:'Lalatango', tagline:'Showroom sur rendez-vous — 17ᵉ arr.',
+        note:'Dites que vous venez de notre part 😊',
+        address:'7 rue Boulay, 75017 Paris',
+        metro:'Porte de Clichy (M13, M14, T3, RER C)',
+        tel:'06 81 34 86 47', contact:'Clotilde',
+        hours:'Sur rendez-vous, lun.–sam.',
+        web:'https://lalatango.com',
+        maps:'https://maps.google.com/?q=7+rue+Boulay+75017+Paris' },
+      { name:'Miltango', tagline:'Showroom sur rendez-vous — 12ᵉ arr.',
+        note:'Dites que vous venez de notre part 😊',
+        address:'1 Villa du Bel Air, 75012 Paris',
+        metro:'Bel Air (M6) ou Daumesnil (M6, M8)',
+        tel:'07 86 55 17 37', contact:'Martine',
+        email:'miltango@live.fr',
+        hours:'Sur rendez-vous — dim. après-midi de préférence',
+        maps:'https://maps.google.com/?q=1+Villa+du+Bel+Air+75012+Paris' }
+    ];
+    let h = '<div class="tab-section-title">👠 Chaussures</div>';
+    h += '<div style="padding:0 16px 16px;">';
+    h += '<p style="font-size:15px;color:#fff;line-height:1.7;margin:0 0 20px;">Deux showrooms parisiens que nous recommandons. Ils accueillent sur rendez-vous — pensez à appeler quelques jours à l'avance.</p>';
+    SHOPS.forEach(function(s){ h += _shoeCard(s); });
+    h += '</div>';
+    pane.innerHTML = h;
   }
 
   window.toggleYogaEssaiForm = function() {
