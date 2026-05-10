@@ -1286,41 +1286,67 @@
     pane.innerHTML = h;
   }
 
-  function renderMusique() {
+  var _musiqueOnglet = 'play';
+  function renderMusique(onglet) {
     const pane = $('musique-pane');
     if (!pane) return;
-    let h = '<div class="tab-section-title">🎵 Musique</div>';
+    if (onglet) _musiqueOnglet = onglet;
+    function _tabBtn(id, label) {
+      var active = _musiqueOnglet === id;
+      return '<button onclick="renderMusique(\'' + id + '\')" style="flex:1;padding:9px 4px;border:none;border-radius:10px;font-size:13px;font-weight:' + (active?'700':'500') + ';cursor:pointer;background:' + (active?'var(--gold)':'var(--s2)') + ';color:' + (active?'#111':'#aaa') + ';">' + label + '</button>';
+    }
+    var h = '<div class="tab-section-title">🎵 Musique</div>';
+    h += '<div style="display:flex;gap:8px;padding:0 16px 18px;">'
+      + _tabBtn('play', '▶ Play')
+      + _tabBtn('playlists', 'Playlists')
+      + _tabBtn('elrecodo', 'El Recodo')
+      + '</div>';
     h += '<div style="padding:0 16px 28px;">';
 
-    // El Recodo
-    h += '<div style="background:var(--s2);border:2px solid var(--gold);border-radius:16px;padding:20px;margin-bottom:24px;">'
-      + '<div style="font-size:17px;font-weight:700;color:var(--gold);margin-bottom:2px;">El Recodo Tango</div>'
-      + '<div style="font-size:13px;color:#aaa;margin-bottom:14px;">La première plateforme de streaming 100&nbsp;% dédiée au tango</div>'
-      + '<p style="font-size:14px;color:#fff;line-height:1.75;margin:0 0 14px;">'
-      + 'El Recodo, c\'est toute la discographie du tango argentin en un seul endroit — orchestres, chanteurs, ères, paroles. '
-      + 'Contrairement à Spotify ou Apple Music où les infos sont souvent fausses et les recommandations hors-sujet, '
-      + 'El Recodo est conçu par et pour les tangueros&nbsp;: recherche par orchestre, époque ou style, '
-      + 'playlists, favoris, et même un identifiant de morceau (vous entendez un tango en milonga&nbsp;? il vous dit lequel).'
-      + '</p>'
-      + '<div style="background:rgba(255,200,0,.08);border-left:3px solid var(--gold);padding:10px 14px;border-radius:8px;margin-bottom:14px;">'
-      + '<div style="font-size:14px;font-weight:700;color:var(--gold);margin-bottom:4px;">🎁 Essai gratuit 14 jours</div>'
-      + '<div style="font-size:13px;color:#fff;line-height:1.6;">Puis 9,95&nbsp;€/mois ou 99&nbsp;€/an (2 mois offerts). Disponible en Europe, Afrique du Nord et Moyen-Orient.</div>'
-      + '</div>'
-      + '<div style="background:rgba(255,200,0,.08);border-left:3px solid var(--gold);padding:10px 14px;border-radius:8px;margin-bottom:18px;">'
-      + '<div style="font-size:14px;font-weight:700;color:var(--gold);margin-bottom:4px;">🏷 Code remise élèves</div>'
-      + '<div style="font-size:13px;color:#fff;line-height:1.6;">Un code de réduction est disponible pour les élèves de Tango&nbsp;&amp;&nbsp;Vous. Demandez-le nous par email ou WhatsApp.</div>'
-      + '</div>'
-      + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
-      + '<a href="https://www.el-recodo.com" target="_blank" rel="noopener" style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--gold);color:#111;font-size:13px;font-weight:700;padding:12px;border-radius:10px;text-decoration:none;">🌐 Découvrir El Recodo</a>'
-      + '<a href="https://www.el-recodo.com/subscribe?lang=en" target="_blank" rel="noopener" style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--s3);color:#fff;font-size:13px;font-weight:600;padding:12px;border-radius:10px;text-decoration:none;">▶ Commencer l\'essai</a>'
-      + '</div>'
-      + '</div>';
+    if (_musiqueOnglet === 'play') {
+      h += '<div style="background:var(--s2);border:2px solid var(--gold);border-radius:16px;padding:20px;">'
+        + '<div style="font-size:17px;font-weight:700;color:var(--gold);margin-bottom:2px;">Play! El Recodo Tango</div>'
+        + '<div style="font-size:13px;color:#aaa;margin-bottom:14px;">La première appli de streaming 100&nbsp;% dédiée au tango</div>'
+        + '<p style="font-size:14px;color:#fff;line-height:1.75;margin:0 0 14px;">'
+        + 'Contrairement à Spotify où les infos sont souvent fausses et les recommandations hors-sujet, '
+        + 'Play! est conçu par et pour les tangueros&nbsp;: recherche par orchestre, chanteur, époque ou style, '
+        + 'playlists, favoris, historique, et même un identifiant de morceau — '
+        + 'vous entendez un tango en milonga&nbsp;? Play! vous dit lequel en quelques secondes.'
+        + '</p>'
+        + '<div style="background:rgba(255,200,0,.08);border-left:3px solid var(--gold);padding:10px 14px;border-radius:8px;margin-bottom:12px;">'
+        + '<div style="font-size:14px;font-weight:700;color:var(--gold);margin-bottom:4px;">🎁 Essai gratuit 14 jours</div>'
+        + '<div style="font-size:13px;color:#fff;line-height:1.6;">Puis 9,95&nbsp;€/mois ou 99&nbsp;€/an (2 mois offerts). Disponible sur iOS, Android et navigateur.</div>'
+        + '</div>'
+        + '<div style="background:rgba(255,200,0,.08);border-left:3px solid var(--gold);padding:10px 14px;border-radius:8px;margin-bottom:18px;">'
+        + '<div style="font-size:14px;font-weight:700;color:var(--gold);margin-bottom:4px;">🏷 Code remise élèves</div>'
+        + '<div style="font-size:13px;color:#fff;line-height:1.6;">Un code de réduction est disponible pour les élèves de Tango&nbsp;&amp;&nbsp;Vous. Demandez-le nous par email ou WhatsApp&nbsp;!</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+        + '<a href="https://www.el-recodo.com/play0.php?lang=fr" target="_blank" rel="noopener" style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--gold);color:#111;font-size:13px;font-weight:700;padding:12px;border-radius:10px;text-decoration:none;">▶ Découvrir Play!</a>'
+        + '<a href="https://www.el-recodo.com/subscribe?lang=fr" target="_blank" rel="noopener" style="flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--s3);color:#fff;font-size:13px;font-weight:600;padding:12px;border-radius:10px;text-decoration:none;">🎁 Commencer l\'essai</a>'
+        + '</div>'
+        + '</div>';
 
-    // YouTube — à venir
-    h += '<div style="background:var(--s2);border:2px solid var(--gold);border-radius:16px;padding:20px;">'
-      + '<div style="font-size:17px;font-weight:700;color:var(--gold);margin-bottom:8px;">▶ Playlists YouTube</div>'
-      + '<div style="font-size:14px;color:#aaa;line-height:1.7;">Des playlists de tango sélectionnées par Jeremy arrivent bientôt ici.</div>'
-      + '</div>';
+    } else if (_musiqueOnglet === 'playlists') {
+      h += '<div style="background:var(--s2);border:2px solid var(--gold);border-radius:16px;padding:36px 20px;text-align:center;">'
+        + '<div style="font-size:40px;margin-bottom:12px;">▶</div>'
+        + '<div style="font-size:16px;font-weight:700;color:var(--gold);margin-bottom:10px;">Playlists YouTube</div>'
+        + '<div style="font-size:14px;color:#aaa;line-height:1.7;">Des playlists de tango sélectionnées par Jérémy<br>arrivent bientôt ici.</div>'
+        + '</div>';
+
+    } else {
+      h += '<div style="background:var(--s2);border:2px solid var(--gold);border-radius:16px;padding:20px;">'
+        + '<div style="font-size:17px;font-weight:700;color:var(--gold);margin-bottom:2px;">El Recodo Tango Music</div>'
+        + '<div style="font-size:13px;color:#aaa;margin-bottom:14px;">La base de données de référence sur le tango argentin</div>'
+        + '<p style="font-size:14px;color:#fff;line-height:1.75;margin:0 0 18px;">'
+        + 'El Recodo, c\'est la plus grande base de données sur la musique tango&nbsp;: discographies complètes, '
+        + 'orchestres, chanteurs, paroles, enregistrements et extraits audio. '
+        + 'Un outil incontournable pour approfondir sa culture tango, identifier un morceau '
+        + 'ou préparer une playlist de DJ. Utilisé par des danseurs et DJs du monde entier.'
+        + '</p>'
+        + '<a href="https://www.el-recodo.com/?lang=fr" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:6px;background:var(--gold);color:#111;font-size:14px;font-weight:700;padding:14px;border-radius:10px;text-decoration:none;">🌐 Visiter El Recodo</a>'
+        + '</div>';
+    }
 
     h += '</div>';
     pane.innerHTML = h;
