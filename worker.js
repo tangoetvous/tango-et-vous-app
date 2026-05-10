@@ -596,8 +596,11 @@ async function _generateEleveICS(email) {
   // 2. Milongas
   milongas.forEach(mil => {
     const loc = [(mil.lieu || {}).nom, (mil.lieu || {}).rue].filter(Boolean).join(' — ');
-    (mil.dates || []).filter(d => d >= saiStart).forEach(d => {
-      events.push({ uid: `milonga-${(mil.id || 'mil').replace(/\s/g, '')}-${d}@tangoetvous.fr`, dtstart: _calIcsDate(d, mil.horaire_debut || '20h30'), duration: 'PT3H', summary: mil.nom || 'Milonga', location: loc, description: `Milonga — ${(mil.lieu || {}).transport || ''}` });
+    (mil.dates || []).forEach(de => {
+      const dStr = typeof de === 'string' ? de : de.date;
+      if (!dStr || dStr < saiStart) return;
+      const hdeb = (typeof de === 'object' ? de.horaire_debut : null) || mil.horaire_debut || '20h30';
+      events.push({ uid: `milonga-${(mil.id || 'mil').replace(/\s/g, '')}-${dStr}@tangoetvous.fr`, dtstart: _calIcsDate(dStr, hdeb), duration: 'PT3H', summary: mil.nom || 'Milonga', location: loc, description: `Milonga — ${(mil.lieu || {}).transport || ''}` });
     });
   });
 
@@ -738,13 +741,13 @@ async function handlePublicICS(slug) {
     });
 
   } else if (slug === 'milongas') {
-    // mil.dates = [{date, horaire_debut, horaire_fin}, ...]
+    // mil.dates peut être [{date, horaire_debut?, horaire_fin?}] ou ['YYYY-MM-DD', ...]
     milsAll.forEach(mil => {
       (mil.dates || []).forEach(de => {
-        const dateStr = de.date;
+        const dateStr = typeof de === 'string' ? de : de.date;
         if (!dateStr) return;
-        const hdeb = de.horaire_debut || mil.horaire_debut;
-        const hfin = de.horaire_fin   || mil.horaire_fin;
+        const hdeb = (typeof de === 'object' ? de.horaire_debut : null) || mil.horaire_debut;
+        const hfin = (typeof de === 'object' ? de.horaire_fin   : null) || mil.horaire_fin;
         if (!hdeb) return; // no start time — skip
         const l   = loc(mil.lieu);
         const uid = `milonga-${(mil.id||mil.nom||'m').replace(/[^a-z0-9]/gi,'').toLowerCase()}-${dateStr}@tangoetvous.fr`;
