@@ -5406,6 +5406,15 @@ function handleAction(action, btn) {
       renderTab();
       chargerDonnees();
       break;
+    case 'ouvrir-form-client':
+      _devisFormClientOuvert = true;
+      renderTab();
+      break;
+    case 'fermer-form-client':
+      _devisFormClientOuvert = false;
+      renderTab();
+      chargerDonnees();
+      break;
     case 'toggle-devis-vue':
       _devisVue = (_devisVue === 'demandes') ? 'liste' : 'demandes';
       renderTab();
@@ -10741,6 +10750,7 @@ var _demandesExpanded = new Set();
 var _devisGenerateurNumero = null; // null=liste, ''=nouveau vierge, 'DEVIS-...'=devis existant
 var _autoBrouillonCreating = new Set(); // IDs demandes en cours de création automatique
 var _devisAnciennes = false; // true = afficher les demandes >6 mois
+var _devisFormClientOuvert = false; // formulaire public demande-devis.html en iframe
 
 // ── Cours particuliers
 var _cpFormOuvert  = false;  // formulaire ouvert en iframe
@@ -11053,6 +11063,17 @@ function _genererICS(opts) {
 }
 
 function renderDevis() {
+  // ── Mode formulaire client (iframe dans le menu)
+  if (_devisFormClientOuvert) {
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+      + '<button class="btn btn-ghost" data-action="fermer-form-client">← Retour</button>'
+      + '<span style="color:var(--dim);font-size:13px;">Formulaire client — Demande de devis</span>'
+      + '</div>'
+      + '<iframe src="/demande-devis.html" '
+      + 'style="width:100%;height:calc(100vh - 130px);border:none;border-radius:8px;">'
+      + '</iframe>';
+  }
+
   // ── Mode générateur intégré (iframe dans le menu)
   if (_devisGenerateurNumero !== null) {
     var src = '/generateur-devis.html'
@@ -11103,7 +11124,7 @@ function renderDevis() {
     + '<button class="btn btn-ghost" style="font-size:13px;" data-action="toggle-devis-vue">'
     + (_devisVue === 'demandes' ? '📂 Devis générés ('+devisList.length+')' : '📥 Demandes ('+demandes.length+')')
     + '</button>'
-    + '<a href="/demande-devis.html" target="_blank" class="btn btn-ghost" style="text-decoration:none;font-size:13px;">🔗 Formulaire client</a>'
+    + '<button class="btn btn-ghost" style="font-size:13px;" data-action="ouvrir-form-client">🔗 Formulaire client</button>'
     + '<button class="btn btn-gold" style="font-size:13px;" data-action="ouvrir-generateur" data-numero="">📄 Nouveau devis</button>'
     + '</div></div>';
 
