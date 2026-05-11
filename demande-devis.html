@@ -1695,7 +1695,7 @@ function showStep(n) {
 function scrollToTop() {
   // Dans l'iframe Wix, on demande au parent de scroller
   try {
-    window.parent.postMessage({ type: 'tangoetvous-scroll', target: 'top' }, '*');
+    window.parent.postMessage({ type: 'tevScrollTop' }, '*');
   } catch (_) {}
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -2122,10 +2122,7 @@ function initIframeResize() {
   const send = () => {
     const h = document.documentElement.scrollHeight;
     try {
-      window.parent.postMessage({
-        type: 'tangoetvous-resize',
-        height: h
-      }, '*');
+      window.parent.postMessage({ type: 'tevHeight', height: h }, '*');
     } catch (_) {}
   };
 
