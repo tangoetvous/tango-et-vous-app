@@ -5422,12 +5422,16 @@ function handleAction(action, btn) {
         if (IS_DEMO) { afficherToast('Mode démo — action désactivée'); return; }
         if (!confirm('Supprimer définitivement cette demande de devis ?')) return;
         btn.disabled = true;
-        TEV.client.from('demandes_devis').delete().eq('id', id)
+        // Suppression optimiste locale immédiate
+        adminData.demandesDevis = (adminData.demandesDevis||[]).filter(function(x){ return String(x.id)!==String(id); });
+        _demandesExpanded.delete(String(id));
+        renderTab();
+        Promise.resolve(TEV.client.from('demandes_devis').delete().eq('id', id))
           .then(function(res) {
-            if (res.error) { btn.disabled=false; afficherToast('Erreur: '+(res.error.message||'')); return; }
+            if (res.error) { afficherToast('Erreur DB: '+(res.error.message||'')); chargerDonnees(); return; }
             afficherToast('🗑️ Demande supprimée');
             chargerDonnees();
-          }).catch(function(e) { btn.disabled=false; afficherToast('Erreur: '+e.message); });
+          }).catch(function(e) { afficherToast('Erreur: '+e.message); chargerDonnees(); });
       })();
       break;
     case 'toggle-demande-detail':
