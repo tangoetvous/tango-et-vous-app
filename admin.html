@@ -11256,8 +11256,50 @@ function renderDevis() {
 
     // ── Boutons
     card += '<div class="btn-row" style="margin-top:8px;">';
-    if (d.email) card += '<a href="mailto:'+d.email+'" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Email</a>';
-    if (d.telephone) card += '<a href="tel:'+d.telephone+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📞</a>';
+
+    if (d.email) {
+      // Gmail : sujet et corps pré-remplis selon qu'un devis existe ou non
+      var dvAssoc = dvList.length ? dvList[dvList.length-1] : null; // dernier devis associé
+      var gmailSujet, gmailCorps;
+      if (dvAssoc) {
+        gmailSujet = encodeURIComponent('Devis '+dvAssoc.numero+' – Tango & Vous / Le Regard Se Pose');
+        gmailCorps = encodeURIComponent(
+          'Bonjour '+(d.prenom||d.nom||'')+',\n\n'
+          +'Veuillez trouver ci-joint notre devis '+dvAssoc.numero
+          +(d.type_evenement ? ' pour votre '+d.type_evenement.toLowerCase() : '')
+          +(dvAssoc.evt_date ? ' du '+dvAssoc.evt_date : '')+'.\n\n'
+          +'N\'hésitez pas à me contacter pour toute question ou pour convenir d\'un rendez-vous.\n\n'
+          +'Cordialement,\n'
+          +'Tango & Vous — Le Regard Se Pose\n'
+          +'tangoetvous@gmail.com · 07 73 27 59 06'
+        );
+      } else {
+        var contexte = d.type_evenement || d.type_demande || 'votre demande';
+        gmailSujet = encodeURIComponent('Votre demande – Tango & Vous / Le Regard Se Pose');
+        gmailCorps = encodeURIComponent(
+          'Bonjour '+(d.prenom||d.nom||'')+',\n\n'
+          +'Suite à votre demande concernant '+contexte.toLowerCase()
+          +(d.date_evenement ? ' le '+d.date_evenement : '')
+          +(d.lieu ? ' ('+d.lieu+')' : '')+'.\n\n'
+          +'[Votre message]\n\n'
+          +'Cordialement,\n'
+          +'Tango & Vous — Le Regard Se Pose\n'
+          +'tangoetvous@gmail.com · 07 73 27 59 06'
+        );
+      }
+      var gmailHref = 'https://mail.google.com/mail/?view=cm&fs=1'
+        +'&to='+encodeURIComponent(d.email)
+        +'&su='+gmailSujet
+        +'&body='+gmailCorps;
+      card += '<a href="'+gmailHref+'" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Gmail</a>';
+    }
+
+    if (d.telephone) {
+      var telClean = escHtml(d.telephone.replace(/\s/g,''));
+      card += '<a href="tel:'+telClean+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;" title="Appeler">📞 Appeler</a>';
+      card += '<a href="sms:'+telClean+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;" title="Envoyer un SMS">💬 SMS</a>';
+    }
+
     card += '<button class="btn btn-ghost" data-action="creer-devis" data-id="'+d.id+'" style="font-size:12px;">📋 Créer un devis</button>';
     card += '<button class="btn btn-ghost" data-action="toggle-demande-detail" data-id="'+d.id+'" style="font-size:12px;">'
       + (expanded ? '▴ Réduire' : '▾ Voir tout') + '</button>';
