@@ -1072,8 +1072,9 @@ body {
        APERÇU DU DEVIS (droite) — celui-ci sera imprimé
        ============================================================ -->
   <div class="preview-wrap">
-    <div class="preview-toolbar">
-      Aperçu — utilisez « Enregistrer en PDF » pour télécharger ou imprimer
+    <div class="preview-toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span>Aperçu — utilisez « Enregistrer en PDF » pour télécharger ou imprimer</span>
+      <button id="btnLienClient" onclick="copyPublicLink()" style="display:none;font-size:11px;padding:4px 10px;" class="btn btn-ghost">🔗 Lien client</button>
     </div>
 
     <div class="devis" id="devis">
@@ -1378,6 +1379,29 @@ document.addEventListener('DOMContentLoaded', () => {
   updatePreview();
 });
 
+/* ============================================================
+   LIEN PUBLIC CLIENT
+   ============================================================ */
+function _refreshLienBtn() {
+  const btn = document.getElementById('btnLienClient');
+  if (!btn) return;
+  btn.style.display = _publicToken ? '' : 'none';
+}
+
+async function copyPublicLink() {
+  if (!_publicToken) return;
+  const url = `https://app.tangoetvous.fr/devis/p/${_publicToken}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    const btn = document.getElementById('btnLienClient');
+    const prev = btn.textContent;
+    btn.textContent = '✓ Lien copié !';
+    setTimeout(() => { btn.textContent = prev; }, 2000);
+  } catch {
+    prompt('Copiez ce lien et envoyez-le au client :', `https://app.tangoetvous.fr/devis/p/${_publicToken}`);
+  }
+}
+
 function isoDate(d) {
   return d.toISOString().split('T')[0];
 }
@@ -1396,7 +1420,8 @@ function isoDate(d) {
    ============================================================ */
 const _SUPA_URL = 'https://qhngqzvvllktuwspojxc.supabase.co';
 const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFobmdxenZ2bGxrdHV3c3BvanhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MjQ0NDYsImV4cCI6MjA5MjMwMDQ0Nn0.j-yMQryi3qoImIf6vyiqQ3SKzHeJoPsrJuP1YwaSyLs';
-let _devisDbId = null;
+let _devisDbId    = null;
+let _publicToken  = null;
 
 function _getJWT() {
   try {
@@ -1416,7 +1441,9 @@ async function loadDevisFromDB(numero) {
     const rows = await r.json();
     if (!rows.length) return;
     const dv = rows[0];
-    _devisDbId = dv.id;
+    _devisDbId   = dv.id;
+    _publicToken = dv.public_token || null;
+    _refreshLienBtn();
 
     if (dv.client_nom)     document.getElementById('clientNom').value    = dv.client_nom;
     if (dv.client_adresse) document.getElementById('clientAdresse').value = dv.client_adresse;

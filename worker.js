@@ -15,6 +15,7 @@
 //   PATCH /api/admin/update-auth-email — admin → sync email dans Supabase Auth (service role)
 //   GET   /api/calendar/token          — génère l'URL ICS personnalisée (JWT requis)
 //   GET   /calendar/e-{token}.ics      — flux iCalendar élève (token signé HMAC)
+//   GET   /devis/p/:token              — vue publique d'un devis (sans auth, token UUID)
 //   *                                  — assets statiques (Cloudflare Static Assets)
 
 const SUPABASE_URL  = 'https://qhngqzvvllktuwspojxc.supabase.co';
@@ -95,6 +96,12 @@ export default {
       const pubCalM = pathname.match(/^\/calendar\/([a-z-]+)\.ics$/);
       if (pubCalM && CAL_SLUGS.includes(pubCalM[1]) && method === 'GET') {
         return handlePublicICS(pubCalM[1]);
+      }
+
+      // GET /devis/p/:token — vue publique d'un devis (sans auth)
+      const dvPubM = pathname.match(/^\/devis\/p\/([A-Za-z0-9-]+)$/);
+      if (dvPubM && method === 'GET') {
+        return handlePublicDevisView(dvPubM[1], env);
       }
 
       return env.ASSETS.fetch(request);
@@ -230,6 +237,7 @@ async function handleCreerDevis(request, jwt) {
     acompte_mode:   body.acompte_mode  || 'percent',
     acompte_value:  parseFloat(body.acompte_value) || 30,
     statut:         'brouillon',
+    public_token:   crypto.randomUUID(),
   };
 
   const insertRes = await sbFetch('devis', 'POST', row, jwt, 'return=representation');
@@ -399,6 +407,321 @@ async function sendBrevoNotification(apiKey, body) {
       htmlContent: html,
     }),
   });
+}
+
+
+// ================================================================
+// GET /devis/p/:token — vue publique d'un devis (sans auth)
+// Requiert env.SUPABASE_SERVICE_KEY pour contourner le RLS
+// ================================================================
+async function handlePublicDevisView(token, env) {
+  if (!env.SUPABASE_SERVICE_KEY) {
+    return new Response('Service non configuré', { status: 503 });
+  }
+  const svcHeaders = {
+    'apikey': env.SUPABASE_SERVICE_KEY,
+    'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+  };
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/devis?public_token=eq.${encodeURIComponent(token)}&select=*&limit=1`,
+    { headers: svcHeaders }
+  );
+  if (!r.ok) return new Response('Erreur serveur', { status: 500 });
+  const rows = await r.json();
+  if (!rows.length) {
+    return new Response(
+      '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Devis introuvable</title>'
+      + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+      + '<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f6f9;}'
+      + '.box{background:#fff;padding:40px;border-radius:12px;text-align:center;max-width:400px;}'
+      + 'h2{color:#2840f0;margin-top:0;}p{color:#7a8099;}</style></head>'
+      + '<body><div class="box"><h2>Devis introuvable</h2>'
+      + '<p>Ce lien est invalide ou a expiré.</p>'
+      + '<p style="font-size:12px;">Contactez Tango&nbsp;&amp;&nbsp;Vous pour obtenir un nouveau lien.</p></div></body></html>',
+      { status: 404, headers: { 'Content-Type': 'text/html;charset=UTF-8' } }
+    );
+  }
+  const html = _renderDevisHtml(rows[0]);
+  return new Response(html, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html;charset=UTF-8', 'Cache-Control': 'no-store' },
+  });
+}
+
+function _renderDevisHtml(dv) {
+  const e = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fDate = iso => {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }); }
+    catch { return iso; }
+  };
+  const fMoney = n => (parseFloat(n)||0).toLocaleString('fr-FR', { style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2 });
+
+  const pres    = Array.isArray(dv.prestations) ? dv.prestations : [];
+  const remise  = dv.remise || {};
+  const total   = parseFloat(dv.montant_ht) || 0;
+  const aMode   = dv.acompte_mode  || 'percent';
+  const aVal    = parseFloat(dv.acompte_value) || 30;
+  const aAmt    = aMode === 'percent' ? total * (aVal / 100) : Math.min(aVal, total);
+  const solde   = total - aAmt;
+  const aText   = aMode === 'percent' ? `${aVal}%&nbsp;(soit ${fMoney(aAmt)})` : fMoney(aAmt);
+
+  // Recalcul du sous-total prestations pour la ligne remise
+  const subPres = pres.reduce((s, p) => s + (parseInt(p.quantite)||1) * (parseFloat(p.prix)||0), 0);
+  let remiseAmt = 0;
+  if (remise.actif && remise.valeur) {
+    remiseAmt = remise.mode === 'percent' ? subPres * (remise.valeur/100) : Math.min(remise.valeur, subPres);
+  }
+
+  const presRows = pres.map(p => {
+    const qty  = parseInt(p.quantite) || 1;
+    const pu   = parseFloat(p.prix) || 0;
+    const desc = [
+      p.duree ? `Durée : ${e(p.duree)}` : '',
+      p.hasPassages && p.nbPassages > 0 ? `${p.nbPassages} passage${p.nbPassages > 1 ? 's' : ''}` : '',
+    ].filter(Boolean).join(' · ');
+    return `<tr>
+      <td>${e(p.intitule||'—')}${desc ? `<div class="pd">${desc}</div>` : ''}</td>
+      <td class="r">${qty > 1 ? qty : '—'}</td>
+      <td class="r">${qty > 1 ? fMoney(pu) : '—'}</td>
+      <td class="r">${fMoney(qty * pu)}</td>
+    </tr>`;
+  }).join('');
+
+  const remiseRow = (remise.actif && remiseAmt > 0)
+    ? `<div class="tot-row"><span class="tk">Remise${remise.mode==='percent'?` (${remise.valeur}%)`:''}
+       </span><span class="tv" style="color:#c0392b">−${fMoney(remiseAmt)}</span></div>` : '';
+
+  const evtAdresse = dv.evt_lieu ? e(dv.evt_lieu).replace(/\n/g,'<br>') : '';
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${e(dv.numero||'Devis')} — Le Regard Se Pose</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bleu:#2840f0;--bleu-soft:#eef0fe;--noir:#1a1d24;--gris:#f5f6f9;--border:#d8dce8;--dim:#7a8099;--r:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;font-size:12px;color:var(--noir);background:#e8eaf0;line-height:1.55}
+.page{max-width:800px;margin:0 auto;padding:20px}
+.print-btn{background:var(--bleu);color:#fff;border:none;padding:10px 20px;border-radius:var(--r);cursor:pointer;font-size:13px;font-family:inherit;display:flex;align-items:center;gap:8px;margin:0 auto 20px;font-weight:500}
+.print-btn:hover{opacity:.9}
+.devis{background:#fff;padding:40px 48px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08)}
+/* Header */
+.dh{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;gap:24px}
+.dh-brand{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--bleu);letter-spacing:.04em}
+.dh-sub{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-top:2px}
+.dh-meta{text-align:right;flex-shrink:0}
+.dh-num{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:var(--bleu)}
+.dh-label{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-top:4px}
+.dh-dates{margin-top:10px;font-size:11px;line-height:1.7}
+.dh-dates .k{color:var(--dim);display:inline-block;min-width:70px}
+/* Parties */
+.parties{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:28px}
+.party h3{font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--bleu);margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.pname{font-weight:600;font-size:13px;margin-bottom:3px}
+.pinfo{font-size:11px;white-space:pre-line;color:var(--noir)}
+/* Événement */
+.evt{background:var(--bleu-soft);border-left:3px solid var(--bleu);padding:12px 16px;margin-bottom:24px;border-radius:0 var(--r) var(--r) 0}
+.evt h3{font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--bleu);margin-bottom:8px}
+.evt-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 20px;font-size:11px}
+.evt-grid .k{color:var(--dim);font-weight:500}.evt-grid .v{color:var(--noir)}
+.evt-det{margin-top:8px;padding-top:8px;border-top:1px solid rgba(40,64,240,.15);font-size:11px;white-space:pre-line}
+/* Table */
+table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:11px}
+thead th{background:var(--noir);color:#fff;text-align:left;padding:8px 12px;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+thead th.r{text-align:right}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tbody td.r{text-align:right;white-space:nowrap}
+.pn{font-weight:500}.pd{font-size:10px;color:var(--dim);margin-top:1px}
+/* Totaux */
+.tots{display:flex;justify-content:flex-end;margin-bottom:20px}
+.tots-inner{min-width:260px;font-size:12px}
+.tot-row{display:flex;justify-content:space-between;padding:5px 0}
+.tk{color:var(--dim)}.tv{color:var(--noir)}
+.tot-total{border-top:2px solid var(--noir);margin-top:3px;padding-top:8px;font-size:14px;font-weight:600}
+.tot-total .tk{color:var(--noir)}.tot-total .tv{color:var(--bleu)}
+/* TVA */
+.tva{background:var(--gris);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;margin-bottom:20px;font-size:10px;color:var(--dim);font-style:italic;line-height:1.5}
+/* Règlement */
+.pay h3{font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--bleu);margin-bottom:7px}
+.pay p{font-size:11px;line-height:1.7;margin-bottom:6px}
+.pay .amt{color:var(--bleu);font-weight:600}
+/* RIB */
+.rib{background:var(--gris);border-radius:var(--r);padding:10px 14px;margin-top:8px;font-size:10px}
+.rib-r{display:flex;margin-bottom:2px}
+.rib-k{color:var(--dim);min-width:80px;font-weight:500}
+.rib-v{font-family:monospace;letter-spacing:.03em}
+/* Signature */
+.sig{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:28px;padding-top:20px;border-top:1px solid var(--border)}
+.sig-lbl{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.sig-ins{color:var(--dim);font-style:italic;font-size:10px;margin-bottom:44px}
+.sig-line{border-bottom:1px solid var(--noir)}
+/* Fait à */
+.fait{margin-top:20px;font-size:11px;color:var(--dim);text-align:right;font-style:italic}
+/* Mentions */
+.ment{margin-top:24px;padding-top:18px;border-top:1px solid var(--border)}
+.ment h3{font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--bleu);margin-bottom:10px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;font-size:9px;line-height:1.5;color:#2a2f3a}
+.mi strong{font-weight:600;color:var(--noir)}
+/* Footer */
+.foot{margin-top:32px;padding-top:14px;border-top:1px solid var(--border);text-align:center;font-size:9px;color:var(--dim);line-height:1.7}
+.foot .fn{font-weight:600;color:var(--bleu);letter-spacing:.05em}
+.foot a{color:var(--dim);text-decoration:none}
+@media print{
+  body{background:#fff}
+  .page{padding:0}
+  .print-btn{display:none}
+  .devis{box-shadow:none;border-radius:0;padding:14mm 16mm}
+  .ment{page-break-before:always;padding-top:14mm}
+  @page{size:A4;margin:0}
+}
+@media(max-width:600px){
+  .devis{padding:20px}
+  .parties,.evt-grid,.sig,.mgrid{grid-template-columns:1fr}
+  .tots{justify-content:stretch}.tots-inner{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <button class="print-btn" onclick="window.print()">🖨 Imprimer / Enregistrer en PDF</button>
+  <div class="devis">
+
+    <!-- En-tête -->
+    <div class="dh">
+      <div>
+        <div class="dh-brand">LE REGARD SE POSE</div>
+        <div class="dh-sub">Tango &amp; Vous</div>
+      </div>
+      <div class="dh-meta">
+        <div class="dh-num">${e(dv.numero||'—')}</div>
+        <div class="dh-label">Devis</div>
+        <div class="dh-dates">
+          <div><span class="k">Émis le</span>${fDate(dv.date_emission)}</div>
+          <div><span class="k">Valable</span>${fDate(dv.date_validite)}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Parties -->
+    <div class="parties">
+      <div class="party">
+        <h3>Émetteur</h3>
+        <div class="pname">Association Le Regard Se Pose</div>
+        <div class="pinfo">MVAC20 — 18 rue Ramus, 75020 Paris
+SIRET 522 679 752 00025
+tangoetvous@gmail.com · 07 73 27 59 06</div>
+      </div>
+      <div class="party">
+        <h3>Client</h3>
+        <div class="pname">${e(dv.client_nom||'—')}</div>
+        ${dv.client_adresse ? `<div class="pinfo">${e(dv.client_adresse).replace(/\n/g,'<br>')}</div>` : ''}
+      </div>
+    </div>
+
+    ${(dv.evt_date||dv.evt_horaire||dv.evt_lieu||dv.evt_details) ? `
+    <!-- Événement -->
+    <div class="evt">
+      <h3>Détails de la prestation</h3>
+      <div class="evt-grid">
+        ${dv.evt_date    ? `<div class="k">Date</div><div class="v">${fDate(dv.evt_date)}</div>` : ''}
+        ${dv.evt_horaire ? `<div class="k">Horaire</div><div class="v">${e(dv.evt_horaire)}</div>` : ''}
+        ${dv.evt_lieu    ? `<div class="k">Lieu</div><div class="v">${evtAdresse}</div>` : ''}
+      </div>
+      ${dv.evt_details ? `<div class="evt-det">${e(dv.evt_details)}</div>` : ''}
+    </div>` : ''}
+
+    <!-- Prestations -->
+    <table>
+      <thead><tr>
+        <th>Désignation</th>
+        <th class="r" style="width:50px">Qté</th>
+        <th class="r" style="width:110px">P.U. HT</th>
+        <th class="r" style="width:120px">Total HT = TTC</th>
+      </tr></thead>
+      <tbody>${presRows}</tbody>
+    </table>
+
+    <!-- Totaux -->
+    <div class="tots"><div class="tots-inner">
+      ${remiseRow}
+      <div class="tot-row"><span class="tk">Total HT</span><span class="tv">${fMoney(total)}</span></div>
+      <div class="tot-row"><span class="tk">TVA</span><span class="tv" style="font-style:italic;color:var(--dim)">Non applicable</span></div>
+      <div class="tot-row tot-total"><span class="tk">Total TTC</span><span class="tv">${fMoney(total)}</span></div>
+    </div></div>
+
+    <!-- TVA -->
+    <div class="tva">
+      <strong>TVA non applicable, art. 293 B du CGI.</strong>
+      L'Association Le Regard Se Pose bénéficie de la franchise en base de TVA.
+      Les montants indiqués sont nets de toute taxe.
+    </div>
+
+    <!-- Règlement -->
+    <div class="pay">
+      <h3>Modalités de règlement</h3>
+      <p>Un acompte de <span class="amt">${aText}</span> est à régler à la signature du présent devis afin de confirmer la réservation.
+      Le solde, soit <span class="amt">${fMoney(solde)}</span>, sera réglé le jour de la prestation.</p>
+      <p>Les règlements s'effectuent par <strong>virement bancaire</strong> sur le compte de l'association
+      <em>(vous trouverez nos coordonnées bancaires ci-après)</em>.</p>
+    </div>
+
+    <!-- Signature -->
+    <div class="sig">
+      <div>
+        <div class="sig-lbl">Émetteur</div>
+        <div class="sig-ins">Le Regard Se Pose</div>
+        <div class="sig-line"></div>
+      </div>
+      <div>
+        <div class="sig-lbl">Bon pour accord — Le client</div>
+        <div class="sig-ins">Date, signature précédée de la mention manuscrite « Bon pour accord »</div>
+        <div class="sig-line"></div>
+      </div>
+    </div>
+
+    <!-- Fait à -->
+    <div class="fait">Fait à Paris, le ${fDate(dv.date_emission)}.</div>
+
+    <!-- Page 2 : RIB + Mentions -->
+    <div class="ment">
+      <h3>Coordonnées bancaires</h3>
+      <div class="rib" style="margin-bottom:20px">
+        <div class="rib-r"><span class="rib-k">Titulaire</span><span class="rib-v">LE REGARD SE POSE</span></div>
+        <div class="rib-r"><span class="rib-k">Banque</span><span class="rib-v">Crédit Mutuel — CCM Paris 1-2 Louvre Montorgueil</span></div>
+        <div class="rib-r"><span class="rib-k">IBAN</span><span class="rib-v">FR76 1027 8060 3100 0204 2490 107</span></div>
+        <div class="rib-r"><span class="rib-k">BIC</span><span class="rib-v">CMCIFR2A</span></div>
+      </div>
+      <h3>Mentions légales et conditions</h3>
+      <div class="mgrid">
+        <div class="mi"><strong>Devis gratuit.</strong> L'établissement de ce devis est gratuit et n'engage le client qu'après acceptation écrite (mention manuscrite « Bon pour accord » et signature) et versement de l'acompte.</div>
+        <div class="mi"><strong>Validité.</strong> Le présent devis est valable jusqu'à la date indiquée en en-tête. Passé ce délai, les tarifs et conditions sont susceptibles d'être révisés.</div>
+        <div class="mi"><strong>Annulation par le client.</strong> En cas d'annulation à plus de 30 jours de la prestation, l'acompte est conservé à titre de dédommagement. À moins de 30 jours, la totalité du montant reste due.</div>
+        <div class="mi"><strong>Annulation par l'émetteur.</strong> En cas d'annulation par l'émetteur (sauf force majeure), l'acompte est intégralement remboursé sous 14 jours.</div>
+        <div class="mi"><strong>Force majeure.</strong> En cas de force majeure rendant la prestation impossible, les parties conviendront soit d'un report soit du remboursement de l'acompte.</div>
+        <div class="mi"><strong>Pénalités de retard.</strong> Tout paiement après l'échéance donnera lieu, sans mise en demeure, à des pénalités de retard au taux légal, ainsi qu'à une indemnité de 40 € (art. L441-10 C. com.).</div>
+        <div class="mi"><strong>Litiges.</strong> En cas de litige et à défaut d'accord amiable, le tribunal compétent sera celui du ressort du siège social de l'émetteur (Paris).</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="foot">
+      <div class="fn">ASSOCIATION LE REGARD SE POSE</div>
+      Association loi 1901 — MVAC20, 18 rue Ramus, 75020 Paris ·
+      Tél : 07 73 27 59 06 ·
+      <a href="mailto:tangoetvous@gmail.com">tangoetvous@gmail.com</a><br>
+      SIRET 522 679 752 00025 · RNA W751181053 · TVA non applicable, art. 293 B du CGI
+    </div>
+
+  </div>
+</div>
+</body>
+</html>`;
 }
 
 

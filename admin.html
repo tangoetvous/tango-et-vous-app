@@ -10830,12 +10830,16 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
     var evtDate = dv.evt_date ? ' · 📅 ' + dv.evt_date : '';
     var evtLieu = dv.evt_lieu ? ' · 📍 ' + dv.evt_lieu : '';
 
+    // Lien public client
+    var publicUrl = dv.public_token ? 'https://app.tangoetvous.fr/devis/p/' + dv.public_token : '';
+
     // URL Gmail compose
     var gmailSubject = encodeURIComponent('Devis ' + dv.numero + ' – Tango & Vous / Le Regard Se Pose');
     var gmailBody = encodeURIComponent(
       'Bonjour ' + (demande ? (demande.prenom || dv.client_nom) : dv.client_nom) + ',\n\n'
-      + 'Veuillez trouver ci-joint notre devis ' + dv.numero + (dv.evt_date ? ' pour votre événement du ' + dv.evt_date : '') + '.\n\n'
-      + 'N\'hésitez pas à me contacter pour toute question.\n\n'
+      + 'Veuillez trouver votre devis ' + dv.numero + (dv.evt_date ? ' pour votre événement du ' + dv.evt_date : '') + ' en suivant ce lien :\n'
+      + (publicUrl ? publicUrl + '\n' : '')
+      + '\nN\'hésitez pas à me contacter pour toute question.\n\n'
       + 'Cordialement,\n'
       + 'Tango & Vous — Le Regard Se Pose\n'
       + 'tangoetvous@gmail.com · 07 73 27 59 06'
@@ -10869,6 +10873,9 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
     h += '<div class="btn-row" style="margin-top:10px;">';
     h += '<button class="btn btn-ghost" style="font-size:12px;" data-action="ouvrir-generateur" data-numero="' + dv.numero + '">📄 Ouvrir / Retoucher</button>';
     h += '<a href="' + gmailUrl + '" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Envoyer par email</a>';
+    if (publicUrl) {
+      h += '<button class="btn btn-ghost" style="font-size:12px;" onclick="navigator.clipboard.writeText(\''+publicUrl+'\').then(function(){afficherToast(\'🔗 Lien copié !\')})">🔗 Lien client</button>';
+    }
     if (dv.statut === 'brouillon') {
       h += '<button class="btn btn-ghost" style="font-size:12px;" data-action="emettre-devis" data-id="' + dv.id + '">✓ Marquer émis</button>';
     }
