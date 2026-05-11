@@ -1075,6 +1075,20 @@ Ajouté juste avant chaque bouton "Continuer →" / "Suivant" qui déclenche une
 Cause : `.radio-group.horizontal { flex-direction: row }` + 3 items `flex:1` → trop étroit sur 375px.
 Fix : ajout de `flex-wrap: wrap` → les items passent à la ligne si écran trop étroit.
 
+### ❌ Zoom / réduction de taille des formulaires sur Wix mobile — IMPOSSIBLE
+
+Le moteur de rendu Wix applique son propre facteur d'échelle mobile (canvas virtuel ~320px → écran réel ~390px = ×1.22) **en dehors de toute portée CSS/JS**. Aucune approche ne fonctionne :
+
+| Approche | Résultat | Raison de l'échec |
+|---|---|---|
+| `html { zoom: 0.82 }` dans la form | ❌ aucun effet | Wix applique son scale après le rendu CSS de la form |
+| `document.documentElement.style.zoom = '0.82'` (JS) | ❌ aucun effet | Idem |
+| `transform: scale(0.82)` sur div wrapper dans parastorage | ❌ "Forbidden" | Cross-origin iframe dans container transformé = restriction sécurité navigateur |
+| `zoom: 0.82` sur `body` du parastorage | ❌ "Forbidden" | Même restriction |
+| `#fw { zoom: 0.6 }` (div wrapper dans la form) | ❌ aucun effet | Wix scale override côté rendu |
+
+**Règle** : ne jamais réessayer ces approches. Le zoom Wix mobile est une limitation définitive et acceptée. Les formulaires apparaissent légèrement plus grands sur mobile Wix que sur navigateur direct — aucun correctif CSS/JS possible.
+
 ### ❌ Scroll automatique vers le haut à chaque étape — IMPOSSIBLE dans ce contexte Wix
 Problème fondamental : les formulaires sont dans un **iframe dans un iframe** (form `app.tangoetvous.fr` → parastorage Wix → page Wix). Chaque tentative a échoué :
 
