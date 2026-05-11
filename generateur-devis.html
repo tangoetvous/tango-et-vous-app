@@ -1917,6 +1917,24 @@ function escapeAttr(s) {
 /* ============================================================
    IMPRESSION — avec garde-fou en mode brouillon
    ============================================================ */
+function _buildPdfFilename() {
+  const client   = (document.getElementById('clientNom').value || '').trim();
+  const dateRaw  = (document.getElementById('evtDate').value  || '').trim();
+  const MOIS = ['janvier','février','mars','avril','mai','juin',
+                'juillet','août','septembre','octobre','novembre','décembre'];
+  let dateStr = '';
+  if (dateRaw) {
+    const p = dateRaw.split('-');
+    if (p.length === 3)
+      dateStr = parseInt(p[2], 10) + ' ' + MOIS[parseInt(p[1], 10) - 1] + ' ' + p[0];
+  }
+  const parts = ['Devis Tango'];
+  if (dateStr) parts.push(dateStr);
+  if (client)  parts.push('- ' + client);
+  parts.push('- Le Regard Se Pose');
+  return parts.join(' ').replace(/[\/\\:*?"<>|]/g, '');
+}
+
 function handlePrint() {
   const isDraft = document.getElementById('devis').classList.contains('draft');
   if (isDraft) {
@@ -1927,7 +1945,10 @@ function handlePrint() {
     );
     if (!ok) return;
   }
+  const prevTitle = document.title;
+  document.title = _buildPdfFilename();
   window.print();
+  document.title = prevTitle;
 }
 
 /* ============================================================
