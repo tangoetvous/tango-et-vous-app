@@ -5368,8 +5368,37 @@ function handleAction(action, btn) {
       })();
       break;
     case 'ouvrir-generateur':
-      _devisGenerateurNumero = btn.dataset.numero !== undefined ? btn.dataset.numero : '';
-      renderTab();
+      if (btn.dataset.numero) {
+        // Ouvrir un devis existant (numéro déjà connu)
+        _devisGenerateurNumero = btn.dataset.numero;
+        renderTab();
+      } else {
+        // Nouveau devis vierge — réserver un numéro légal en DB d'abord
+        if (IS_DEMO) { _devisGenerateurNumero = ''; renderTab(); break; }
+        btn.disabled = true; btn.textContent = '⏳ Création…';
+        TEV.getSession().then(function(session) {
+          var tok = session ? session.access_token : '';
+          return fetch('/api/devis/creer', {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+tok },
+            body: JSON.stringify({
+              demande_id: null, client_nom: '', client_adresse: '',
+              evt_date: '', evt_horaire: '', evt_lieu: '', evt_details: '',
+              prestations: [], acompte_mode: 'percent', acompte_value: 30,
+            }),
+          });
+        }).then(function(r){ return r.json(); }).then(function(res) {
+          btn.disabled = false; btn.textContent = '📄 Nouveau devis';
+          if (res.devis && res.devis.numero) {
+            chargerDonnees();
+            _devisGenerateurNumero = res.devis.numero;
+            renderTab();
+          } else afficherToast('Erreur : ' + (res.error || 'inconnue'));
+        }).catch(function(e) {
+          btn.disabled = false; btn.textContent = '📄 Nouveau devis';
+          afficherToast('Erreur : ' + e.message);
+        });
+      }
       break;
     case 'fermer-generateur':
       _devisGenerateurNumero = null;
