@@ -1019,6 +1019,33 @@ body {
       </div>
     </div>
 
+    <!-- Remise -->
+    <div class="section">
+      <div class="section-title">Remise</div>
+      <div class="field">
+        <label class="check-inline">
+          <input type="checkbox" id="remiseCheck" style="width:auto;padding:0;margin:0;flex-shrink:0;"
+            onchange="toggleRemise(this.checked)">
+          <span>Appliquer une remise sur le total</span>
+        </label>
+        <div id="remiseFields" style="display:none;margin-top:8px;">
+          <div class="toggle-group" style="margin-bottom:8px;">
+            <button type="button" class="toggle-btn active" data-remmode="percent" onclick="setRemiseMode('percent')">En pourcentage (%)</button>
+            <button type="button" class="toggle-btn" data-remmode="amount" onclick="setRemiseMode('amount')">Montant fixe (€)</button>
+          </div>
+          <div class="field-row cols-2">
+            <div class="field" style="margin:0;">
+              <input type="number" id="remiseValue" value="0" min="0" step="0.01"
+                oninput="updateRemise(parseFloat(this.value)||0)" style="text-align:right;">
+            </div>
+            <div class="field" style="margin:0;">
+              <input type="text" id="remiseUnit" value="%" readonly style="background:var(--gris-bg);text-align:center;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Règlement -->
     <div class="section">
       <div class="section-title">Conditions de règlement</div>
@@ -1099,7 +1126,9 @@ RNA : W751181053</div>
         <thead>
           <tr>
             <th>Désignation</th>
-            <th class="right" style="width:140px;">Montant HT = TTC</th>
+            <th class="right" style="width:50px;">Qté</th>
+            <th class="right" style="width:120px;">P.U. HT</th>
+            <th class="right" style="width:130px;">Total HT = TTC</th>
           </tr>
         </thead>
         <tbody id="prevPrestaTable"></tbody>
@@ -1108,6 +1137,10 @@ RNA : W751181053</div>
       <!-- Totaux -->
       <div class="devis-totals">
         <div class="devis-totals-table">
+          <div class="row" id="prevRemiseRow" style="display:none;">
+            <span class="key">Remise</span>
+            <span class="val" id="prevRemise" style="color:var(--rouge, #c0392b);">— €</span>
+          </div>
           <div class="row">
             <span class="key">Total HT</span>
             <span class="val" id="prevTotalHT">0,00 €</span>
@@ -1296,10 +1329,12 @@ const PRESTATIONS_CATALOG = [
    ============================================================ */
 const state = {
   prestations: [
-    { type: '', intitule: '', duree: '', hasPassages: false, nbPassages: 1, prix: 0 }
+    { type: '', intitule: '', duree: '', hasPassages: false, nbPassages: 1, quantite: 1, prix: 0 }
   ],
   acompteMode: 'percent', // 'percent' ou 'amount'
   acompteValue: 30,
+  // Remise globale (optionnelle)
+  remise: { actif: false, mode: 'percent', valeur: 0 },
   // Frais annexes (optionnels)
   frais: {
     deplacement: { actif: false, montant: 0, description: 'Frais de déplacement aller-retour' },
@@ -1397,8 +1432,21 @@ async function loadDevisFromDB(numero) {
         duree:       p.duree       || '',
         hasPassages: !!p.hasPassages,
         nbPassages:  p.nbPassages  || 1,
+        quantite:    parseInt(p.quantite) || 1,
         prix:        parseFloat(p.prix) || 0
       }));
+      if (dv.remise) {
+        state.remise = Object.assign({ actif: false, mode: 'percent', valeur: 0 }, dv.remise);
+        const remCheck = document.getElementById('remiseCheck');
+        if (remCheck && state.remise.actif) {
+          remCheck.checked = true;
+          document.getElementById('remiseFields').style.display = '';
+          document.querySelectorAll('[data-remmode]').forEach(b =>
+            b.classList.toggle('active', b.dataset.remmode === state.remise.mode));
+          document.getElementById('remiseUnit').value = state.remise.mode === 'percent' ? '%' : '€';
+          document.getElementById('remiseValue').value = state.remise.valeur || 0;
+        }
+      }
       renderPrestations();
     }
 
@@ -1429,7 +1477,8 @@ async function sauvegarderBrouillon() {
     evt_lieu:       document.getElementById('evtAdresse').value    || '',
     evt_details:    document.getElementById('evtDetails').value    || '',
     prestations:    state.prestations,
-    montant_ht:     state.prestations.reduce((s, p) => s + (parseFloat(p.prix) || 0), 0),
+    montant_ht:     computeTotal(),
+    remise:         state.remise,
     acompte_mode:   state.acompteMode,
     acompte_value:  state.acompteValue,
   };
@@ -1599,12 +1648,19 @@ function renderPrestations() {
             oninput="updatePresta(${i}, 'duree', this.value)">
         </div>
         <div class="field" style="margin:0;">
-          <label style="font-size:10px;color:var(--gris-faint);text-transform:uppercase;letter-spacing:0.08em;">Prix (€)</label>
-          <input type="number" placeholder="Prix" step="0.01" min="0"
-            value="${p.prix || ''}"
-            oninput="updatePresta(${i}, 'prix', parseFloat(this.value) || 0)"
+          <label style="font-size:10px;color:var(--gris-faint);text-transform:uppercase;letter-spacing:0.08em;">Quantité</label>
+          <input type="number" placeholder="1" step="1" min="1"
+            value="${p.quantite || 1}"
+            oninput="updatePresta(${i}, 'quantite', parseInt(this.value) || 1)"
             style="text-align:right;">
         </div>
+      </div>
+      <div class="field" style="margin-bottom:8px;">
+        <label style="font-size:10px;color:var(--gris-faint);text-transform:uppercase;letter-spacing:0.08em;">Prix unitaire HT (€)</label>
+        <input type="number" placeholder="Prix" step="0.01" min="0"
+          value="${p.prix || ''}"
+          oninput="updatePresta(${i}, 'prix', parseFloat(this.value) || 0)"
+          style="text-align:right;">
       </div>
       <div class="field" style="margin:0;">
         <label class="check-inline">
@@ -1687,8 +1743,38 @@ function updateFrais(type, field, value) {
 
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
+/* ============================================================
+   REMISE
+   ============================================================ */
+function toggleRemise(checked) {
+  state.remise.actif = checked;
+  document.getElementById('remiseFields').style.display = checked ? '' : 'none';
+  if (checked) {
+    document.querySelectorAll('[data-remmode]').forEach(b =>
+      b.classList.toggle('active', b.dataset.remmode === state.remise.mode));
+    document.getElementById('remiseUnit').value = state.remise.mode === 'percent' ? '%' : '€';
+    document.getElementById('remiseValue').value = state.remise.valeur || 0;
+  }
+  updatePreview();
+}
+
+function setRemiseMode(mode) {
+  state.remise.mode = mode;
+  document.querySelectorAll('[data-remmode]').forEach(b =>
+    b.classList.toggle('active', b.dataset.remmode === mode));
+  document.getElementById('remiseUnit').value = mode === 'percent' ? '%' : '€';
+  document.getElementById('remiseValue').value = 0;
+  state.remise.valeur = 0;
+  updatePreview();
+}
+
+function updateRemise(value) {
+  state.remise.valeur = value;
+  updatePreview();
+}
+
 function addPresta() {
-  state.prestations.push({ type: '', intitule: '', duree: '', hasPassages: false, nbPassages: 1, prix: 0 });
+  state.prestations.push({ type: '', intitule: '', duree: '', hasPassages: false, nbPassages: 1, quantite: 1, prix: 0 });
   renderPrestations();
   updatePreview();
 }
@@ -1752,11 +1838,16 @@ function bindFieldEvents() {
    APERÇU — synchronisation
    ============================================================ */
 function computeTotal() {
-  const totalPrestations = state.prestations.reduce((sum, p) => sum + (p.prix || 0), 0);
+  const totalPrestations = state.prestations.reduce((sum, p) => sum + (parseInt(p.quantite) || 1) * (parseFloat(p.prix) || 0), 0);
   const totalFrais =
     (state.frais.deplacement.actif ? (state.frais.deplacement.montant || 0) : 0) +
     (state.frais.hebergement.actif ? (state.frais.hebergement.montant || 0) : 0);
-  return totalPrestations + totalFrais;
+  const subtotal = totalPrestations + totalFrais;
+  if (!state.remise || !state.remise.actif || !state.remise.valeur) return subtotal;
+  const remiseAmt = state.remise.mode === 'percent'
+    ? subtotal * (state.remise.valeur / 100)
+    : Math.min(state.remise.valeur, subtotal);
+  return Math.max(0, subtotal - remiseAmt);
 }
 
 function formatMoney(n) {
@@ -1817,7 +1908,6 @@ function updatePreview() {
   // Prestations
   const tbody = document.getElementById('prevPrestaTable');
   const prestaRows = state.prestations.map(p => {
-    // Construit la ligne de précisions sous l'intitulé : durée et/ou passages
     const parts = [];
     if (p.duree && p.duree.trim()) {
       parts.push(`Durée : ${escapeHtml(p.duree.trim())}`);
@@ -1827,6 +1917,8 @@ function updatePreview() {
       parts.push(`${n} passage${n > 1 ? 's' : ''}`);
     }
     const desc = parts.join(' · ');
+    const qty = parseInt(p.quantite) || 1;
+    const pu  = parseFloat(p.prix) || 0;
 
     return `
       <tr>
@@ -1834,7 +1926,9 @@ function updatePreview() {
           <div class="presta-name">${escapeHtml(p.intitule || '—')}</div>
           ${desc ? `<div class="presta-desc">${desc}</div>` : ''}
         </td>
-        <td class="right">${formatMoney(p.prix || 0)}</td>
+        <td class="right">${qty > 1 ? qty : '—'}</td>
+        <td class="right">${qty > 1 ? formatMoney(pu) : '—'}</td>
+        <td class="right">${formatMoney(qty * pu)}</td>
       </tr>
     `;
   });
@@ -1850,6 +1944,8 @@ function updatePreview() {
             ? `<div class="presta-desc">${escapeHtml(state.frais.deplacement.description)}</div>`
             : ''}
         </td>
+        <td class="right">—</td>
+        <td class="right">—</td>
         <td class="right">${formatMoney(state.frais.deplacement.montant || 0)}</td>
       </tr>
     `);
@@ -1863,12 +1959,32 @@ function updatePreview() {
             ? `<div class="presta-desc">${escapeHtml(state.frais.hebergement.description)}</div>`
             : ''}
         </td>
+        <td class="right">—</td>
+        <td class="right">—</td>
         <td class="right">${formatMoney(state.frais.hebergement.montant || 0)}</td>
       </tr>
     `);
   }
 
   tbody.innerHTML = [...prestaRows, ...fraisRows].join('');
+
+  // Remise
+  const remiseRow = document.getElementById('prevRemiseRow');
+  if (state.remise && state.remise.actif && state.remise.valeur) {
+    const subtotal = state.prestations.reduce((s, p) => s + (parseInt(p.quantite)||1) * (parseFloat(p.prix)||0), 0)
+      + (state.frais.deplacement.actif ? (state.frais.deplacement.montant||0) : 0)
+      + (state.frais.hebergement.actif ? (state.frais.hebergement.montant||0) : 0);
+    const remAmt = state.remise.mode === 'percent'
+      ? subtotal * (state.remise.valeur / 100)
+      : Math.min(state.remise.valeur, subtotal);
+    const remLabel = state.remise.mode === 'percent'
+      ? `−${state.remise.valeur}% (−${formatMoney(remAmt)})`
+      : `−${formatMoney(remAmt)}`;
+    document.getElementById('prevRemise').textContent = remLabel;
+    if (remiseRow) remiseRow.style.display = '';
+  } else {
+    if (remiseRow) remiseRow.style.display = 'none';
+  }
 
   // Total
   const total = computeTotal();
@@ -1959,11 +2075,15 @@ function resetForm() {
   document.querySelectorAll('input, textarea').forEach(el => {
     if (el.type !== 'button') el.value = '';
   });
-  state.prestations = [{ type: '', intitule: '', duree: '', hasPassages: false, nbPassages: 1, prix: 0 }];
+  state.prestations = [{ type: '', intitule: '', duree: '', hasPassages: false, nbPassages: 1, quantite: 1, prix: 0 }];
   state.acompteMode = 'percent';
   state.acompteValue = 30;
+  state.remise = { actif: false, mode: 'percent', valeur: 0 };
   state.frais.deplacement = { actif: false, montant: 0, description: 'Frais de déplacement aller-retour' };
   state.frais.hebergement = { actif: false, montant: 0, description: 'Frais d\'hébergement' };
+  // Reset remise UI
+  const remCheck = document.getElementById('remiseCheck');
+  if (remCheck) { remCheck.checked = false; document.getElementById('remiseFields').style.display = 'none'; }
 
   // Reset des champs frais
   document.getElementById('fraisDeplacementCheck').checked = false;

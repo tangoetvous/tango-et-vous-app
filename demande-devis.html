@@ -1015,13 +1015,15 @@ body {
           <input type="text" id="horaireEvenement" placeholder="Ex : 20h30, après le dîner, 19h–21h…">
         </div>
 
-        <div class="field-row cols-2-1">
-          <div class="field">
-            <label for="lieu">Lieu / Ville <span class="req">*</span></label>
-            <input type="text" id="lieu" placeholder="Paris, Vincennes, autre…">
+        <div class="field">
+            <label for="lieu">Lieu <span class="req">*</span></label>
+            <input type="text" id="lieu" placeholder="Salle des fêtes, château, restaurant…">
             <div class="field-error">Merci d'indiquer le lieu de l'événement.</div>
           </div>
-        </div>
+          <div class="field">
+            <label for="adresseEvenement">Adresse</label>
+            <input type="text" id="adresseEvenement" placeholder="12 rue des Fleurs, 75020 Paris">
+          </div>
 
         <div class="field">
           <label for="nombreInvites">Nombre d'invités estimé</label>
@@ -1823,7 +1825,7 @@ function renderRecap() {
     } else {
       dateDisplay = 'Non précisée';
     }
-    const lieuFull = get('lieu');
+    const lieuFull = [get('lieu'), get('adresseEvenement')].filter(Boolean).join(' — ');
 
     sections.push(`
       <div class="recap-section">
@@ -1834,7 +1836,8 @@ function renderRecap() {
         ${row('Type', get('typeEvenement'))}
         ${row('Date', dateDisplay)}
         ${row('Horaire', get('horaireEvenement'))}
-        ${row('Lieu', lieuFull)}
+        ${row('Lieu', get('lieu'))}
+        ${row('Adresse', get('adresseEvenement'))}
         ${row('Invités', get('nombreInvites'))}
       </div>
     `);
@@ -2005,6 +2008,7 @@ async function submit() {
       date_evenement: get('dateEvenement'),
       date_flexible: document.getElementById('dateFlexible').checked,
       lieu: get('lieu'),
+      adresse_evenement: get('adresseEvenement'),
       nombre_invites: get('nombreInvites'),
       duree_prestation: get('dureePrestation'),
       horaire_evenement: get('horaireEvenement')

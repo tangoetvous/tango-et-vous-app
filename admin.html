@@ -5258,7 +5258,7 @@ function handleAction(action, btn) {
         var clientAdresse = demande ? (demande.adresse_facturation || '') : '';
         var evtDate       = demande ? (demande.date_evenement || '')     : '';
         var evtHoraire    = demande ? (demande.horaire_evenement || '')   : '';
-        var evtLieu       = demande ? (demande.lieu || '')               : '';
+        var evtLieu       = demande ? [demande.lieu, demande.adresse_evenement].filter(Boolean).join('\n') : '';
         var evtDetailsParts = [];
         if (demande && demande.type_evenement) evtDetailsParts.push(demande.type_evenement);
         if (demande && demande.nombre_invites) evtDetailsParts.push(demande.nombre_invites + ' invités');
@@ -10785,7 +10785,7 @@ function _autoCreerBrouillon(demande) {
         client_adresse: demande.adresse_facturation || '',
         evt_date:       demande.date_evenement || demande.date_butoir || '',
         evt_horaire:    demande.horaire_evenement || '',
-        evt_lieu:       demande.lieu || demande.lieu_cours || '',
+        evt_lieu:       [demande.lieu || demande.lieu_cours, demande.adresse_evenement].filter(Boolean).join('\n'),
         evt_details:    evtDetailsParts.join(' · '),
         prestations:    pres,
         acompte_mode:   'percent',
