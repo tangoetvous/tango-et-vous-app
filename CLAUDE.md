@@ -365,7 +365,7 @@ GRANT USAGE, SELECT ON SEQUENCE cheques_depot_id_seq  TO authenticated;
 - [ ] Rappels emails automatiques pour paiements CB en plusieurs fois (cb3x) — relances aux échéances
 - [x] Rubrique Devis : formulaire public + générateur PDF + admin complet — TERMINÉ (voir section Devis)
 - [ ] Devis : envoyer le PDF par email directement depuis l'appli (actuellement via Gmail ouvert manuellement)
-- [ ] Devis : ajouter Turnstile sur demande-devis.html quand intégré en iframe Wix
+- [x] Devis : Turnstile ajouté sur demande-devis.html (widget retiré en iframe Wix, vérifié hors iframe)
 - [ ] **Assistant vocal/texte dans l'admin** : champ texte (ou micro) qui envoie une commande en langage naturel à Claude via l'API Anthropic, avec `adminData` en contexte. Claude interprète l'intention et appelle la fonction JS correspondante. Exemples : "pointer la carte de Dupont", "inscrire Untel au cours de mercredi", "combien d'élèves ont une carte qui expire ce mois-ci ?". Étapes : définir les actions autorisées, demander confirmation avant exécution ("Pointer 1 cours pour Felipe Diaz aujourd'hui — confirmer ?"), gérer les ambiguïtés ("2 Dupont trouvés, lequel ?").
 
 ## Keep-alive automatique — mis en place, rien à faire
@@ -386,7 +386,7 @@ GRANT USAGE, SELECT ON SEQUENCE cheques_depot_id_seq  TO authenticated;
 - **Discussions** : messages stockés dans Supabase, notifications via FCM — Brevo non impliqué
 - **Code.gs (Google Apps Script)** : fichier legacy, **ne plus utiliser**, emails non envoyés depuis la migration Supabase
 - **GitHub Actions** : 2 000 min/mois gratuit (~1 000 déploiements possibles)
-- **Cloudflare Turnstile** : déjà intégré sur tous les formulaires publics (inscription-cours, cours-essai, essai-yoga, stages-pwa, cours-particuliers) — sitekey `0x4AAAAAADCDhidbX3fOzZl5`. À ajouter sur le futur formulaire de devis (Wix).
+- **Cloudflare Turnstile** : intégré sur tous les formulaires publics (inscription-cours, cours-essai, essai-yoga, stages-pwa, cours-particuliers, demande-devis) — sitekey `0x4AAAAAADCDhidbX3fOzZl5`. Widget retiré automatiquement quand chargé en iframe (Wix), vérifié côté client hors iframe.
 
 ## Notifications push — état d'avancement
 - Boutons **[🔔 Activer | ⚡ Tester]** ajoutés dans le menu ligne 1
@@ -704,7 +704,7 @@ Le renouvellement est **toujours une action manuelle**. Il n'existe que deux voi
 - **Cours particuliers** : formulaire public → admin reçoit la demande, gère manuellement
 - **Devis** : formulaire public `demande-devis.html` → admin reçoit la fiche → crée un devis dans `generateur-devis.html` → envoie par Gmail
 - **Ajout dans Élèves Tango/Yoga toujours manuel et intentionnel** : un élève n'est inscrit que s'il a payé sur AssoConnect. L'appli n'a pas accès à AssoConnect — c'est l'admin qui vérifie le paiement puis ajoute l'élève manuellement. Ne pas automatiser.
-- **Turnstile manquant** : à ajouter sur le futur formulaire de devis
+- **Turnstile** : intégré sur demande-devis.html (widget retiré en iframe)
 
 ## Saisie des données — règle importante
 À partir de la saison 2026-2027, **toutes les données entrent exclusivement par** :

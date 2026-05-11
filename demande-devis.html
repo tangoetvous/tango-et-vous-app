@@ -24,6 +24,9 @@
   };
 </script>
 
+<!-- Turnstile anti-bot (chargé uniquement hors iframe) -->
+<script>(function(){ try { if(window.self===window.top){ var s=document.createElement('script'); s.src='https://challenges.cloudflare.com/turnstile/v0/api.js'; s.async=true; s.defer=true; document.head.appendChild(s); } } catch(e){} })();</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1368,9 +1371,12 @@ body {
 
       <div class="nav">
         <button type="button" class="btn btn-prev" data-prev>← Retour</button>
-        <button type="button" class="btn btn-submit" id="submitBtn">
-          Envoyer la demande <span class="arrow">✓</span>
-        </button>
+        <div>
+          <div class="cf-turnstile" data-sitekey="0x4AAAAAADCDhidbX3fOzZl5" data-theme="dark" style="margin-bottom:12px;"></div>
+          <button type="button" class="btn btn-submit" id="submitBtn">
+            Envoyer la demande <span class="arrow">✓</span>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -1484,6 +1490,10 @@ document.addEventListener('DOMContentLoaded', () => {
   renderPrestations();
   bindEvents();
   initIframeResize();
+
+  // Turnstile : retirer le widget si on est dans une iframe (Wix)
+  var _inIframe = window.self !== window.top;
+  if (_inIframe) { var _tsDomEl = document.querySelector('.cf-turnstile'); if (_tsDomEl) _tsDomEl.parentNode.removeChild(_tsDomEl); }
 });
 
 /* ============================================================
@@ -1957,6 +1967,17 @@ function escapeHtml(s) {
    ============================================================ */
 async function submit() {
   if (!validateStep(4)) return;
+
+  // Vérification Turnstile (hors iframe uniquement)
+  var _inIframe = window.self !== window.top;
+  if (!_inIframe) {
+    var tsToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
+    if (!tsToken) {
+      var errEl = document.querySelector('.cf-turnstile');
+      if (errEl) errEl.style.outline = '1px solid #e55';
+      return;
+    }
+  }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
