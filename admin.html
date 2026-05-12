@@ -11807,14 +11807,27 @@ function _comptaSortBar() {
 // ================================================================
 function _buildADeposer() {
   var liste=[], sai=saisonActive();
+  var seenCarte10={};
   (adminData.coursTango||[]).forEach(function(e){
     var pai=(e.paiement||'').toLowerCase();
     if((pai==='especes'||pai==='cheque')&&!e.remise_id&&e.statut!=='supprimé'&&e.statut!=='demande'&&e.saison===sai){
+      // Une seule carte de 10 par email (non-renouvellement) — garder la plus haute
+      if(e.type==='carte10'&&!(e.donnees&&e.donnees.isRenewal)){
+        var m=Number(e.montant)||0;
+        if(seenCarte10[e.email]&&m<=(seenCarte10[e.email].m||0))return;
+        if(seenCarte10[e.email]){
+          var idx=liste.indexOf(seenCarte10[e.email].item);
+          if(idx>=0)liste.splice(idx,1);
+        }
+        seenCarte10[e.email]={m:m,item:null};
+      }
       var coursLbl=e.cours||(e.ville==='vincennes'?'Vincennes':'Paris');
       var typeLbl=e.type==='carte10'?' (Carte 10)':' (Forfait)';
-      liste.push({_key:'ic:'+e.id,source_table:'inscriptions_cours',source_id:e.id,
+      var item={_key:'ic:'+e.id,source_table:'inscriptions_cours',source_id:e.id,
         type:pai,montant:Number(e.montant)||0,nom:e.nom||'',prenom:e.prenom||'',email:e.email||'',
-        label:(e.prenom||'')+' '+(e.nom||'')+' — '+coursLbl+typeLbl,saison:sai});
+        label:(e.prenom||'')+' '+(e.nom||'')+' — '+coursLbl+typeLbl,saison:sai};
+      liste.push(item);
+      if(e.type==='carte10'&&!(e.donnees&&e.donnees.isRenewal))seenCarte10[e.email].item=item;
     }
   });
   (adminData.coursYoga||[]).forEach(function(e){
@@ -12097,19 +12110,23 @@ function _comptaBlock(liste, titre, ctx) {
     echs.forEach(function(ech){if(ech.encaisse)encE+=ech.montant;else prevE+=ech.montant;});
     var isSup=e.statut==='supprimé';
     var isRenew=!!(e.donnees&&e.donnees.isRenewal);
-    var isNonPaye=isRenew ? (e.donnees.renewalPaye!==true) : (e.type==='carte10'&&!_getCartePaye(e.email));
+    var isShared=!!e._sharedCarte;
+    var isNonPaye=!isShared&&(isRenew ? (e.donnees.renewalPaye!==true) : (e.type==='carte10'&&!_getCartePaye(e.email)));
     h+='<div style="padding:7px 8px;border-bottom:1px solid var(--s2);'+(isSup?'opacity:.65;':'')+(isNonPaye?'border-left:3px solid #fb923c;padding-left:6px;':'')+'\">';
     h+='<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">';
     h+='<div style="min-width:0;">';
     h+='<a href="javascript:void(0)" onclick="ouvrirComptaEdit(\''+e.id+'\',\''+ctx+'\')" style="color:var(--fg);font-size:13px;text-decoration:none;border-bottom:1px dashed var(--border);">'+(e.prenom||'')+' '+(e.nom||'')+'</a>';
+    if (isShared) h+='<span style="font-size:9px;color:var(--dim);margin-left:5px;">carte partagée</span>';
     if (isRenew) h+='<span style="font-size:9px;color:var(--dim);margin-left:5px;">↻ renouvellement</span>';
     if (isSup) h+='<span style="font-size:9px;color:var(--dim);margin-left:5px;">supprimé</span>';
     if (isNonPaye && isRenew) h+='<span style="font-size:9px;color:#fb923c;margin-left:5px;">non payée &nbsp;<a href="javascript:void(0)" onclick="_toggleRenewalPaye(\''+e.id+'\')" style="color:#4ade80;text-decoration:none;">✓ Réglé</a></span>';
     else if (isNonPaye) h+='<span style="font-size:9px;color:#fb923c;margin-left:5px;">non payée</span>';
-    if (dt&&!isX3) h+='<span style="font-size:10px;color:var(--dim);margin-left:6px;">· '+_fmtJour(dt)+'</span>';
+    if (!isShared&&dt&&!isX3) h+='<span style="font-size:10px;color:var(--dim);margin-left:6px;">· '+_fmtJour(dt)+'</span>';
     h+='</div>';
-    h+='<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--s3);white-space:nowrap;">'+(PAI_LBL[e.paiement]||e.paiement||'—')+'</span>';
-    if (isNonPaye) {
+    h+='<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--s3);white-space:nowrap;">'+(isShared?'—':PAI_LBL[e.paiement]||e.paiement||'—')+'</span>';
+    if (isShared) {
+      h+='<span style="font-size:11px;color:var(--dim);text-align:right;font-style:italic;">—</span>';
+    } else if (isNonPaye) {
       h+='<span style="font-size:13px;font-weight:700;color:#fb923c;text-align:right;">'+(e.montant?e.montant+'€':'—')+'</span>';
     } else if (isX3&&echs.length&&prevE>0) {
       h+='<div style="text-align:right;line-height:1.3;">';
@@ -12161,6 +12178,25 @@ function _comptaBlock(liste, titre, ctx) {
   return h;
 }
 
+// Marque les entrées carte10 secondaires (même email, non-isRenewal) :
+// montant=0 + _sharedCarte=true pour éviter le double-comptage en compta.
+// La primaire est celle avec le montant le plus élevé.
+function _markSharedCartes(liste) {
+  var emailMax={};
+  liste.forEach(function(e){
+    if(e.type!=='carte10'||(e.donnees&&e.donnees.isRenewal))return;
+    var m=Number(e.montant)||0;
+    if(!(e.email in emailMax)||m>emailMax[e.email])emailMax[e.email]=m;
+  });
+  var emailUsed={};
+  return liste.map(function(e){
+    if(e.type!=='carte10'||(e.donnees&&e.donnees.isRenewal))return e;
+    var m=Number(e.montant)||0;
+    if(!emailUsed[e.email]&&m===emailMax[e.email]){emailUsed[e.email]=true;return e;}
+    return Object.assign({},e,{montant:0,_sharedCarte:true});
+  });
+}
+
 function _renderComptaTango() {
   var sai=saisonActive();
   var COURS=[
@@ -12176,6 +12212,7 @@ function _renderComptaTango() {
     if (e.statut==='supprimé') return true;
     return false;
   });
+  tous=_markSharedCartes(tous);
   var h='';
   h+=_comptaGrandTotalBox(_comptaEncaisse(tous), 'TOTAL ÉLÈVES TANGO — '+sai);
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">';
