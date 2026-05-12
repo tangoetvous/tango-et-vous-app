@@ -7329,9 +7329,24 @@ function renderCartesSupprimees(d) {
     h+='<div class="point-row" style="display:flex;align-items:center;gap:8px;opacity:0.7;">'
       +'<div style="flex:1;">'+nomCliquable(e.nom,e.email,e.tel,'ct')+'</div>'
       +'<span class="pill pill-err" style="font-size:9px;">Supprimée</span>'
+      +'<a href="javascript:void(0)" onclick="supprimerDefinitivementCarte(\''+escHtml(e.email)+'\',\''+escHtml(e.nom)+'\')" style="font-size:11px;color:#ff6b6b;text-decoration:none;white-space:nowrap;">🗑 Définitif</a>'
       +'</div>';
   });
   return h;
+}
+function supprimerDefinitivementCarte(email, nom) {
+  if (!confirm('Supprimer définitivement la carte de '+nom+' ? Cette action est irréversible.')) return;
+  adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return x.email!==email; });
+  if (adminData.cartes) adminData.cartes = adminData.cartes.filter(function(c){ return c.email!==email; });
+  afficherToast('🗑 Carte de '+nom+' supprimée définitivement');
+  renderTab();
+  if (!IS_DEMO) {
+    Promise.all([
+      Promise.resolve(TEV.client.from('inscriptions_cours').delete().eq('email', email)),
+      Promise.resolve(TEV.client.from('eleves').delete().eq('email', email))
+    ]).then(function(){ chargerDonnees(); })
+    .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
+  }
 }
 function confirmerSupprimerCarte(email, nom) {
   var sai = saisonActive();
