@@ -879,10 +879,13 @@ Côté formulaire (`stages-pwa.html`) : vérification préalable qui filtre les 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_essai_no_double
   ON inscriptions_essai (lower(trim(prenom)), lower(trim(nom)), date_essai, niveau);
 
--- Inscriptions cours régulier (exclut les supprimés)
+-- Inscriptions cours régulier (exclut les supprimés et les renouvellements carte10)
+-- ⚠️ La clause isRenewal est obligatoire sinon les renouvellements carte10 sont bloqués
+DROP INDEX IF EXISTS idx_cours_no_double;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_cours_no_double
   ON inscriptions_cours (lower(trim(prenom)), lower(trim(nom)), ville, niveau, saison)
-  WHERE statut != 'supprimé';
+  WHERE statut != 'supprimé'
+    AND (donnees IS NULL OR donnees->>'isRenewal' IS DISTINCT FROM 'true');
 
 -- Cours d'essai yoga
 CREATE UNIQUE INDEX IF NOT EXISTS idx_essai_yoga_no_double
