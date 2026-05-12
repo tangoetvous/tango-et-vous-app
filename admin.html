@@ -282,6 +282,40 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   </div>
 </div>
 
+<!-- Modal paiement carte -->
+<div class="modal-overlay" id="modal-carte-paiement">
+  <div class="modal-box">
+    <div class="modal-titre">💳 Enregistrer le paiement</div>
+    <div class="modal-msg" id="modal-cp-nom" style="font-weight:600;margin-bottom:12px;"></div>
+    <div class="field">
+      <label>Montant</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="number" id="modal-cp-montant" min="0" step="1" style="width:90px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:14px;">
+        <span style="color:var(--dim);font-size:13px;">€</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Date de paiement</label>
+      <input type="date" id="modal-cp-date" style="background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:14px;width:100%;box-sizing:border-box;">
+    </div>
+    <div class="field">
+      <label>Moyen de paiement</label>
+      <select id="modal-cp-mode" style="background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:14px;width:100%;box-sizing:border-box;">
+        <option value="cb1x">CB 1×</option>
+        <option value="cb3x">CB 3×</option>
+        <option value="especes">Espèces</option>
+        <option value="cheque">Chèque</option>
+        <option value="virement1x">Virement 1×</option>
+        <option value="virement3x">Virement 3×</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" id="modal-cp-cancel">Annuler</button>
+      <button class="modal-ok" id="modal-cp-ok">✓ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal QR Code carte -->
 <div class="modal-overlay" id="modal-qr">
   <div class="modal-box" style="text-align:center;">
@@ -1759,6 +1793,64 @@ function confirmerModalConfirm() {
   if (cb) cb();
 }
 
+var _cpModalId = null;
+function ouvrirModalCartePaiement(eleveId, nom) {
+  _cpModalId = eleveId;
+  gel('modal-cp-nom').textContent = nom || '';
+  // Pre-fill with existing payment data if card is already paid
+  var carte = (adminData.cartes||[]).find(function(x){return String(x.id)===String(eleveId);});
+  var prefillMontant = TARIFS.carte10_renouv || 150;
+  var prefillDate = today();
+  var prefillMode = 'cb1x';
+  if (carte) {
+    var renewRows = (adminData.coursTango||[]).filter(function(x){
+      return x.email===carte.email && x.type==='carte10' && x.donnees&&x.donnees.isRenewal && x.statut!=='supprimé';
+    }).sort(function(a,b){return (b.created_at||'').localeCompare(a.created_at||'');});
+    var rr = renewRows[0];
+    if (rr) {
+      if (rr.montant) prefillMontant = rr.montant;
+      if (rr.paiement) prefillMode = rr.paiement;
+      if (rr.donnees && rr.donnees.datePremierPaiement) prefillDate = rr.donnees.datePremierPaiement;
+    }
+  }
+  gel('modal-cp-montant').value = prefillMontant;
+  gel('modal-cp-date').value = prefillDate;
+  gel('modal-cp-mode').value = prefillMode;
+  gel('modal-carte-paiement').classList.add('vis');
+}
+function fermerModalCartePaiement() {
+  gel('modal-carte-paiement').classList.remove('vis');
+  _cpModalId = null;
+}
+function confirmerCartePaiement() {
+  var id = _cpModalId;
+  fermerModalCartePaiement();
+  if (!id) return;
+  var montant = Number((gel('modal-cp-montant')||{}).value) || TARIFS.carte10_renouv || 150;
+  var datePai = (gel('modal-cp-date')||{}).value || today();
+  var modePai = (gel('modal-cp-mode')||{}).value || 'cb1x';
+  var carte = (adminData.cartes||[]).find(function(x){return x.id===id;});
+  if (!carte) return;
+  carte.paye = true;
+  // Find most recent isRenewal row for this email
+  var renewRows = (adminData.coursTango||[]).filter(function(x){
+    return x.email===carte.email && x.type==='carte10' && x.donnees&&x.donnees.isRenewal && (x.saison||saisonCourante())===saisonActive() && x.statut!=='supprimé';
+  }).sort(function(a,b){return (b.created_at||'').localeCompare(a.created_at||'');});
+  var renewRow = renewRows[0] || null;
+  if (renewRow) {
+    var newDonnees = Object.assign({}, renewRow.donnees, {renewalPaye:true, datePremierPaiement:datePai});
+    renewRow.montant = montant; renewRow.paiement = modePai; renewRow.donnees = newDonnees;
+  }
+  renderTab();
+  if (!IS_DEMO) {
+    TEV.toggleCartePaye({eleveId:id, paye:true}).catch(function(){});
+    if (renewRow) {
+      var nd = Object.assign({}, renewRow.donnees, {renewalPaye:true, datePremierPaiement:datePai});
+      Promise.resolve(TEV.client.from('inscriptions_cours').update({montant:montant, paiement:modePai, donnees:nd}).eq('id', renewRow.id)).catch(function(){});
+    }
+  }
+}
+
 var _renewModalCb = null;
 var _renewModalId = null;
 function ouvrirModalRenouveler(id, nom) {
@@ -1856,6 +1948,8 @@ gel('modal-confirm-cancel').addEventListener('click', fermerModalConfirm);
 gel('modal-confirm-ok').addEventListener('click', confirmerModalConfirm);
 gel('modal-ren-cancel').addEventListener('click', fermerModalRenouveler);
 gel('modal-ren-ok').addEventListener('click', confirmerModalRenouveler);
+gel('modal-cp-cancel').addEventListener('click', fermerModalCartePaiement);
+gel('modal-cp-ok').addEventListener('click', confirmerCartePaiement);
 gel('pub-view-close').addEventListener('click', fermerPubView);
 gel('pub-view-modal').addEventListener('click', function(e){ if(e.target===this)fermerPubView(); });
 gel('modal-qr-close').addEventListener('click', fermerModalQR);
@@ -4800,6 +4894,9 @@ function handleAction(action, btn) {
     case 'renouveler-carte':
       ouvrirModalRenouveler(id, btn.dataset.nom||'');
       break;
+    case 'enregistrer-paiement-carte':
+      ouvrirModalCartePaiement(id, btn.dataset.nom||'');
+      break;
     case 'toggle-carte-paye':
       toggleCartePaye(id);
       break;
@@ -5833,7 +5930,7 @@ window.repSupprimerDefinitif = function(id, isTango) {
 function renderElevesTango() {
   var sai = saisonActive();
   var tous = (adminData.coursTango||[]).filter(function(e){return (e.saison||saisonCourante())===sai;});
-  var inscrits = tous.filter(function(e){return e.statut==='inscrit';});
+  var inscrits = tous.filter(function(e){return e.statut==='inscrit' && !(e.donnees&&e.donnees.isRenewal);});
   var supprimes = tous.filter(function(e){return e.statut==='supprimé';});
   var ONGLETS = [
     {id:'paris-deb',     lbl:'Paris Débutants',          ville:'paris',     niv:'debutant'},
@@ -6106,7 +6203,35 @@ function ouvrirChangementCours(id) {
   COURS.forEach(function(c){h+='<option'+(c===e.cours?' selected':'')+'>'+c+'</option>';});
   h+='</select></div>'
     +'<div class="field"><label>Moyen de paiement</label><select id="cc-paiement">'+PAI_OPT+'</select></div>'
-    +'<div class="field"><label>Montant (€)</label><input type="number" id="cc-montant" value="'+(e.montant||'')+'" placeholder="ex: 170" style="width:100%;box-sizing:border-box;"></div>';
+    +'<div class="field"><label>Montant (€)</label><input type="number" id="cc-montant" value="'+(e.montant||'')+'" placeholder="ex: 170" style="width:100%;box-sizing:border-box;"></div>'
+    +(e.type==='carte10'
+      ? '<div class="field"><label>Date paiement carte 1</label><input type="date" id="cc-date-carte1" value="'+((e.donnees&&e.donnees.datePremierPaiement)||'')+'" style="width:100%;box-sizing:border-box;"></div>'
+      : '');
+  if(e.type==='carte10') {
+    var saiCC=e.saison||saisonCourante();
+    var _rwRows=(adminData.coursTango||[]).filter(function(x){
+      return x.email===e.email&&x.type==='carte10'&&x.donnees&&x.donnees.isRenewal&&(x.saison||saisonCourante())===saiCC&&x.statut!=='supprimé';
+    }).sort(function(a,b){return (a.created_at||'').localeCompare(b.created_at||'');});
+    if(_rwRows.length) {
+      h+='<div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:14px;">';
+      h+='<div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">↻ Renouvellements</div>';
+      _rwRows.forEach(function(rw,i){
+        var d=rw.donnees||{};
+        var rwM=rw.montant||d.renewalMontant||150;
+        var rwD=d.datePremierPaiement||'';
+        var rwP=rw.paiement||d.renewalPaiement||'';
+        var mOpts='<option value="">—</option>'+Object.entries(PAI_LBL).map(function(kv){return '<option value="'+kv[0]+'"'+(rwP===kv[0]?' selected':'')+'>'+kv[1]+'</option>';}).join('');
+        h+='<div style="background:var(--s3);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">';
+        h+='<div style="font-size:11px;color:var(--gold);margin-bottom:8px;font-weight:700;">Carte '+(i+2)+(d.renewalPaye===false?'<span style="color:#fb923c;font-size:10px;margin-left:8px;">⚠️ Non payée</span>':'')+'</div>';
+        h+='<div style="display:grid;grid-template-columns:90px 1fr 1fr;gap:8px;align-items:end;">';
+        h+='<div class="field" style="margin:0;"><label style="font-size:10px;">Montant</label><div style="display:flex;gap:4px;align-items:center;"><input type="number" id="rw-m-'+rw.id+'" value="'+(rwM||'')+'" min="0" step="1" style="width:65px;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:12px;"><span style="font-size:11px;color:var(--dim);">€</span></div></div>';
+        h+='<div class="field" style="margin:0;"><label style="font-size:10px;">Date paiement</label><input type="date" id="rw-d-'+rw.id+'" value="'+(rwD||'')+'" style="width:100%;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:12px;"></div>';
+        h+='<div class="field" style="margin:0;"><label style="font-size:10px;">Mode</label><select id="rw-p-'+rw.id+'" style="width:100%;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:12px;">'+mOpts+'</select></div>';
+        h+='</div></div>';
+      });
+      h+='</div>';
+    }
+  }
   if(coursDispo.length){
     h+='<div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:14px;">'
       +'<div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">+ Inscrire sur un 2ème cours</div>'
@@ -6192,14 +6317,38 @@ function validerChangementCours(id) {
   fermerContact();
   afficherToast('✓ '+e.prenom+' '+e.nom+' mis à jour');
   renderTab();
+  // Save carte 1 date
+  var dateCarte1 = (gel('cc-date-carte1')||{}).value || '';
+  if (dateCarte1) {
+    var d1 = Object.assign({}, e.donnees||{}, {datePremierPaiement: dateCarte1});
+    e.donnees = d1;
+  }
+  // Save renewal card data
+  var saiCC2 = e.saison || saisonCourante();
+  var _renewsToSave = (adminData.coursTango||[]).filter(function(x){
+    return x.email===e.email&&x.type==='carte10'&&x.donnees&&x.donnees.isRenewal&&(x.saison||saisonCourante())===saiCC2&&x.statut!=='supprimé';
+  });
+  _renewsToSave.forEach(function(rw){
+    var mEl=gel('rw-m-'+rw.id), dEl=gel('rw-d-'+rw.id), pEl=gel('rw-p-'+rw.id);
+    if(!mEl)return;
+    rw.montant=Number(mEl.value)||rw.montant;
+    rw.paiement=pEl?pEl.value:rw.paiement;
+    rw.donnees=Object.assign({},rw.donnees,{datePremierPaiement:dEl?dEl.value:''});
+  });
   if (!IS_DEMO) {
     var ops=[
       Promise.resolve(TEV.client.from('inscriptions_cours').update({
         ville: e.ville, niveau: e.niveau,
-        paiement: paiement, montant: montant
+        paiement: paiement, montant: montant,
+        donnees: e.donnees||null
       }).eq('id', id))
     ];
     if(carteLocale) ops.push(Promise.resolve(TEV.client.from('eleves').update({ville:e.ville,niveau:e.niveau}).eq('email',(e.email||'').toLowerCase())));
+    _renewsToSave.forEach(function(rw){
+      ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({
+        montant:rw.montant, paiement:rw.paiement, donnees:rw.donnees
+      }).eq('id',rw.id)));
+    });
     Promise.all(ops).then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur sauvegarde: ' + ((err&&err.message)||'')); });
   }
@@ -7411,8 +7560,8 @@ function renderCartesDetails(d) {
     var expTxt=c.isReport&&!c.datePremierCours?'Report de '+c.saisonOrigine+' · Dém. au 1er cours':expAff?'Exp. '+fmtDate(expAff):c.datePremierCours?'Dép. '+fmtDate(c.datePremierCours):'Pas encore commencée';
     var payeOk=c.paye===true;
     var payePill=payeOk
-      ?'<span class="pill pill-ok" style="font-size:8px;cursor:pointer;" data-action="toggle-carte-paye" data-id="'+c.id+'">✓ Payé</span>'
-      :'<span class="pill pill-warn" style="font-size:8px;cursor:pointer;" data-action="toggle-carte-paye" data-id="'+c.id+'">Non payé</span>';
+      ?'<span class="pill pill-ok" style="font-size:8px;cursor:pointer;" data-action="enregistrer-paiement-carte" data-id="'+c.id+'" data-nom="'+c.nom.replace(/"/g,'&quot;')+'">✓ Payé</span>'
+      :'<span class="pill pill-warn" style="font-size:8px;cursor:pointer;" data-action="enregistrer-paiement-carte" data-id="'+c.id+'" data-nom="'+c.nom.replace(/"/g,'&quot;')+'">Non payé</span>';
     return '<div class="point-row" data-snom="'+c.nom.toLowerCase().replace(/"/g,'&quot;')+'" style="display:block;padding:10px 12px;'+(fini||bient?'border-left:3px solid var(--warn-text);':'border-left:3px solid var(--border);')+'">'
       +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">'
       +'<span class="point-nom nom-clickable" style="font-size:13px;" data-action="open-contact" data-nom="'+c.nom.replace(/"/g,'&quot;')+'" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-tel="'+(c.tel||'').replace(/"/g,'&quot;')+'" data-ctx="carte">'+c.nom+'</span>'
