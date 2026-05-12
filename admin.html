@@ -12208,10 +12208,7 @@ function _renderComptaTango() {
   ];
   var tous=(adminData.coursTango||[]).filter(function(e){
     if ((e.saison||saisonCourante())!==sai) return false;
-    if (e.statut==='inscrit') return true;
-    // Supprimé = arrêt des cours, pas absence de paiement → toujours en compta
-    if (e.statut==='supprimé') return true;
-    return false;
+    return e.statut==='inscrit';
   });
   tous=_markSharedCartes(tous);
   var h='';
