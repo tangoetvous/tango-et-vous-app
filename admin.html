@@ -6157,23 +6157,24 @@ function delierPartenaire(id) {
   }
 }
 function validerLierPartenaire(id, selId) {
-  var e = (adminData.coursTango||[]).find(function(x){return x.id===id;});
+  var e = (adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
   var sel = gel(selId||'lp-partner');
   if (!e || !sel || !sel.value) return;
-  var p = (adminData.coursTango||[]).find(function(x){return x.id===sel.value;});
+  var p = (adminData.coursTango||[]).find(function(x){return String(x.id)===String(sel.value);});
   if (!p) return;
   var eNom = ((e.prenom||'')+' '+(e.nom||'')).trim();
   var pNom = ((p.prenom||'')+' '+(p.nom||'')).trim();
-  e.partenaire = pNom;
-  p.partenaire = eNom;
+  e.partenaire = pNom; e.emailPartenaire = p.email||'';
+  p.partenaire = eNom; p.emailPartenaire = e.email||'';
   fermerContact();
   afficherToast('✓ '+eNom+' ↔ '+pNom+' liés');
   renderTab();
   if (!IS_DEMO) {
-    TEV.client.from('inscriptions_cours').update({partenaire:pNom}).eq('id',e.id).catch(function(){});
-    TEV.client.from('inscriptions_cours').update({partenaire:eNom}).eq('id',p.id).catch(function(){});
-    TEV.client.from('eleves').update({partenaire:pNom}).eq('email',(e.email||'').toLowerCase()).catch(function(){});
-    TEV.client.from('eleves').update({partenaire:eNom}).eq('email',(p.email||'').toLowerCase()).catch(function(){});
+    Promise.resolve(TEV.client.from('inscriptions_cours').update({partenaire:pNom,email_partenaire:p.email||''}).eq('id',e.id)).catch(function(){});
+    Promise.resolve(TEV.client.from('inscriptions_cours').update({partenaire:eNom,email_partenaire:e.email||''}).eq('id',p.id)).catch(function(){});
+    Promise.resolve(TEV.client.from('eleves').update({partenaire:pNom,email_partenaire:p.email||''}).eq('email',(e.email||'').toLowerCase())).catch(function(){});
+    if (p.email) Promise.resolve(TEV.client.from('eleves').update({partenaire:eNom,email_partenaire:e.email||''}).eq('email',p.email.toLowerCase())).catch(function(){});
+    setTimeout(chargerDonnees, 500);
   }
 }
 function ouvrirChangementCours(id) {
@@ -6298,12 +6299,20 @@ function ajouterDeuxiemeCoursTango(sourceId) {
   }
 }
 function validerChangementCours(id) {
-  var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
+  var e=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
   if(!e) return;
   var sel=gel('cc-cours'); if(!sel) return;
   var cours=sel.value;
   var paiement=(gel('cc-paiement')||{}).value||'';
   var montant=parseInt((gel('cc-montant')||{}).value||0)||0;
+  // Partner linking (if selected in the dropdown)
+  var lpSel=gel('cc-lp'), lpVal=lpSel?lpSel.value:'';
+  var pPart=lpVal?(adminData.coursTango||[]).find(function(x){return String(x.id)===String(lpVal);}):null;
+  if(pPart){
+    var eNomP=((e.prenom||'')+' '+(e.nom||'')).trim(), pNomP=((pPart.prenom||'')+' '+(pPart.nom||'')).trim();
+    e.partenaire=pNomP; e.emailPartenaire=pPart.email||'';
+    pPart.partenaire=eNomP; pPart.emailPartenaire=e.email||'';
+  }
   e.cours=cours;
   e.ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   e.niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
@@ -6334,19 +6343,20 @@ function validerChangementCours(id) {
     rw.donnees=Object.assign({},rw.donnees,{datePremierPaiement:dEl?dEl.value:''});
   });
   if (!IS_DEMO) {
-    var ops=[
-      Promise.resolve(TEV.client.from('inscriptions_cours').update({
-        ville: e.ville, niveau: e.niveau,
-        paiement: paiement, montant: montant,
-        donnees: e.donnees||null
-      }).eq('id', id))
-    ];
+    var mainUpdate={ville:e.ville,niveau:e.niveau,paiement:paiement,montant:montant,donnees:e.donnees||null};
+    if(pPart){mainUpdate.partenaire=e.partenaire;mainUpdate.email_partenaire=e.emailPartenaire;}
+    var ops=[Promise.resolve(TEV.client.from('inscriptions_cours').update(mainUpdate).eq('id',id))];
     if(carteLocale) ops.push(Promise.resolve(TEV.client.from('eleves').update({ville:e.ville,niveau:e.niveau}).eq('email',(e.email||'').toLowerCase())));
     _renewsToSave.forEach(function(rw){
       ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({
         montant:rw.montant, paiement:rw.paiement, donnees:rw.donnees
       }).eq('id',rw.id)));
     });
+    if(pPart){
+      ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({partenaire:pPart.partenaire,email_partenaire:pPart.emailPartenaire}).eq('id',pPart.id)));
+      ops.push(Promise.resolve(TEV.client.from('eleves').update({partenaire:e.partenaire,email_partenaire:e.emailPartenaire}).eq('email',(e.email||'').toLowerCase())));
+      if(pPart.email) ops.push(Promise.resolve(TEV.client.from('eleves').update({partenaire:pPart.partenaire,email_partenaire:pPart.emailPartenaire}).eq('email',pPart.email.toLowerCase())));
+    }
     Promise.all(ops).then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur sauvegarde: ' + ((err&&err.message)||'')); });
   }
