@@ -6073,12 +6073,19 @@ function supprimerDefinitivementEleve(id) {
   var e = (adminData.coursTango||[]).find(function(x){ return x.id===id; });
   if (!e) return;
   var nom = (e.prenom||'')+' '+(e.nom||'');
+  var email = e.email;
   if (!confirm('Supprimer définitivement '+nom+' ? Cette action est irréversible.')) return;
-  adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return x.id!==id; });
+  // Retirer toutes les inscriptions de cet email (incluant les cartes10) + l'entrée cartes
+  adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return x.email!==email; });
+  if (adminData.cartes) adminData.cartes = adminData.cartes.filter(function(c){ return c.email!==email; });
   afficherToast('🗑 '+nom+' supprimé·e définitivement');
   renderTab();
   if (!IS_DEMO) {
-    TEV.client.from('inscriptions_cours').delete().eq('id', id)
+    var ops = [
+      Promise.resolve(TEV.client.from('inscriptions_cours').delete().eq('email', email)),
+      Promise.resolve(TEV.client.from('eleves').delete().eq('email', email))
+    ];
+    Promise.all(ops)
     .then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
   }
