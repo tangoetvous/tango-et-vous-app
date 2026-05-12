@@ -307,7 +307,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [x] Section "Ma carte de 10 cours" s'affichait pour les élèves forfait dans Accueil et Carte (espace élève) — CORRIGÉ (condition `=== 'carte10'` stricte + `showScreen` uniquement dans callback inscriptions_cours + détection binaire `hasCarte10 ? 'carte10' : 'forfait'` + fallback eleves)
 - [x] Sorano admin — bouton "Marquer réglé" revertait après 15s — CORRIGÉ (pattern `_pendingSoranoPayé` anti-polling, re-appliqué dans `chargerDonnees()` sur coursTango + coursYoga, jamais supprimé sur erreur DB) + colonnes `paiement_sorano BOOLEAN DEFAULT false` à créer via SQL
 - [x] Sorano espace élève — bloc "Adhésion Sorano" disparaît et remplacé par note discrète quand réglé — FAIT (`eleveData.soranoPayé` depuis callback inscriptions_cours)
-- [ ] Tester modification cours/paiement/montant → persiste après refresh
+- [x] Tester modification cours/paiement/montant → persiste après refresh — CORRIGÉ (2026-05-13, voir session VP)
 - [ ] Installer l'appli sur Mac (PWA déjà prête) : ouvrir admin dans Chrome → icône ⊕ dans la barre d'adresse → Installer
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
 - [ ] Implémenter emails automatiques via Brevo + Supabase Edge Functions (remplace Code.gs/MailApp qui est inactif) — **inclut la relance absences carte10** (voir section Emails → Cartes 10 → Relance 2 absences)
@@ -1321,3 +1321,51 @@ CREATE UNIQUE INDEX idx_cours_no_double
   WHERE statut != 'supprimé'
     AND (donnees IS NULL OR donnees->>'isRenewal' IS DISTINCT FROM 'true');
 ```
+
+## Session 2026-05-13 — Liaison partenaires, formulaire Valider Paiement
+
+### ✅ Suppression co-inscription partenaire dans DI et VP
+- **Décision** : les formulaires "Inscription Directe" et "Valider Paiement" n'inscrivent plus le partenaire en même temps. Chaque personne est inscrite individuellement, puis le lien partenaire est établi via "Modifier l'inscription" (✏️) dans Élèves Tango.
+- **Supprimé** : fonctions `_diPartZone`, `_vpPartZone`, `diTogglePartCours`, `diUpdateRolePartLabel`, `vpTogglePartCours`, `vpUpdateRolePartLabel`, `partenairesCartes` dict, blocs de validation partenaire dans `soumettreInscriptionDirecte`.
+
+### ✅ Liaison partenaires dans "Modifier l'inscription" (modal ✏️)
+
+**`validerLierPartenaire(id, selId)`** — bouton "🔗 Lier ce partenaire" :
+- Corrigé : comparaison `String(x.id)===String(id)` au lieu de `x.id===id` (BIGINT vs string)
+- Corrigé : mise à jour de `e.emailPartenaire` et `p.emailPartenaire` dans l'état local
+- Corrigé : `email_partenaire` inclus dans les UPDATE `inscriptions_cours` ET `eleves` des deux côtés
+- Corrigé : `Promise.resolve(...).catch()` au lieu de `.catch()` direct sur le builder Supabase
+- Ajouté : `setTimeout(chargerDonnees, 500)` après les DB ops pour persistance post-polling
+
+**`validerChangementCours(id)`** — bouton "✓ Valider" :
+- Corrigé : lit `cc-lp` (dropdown partenaire) avant `fermerContact()`
+- Ajouté : applique le lien partenaire dans l'état local + inclus dans `Promise.all(ops)` si partenaire sélectionné
+- Inclut UPDATE `inscriptions_cours` du partenaire + UPDATE `eleves` des deux côtés
+
+### ✅ Formulaire Valider Paiement — `soumettreValiderPaiement`
+
+**Problème 1 — cours changé non persisté :**
+- `existing` était cherché par `email + NEW cours` mais l'entrée DB avait l'ANCIEN cours → introuvable → aucun UPDATE
+- Fix : `_vpPrefillIds = []` (global) peuplé dans `vpPrefill` avec les IDs des inscriptions pré-chargées. Dans le second `forEach` (DB), fallback sur `_vpPrefillIds[idx]` quand le cours ne matche pas.
+
+**Problème 2 — `ville`/`niveau` manquants dans l'UPDATE :**
+- Le second `forEach` (DB) ne déclarait pas `var ville` et `var niveau` → `undefined` envoyé en DB
+- Fix : déclaration explicite `var ville` / `var niveau` au début du second `forEach`
+
+**Problème 3 — `ville`/`niveau` non mis à jour dans l'état local :**
+- Le premier `forEach` (local) ne mettait pas à jour `existing.ville`, `existing.niveau`, `existing.cours` quand le cours changeait
+- Fix : ajout de `existing.ville=ville; existing.niveau=niveau; existing.cours=cours;` dans le bloc `if(existing)`
+
+**Problème 4 — 2ème cours non sauvegardé (INSERT manquant) :**
+- Le second `forEach` ne faisait que des UPDATE, jamais d'INSERT pour un nouveau cours
+- Fix : ajout d'une branche `else { INSERT ... }` dans le second `forEach`
+- `dateP` (datePremierPaiement) inclus dans les deux payloads UPDATE et INSERT
+
+**Problème 5 — entrée locale fake bloquait l'INSERT du 2ème cours :**
+- Le premier `forEach` pousse une entrée fake (`id='CT'+timestamp`) pour le 2ème cours
+- Le second `forEach` retrouvait cette fake entrée par `email+cours` → tentait UPDATE avec faux ID → 0 lignes en DB
+- Fix : `if(existing && isNaN(parseInt(existing.id))) existing = null;` — les IDs non-numériques (faux locaux) sont ignorés → branche INSERT utilisée à la place
+
+**Règle mémo — IDs locaux fake vs IDs DB réels :**
+`isNaN(parseInt(e.id))` = true → ID fake créé localement (ex: `'CT1234567890v1'`) → toujours faire INSERT
+`isNaN(parseInt(e.id))` = false → ID réel Supabase (entier) → UPDATE safe
