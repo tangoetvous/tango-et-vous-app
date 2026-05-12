@@ -1857,16 +1857,9 @@ function ouvrirModalRenouveler(id, nom) {
   gel('modal-ren-nom').textContent = nom || '';
   var radios = document.querySelectorAll('input[name="ren-paye"]');
   radios.forEach(function(r){ r.checked = r.value==='non'; });
-  var montantEl = gel('modal-ren-montant');
-  if (montantEl) montantEl.value = TARIFS.carte10_renouv || 150;
   var montantRow = gel('modal-ren-montant-row');
   if (montantRow) montantRow.style.display = 'none';
-  radios.forEach(function(r) {
-    r.onchange = function() {
-      var sel = document.querySelector('input[name="ren-paye"]:checked');
-      if (montantRow) montantRow.style.display = (sel && sel.value==='oui') ? 'block' : 'none';
-    };
-  });
+  radios.forEach(function(r) { r.onchange = null; });
   gel('modal-renouveler').classList.add('vis');
   _renewModalId = id;
 }
@@ -1929,10 +1922,15 @@ function confirmerModalRenouveler() {
   var id = _renewModalId;
   var el = document.querySelector('input[name="ren-paye"]:checked');
   var paye = el ? el.value==='oui' : false;
-  var montantEl = gel('modal-ren-montant');
-  var montant = montantEl ? (Number(montantEl.value) || TARIFS.carte10_renouv || 150) : (TARIFS.carte10_renouv || 150);
+  var nom = (gel('modal-ren-nom')||{}).textContent || '';
   fermerModalRenouveler();
-  if (id) renouvelerCarteAction(id, null, paye, montant);
+  if (!id) return;
+  if (paye) {
+    // Renouveler sans payer, puis ouvrir le modal paiement pour saisir les détails
+    renouvelerCarteAction(id, null, false, 0, function(){ ouvrirModalCartePaiement(id, nom); });
+  } else {
+    renouvelerCarteAction(id, null, false, 0);
+  }
 }
 
 // Attacher les boutons des modals une seule fois
@@ -7657,13 +7655,13 @@ function pointerCoursAction(id, date, nbCours, btn) {
     })
     .catch(function(e){if(btn)btn.disabled=false;});
 }
-function renouvelerCarteAction(id, btn, paye, montant) {
+function renouvelerCarteAction(id, btn, paye, montant, onDone) {
   if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=10;c.datePremierCours='';c.expiration='';c.datesCours=[];c.paye=paye===true;
 var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='inscrit';});
 if(cte){cte.statut=paye===true?'inscrit':'attente_paiement';}
-_broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCours:[],datePremierCours:'',expiration:''});}renderTab();return;}
+_broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCours:[],datePremierCours:'',expiration:''});}renderTab();if(onDone)onDone();return;}
   if(btn){btn.disabled=true;btn.textContent='⏳';}
-  var _mont = Number(montant) || TARIFS.carte10_renouv || 150;
+  var _mont = Number(montant) || 0;
   TEV.renouvelerCarte({eleveId:id,paye:paye===true}).then(function(){
     var _carteObj = (adminData.cartes||[]).find(function(x){return x.id===id;});
     var _email = _carteObj ? (_carteObj.email||'') : '';
@@ -7682,7 +7680,7 @@ _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCou
       };
       Promise.resolve(TEV.client.from('inscriptions_cours').insert(_renewRow)).catch(function(){});
     }
-    chargerDonnees();
+    chargerDonnees().then(function(){ if(onDone) onDone(); }).catch(function(){ if(onDone) onDone(); });
   }).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
 }
 function toggleCartePaye(id) {
