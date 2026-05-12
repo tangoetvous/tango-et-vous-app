@@ -10273,14 +10273,21 @@ window.soumettreValiderPaiement = function(force) {
     var updates=[];
     coursCoches.forEach(function(cours,idx){
       var ci=COURS_VALS_REF.indexOf(cours);
+      var ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
+      var niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
       var formule=forfait2Checked?'forfait':carte10UniqueChecked?'carte10':((document.querySelector('input[name="vp-formule-c-'+ci+'"]:checked')||{}).value||'carte10');
       var role=((document.querySelector('input[name="vp-role-'+ci+'"]:checked')||{}).value)||'guideur';
       var paie=vpShared?((gel('vp-paie-shared')||{}).value||'cb1x'):((gel('vp-paie-'+ci)||{}).value||'cb1x');
       var mf=vpShared?(idx===0?gel('vp-montant-shared'):null):gel('vp-montant-'+ci);
       var montant=mf?(parseFloat(mf.value)||0):(vpShared?0:0);
+      var dateP=vpShared?((gel('vp-dateP-shared')||{}).value||''):((gel('vp-dateP-'+ci)||{}).value||'');
       var existing=(adminData.coursTango||[]).find(function(e){return e.email===email&&_coursDbToLbl(e)===cours;});
       if(!existing&&idx<_vpPrefillIds.length) existing=(adminData.coursTango||[]).find(function(e){return String(e.id)===String(_vpPrefillIds[idx]);});
-      if(existing)updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'inscrit',type:formule,paiement:paie,montant:montant,tel:tel,ville:ville,niveau:niveau}).eq('id',existing.id)));
+      if(existing){
+        updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'inscrit',type:formule,paiement:paie,montant:montant,tel:tel,ville:ville,niveau:niveau,donnees:dateP?{datePremierPaiement:dateP}:{}}).eq('id',existing.id)));
+      } else {
+        updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').insert({prenom:prenom,nom:nom,email:email,tel:tel,role:role,ville:ville,niveau:niveau,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:dateP?{datePremierPaiement:dateP}:{}})));
+      }
     });
     Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?10:0,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     Promise.all(updates).then(function(){
