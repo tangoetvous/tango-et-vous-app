@@ -326,6 +326,16 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [x] **Module Trésorerie (Compta)** — UI complète implémentée dans admin.html (onglet Compta → Trésorerie). SQL exécuté dans Supabase le 2026-05-08. ✅ Testé et fonctionnel.
 - [x] **`calcExpiration` double-comptage été** — CORRIGÉ : les dates juillet-août étaient dans `SANS_COURS_PARIS`/`SANS_COURS_VINCENNES` ET couvertes par le bonus inter-saison (step 3), ce qui doublait leur effet. Fix : suppression des dates d'été des tableaux `SANS_COURS_*` — l'été est géré exclusivement par le step 3 (gap estival).
 - [x] **`sauvegarderEditCarte` ne persistait pas** — CORRIGÉ : les dates venaient de la table `presences` (reconstruite à chaque `chargerDonnees`). Fix : DELETE des présences existantes + INSERT des nouvelles pour cet `eleve_id`. L'expiration est recalculée systématiquement (suppression de la garde `!c.expiration`). Pour les cartes reportées (`_fromCoursTango`) : l'`eleves.id` est retrouvé par email dans `adminData.cartes` (même si la saison ne correspond plus) → `Promise.all` sur `eleves` + `presences` + `inscriptions_cours.donnees`.
+- [x] **Badges paiement carte10 — "✓ Payé" et modal paiement** — FAIT (2026-05-12) : cliquer "✓ Payé" ouvre désormais le même modal que "Non payé" (pré-rempli avec les données de l'isRenewal le plus récent). Modal `ouvrirModalCartePaiement` enrichi : si un isRenewal existe pour cet email → pré-remplit montant/mode/date depuis `donnees.datePremierPaiement`, `paiement`, `montant`.
+- [x] **Renouvellement carte + "Payé" → ouvre modal paiement** — FAIT (2026-05-12) : dans `confirmerModalRenouveler`, si `paye=true` → appelle `renouvelerCarteAction(id, null, false, 0, callback)` puis le callback ouvre `ouvrirModalCartePaiement`. Le renouvellement lui-même reste non-payé en DB jusqu'à validation dans le modal.
+- [x] **Race condition `renouvelerCarteAction` + isRenewal INSERT** — CORRIGÉ (2026-05-12) : la promesse `insertProm` était dans le premier `.then()` mais non retournée → `chargerDonnees` s'exécutait avant la fin de l'INSERT. Fix : `return insertProm` dans le premier `.then()` pour chaîner correctement.
+- [x] **`idx_cours_no_double` bloquait les inserts isRenewal** — SQL À EXÉCUTER dans Supabase (2026-05-12) : l'index UNIQUE sur `(prenom, nom, ville, niveau, saison)` rejetait silencieusement les lignes `isRenewal` car même combinaison que l'original. Fix : recréer l'index avec clause `AND (donnees IS NULL OR donnees->>'isRenewal' IS DISTINCT FROM 'true')`.
+- [x] **Modal "Modifier l'inscription" — scroll** — CORRIGÉ (2026-05-12) : `.modal-box` manquait `max-height:90vh;overflow-y:auto;` → ajouté globalement.
+- [x] **Compta — double-comptage élève 2 cours avec carte10** — CORRIGÉ (2026-05-12) : `_markSharedCartes(liste)` identifie les entrées secondaires (même email, carte10, non-isRenewal) et les marque `montant:0, _sharedCarte:true`. `_buildADeposer` déduplique aussi (garde le montant le plus élevé par email). `_comptaBlock` affiche "carte partagée" avec "—" pour montant/mode.
+- [x] **Compta tango — élèves supprimés exclus** — CORRIGÉ (2026-05-12) : `_renderComptaTango` incluait `statut='supprimé'` — seul `statut='inscrit'` est désormais conservé.
+- [x] **Stages — labels statut** — CORRIGÉ (2026-05-12) : "Confirmé" → "Validé·e" (pill verte), "Confirmés" → "Validé·e·s" (stat), "✓ Confirmer" → "✓ Valider" (tous les boutons). Ajout d'un bouton "✓ Valider" directement sur les cartes en attente dans la vue "Tous".
+- [x] **Inscription directe — ReferenceError `formule`** — CORRIGÉ (2026-05-12) : `formule` déclarée dans le `forEach` (scope local) utilisée après la boucle dans `postAS` (legacy, ne fonctionne plus) → suppression du champ `formule` dans l'appel `postAS`.
+- [x] **Inscription directe + VP — 3 formules pour 2 cours + max 2 cours** — FAIT (2026-05-12) : 3 options radio quand 2 cours sélectionnés : (1) "1 carte de 10 + 1 forfait" — sections indépendantes par cours (formule/rôle/paiement/montant/date) ; (2) "Forfait 2 cours" — bloc paiement commun + rôle par cours ; (3) "1 carte de 10 pour les 2 cours" — bloc paiement commun + rôle par cours. Max 2 cours enforced dans l'UI (uncheck silencieux) et dans le submit (erreur). Valeurs `di-formule2` / `vp-formule2` : `'carte10forfait'`, `'forfait2'`, `'carte10unique'`. `soumettreInscriptionDirecte` et `soumettreValiderPaiement` lisent les champs partagés (`di-paie-shared`, `di-montant-shared`, `di-dateP-shared` / idem `vp-`) quand formule partagée. `vpPrefill` détecte automatiquement `carte10unique` (allCarte10 && secondMontant===0).
 
 ### SQL Trésorerie — à exécuter dans Supabase SQL Editor
 ```sql
@@ -1256,3 +1266,58 @@ Appelé avec `_calIcsDate(dateStr, hfin, hdeb)` pour le DTEND des milongas.
 - **Source des dates milongas** : `tev_milongas_{sai}.milongas[].dates` — géré depuis Paramètres → Milongas. Ajout/suppression de dates = auto-sauvegarde (`sauverMilongas()` appelé sans bouton supplémentaire, toast de confirmation affiché). Modification info/horaires = bouton "Enregistrer" dans l'accordéon Info.
 - **Modifications Agenda** (`agendaOverrides`) : stockées dans `tev_agenda_overrides`, utilisées pour l'affichage dans l'agenda admin ET pour l'ICS (testé fonctionnel).
 - **Fusion deux saisons** : milongas et stages fusionnent `saiCur` + `saiNext` pour montrer les dates futures de la prochaine saison dans l'ICS courant.
+
+## Session 2026-05-12 — Cartes 10, Compta, Stages, Formulaires inscription
+
+### ✅ Modal paiement carte10 — "✓ Payé" et renouvellement
+- **"✓ Payé"** (pill verte dans Cartes 10 → Détails) ouvre désormais le même modal de paiement que "Non payé" — pour modifier une donnée déjà saisie. `ouvrirModalCartePaiement` pré-remplit depuis l'isRenewal le plus récent (`montant`, `paiement`, `donnees.datePremierPaiement`).
+- **Renouveler → Payé** : `confirmerModalRenouveler` enchaîne `renouvelerCarteAction(id, null, false, 0, callback)` → callback ouvre `ouvrirModalCartePaiement`. Le renouvellement crée la nouvelle carte (non-payée) en DB, puis le modal enregistre le paiement.
+
+### ✅ Race condition isRenewal INSERT + index UNIQUE
+- **Race condition** : `renouvelerCarteAction` n'attendait pas la fin de l'INSERT isRenewal avant d'appeler `chargerDonnees`. Fix : `return insertProm` dans le premier `.then()`.
+- **`idx_cours_no_double`** bloquait silencieusement les INSERT isRenewal (même prenom/nom/ville/niveau/saison que l'original). **SQL à exécuter dans Supabase** :
+```sql
+DROP INDEX IF EXISTS idx_cours_no_double;
+CREATE UNIQUE INDEX idx_cours_no_double
+  ON inscriptions_cours (lower(trim(prenom)), lower(trim(nom)), ville, niveau, saison)
+  WHERE statut != 'supprimé'
+    AND (donnees IS NULL OR donnees->>'isRenewal' IS DISTINCT FROM 'true');
+```
+
+### ✅ Compta — corrections
+- **Double-comptage carte10 + 2 cours** : `_markSharedCartes(liste)` — deux passes : (1) trouve le montant max par email parmi les non-isRenewal carte10 ; (2) marque les entrées secondaires `montant:0, _sharedCarte:true`. `_buildADeposer` déduplique (garde entrée à montant le plus élevé par email). `_comptaBlock` affiche badge "carte partagée" avec "—" pour montant/mode sur les entrées dupliquées.
+- **Élèves supprimés exclus** : `_renderComptaTango` n'inclut plus `statut='supprimé'` — seul `statut='inscrit'` comptabilisé.
+- **Renouvellements (isRenewal)** : comptés une seule fois car `renouvelerCarteAction` utilise `.find()` — une seule ligne isRenewal créée par renouvellement.
+
+### ✅ Stages — refonte labels
+- Vue Tous : pill "Confirmé" → **"Validé·e"** ; bouton "✓ Valider" ajouté directement sur les cartes `i.attente` (en plus du sous-onglet Attente)
+- Vue Pointage : stat "Confirmés" → **"Validé·e·s"**, recette sous-titre adapté, bouton "✓ Confirmer" → **"✓ Valider"**
+- Vue Attente + vue Slot : bouton "✓ Confirmer" → **"✓ Valider"**
+
+### ✅ Inscription directe — bug `formule` hors portée
+`formule` était déclaré dans le `coursCoches.forEach` mais référencé après la boucle dans `postAS` (legacy, non fonctionnel). ReferenceError attrapé par try/catch → affiché comme erreur bloquante. Fix : suppression du champ `formule` dans l'appel `postAS`.
+
+### ✅ Formulaires Inscription Directe + Valider Paiement — 3 formules 2 cours
+Quand 2 cours cochés, 3 options radio remplacent l'ancienne "Par cours / Forfait 2 cours" :
+
+| Valeur `formule2` | Comportement UI | Comportement DB |
+|---|---|---|
+| `carte10forfait` | 2 sections indépendantes : formule/rôle/paiement/montant/date par cours | type déduit par cours (carte10 ou forfait) |
+| `forfait2` | 1 bloc paiement commun + rôle par cours | type='forfait', idx>0 montant=0 |
+| `carte10unique` | 1 bloc paiement commun + rôle par cours | type='carte10' pour les 2, idx>0 montant=0 |
+
+- Max 2 cours : uncheck silencieux dans l'UI + erreur dans le submit
+- Champs partagés : `di-paie-shared`, `di-montant-shared`, `di-dateP-shared` (idem `vp-`)
+- `vpPrefill` détecte `carte10unique` : `allCarte10 && secondMontant===0`
+- `anyMainCarte10` : `carte10UniqueChecked || insRows.some(type==='carte10')`
+- Le modal scroll `.modal-box` : `max-height:90vh; overflow-y:auto` ajouté globalement
+
+### ⚠️ SQL restant à exécuter dans Supabase
+```sql
+-- Fix index UNIQUE pour autoriser les isRenewal
+DROP INDEX IF EXISTS idx_cours_no_double;
+CREATE UNIQUE INDEX idx_cours_no_double
+  ON inscriptions_cours (lower(trim(prenom)), lower(trim(nom)), ville, niveau, saison)
+  WHERE statut != 'supprimé'
+    AND (donnees IS NULL OR donnees->>'isRenewal' IS DISTINCT FROM 'true');
+```
