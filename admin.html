@@ -10081,25 +10081,6 @@ window.vpUpdatePaieZone = function() {
   var hasVincVp = checked.some(function(cb){ return cb.value.toLowerCase().indexOf('vincennes')>=0; });
   var _lrsVp = TARIFS.adhesion_lrp||0, _sorVp = hasVincVp?(TARIFS.sorano_vinc||0):0;
 
-  function _vpPartZone(ci){
-    var s='<div id="vp-part-zone-'+ci+'" style="display:none;background:var(--s3);border-radius:6px;padding:8px;margin-top:4px;">';
-    s+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="font-size:10px;color:var(--dim);">Rôle partenaire :</span><span id="vp-role-part-lbl-'+ci+'" style="font-size:11px;color:var(--gold);font-weight:600;">👩 Guidée (auto)</span></div>';
-    s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Prénom part. *</label><input type="text" id="vp-p-prenom-'+ci+'"/></div>';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Nom part. *</label><input type="text" id="vp-p-nom-'+ci+'"/></div>';
-    s+='</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Email part.</label><input type="email" id="vp-p-email-'+ci+'" autocapitalize="none"/></div>';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Tél part.</label><input type="tel" id="vp-p-tel-'+ci+'"/></div>';
-    s+='</div><div style="display:flex;gap:10px;align-items:center;margin-bottom:6px;">';
-    s+='<span style="font-size:10px;color:var(--dim);">Formule :</span>';
-    s+='<label '+lbl+'><input type="radio" name="vp-formule-p-'+ci+'" value="carte10" checked '+inp+'/> C10</label>';
-    s+='<label '+lbl+'><input type="radio" name="vp-formule-p-'+ci+'" value="forfait" '+inp+'/> Forfait</label>';
-    s+='</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Paiement part.</label><select id="vp-paie-p-'+ci+'">'+PAI_OPT_Z+'</select></div>';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Montant part. (€)</label><input type="number" id="vp-montant-p-'+ci+'" value="'+(TARIFS.carte10||0)+'" min="0" step="1"/></div>';
-    s+='</div></div>';
-    return s;
-  }
 
   if (is2cours) {
     h += '<div style="margin-bottom:10px;padding:10px;background:var(--s2);border-radius:8px;">';
@@ -10127,14 +10108,9 @@ window.vpUpdatePaieZone = function() {
       h += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;">'+cours+'</div>';
       h += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">';
       h += '<span style="font-size:10px;color:var(--dim);">Rôle :</span>';
-      h += '<label '+lbl+'><input type="radio" name="vp-role-'+ci+'" value="guideur" checked onchange="vpUpdateRolePartLabel(\'guideur\','+ci+')" '+inp+'/> Guideur</label>';
-      h += '<label '+lbl+'><input type="radio" name="vp-role-'+ci+'" value="guidee" onchange="vpUpdateRolePartLabel(\'guidee\','+ci+')" '+inp+'/> Guidée</label>';
+      h += '<label '+lbl+'><input type="radio" name="vp-role-'+ci+'" value="guideur" checked '+inp+'/> Guideur</label>';
+      h += '<label '+lbl+'><input type="radio" name="vp-role-'+ci+'" value="guidee" '+inp+'/> Guidée</label>';
       h += '</div>';
-      h += '<div style="display:flex;gap:12px;margin-bottom:4px;">';
-      h += '<label '+lbl+'><input type="radio" name="vp-part-'+ci+'" value="solo" checked onchange="vpTogglePartCours('+ci+')" '+inp+'/> Solo</label>';
-      h += '<label '+lbl+'><input type="radio" name="vp-part-'+ci+'" value="avec" onchange="vpTogglePartCours('+ci+')" '+inp+'/> Avec partenaire</label>';
-      h += '</div>';
-      h += _vpPartZone(ci);
       h += '</div>';
     });
   } else {
@@ -10157,31 +10133,18 @@ window.vpUpdatePaieZone = function() {
       h += '</div>';
       h += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">';
       h += '<span style="font-size:10px;color:var(--dim);">Rôle :</span>';
-      h += '<label '+lbl+'><input type="radio" name="vp-role-'+ci+'" value="guideur" checked onchange="vpUpdateRolePartLabel(\'guideur\','+ci+')" '+inp+'/> Guideur</label>';
-      h += '<label '+lbl+'><input type="radio" name="vp-role-'+ci+'" value="guidee" onchange="vpUpdateRolePartLabel(\'guidee\','+ci+')" '+inp+'/> Guidée</label>';
+      h += '<label '+lbl+'><input type="radio" name="vp-role-'+ci+'" value="guideur" checked '+inp+'/> Guideur</label>';
+      h += '<label '+lbl+'><input type="radio" name="vp-role-'+ci+'" value="guidee" '+inp+'/> Guidée</label>';
       h += '</div>';
       h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
       h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Paiement</label><select id="vp-paie-'+ci+'">'+PAI_OPT_Z+'</select></div>';
       h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Montant (€)</label><input type="number" id="vp-montant-'+ci+'" value="'+defMt+'" min="0" step="1"/></div>';
       h += '</div>';
       h += '<div class="field" style="margin:0 0 8px;"><label style="font-size:10px;">Date du 1er paiement</label><input type="date" id="vp-dateP-'+ci+'" style="font-size:13px;"/></div>';
-      h += '<div style="display:flex;gap:12px;margin-bottom:4px;">';
-      h += '<label '+lbl+'><input type="radio" name="vp-part-'+ci+'" value="solo" checked onchange="vpTogglePartCours('+ci+')" '+inp+'/> Solo</label>';
-      h += '<label '+lbl+'><input type="radio" name="vp-part-'+ci+'" value="avec" onchange="vpTogglePartCours('+ci+')" '+inp+'/> Avec partenaire</label>';
-      h += '</div>';
-      h += _vpPartZone(ci);
       h += '</div>';
     });
   }
   z.innerHTML = h;
-};
-window.vpTogglePartCours = function(ci) {
-  var avec = (document.querySelector('input[name="vp-part-'+ci+'"]:checked')||{}).value==='avec';
-  var z = gel('vp-part-zone-'+ci); if(z) z.style.display = avec?'block':'none';
-};
-window.vpUpdateRolePartLabel = function(role, ci) {
-  var lbl = gel('vp-role-part-lbl-'+ci);
-  if(lbl) lbl.textContent = (role==='guideur'?'👩 Guidée':'👨 Guideur')+' (auto)';
 };
 window.vpPrefill = function(id) {
   if(!id) return;
@@ -10222,22 +10185,9 @@ window.vpPrefill = function(id) {
       if(fEl) fEl.checked=true;
       var role=ins.role||'guideur';
       var rEl=document.querySelector('input[name="vp-role-'+ci+'"][value="'+role+'"]');
-      if(rEl){rEl.checked=true;vpUpdateRolePartLabel(role,ci);}
+      if(rEl) rEl.checked=true;
       var pEl=gel('vp-paie-'+ci); if(pEl&&ins.paiement) pEl.value=ins.paiement;
       var mEl=gel('vp-montant-'+ci); if(mEl&&ins.montant) mEl.value=ins.montant;
-      if(ins.partenaire){
-        var avecEl=document.querySelector('input[name="vp-part-'+ci+'"][value="avec"]');
-        if(avecEl){avecEl.checked=true;vpTogglePartCours(ci);}
-        var parts=ins.partenaire.split(' ');
-        var ppEl=gel('vp-p-prenom-'+ci),pnEl=gel('vp-p-nom-'+ci),peEl=gel('vp-p-email-'+ci);
-        if(ppEl) ppEl.value=parts[0]||'';
-        if(pnEl) pnEl.value=parts.slice(1).join(' ')||'';
-        if(peEl) peEl.value=ins.emailPartenaire||'';
-        var partEntry=ins.emailPartenaire
-          ?(adminData.coursTango||[]).find(function(x){return String(x.email)===String(ins.emailPartenaire)&&x.ville===ins.ville&&x.niveau===ins.niveau;})
-          :(adminData.coursTango||[]).find(function(x){return _normNom((x.prenom+' '+x.nom).trim())===_normNom(ins.partenaire)&&x.ville===ins.ville&&x.niveau===ins.niveau;});
-        var ptEl=gel('vp-p-tel-'+ci); if(ptEl&&partEntry) ptEl.value=partEntry.tel||'';
-      }
     });
   },60);
 };
@@ -10272,7 +10222,6 @@ window.soumettreValiderPaiement = function(force) {
     });
     if(quotaWarn){if(err){err.innerHTML=quotaWarn+'<br><button class="btn btn-warn" onclick="soumettreValiderPaiement(true)" style="margin-top:8px;width:100%;">⚡ Forcer quand même</button>';err.style.display='block';}return;}
   }
-  var partenairesCartes={};
   if(!adminData.coursTango)adminData.coursTango=[];
   var _hvVp=coursCoches.some(function(c){return c.toLowerCase().indexOf('vincennes')>=0;});
   var _lVp=TARIFS.adhesion_lrp||0;
@@ -10290,29 +10239,9 @@ window.soumettreValiderPaiement = function(force) {
     var paie=vpShared?((gel('vp-paie-shared')||{}).value||'cb1x'):((gel('vp-paie-'+ci)||{}).value||'cb1x');
     var montant=vpShared?(idx===0?(parseFloat((gel('vp-montant-shared')||{}).value)||0):0):(parseFloat((gel('vp-montant-'+ci)||{}).value)||(_cVp2+(idx===0?_lVp+_sVp:0)));
     var role=((document.querySelector('input[name="vp-role-'+ci+'"]:checked')||{}).value)||'guideur';
-    var roleP=role==='guideur'?'guidee':'guideur';
-    var avecC=(document.querySelector('input[name="vp-part-'+ci+'"]:checked')||{}).value==='avec';
-    var pPrenomC=avecC?((gel('vp-p-prenom-'+ci)||{}).value||'').trim():'';
-    var pNomC=avecC?((gel('vp-p-nom-'+ci)||{}).value||'').trim():'';
-    var pEmailC=avecC?((gel('vp-p-email-'+ci)||{}).value||'').trim().toLowerCase():'';
-    var pTelC=avecC?((gel('vp-p-tel-'+ci)||{}).value||'').trim():'';
-    var formPEl=avecC?document.querySelector('input[name="vp-formule-p-'+ci+'"]:checked'):null;
-    var formulePart=formPEl?formPEl.value:formule;
-    var partNomC=avecC?(pPrenomC+' '+pNomC).trim():'';
-    var paiePart=avecC?((gel('vp-paie-p-'+ci)||{}).value||paie):paie;
-    var mpf=avecC?gel('vp-montant-p-'+ci):null;
-    var montantP=mpf?(parseFloat(mpf.value)||0):(formulePart==='carte10'?TARIFS.carte10:(ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris));
     var existing=adminData.coursTango.find(function(e){return e.email===email&&_coursDbToLbl(e)===cours&&e.statut!=='inscrit'&&e.statut!=='supprimé';});
-    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.role=role;existing.partenaire=partNomC;existing.emailPartenaire=pEmailC;if(tel)existing.tel=tel;}
-    else{adminData.coursTango.push({id:'CT'+Date.now()+'v'+idx,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:_coursDbToLbl({ville:ville,niveau:niveau}),ville:ville,statut:'inscrit',partenaire:partNomC,emailPartenaire:pEmailC,type:formule,paiement:paie,montant:montant,dateInscription:today(),saison:sai});}
-    if(avecC&&pPrenomC&&pNomC){
-      var existingP=adminData.coursTango.find(function(e){return pEmailC&&e.email===pEmailC&&_coursDbToLbl(e)===cours&&e.statut!=='inscrit'&&e.statut!=='supprimé';});
-      if(existingP){existingP.statut='inscrit';existingP.type=formulePart;existingP.paiement=paiePart;existingP.montant=montantP;existingP.partenaire=prenom+' '+nom;existingP.emailPartenaire=email;if(pTelC)existingP.tel=pTelC;}
-      else{adminData.coursTango.push({id:'CT'+Date.now()+'vp'+idx,prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,role:roleP,niveau:niveau,cours:_coursDbToLbl({ville:ville,niveau:niveau}),ville:ville,statut:'inscrit',partenaire:prenom+' '+nom,emailPartenaire:email,type:formulePart,paiement:paiePart,montant:montantP,dateInscription:today(),saison:sai});}
-      var partKeyVp=pEmailC||('_nomail_'+pPrenomC+'_'+pNomC);
-      if(formulePart==='carte10'&&pPrenomC&&!partenairesCartes[partKeyVp])
-        partenairesCartes[partKeyVp]={prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,ville:ville,niveau:niveau};
-    }
+    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.role=role;if(tel)existing.tel=tel;}
+    else{adminData.coursTango.push({id:'CT'+Date.now()+'v'+idx,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:_coursDbToLbl({ville:ville,niveau:niveau}),ville:ville,statut:'inscrit',type:formule,paiement:paie,montant:montant,dateInscription:today(),saison:sai});}
   });
   // Cartes 10
   var anyMainCarte10=carte10UniqueChecked||coursCoches.some(function(cours,idx){
@@ -10326,13 +10255,6 @@ window.soumettreValiderPaiement = function(force) {
     adminData.cartes.push({id:'C'+Date.now(),nom:prenom+' '+nom,prenom:prenom,niveau:niveauLbl0,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville0,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
     recalcStats();
   }
-  Object.keys(partenairesCartes).forEach(function(pem,i){
-    var pd=partenairesCartes[pem],nLbl=pd.niveau==='debutant'?'Débutant':'Intermédiaire';
-    if(!pd.email||!adminData.cartes.find(function(c){return c.email===pd.email;})){
-      adminData.cartes.push({id:'C'+(Date.now()+100+i),nom:pd.prenom+' '+pd.nom,prenom:pd.prenom,niveau:nLbl,email:pd.email,tel:pd.tel,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:pd.ville,datesCours:[],partenaire:prenom+' '+nom,emailPartenaire:email,saison:sai});
-      recalcStats();
-    }
-  });
   if(ok)ok.style.display='block';
   if(!IS_DEMO){
     var updates=[];
@@ -10343,24 +10265,10 @@ window.soumettreValiderPaiement = function(force) {
       var paie=vpShared?((gel('vp-paie-shared')||{}).value||'cb1x'):((gel('vp-paie-'+ci)||{}).value||'cb1x');
       var mf=vpShared?(idx===0?gel('vp-montant-shared'):null):gel('vp-montant-'+ci);
       var montant=mf?(parseFloat(mf.value)||0):(vpShared?0:0);
-      var avecC=(document.querySelector('input[name="vp-part-'+ci+'"]:checked')||{}).value==='avec';
-      var pEmailC=avecC?((gel('vp-p-email-'+ci)||{}).value||'').trim().toLowerCase():'';
       var existing=adminData.coursTango.find(function(e){return e.email===email&&_coursDbToLbl(e)===cours;});
       if(existing)updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'inscrit',type:formule,paiement:paie,montant:montant,tel:tel}).eq('id',existing.id)));
-      if(avecC&&pEmailC){
-        var paiePart=((gel('vp-paie-p-'+ci)||{}).value||paie);
-        var mpf=gel('vp-montant-p-'+ci); var montantP=mpf?(parseFloat(mpf.value)||0):(formulePart==='carte10'?(TARIFS.carte10||0):(TARIFS.forfait_paris||0));
-        var formulePart=(document.querySelector('input[name="vp-formule-p-'+ci+'"]:checked')||{}).value||formule;
-        var existingP=adminData.coursTango.find(function(e){return e.email===pEmailC&&_coursDbToLbl(e)===cours;});
-        if(existingP)updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'inscrit',type:formulePart,paiement:paiePart,montant:montantP}).eq('id',existingP.id)));
-      }
     });
     Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?10:0,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
-    Object.keys(partenairesCartes).forEach(function(pem){
-      var pd=partenairesCartes[pem];
-      if(!pd.email) return;
-      Promise.resolve(TEV.client.from('eleves').upsert({prenom:pd.prenom,nom:pd.nom,email:pd.email,tel:pd.tel,niveau:pd.niveau,ville:pd.ville,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:10,carte_statut:'Nouvelle carte',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
-    });
     Promise.all(updates).then(function(){
       chargerDonnees();
       setTimeout(function(){sousOngletEleves=ville0+'-'+(niveau0==='intermediaire'?'int':'deb');switchTab('eleves-tango');},1500);
@@ -10406,14 +10314,6 @@ function renderFormulaireInscriptionDirecteAdmin() {
     +'<button class="btn btn-gold" style="width:100%;" onclick="soumettreInscriptionDirecte()">✓ Inscrire</button>'
     +'</div>';
 }
-window.diTogglePartCours = function(ci) {
-  var avec = (document.querySelector('input[name="di-part-'+ci+'"]:checked')||{}).value === 'avec';
-  var z = gel('di-part-zone-'+ci); if(z) z.style.display = avec ? 'block' : 'none';
-};
-window.diUpdateRolePartLabel = function(role, ci) {
-  var lbl = gel('di-role-part-lbl-'+ci);
-  if(lbl) lbl.textContent = (role==='guideur'?'👩 Guidée':'👨 Guideur')+' (auto)';
-};
 window.diUpdatePaieZone = function() {
   var COURS_VALS_Z = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
   var PAI_OPT_Z = Object.entries(PAI_LBL).map(function(kv){ return '<option value="'+kv[0]+'">'+kv[1]+'</option>'; }).join('');
@@ -10430,26 +10330,6 @@ window.diUpdatePaieZone = function() {
   var h = '';
   var hasVincDi = checked.some(function(cb){ return cb.value.toLowerCase().indexOf('vincennes')>=0; });
   var _lrsDi = TARIFS.adhesion_lrp||0, _sorDi = hasVincDi?(TARIFS.sorano_vinc||0):0;
-
-  function _diPartZone(ci){
-    var s='<div id="di-part-zone-'+ci+'" style="display:none;background:var(--s3);border-radius:6px;padding:8px;margin-top:4px;">';
-    s+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="font-size:10px;color:var(--dim);">Rôle partenaire :</span><span id="di-role-part-lbl-'+ci+'" style="font-size:11px;color:var(--gold);font-weight:600;">👩 Guidée (auto)</span></div>';
-    s+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Prénom part. *</label><input type="text" id="di-p-prenom-'+ci+'"/></div>';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Nom part. *</label><input type="text" id="di-p-nom-'+ci+'"/></div>';
-    s+='</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Email part.</label><input type="email" id="di-p-email-'+ci+'" autocapitalize="none"/></div>';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Tél part.</label><input type="tel" id="di-p-tel-'+ci+'"/></div>';
-    s+='</div><div style="display:flex;gap:10px;align-items:center;margin-bottom:6px;">';
-    s+='<span style="font-size:10px;color:var(--dim);">Formule :</span>';
-    s+='<label '+lbl+'><input type="radio" name="di-formule-p-'+ci+'" value="carte10" checked '+inp+'/> C10</label>';
-    s+='<label '+lbl+'><input type="radio" name="di-formule-p-'+ci+'" value="forfait" '+inp+'/> Forfait</label>';
-    s+='</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Paiement part.</label><select id="di-paie-p-'+ci+'">'+PAI_OPT_Z+'</select></div>';
-    s+='<div class="field" style="margin:0;"><label style="font-size:10px;">Montant part. (€)</label><input type="number" id="di-montant-p-'+ci+'" value="'+(TARIFS.carte10||0)+'" min="0" step="1"/></div>';
-    s+='</div></div>';
-    return s;
-  }
 
   // ── Sélecteur formule (2 cours) ──
   if (is2cours) {
@@ -10480,14 +10360,9 @@ window.diUpdatePaieZone = function() {
       h += '<div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:600;">'+cours+'</div>';
       h += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">';
       h += '<span style="font-size:10px;color:var(--dim);">Rôle :</span>';
-      h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guideur" checked onchange="diUpdateRolePartLabel(\'guideur\','+ci+')" '+inp+'/> Guideur</label>';
-      h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guidee" onchange="diUpdateRolePartLabel(\'guidee\','+ci+')" '+inp+'/> Guidée</label>';
+      h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guideur" checked '+inp+'/> Guideur</label>';
+      h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guidee" '+inp+'/> Guidée</label>';
       h += '</div>';
-      h += '<div style="display:flex;gap:12px;margin-bottom:4px;">';
-      h += '<label '+lbl+'><input type="radio" name="di-part-'+ci+'" value="solo" checked onchange="diTogglePartCours('+ci+')" '+inp+'/> Solo</label>';
-      h += '<label '+lbl+'><input type="radio" name="di-part-'+ci+'" value="avec" onchange="diTogglePartCours('+ci+')" '+inp+'/> Avec partenaire</label>';
-      h += '</div>';
-      h += _diPartZone(ci);
       h += '</div>';
     });
   } else {
@@ -10511,19 +10386,14 @@ window.diUpdatePaieZone = function() {
       h += '</div>';
       h += '<div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">';
       h += '<span style="font-size:10px;color:var(--dim);">Rôle :</span>';
-      h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guideur" checked onchange="diUpdateRolePartLabel(\'guideur\','+ci+')" '+inp+'/> Guideur</label>';
-      h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guidee" onchange="diUpdateRolePartLabel(\'guidee\','+ci+')" '+inp+'/> Guidée</label>';
+      h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guideur" checked '+inp+'/> Guideur</label>';
+      h += '<label '+lbl+'><input type="radio" name="di-role-'+ci+'" value="guidee" '+inp+'/> Guidée</label>';
       h += '</div>';
       h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">';
       h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Paiement</label><select id="di-paie-'+ci+'">'+PAI_OPT_Z+'</select></div>';
       h += '<div class="field" style="margin:0;"><label style="font-size:10px;">Montant (€)</label><input type="number" id="di-montant-'+ci+'" value="'+defMt+'" min="0" step="1"/></div>';
       h += '</div>';
       h += '<div class="field" style="margin:0 0 8px;"><label style="font-size:10px;">Date du 1er paiement</label><input type="date" id="di-dateP-'+ci+'" style="font-size:13px;"/></div>';
-      h += '<div style="display:flex;gap:12px;margin-bottom:4px;">';
-      h += '<label '+lbl+'><input type="radio" name="di-part-'+ci+'" value="solo" checked onchange="diTogglePartCours('+ci+')" '+inp+'/> Solo</label>';
-      h += '<label '+lbl+'><input type="radio" name="di-part-'+ci+'" value="avec" onchange="diTogglePartCours('+ci+')" '+inp+'/> Avec partenaire</label>';
-      h += '</div>';
-      h += _diPartZone(ci);
       h += '</div>';
     });
   }
@@ -10546,17 +10416,6 @@ window.soumettreInscriptionDirecte = function(force) {
   if (!coursCoches.length) { if(err){err.textContent='Choisissez au moins un cours.';err.style.display='block';} return; }
   if (coursCoches.length > 2) { if(err){err.textContent='Maximum 2 cours.';err.style.display='block';} return; }
   var COURS_VALS_REF = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
-  // Validation partenaires
-  var validErr = null;
-  coursCoches.forEach(function(cours){ if(validErr) return;
-    var ci = COURS_VALS_REF.indexOf(cours);
-    if((document.querySelector('input[name="di-part-'+ci+'"]:checked')||{}).value==='avec'){
-      if(!((gel('di-p-prenom-'+ci)||{}).value||'').trim()||!((gel('di-p-nom-'+ci)||{}).value||'').trim())
-        validErr='Prénom et nom du partenaire sont requis pour "'+cours+'".';
-    }
-  });
-  if(validErr){ if(err){err.textContent=validErr;err.style.display='block';} return; }
-
   // ── Vérification quotas (sauf forçage ou période sans limite) ──
   if (!force && !noLimitsTangoToday()) {
     var COURS_VALS_REF2 = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
@@ -10587,7 +10446,6 @@ window.soumettreInscriptionDirecte = function(force) {
   var sai = saisonActive();
   var ts  = Date.now();
   if(!adminData.coursTango) adminData.coursTango=[];
-  var partenairesCartes = {};
   var insRows = [];
   var _hvDi = coursCoches.some(function(c){ return c.toLowerCase().indexOf('vincennes')>=0; });
   var _lDi = TARIFS.adhesion_lrp||0;
@@ -10610,32 +10468,11 @@ window.soumettreInscriptionDirecte = function(force) {
       : (parseFloat((gel('di-montant-'+ci)||{}).value)||(_cDi2+(idx===0?_lDi+_sDi:0)));
     var dateP = diShared ? ((gel('di-dateP-shared')||{}).value||'') : ((gel('di-dateP-'+ci)||{}).value||'');
     var role = ((document.querySelector('input[name="di-role-'+ci+'"]:checked')||{}).value)||'guideur';
-    var roleP = role==='guideur'?'guidee':'guideur';
-    var avecC = (document.querySelector('input[name="di-part-'+ci+'"]:checked')||{}).value==='avec';
-    var pPrenomC = avecC?((gel('di-p-prenom-'+ci)||{}).value||'').trim():'';
-    var pNomC    = avecC?((gel('di-p-nom-'+ci)||{}).value||'').trim():'';
-    var pEmailC  = avecC?((gel('di-p-email-'+ci)||{}).value||'').trim().toLowerCase():'';
-    var pTelC    = avecC?((gel('di-p-tel-'+ci)||{}).value||'').trim():'';
-    var formPEl  = avecC?document.querySelector('input[name="di-formule-p-'+ci+'"]:checked'):null;
-    var formulePart = formPEl?formPEl.value:formule;
-    var partNomC = avecC?(pPrenomC+' '+pNomC).trim():'';
-    var paiePart = avecC?((gel('di-paie-p-'+ci)||{}).value||paie):paie;
-    var mpf = avecC?gel('di-montant-p-'+ci):null;
-    var montantP = mpf?(parseFloat(mpf.value)||0):(formulePart==='carte10'?(TARIFS.carte10||0):(ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris)||0);
-    var ts_c = ts+idx*2, ts_p = ts+idx*2+1;
+    var ts_c = ts+idx*2;
     var existing = adminData.coursTango.find(function(e){return e.email===email&&e.cours===cours&&(e.nom||'').toLowerCase()===(nom||'').toLowerCase();});
-    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.ville=ville;existing.niveau=niveau;existing.partenaire=partNomC;existing.emailPartenaire=pEmailC;if(tel)existing.tel=tel;if(dateP)existing.datePremierPaiement=dateP;}
-    else{adminData.coursTango.push({id:'CT'+ts_c,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',partenaire:partNomC,emailPartenaire:pEmailC,type:formule,paiement:paie,montant:montant,datePremierPaiement:dateP,dateInscription:today(),saison:sai});}
-    if(avecC){
-      var existingP=adminData.coursTango.find(function(e){return pEmailC&&e.email===pEmailC&&e.cours===cours&&(e.nom||'').toLowerCase()===(pNomC||'').toLowerCase();});
-      if(existingP){existingP.statut='inscrit';existingP.type=formulePart;existingP.paiement=paiePart;existingP.montant=montantP;existingP.ville=ville;existingP.niveau=niveau;existingP.partenaire=prenom+' '+nom;existingP.emailPartenaire=email;if(pTelC)existingP.tel=pTelC;}
-      else{adminData.coursTango.push({id:'CT'+ts_p,prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,role:roleP,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',partenaire:prenom+' '+nom,emailPartenaire:email,type:formulePart,paiement:paiePart,montant:montantP,dateInscription:today(),saison:sai});}
-      var partKeyDi=pEmailC||('_nomail_'+pPrenomC+'_'+pNomC);
-      if(formulePart==='carte10'&&pPrenomC&&!partenairesCartes[partKeyDi])
-        partenairesCartes[partKeyDi]={prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,ville:ville,niveau:niveau};
-    }
-    insRows.push({prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,ville:ville,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,partenaire:partNomC,email_partenaire:pEmailC,donnees:dateP?{datePremierPaiement:dateP}:{}});
-    if(avecC&&pPrenomC&&pNomC){insRows.push({prenom:pPrenomC,nom:pNomC,email:pEmailC,tel:pTelC,role:roleP,niveau:niveau,ville:ville,cours:cours,type:formulePart,paiement:paiePart,montant:montantP,statut:'inscrit',saison:sai,partenaire:prenom+' '+nom,email_partenaire:email,donnees:dateP?{datePremierPaiement:dateP}:{}});}
+    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.ville=ville;existing.niveau=niveau;if(tel)existing.tel=tel;if(dateP)existing.datePremierPaiement=dateP;}
+    else{adminData.coursTango.push({id:'CT'+ts_c,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',type:formule,paiement:paie,montant:montant,datePremierPaiement:dateP,dateInscription:today(),saison:sai});}
+    insRows.push({prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,ville:ville,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:dateP?{datePremierPaiement:dateP}:{}});
   });
   // Cartes 10
   var anyMainCarte10 = carte10UniqueChecked || insRows.some(function(r){ return r.email===email && r.type==='carte10'; });
@@ -10646,16 +10483,6 @@ window.soumettreInscriptionDirecte = function(force) {
     adminData.cartes.push({id:'C'+ts,nom:prenom+' '+nom,prenom:prenom,niveau:niveauLbl0,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville0,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
     recalcStats();
   }
-  Object.keys(partenairesCartes).forEach(function(pem,i){
-    var pd=partenairesCartes[pem], nLbl=pd.niveau==='debutant'?'Débutant':'Intermédiaire';
-    if(!pd.email||!adminData.cartes.find(function(c){return c.email===pd.email;})){
-      adminData.cartes.push({id:'C'+(ts+100+i),nom:pd.prenom+' '+pd.nom,prenom:pd.prenom,niveau:nLbl,email:pd.email,tel:pd.tel,statutEleve:'Actif',utilises:0,restants:10,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:pd.ville,datesCours:[],partenaire:prenom+' '+nom,emailPartenaire:email,saison:sai});
-      recalcStats();
-    }
-  });
-  var coursList=coursCoches.join(', ');
-  if(IS_DEMO){ afficherToast('✉️ Email de confirmation envoyé à '+prenom+' '+nom+' (démo)'); }
-  else{ postAS({action:'emailInscriptionDirecteAdmin',prenom:prenom,nom:nom,email:email,cours:coursList,saison:sai}).catch(function(){}); }
   if(ok) ok.style.display='block';
   var _gotoTab = function() {
     var v1=cours0.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
@@ -10665,13 +10492,7 @@ window.soumettreInscriptionDirecte = function(force) {
     setTimeout(renderTab, 300);
   };
   if(!IS_DEMO && insRows.length){
-    // Eleves upserts (fire and forget)
     Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?10:0,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
-    Object.keys(partenairesCartes).forEach(function(pem){
-      var pd=partenairesCartes[pem];
-      if(!pd.email) return;
-      Promise.resolve(TEV.client.from('eleves').upsert({prenom:pd.prenom,nom:pd.nom,email:pd.email,tel:pd.tel,niveau:pd.niveau,ville:pd.ville,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:10,carte_statut:'Nouvelle carte',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
-    });
     // inscriptions_cours INSERT — navigate to list after completion
     TEV.client.from('inscriptions_cours').insert(insRows).then(function(r){
       if(r && r.error){
