@@ -4065,6 +4065,7 @@ var _chargerDonneesSeq = 0; // Séquence pour ignorer les résultats périmés (
 var _pendingSupprimes = new Set(); // IDs supprimés localement mais pas encore confirmés par la DB
 var _pendingCoursInserts = {}; // email → entry : inserts locaux pas encore confirmés par la DB
 var _pendingSoranoPayé = {}; // email → bool : paiement_sorano en attente de confirmation DB
+var _vpPrefillIds = []; // IDs des inscriptions préchargées dans le formulaire Valider Paiement
 function demarrerRealtime() {
   if (IS_DEMO || _pollTimer) return;
   // Polling toutes les 15s — fiable quelle que soit la source (Wix, autre appareil)
@@ -10166,6 +10167,7 @@ window.vpPrefill = function(id) {
   var inscrs = (adminData.coursTango||[]).filter(function(x){
     return x.email===e.email&&(x.saison||saisonCourante())===sai&&x.statut!=='inscrit'&&x.statut!=='supprimé';
   });
+  _vpPrefillIds = inscrs.map(function(i){return i.id;});
   var COURS_VALS_REF = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
   document.querySelectorAll('input[name="vp-cours"]').forEach(function(cb){ cb.checked=false; });
   inscrs.forEach(function(ins){
@@ -10250,7 +10252,8 @@ window.soumettreValiderPaiement = function(force) {
     var montant=vpShared?(idx===0?(parseFloat((gel('vp-montant-shared')||{}).value)||0):0):(parseFloat((gel('vp-montant-'+ci)||{}).value)||(_cVp2+(idx===0?_lVp+_sVp:0)));
     var role=((document.querySelector('input[name="vp-role-'+ci+'"]:checked')||{}).value)||'guideur';
     var existing=adminData.coursTango.find(function(e){return e.email===email&&_coursDbToLbl(e)===cours&&e.statut!=='inscrit'&&e.statut!=='supprimé';});
-    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.role=role;if(tel)existing.tel=tel;}
+    if(!existing&&idx<_vpPrefillIds.length) existing=adminData.coursTango.find(function(e){return String(e.id)===String(_vpPrefillIds[idx])&&e.statut!=='inscrit'&&e.statut!=='supprimé';});
+    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.role=role;existing.ville=ville;existing.niveau=niveau;existing.cours=cours;if(tel)existing.tel=tel;}
     else{adminData.coursTango.push({id:'CT'+Date.now()+'v'+idx,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:_coursDbToLbl({ville:ville,niveau:niveau}),ville:ville,statut:'inscrit',type:formule,paiement:paie,montant:montant,dateInscription:today(),saison:sai});}
   });
   // Cartes 10
@@ -10275,8 +10278,9 @@ window.soumettreValiderPaiement = function(force) {
       var paie=vpShared?((gel('vp-paie-shared')||{}).value||'cb1x'):((gel('vp-paie-'+ci)||{}).value||'cb1x');
       var mf=vpShared?(idx===0?gel('vp-montant-shared'):null):gel('vp-montant-'+ci);
       var montant=mf?(parseFloat(mf.value)||0):(vpShared?0:0);
-      var existing=adminData.coursTango.find(function(e){return e.email===email&&_coursDbToLbl(e)===cours;});
-      if(existing)updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'inscrit',type:formule,paiement:paie,montant:montant,tel:tel}).eq('id',existing.id)));
+      var existing=(adminData.coursTango||[]).find(function(e){return e.email===email&&_coursDbToLbl(e)===cours;});
+      if(!existing&&idx<_vpPrefillIds.length) existing=(adminData.coursTango||[]).find(function(e){return String(e.id)===String(_vpPrefillIds[idx]);});
+      if(existing)updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'inscrit',type:formule,paiement:paie,montant:montant,tel:tel,ville:ville,niveau:niveau}).eq('id',existing.id)));
     });
     Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?10:0,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     Promise.all(updates).then(function(){
