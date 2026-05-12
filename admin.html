@@ -8079,7 +8079,7 @@ function renderStages() {
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
       var statPill=i.attente
         ?'<span class="pill pill-warn" style="font-size:9px;">Attente</span>'
-        :'<span class="pill pill-ok" style="font-size:9px;">Confirmé</span>';
+        :'<span class="pill pill-ok" style="font-size:9px;">Validé·e</span>';
       return '<div class="card'+(i.attente?' hl-warn':'')+'"'+(noMargin?' style="margin-bottom:0;"':'')+' data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top">'
         +'<div style="flex:1;min-width:0;">'
         +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
@@ -8087,6 +8087,7 @@ function renderStages() {
         +'<div class="card-sub" style="margin-top:3px;">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.montant?' · '+(i.montant)+'€':'')+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:4px;flex-shrink:0;">'
+        +(i.attente?'<button class="btn btn-ok" style="padding:4px 8px;font-size:11px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button>':'')
         +'<button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" data-action="editer-slots-stage" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✏️</button>'
         +'<button class="btn btn-err" style="padding:4px 8px;font-size:11px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="all">✕</button>'
         +'</div>'
@@ -8109,20 +8110,20 @@ function renderStages() {
     var pres=conf.filter(function(i){return i.present===true;});
     var rec=pres.reduce(function(s,i){return s+(i.montant||0);},0);
     var recTot=conf.reduce(function(s,i){return s+(i.montant||0);},0);
-    h+='<div class="stats-row stats-4"><div class="stat"><div class="stat-n n-gold">'+conf.length+'</div><div class="stat-l">Confirmés</div></div>'
+    h+='<div class="stats-row stats-4"><div class="stat"><div class="stat-n n-gold">'+conf.length+'</div><div class="stat-l">Validé·e·s</div></div>'
       +'<div class="stat"><div class="stat-n">'+ins.filter(function(i){return i.role==='guideur'&&!i.attente;}).length+'</div><div class="stat-l">Guideurs</div></div>'
       +'<div class="stat"><div class="stat-n">'+ins.filter(function(i){return i.role==='guidee'&&!i.attente;}).length+'</div><div class="stat-l">Guidées</div></div>'
       +'<div class="stat"><div class="stat-n n-warn">'+att.length+'</div><div class="stat-l">Attente</div></div></div>';
     h+='<div class="card hl-ok" style="margin-bottom:12px;"><div style="font-size:10px;color:var(--ok-text);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">Recette</div>'
       +'<div style="font-size:22px;font-weight:700;color:var(--ok-text);">'+(pres.length?rec:recTot)+' €</div>'
-      +'<div class="card-sub">'+(pres.length?pres.length+' présents pointés':conf.length+' confirmés')+'</div></div>';
+      +'<div class="card-sub">'+(pres.length?pres.length+' présents pointés':conf.length+' validé·e·s')+'</div></div>';
     if(att.filter(function(i){return i.role==='guidee';}).length){
       h+='<div class="section-hdr">Guidées en attente</div>';
       att.filter(function(i){return i.role==='guidee';}).forEach(function(i){
         h+='<div class="card hl-warn" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top"><div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+(i.prenom+' '+i.nom).replace(/"/g,'&quot;')+'" data-email="'+(i.email||'')+'" data-tel="'+(i.tel||'')+'" data-ctx="stage">'+i.prenom+' '+i.nom+'</div>'
           +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(', ')+'</div>'+partenaireTag(i.partenaire,'guidee')+'</div>'
           +'<span class="pill pill-warn">Attente</span></div>'
-          +'<div class="btn-row"><button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Confirmer</button>'
+          +'<div class="btn-row"><button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button>'
           +'</div></div>';
       });
     }
@@ -8164,7 +8165,7 @@ function renderStages() {
         +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(', ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
         +'<span class="pill '+rcls+'" style="font-size:9px;">'+i.role+'</span></div>'
         +'<div class="btn-row">'
-        +'<button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Confirmer</button>'
+        +'<button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button>'
         +'</div></div>';
     }
     _groupCouples(att2).forEach(function(grp){
@@ -8215,7 +8216,7 @@ function renderStages() {
         +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
-        +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓</button>'
+        +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button>'
         +'</div></div>';
     });
   }
