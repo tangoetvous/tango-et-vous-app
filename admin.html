@@ -10282,6 +10282,7 @@ window.soumettreValiderPaiement = function(force) {
       var montant=mf?(parseFloat(mf.value)||0):(vpShared?0:0);
       var dateP=vpShared?((gel('vp-dateP-shared')||{}).value||''):((gel('vp-dateP-'+ci)||{}).value||'');
       var existing=(adminData.coursTango||[]).find(function(e){return e.email===email&&_coursDbToLbl(e)===cours;});
+      if(existing&&isNaN(parseInt(existing.id))) existing=null; // ignore fake local IDs (CT+timestamp) — they need INSERT, not UPDATE
       if(!existing&&idx<_vpPrefillIds.length) existing=(adminData.coursTango||[]).find(function(e){return String(e.id)===String(_vpPrefillIds[idx]);});
       if(existing){
         updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'inscrit',type:formule,paiement:paie,montant:montant,tel:tel,ville:ville,niveau:niveau,donnees:dateP?{datePremierPaiement:dateP}:{}}).eq('id',existing.id)));
