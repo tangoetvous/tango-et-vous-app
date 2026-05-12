@@ -1051,6 +1051,7 @@ var _tresoLoading     = false;
 var compTangoCours    = 'paris-deb';  // paris-deb | paris-int | vincennes-deb | vincennes-int | tous
 var compYogaCours     = 'hatha';      // hatha | yin
 var comptaSort        = 'nom';        // 'nom' | 'paiement' | 'montant'
+var comptaSearch      = '';           // filtre par nom d'élève
 var _comptaEditId     = null;
 var _comptaEditCtx    = '';
 var _mceEchStatus     = [null, null, null]; // null=auto, true=encaissé, false=non-encaissé
@@ -4595,6 +4596,9 @@ function renderTab() {
       }
     });
     if (savedScroll > 0) requestAnimationFrame(function(){ window.scrollTo(0, savedScroll); });
+    if (currentTab==='compta' && comptaSearch) requestAnimationFrame(function(){
+      var si=gel('compta-search'); if(si){si.focus();si.setSelectionRange(si.value.length,si.value.length);}
+    });
   }
 
   if (hasIframe) {
@@ -11573,6 +11577,11 @@ function renderCompta() {
     h+='<button onclick="sousOngletCompta=\''+t.key+'\';renderTab();" style="padding:8px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;'+(act?'background:var(--gold);color:#000;':'background:var(--s2);color:var(--fg);')+'">'+t.label+'</button>';
   });
   h += '</div>';
+  if (sousOngletCompta!=='tresorerie') {
+    h += '<div style="margin-bottom:16px;">';
+    h += '<input type="search" id="compta-search" placeholder="🔍 Rechercher un élève…" value="'+escHtml(comptaSearch)+'" oninput="comptaSearch=this.value;renderTab();" style="width:100%;max-width:320px;padding:7px 12px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--fg);font-size:13px;box-sizing:border-box;">';
+    h += '</div>';
+  }
   if (sousOngletCompta==='tango')            h += _renderComptaTango();
   else if (sousOngletCompta==='yoga')        h += _renderComptaYoga();
   else if (sousOngletCompta==='stages')      h += _renderComptaStages();
@@ -11673,6 +11682,15 @@ function _comptaGrandTotalBox(t, titre) {
   }
   h+='</div></div>';
   return h;
+}
+
+function _comptaFilterSearch(liste) {
+  if (!comptaSearch.trim()) return liste;
+  var q = comptaSearch.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  return liste.filter(function(e){
+    var full = ((e.prenom||'')+' '+(e.nom||'')).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    return full.indexOf(q) >= 0;
+  });
 }
 
 function _comptaSortListe(liste) {
@@ -12107,6 +12125,7 @@ function _renderComptaTango() {
     return e.statut==='inscrit';
   });
   tous=_markSharedCartes(tous);
+  tous=_comptaFilterSearch(tous);
   var h='';
   h+=_comptaGrandTotalBox(_comptaEncaisse(tous), 'TOTAL ÉLÈVES TANGO — '+sai);
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">';
@@ -12137,6 +12156,7 @@ function _renderComptaYoga() {
   var tous=(adminData.coursYoga||[]).filter(function(e){
     return (e.saison||saisonCourante())===sai && e.statut==='inscrit';
   });
+  tous=_comptaFilterSearch(tous);
   var h='';
   h+=_comptaGrandTotalBox(_comptaEncaisse(tous), 'TOTAL YOGA — '+sai);
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">';
@@ -12161,7 +12181,8 @@ function _renderComptaStages() {
   var grandTotal=0, grandCount=0;
   dates.forEach(function(d){
     var jour=stages[d];
-    var tous=(jour.inscrits||[]);
+    var tous=_comptaFilterSearch(jour.inscrits||[]);
+    if (!tous.length && comptaSearch.trim()) return; // masquer la date si aucun résultat de recherche
     var inscrits=tous.filter(function(i){return !i.attente;});
     var attente=tous.filter(function(i){return !!i.attente;});
     var tot=_comptaTotaux(inscrits);
