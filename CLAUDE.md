@@ -655,11 +655,16 @@ Le renouvellement est **toujours une action manuelle**. Il n'existe que deux voi
 - Fonction SQL `pointer_cours_qr` (RPC Supabase, SECURITY DEFINER, accessible à `anon`) — **ne jamais y réintroduire de logique de renouvellement**
 
 **Règle à 9 cours pris (espace élève `index.html`)**
-1. L'élève ne peut pointer qu'**1 seul cours** ce jour-là (pas 2 — limite journalière = 2, et 1 cours ce jour ne peut donc pas en faire 2)
-2. Après ce pointage → carte à **10/10** → bouton **"↻ Renouveler sans payer pour l'instant"** apparaît **au-dessus** de "✓ Je pointe ma présence"
+1. L'élève ne peut pointer qu'**1 seul cours** ce jour-là (limite journalière)
+2. Ce pointage fait passer la carte à **10/10** → le bouton **"↻ Renouveler sans payer pour l'instant"** apparaît **au-dessus** de "✓ Je pointe ma présence"
 3. Cliquer "Je pointe" sans renouveler d'abord → modal s'ouvre avec message d'erreur + bouton Valider désactivé
 4. Si "Renouveler" cliqué → nouvelle carte : `utilises=0`, `restants=10`, `paye=false`, `statut='Nouvelle carte'` → badge "⚠️ Non payée" visible dans admin (Cartes 10 → Détails) ET dans l'espace élève
 5. L'élève peut alors pointer **1 cours de plus** ce jour-là sur sa nouvelle carte (= 2 cours au total sur la date = maximum)
+
+**Même logique côté admin :**
+1. Admin pointe 1 cours → carte passe à 10/10
+2. Admin clique "Renouveler" sur la fiche de l'élève dans Cartes 10 → Détails
+3. Admin peut pointer un 2e cours ce jour-là sur la nouvelle carte
 - ⚠️ **À faire** : notification push + email à l'élève quand carte renouvelée sans payer
 
 **Carte expirée (pas épuisée)**
