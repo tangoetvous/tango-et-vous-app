@@ -7662,9 +7662,13 @@ function renderCartesDetails(d) {
     var sCls=fini?'pill-err':bient?'pill-warn':'pill-ok';
     var _todayDet=today();
     var _dpDet=adminData._dailyCounts?(adminData._dailyCounts[(c.email||'').toLowerCase()+'|'+_todayDet]||0):0;
+    // datesCours est trié DESC (plus récent en premier).
+    // Les nbUtil premières = carte actuelle ; le reste = cartes précédentes.
+    var currentDates=datesCours.slice(0,nbUtil);
+    var histDates=datesCours.slice(nbUtil);
     var miniDots='<div style="display:flex;gap:5px;margin:8px 0;flex-wrap:wrap;align-items:flex-start;">';
     for(var i=0;i<totalSlots;i++){
-      var ds=datesCours[i]||null;
+      var ds=currentDates[i]||null;
       var circleBg=i<nbUtil?(fini?'var(--err-text)':'#D4AF37'):'var(--s3)';
       var circleBorder=i<nbUtil?(fini?'var(--err-text)':'#b8961e'):'var(--border)';
       miniDots+='<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">'
@@ -7673,40 +7677,25 @@ function renderCartesDetails(d) {
         +'</div>';
     }
     miniDots+='</div>';
-    // Historical cards from previous renewals
+    // Cartes précédentes : histDates découpées par tranches de 10 (une tranche = une carte)
     var _histHtml='';
-    var _renewRows=(adminData.coursTango||[]).filter(function(ct){
-      var _dd=ct.donnees&&typeof ct.donnees==='object'?ct.donnees:{};
-      try{if(typeof ct.donnees==='string'&&ct.donnees)_dd=JSON.parse(ct.donnees);}catch(e){}
-      return ct.email===c.email&&ct.type==='carte10'&&_dd.isRenewal&&ct.statut!=='supprimé';
-    }).sort(function(a,b){
-      var _da=(a.donnees&&a.donnees.dateRenouvellement)||(a.dateInscription||''),_db=(b.donnees&&b.donnees.dateRenouvellement)||(b.dateInscription||'');
-      return _da.localeCompare(_db);
-    });
-    if(_renewRows.length>0){
-      var _allDatesAsc=(c.datesCours||[]).slice().sort();
-      var _cutoffs=_renewRows.map(function(r){var _dd=r.donnees&&typeof r.donnees==='object'?r.donnees:{};try{if(typeof r.donnees==='string'&&r.donnees)_dd=JSON.parse(r.donnees);}catch(e){}return _dd.dateRenouvellement||(r.dateInscription||'');}).filter(Boolean);
-      if(_cutoffs.length>0){
-        var _segs=[],_rem=_allDatesAsc.slice();
-        _cutoffs.forEach(function(cut){var _bef=_rem.filter(function(d){return d<cut;});_rem=_rem.filter(function(d){return d>=cut;});_segs.push({dates:_bef,renewalDate:cut});});
-        var _validSegs=_segs.filter(function(s){return s.dates.length>0;});
-        if(_validSegs.length>0){
-          _histHtml='<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">';
-          _histHtml+='<div style="font-size:10px;color:var(--dim);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">📋 Cartes précédentes</div>';
-          _validSegs.slice().reverse().forEach(function(seg){
-            var _hd=seg.dates,_hu=_hd.length,_hf=_hd[0]||'',_he=_hf?calcExpiration(_hf,c.ville||'paris'):'';
-            var _hdots='<div style="display:flex;gap:3px;flex-wrap:wrap;margin:4px 0;">';
-            for(var j=0;j<10;j++){var _dj=_hd[j]||null;_hdots+='<div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:14px;height:14px;border-radius:50%;background:'+(j<_hu?'rgba(212,175,55,0.4)':'var(--s2)')+';border:1px solid '+(j<_hu?'rgba(212,175,55,0.6)':'var(--border)')+';flex-shrink:0;"></div>'+(_dj?'<div style="font-size:9px;color:var(--dim);white-space:nowrap;">'+fmtDateCourt(_dj)+'</div>':'')+'</div>';}
-            _hdots+='</div>';
-            _histHtml+='<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:4px;">';
-            _histHtml+='<div style="font-size:10px;color:var(--text);"><strong>'+_hu+'/10 cours</strong>';
-            if(_hf) _histHtml+=' · Début '+fmtDate(_hf);
-            if(_he) _histHtml+=' · Exp. '+fmtDate(_he);
-            _histHtml+='</div>'+_hdots+'</div>';
-          });
-          _histHtml+='</div>';
-        }
-      }
+    if(histDates.length>0){
+      var _histSegs=[], _rem=histDates.slice();
+      while(_rem.length>0){ _histSegs.push(_rem.splice(0,10)); }
+      _histHtml='<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">';
+      _histHtml+='<div style="font-size:10px;color:var(--dim);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">📋 Cartes précédentes</div>';
+      _histSegs.forEach(function(seg){
+        var _hu=seg.length, _hf=seg[seg.length-1]||'', _he=_hf?calcExpiration(_hf,c.ville||'paris'):'';
+        var _hdots='<div style="display:flex;gap:3px;flex-wrap:wrap;margin:4px 0;">';
+        for(var j=0;j<10;j++){var _dj=seg[j]||null;_hdots+='<div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:14px;height:14px;border-radius:50%;background:'+(j<_hu?'rgba(212,175,55,0.4)':'var(--s2)')+';border:1px solid '+(j<_hu?'rgba(212,175,55,0.6)':'var(--border)')+';flex-shrink:0;"></div>'+(_dj?'<div style="font-size:9px;color:var(--dim);white-space:nowrap;">'+fmtDateCourt(_dj)+'</div>':'')+'</div>';}
+        _hdots+='</div>';
+        _histHtml+='<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:4px;">';
+        _histHtml+='<div style="font-size:10px;color:var(--text);"><strong>'+_hu+'/10 cours</strong>';
+        if(_hf) _histHtml+=' · Début '+fmtDate(_hf);
+        if(_he) _histHtml+=' · Exp. '+fmtDate(_he);
+        _histHtml+='</div>'+_hdots+'</div>';
+      });
+      _histHtml+='</div>';
     }
     var expTxt=c.isReport&&!c.datePremierCours?'Report de '+c.saisonOrigine+' · Dém. au 1er cours':expAff?'Exp. '+fmtDate(expAff):c.datePremierCours?'Dép. '+fmtDate(c.datePremierCours):'Pas encore commencée';
     var payeOk=c.paye===true;

@@ -519,45 +519,28 @@
       $('dash-alert').style.display = 'none';
     }
 
-    // Cartes précédentes (renouvellements)
+    // Cartes précédentes : presences est trié DESC, les nbUtil premières = carte actuelle,
+    // le reste = cartes précédentes, découpé par tranches de 10.
     (function(){
       var _histEl = $('hist-cartes-eleve');
       if (!_histEl) return;
       if (isForfait) { _histEl.style.display = 'none'; return; }
-      var _insc = eleveData.inscriptionsTango || [];
-      var _renewRows = _insc.filter(function(i){
-        var _dd = i.donnees && typeof i.donnees === 'object' ? i.donnees : {};
-        try { if (typeof i.donnees === 'string' && i.donnees) _dd = JSON.parse(i.donnees); } catch(e) {}
-        return _dd.isRenewal;
-      }).sort(function(a, b){
-        var _da = (a.donnees && a.donnees.dateRenouvellement) || (a.created_at||'').slice(0,10) || '';
-        var _db = (b.donnees && b.donnees.dateRenouvellement) || (b.created_at||'').slice(0,10) || '';
-        return _da.localeCompare(_db);
-      });
-      if (_renewRows.length === 0) { _histEl.style.display = 'none'; return; }
-      var _allDatesAsc = (presences || []).map(function(p){ return p.date; }).filter(Boolean).sort();
-      var _cutoffs = _renewRows.map(function(r){
-        var _dd = r.donnees && typeof r.donnees === 'object' ? r.donnees : {};
-        try { if (typeof r.donnees === 'string' && r.donnees) _dd = JSON.parse(r.donnees); } catch(e) {}
-        return _dd.dateRenouvellement || (r.created_at||'').slice(0,10) || '';
-      }).filter(Boolean);
-      var _segs = [], _rem = _allDatesAsc.slice();
-      _cutoffs.forEach(function(cut){
-        var _bef = _rem.filter(function(d){ return d < cut; });
-        _rem = _rem.filter(function(d){ return d >= cut; });
-        _segs.push({ dates: _bef, renewalDate: cut });
-      });
-      var _validSegs = _segs.filter(function(s){ return s.dates.length > 0; });
-      if (_validSegs.length === 0) { _histEl.style.display = 'none'; return; }
+      var _nbUtil = carte.coursUtilises || 0;
+      var _allDates = (presences || []).map(function(p){ return p.date; }).filter(Boolean);
+      // presences est déjà trié DESC (newest first)
+      var _histDates = _allDates.slice(_nbUtil);
+      if (_histDates.length === 0) { _histEl.style.display = 'none'; return; }
+      var _histSegs = [], _rem = _histDates.slice();
+      while (_rem.length > 0) { _histSegs.push(_rem.splice(0, 10)); }
       var _h = '<div class="section"><div class="section-title">Cartes précédentes</div>';
-      _validSegs.slice().reverse().forEach(function(seg){
-        var _hd = seg.dates, _hu = _hd.length, _hf = _hd[0] || '', _hl = _hd[_hd.length - 1] || '';
+      _histSegs.forEach(function(seg){
+        var _hu = seg.length, _hf = seg[seg.length - 1] || '', _hl = seg[0] || '';
         _h += '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;margin-bottom:10px;">';
         _h += '<div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:8px;">🎫 ' + _hu + '/10 cours utilisés</div>';
         if (_hf) _h += '<div style="font-size:12px;color:rgba(255,255,255,0.6);margin-bottom:6px;">Du ' + formatDate(_hf) + ' au ' + formatDate(_hl) + '</div>';
         var _hdots = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">';
         for (var j = 0; j < 10; j++) {
-          var _dj = _hd[j] || null;
+          var _dj = seg[j] || null;
           _hdots += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">'
             + '<div style="width:16px;height:16px;border-radius:50%;background:' + (j < _hu ? 'rgba(212,175,55,0.5)' : 'rgba(255,255,255,0.08)') + ';border:1px solid ' + (j < _hu ? 'rgba(212,175,55,0.7)' : 'rgba(255,255,255,0.15)') + ';flex-shrink:0;"></div>'
             + (_dj ? '<div style="font-size:9px;color:rgba(255,255,255,0.5);white-space:nowrap;">' + (_dj.slice(8,10) + '/' + _dj.slice(5,7)) + '</div>' : '')
