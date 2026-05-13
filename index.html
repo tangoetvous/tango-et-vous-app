@@ -327,7 +327,7 @@
       eleveData.hasVincennes = ((data.eleve&&data.eleve.ville)||'').toLowerCase() === 'vincennes';
       // Inscriptions tango — détecter forfait/Vincennes (async, affine les valeurs ci-dessus)
       TEV.client.from('inscriptions_cours')
-        .select('type, ville, niveau, statut, saison, paiement_sorano, donnees')
+        .select('type, ville, niveau, statut, saison, paiement_sorano, donnees, created_at')
         .eq('email', _stEmail)
         .neq('statut', 'supprimé')
         .then(function(res) {
@@ -528,10 +528,10 @@
       var _renewRows = _insc.filter(function(i){
         var _dd = i.donnees && typeof i.donnees === 'object' ? i.donnees : {};
         try { if (typeof i.donnees === 'string' && i.donnees) _dd = JSON.parse(i.donnees); } catch(e) {}
-        return _dd.isRenewal && _dd.dateRenouvellement;
+        return _dd.isRenewal;
       }).sort(function(a, b){
-        var _da = (a.donnees && a.donnees.dateRenouvellement) || '';
-        var _db = (b.donnees && b.donnees.dateRenouvellement) || '';
+        var _da = (a.donnees && a.donnees.dateRenouvellement) || (a.created_at||'').slice(0,10) || '';
+        var _db = (b.donnees && b.donnees.dateRenouvellement) || (b.created_at||'').slice(0,10) || '';
         return _da.localeCompare(_db);
       });
       if (_renewRows.length === 0) { _histEl.style.display = 'none'; return; }
@@ -539,7 +539,7 @@
       var _cutoffs = _renewRows.map(function(r){
         var _dd = r.donnees && typeof r.donnees === 'object' ? r.donnees : {};
         try { if (typeof r.donnees === 'string' && r.donnees) _dd = JSON.parse(r.donnees); } catch(e) {}
-        return _dd.dateRenouvellement || '';
+        return _dd.dateRenouvellement || (r.created_at||'').slice(0,10) || '';
       }).filter(Boolean);
       var _segs = [], _rem = _allDatesAsc.slice();
       _cutoffs.forEach(function(cut){

@@ -7678,14 +7678,14 @@ function renderCartesDetails(d) {
     var _renewRows=(adminData.coursTango||[]).filter(function(ct){
       var _dd=ct.donnees&&typeof ct.donnees==='object'?ct.donnees:{};
       try{if(typeof ct.donnees==='string'&&ct.donnees)_dd=JSON.parse(ct.donnees);}catch(e){}
-      return ct.email===c.email&&ct.type==='carte10'&&_dd.isRenewal&&_dd.dateRenouvellement&&ct.statut!=='supprimé';
+      return ct.email===c.email&&ct.type==='carte10'&&_dd.isRenewal&&ct.statut!=='supprimé';
     }).sort(function(a,b){
-      var _da=(a.donnees&&a.donnees.dateRenouvellement)||'',_db=(b.donnees&&b.donnees.dateRenouvellement)||'';
+      var _da=(a.donnees&&a.donnees.dateRenouvellement)||(a.dateInscription||''),_db=(b.donnees&&b.donnees.dateRenouvellement)||(b.dateInscription||'');
       return _da.localeCompare(_db);
     });
     if(_renewRows.length>0){
       var _allDatesAsc=(c.datesCours||[]).slice().sort();
-      var _cutoffs=_renewRows.map(function(r){var _dd=r.donnees&&typeof r.donnees==='object'?r.donnees:{};try{if(typeof r.donnees==='string'&&r.donnees)_dd=JSON.parse(r.donnees);}catch(e){}return _dd.dateRenouvellement||'';}).filter(Boolean);
+      var _cutoffs=_renewRows.map(function(r){var _dd=r.donnees&&typeof r.donnees==='object'?r.donnees:{};try{if(typeof r.donnees==='string'&&r.donnees)_dd=JSON.parse(r.donnees);}catch(e){}return _dd.dateRenouvellement||(r.dateInscription||'');}).filter(Boolean);
       if(_cutoffs.length>0){
         var _segs=[],_rem=_allDatesAsc.slice();
         _cutoffs.forEach(function(cut){var _bef=_rem.filter(function(d){return d<cut;});_rem=_rem.filter(function(d){return d>=cut;});_segs.push({dates:_bef,renewalDate:cut});});
