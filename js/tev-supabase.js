@@ -636,27 +636,32 @@ function _calcExpirationSb(dateStr, ville) {
   const coursSet = {};
   coursArr.forEach(d => { coursSet[d] = true; });
 
-  // Bonus : semaines hebdomadaires absentes de coursArr, dans la plage des dates connues
   const firstStored = coursArr[0] || '';
   const lastStored  = coursArr[coursArr.length - 1] || '';
-  let bonus = 0;
-  const cur = new Date(debut.getTime());
-  cur.setDate(cur.getDate() + 7);
-  const finStr = fin.toISOString().slice(0, 10);
-  while (cur.toISOString().slice(0, 10) <= finStr) {
-    const iso = cur.toISOString().slice(0, 10);
-    if (firstStored && iso >= firstStored && iso <= lastStored && !coursSet[iso]) bonus++;
-    cur.setDate(cur.getDate() + 7);
-  }
-  fin.setDate(fin.getDate() + bonus * 7);
 
-  // Coupure estivale : même règle que calcExpiration() dans admin.html
+  // Bornes de saison — calculées avant le bonus pour éviter le double-comptage été
   const seasonEndYear = debut.getMonth() >= 8 ? debut.getFullYear() + 1 : debut.getFullYear();
   const septStart = seasonEndYear + '-09-01';
   const seasonStartBound = (seasonEndYear - 1) + '-09-01';
   let lastSaisonCours = '';
   coursArr.forEach(d => { if (d >= seasonStartBound && d < septStart && d > lastSaisonCours) lastSaisonCours = d; });
   const firstNextCours = coursArr.find(d => d >= septStart) || '';
+
+  // Bonus : semaines absentes INTRA-SAISON uniquement (cap à lastSaisonCours pour éviter
+  // de compter juillet-août deux fois avec la coupure estivale ci-dessous)
+  const bonusUpperBound = lastSaisonCours || lastStored;
+  let bonus = 0;
+  const cur = new Date(debut.getTime());
+  cur.setDate(cur.getDate() + 7);
+  const finStr = fin.toISOString().slice(0, 10);
+  while (cur.toISOString().slice(0, 10) <= finStr) {
+    const iso = cur.toISOString().slice(0, 10);
+    if (firstStored && iso >= firstStored && iso <= bonusUpperBound && !coursSet[iso]) bonus++;
+    cur.setDate(cur.getDate() + 7);
+  }
+  fin.setDate(fin.getDate() + bonus * 7);
+
+  // Coupure estivale : ajoute les semaines entre dernier cours et reprise
   if (lastSaisonCours && firstNextCours) {
     const lastD  = new Date(lastSaisonCours  + 'T12:00:00');
     const firstD = new Date(firstNextCours + 'T12:00:00');

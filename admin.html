@@ -607,22 +607,10 @@ function calcExpiration(datePremierCours, ville) {
   var coursSet = {};
   coursArr.forEach(function(d) { coursSet[d] = true; });
 
-  // Bonus : semaines hebdomadaires absentes de coursArr, dans la plage des dates connues
   var firstStored = coursArr[0] || '';
   var lastStored  = coursArr[coursArr.length - 1] || '';
-  var bonus = 0;
-  var cur = new Date(debut.getTime());
-  cur.setDate(cur.getDate() + 7);
-  var finStr = fin.toISOString().slice(0, 10);
-  while (cur.toISOString().slice(0, 10) <= finStr) {
-    var iso = cur.toISOString().slice(0, 10);
-    if (firstStored && iso >= firstStored && iso <= lastStored && !coursSet[iso]) bonus++;
-    cur.setDate(cur.getDate() + 7);
-  }
-  fin.setDate(fin.getDate() + bonus * 7);
 
-  // Coupure estivale : si la fin dépasse le dernier cours de la saison,
-  // rajouter les semaines séparant ce dernier cours du premier cours de la saison suivante
+  // Bornes de saison — calculées avant le bonus pour éviter le double-comptage été
   var seasonEndYear = debut.getMonth() >= 8 ? debut.getFullYear() + 1 : debut.getFullYear();
   var septStart = seasonEndYear + '-09-01';
   var seasonStartBound = (seasonEndYear - 1) + '-09-01';
@@ -634,6 +622,22 @@ function calcExpiration(datePremierCours, ville) {
   for (var i = 0; i < coursArr.length; i++) {
     if (coursArr[i] >= septStart) { firstNextCours = coursArr[i]; break; }
   }
+
+  // Bonus : semaines absentes INTRA-SAISON uniquement (cap à lastSaisonCours pour éviter
+  // de compter juillet-août deux fois avec la coupure estivale ci-dessous)
+  var bonusUpperBound = lastSaisonCours || lastStored;
+  var bonus = 0;
+  var cur = new Date(debut.getTime());
+  cur.setDate(cur.getDate() + 7);
+  var finStr = fin.toISOString().slice(0, 10);
+  while (cur.toISOString().slice(0, 10) <= finStr) {
+    var iso = cur.toISOString().slice(0, 10);
+    if (firstStored && iso >= firstStored && iso <= bonusUpperBound && !coursSet[iso]) bonus++;
+    cur.setDate(cur.getDate() + 7);
+  }
+  fin.setDate(fin.getDate() + bonus * 7);
+
+  // Coupure estivale : ajoute les semaines entre dernier cours et reprise
   if (lastSaisonCours && firstNextCours) {
     var lastD = new Date(lastSaisonCours + 'T12:00:00');
     var firstD = new Date(firstNextCours + 'T12:00:00');
