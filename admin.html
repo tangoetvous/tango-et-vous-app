@@ -7677,11 +7677,34 @@ function renderCartesDetails(d) {
         +'</div>';
     }
     miniDots+='</div>';
-    // Cartes précédentes : histDates découpées par tranches de 10 (une tranche = une carte)
+    // Cartes précédentes : découpage par previousUtilises si dispo, sinon bloc unique
     var _histHtml='';
     if(histDates.length>0){
       var _histSegs=[], _rem=histDates.slice();
-      while(_rem.length>0){ _histSegs.push(_rem.splice(0,10)); }
+      // Lignes isRenewal triées DESC (renouvellement le plus récent en premier)
+      var _rnRows=(adminData.coursTango||[]).filter(function(ct){
+        var _dd=ct.donnees&&typeof ct.donnees==='object'?ct.donnees:{};
+        try{if(typeof ct.donnees==='string'&&ct.donnees)_dd=JSON.parse(ct.donnees);}catch(e){}
+        return ct.email===c.email&&ct.type==='carte10'&&_dd.isRenewal&&ct.statut!=='supprimé';
+      }).sort(function(a,b){
+        var _da=(a.donnees&&a.donnees.dateRenouvellement)||(a.dateInscription||'');
+        var _db=(b.donnees&&b.donnees.dateRenouvellement)||(b.dateInscription||'');
+        return _db.localeCompare(_da); // DESC
+      });
+      if(_rnRows.length>0){
+        _rnRows.forEach(function(r){
+          if(!_rem.length)return;
+          var _dd=r.donnees&&typeof r.donnees==='object'?r.donnees:{};
+          try{if(typeof r.donnees==='string'&&r.donnees)_dd=JSON.parse(r.donnees);}catch(e){}
+          var _pu=typeof _dd.previousUtilises==='number'?_dd.previousUtilises:null;
+          // Si pas de previousUtilises (ancien renouvellement), prend tout le reste
+          var _take=_pu!==null?_pu:_rem.length;
+          if(_take>0)_histSegs.push(_rem.splice(0,_take));
+        });
+        if(_rem.length>0)_histSegs.push(_rem); // carte la plus ancienne sans ligne isRenewal
+      } else {
+        _histSegs.push(_rem); // pas de lignes isRenewal : tout en un bloc
+      }
       _histHtml='<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">';
       _histHtml+='<div style="font-size:10px;color:var(--dim);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">📋 Cartes précédentes</div>';
       _histSegs.forEach(function(seg){
@@ -7820,7 +7843,7 @@ _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCou
         cours:_orig.cours||'', saison:saisonActive(),
         type:'carte10', statut:'inscrit',
         montant:_mont, paiement:_orig.paiement||'',
-        donnees:{isRenewal:true, renewalPaye:paye===true, dateRenouvellement:today()}
+        donnees:{isRenewal:true, renewalPaye:paye===true, dateRenouvellement:today(), previousUtilises:(_carteObj?(_carteObj.utilises||0):0)}
       };
       insertProm = Promise.resolve(TEV.client.from('inscriptions_cours').insert(_renewRow)).catch(function(){});
     }

@@ -531,7 +531,29 @@
       var _histDates = _allDates.slice(_nbUtil);
       if (_histDates.length === 0) { _histEl.style.display = 'none'; return; }
       var _histSegs = [], _rem = _histDates.slice();
-      while (_rem.length > 0) { _histSegs.push(_rem.splice(0, 10)); }
+      // Lignes isRenewal triées DESC : chacune a previousUtilises = cours de la carte renouvelée
+      var _rnRows = (eleveData.inscriptionsTango || []).filter(function(i){
+        var _dd = i.donnees && typeof i.donnees === 'object' ? i.donnees : {};
+        try { if (typeof i.donnees === 'string' && i.donnees) _dd = JSON.parse(i.donnees); } catch(e) {}
+        return i.type === 'carte10' && _dd.isRenewal;
+      }).sort(function(a, b){
+        var _da = (a.donnees && a.donnees.dateRenouvellement) || (a.created_at||'').slice(0,10) || '';
+        var _db = (b.donnees && b.donnees.dateRenouvellement) || (b.created_at||'').slice(0,10) || '';
+        return _db.localeCompare(_da); // DESC
+      });
+      if (_rnRows.length > 0) {
+        _rnRows.forEach(function(r) {
+          if (!_rem.length) return;
+          var _dd = r.donnees && typeof r.donnees === 'object' ? r.donnees : {};
+          try { if (typeof r.donnees === 'string' && r.donnees) _dd = JSON.parse(r.donnees); } catch(e) {}
+          var _pu = typeof _dd.previousUtilises === 'number' ? _dd.previousUtilises : null;
+          var _take = _pu !== null ? _pu : _rem.length;
+          if (_take > 0) _histSegs.push(_rem.splice(0, _take));
+        });
+        if (_rem.length > 0) _histSegs.push(_rem);
+      } else {
+        _histSegs.push(_rem);
+      }
       var _h = '<div class="section"><div class="section-title">Cartes précédentes</div>';
       _histSegs.forEach(function(seg){
         var _hu = seg.length, _hf = seg[seg.length - 1] || '', _hl = seg[0] || '';
@@ -3295,7 +3317,30 @@
         _broadcastRenouv();
         renderDashboard(); renderAccueil(); return;
       }
+      // Capturer le nombre de cours AVANT le reset
+      const _prevUtil = eleveData.carte ? (eleveData.carte.coursUtilises || 0) : 0;
       await TEV.renouvelerCarte({ eleveId: eleveData.eleve.id, paye: false });
+      // Insérer une ligne isRenewal pour que l'historique soit correct
+      const _inscOrig = (eleveData.inscriptionsTango || []).find(function(i){
+        var _dd = i.donnees && typeof i.donnees === 'object' ? i.donnees : {};
+        try { if (typeof i.donnees === 'string' && i.donnees) _dd = JSON.parse(i.donnees); } catch(e) {}
+        return i.type === 'carte10' && !_dd.isRenewal;
+      });
+      if (_inscOrig) {
+        try {
+          await TEV.client.from('inscriptions_cours').insert({
+            prenom: eleveData.eleve.prenom || '', nom: eleveData.eleve.nom || '',
+            email: (eleveData.eleve.email || '').toLowerCase(),
+            tel: eleveData.eleve.tel || '', role: eleveData.eleve.role || '',
+            ville: _inscOrig.ville || '', niveau: _inscOrig.niveau || '',
+            cours: (_inscOrig.ville === 'vincennes' ? 'vincennes' : 'paris') + '—' + (_inscOrig.niveau || ''),
+            saison: _inscOrig.saison || '', type: 'carte10', statut: 'inscrit',
+            donnees: { isRenewal: true, renewalPaye: false,
+              dateRenouvellement: new Date().toISOString().slice(0, 10),
+              previousUtilises: _prevUtil }
+          });
+        } catch(e) {}
+      }
       const d2 = await TEV.getEleve(eleveData.eleve.email);
       if (d2 && d2.carte) {
         eleveData.carte = d2.carte;
