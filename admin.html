@@ -7264,7 +7264,6 @@ function renderReportSection(sai, cartes) {
 }
 function _buildCartesData() {
   var sai = saisonActive();
-  var _DBG_EMAIL = 'salvaje91@gmail.com';
   // Emails dont toutes les inscriptions tango de la saison sont supprimées
   var _emailsSupprimés = {};
   (adminData.coursTango||[]).forEach(function(ct){
@@ -7282,41 +7281,24 @@ function _buildCartesData() {
     if(c.paye===undefined)c.paye=(c.source==='inscription');
     try { if(localStorage.getItem('tev_nonpayee_'+c.email)==='1') c.paye=false; } catch(e) {}
   });
-  var emailsCartes = {};
-  // Couples email partagé : tracker par nom normalisé pour inclure les deux personnes.
-  // _nStr(s) normalise sans accents. Pour les entrées eleves, c.nom = "Prenom NOM" (concaténé).
-  // Pour les entrées IC, on compare ct.prenom+' '+ct.nom contre c.nom → même résultat.
+  // Tracker chaque personne par (email::nomNormalisé) — gère les couples email partagé.
+  // c.nom dans cartes[] = "Prenom NOM" (concaténé par tev-supabase).
+  // ct.prenom+' '+ct.nom dans coursTango = même format → comparaison directe.
   function _nStr(s) {
     return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().trim();
   }
-  var eleveNomsParEmail = {}; // email → [_nStr(c.nom), ...]
+  var personnesVues = {}; // "email::PRENOM NOM" → true
   cartesEleves.forEach(function(c){
-    emailsCartes[c.email]=true;
-    if (!eleveNomsParEmail[c.email]) eleveNomsParEmail[c.email] = [];
-    eleveNomsParEmail[c.email].push(_nStr(c.nom)); // c.nom = "Prenom NOM" déjà concaténé
+    personnesVues[c.email+'::'+_nStr(c.nom)] = true;
   });
-  if (window._DBG_CARTES) console.log('[CARTES DBG] salvaje emailsCartes=', emailsCartes[_DBG_EMAIL], 'eleveNoms=', JSON.stringify(eleveNomsParEmail[_DBG_EMAIL]), 'cartesEleves noms=', cartesEleves.filter(function(c){return c.email===_DBG_EMAIL;}).map(function(c){return c.nom;}));
-  var icPersonnesVues = {}; // évite doublons (isRenewal, etc.) dans la boucle IC
-  var _dbgIcRows = (adminData.coursTango||[]).filter(function(ct){ return ct.email===_DBG_EMAIL; });
-  if (window._DBG_CARTES) console.log('[CARTES DBG] IC rows for salvaje:', _dbgIcRows.map(function(ct){return {nom:ct.nom,prenom:ct.prenom,type:ct.type,statut:ct.statut,saison:ct.saison,donnees:ct.donnees};}));
   (adminData.coursTango||[]).filter(function(ct){
     if (ct.statut!=='inscrit') return false;
     if (!ct.type || ct.type.indexOf('carte')<0) return false;
     if ((ct.saison||saisonCourante())!==sai) return false;
     if (ct.donnees && ct.donnees.isRenewal) return false;
-    var ctFullNorm = _nStr((ct.prenom||'')+' '+(ct.nom||'')); // "HUGO FIGUEREDO" ou "ANAIS GOSSELIN"
-    var personKey = ct.email+'::'+ctFullNorm;
-    if (icPersonnesVues[personKey]) return false;
-    if (!emailsCartes[ct.email]) return true; // email absent des eleves → inclure
-    // Email dans eleves : vérifier si c'est la même personne (couple email partagé).
-    // c.nom dans eleves = "Prenom NOM" (concaténé) → même format que ctFullNorm.
-    var memePersonne = (eleveNomsParEmail[ct.email]||[]).some(function(n){ return n===ctFullNorm; });
-    if (window._DBG_CARTES && ct.email===_DBG_EMAIL) console.log('[CARTES DBG] IC', ct.prenom, ct.nom, 'ctFullNorm=', ctFullNorm, 'memePersonne=', memePersonne, 'included=', !memePersonne);
-    return !memePersonne;
+    return !personnesVues[ct.email+'::'+_nStr((ct.prenom||'')+' '+(ct.nom||''))];
   }).forEach(function(ct){
-    var ctFullNorm = _nStr((ct.prenom||'')+' '+(ct.nom||''));
-    icPersonnesVues[ct.email+'::'+ctFullNorm] = true;
-    emailsCartes[ct.email]=true;
+    personnesVues[ct.email+'::'+_nStr((ct.prenom||'')+' '+(ct.nom||''))] = true;
     var donneesObj = ct.donnees && typeof ct.donnees === 'object' ? ct.donnees : {};
     try { if (typeof ct.donnees === 'string' && ct.donnees) donneesObj = JSON.parse(ct.donnees); } catch(e) {}
     var isRep = !!(donneesObj.isReport);
