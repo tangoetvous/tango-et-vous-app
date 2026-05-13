@@ -7275,7 +7275,8 @@ function _buildCartesData() {
     return carteS===sai && c.statut!=='supprimé' && !_emailsSupprimés[c.email] && (c.utilises>0||c.restants>0||c.datePremierCours||c.statut==='Nouvelle carte');
   });
   cartesEleves.forEach(function(c){
-    c._fromCoursTango = false;
+    // Ne pas écraser _fromCoursTango=true sur les entrées fake déjà poussées dans adminData.cartes
+    if (c._fromCoursTango !== true) c._fromCoursTango = false;
     if(c.paye===undefined)c.paye=(c.source==='inscription');
     try { if(localStorage.getItem('tev_nonpayee_'+c.email)==='1') c.paye=false; } catch(e) {}
   });
