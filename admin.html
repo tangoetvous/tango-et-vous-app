@@ -7410,6 +7410,64 @@ function _tevPrint(titre, sections) {
   w.document.close();
 }
 
+function ouvrirModalRemplacant() {
+  var box = gel('modal-contact-box'); if (!box) return;
+  var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate());
+  var dateDefault = tomorrow.toISOString().split('T')[0];
+  var h = '<div class="modal-titre">🔗 Lien remplaçant</div>'
+    +'<div style="font-size:13px;color:var(--dim);margin-bottom:16px;">Génère un lien valable <strong style="color:var(--fg);">uniquement le jour indiqué</strong>. Le remplaçant pourra pointer les cartes de 10 des cours sélectionnés — sans accès au reste de l\'administration.</div>'
+    +'<div class="field"><label>Cours autorisés</label>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">'
+    +'<label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="remp-c1" value="paris-debutant" checked style="width:auto;padding:0;margin:0;flex-shrink:0;"> Paris Débutant</label>'
+    +'<label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" id="remp-c2" value="paris-intermediaire" checked style="width:auto;padding:0;margin:0;flex-shrink:0;"> Paris Intermédiaire</label>'
+    +'</div></div>'
+    +'<div class="field"><label>Date du cours</label><input type="date" id="remp-date" value="'+dateDefault+'" style="width:100%;box-sizing:border-box;"></div>'
+    +'<div id="remp-result" style="display:none;margin-top:8px;">'
+    +'<div style="font-size:12px;color:var(--dim);margin-bottom:6px;">Lien à envoyer au remplaçant :</div>'
+    +'<div style="display:flex;gap:6px;align-items:center;">'
+    +'<input type="text" id="remp-url" readonly style="flex:1;font-size:11px;padding:6px 8px;background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--fg);">'
+    +'<button class="btn btn-gold" style="padding:6px 12px;font-size:12px;white-space:nowrap;" onclick="copierLienRemplacant()">📋 Copier</button>'
+    +'</div></div>'
+    +'<div class="btn-row">'
+    +'<button class="btn btn-gold" style="flex:2;" onclick="genererLienRemplacant()">🔗 Générer le lien</button>'
+    +'<button class="btn btn-ghost" data-action="fermer-contact">Annuler</button>'
+    +'</div>';
+  box.innerHTML = h;
+  gel('modal-contact').classList.add('vis');
+}
+function genererLienRemplacant() {
+  var cours = [];
+  if ((gel('remp-c1')||{}).checked) cours.push('paris-debutant');
+  if ((gel('remp-c2')||{}).checked) cours.push('paris-intermediaire');
+  var date = (gel('remp-date')||{}).value || '';
+  if (!cours.length) { afficherToast('⚠️ Sélectionnez au moins un cours'); return; }
+  if (!date) { afficherToast('⚠️ Choisissez une date'); return; }
+  var btn = document.querySelector('#modal-contact-box .btn-gold');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Génération…'; }
+  var jwt = '';
+  try {
+    var raw = localStorage.getItem('sb-qhngqzvvllktuwspojxc-auth-token');
+    if (raw) jwt = (JSON.parse(raw).access_token || '');
+  } catch(e) {}
+  fetch('/api/remplacant/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
+    body: JSON.stringify({ cours: cours, date: date }),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.error) { afficherToast('⚠️ ' + d.error); if (btn) { btn.disabled = false; btn.textContent = '🔗 Générer le lien'; } return; }
+    var res = gel('remp-result'), inp = gel('remp-url');
+    if (res) res.style.display = '';
+    if (inp) inp.value = d.url;
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Régénérer'; }
+  })
+  .catch(function() { afficherToast('⚠️ Erreur réseau'); if (btn) { btn.disabled = false; btn.textContent = '🔗 Générer le lien'; } });
+}
+function copierLienRemplacant() {
+  var inp = gel('remp-url'); if (!inp) return;
+  navigator.clipboard.writeText(inp.value).then(function(){ afficherToast('✓ Lien copié !'); }).catch(function(){ inp.select(); document.execCommand('copy'); afficherToast('✓ Lien copié !'); });
+}
 function imprimerCartesPointage() {
   var d = _buildCartesData();
   var now = d.now;
@@ -7520,7 +7578,10 @@ function renderCartes() {
 }
 function renderCartesPointage(d) {
   var cartes=d.cartes, coursKey=d.coursKey, now=d.now;
-  var h='<div style="display:flex;justify-content:flex-end;padding:4px 12px 0;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerCartesPointage()">🖨️ Imprimer / PDF</button></div>';
+  var h='<div style="display:flex;justify-content:flex-end;gap:6px;padding:4px 12px 0;">'
+    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="ouvrirModalRemplacant()">🔗 Lien remplaçant</button>'
+    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerCartesPointage()">🖨️ Imprimer / PDF</button>'
+    +'</div>';
   h+=_tevSearchBar();
   h+='<div style="font-size:10px;color:var(--dim);padding:6px 12px;font-style:italic;">💡 Cliquez "Pointer" pour enregistrer le cours d\'aujourd\'hui. Max 2 par jour.</div>';
   function _carteRowPtg(c){

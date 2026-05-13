@@ -16,6 +16,8 @@
 //   GET   /api/calendar/token          — génère l'URL ICS personnalisée (JWT requis)
 //   GET   /calendar/e-{token}.ics      — flux iCalendar élève (token signé HMAC)
 //   GET   /devis/p/:token              — vue publique d'un devis (sans auth, token UUID)
+//   POST  /api/remplacant/generate     — génère URL remplaçant signée (JWT admin requis)
+//   GET   /api/remplacant/data         — données pointage pour le remplaçant (token signé)
 //   *                                  — assets statiques (Cloudflare Static Assets)
 
 const SUPABASE_URL  = 'https://qhngqzvvllktuwspojxc.supabase.co';
@@ -102,6 +104,19 @@ export default {
       const dvPubM = pathname.match(/^\/devis\/p\/([A-Za-z0-9-]+)$/);
       if (dvPubM && method === 'GET') {
         return handlePublicDevisView(dvPubM[1], env);
+      }
+
+      // POST /api/remplacant/generate — génère URL remplaçant (JWT admin requis)
+      if (pathname === '/api/remplacant/generate' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!env.SUPABASE_SERVICE_KEY) return jsonError(503, 'Service non configuré');
+        return handleRemplacantGenerate(request, jwt, env);
+      }
+
+      // GET /api/remplacant/data — données pointage (token signé, pas de JWT)
+      if (pathname === '/api/remplacant/data' && method === 'GET') {
+        if (!env.SUPABASE_SERVICE_KEY) return jsonError(503, 'Service non configuré');
+        return handleRemplacantData(request, url, env);
       }
 
       return env.ASSETS.fetch(request);
@@ -805,6 +820,113 @@ async function handleEleveICS(token, env) {
     },
   });
 }
+
+// ================================================================
+// REMPLAÇANT — pointage carte10 par un tiers de confiance
+// ================================================================
+
+async function handleRemplacantGenerate(request, jwt, env) {
+  // Vérifier que le JWT est bien un admin
+  const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_admin`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  let isAdmin = false;
+  try { isAdmin = await checkRes.json(); } catch(e) {}
+  if (!isAdmin) return jsonError(403, 'Accès refusé — non administrateur');
+
+  let body;
+  try { body = await request.json(); } catch(e) { return jsonError(400, 'JSON invalide'); }
+  const { cours, date } = body || {};
+  if (!cours || !Array.isArray(cours) || !cours.length || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return jsonError(400, 'Paramètres invalides (cours[], date)');
+  }
+
+  const payload = JSON.stringify({ cours, date });
+  const token   = await _rempSignToken(payload, env.SUPABASE_SERVICE_KEY);
+  const url     = `https://app.tangoetvous.fr/remplacant.html?token=${encodeURIComponent(token)}`;
+  return corsResponse({ ok: true, url }, 200, {}, request);
+}
+
+async function handleRemplacantData(request, urlObj, env) {
+  const token = urlObj.searchParams.get('token') || '';
+  if (!token) return jsonError(400, 'Token manquant');
+
+  const payload = await _rempVerifyToken(token, env.SUPABASE_SERVICE_KEY);
+  if (!payload) return jsonError(401, 'Lien invalide ou signature incorrecte');
+
+  const today = new Date().toISOString().split('T')[0];
+  if (payload.date !== today) return jsonError(403, `Lien expiré — valable uniquement le ${payload.date}`);
+
+  const svcKey = env.SUPABASE_SERVICE_KEY;
+  const saison = _currentSaison();
+  const sb = (path) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` },
+  });
+
+  const result = [];
+  for (const coursKey of payload.cours) {
+    const dash   = coursKey.indexOf('-');
+    const ville  = coursKey.slice(0, dash);
+    const niveau = coursKey.slice(dash + 1);
+    const label  = (ville === 'vincennes' ? 'Vincennes' : 'Paris') + ' — ' + (niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant');
+
+    const icRes = await sb(`inscriptions_cours?select=email,prenom,nom&statut=eq.inscrit&type=eq.carte10&ville=eq.${ville}&niveau=eq.${niveau}&saison=eq.${encodeURIComponent(saison)}`);
+    const ics   = icRes.ok ? await icRes.json() : [];
+
+    let eleves = [];
+    if (ics.length) {
+      const emailList = ics.map(i => i.email).filter(Boolean).join(',');
+      const elvRes = await sb(`eleves?select=email,nom,prenom,carte_utilises,carte_restants,carte_expiration&email=in.(${emailList})`);
+      const elvs   = elvRes.ok ? await elvRes.json() : [];
+      const elvMap = {};
+      for (const e of elvs) elvMap[e.email] = e;
+
+      eleves = ics.map(ic => {
+        const e = elvMap[ic.email] || {};
+        return {
+          email:      ic.email,
+          nom:        ic.nom        || e.nom        || '',
+          prenom:     ic.prenom     || e.prenom     || '',
+          utilises:   e.carte_utilises ?? 0,
+          restants:   e.carte_restants  ?? 10,
+          expiration: e.carte_expiration || null,
+        };
+      }).sort((a, b) => (a.nom + a.prenom).localeCompare(b.nom + b.prenom, 'fr'));
+    }
+    result.push({ key: coursKey, label, eleves });
+  }
+
+  return corsResponse({ date: today, cours: result }, 200, {}, request);
+}
+
+function _currentSaison() {
+  const d = new Date();
+  const m = d.getMonth() + 1;
+  const y = d.getFullYear();
+  return m >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+}
+
+async function _rempSignToken(payload, secret) {
+  const b64  = btoa(payload).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const hmac = await _calHmac(b64, secret);
+  return `${b64}.${hmac.slice(0, 32)}`;
+}
+
+async function _rempVerifyToken(token, secret) {
+  const dot = token.lastIndexOf('.');
+  if (dot < 0) return null;
+  const b64Part = token.slice(0, dot);
+  const sig     = token.slice(dot + 1);
+  const expected = await _calHmac(b64Part, secret);
+  if (expected.slice(0, 32) !== sig) return null;
+  try {
+    return JSON.parse(atob(b64Part.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch(e) { return null; }
+}
+
+// ================================================================
 
 async function _calHmac(email, secret) {
   const enc = new TextEncoder();
