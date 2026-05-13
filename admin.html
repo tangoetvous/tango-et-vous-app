@@ -7840,7 +7840,7 @@ _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCou
     var _carteObj = (adminData.cartes||[]).find(function(x){return x.id===id;});
     var _email = _carteObj ? (_carteObj.email||'') : '';
     var _orig = _email ? (adminData.coursTango||[]).find(function(x){
-      return x.email===_email && x.type==='carte10' && (x.saison||'')===(saisonActive()) && !(x.donnees&&x.donnees.isRenewal);
+      return x.email===_email && (x.type==='carte10'||x.type==='carte') && (x.saison||'')===(saisonActive()) && !(x.donnees&&x.donnees.isRenewal);
     }) : null;
     var insertProm = Promise.resolve();
     if (_email && _orig) {
