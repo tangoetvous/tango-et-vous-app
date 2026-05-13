@@ -6114,7 +6114,7 @@ function supprimerDefinitivementEleve(id) {
 function ficheEleveInscrit(e, borderStyle, grise) {
   var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
   var roleLbl=e.role==='guideur'?'Guideur':'Guidée';
-  var typeLbl={forfait:'Forfait',carte10:'Carte 10',unitaire:'À l\'unité'}[e.type]||e.type||'';
+  var typeLbl={forfait:'Forfait',carte10:'Carte 10',carte:'Carte 10',unitaire:'À l\'unité'}[e.type]||e.type||'';
   var paiLbl=PAI_LBL[e.paiement]||e.paiement||'';
   var griseStyle=grise?'opacity:.38;filter:grayscale(1);':'';
   return '<div class="point-row" style="'+(borderStyle||'')+griseStyle+'flex-wrap:wrap;align-items:center;gap:5px;padding:8px 0;">'
@@ -7939,40 +7939,59 @@ function sauvegarderEditCarte() {
     var _histDatesDB = _histDates.slice(); // dates des cartes précédentes à préserver
     var _nom = c.nom;
     var _niveau = c.niveau || '';
-    // Pour les cartes _fromCoursTango (reportées), la personne a un eleves.id trouvable par email
-    var _eleveRow = (adminData.cartes||[]).find(function(x){ return x.email && x.email===c.email; });
-    var _eleveId = c._fromCoursTango ? (_eleveRow ? _eleveRow.id : null) : c.id;
     var _upd = {carte_utilises:n, carte_restants:Math.max(0,10-n)};
     if(dates[0]) _upd.carte_date_achat = dates[0];
     if(c.expiration) _upd.carte_expiration = c.expiration;
-    var _saveEleves = _eleveId
-      ? Promise.resolve(TEV.client.from('eleves').update(_upd).eq('id', _eleveId))
-          .then(function(res) {
-            if(res && res.error) return res;
-            // Supprimer toutes les présences puis réinsérer : nouvelles dates + historiques préservées
-            return Promise.resolve(TEV.client.from('presences').delete().eq('eleve_id', _eleveId))
-              .then(function() {
-                var allRows = _dates.map(function(d){
-                  return {eleve_id: _eleveId, eleve_nom: _nom, date: d, niveau: _niveau, note: 'Correction admin'};
-                }).concat(_histDatesDB.map(function(d){
-                  return {eleve_id: _eleveId, eleve_nom: _nom, date: d, niveau: _niveau, note: 'Historique'};
-                }));
-                if(!allRows.length) return {error: null};
-                return Promise.resolve(TEV.client.from('presences').insert(allRows));
-              });
-          })
-      : Promise.resolve({error: null});
-    var _saveCoursTango = c._fromCoursTango
-      ? Promise.resolve(TEV.client.from('inscriptions_cours')
-          .update({donnees:{reportedRestants:n, isReport:true, saisonOrigine:c.saisonOrigine||''}})
-          .eq('id', c.id))
-      : Promise.resolve({error: null});
-    Promise.all([_saveEleves, _saveCoursTango]).then(function(results){
-      var err = (results[0]&&results[0].error) || (results[1]&&results[1].error);
-      if(err) afficherToast('⚠️ Erreur sauvegarde : ' + (err.message || err.code || ''));
-      else afficherToast('✓ Carte de '+_cRef.nom+' mise à jour');
-      chargerDonnees();
-    }).catch(function(e){ afficherToast('⚠️ Erreur : '+((e&&e.message)||'')); });
+    // Pour les cartes _fromCoursTango, résoudre le vrai eleves.id :
+    // 1. Chercher une entrée eleves-based (!_fromCoursTango) en mémoire
+    // 2. Sinon, SELECT par email en DB
+    // 3. Sinon, INSERT la ligne manquante
+    var _getEleveId = c._fromCoursTango
+      ? (function(){
+          var _inMem = (adminData.cartes||[]).find(function(x){ return x.email && x.email===c.email && !x._fromCoursTango; });
+          if (_inMem) return Promise.resolve(_inMem.id);
+          return Promise.resolve(TEV.client.from('eleves').select('id').eq('email',c.email).maybeSingle())
+            .then(function(res){
+              if (res && res.data && res.data.id) return res.data.id;
+              var _ctRow=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(c.id);});
+              return Promise.resolve(TEV.client.from('eleves').upsert({
+                prenom:_ctRow?(_ctRow.prenom||''):'', nom:_ctRow?(_ctRow.nom||''):'', email:c.email,
+                niveau:c.niveau||'', ville:c.ville||'paris',
+                statut_eleve:'Actif', source:'inscription', saison:saisonActive()
+              },{onConflict:'email'}).select('id').single()).then(function(r){return r&&r.data?r.data.id:null;});
+            });
+        })()
+      : Promise.resolve(c.id);
+    _getEleveId.then(function(_eleveId){
+      var _saveEleves = _eleveId
+        ? Promise.resolve(TEV.client.from('eleves').update(_upd).eq('id',_eleveId))
+            .then(function(res){
+              if(res&&res.error) return res;
+              // Supprimer toutes les présences puis réinsérer : nouvelles dates + historiques préservées
+              return Promise.resolve(TEV.client.from('presences').delete().eq('eleve_id',_eleveId))
+                .then(function(){
+                  var allRows=_dates.map(function(d){
+                    return {eleve_id:_eleveId,eleve_nom:_nom,date:d,niveau:_niveau,note:'Correction admin'};
+                  }).concat(_histDatesDB.map(function(d){
+                    return {eleve_id:_eleveId,eleve_nom:_nom,date:d,niveau:_niveau,note:'Historique'};
+                  }));
+                  if(!allRows.length) return {error:null};
+                  return Promise.resolve(TEV.client.from('presences').insert(allRows));
+                });
+            })
+        : Promise.resolve({error:null});
+      var _saveCoursTango = c._fromCoursTango
+        ? Promise.resolve(TEV.client.from('inscriptions_cours')
+            .update({donnees:{reportedRestants:n,isReport:true,saisonOrigine:c.saisonOrigine||''}})
+            .eq('id',c.id))
+        : Promise.resolve({error:null});
+      Promise.all([_saveEleves,_saveCoursTango]).then(function(results){
+        var err=(results[0]&&results[0].error)||(results[1]&&results[1].error);
+        if(err) afficherToast('⚠️ Erreur sauvegarde : '+(err.message||err.code||''));
+        else afficherToast('✓ Carte de '+_cRef.nom+' mise à jour');
+        chargerDonnees();
+      }).catch(function(e){afficherToast('⚠️ Erreur : '+((e&&e.message)||''));});
+    }).catch(function(e){afficherToast('⚠️ Erreur : '+((e&&e.message)||''));});
   }
 }
 function reporterCarteJs(id, btn) {
@@ -10681,13 +10700,27 @@ window.soumettreInscriptionDirecte = function(force) {
     setTimeout(renderTab, 300);
   };
   if(!IS_DEMO && insRows.length){
-    Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?10:0,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
-    // inscriptions_cours INSERT — navigate to list after completion
+    // Mettre à jour les champs carte sur la ligne eleves existante, ou créer si absente
+    var _elvProm = Promise.resolve(TEV.client.from('eleves').update({
+      carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',
+      carte_utilises:0, carte_restants:anyMainCarte10?10:0, carte_paye:true
+    }).eq('email',email).select('id')).then(function(r){
+      if (r && r.data && r.data.length) return; // ligne existante mise à jour
+      return Promise.resolve(TEV.client.from('eleves').insert({
+        prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,
+        statut_eleve:'Actif',source:'inscription',saison:sai,
+        carte_utilises:0,carte_restants:anyMainCarte10?10:0,
+        carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true
+      }));
+    }).catch(function(){});
+    // inscriptions_cours INSERT — navigate to list after both ops complete
     TEV.client.from('inscriptions_cours').insert(insRows).then(function(r){
       if(r && r.error){
         afficherToast('⚠️ Erreur INSERT: '+(r.error.message||r.error.code||JSON.stringify(r.error)));
         console.error('ins_dir inscriptions_cours:', r.error);
       }
+      return _elvProm;
+    }).then(function(){
       _gotoTab();
     });
   } else {
