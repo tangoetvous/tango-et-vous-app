@@ -1369,3 +1369,22 @@ CREATE UNIQUE INDEX idx_cours_no_double
 **Règle mémo — IDs locaux fake vs IDs DB réels :**
 `isNaN(parseInt(e.id))` = true → ID fake créé localement (ex: `'CT1234567890v1'`) → toujours faire INSERT
 `isNaN(parseInt(e.id))` = false → ID réel Supabase (entier) → UPDATE safe
+
+## Session 2026-05-13 (suite) — Compta search, suppression définitive cartes
+
+### ✅ Compta — champ de recherche par nom
+- Variable globale `comptaSearch = ''` (ligne ~1054)
+- Input `#compta-search` affiché dans `renderCompta()` pour tous les sous-onglets sauf Trésorerie
+- `_comptaFilterSearch(liste)` : filtre insensible aux accents via NFD + `.toLowerCase()` sur `prenom + ' ' + nom`
+- Appliqué dans `_renderComptaTango()` (après `_markSharedCartes`), `_renderComptaYoga()`, `_renderComptaStages()` (par date, masque les dates sans résultat)
+- Focus restauré après re-render via `requestAnimationFrame` dans `renderTab()` (si `currentTab==='compta' && comptaSearch`)
+
+### ✅ Suppression définitive élève — nettoie aussi les cartes10
+- **Problème** : `supprimerDefinitivementEleve(id)` ne supprimait que l'entrée ciblée par `id` → les entrées `carte10` avec `statut='supprimé'` restaient en DB et continuaient d'apparaître dans Cartes 10 → Supprimées
+- **Fix** : supprime maintenant **par email** (pas par id) : `inscriptions_cours.delete().eq('email', email)` + `eleves.delete().eq('email', email)` — toutes les inscriptions de la personne et sa ligne élève sont effacées
+- **Localement** : `adminData.coursTango` filtre par email (pas par id), `adminData.cartes` filtré aussi
+
+### ✅ Cartes 10 → Supprimées — bouton 🗑 Définitif (temporaire, retiré)
+- Ajouté temporairement pour permettre le nettoyage rétroactif des fiches résiduelles
+- Fonction `supprimerDefinitivementCarte(email, nom)` : même logique que `supprimerDefinitivementEleve` (DELETE par email)
+- **Retiré après usage** — le bouton n'est plus dans l'UI, la fonction reste dans le code
