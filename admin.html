@@ -7705,7 +7705,7 @@ function renderCartesDetails(d) {
       } else {
         _histSegs.push(_rem); // pas de lignes isRenewal : tout en un bloc
       }
-      _histHtml='<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">';
+      _histHtml='<div id="hc-'+c.id+'" style="display:none;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">';
       _histHtml+='<div style="font-size:10px;color:var(--dim);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">📋 Cartes précédentes</div>';
       _histSegs.forEach(function(seg){
         var _hu=seg.length, _hf=seg[seg.length-1]||'', _he=_hf?calcExpiration(_hf,c.ville||'paris'):'';
@@ -7738,6 +7738,7 @@ function renderCartesDetails(d) {
       +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">'
       +(_dpDet>=2?'<span class="pill pill-ok" style="font-size:9px;padding:3px 8px;">✓ 2/2 pointés</span>':fini?'':'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer'+(_dpDet===1?' ×2':'')+'</button>')
       +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="edit-carte-dates" data-id="'+c.id+'">✏️ Modifier</button>'
+      +(histDates.length>0?'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" onclick="toggleHistCarte(\''+c.id+'\')" title="Cartes précédentes">🕐</button>':'')
       +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="qr-carte" data-id="'+c.id+'" data-nom="'+c.nom+'" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-cours="'+(c.cours||'').replace(/"/g,'&quot;')+'">📱 QR</button>'
       +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="renouveler-carte" data-id="'+c.id+'" data-nom="'+c.nom+'">↻ Renouveler</button>'
       +(isReportPeriod&&!fini&&!c.isReport&&(c.restants||0)>0?'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="reporter-carte" data-id="'+c.id+'">↩ Reporter</button>':'')
@@ -7851,6 +7852,11 @@ _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCou
   }).then(function(){
     chargerDonnees().then(function(){ if(onDone) onDone(); }).catch(function(){ if(onDone) onDone(); });
   }).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
+}
+function toggleHistCarte(id) {
+  var el = document.getElementById('hc-' + id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 function toggleCartePaye(id) {
   var c=(adminData.cartes||[]).find(function(x){return x.id===id;});
