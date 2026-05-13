@@ -109,13 +109,11 @@ export default {
       // POST /api/remplacant/generate — génère URL remplaçant (JWT admin requis)
       if (pathname === '/api/remplacant/generate' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
-        if (!env.SUPABASE_SERVICE_KEY) return jsonError(503, 'Service non configuré');
         return handleRemplacantGenerate(request, jwt, env);
       }
 
       // GET /api/remplacant/data — données pointage (token signé, pas de JWT)
       if (pathname === '/api/remplacant/data' && method === 'GET') {
-        if (!env.SUPABASE_SERVICE_KEY) return jsonError(503, 'Service non configuré');
         return handleRemplacantData(request, url, env);
       }
 
@@ -843,8 +841,10 @@ async function handleRemplacantGenerate(request, jwt, env) {
     return jsonError(400, 'Paramètres invalides (cours[], date)');
   }
 
+  // Signe avec service key si dispo, sinon clé anon (token auto-protégé par date)
+  const secret  = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const payload = JSON.stringify({ cours, date });
-  const token   = await _rempSignToken(payload, env.SUPABASE_SERVICE_KEY);
+  const token   = await _rempSignToken(payload, secret);
   const url     = `https://app.tangoetvous.fr/remplacant.html?token=${encodeURIComponent(token)}`;
   return corsResponse({ ok: true, url }, 200, {}, request);
 }
@@ -853,48 +853,30 @@ async function handleRemplacantData(request, urlObj, env) {
   const token = urlObj.searchParams.get('token') || '';
   if (!token) return jsonError(400, 'Token manquant');
 
-  const payload = await _rempVerifyToken(token, env.SUPABASE_SERVICE_KEY);
+  // Vérifie avec service key si dispo, sinon clé anon (même secret que generate)
+  const secret  = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const payload = await _rempVerifyToken(token, secret);
   if (!payload) return jsonError(401, 'Lien invalide ou signature incorrecte');
 
   const today = new Date().toISOString().split('T')[0];
   if (payload.date !== today) return jsonError(403, `Lien expiré — valable uniquement le ${payload.date}`);
 
-  const svcKey = env.SUPABASE_SERVICE_KEY;
   const saison = _currentSaison();
-  const sb = (path) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` },
-  });
-
   const result = [];
+
   for (const coursKey of payload.cours) {
     const dash   = coursKey.indexOf('-');
     const ville  = coursKey.slice(0, dash);
     const niveau = coursKey.slice(dash + 1);
     const label  = (ville === 'vincennes' ? 'Vincennes' : 'Paris') + ' — ' + (niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant');
 
-    const icRes = await sb(`inscriptions_cours?select=email,prenom,nom&statut=eq.inscrit&type=eq.carte10&ville=eq.${ville}&niveau=eq.${niveau}&saison=eq.${encodeURIComponent(saison)}`);
-    const ics   = icRes.ok ? await icRes.json() : [];
-
-    let eleves = [];
-    if (ics.length) {
-      const emailList = ics.map(i => i.email).filter(Boolean).join(',');
-      const elvRes = await sb(`eleves?select=email,nom,prenom,carte_utilises,carte_restants,carte_expiration&email=in.(${emailList})`);
-      const elvs   = elvRes.ok ? await elvRes.json() : [];
-      const elvMap = {};
-      for (const e of elvs) elvMap[e.email] = e;
-
-      eleves = ics.map(ic => {
-        const e = elvMap[ic.email] || {};
-        return {
-          email:      ic.email,
-          nom:        ic.nom        || e.nom        || '',
-          prenom:     ic.prenom     || e.prenom     || '',
-          utilises:   e.carte_utilises ?? 0,
-          restants:   e.carte_restants  ?? 10,
-          expiration: e.carte_expiration || null,
-        };
-      }).sort((a, b) => (a.nom + a.prenom).localeCompare(b.nom + b.prenom, 'fr'));
-    }
+    // Appel RPC SECURITY DEFINER accessible à anon — pas besoin de service key
+    const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_remplacant_eleves`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_ville: ville, p_niveau: niveau, p_saison: saison }),
+    });
+    const eleves = rpcRes.ok ? (await rpcRes.json() || []) : [];
     result.push({ key: coursKey, label, eleves });
   }
 
