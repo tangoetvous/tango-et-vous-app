@@ -7664,6 +7664,41 @@ function renderCartesDetails(d) {
         +'</div>';
     }
     miniDots+='</div>';
+    // Historical cards from previous renewals
+    var _histHtml='';
+    var _renewRows=(adminData.coursTango||[]).filter(function(ct){
+      var _dd=ct.donnees&&typeof ct.donnees==='object'?ct.donnees:{};
+      try{if(typeof ct.donnees==='string'&&ct.donnees)_dd=JSON.parse(ct.donnees);}catch(e){}
+      return ct.email===c.email&&ct.type==='carte10'&&_dd.isRenewal&&_dd.dateRenouvellement&&ct.statut!=='supprimé';
+    }).sort(function(a,b){
+      var _da=(a.donnees&&a.donnees.dateRenouvellement)||'',_db=(b.donnees&&b.donnees.dateRenouvellement)||'';
+      return _da.localeCompare(_db);
+    });
+    if(_renewRows.length>0){
+      var _allDatesAsc=(c.datesCours||[]).slice().sort();
+      var _cutoffs=_renewRows.map(function(r){var _dd=r.donnees&&typeof r.donnees==='object'?r.donnees:{};try{if(typeof r.donnees==='string'&&r.donnees)_dd=JSON.parse(r.donnees);}catch(e){}return _dd.dateRenouvellement||'';}).filter(Boolean);
+      if(_cutoffs.length>0){
+        var _segs=[],_rem=_allDatesAsc.slice();
+        _cutoffs.forEach(function(cut){var _bef=_rem.filter(function(d){return d<cut;});_rem=_rem.filter(function(d){return d>=cut;});_segs.push({dates:_bef,renewalDate:cut});});
+        var _validSegs=_segs.filter(function(s){return s.dates.length>0;});
+        if(_validSegs.length>0){
+          _histHtml='<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">';
+          _histHtml+='<div style="font-size:10px;color:var(--dim);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">📋 Cartes précédentes</div>';
+          _validSegs.slice().reverse().forEach(function(seg){
+            var _hd=seg.dates,_hu=_hd.length,_hf=_hd[0]||'',_he=_hf?calcExpiration(_hf,c.ville||'paris'):'';
+            var _hdots='<div style="display:flex;gap:3px;flex-wrap:wrap;margin:4px 0;">';
+            for(var j=0;j<10;j++){var _dj=_hd[j]||null;_hdots+='<div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:14px;height:14px;border-radius:50%;background:'+(j<_hu?'rgba(212,175,55,0.4)':'var(--s2)')+';border:1px solid '+(j<_hu?'rgba(212,175,55,0.6)':'var(--border)')+';flex-shrink:0;"></div>'+(_dj?'<div style="font-size:9px;color:var(--dim);white-space:nowrap;">'+fmtDateCourt(_dj)+'</div>':'')+'</div>';}
+            _hdots+='</div>';
+            _histHtml+='<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:4px;">';
+            _histHtml+='<div style="font-size:10px;color:var(--text);"><strong>'+_hu+'/10 cours</strong>';
+            if(_hf) _histHtml+=' · Début '+fmtDate(_hf);
+            if(_he) _histHtml+=' · Exp. '+fmtDate(_he);
+            _histHtml+='</div>'+_hdots+'</div>';
+          });
+          _histHtml+='</div>';
+        }
+      }
+    }
     var expTxt=c.isReport&&!c.datePremierCours?'Report de '+c.saisonOrigine+' · Dém. au 1er cours':expAff?'Exp. '+fmtDate(expAff):c.datePremierCours?'Dép. '+fmtDate(c.datePremierCours):'Pas encore commencée';
     var payeOk=c.paye===true;
     var payePill=payeOk
@@ -7678,6 +7713,7 @@ function renderCartesDetails(d) {
       +'</div>'
       +'<div class="point-sub" style="font-size:10px;">'+nbUtil+'/'+totalSlots+' cours · '+expTxt+'</div>'
       +miniDots
+      +_histHtml
       +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">'
       +(_dpDet>=2?'<span class="pill pill-ok" style="font-size:9px;padding:3px 8px;">✓ 2/2 pointés</span>':fini?'':'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="pointer-cours" data-id="'+c.id+'">+ Pointer'+(_dpDet===1?' ×2':'')+'</button>')
       +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="edit-carte-dates" data-id="'+c.id+'">✏️ Modifier</button>'
@@ -7786,7 +7822,7 @@ _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCou
         cours:_orig.cours||'', saison:saisonActive(),
         type:'carte10', statut:'inscrit',
         montant:_mont, paiement:_orig.paiement||'',
-        donnees:{isRenewal:true, renewalPaye:paye===true}
+        donnees:{isRenewal:true, renewalPaye:paye===true, dateRenouvellement:today()}
       };
       insertProm = Promise.resolve(TEV.client.from('inscriptions_cours').insert(_renewRow)).catch(function(){});
     }
