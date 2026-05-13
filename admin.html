@@ -7282,10 +7282,37 @@ function _buildCartesData() {
     try { if(localStorage.getItem('tev_nonpayee_'+c.email)==='1') c.paye=false; } catch(e) {}
   });
   var emailsCartes = {};
-  cartesEleves.forEach(function(c){ emailsCartes[c.email]=true; });
+  // Pour les couples avec email partagé (ex: Hugo FIGUEREDO / Anaïs GOSSELIN),
+  // on ne peut pas filtrer uniquement par email — on track le nom complet par email.
+  // eleveNomsParEmail[email] = [normeNomComplet, ...] des entrées déjà couvertes via eleves.
+  var eleveNomsParEmail = {};
+  function _normNomComplet(prenom, nom) {
+    return ((prenom||'')+' '+(nom||'')).trim().normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+  }
+  cartesEleves.forEach(function(c){
+    emailsCartes[c.email]=true;
+    if (!eleveNomsParEmail[c.email]) eleveNomsParEmail[c.email] = [];
+    // c.nom = "Prenom NOM" (concaténé dans tev-supabase), c.prenom = "Prenom"
+    var rawNom = c.prenom ? (c.nom||'').replace(new RegExp('^'+c.prenom.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s+'),'').trim() : (c.nom||'');
+    eleveNomsParEmail[c.email].push(_normNomComplet(c.prenom, rawNom));
+  });
+  var icPersonnesVues = {}; // évite doublons (isRenewal, etc.) dans la boucle IC
   (adminData.coursTango||[]).filter(function(ct){
-    return ct.statut==='inscrit' && ct.type && ct.type.indexOf('carte')>=0 && !emailsCartes[ct.email] && (ct.saison||saisonCourante())===sai;
+    if (ct.statut!=='inscrit') return false;
+    if (!ct.type || ct.type.indexOf('carte')<0) return false;
+    if ((ct.saison||saisonCourante())!==sai) return false;
+    if (ct.donnees && ct.donnees.isRenewal) return false;
+    var personKey = ct.email+'::'+_normNomComplet(ct.prenom, ct.nom);
+    if (icPersonnesVues[personKey]) return false;
+    if (!emailsCartes[ct.email]) return true;
+    // Email déjà dans eleves — vérifier si c'est la même personne (couple email partagé)
+    var ctNorm = _normNomComplet(ct.prenom, ct.nom);
+    var memePersonne = (eleveNomsParEmail[ct.email]||[]).some(function(n){ return n===ctNorm; });
+    return !memePersonne;
   }).forEach(function(ct){
+    var personKey = ct.email+'::'+_normNomComplet(ct.prenom, ct.nom);
+    icPersonnesVues[personKey] = true;
+    emailsCartes[ct.email]=true;
     var donneesObj = ct.donnees && typeof ct.donnees === 'object' ? ct.donnees : {};
     try { if (typeof ct.donnees === 'string' && ct.donnees) donneesObj = JSON.parse(ct.donnees); } catch(e) {}
     var isRep = !!(donneesObj.isReport);
@@ -7309,7 +7336,6 @@ function _buildCartesData() {
     cartesEleves.push(newCarte);
     if(!adminData.cartes)adminData.cartes=[];
     adminData.cartes.push(newCarte);
-    emailsCartes[ct.email]=true;
   });
   var NIVEAUX_LABELS={'debutant':'Débutant','débutant':'Débutant','intermediaire':'Intermédiaire','intermédiaire':'Intermédiaire','avance':'Avancé','avancé':'Avancé'};
   function normNiv(n){return n?(NIVEAUX_LABELS[n.toLowerCase()]||n):'—';}
