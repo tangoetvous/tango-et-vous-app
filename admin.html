@@ -606,45 +606,19 @@ function calcExpiration(datePremierCours, ville) {
   var coursArr = ((ville === 'vincennes' ? stored.vincennes : stored.paris) || []).slice().sort();
   var coursSet = {};
   coursArr.forEach(function(d) { coursSet[d] = true; });
-
   var firstStored = coursArr[0] || '';
   var lastStored  = coursArr[coursArr.length - 1] || '';
 
-  // Bornes de saison — calculées avant le bonus pour éviter le double-comptage été
-  var seasonEndYear = debut.getMonth() >= 8 ? debut.getFullYear() + 1 : debut.getFullYear();
-  var septStart = seasonEndYear + '-09-01';
-  var seasonStartBound = (seasonEndYear - 1) + '-09-01';
-  var lastSaisonCours = '';
-  coursArr.forEach(function(d) {
-    if (d >= seasonStartBound && d < septStart && d > lastSaisonCours) lastSaisonCours = d;
-  });
-  var firstNextCours = '';
-  for (var i = 0; i < coursArr.length; i++) {
-    if (coursArr[i] >= septStart) { firstNextCours = coursArr[i]; break; }
-  }
-
-  // Bonus : semaines absentes INTRA-SAISON uniquement (cap à lastSaisonCours pour éviter
-  // de compter juillet-août deux fois avec la coupure estivale ci-dessous)
-  var bonusUpperBound = lastSaisonCours || lastStored;
-  var bonus = 0;
+  // Algorithme itératif : chaque semaine sans cours dans la plage connue repousse fin d'1 semaine.
+  // La boucle s'étend naturellement → gère vacances intra-saison ET coupure estivale sans double-comptage.
   var cur = new Date(debut.getTime());
   cur.setDate(cur.getDate() + 7);
-  var finStr = fin.toISOString().slice(0, 10);
-  while (cur.toISOString().slice(0, 10) <= finStr) {
+  while (cur <= fin) {
     var iso = cur.toISOString().slice(0, 10);
-    if (firstStored && iso >= firstStored && iso <= bonusUpperBound && !coursSet[iso]) bonus++;
-    cur.setDate(cur.getDate() + 7);
-  }
-  fin.setDate(fin.getDate() + bonus * 7);
-
-  // Coupure estivale : ajoute les semaines entre dernier cours et reprise
-  if (lastSaisonCours && firstNextCours) {
-    var lastD = new Date(lastSaisonCours + 'T12:00:00');
-    var firstD = new Date(firstNextCours + 'T12:00:00');
-    if (fin > lastD) {
-      var pauseWeeks = Math.ceil((firstD - lastD) / (7 * 24 * 60 * 60 * 1000));
-      fin.setDate(fin.getDate() + pauseWeeks * 7);
+    if (firstStored && iso >= firstStored && iso <= lastStored && !coursSet[iso]) {
+      fin.setDate(fin.getDate() + 7);
     }
+    cur.setDate(cur.getDate() + 7);
   }
   return fin.toISOString().slice(0, 10);
 }

@@ -639,36 +639,16 @@ function _calcExpirationSb(dateStr, ville) {
   const firstStored = coursArr[0] || '';
   const lastStored  = coursArr[coursArr.length - 1] || '';
 
-  // Bornes de saison — calculées avant le bonus pour éviter le double-comptage été
-  const seasonEndYear = debut.getMonth() >= 8 ? debut.getFullYear() + 1 : debut.getFullYear();
-  const septStart = seasonEndYear + '-09-01';
-  const seasonStartBound = (seasonEndYear - 1) + '-09-01';
-  let lastSaisonCours = '';
-  coursArr.forEach(d => { if (d >= seasonStartBound && d < septStart && d > lastSaisonCours) lastSaisonCours = d; });
-  const firstNextCours = coursArr.find(d => d >= septStart) || '';
-
-  // Bonus : semaines absentes INTRA-SAISON uniquement (cap à lastSaisonCours pour éviter
-  // de compter juillet-août deux fois avec la coupure estivale ci-dessous)
-  const bonusUpperBound = lastSaisonCours || lastStored;
-  let bonus = 0;
+  // Algorithme itératif : chaque semaine sans cours repousse fin d'1 semaine.
+  // Gère vacances intra-saison ET coupure estivale sans double-comptage.
   const cur = new Date(debut.getTime());
   cur.setDate(cur.getDate() + 7);
-  const finStr = fin.toISOString().slice(0, 10);
-  while (cur.toISOString().slice(0, 10) <= finStr) {
+  while (cur <= fin) {
     const iso = cur.toISOString().slice(0, 10);
-    if (firstStored && iso >= firstStored && iso <= bonusUpperBound && !coursSet[iso]) bonus++;
-    cur.setDate(cur.getDate() + 7);
-  }
-  fin.setDate(fin.getDate() + bonus * 7);
-
-  // Coupure estivale : ajoute les semaines entre dernier cours et reprise
-  if (lastSaisonCours && firstNextCours) {
-    const lastD  = new Date(lastSaisonCours  + 'T12:00:00');
-    const firstD = new Date(firstNextCours + 'T12:00:00');
-    if (fin > lastD) {
-      const pauseWeeks = Math.ceil((firstD - lastD) / (7 * 24 * 60 * 60 * 1000));
-      fin.setDate(fin.getDate() + pauseWeeks * 7);
+    if (firstStored && iso >= firstStored && iso <= lastStored && !coursSet[iso]) {
+      fin.setDate(fin.getDate() + 7);
     }
+    cur.setDate(cur.getDate() + 7);
   }
   return fin.toISOString().slice(0, 10);
 }
