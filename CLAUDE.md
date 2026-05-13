@@ -324,7 +324,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] **Tester sync email Auth** : dans admin, changer l'email d'un élève → F12 → Network → chercher `update-auth-email` → vérifier réponse `{"ok":true,"userId":"..."}` → vérifier dans Supabase Dashboard → Authentication → Users
 - [x] Téléphone et photo modifiables depuis espace élève — CORRIGÉS : `tevUpdateEleveTel` n'écrit que dans `eleves` (RLS interdit UPDATE sur `inscriptions_cours` aux non-admins). Priorité inversée dans `tevGetAdminData()` : `elv.tel || ic.tel` (au lieu de `ic.tel || elv.tel`) pour que la valeur fraîche de `eleves` prime sur l'ancienne de `inscriptions_cours`. Photo : même logique, `eleves.photo_url` mis à jour via `tevUpdateElevePhoto`. ⚠️ Règle à retenir : tout champ modifiable depuis l'espace élève doit écrire dans `eleves` et être lu en priorité depuis `eleves` dans l'admin.
 - [x] **Module Trésorerie (Compta)** — UI complète implémentée dans admin.html (onglet Compta → Trésorerie). SQL exécuté dans Supabase le 2026-05-08. ✅ Testé et fonctionnel.
-- [x] **`calcExpiration` double-comptage été** — CORRIGÉ : les dates juillet-août étaient dans `SANS_COURS_PARIS`/`SANS_COURS_VINCENNES` ET couvertes par le bonus inter-saison (step 3), ce qui doublait leur effet. Fix : suppression des dates d'été des tableaux `SANS_COURS_*` — l'été est géré exclusivement par le step 3 (gap estival).
+- [x] **`calcExpiration` — refonte complète (2026-05-13)** : suppression de `SANS_COURS_PARIS/VINCENNES` hardcodés. Les semaines sans cours sont détectées automatiquement depuis les gaps dans `tev_cours_dates` (Paramètres). Fix timezone T00→T12. Voir section "Session 2026-05-13 (suite 3)".
 - [x] **`sauvegarderEditCarte` ne persistait pas** — CORRIGÉ : les dates venaient de la table `presences` (reconstruite à chaque `chargerDonnees`). Fix : DELETE des présences existantes + INSERT des nouvelles pour cet `eleve_id`. L'expiration est recalculée systématiquement (suppression de la garde `!c.expiration`). Pour les cartes reportées (`_fromCoursTango`) : l'`eleves.id` est retrouvé par email dans `adminData.cartes` (même si la saison ne correspond plus) → `Promise.all` sur `eleves` + `presences` + `inscriptions_cours.donnees`.
 - [x] **Badges paiement carte10 — "✓ Payé" et modal paiement** — FAIT (2026-05-12) : cliquer "✓ Payé" ouvre désormais le même modal que "Non payé" (pré-rempli avec les données de l'isRenewal le plus récent). Modal `ouvrirModalCartePaiement` enrichi : si un isRenewal existe pour cet email → pré-remplit montant/mode/date depuis `donnees.datePremierPaiement`, `paiement`, `montant`.
 - [x] **Renouvellement carte + "Payé" → ouvre modal paiement** — FAIT (2026-05-12) : dans `confirmerModalRenouveler`, si `paye=true` → appelle `renouvelerCarteAction(id, null, false, 0, callback)` puis le callback ouvre `ouvrirModalCartePaiement`. Le renouvellement lui-même reste non-payé en DB jusqu'à validation dans le modal.
@@ -646,8 +646,11 @@ Lifecycle des statuts dans `inscriptions_cours` pour les nouvelles inscriptions 
 - **Bonus inter-saison** : si la carte court sur l'été (fin juin → début septembre), toutes les semaines estivales sans cours sont aussi comptées
 - Formule : `expiration = datePremierCours + 3 mois + (nb semaines sans cours × 7 jours)`
 - Calcul : `calcExpiration(datePremierCours, ville)` dans `admin.html` et `_calcExpirationSb()` dans `tev-supabase.js`
-- Les semaines sans cours sont dans `SANS_COURS_PARIS` et `SANS_COURS_VINCENNES` dans `admin.html` — à mettre à jour chaque saison
-- ⚠️ **Ne jamais mettre les dates juillet-août dans `SANS_COURS_*`** : le bonus inter-saison (step 3) couvre déjà tout l'été — les inclure causerait un double-comptage et gonflerait l'expiration de plusieurs semaines
+- **Source des dates** : `localStorage.tev_cours_dates.paris` / `.vincennes` (synchronisé depuis Supabase via Paramètres → Tango Paris/Vincennes → Dates). **Zéro hardcodé** — `SANS_COURS_*` supprimés.
+- **Détection automatique des semaines sans cours** : pour chaque semaine hebdomadaire entre `datePremierCours` et `+3 mois`, si la date est absente de `tev_cours_dates` → +7j. Seules les semaines dans la plage des dates saisies sont vérifiées (`firstStored ≤ iso ≤ lastStored`).
+- **Bug timezone corrigé** : `T00:00:00` → `T12:00:00` partout dans les deux fonctions (évite le glissement UTC/heure locale qui donnait -1 jour).
+- ⚠️ **Les dates doivent être saisies depuis le début de la saison** : si une carte a commencé avant la première date dans Paramètres, les semaines sans cours antérieures ne seront pas comptées.
+- ⚠️ **Ne jamais remettre de listes `SANS_COURS_*` hardcodées** : le système détecte les gaps automatiquement.
 
 **Limite journalière de pointage**
 - Maximum **2 cours par date** (toutes sources confondues : admin, espace élève, QR code)
@@ -1437,3 +1440,30 @@ GRANT EXECUTE ON FUNCTION get_remplacant_eleves(text, text, text) TO anon, authe
 ```
 
 **Note** : éviter `DISTINCT ON ... ORDER BY` dans la fonction — Supabase SQL Editor l'interprète mal et ajoute des `<>` autour du nom de colonne → erreur de syntaxe. Utiliser `UNION` à la place.
+
+## Session 2026-05-13 (suite 3) — calcExpiration depuis Paramètres
+
+### ✅ calcExpiration — dates depuis Paramètres uniquement, zéro hardcodé
+
+**Problème** : `SANS_COURS_PARIS/VINCENNES` étaient des listes hardcodées de semaines sans cours, à maintenir manuellement à chaque saison. Deux bugs constatés :
+1. **Timezone** : `new Date(date + 'T00:00:00')` + `toISOString()` = -1 jour en heure Paris (CET/CEST)
+2. **Donnée manquante** : `2026-02-26` absent de `SANS_COURS_PARIS` → semaine bonus non comptée pour une carte du 29/01 (résultat : 28/04 au lieu de 06/05)
+
+**Fix** : suppression complète de `SANS_COURS_*` et `_COURS_*/_SANS_COURS_*` dans `tev-supabase.js`. Les semaines sans cours sont désormais détectées automatiquement par les gaps hebdomadaires dans `tev_cours_dates`.
+
+**Algorithme** :
+```javascript
+// Dans la fenêtre [debut+7j, debut+3mois], itérer semaine par semaine
+// Si la date n'est pas dans tev_cours_dates.paris (ou vincennes) → bonus++
+// Contrainte : ne vérifier que les semaines dans la plage [firstStored, lastStored]
+// (évite de compter les semaines avant la première date saisie comme "sans cours")
+```
+
+**Résultat** : pour une carte démarrant le 29/01/2026, Paris, avec le 26/02 absent des dates saisies :
+- Base 3 mois : 29/04
+- 1 gap (26/02) : +7j → **06/05/2026**
+
+**Règles importantes** :
+- Les dates Paris doivent être saisies depuis le début de la saison pour que tous les gaps soient détectés
+- Ne jamais remettre de listes hardcodées `SANS_COURS_*`
+- Fix identique dans `admin.html` (`calcExpiration`) et `js/tev-supabase.js` (`_calcExpirationSb`)
