@@ -7264,6 +7264,7 @@ function renderReportSection(sai, cartes) {
 }
 function _buildCartesData() {
   var sai = saisonActive();
+  var _DBG_EMAIL = 'salvaje91@gmail.com';
   // Emails dont toutes les inscriptions tango de la saison sont supprimées
   var _emailsSupprimés = {};
   (adminData.coursTango||[]).forEach(function(ct){
@@ -7294,7 +7295,10 @@ function _buildCartesData() {
     if (!eleveNomsParEmail[c.email]) eleveNomsParEmail[c.email] = [];
     eleveNomsParEmail[c.email].push(_nStr(c.nom)); // c.nom = "Prenom NOM" déjà concaténé
   });
+  if (window._DBG_CARTES) console.log('[CARTES DBG] salvaje emailsCartes=', emailsCartes[_DBG_EMAIL], 'eleveNoms=', JSON.stringify(eleveNomsParEmail[_DBG_EMAIL]), 'cartesEleves noms=', cartesEleves.filter(function(c){return c.email===_DBG_EMAIL;}).map(function(c){return c.nom;}));
   var icPersonnesVues = {}; // évite doublons (isRenewal, etc.) dans la boucle IC
+  var _dbgIcRows = (adminData.coursTango||[]).filter(function(ct){ return ct.email===_DBG_EMAIL; });
+  if (window._DBG_CARTES) console.log('[CARTES DBG] IC rows for salvaje:', _dbgIcRows.map(function(ct){return {nom:ct.nom,prenom:ct.prenom,type:ct.type,statut:ct.statut,saison:ct.saison,donnees:ct.donnees};}));
   (adminData.coursTango||[]).filter(function(ct){
     if (ct.statut!=='inscrit') return false;
     if (!ct.type || ct.type.indexOf('carte')<0) return false;
@@ -7307,6 +7311,7 @@ function _buildCartesData() {
     // Email dans eleves : vérifier si c'est la même personne (couple email partagé).
     // c.nom dans eleves = "Prenom NOM" (concaténé) → même format que ctFullNorm.
     var memePersonne = (eleveNomsParEmail[ct.email]||[]).some(function(n){ return n===ctFullNorm; });
+    if (window._DBG_CARTES && ct.email===_DBG_EMAIL) console.log('[CARTES DBG] IC', ct.prenom, ct.nom, 'ctFullNorm=', ctFullNorm, 'memePersonne=', memePersonne, 'included=', !memePersonne);
     return !memePersonne;
   }).forEach(function(ct){
     var ctFullNorm = _nStr((ct.prenom||'')+' '+(ct.nom||''));
