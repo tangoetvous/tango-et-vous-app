@@ -7968,20 +7968,30 @@ function sauvegarderEditCarte() {
         })()
       : Promise.resolve(c.id);
     _getEleveId.then(function(_eleveId){
+      // DEBUG TEMP
+      afficherToast('DEBUG: fct='+c._fromCoursTango+' cid='+c.id+' eid='+_eleveId+' dates='+_dates.length);
+      console.log('[SEC] _fromCoursTango=',c._fromCoursTango,'c.id=',c.id,'_eleveId=',_eleveId,'_dates=',_dates,'_upd=',_upd);
       var _saveEleves = _eleveId
         ? Promise.resolve(TEV.client.from('eleves').update(_upd).eq('id',_eleveId))
             .then(function(res){
-              if(res&&res.error) return res;
-              // Supprimer toutes les présences puis réinsérer : nouvelles dates + historiques préservées
+              console.log('[SEC] eleves.update res=',res);
+              if(res&&res.error){afficherToast('⚠️ eleves.update ERR: '+(res.error.message||res.error.code||JSON.stringify(res.error)));return res;}
               return Promise.resolve(TEV.client.from('presences').delete().eq('eleve_id',_eleveId))
-                .then(function(){
+                .then(function(delRes){
+                  console.log('[SEC] presences.delete res=',delRes);
                   var allRows=_dates.map(function(d){
                     return {eleve_id:_eleveId,eleve_nom:_nom,date:d,niveau:_niveau,note:'Correction admin'};
                   }).concat(_histDatesDB.map(function(d){
                     return {eleve_id:_eleveId,eleve_nom:_nom,date:d,niveau:_niveau,note:'Historique'};
                   }));
+                  afficherToast('DEBUG: allRows='+allRows.length+' eid='+_eleveId);
+                  console.log('[SEC] allRows=',allRows);
                   if(!allRows.length) return {error:null};
-                  return Promise.resolve(TEV.client.from('presences').insert(allRows));
+                  return Promise.resolve(TEV.client.from('presences').insert(allRows)).then(function(r){
+                    console.log('[SEC] presences.insert res=',r);
+                    if(r&&r.error) afficherToast('⚠️ presences.insert ERR: '+(r.error.message||r.error.code||JSON.stringify(r.error)));
+                    return r;
+                  });
                 });
             })
         : Promise.resolve({error:null});
