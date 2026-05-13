@@ -7658,7 +7658,7 @@ function renderCartesPointage(d) {
   _ptgOrder.forEach(function(coursLbl){
     h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>';
     var _gc=_ptgGroups[coursLbl], _used={}, _cp=[], _sl=[];
-    _gc.forEach(function(c){ if(_used[c.email])return; if(c.emailPartenaire){var p=_gc.find(function(x){return x.email===c.emailPartenaire;}); if(p&&!_used[p.email]){_used[c.email]=true;_used[p.email]=true;_cp.push([c,p]);return;}} _used[c.email]=true;_sl.push(c); });
+    _gc.forEach(function(c){ var _uk=c.email+'::'+c.nom; if(_used[_uk])return; if(c.emailPartenaire){var p=_gc.find(function(x){return x.email===c.emailPartenaire&&!_used[x.email+'::'+x.nom];}); if(p){_used[_uk]=true;_used[p.email+'::'+p.nom]=true;_cp.push([c,p]);return;}} _used[_uk]=true;_sl.push(c); });
     _cp.forEach(function(pair){ h+=_coupleWrap(_carteRowPtg(pair[0])+_carteRowPtg(pair[1])); });
     _sl.forEach(function(c){ h+=_carteRowPtg(c); });
   });
@@ -7770,7 +7770,7 @@ function renderCartesDetails(d) {
   _detOrder.forEach(function(coursLbl){
     h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>';
     var _gc=_detGroups[coursLbl], _used={}, _cp=[], _sl=[];
-    _gc.forEach(function(c){ if(_used[c.email])return; if(c.emailPartenaire){var p=_gc.find(function(x){return x.email===c.emailPartenaire;}); if(p&&!_used[p.email]){_used[c.email]=true;_used[p.email]=true;_cp.push([c,p]);return;}} _used[c.email]=true;_sl.push(c); });
+    _gc.forEach(function(c){ var _uk=c.email+'::'+c.nom; if(_used[_uk])return; if(c.emailPartenaire){var p=_gc.find(function(x){return x.email===c.emailPartenaire&&!_used[x.email+'::'+x.nom];}); if(p){_used[_uk]=true;_used[p.email+'::'+p.nom]=true;_cp.push([c,p]);return;}} _used[_uk]=true;_sl.push(c); });
     _cp.forEach(function(pair){ h+=_coupleWrap(_carteRowDet(pair[0])+_carteRowDet(pair[1])); });
     _sl.forEach(function(c){ h+=_carteRowDet(c); });
   });
