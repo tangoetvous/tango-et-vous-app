@@ -1388,3 +1388,52 @@ CREATE UNIQUE INDEX idx_cours_no_double
 - Ajouté temporairement pour permettre le nettoyage rétroactif des fiches résiduelles
 - Fonction `supprimerDefinitivementCarte(email, nom)` : même logique que `supprimerDefinitivementEleve` (DELETE par email)
 - **Retiré après usage** — le bouton n'est plus dans l'UI, la fonction reste dans le code
+
+## Session 2026-05-13 (suite 2) — Lien remplaçant : fix service key + SQL
+
+### ✅ Lien remplaçant — suppression dépendance `SUPABASE_SERVICE_KEY`
+- **Problème** : worker retournait `503 'Service non configuré'` car `SUPABASE_SERVICE_KEY` n'est pas configuré comme secret Cloudflare Workers
+- **Fix worker.js** : suppression des gardes `if (!env.SUPABASE_SERVICE_KEY)` dans les deux routes ; secret de signature = `env.SUPABASE_SERVICE_KEY || SUPABASE_ANON` (fallback acceptable : données peu sensibles + token protégé par date)
+- **Fix données** : `handleRemplacantData` n'interroge plus les tables directement (RLS bloque anon) → appelle `get_remplacant_eleves` RPC (SECURITY DEFINER)
+
+### ✅ Fonction SQL `get_remplacant_eleves` — version finale
+Deux sources comme `_buildCartesData()` dans admin.html :
+1. **`eleves`** avec `carte_statut IN ('Active', 'Nouvelle carte')` ET inscrits dans le cours (via `EXISTS inscriptions_cours`)
+2. **`inscriptions_cours`** avec `type='carte10'` pour les élèves sans entrée active dans `eleves`
+
+```sql
+CREATE OR REPLACE FUNCTION get_remplacant_eleves(p_ville text, p_niveau text, p_saison text)
+RETURNS json LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  RETURN (
+    SELECT json_agg(row_to_json(t) ORDER BY t.nom, t.prenom)
+    FROM (
+      SELECT e.email, e.nom, e.prenom,
+        COALESCE(e.carte_utilises, 0)  AS utilises,
+        COALESCE(e.carte_restants, 10) AS restants,
+        e.carte_expiration             AS expiration
+      FROM eleves e
+      WHERE e.carte_statut IN ('Active', 'Nouvelle carte')
+        AND (e.carte_utilises > 0 OR e.carte_restants > 0 OR e.carte_statut = 'Nouvelle carte')
+        AND EXISTS (
+          SELECT 1 FROM inscriptions_cours ic
+          WHERE ic.email=e.email AND ic.statut='inscrit'
+            AND ic.ville=p_ville AND ic.niveau=p_niveau AND ic.saison=p_saison
+        )
+      UNION
+      SELECT ic.email,
+        COALESCE(e2.nom, ic.nom) AS nom, COALESCE(e2.prenom, ic.prenom) AS prenom,
+        0 AS utilises, 10 AS restants, NULL AS expiration
+      FROM inscriptions_cours ic
+      LEFT JOIN eleves e2 ON e2.email = ic.email
+      WHERE ic.statut='inscrit' AND ic.type='carte10'
+        AND ic.ville=p_ville AND ic.niveau=p_niveau AND ic.saison=p_saison
+        AND (e2.email IS NULL OR e2.carte_statut NOT IN ('Active', 'Nouvelle carte'))
+    ) t
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION get_remplacant_eleves(text, text, text) TO anon, authenticated;
+```
+
+**Note** : éviter `DISTINCT ON ... ORDER BY` dans la fonction — Supabase SQL Editor l'interprète mal et ajoute des `<>` autour du nom de colonne → erreur de syntaxe. Utiliser `UNION` à la place.
