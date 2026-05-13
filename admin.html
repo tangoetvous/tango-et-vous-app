@@ -584,18 +584,19 @@ var STAGES = [
   {date:'2027-06-19',label:'Sam. 19 Juin 2027',technique:true,nStages:2,themes:['À venir','À venir']}
 ];
 var MILONGAS = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
-var SANS_COURS_PARIS = ['2026-04-30','2026-05-14','2026-10-29','2026-12-24','2026-12-31','2027-02-11','2027-04-08','2027-05-06'];
+var SANS_COURS_PARIS = ['2026-02-26','2026-04-30','2026-05-14','2026-10-29','2026-12-24','2026-12-31','2027-02-11','2027-04-08','2027-05-06'];
 var SANS_COURS_VINCENNES = ['2026-04-06','2026-04-20','2026-04-27','2026-05-25','2026-06-22','2026-10-19','2026-10-26','2026-12-21','2026-12-28','2027-02-08','2027-02-15','2027-03-29','2027-04-05','2027-04-12','2027-05-17'];
 
 function calcExpiration(datePremierCours, ville) {
   if (!datePremierCours) return '';
-  var debut = new Date(datePremierCours + 'T00:00:00');
+  // T12:00:00 évite le glissement de -1 jour dû au décalage UTC/heure locale
+  var debut = new Date(datePremierCours + 'T12:00:00');
   var fin   = new Date(debut.getTime());
   fin.setMonth(fin.getMonth() + 3);
   var sansCours = ville === 'vincennes' ? SANS_COURS_VINCENNES : SANS_COURS_PARIS;
   var bonus = 0;
   sansCours.forEach(function(ds) {
-    var d = new Date(ds + 'T00:00:00');
+    var d = new Date(ds + 'T12:00:00');
     if (d >= debut && d <= fin) bonus++;
   });
   fin.setDate(fin.getDate() + bonus * 7);
@@ -614,8 +615,8 @@ function calcExpiration(datePremierCours, ville) {
     if (coursArr[i] >= septStart) { firstNextCours = coursArr[i]; break; }
   }
   if (lastSaisonCours && firstNextCours) {
-    var lastD = new Date(lastSaisonCours + 'T00:00:00');
-    var firstD = new Date(firstNextCours + 'T00:00:00');
+    var lastD = new Date(lastSaisonCours + 'T12:00:00');
+    var firstD = new Date(firstNextCours + 'T12:00:00');
     if (fin > lastD) {
       var pauseWeeks = Math.ceil((firstD - lastD) / (7 * 24 * 60 * 60 * 1000));
       fin.setDate(fin.getDate() + pauseWeeks * 7);
