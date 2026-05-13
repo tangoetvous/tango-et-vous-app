@@ -3281,7 +3281,7 @@
       }
       fermerModalPointerSelf();
       const d2 = await TEV.getEleve(eleveData.eleve.email);
-      if (d2 && d2.carte) { eleveData.carte=d2.carte; eleveData.presences=d2.presences||eleveData.presences; renderDashboard(); renderAccueil(); }
+      if (d2 && d2.carte) { var _pt=eleveData.carte&&eleveData.carte.type; eleveData.carte=d2.carte; if(_pt&&!eleveData.carte.type)eleveData.carte.type=_pt; eleveData.presences=d2.presences||eleveData.presences; renderDashboard(); renderAccueil(); }
     } catch(err) {
       msgEl.textContent='Erreur de connexion. Réessayez.'; msgEl.style.display='block';
       btn.disabled=false; btn.textContent='✓ Valider';
@@ -3345,7 +3345,9 @@
       }
       const d2 = await TEV.getEleve(eleveData.eleve.email);
       if (d2 && d2.carte) {
+        var _pt = eleveData.carte && eleveData.carte.type;
         eleveData.carte = d2.carte;
+        if (_pt && !eleveData.carte.type) eleveData.carte.type = _pt;
         eleveData.presences = d2.presences || eleveData.presences;
       }
       _broadcastRenouv();
