@@ -289,6 +289,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] Vérifier correction Sandrine Billot (hatha uniquement) / Myriam Bloch (hatha+yin) dans Supabase — SQL généré mais pas confirmé exécuté
 - [ ] **Activer sauvegardes Supabase** : Dashboard Supabase → Settings → Database → Backups → activer (7 jours rétention sur plan gratuit)
 - [x] **Configurer email backup CSV** — FAIT (`SMTP_USERNAME`, `SMTP_PASSWORD`, `BACKUP_EMAIL` ajoutés dans GitHub Actions secrets). Workflow tourne chaque soir à 23h heure de Paris (cron `0 21 * * *` UTC, ajusté pour CEST = UTC+2 en été), exporte 15 tables en CSV + ZIP → artifact GitHub 90 jours + email.
+- [ ] **Septembre 2026 — mettre en place Playwright** : tests E2E sur `admin.html` en mode démo, ciblés sur les points fragiles (couples email partagé dans Cartes 10, `calcExpiration`). Playwright démarre/arrête le serveur local automatiquement, une seule commande `npm test`. Voir session 2026-05-13 pour le contexte. Option B choisie (vs Vitest unitaire) car teste le vrai code sans duplication.
 - [ ] **Septembre 2026 — mettre à jour les actions GitHub** : remplacer `actions/checkout@v4`, `actions/upload-artifact@v4`, `dawidd6/action-send-mail@v3` par leurs versions Node.js 24 dans `backup-csv.yml` (et `keep-alive.yml` si concerné). Signaler à Claude à ce moment-là.
 - [x] **Exécuter SQL colonnes paiement_sorano + tel yoga** — FAIT (exécuté dans Supabase SQL Editor)
 - [x] Tester suppression élève tango → persiste après refresh — CORRIGÉ (approche `_pendingSupprimes`)
