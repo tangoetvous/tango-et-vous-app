@@ -7915,9 +7915,12 @@ function sauvegarderEditCarte() {
     if(inp.value) dates.push(inp.value);
   });
   dates.sort();
+  // Capturer les dates historiques (cartes précédentes) AVANT d'écraser c.utilises et c.datesCours
+  var _histDates = (c.datesCours || []).slice(c.utilises || 0);
   c.utilises = n;
   c.restants = Math.max(0, 10 - n);
-  c.datesCours = dates;
+  // Nouvelles dates (ASC→DESC) + historiques préservées (déjà DESC)
+  c.datesCours = dates.slice().reverse().concat(_histDates);
   if(dates[0]) c.datePremierCours = dates[0];
   // Toujours recalculer l'expiration quand datePremierCours change
   if(c.datePremierCours) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris');
@@ -7927,6 +7930,7 @@ function sauvegarderEditCarte() {
   if(!IS_DEMO){
     var _cRef = c;
     var _dates = dates.slice();
+    var _histDatesDB = _histDates.slice(); // dates des cartes précédentes à préserver
     var _nom = c.nom;
     var _niveau = c.niveau || '';
     // Pour les cartes _fromCoursTango (reportées), la personne a un eleves.id trouvable par email
@@ -7939,14 +7943,16 @@ function sauvegarderEditCarte() {
       ? Promise.resolve(TEV.client.from('eleves').update(_upd).eq('id', _eleveId))
           .then(function(res) {
             if(res && res.error) return res;
-            // Supprimer toutes les présences puis réinsérer
+            // Supprimer toutes les présences puis réinsérer : nouvelles dates + historiques préservées
             return Promise.resolve(TEV.client.from('presences').delete().eq('eleve_id', _eleveId))
               .then(function() {
-                if(!_dates.length) return {error: null};
-                var presRows = _dates.map(function(d){
+                var allRows = _dates.map(function(d){
                   return {eleve_id: _eleveId, eleve_nom: _nom, date: d, niveau: _niveau, note: 'Correction admin'};
-                });
-                return Promise.resolve(TEV.client.from('presences').insert(presRows));
+                }).concat(_histDatesDB.map(function(d){
+                  return {eleve_id: _eleveId, eleve_nom: _nom, date: d, niveau: _niveau, note: 'Historique'};
+                }));
+                if(!allRows.length) return {error: null};
+                return Promise.resolve(TEV.client.from('presences').insert(allRows));
               });
           })
       : Promise.resolve({error: null});
