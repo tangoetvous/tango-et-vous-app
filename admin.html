@@ -7282,19 +7282,17 @@ function _buildCartesData() {
     try { if(localStorage.getItem('tev_nonpayee_'+c.email)==='1') c.paye=false; } catch(e) {}
   });
   var emailsCartes = {};
-  // Pour les couples avec email partagé (ex: Hugo FIGUEREDO / Anaïs GOSSELIN),
-  // on ne peut pas filtrer uniquement par email — on track le nom complet par email.
-  // eleveNomsParEmail[email] = [normeNomComplet, ...] des entrées déjà couvertes via eleves.
-  var eleveNomsParEmail = {};
-  function _normNomComplet(prenom, nom) {
-    return ((prenom||'')+' '+(nom||'')).trim().normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+  // Couples email partagé : tracker par nom normalisé pour inclure les deux personnes.
+  // _nStr(s) normalise sans accents. Pour les entrées eleves, c.nom = "Prenom NOM" (concaténé).
+  // Pour les entrées IC, on compare ct.prenom+' '+ct.nom contre c.nom → même résultat.
+  function _nStr(s) {
+    return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().trim();
   }
+  var eleveNomsParEmail = {}; // email → [_nStr(c.nom), ...]
   cartesEleves.forEach(function(c){
     emailsCartes[c.email]=true;
     if (!eleveNomsParEmail[c.email]) eleveNomsParEmail[c.email] = [];
-    // c.nom = "Prenom NOM" (concaténé dans tev-supabase), c.prenom = "Prenom"
-    var rawNom = c.prenom ? (c.nom||'').replace(new RegExp('^'+c.prenom.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s+'),'').trim() : (c.nom||'');
-    eleveNomsParEmail[c.email].push(_normNomComplet(c.prenom, rawNom));
+    eleveNomsParEmail[c.email].push(_nStr(c.nom)); // c.nom = "Prenom NOM" déjà concaténé
   });
   var icPersonnesVues = {}; // évite doublons (isRenewal, etc.) dans la boucle IC
   (adminData.coursTango||[]).filter(function(ct){
@@ -7302,16 +7300,17 @@ function _buildCartesData() {
     if (!ct.type || ct.type.indexOf('carte')<0) return false;
     if ((ct.saison||saisonCourante())!==sai) return false;
     if (ct.donnees && ct.donnees.isRenewal) return false;
-    var personKey = ct.email+'::'+_normNomComplet(ct.prenom, ct.nom);
+    var ctFullNorm = _nStr((ct.prenom||'')+' '+(ct.nom||'')); // "HUGO FIGUEREDO" ou "ANAIS GOSSELIN"
+    var personKey = ct.email+'::'+ctFullNorm;
     if (icPersonnesVues[personKey]) return false;
-    if (!emailsCartes[ct.email]) return true;
-    // Email déjà dans eleves — vérifier si c'est la même personne (couple email partagé)
-    var ctNorm = _normNomComplet(ct.prenom, ct.nom);
-    var memePersonne = (eleveNomsParEmail[ct.email]||[]).some(function(n){ return n===ctNorm; });
+    if (!emailsCartes[ct.email]) return true; // email absent des eleves → inclure
+    // Email dans eleves : vérifier si c'est la même personne (couple email partagé).
+    // c.nom dans eleves = "Prenom NOM" (concaténé) → même format que ctFullNorm.
+    var memePersonne = (eleveNomsParEmail[ct.email]||[]).some(function(n){ return n===ctFullNorm; });
     return !memePersonne;
   }).forEach(function(ct){
-    var personKey = ct.email+'::'+_normNomComplet(ct.prenom, ct.nom);
-    icPersonnesVues[personKey] = true;
+    var ctFullNorm = _nStr((ct.prenom||'')+' '+(ct.nom||''));
+    icPersonnesVues[ct.email+'::'+ctFullNorm] = true;
     emailsCartes[ct.email]=true;
     var donneesObj = ct.donnees && typeof ct.donnees === 'object' ? ct.donnees : {};
     try { if (typeof ct.donnees === 'string' && ct.donnees) donneesObj = JSON.parse(ct.donnees); } catch(e) {}
