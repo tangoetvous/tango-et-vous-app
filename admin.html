@@ -584,25 +584,36 @@ var STAGES = [
   {date:'2027-06-19',label:'Sam. 19 Juin 2027',technique:true,nStages:2,themes:['À venir','À venir']}
 ];
 var MILONGAS = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
-var SANS_COURS_PARIS = ['2026-02-26','2026-04-30','2026-05-14','2026-10-29','2026-12-24','2026-12-31','2027-02-11','2027-04-08','2027-05-06'];
-var SANS_COURS_VINCENNES = ['2026-04-06','2026-04-20','2026-04-27','2026-05-25','2026-06-22','2026-10-19','2026-10-26','2026-12-21','2026-12-28','2027-02-08','2027-02-15','2027-03-29','2027-04-05','2027-04-12','2027-05-17'];
-
 function calcExpiration(datePremierCours, ville) {
   if (!datePremierCours) return '';
   // T12:00:00 évite le glissement de -1 jour dû au décalage UTC/heure locale
   var debut = new Date(datePremierCours + 'T12:00:00');
   var fin   = new Date(debut.getTime());
   fin.setMonth(fin.getMonth() + 3);
-  var sansCours = ville === 'vincennes' ? SANS_COURS_VINCENNES : SANS_COURS_PARIS;
+
+  // Dates de cours depuis Paramètres (localStorage mis à jour depuis Supabase)
+  var stored = {};
+  try { stored = JSON.parse(localStorage.getItem('tev_cours_dates') || '{}'); } catch(e) {}
+  var coursArr = ((ville === 'vincennes' ? stored.vincennes : stored.paris) || []).slice().sort();
+  var coursSet = {};
+  coursArr.forEach(function(d) { coursSet[d] = true; });
+
+  // Bonus : semaines hebdomadaires absentes de coursArr, dans la plage des dates connues
+  var firstStored = coursArr[0] || '';
+  var lastStored  = coursArr[coursArr.length - 1] || '';
   var bonus = 0;
-  sansCours.forEach(function(ds) {
-    var d = new Date(ds + 'T12:00:00');
-    if (d >= debut && d <= fin) bonus++;
-  });
+  var cur = new Date(debut.getTime());
+  cur.setDate(cur.getDate() + 7);
+  var finStr = fin.toISOString().slice(0, 10);
+  while (cur.toISOString().slice(0, 10) <= finStr) {
+    var iso = cur.toISOString().slice(0, 10);
+    if (firstStored && iso >= firstStored && iso <= lastStored && !coursSet[iso]) bonus++;
+    cur.setDate(cur.getDate() + 7);
+  }
   fin.setDate(fin.getDate() + bonus * 7);
+
   // Coupure estivale : si la fin dépasse le dernier cours de la saison,
   // rajouter les semaines séparant ce dernier cours du premier cours de la saison suivante
-  var coursArr = ville === 'vincennes' ? COURS_VINCENNES : COURS_PARIS;
   var seasonEndYear = debut.getMonth() >= 8 ? debut.getFullYear() + 1 : debut.getFullYear();
   var septStart = seasonEndYear + '-09-01';
   var seasonStartBound = (seasonEndYear - 1) + '-09-01';

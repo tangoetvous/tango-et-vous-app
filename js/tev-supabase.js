@@ -622,25 +622,35 @@ function tevUnsubscribe(channel) {
 // ================================================================
 // UTILITAIRES
 // ================================================================
-const _SANS_COURS_PARIS     = ['2026-02-26','2026-04-30','2026-05-14','2026-07-02','2026-07-09','2026-07-16','2026-07-23','2026-07-30','2026-08-06','2026-08-13','2026-08-20','2026-08-27','2026-10-29','2026-12-24','2026-12-31','2027-02-11','2027-04-08','2027-05-06'];
-const _SANS_COURS_VINCENNES = ['2026-04-06','2026-04-20','2026-04-27','2026-05-25','2026-06-22','2026-07-06','2026-07-13','2026-07-20','2026-07-27','2026-08-03','2026-08-10','2026-08-17','2026-08-24','2026-08-31','2026-10-19','2026-10-26','2026-12-21','2026-12-28','2027-02-08','2027-02-15','2027-03-29','2027-04-05','2027-04-12','2027-05-17'];
-const _COURS_PARIS     = ['2026-04-02','2026-04-09','2026-04-16','2026-04-23','2026-05-07','2026-05-21','2026-05-28','2026-06-04','2026-06-11','2026-06-18','2026-06-25','2026-09-03','2026-09-10','2026-09-17','2026-09-24','2026-10-01','2026-10-08','2026-10-15','2026-10-22','2026-11-05','2026-11-12','2026-11-19','2026-11-26','2026-12-03','2026-12-10','2026-12-17','2027-01-07','2027-01-14','2027-01-21','2027-01-28','2027-02-04','2027-02-18','2027-02-25','2027-03-04','2027-03-11','2027-03-18','2027-03-25','2027-04-01','2027-04-15','2027-04-22','2027-04-29','2027-05-13','2027-05-20','2027-05-27','2027-06-03','2027-06-10','2027-06-17','2027-06-24'];
-const _COURS_VINCENNES = ['2026-04-13','2026-05-04','2026-05-11','2026-05-18','2026-06-01','2026-06-08','2026-06-15','2026-06-29','2026-09-07','2026-09-14','2026-09-21','2026-09-28','2026-10-05','2026-10-12','2026-11-02','2026-11-09','2026-11-16','2026-11-23','2026-11-30','2026-12-07','2026-12-14','2027-01-04','2027-01-11','2027-01-18','2027-01-25','2027-02-01','2027-02-22','2027-03-01','2027-03-08','2027-03-15','2027-03-22','2027-04-19','2027-04-26','2027-05-03','2027-05-10','2027-05-24','2027-05-31','2027-06-07','2027-06-14','2027-06-21'];
-
 function _calcExpirationSb(dateStr, ville) {
   if (!dateStr) return null;
+  // T12:00:00 évite le glissement de -1 jour dû au décalage UTC/heure locale
   const debut = new Date(dateStr + 'T12:00:00');
   const fin   = new Date(debut.getTime());
   fin.setMonth(fin.getMonth() + 3);
-  const sansCours = ville === 'vincennes' ? _SANS_COURS_VINCENNES : _SANS_COURS_PARIS;
+
+  // Dates de cours depuis Paramètres (localStorage mis à jour depuis Supabase)
+  let stored = {};
+  try { stored = JSON.parse(localStorage.getItem('tev_cours_dates') || '{}'); } catch(e) {}
+  const coursArr = ((ville === 'vincennes' ? stored.vincennes : stored.paris) || []).slice().sort();
+  const coursSet = {};
+  coursArr.forEach(d => { coursSet[d] = true; });
+
+  // Bonus : semaines hebdomadaires absentes de coursArr, dans la plage des dates connues
+  const firstStored = coursArr[0] || '';
+  const lastStored  = coursArr[coursArr.length - 1] || '';
   let bonus = 0;
-  sansCours.forEach(ds => {
-    const d = new Date(ds + 'T12:00:00');
-    if (d >= debut && d <= fin) bonus++;
-  });
+  const cur = new Date(debut.getTime());
+  cur.setDate(cur.getDate() + 7);
+  const finStr = fin.toISOString().slice(0, 10);
+  while (cur.toISOString().slice(0, 10) <= finStr) {
+    const iso = cur.toISOString().slice(0, 10);
+    if (firstStored && iso >= firstStored && iso <= lastStored && !coursSet[iso]) bonus++;
+    cur.setDate(cur.getDate() + 7);
+  }
   fin.setDate(fin.getDate() + bonus * 7);
+
   // Coupure estivale : même règle que calcExpiration() dans admin.html
-  const coursArr = ville === 'vincennes' ? _COURS_VINCENNES : _COURS_PARIS;
   const seasonEndYear = debut.getMonth() >= 8 ? debut.getFullYear() + 1 : debut.getFullYear();
   const septStart = seasonEndYear + '-09-01';
   const seasonStartBound = (seasonEndYear - 1) + '-09-01';
