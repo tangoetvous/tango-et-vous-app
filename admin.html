@@ -4558,6 +4558,7 @@ function _renderTabSiPasFormulaire() {
   if (currentTab === 'essai' && filtreEssai === 'pointage') return; // pointage actif — ne pas interrompre le scroll
   if (currentTab === 'yoga' && sousOngletYoga === 'essai') return; // accordéons yoga essai — ne pas perturber la navigation
   if (currentTab === 'publications' && gel('pub-ed') && gel('pub-ed').innerHTML.trim()) return; // formulaire pub ouvert
+  if (_editCarteId !== null) return; // modal ✏️ Modifier carte ouverte
   // Ne pas re-rendre si l'utilisateur est en train de saisir dans un champ
   var ae = document.activeElement;
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return;
@@ -7920,6 +7921,21 @@ function updateModalEcDates() {
 }
 function sauvegarderEditCarte() {
   var c = (adminData.cartes||[]).find(function(x){return String(x.id)===String(_editCarteId);});
+  if(!c) {
+    // chargerDonnees a pu vider adminData.cartes des entrées fake (polling + input focus guard)
+    // → reconstruire depuis coursTango
+    var _ct=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(_editCarteId);});
+    if(_ct){
+      var _do=_ct.donnees&&typeof _ct.donnees==='object'?Object.assign({},_ct.donnees):{};
+      try{if(typeof _ct.donnees==='string'&&_ct.donnees)_do=JSON.parse(_ct.donnees);}catch(e){_do={};}
+      c={id:_ct.id,email:_ct.email,nom:(_ct.prenom||'')+' '+(_ct.nom||''),niveau:_ct.niveau,
+        ville:_ct.ville,_fromCoursTango:true,isReport:false,saisonOrigine:'',
+        utilises:_do.utilises||0,restants:Math.max(0,10-(_do.utilises||0)),
+        datesCours:(_do.datesCours||[]).slice().reverse(),
+        datePremierCours:(_do.datesCours||[])[0]||'',
+        expiration:'',classesReportees:0,paye:true,statut:'Nouvelle carte'};
+    }
+  }
   if(!c){fermerModalEditCarte();return;}
   var n = Math.max(0, Math.min(10, parseInt(gel('modal-ec-utilises').value)||0));
   var dates = [];
