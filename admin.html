@@ -7930,8 +7930,10 @@ function sauvegarderEditCarte() {
   if(dates[0]) c.datePremierCours = dates[0];
   // Toujours recalculer l'expiration quand datePremierCours change
   if(c.datePremierCours) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris');
-  // Nettoyer le flag isReport si la carte n'est pas un vrai report (évite la pastille parasite)
-  if(c._fromCoursTango && !c.isReport) { c.isReport=false; c.classesReportees=0; }
+  // Un vrai report a toujours saisonOrigine non vide (mis par reporterCarteJs).
+  // Si isReport=true mais saisonOrigine vide → donnees corrompues → remettre à zéro localement.
+  var _isRealReport = !!(c._fromCoursTango && c.isReport && c.saisonOrigine);
+  if(c._fromCoursTango && !_isRealReport) { c.isReport=false; c.classesReportees=0; c.restants=Math.max(0,10-n); }
   _broadcastAdminSync('carteUpdate', {email:c.email, utilises:c.utilises, restants:c.restants, datesCours:c.datesCours, datePremierCours:c.datePremierCours, expiration:c.expiration});
   fermerModalEditCarte();
   renderTab();
@@ -7985,18 +7987,19 @@ function sauvegarderEditCarte() {
       // _saveCoursTango : uniquement pour les vrais reports (c.isReport===true)
       // Pour les cartes _fromCoursTango non-report (ex: inscription directe), ne pas écrire
       // isReport:true — et nettoyer si ce champ a été mis par erreur lors d'un précédent save.
+      // Vrai report = saisonOrigine non vide (mis par reporterCarteJs).
+      // isReport=true sans saisonOrigine = donnees corrompues par un précédent save raté.
       var _saveCoursTango = (function(){
         if (!c._fromCoursTango) return Promise.resolve({error:null});
-        if (c.isReport) {
+        if (_isRealReport) {
           return Promise.resolve(TEV.client.from('inscriptions_cours')
-            .update({donnees:{reportedRestants:n,isReport:true,saisonOrigine:c.saisonOrigine||''}})
+            .update({donnees:{reportedRestants:n,isReport:true,saisonOrigine:c.saisonOrigine}})
             .eq('id',c.id));
         }
-        // Carte _fromCoursTango non-report : nettoyer isReport si présent dans donnees
+        // Non-report (ou donnees corrompues) : nettoyer isReport/reportedRestants
         var _icRow=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(c.id);});
         var _d=(_icRow&&_icRow.donnees&&typeof _icRow.donnees==='object')?Object.assign({},_icRow.donnees):{};
         try{if(typeof _d==='string'&&_d)_d=JSON.parse(_d);}catch(e){_d={};}
-        if(!_d.isReport&&!_d.reportedRestants) return Promise.resolve({error:null});
         delete _d.isReport; delete _d.reportedRestants; delete _d.saisonOrigine;
         return Promise.resolve(TEV.client.from('inscriptions_cours').update({donnees:_d}).eq('id',c.id));
       })();
