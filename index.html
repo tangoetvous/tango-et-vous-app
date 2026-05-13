@@ -578,11 +578,13 @@
 
     // Historique présences (toujours affiché)
     const used = isForfait ? (presences ? presences.length : 0) : carte.coursUtilises;
+    // Pour carte10 : n'afficher que les présences de la carte actuelle (les `used` plus récentes)
+    const displayPresences = isForfait ? (presences || []) : (presences || []).slice(0, used);
     const container = $('presences-list');
-    if (!presences || presences.length === 0) {
+    if (!displayPresences || displayPresences.length === 0) {
       container.innerHTML = '<p class="no-presences">Aucune présence enregistrée pour le moment.</p>';
     } else {
-      container.innerHTML = presences.map((p, i) => `
+      container.innerHTML = displayPresences.map((p, i) => `
         <div class="presence-item" style="animation-delay:${i*60}ms">
           <div class="presence-dot"></div>
           <div class="presence-info">
