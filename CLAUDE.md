@@ -1552,3 +1552,43 @@ Dans `inscriptions_cours`, une personne peut avoir plusieurs lignes légitimes (
 - Message corrigé : "Pas de cours **cette** semaine" (remplace "la semaine prochaine" qui était souvent inexact)
 
 **Règle** : ne jamais remettre `_hierEstCours` comme condition — elle ne couvre qu'un seul jour sur toute la fenêtre sans cours.
+
+## Session 2026-05-14 (suite 2) — Paramètres Milonga
+
+### ✅ Nom de milonga et nom de salle modifiables, sans valeur par défaut
+
+**Problème** : `chargerMilongas()` contenait une normalisation qui écrasait `mil.nom` à chaque chargement :
+```javascript
+if (mil.id === 'dolce-vita') { mil.nom = 'LA DOLCE VITA'; ... }
+if (mil.id === 'colectivo')  { mil.nom = 'LE COLECTIVO';  ... }
+```
+Même si l'admin sauvegardait un nouveau nom, il était réécrasé à la prochaine lecture. `MILONGAS_DEFAULTS` contenait aussi `nom: 'LA DOLCE VITA'` et `lieu.nom: 'Centre Re-Corps'` hardcodés.
+
+**Fix** :
+- `MILONGAS_DEFAULTS` : `nom` et `lieu.nom` vidés (`''`) pour les deux milongas
+- `chargerMilongas()` : suppression des lignes `mil.nom = ...` — seule la migration GPS dolce-vita est conservée
+- **Règle** : ne jamais remettre de normalisation de `mil.nom` ou `mil.lieu.nom` dans `chargerMilongas()`
+
+### ✅ Ajout et suppression de milongas supplémentaires
+
+- Bouton **"➕ Ajouter une milonga"** en bas de la section Milongas dans Paramètres
+- `ajouterNouvelleMilonga()` : crée un objet vide avec ID unique `'mil-<timestamp>'`, sauvegarde en Supabase, ouvre l'accordéon Info
+- Bouton **"🗑 Supprimer cette milonga"** dans l'accordéon Info de chaque milonga (avec `confirm()`)
+- `supprimerMilonga(idx)` : `MILONGAS.splice(idx, 1)` + `sauverMilongas()`
+- **Propagation automatique** : toute la logique admin et espace élève itère `MILONGAS` dynamiquement — aucun code supplémentaire requis. Les nouvelles milongas apparaissent dans : onglet Milonga admin (présences), accueil élève (prochaine milonga), onglet Milonga élève (Je pense venir), Agenda, flux ICS
+
+### ✅ Horaires début/fin modifiables sans valeur par défaut
+
+**Problème** : `sauverMilongaInfo` utilisait `|| mil.horaire_debut` comme fallback — si l'input était vide ou si l'admin changeait la valeur, le fallback conservait l'ancienne valeur stockée, rendant les horaires impossibles à modifier.
+
+**Fix** :
+```javascript
+// Avant (bloquant) :
+mil.horaire_debut = (gel('mil-hdeb-'+idx)||{}).value || mil.horaire_debut;
+// Après (correct) :
+mil.horaire_debut = ((gel('mil-hdeb-'+idx)||{}).value||'').trim();
+```
+- Labels : "Horaire début (défaut)" → "Horaire début" (idem fin)
+- Placeholders : `"17h30"` → `"ex : 17h30"` pour distinguer hint et donnée réelle
+- **Règle** : ne jamais utiliser `|| mil.horaire_debut` ou `|| mil.horaire_fin` dans `sauverMilongaInfo` — toujours lire `.value.trim()` directement
+- **Règle** : ne jamais utiliser `|| mil.horaire_xxx` dans sauverMilongaInfo — ça rend le champ non-modifiable
