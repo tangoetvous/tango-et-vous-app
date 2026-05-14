@@ -4851,7 +4851,8 @@ function handleAction(action, btn) {
         if (gel('diy-nom'))    gel('diy-nom').value    = btn.dataset.nom    || '';
         if (gel('diy-email'))  gel('diy-email').value  = btn.dataset.email  || '';
         if (gel('diy-tel'))    gel('diy-tel').value    = btn.dataset.tel    || '';
-        if (gel('diy-cours'))  gel('diy-cours').value  = btn.dataset.cours  || 'yin';
+        if (gel('diy-cours'))  { gel('diy-cours').value = btn.dataset.cours || 'yin'; window.diyUpdateMontant(); }
+        if (gel('diy-from-essai') && btn.dataset.id) gel('diy-from-essai').value = btn.dataset.id;
       }, 0);
       break;
     case 'confirmer-yoga-inscr':
@@ -9902,7 +9903,7 @@ function renderYogaEssai() {
           +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Conf.</span>':'')
           +(estDejaEleveYoga(e.email)
             ?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>'
-            :'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" data-tel="'+(e.tel||'')+'" data-cours="'+(e.cours||'yin')+'" title="Inscrire comme élève">💳 Inscrire</button>')
+            :'<button class="btn btn-ok" style="padding:2px 7px;font-size:10px;" data-action="ouvrir-yoga-inscr" data-id="'+e.id+'" data-email="'+e.email+'" data-prenom="'+(e.prenom||'')+'" data-nom="'+(e.nom||'')+'" data-tel="'+(e.tel||'')+'" data-cours="'+(e.cours||'yin')+'" title="Inscrire comme élève">💳 Inscrire</button>')
           +btnEmail(e.email,e.prenom+' '+e.nom)
           +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'">✗</button>'
@@ -10042,8 +10043,31 @@ function renderYogaInscrireEssai() {
 
 function renderYogaInscrireEleve() {
   var PAI_OPT = Object.entries(PAI_LBL).map(function(kv){ return '<option value="'+kv[0]+'">'+kv[1]+'</option>'; }).join('');
+  // Dropdown pré-remplissage depuis les cours d'essai
+  var essaiFiltres = (adminData.essaiYoga || []).filter(function(e) {
+    return !estDejaEleveYoga(e.email);
+  }).slice().sort(function(a, b) {
+    if (b.date > a.date) return 1;
+    if (b.date < a.date) return -1;
+    return ((a.nom||'')+(a.prenom||'')).localeCompare((b.nom||'')+(b.prenom||''));
+  });
+  var essaiDropdown = '';
+  if (essaiFiltres.length) {
+    essaiDropdown = '<div class="field" style="margin-bottom:14px;">'
+      +'<label>Pré-remplir depuis un cours d\'essai</label>'
+      +'<select id="diy-from-essai" onchange="diyPrefillFromEssai(this.value)">'
+      +'<option value="">— Sélectionner un élève essai —</option>'
+      +essaiFiltres.map(function(e) {
+        var coursLbl = (COURS_YOGA_LBL[e.cours] || e.cours || '').replace(/ 10h30.*| 11h30.*/,'');
+        var dd = e.date ? e.date.slice(8,10)+'/'+e.date.slice(5,7) : '';
+        return '<option value="'+e.id+'">'+escHtml((e.prenom||'')+' '+(e.nom||'')+' — '+coursLbl+(dd?' ('+dd+')':''))+'</option>';
+      }).join('')
+      +'</select>'
+      +'</div>';
+  }
   return '<div class="card" style="margin:0 0 16px;">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:16px;">✏️ Inscription directe — Yoga</div>'
+    +essaiDropdown
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
     +'<div class="field" style="margin:0;"><label>Prénom *</label><input type="text" id="diy-prenom" autocomplete="given-name"/></div>'
     +'<div class="field" style="margin:0;"><label>Nom *</label><input type="text" id="diy-nom" autocomplete="family-name"/></div>'
@@ -10072,6 +10096,17 @@ window.diyUpdateMontant = function() {
   var cours = ((gel('diy-cours')||{}).value||'yin');
   var mt = cours==='forfait' ? (TARIFS.yoga_forfait_2cours||0) : (TARIFS.yoga_forfait_1cours||0);
   var inp = gel('diy-montant'); if(inp && !inp._touched) inp.value = mt;
+};
+window.diyPrefillFromEssai = function(id) {
+  if (!id) return;
+  var e = (adminData.essaiYoga || []).find(function(x){ return String(x.id) === String(id); });
+  if (!e) return;
+  if (gel('diy-prenom')) gel('diy-prenom').value = e.prenom || '';
+  if (gel('diy-nom'))    gel('diy-nom').value    = e.nom    || '';
+  if (gel('diy-email'))  gel('diy-email').value  = e.email  || '';
+  if (gel('diy-tel'))    gel('diy-tel').value    = e.tel    || '';
+  if (gel('diy-cours'))  gel('diy-cours').value  = e.cours  || 'yin';
+  window.diyUpdateMontant();
 };
 // Pré-remplir montant au rendu
 setTimeout(function(){ if(gel('diy-montant')&&!gel('diy-montant').value) window.diyUpdateMontant(); }, 50);
