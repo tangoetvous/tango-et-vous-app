@@ -1540,3 +1540,15 @@ Dans `inscriptions_cours`, une personne peut avoir plusieurs lignes légitimes (
 - Si `MILONGAS_OBJ` est null (Supabase pas encore chargé), la section milonga n'affiche rien — pas de fausses dates
 
 **Règle** : `MILONGAS_OBJ` est la seule source de vérité pour les milongas dans index.html. Ne jamais réintroduire de dates ou de lieux hardcodés dans ce fichier pour les milongas.
+
+### ✅ Alerte « pas de cours cette semaine » — visible tout au long du gap
+
+**Problème** : la condition `_hierEstCours` (hier = jour de cours) ne déclenchait l'alerte orange que le lendemain du dernier cours. Dès le surlendemain, elle disparaissait — alors que les élèves avaient toujours besoin de l'information.
+
+**Fix** : condition remplacée par un calcul de gap :
+- `_dernierCours` = dernière date de cours strictement avant aujourd'hui (`coursArr.filter(d < today).pop()`)
+- `_totalGap` = `prochainCours - _dernierCours` en jours
+- Alerte affichée si `_totalGap > 7` (semaine sans cours) ET `<= 35` (exclut la coupure estivale > 10 semaines) ET `prochainCours > todayStr` (ne s'affiche pas le jour où les cours reprennent)
+- Message corrigé : "Pas de cours **cette** semaine" (remplace "la semaine prochaine" qui était souvent inexact)
+
+**Règle** : ne jamais remettre `_hierEstCours` comme condition — elle ne couvre qu'un seul jour sur toute la fenêtre sans cours.
