@@ -3019,10 +3019,10 @@ function _renderMilongaInfoContent(mil, idx) {
     + field('Coordonn\u00e9es GPS m\u00e9tro (lat,lng)', 'mil-lieu-metrogps-'+idx, mil.lieu.metroGps||'', 'ex : 48.8428,2.3701')
     + mapsPreview
     + '<div style="display:flex;gap:8px;margin-bottom:8px;align-items:flex-end;flex-wrap:wrap;">'
-    + '<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Horaire d\u00e9but (d\u00e9faut)</label>'
-    + '<input id="mil-hdeb-'+idx+'" type="text" value="'+(mil.horaire_debut||'').replace(/"/g,'&quot;')+'" placeholder="17h30" style="'+tS+'"></div>'
-    + '<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Horaire fin (d\u00e9faut)</label>'
-    + '<input id="mil-hfin-'+idx+'" type="text" value="'+(mil.horaire_fin||'').replace(/"/g,'&quot;')+'" placeholder="23h30" style="'+tS+'"></div>'
+    + '<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Horaire d\u00e9but</label>'
+    + '<input id="mil-hdeb-'+idx+'" type="text" value="'+(mil.horaire_debut||'').replace(/"/g,'&quot;')+'" placeholder="ex\u00a0: 17h30" style="'+tS+'"></div>'
+    + '<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Horaire fin</label>'
+    + '<input id="mil-hfin-'+idx+'" type="text" value="'+(mil.horaire_fin||'').replace(/"/g,'&quot;')+'" placeholder="ex\u00a0: 23h30" style="'+tS+'"></div>'
     + '<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Couleur</label>'
     + '<input id="mil-color-'+idx+'" type="color" value="'+(mil.color||'#ff8c00')+'"'
     + ' style="width:40px;height:36px;border:1px solid var(--border);border-radius:6px;padding:2px;cursor:pointer;background:var(--s3);"></div>'
@@ -3673,8 +3673,8 @@ function sauverMilongaInfo(idx) {
   mil.lieu.gps = (gel('mil-lieu-gps-'+idx)||{}).value || '';
   mil.lieu.metroGps = (gel('mil-lieu-metrogps-'+idx)||{}).value || '';
   mil.lieu.transport = (gel('mil-lieu-transport-'+idx)||{}).value || mil.lieu.transport;
-  mil.horaire_debut = (gel('mil-hdeb-'+idx)||{}).value || mil.horaire_debut;
-  mil.horaire_fin   = (gel('mil-hfin-'+idx)||{}).value || mil.horaire_fin;
+  mil.horaire_debut = ((gel('mil-hdeb-'+idx)||{}).value||'').trim();
+  mil.horaire_fin   = ((gel('mil-hfin-'+idx)||{}).value||'').trim();
   mil.color = (gel('mil-color-'+idx)||{}).value || mil.color;
   sauverMilongas();
   afficherToast('\u2713 Milonga ' + mil.nom + ' enregistr\u00e9e');
