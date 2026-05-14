@@ -9655,12 +9655,16 @@ function renderMilongaPresences() {
 
 function renderPublications() {
   var sai = saisonActive();
+  var saiNext = saisonSuivante();
   var allPubs = adminData.publications || [];
   var pubs = allPubs.filter(function(p) {
     var dates = p.datesProgrammees && p.datesProgrammees.length ? p.datesProgrammees
               : (p.dateProgrammee ? [p.dateProgrammee] : []);
     if (dates.length) {
-      return dates.some(function(d) { return dateAppartientSaison((d||'').slice(0,10), sai); });
+      return dates.some(function(d) {
+        var ds = (d||'').slice(0,10);
+        return dateAppartientSaison(ds, sai) || dateAppartientSaison(ds, saiNext);
+      });
     }
     // Pas de date programmée → fallback sur created_at
     return dateAppartientSaison(((p.created_at||today())).slice(0,10), sai);
