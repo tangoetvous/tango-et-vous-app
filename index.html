@@ -2812,8 +2812,15 @@
     } catch(e) {}
 
     const now = new Date();
-    const seasonStart = new Date(now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear()-1, 8, 1);
-    pubs = pubs.filter(p => new Date(p.dateProgrammee || p.date || 0) >= seasonStart);
+    const syear = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    const seasonStart = new Date(syear, 8, 1);       // 1er sept année 1
+    const seasonEnd   = new Date(syear + 1, 7, 31);  // 31 août année 2
+    pubs = pubs.filter(p => {
+      const dates = p.datesProgrammees && p.datesProgrammees.length ? p.datesProgrammees
+                  : (p.dateProgrammee ? [p.dateProgrammee] : []);
+      if (!dates.length) return true;
+      return dates.some(d => { const dt = new Date(d); return dt >= seasonStart && dt <= seasonEnd; });
+    });
 
     // Filtrer par date de programmation (publiee n'est plus un critère — toujours true)
     pubs = pubs.filter(p => {

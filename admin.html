@@ -9654,10 +9654,21 @@ function renderMilongaPresences() {
 }
 
 function renderPublications() {
-  var pubs=adminData.publications||[];
+  var sai = saisonActive();
+  var allPubs = adminData.publications || [];
+  var pubs = allPubs.filter(function(p) {
+    var dates = p.datesProgrammees && p.datesProgrammees.length ? p.datesProgrammees
+              : (p.dateProgrammee ? [p.dateProgrammee] : []);
+    if (dates.length) {
+      return dates.some(function(d) { return dateAppartientSaison((d||'').slice(0,10), sai); });
+    }
+    // Pas de date programmée → fallback sur created_at
+    return dateAppartientSaison(((p.created_at||today())).slice(0,10), sai);
+  });
   var h='<button class="btn btn-gold" data-action="nouvelle-pub" style="width:100%;margin-bottom:14px;">✏️ Nouvelle publication</button><div id="pub-ed"></div>';
-  if(!pubs.length)return h+'<div class="empty-state">Aucune publication.</div>';
-  pubs.forEach(function(p,i){
+  if(!pubs.length)return h+'<div class="empty-state">Aucune publication pour cette saison.</div>';
+  pubs.forEach(function(p){
+    var i = allPubs.indexOf(p); // index original pour les actions
     var dates=p.datesProgrammees&&p.datesProgrammees.length?p.datesProgrammees:(p.dateProgrammee?[p.dateProgrammee]:[]);
     var futur=dates.filter(function(d){return new Date(d)>new Date();});
     var passe=dates.filter(function(d){return new Date(d)<=new Date();});
