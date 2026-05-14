@@ -8763,10 +8763,14 @@ function stageMoveInsrit(date, idx, dir) {
 }
 
 function renderFormulaireStageAdmin() {
-  // Construire la liste des élèves (dédupliquée par email, triée alphabétiquement)
+  // Construire la liste des élèves de la saison active (dédupliquée par email, triée alphabétiquement)
   var _studs = [];
   var _seen = {};
-  (adminData.coursTango || []).forEach(function(e) {
+  var _sai = saisonActive();
+  (adminData.coursTango || []).filter(function(e) {
+    return !e._isRenewalRow && e.statut === 'inscrit'
+      && (e.saison || saisonCourante()) === _sai;
+  }).forEach(function(e) {
     var em = (e.email || '').toLowerCase().trim();
     if (!em || _seen[em]) return;
     _seen[em] = true;
