@@ -1741,13 +1741,15 @@
       : null;
     const prochaineMilonga = _nextMilEvt ? _nextMilEvt.date : (MILONGAS_DATA.find(d => d >= todayStr) || null);
 
-    // ── Alerte pas de cours la semaine prochaine ──────────────
+    // ── Alerte semaine(s) sans cours ──────────────────────────
     (function() {
-      var _hier = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-      var _hierEstCours = coursArr.indexOf(_hier) >= 0;
-      var _joursAvantProchain = prochainCours ? Math.round((new Date(prochainCours) - new Date(todayStr)) / 86400000) : 0;
-      if (_hierEstCours && prochainCours && _joursAvantProchain > 7) {
-        h += '<div style="background:rgba(255,160,0,0.1);border:1px solid rgba(255,160,0,0.35);border-left:3px solid #ffa000;border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:13px;color:#ffd54f;line-height:1.5;">⚠️ <strong>Attention !</strong> Pas de cours la semaine prochaine. Le prochain cours est indiqué ci-dessous !</div>';
+      var _dernierCours = coursArr.filter(function(d){ return d < todayStr; }).pop() || null;
+      var _totalGap = (_dernierCours && prochainCours)
+        ? Math.round((new Date(prochainCours+'T12:00:00') - new Date(_dernierCours+'T12:00:00')) / 86400000)
+        : 0;
+      // Gap > 7j = semaine sans cours ; <= 35j pour exclure la coupure estivale
+      if (_dernierCours && prochainCours && prochainCours > todayStr && _totalGap > 7 && _totalGap <= 35) {
+        h += '<div style="background:rgba(255,160,0,0.1);border:1px solid rgba(255,160,0,0.35);border-left:3px solid #ffa000;border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:13px;color:#ffd54f;line-height:1.5;">⚠️ <strong>Attention !</strong> Pas de cours cette semaine. Le prochain cours est indiqué ci-dessous !</div>';
       }
     })();
 
