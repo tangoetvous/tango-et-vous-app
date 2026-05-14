@@ -5996,10 +5996,12 @@ function _elevesResultatsHTML(inscrits) {
   var ong=_elevesOnglets().find(function(o){return o.id===sousOngletEleves;});
   if(!ong) return '';
   var liste=inscrits.filter(function(e){return e.ville===ong.ville&&e.niveau===ong.niv;});
-  // Dédupliquer par email::normNom — protection contre les doublons en DB
+  // Dédupliquer par nom normalisé — dans un même cours, même nom = même personne
+  // (gère le cas email vide sur l'entrée partenaire vs email réel sur l'entrée principale)
   var _seenKeys={};
   liste=liste.filter(function(e){
-    var k=(e.email||'')+'::'+_normNom((e.prenom||'')+' '+(e.nom||''));
+    var k=_normNom((e.prenom||'')+' '+(e.nom||''));
+    if(!k) return true;
     if(_seenKeys[k])return false; _seenKeys[k]=true; return true;
   });
   var cap=capaciteCours(ong.ville,ong.niv);
