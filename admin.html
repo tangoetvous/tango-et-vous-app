@@ -5996,6 +5996,12 @@ function _elevesResultatsHTML(inscrits) {
   var ong=_elevesOnglets().find(function(o){return o.id===sousOngletEleves;});
   if(!ong) return '';
   var liste=inscrits.filter(function(e){return e.ville===ong.ville&&e.niveau===ong.niv;});
+  // Dédupliquer par email::normNom — protection contre les doublons en DB
+  var _seenKeys={};
+  liste=liste.filter(function(e){
+    var k=(e.email||'')+'::'+_normNom((e.prenom||'')+' '+(e.nom||''));
+    if(_seenKeys[k])return false; _seenKeys[k]=true; return true;
+  });
   var cap=capaciteCours(ong.ville,ong.niv);
   var noLimEl=noLimitsTangoToday();
   function capCol(n,max){return n>=max?'#ff6b6b':n>=Math.round(max*0.85)?'#ffaa44':'#4ade80';}
