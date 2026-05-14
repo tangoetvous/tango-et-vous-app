@@ -1094,9 +1094,17 @@ var CAP_GUI = 22, CAP_GDE = 23;
 // Nombre d'élèves inscrits (statut==='inscrit') pour une ville+niveau+rôle
 function nbInscritsCours(ville, niveau, role) {
   var sai = saisonActive();
-  return (adminData.coursTango||[]).filter(function(e){
-    return e.statut==='inscrit' && e.ville===ville && e.niveau===niveau
+  var entries = (adminData.coursTango||[]).filter(function(e){
+    return e.statut==='inscrit' && !e._isRenewalRow
+      && e.ville===ville && e.niveau===niveau
       && e.role===role && (e.saison||saisonCourante())===sai;
+  });
+  var seen = {};
+  return entries.filter(function(e){
+    var k = _normNom((e.prenom||'')+' '+(e.nom||''));
+    if (!k) return true;
+    if (seen[k]) return false;
+    seen[k] = true; return true;
   }).length;
 }
 // Retourne {gui, gde, maxGui, maxGde, fullGui, fullGde}
@@ -5952,7 +5960,9 @@ function renderElevesTango() {
   ];
   var h = '<div class="sub-tabs" style="flex-wrap:wrap;">';
   ONGLETS.forEach(function(o){
-    var n=inscrits.filter(function(e){return e.ville===o.ville&&e.niveau===o.niv;}).length;
+    var _sub=inscrits.filter(function(e){return e.ville===o.ville&&e.niveau===o.niv;});
+    var _sk={};_sub=_sub.filter(function(e){var k=_normNom((e.prenom||'')+' '+(e.nom||''));if(!k)return true;if(_sk[k])return false;_sk[k]=true;return true;});
+    var n=_sub.length;
     var c=capaciteCours(o.ville,o.niv);
     var dot=(c.fullGui||c.fullGde)&&!noLimitsTangoToday()?' 🔴':'';
     h+='<button class="sub-tab'+(sousOngletEleves===o.id?' active':'')+'" data-sous-el="'+o.id+'">'+o.lbl+' ('+n+')'+dot+'</button>';
