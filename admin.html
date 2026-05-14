@@ -2813,6 +2813,8 @@ function renderParametres() {
   MILONGAS.forEach(function(mil, idx) {
     h += _renderMilongaCard(mil, idx);
   });
+  h += '<button class="btn" data-action="ajouter-nouvelle-milonga"'
+    +' style="margin-top:4px;font-size:12px;width:100%;background:transparent;border:1px dashed var(--border);color:var(--dim);">➕ Ajouter une milonga</button>';
   h += '</div>';
 
   // ── Section Résa Salles ────────────────────────────────────
@@ -3025,9 +3027,11 @@ function _renderMilongaInfoContent(mil, idx) {
     + '<input id="mil-color-'+idx+'" type="color" value="'+(mil.color||'#ff8c00')+'"'
     + ' style="width:40px;height:36px;border:1px solid var(--border);border-radius:6px;padding:2px;cursor:pointer;background:var(--s3);"></div>'
     + '</div>'
-    + '<div class="btn-row">'
+    + '<div class="btn-row" style="flex-wrap:wrap;gap:8px;">'
     + '<button class="btn btn-gold" data-action="sauver-milonga-info" data-idx="'+idx+'"'
     + ' style="font-size:12px;">\ud83d\udcbe Enregistrer</button>'
+    + '<button class="btn" data-action="supprimer-milonga" data-idx="'+idx+'"'
+    + ' style="font-size:12px;background:transparent;border:1px solid var(--err-text,#e57373);color:var(--err-text,#e57373);">\ud83d\uddd1 Supprimer cette milonga</button>'
     + '</div>';
 }
 function _renderMilongaDatesContent(mil, idx) {
@@ -3710,6 +3714,30 @@ function supprimerDateMilonga(idx, date) {
     afficherToast('\u2713 Date supprim\u00e9e');
     renderTab();
   }
+}
+
+function ajouterNouvelleMilonga() {
+  chargerMilongas(saisonParametres || saisonCourante());
+  var newId = 'mil-' + Date.now();
+  MILONGAS.push({
+    id: newId, nom: '',
+    lieu: { nom: '', rue: '', gps: '', transport: '', metroGps: '' },
+    color: '#8b5cf6', horaire_debut: '', horaire_fin: '', dates: []
+  });
+  sauverMilongas();
+  milongaAccordion['mil-' + (MILONGAS.length - 1) + '-info'] = true;
+  renderTab();
+  afficherToast('✓ Nouvelle milonga ajoutée — remplissez les informations ci-dessous');
+}
+function supprimerMilonga(idx) {
+  chargerMilongas(saisonParametres || saisonCourante());
+  if (!MILONGAS || !MILONGAS[idx]) return;
+  var mil = MILONGAS[idx];
+  if (!confirm('Supprimer la milonga "' + (mil.nom || 'sans nom') + '" et toutes ses dates ?')) return;
+  MILONGAS.splice(idx, 1);
+  sauverMilongas();
+  afficherToast('✓ Milonga supprimée');
+  renderTab();
 }
 
 // ── Stages helpers ────────────────────────────────────────────
@@ -5236,6 +5264,12 @@ function handleAction(action, btn) {
       break;
     case 'suppr-date-milonga':
       supprimerDateMilonga(parseInt(btn.dataset.idx)||0, btn.dataset.date||'');
+      break;
+    case 'ajouter-nouvelle-milonga':
+      ajouterNouvelleMilonga();
+      break;
+    case 'supprimer-milonga':
+      supprimerMilonga(parseInt(btn.dataset.idx)||0);
       break;
     case 'add-mil-presence':
       (function() {
