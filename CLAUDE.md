@@ -1491,3 +1491,20 @@ GRANT EXECUTE ON FUNCTION get_remplacant_eleves(text, text, text) TO anon, authe
 - Les dates Paris doivent être saisies depuis le début de la saison pour que tous les gaps soient détectés
 - Ne jamais remettre de listes hardcodées `SANS_COURS_*`
 - Fix identique dans `admin.html` (`calcExpiration`) et `js/tev-supabase.js` (`_calcExpirationSb`)
+
+## Session 2026-05-14 — Doublons Élèves Tango + compteurs guideurs/guidées
+
+### ✅ Fiche en double après renouvellement carte10
+**Problème** : renouveler une carte créait une ligne `isRenewal` dans `inscriptions_cours` qui apparaissait comme une deuxième fiche dans Élèves Tango. La garde `!(e.donnees&&e.donnees.isRenewal)` ne fonctionnait pas quand `donnees` revenait en JSON string depuis Supabase.
+**Fix** : marqueur explicite `_isRenewalRow: true` positionné dans `chargerDonnees()` avec parsing robuste (objet OU string JSON). `renderElevesTango` et `_buildCartesData` filtrent via `!e._isRenewalRow`.
+
+### ✅ Doublons partenaires (Alice MÉRIAUX, Alexandre BEZIN)
+**Problème** : quand un élève est inscrit "avec partenaire", une deuxième ligne est créée dans `inscriptions_cours` pour le partenaire, parfois avec un email vide. La déduplication par `email::normNom` ratait les entrées à email vide.
+**Fix** : déduplication par `_normNom(prenom + ' ' + nom)` uniquement (sans email). Dans un même sous-onglet ville+niveau, même nom normalisé = même personne. Appliqué dans `_elevesResultatsHTML` (affichage), les compteurs de sous-onglets, et `nbInscritsCours`.
+
+### ✅ Compteurs guideurs/guidées incorrects (badge "14 guideurs 17 guidées" pour 29 élèves)
+**Problème** : `nbInscritsCours(ville, niveau, role)` comptait les lignes `isRenewal` + les doublons partenaires → 14 guideurs / 17 guidées au lieu de 13/16 pour Paris Débutants.
+**Fix** : `nbInscritsCours` filtre `!e._isRenewalRow` ET déduplique par `_normNom(prenom + ' ' + nom)` avant de compter. Résultat confirmé ✅.
+
+### Règle mémo — déduplication Élèves Tango
+Dans `inscriptions_cours`, une personne peut avoir plusieurs lignes légitimes (inscription principale + entrée `isRenewal` + entrée partenaire). La déduplication d'affichage se fait **par nom normalisé** (`_normNom`) dans le contexte d'un même cours (ville + niveau). Ne jamais dédupliquer par email seul — les entrées partenaire peuvent avoir un email vide.
