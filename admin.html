@@ -9584,10 +9584,14 @@ function renderMilongaPresences() {
   }).join('');
   if (!dateOpts) dateOpts = '<option value="">Aucune date future configurée</option>';
 
-  // Build student list from coursTango
+  // Build student list from coursTango — saison active uniquement
   var _milStuds = [];
   var _milStudSeen = {};
-  (adminData.coursTango || []).forEach(function(e) {
+  var _milSai = saisonActive();
+  (adminData.coursTango || []).filter(function(e) {
+    return !e._isRenewalRow && e.statut === 'inscrit'
+      && (e.saison || saisonCourante()) === _milSai;
+  }).forEach(function(e) {
     var em = (e.email || '').toLowerCase().trim();
     if (!em || _milStudSeen[em]) return;
     _milStudSeen[em] = true;
