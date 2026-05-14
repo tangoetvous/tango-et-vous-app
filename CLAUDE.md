@@ -21,6 +21,29 @@
 - La clé anon Supabase est intentionnellement publique (design Supabase) — sécurité dépend du RLS
 - `unsafe-inline` dans CSP inévitable tant que les scripts sont inline dans les HTML — accepté comme risque résiduel
 
+## Supabase — changement GRANTs Data API (email 2026-05-14)
+
+### Contexte
+Supabase modifie son comportement par défaut : les nouvelles tables dans le schéma `public` n'auront plus de GRANTs automatiques vers `anon`/`authenticated`. Sans GRANT explicite, supabase-js retourne une erreur `42501` et la table est invisible pour l'app.
+
+### Dates clés
+- **30 mai 2026** : nouveau comportement pour tous les nouveaux projets
+- **30 octobre 2026** : appliqué à tous les projets existants (y compris celui-ci)
+
+### Impact sur ce projet
+- **Tables existantes** : pas d'impact — elles gardent leurs GRANTs actuels
+- **Nouvelles tables** : déjà OK — les SQL récents (notifications_eleve, remises_banque, cheques_depot…) incluent tous des `GRANT ... TO anon, authenticated`
+- **⚠️ À faire avant le 30 octobre** : vérifier les tables existantes via Dashboard Supabase → Database → Security Advisor. Si des tables apparaissent sans grant, générer le SQL de correction
+
+### Règle obligatoire — tout nouveau `CREATE TABLE` doit inclure
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.ma_table TO anon, authenticated;
+-- (ajuster selon la table : tables admin uniquement → TO authenticated seulement)
+```
+
+### À faire avec l'utilisateur
+- [ ] **Audit GRANTs existants** : ouvrir Dashboard Supabase → Database → Security Advisor → lister les tables sans grants explicites → générer le SQL de correction en une passe
+
 ## Vue d'ensemble
 Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **Frontend** : HTML/CSS/JS vanilla (admin.html, index.html, etc.)
