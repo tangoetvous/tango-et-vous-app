@@ -280,6 +280,8 @@
         showScreen('screen-notfound'); return;
       }
       eleveData = data;
+      // Rafraîchir les milongas depuis Supabase (non-bloquant)
+      chargerMilongasEleve();
       // Absences déclarées par l'élève — localStorage d'abord, puis sync DB en arrière-plan
       eleveData.absencesJour = [];
       try { eleveData.absencesJour = JSON.parse(localStorage.getItem('tev_abs_'+((data.eleve&&data.eleve.email)||'').toLowerCase())||'[]'); } catch(e) {}
@@ -643,7 +645,7 @@
     if (tab === 'carte') renderDashboard();
     if (tab === 'agenda') renderAgenda('tous');
     if (tab === 'stages') renderStages();
-    if (tab === 'milonga') renderMilonga();
+    if (tab === 'milonga') { chargerMilongasEleve(); renderMilonga(); }
     if (tab === 'actu')   { renderActu(); _actuStartPoll(); }
     if (tab === 'contact') renderContact();
     if (tab === 'carte-lieux') { setTimeout(function(){ if(window._initPlan) window._initPlan(); }, 60); }
@@ -1815,8 +1817,8 @@
     // Prochaine milonga — 1-2 lignes avec horaire
     if (prochaineMilonga) {
       const _mc  = (_nextMilEvt && _nextMilEvt.color) || '#ff8c00';
-      const _mn  = (_nextMilEvt && _nextMilEvt.nom)   || 'La Dolce Vita';
-      const _mh  = (_nextMilEvt ? _nextMilEvt.hdeb+'\u2013'+_nextMilEvt.hfin : '17h30\u201323h30').toUpperCase();
+      const _mn  = (_nextMilEvt && _nextMilEvt.nom)   || '';
+      const _mh  = (_nextMilEvt ? _nextMilEvt.hdeb+'\u2013'+_nextMilEvt.hfin : '').toUpperCase();
       const _mcR = _mc.replace(/^#/,'');
       const _r   = parseInt(_mcR.slice(0,2),16), _g = parseInt(_mcR.slice(2,4),16), _b = parseInt(_mcR.slice(4,6),16);
       const _milIdAcc = (_nextMilEvt && _nextMilEvt.id) || '';
@@ -2040,17 +2042,37 @@
       }
     } catch(e){}
   })();
-  const MILONGAS_DATA_FB = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
-  const MILONGAS_OBJ = (function() {
+  const MILONGAS_DATA_FB = [];
+  let MILONGAS_OBJ = (function() {
     try {
       var r = JSON.parse(localStorage.getItem('tev_milongas_'+_sai())||'null');
       return (r && r.milongas && r.milongas.length) ? r.milongas : null;
     } catch(e) { return null; }
   })();
   // Tableau plat de toutes les dates (pour prochaineMilonga dans Accueil)
-  const MILONGAS_DATA = MILONGAS_OBJ
+  let MILONGAS_DATA = MILONGAS_OBJ
     ? MILONGAS_OBJ.flatMap(m => (m.dates||[]).map(d => d.date)).sort()
-    : MILONGAS_DATA_FB;
+    : [];
+  // Charge (ou rafraîchit) les milongas depuis Supabase, met à jour MILONGAS_OBJ/DATA et re-rend
+  async function chargerMilongasEleve() {
+    try {
+      var sai = _sai();
+      var res = await TEV.client.from('parametres').select('valeur').eq('cle','tev_milongas_'+sai).maybeSingle();
+      if (!res || !res.data) return;
+      var d = res.data.valeur;
+      if (!d || !d.milongas || !d.milongas.length) return;
+      try { localStorage.setItem('tev_milongas_'+sai, JSON.stringify(d)); } catch(e2) {}
+      window._onMilongasUpdated(d.milongas, sai);
+    } catch(e) {}
+  }
+  window._onMilongasUpdated = function(mils, sai) {
+    if (!mils || !mils.length || sai !== _sai()) return;
+    MILONGAS_OBJ = mils;
+    MILONGAS_DATA = mils.flatMap(function(m){ return (m.dates||[]).map(function(d){ return d.date; }); }).sort();
+    if (currentTab === 'accueil') renderAccueil();
+    else if (currentTab === 'milonga') renderMilonga();
+    else if (currentTab === 'agenda') renderAgenda();
+  };
   // Yoga — mardis à l'Espace Sorano Vincennes (Yin 10h30, Hatha 11h30)
   const COURS_YOGA = (_coursDates.yoga && _coursDates.yoga.length) ? _coursDates.yoga : [
     '2025-09-09','2025-09-16','2025-09-23','2025-09-30','2025-10-07','2025-10-14',
@@ -2134,10 +2156,6 @@
               color: mil.color || COLOR_MILONGA
             });
           });
-        });
-      } else {
-        MILONGAS_DATA.filter(d => d >= todayStr && d <= maxStr).forEach(d => {
-          events.push({date:d, subtype:'milonga', type:'milonga', titre:'Milonga La Dolce Vita', milId:'dolce-vita', milNom:'La Dolce Vita', heure:'17h30\u201323h30', lieu:'Centre Re-Corps \u2014 16A bd de Reuilly, Paris 12e \u00b7 M\u00b0 Dugommier (L6)'});
         });
       }
     }
@@ -2664,12 +2682,6 @@
         (mil.dates || []).forEach(d => {
           if (d.date >= todayStr) upcoming.push({ date:d.date, mil });
         });
-      });
-    } else {
-      MILONGAS_DATA.filter(d => d >= todayStr).forEach(d => {
-        upcoming.push({ date:d, mil:{ id:'dolce-vita', nom:'La Dolce Vita', color:'#ff8c00',
-          horaire_debut:'17h30', horaire_fin:'23h30',
-          lieu:{ nom:'Centre Re-Corps', rue:'16A bd de Reuilly, Paris 12e', transport:'M° Dugommier (L6)' } }});
       });
     }
     upcoming.sort((a,b) => a.date.localeCompare(b.date));
@@ -5267,6 +5279,7 @@ if('serviceWorker' in navigator){
         if (!d.milongas || !d.milongas.length) return;
         try { localStorage.setItem(cle, JSON.stringify(d)); } catch(e) {}
         _applyMilongasGps(d.milongas);
+        if (typeof window._onMilongasUpdated === 'function') window._onMilongasUpdated(d.milongas, sai);
       });
     });
     // Supabase : lieux statiques
