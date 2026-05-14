@@ -780,13 +780,20 @@
       try {
         const elv = (eleveData && eleveData.eleve) || {};
         const discs = await TEV.getDiscussions({ eleveEmail: elv.email });
+        const _now = new Date(), _y = _now.getFullYear(), _m = _now.getMonth() + 1;
+        const _saiY1 = _m >= 9 ? _y : _y - 1;
+        const _saiStart = _saiY1 + '-09-01', _saiEnd = (_saiY1 + 1) + '-08-31';
         _discDiscList = discs.filter(disc => !disc.fermee).map(disc => ({
           id: disc.id, titre: disc.titre,
           createur_email: disc.eleve_email, createur_nom: disc.eleve_nom,
           statut: disc.fermee ? 'ferme' : 'ouvert',
           date: disc.last_message_at || disc.created_at,
+          created_at: disc.created_at,
           groupes: disc.groupes || [],
-        })).filter(disc => _discPeutVoir(disc));
+        })).filter(disc => {
+          const ds = (disc.created_at || disc.date || '').slice(0, 10);
+          return ds >= _saiStart && ds <= _saiEnd;
+        }).filter(disc => _discPeutVoir(disc));
       } catch(e) {
         _discDiscList = _discDiscList || [];
       }

@@ -10956,6 +10956,7 @@ function chargerDiscussions(callback) {
         statut: d.fermee ? 'ferme' : 'ouvert',
         groupes: d.groupes || [],
         date: d.last_message_at || d.created_at,
+        created_at: d.created_at,
       };
     });
     updateNotifBadge();
@@ -11746,7 +11747,10 @@ function renderDiscussions() {
   if(_discView==='new')  return _renderDiscFormHtml();
   if(_discView==='chat') return _renderDiscChatShell();
   if(!adminData.discussions){ chargerDiscussions(function(){ renderTab(); }); return '<div class="spinner"></div>'; }
-  var discs=adminData.discussions;
+  var sai=saisonActive();
+  var discs=(adminData.discussions||[]).filter(function(d){
+    return dateAppartientSaison((d.created_at||d.date||'').slice(0,10), sai);
+  });
   var h='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;">'
     +'<h2 style="margin:0;font-size:16px;">💬 Discussions</h2>'
     +'<button class="btn btn-gold" data-action="nouvelle-discussion">+ Nouvelle</button>'
