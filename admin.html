@@ -2844,7 +2844,7 @@ function _renderWhatsappParamSection(sai) {
     return '<div style="margin-bottom:16px;">'
       +'<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;">'+label+'</div>'
       +field('wa-lien-'+key, 'Lien WhatsApp (invitation au groupe)', v.lien||'', 'https://chat.whatsapp.com/\u2026')
-      +field('wa-qr-'+key,   'Lien Google Drive du QR Code', v.qr||'', 'https://drive.google.com/file/d/\u2026')
+      +field('wa-qr-'+key,   'Image QR Code (URL Google Drive ou directe)', v.qr||'', 'https://drive.google.com/file/d/\u2026 ou https://res.cloudinary.com/\u2026')
       +'</div>';
   }
   return '<div style="margin-top:24px;">'
@@ -9078,8 +9078,9 @@ function renderWhatsapp() {
   h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">';
   cours.forEach(function(c) {
     var v = d[c.key] || {};
-    var imgUrl = v.qr ? _driveImgUrl(v.qr) : '';
-    var imgUrlBig = v.qr ? ('https://drive.google.com/thumbnail?id='+_driveFileId(v.qr)+'&sz=w800') : '';
+    var imgUrl    = v.qr ? _driveImgUrl(v.qr) : '';
+    var fid       = _driveFileId(v.qr||'');
+    var imgUrlBig = v.qr ? (fid ? 'https://drive.google.com/thumbnail?id='+fid+'&sz=w800' : v.qr) : '';
     var driveLink = (v.qr||'').replace(/"/g,'&quot;');
     var labelEsc = c.label.replace(/'/g,"\\'").replace(/"/g,'&quot;');
     var bigEsc   = imgUrlBig.replace(/'/g,"\\'").replace(/"/g,'&quot;');
