@@ -4350,6 +4350,15 @@ async function chargerDonnees() {
               ? Object.assign({},e,{paiement_sorano:_pendingSoranoPayé[e.email]}) : e;
           });
         }
+        // Marquer explicitement les lignes isRenewal (robuste : object ET string pour donnees)
+        ct = ct.map(function(e) {
+          if (e._isRenewalRow) return e;
+          var dn = e.donnees;
+          var isRen = false;
+          if (dn && typeof dn === 'object') isRen = !!dn.isRenewal;
+          else if (dn && typeof dn === 'string') { try { isRen = !!(JSON.parse(dn)||{}).isRenewal; } catch(ex) {} }
+          return isRen ? Object.assign({}, e, {_isRenewalRow: true}) : e;
+        });
         return ct;
       })(),
       coursYoga:         (function(){
@@ -5933,7 +5942,7 @@ window.repSupprimerDefinitif = function(id, isTango) {
 function renderElevesTango() {
   var sai = saisonActive();
   var tous = (adminData.coursTango||[]).filter(function(e){return (e.saison||saisonCourante())===sai;});
-  var inscrits = tous.filter(function(e){return e.statut==='inscrit' && !(e.donnees&&e.donnees.isRenewal);});
+  var inscrits = tous.filter(function(e){return e.statut==='inscrit' && !e._isRenewalRow;});
   var supprimes = tous.filter(function(e){return e.statut==='supprimé';});
   var ONGLETS = [
     {id:'paris-deb',     lbl:'Paris Débutants',          ville:'paris',     niv:'debutant'},
@@ -7273,7 +7282,7 @@ function _buildCartesData() {
     if (ct.statut!=='inscrit') return false;
     if (!ct.type || ct.type.indexOf('carte')<0) return false;
     if ((ct.saison||saisonCourante())!==sai) return false;
-    if (ct.donnees && ct.donnees.isRenewal) return false;
+    if (ct._isRenewalRow) return false;
     return !personnesVues[ct.email+'::'+_nStr((ct.prenom||'')+' '+(ct.nom||''))];
   }).forEach(function(ct){
     personnesVues[ct.email+'::'+_nStr((ct.prenom||'')+' '+(ct.nom||''))] = true;
