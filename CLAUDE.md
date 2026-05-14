@@ -1508,3 +1508,35 @@ GRANT EXECUTE ON FUNCTION get_remplacant_eleves(text, text, text) TO anon, authe
 
 ### Règle mémo — déduplication Élèves Tango
 Dans `inscriptions_cours`, une personne peut avoir plusieurs lignes légitimes (inscription principale + entrée `isRenewal` + entrée partenaire). La déduplication d'affichage se fait **par nom normalisé** (`_normNom`) dans le contexte d'un même cours (ville + niveau). Ne jamais dédupliquer par email seul — les entrées partenaire peuvent avoir un email vide.
+
+## Session 2026-05-14 (suite) — Filtres saison + Milongas espace élève
+
+### ✅ Filtres par saison — admin.html
+
+- **Yoga « Inscrire Élève »** : dropdown pré-remplissage depuis `adminData.essaiYoga` filtré par `dateAppartientSaison(e.date, saisonActive())` et `!estDejaEleveYoga(e.email)`. Bouton 💳 dans la liste essai yoga passe `data-id` pour pré-remplir le formulaire.
+- **Stages « Inscrire »** : dropdown élèves filtré par `saisonActive()` + `statut==='inscrit'` + `!_isRenewalRow`.
+- **Milonga « Présences »** : dropdown élèves filtré par `saisonActive()` + `statut==='inscrit'` + `!_isRenewalRow`.
+- **Publications** : affiche saison active + saison suivante (pour visualiser/modifier les publications programmées à l'avance). Filtre : `dateAppartientSaison(date, sai) || dateAppartientSaison(date, saiNext)`. `allPubs.indexOf(p)` préserve l'index original pour les actions.
+- **WhatsApp** : QR codes et liens depuis les Paramètres de la `saisonActive()`, rien de hardcodé. `imgUrlBig` conditionnel sur `fid` non-vide pour les URLs non-Drive.
+- **Discussions admin** : filtré par `dateAppartientSaison(d.created_at, saisonActive())` — utilise `created_at` (pas `last_message_at`) pour que les discussions appartiennent à la saison où elles ont été créées.
+
+### ✅ Filtres par saison — index.html (espace élève)
+
+- **Publications** : filtre saison courante uniquement, avec borne inférieure (`>= seasonStart`) ET supérieure (`<= seasonEnd = 31 août`). Utilise calcul inline `_m >= 9 ? _y : _y - 1` pour l'année de début de saison.
+- **Discussions** : `created_at` mappé dans l'objet, filtre par `_saiStart` / `_saiEnd` (strings ISO) — saison courante uniquement.
+
+### ✅ Milongas espace élève — zéro hardcodé, tout depuis Paramètres/Supabase
+
+**Problème** : `MILONGAS_DATA_FB` contenait 23 dates hardcodées utilisées comme fallback. Si l'admin annulait une milonga et en ajoutait une nouvelle dans Paramètres, l'espace élève continuait d'afficher les vieilles dates hardcodées.
+
+**Fix** :
+- `MILONGAS_DATA_FB = []` (tableau vide — plus aucune date de secours)
+- `const MILONGAS_OBJ` → `let MILONGAS_OBJ`, `const MILONGAS_DATA` → `let MILONGAS_DATA` (mis à jour dynamiquement)
+- Ajout `chargerMilongasEleve()` : fetch async `parametres` → clé `tev_milongas_<_sai()>` → met à jour localStorage + `MILONGAS_OBJ`/`MILONGAS_DATA` → re-rend accueil/milonga/agenda
+- Appelée au **login** (non-bloquant, dans `loadEleveData` après `eleveData = data`) et à l'**ouverture de l'onglet Milonga** (`switchTab`)
+- `window._onMilongasUpdated(mils, sai)` : callback partagé — vérifie `sai === _sai()`, met à jour les vars, re-rend
+- Hookée dans le **Plan IIFE** (`_fetchAndApply 'tev_milongas_'+sai`) : l'ouverture du Plan propage aussi les milongas fraîches vers accueil/milonga
+- Suppression des fallbacks hardcodés "La Dolce Vita" dans `renderAccueil` (lignes `_mn || 'La Dolce Vita'`, `_mh || '17h30–23h30'`), `getEvents()` (branche `else` avec 23 dates), `renderMilonga()` (branche `else` idem)
+- Si `MILONGAS_OBJ` est null (Supabase pas encore chargé), la section milonga n'affiche rien — pas de fausses dates
+
+**Règle** : `MILONGAS_OBJ` est la seule source de vérité pour les milongas dans index.html. Ne jamais réintroduire de dates ou de lieux hardcodés dans ce fichier pour les milongas.
