@@ -10044,8 +10044,9 @@ function renderYogaInscrireEssai() {
 function renderYogaInscrireEleve() {
   var PAI_OPT = Object.entries(PAI_LBL).map(function(kv){ return '<option value="'+kv[0]+'">'+kv[1]+'</option>'; }).join('');
   // Dropdown pré-remplissage depuis les cours d'essai
+  var sai = saisonActive();
   var essaiFiltres = (adminData.essaiYoga || []).filter(function(e) {
-    return !estDejaEleveYoga(e.email);
+    return dateAppartientSaison(e.date, sai) && !estDejaEleveYoga(e.email);
   }).slice().sort(function(a, b) {
     if (b.date > a.date) return 1;
     if (b.date < a.date) return -1;
