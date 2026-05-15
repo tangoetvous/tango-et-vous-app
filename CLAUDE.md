@@ -1804,3 +1804,14 @@ if (currentTab === 'publications') return; // ne pas interrompre avec le polling
 ```
 
 **Règle** : l'onglet Publications ne se re-rend jamais automatiquement. L'admin navigue vers un autre onglet et revient pour voir les nouvelles données. Publications = données peu volatiles, pas de polling nécessaire.
+
+### ✅ Heure de diffusion des publications programmées : 11h
+
+- `genererPublicationsStages()` et `genererPublicationsMilongas()` : heure de publication `T08:00:00.000Z` → `T11:00:00.000Z`
+- Publications déjà en base migrées via SQL : `REPLACE(donnees->>'dateProgrammee', 'T08:00:00', 'T11:00:00')` sur `donnees.dateProgrammee` et `donnees.datesProgrammees`, filtre `> NOW()`
+- **Règle** : toute nouvelle génération de publications automatiques utilise `T11:00:00.000Z`
+
+### ✅ Scroll automatique vers le formulaire d'édition publication
+
+- `ouvrirPub()` : ajout de `requestAnimationFrame(function(){ el.scrollIntoView({behavior:'smooth',block:'start'}); })` après injection du formulaire dans `#pub-ed`
+- **Cause** : `#pub-ed` est en haut de la liste, le formulaire apparaissait hors écran quand l'admin était scrollé vers le bas — donnait l'impression que «rien ne se passait»
