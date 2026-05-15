@@ -1592,3 +1592,99 @@ mil.horaire_debut = ((gel('mil-hdeb-'+idx)||{}).value||'').trim();
 - Placeholders : `"17h30"` → `"ex : 17h30"` pour distinguer hint et donnée réelle
 - **Règle** : ne jamais utiliser `|| mil.horaire_debut` ou `|| mil.horaire_fin` dans `sauverMilongaInfo` — toujours lire `.value.trim()` directement
 - **Règle** : ne jamais utiliser `|| mil.horaire_xxx` dans sauverMilongaInfo — ça rend le champ non-modifiable
+
+## Session 2026-05-15 — Visuels stages/milongas + publications auto-générées
+
+### ✅ Visuels Cloudinary par date de stage (Paramètres → Stages)
+
+- Nouvelle section collapsible **"🖼 Visuel"** sous chaque date de stage dans `_renderSecDatesContent`
+- Toggle via `stageVisuelOpen[st.date]` (nouveau dict, ajouté après `stageAdresseOpen`)
+- Prévisualisation de l'image (28×28 thumbnail si image présente, icône 🖼 sinon) positionnée **directement après le label de date** (`margin-right:auto` sur le label → pousse les boutons ✕ vers la droite) pour éviter les clics accidentels sur supprimer
+- Stockage : `st.image_url` (string URL Cloudinary) sur chaque objet date dans le tableau `STAGES`
+- Upload : `_uploadImageStage(date, sai, input)` → Cloudinary (`upload_preset:'tango_uploads'`, cloud `dnggqa2kw`) → `STAGES[idx].image_url = url` → `sauverStagesLocal(sai)` → `syncImageToPublications(date, url)` → `setTimeout(renderTab, 800)`
+- Suppression : `supprimerImageStage(date, sai)` → `delete STAGES[idx].image_url` → `sauverStagesLocal(sai)` → `syncImageToPublications(date, '')` → `renderTab()`
+- `_migrateStageItem(st)` déjà préservait `image_url` (retourne tôt si `nStages` défini)
+- Click handlers : `case 'toggle-visuel-date'`, `case 'suppr-image-stage'`
+
+### ✅ Visuels Cloudinary par date de milonga (Paramètres → Milongas)
+
+- Image stockée sur **chaque date** : `mil.dates[i].image_url` (pas sur `mil` directement)
+- Dans `_renderMilongaDatesContent` : prévisualisation 28×28 (ou 🖼 opacity:0.35 si absent) juste après le label de date
+- Upload : `_uploadImageMilongaDate(milIdx, dateStr, input)` → Cloudinary → `MILONGAS[milIdx].dates[di].image_url = url` → `sauverMilongas()` → toast + `setTimeout(renderTab, 800)`
+- Suppression : `supprimerImageMilongaDate(milIdx, dateStr)` → `delete MILONGAS[milIdx].dates[di].image_url` → `sauverMilongas()` → `renderTab()`
+- Click handler : `case 'suppr-image-mil-date'`
+- **Supprimé** : bloc upload image dans `_renderMilongaInfoContent` et lecture `imgUrl` dans `sauverMilongaInfo` — l'image est désormais entièrement au niveau date
+- **Règle** : `mil.image_url` n'existe plus — ne jamais lire ni écrire au niveau milonga, toujours `mil.dates[i].image_url`
+
+### ✅ Synchronisation image → publications (`syncImageToPublications`)
+
+```javascript
+async function syncImageToPublications(date, imageUrl) {
+  // Fetch publications avec donnees->stageDate = date ET donnees->autoGenStage = 'true'
+  // Pour chaque pub trouvée : UPDATE donnees.image = imageUrl (ou delete si vide)
+  // Toast : "✅ Visuel synchronisé sur N publication(s)"
+}
+```
+- Appelée depuis `_uploadImageStage` et `supprimerImageStage` après sauvegarde Cloudinary
+- Filtre JSONB Supabase : `.filter('donnees->>stageDate', 'eq', date).filter('donnees->>autoGenStage', 'eq', 'true')`
+- Permet de publier sans visuel, puis d'uploader le visuel dans Paramètres → toutes les publications du stage sont mises à jour automatiquement
+
+### ✅ Génération automatique de publications stages (`genererPublicationsStages`)
+
+- Bouton **"🗓 Générer les publications stages [saison suivante]"** visible dans l'onglet Publications à partir du **15 mai** de la saison active (conditionné sur `today() >= saisonActive().split('-')[1] + '-05-15'`)
+- Génère **3 publications par date de stage** : J-20, J-14, J-7 avant la date
+- Fetch Supabase : `tev_dates_stages_<saiNext>` + `tev_params_stages_<saiNext>` pour le contenu
+- Anti-doublon : vérifie `adminData.publications` en mémoire via clé `stageDate + '_' + jAvant`
+- Toutes les publications générées ont `publiee: false` (à valider par l'admin avant diffusion)
+
+**Structure d'un objet donnees généré :**
+```javascript
+{
+  cat: 'stage',
+  extrait: 'Thème 1 - Thème 2',       // thèmes joints par ' - ', sans "Technique"
+  image: st.image_url || '',
+  dateProgrammee: pubISO,              // date de publication (J-20, J-14 ou J-7)
+  datesProgrammees: [pubISO],
+  cours: ['paris-deb','paris-int','vincennes-deb','vincennes-int'],
+  autoGenStage: true,                  // marqueur pour syncImageToPublications
+  stageDate: st.date,                  // date de la journée de stages (YYYY-MM-DD)
+  jAvant: 20,                          // 20, 14 ou 7
+  lienInscription: 'https://app.tangoetvous.fr/stages-pwa.html'
+}
+```
+
+**Format du titre généré :** `STAGE DU SAMEDI 11 AVRIL 14H-18H` (plage horaire = première heure début → dernière heure fin des slots du jour)
+
+**Format du contenu généré :**
+```
+[intro selon jAvant]
+
+📅 [Date longue]
+[Créneau 1] — [Thème 1]
+[Créneau 2] — [Thème 2]
+...
+
+Pour s'inscrire, cliquez sur le bouton ci-dessous.
+
+📍 [Lieu — nom, adresse]
+
+💰 Tarifs
+Technique (1h) : 20€
+1 stage : 25€ / 2 stages : 45€ / 3 stages : 65€ / 4 stages : 85€
+(Tarifs sur place le jour du stage)
+```
+
+**Horaires par défaut (`DEFAULTS_HORAIRES.stages`) :**
+```javascript
+{tech_deb:'14h', tech_fin:'15h', s1_deb:'15h', s1_fin:'16h30',
+ s2_deb:'16h30', s2_fin:'18h', s3_deb:'11h30', s3_fin:'13h',
+ s4_deb:'10h', s4_fin:'11h30'}
+```
+
+### ✅ Bouton "S'inscrire aux stages →" dans le modal publication (index.html)
+
+- Champ `lienInscription` dans `donnees` des publications auto-générées stages
+- Dans `openPub()` : si `p.lienInscription` existe → crée un `<a>` dans `#pub-modal-btn` avec `class="pub-modal-inscr-btn"`
+- CSS `.pub-modal-inscr-btn` : bouton doré pleine largeur, `background:var(--gold)`, `color:#1a1208`, `font-weight:700`, `padding:13px 20px`, `border-radius:8px`
+- `#pub-modal-btn` : `margin-top:20px`
+- **Règle** : le contenu `p.contenu` est rendu en `textContent` (pas `innerHTML`) — tout lien cliquable doit passer par `pub-modal-btn` ou un élément DOM dédié, jamais par le texte du contenu
