@@ -4131,6 +4131,7 @@ function _uploadImageStage(date, sai, input) {
           STAGES[idx] = _migrateStageItem(STAGES[idx]);
           STAGES[idx].image_url = d.secure_url;
           sauverStagesLocal(sai);
+          syncImageToPublications(date, d.secure_url);
         }
         if (prog) { prog.textContent='✅ Image enregistrée'; prog.style.color='#4caf50'; }
         setTimeout(function(){ renderTab(); }, 800);
@@ -4146,7 +4147,7 @@ function supprimerImageStage(date, sai) {
   STAGES[idx] = _migrateStageItem(STAGES[idx]);
   delete STAGES[idx].image_url;
   sauverStagesLocal(sai);
-  afficherToast('✓ Image supprimée');
+  syncImageToPublications(date, '');
   renderTab();
 }
 
@@ -9811,6 +9812,22 @@ function renderMilongaPresences() {
   return h;
 }
 
+async function syncImageToPublications(date, imageUrl) {
+  var res = await Promise.resolve(
+    TEV.client.from('publications').select('id,donnees')
+      .filter('donnees->>stageDate', 'eq', date)
+      .filter('donnees->>autoGenStage', 'eq', 'true')
+  ).catch(function(){ return null; });
+  var pubs = res && res.data || [];
+  if (!pubs.length) return;
+  await Promise.all(pubs.map(function(pub) {
+    var d = Object.assign({}, pub.donnees || {});
+    if (imageUrl) d.image = imageUrl; else delete d.image;
+    return Promise.resolve(TEV.client.from('publications').update({donnees: d}).eq('id', pub.id)).catch(function(){});
+  }));
+  afficherToast('✅ Visuel synchronisé sur ' + pubs.length + ' publication' + (pubs.length > 1 ? 's' : ''));
+}
+
 async function genererPublicationsStages() {
   var saiNext = saisonSuivante();
   var saiCur  = saisonActive();
@@ -9925,7 +9942,7 @@ async function genererPublicationsStages() {
         contenu += ni + ' STAGES + TECHNIQUE > ' + getTarif('stage_' + ni + '_tech') + '€\n';
       }
     }
-    contenu += '\n👉 S\'inscrire : https://app.tangoetvous.fr/stages-pwa.html';
+    contenu += '\n(Tarifs sur place le jour du stage)';
 
     // 3 publications : J-20, J-14, J-7
     [20, 14, 7].forEach(function(jAvant) {
@@ -9947,7 +9964,8 @@ async function genererPublicationsStages() {
           cours: ['paris-deb', 'paris-int', 'vincennes-deb', 'vincennes-int'],
           autoGenStage: true,
           stageDate: st.date,
-          jAvant: jAvant
+          jAvant: jAvant,
+          lienInscription: 'https://app.tangoetvous.fr/stages-pwa.html'
         }
       });
     });
