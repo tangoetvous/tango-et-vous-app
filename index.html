@@ -2958,14 +2958,16 @@
     const btnDiv = $('pub-modal-btn');
     if (btnDiv) {
       btnDiv.innerHTML = '';
-      if (p.lienInscription) {
-        const a = document.createElement('a');
-        a.href = p.lienInscription;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.className = 'pub-modal-inscr-btn';
-        a.textContent = "S'inscrire aux stages →";
-        btnDiv.appendChild(a);
+      if (p.cat === 'stage') {
+        const btn = document.createElement('button');
+        btn.className = 'pub-modal-inscr-btn';
+        btn.textContent = "S'inscrire →";
+        btn.onclick = function() {
+          $('pub-modal').classList.remove('open');
+          $('pub-modal-backdrop').classList.remove('open');
+          switchTab('stages');
+        };
+        btnDiv.appendChild(btn);
       }
     }
     $('pub-modal').classList.add('open');
