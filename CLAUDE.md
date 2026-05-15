@@ -1593,69 +1593,73 @@ mil.horaire_debut = ((gel('mil-hdeb-'+idx)||{}).value||'').trim();
 - **Règle** : ne jamais utiliser `|| mil.horaire_debut` ou `|| mil.horaire_fin` dans `sauverMilongaInfo` — toujours lire `.value.trim()` directement
 - **Règle** : ne jamais utiliser `|| mil.horaire_xxx` dans sauverMilongaInfo — ça rend le champ non-modifiable
 
-## Session 2026-05-15 — Visuels stages/milongas + publications auto-générées
+## Session 2026-05-15 — Publications automatiques (stages + milongas) et visuels Cloudinary
 
 ### ✅ Visuels Cloudinary par date de stage (Paramètres → Stages)
 
 - Nouvelle section collapsible **"🖼 Visuel"** sous chaque date de stage dans `_renderSecDatesContent`
-- Toggle via `stageVisuelOpen[st.date]` (nouveau dict, ajouté après `stageAdresseOpen`)
-- Prévisualisation de l'image (28×28 thumbnail si image présente, icône 🖼 sinon) positionnée **directement après le label de date** (`margin-right:auto` sur le label → pousse les boutons ✕ vers la droite) pour éviter les clics accidentels sur supprimer
+- Toggle via `stageVisuelOpen[st.date]` (nouveau dict global, ajouté après `stageAdresseOpen`)
+- Prévisualisation 28×28 thumbnail (ou icône 🖼) positionnée directement après le label de date (`margin-right:auto` sur le label → pousse les boutons ✕ vers la droite, évite les clics accidentels)
 - Stockage : `st.image_url` (string URL Cloudinary) sur chaque objet date dans le tableau `STAGES`
-- Upload : `_uploadImageStage(date, sai, input)` → Cloudinary (`upload_preset:'tango_uploads'`, cloud `dnggqa2kw`) → `STAGES[idx].image_url = url` → `sauverStagesLocal(sai)` → `syncImageToPublications(date, url)` → `setTimeout(renderTab, 800)`
-- Suppression : `supprimerImageStage(date, sai)` → `delete STAGES[idx].image_url` → `sauverStagesLocal(sai)` → `syncImageToPublications(date, '')` → `renderTab()`
-- `_migrateStageItem(st)` déjà préservait `image_url` (retourne tôt si `nStages` défini)
+- Upload : `_uploadImageStage(date, sai, input)` → Cloudinary (`upload_preset:'tango_uploads'`, cloud `dnggqa2kw`) → `STAGES[idx].image_url = url` → `sauverStagesLocal(sai)` → `syncPublicationsStage(date, sai)` → `setTimeout(renderTab, 800)`
+- Suppression : `supprimerImageStage(date, sai)` → `delete STAGES[idx].image_url` → `sauverStagesLocal(sai)` → `syncPublicationsStage(date, sai)` → `renderTab()`
 - Click handlers : `case 'toggle-visuel-date'`, `case 'suppr-image-stage'`
 
 ### ✅ Visuels Cloudinary par date de milonga (Paramètres → Milongas)
 
-- Image stockée sur **chaque date** : `mil.dates[i].image_url` (pas sur `mil` directement)
+- Image stockée sur **chaque date** : `mil.dates[i].image_url` (jamais sur `mil` directement)
 - Dans `_renderMilongaDatesContent` : prévisualisation 28×28 (ou 🖼 opacity:0.35 si absent) juste après le label de date
-- Upload : `_uploadImageMilongaDate(milIdx, dateStr, input)` → Cloudinary → `MILONGAS[milIdx].dates[di].image_url = url` → `sauverMilongas()` → toast + `setTimeout(renderTab, 800)`
-- Suppression : `supprimerImageMilongaDate(milIdx, dateStr)` → `delete MILONGAS[milIdx].dates[di].image_url` → `sauverMilongas()` → `renderTab()`
+- Upload : `_uploadImageMilongaDate(milIdx, dateStr, input)` → Cloudinary → `MILONGAS[milIdx].dates[di].image_url = url` → `sauverMilongas()` → `syncPublicationsMilongaDate(...)` → toast + `setTimeout(renderTab, 800)`
+- Suppression : `supprimerImageMilongaDate(milIdx, dateStr)` → `delete MILONGAS[milIdx].dates[di].image_url` → `sauverMilongas()` → `syncPublicationsMilongaDate(...)` → `renderTab()`
 - Click handler : `case 'suppr-image-mil-date'`
-- **Supprimé** : bloc upload image dans `_renderMilongaInfoContent` et lecture `imgUrl` dans `sauverMilongaInfo` — l'image est désormais entièrement au niveau date
 - **Règle** : `mil.image_url` n'existe plus — ne jamais lire ni écrire au niveau milonga, toujours `mil.dates[i].image_url`
 
-### ✅ Synchronisation image → publications (`syncImageToPublications`)
+### ✅ Champ Tarif par milonga (Paramètres → Milongas → Info)
 
-```javascript
-async function syncImageToPublications(date, imageUrl) {
-  // Fetch publications avec donnees->stageDate = date ET donnees->autoGenStage = 'true'
-  // Pour chaque pub trouvée : UPDATE donnees.image = imageUrl (ou delete si vide)
-  // Toast : "✅ Visuel synchronisé sur N publication(s)"
-}
-```
-- Appelée depuis `_uploadImageStage` et `supprimerImageStage` après sauvegarde Cloudinary
-- Filtre JSONB Supabase : `.filter('donnees->>stageDate', 'eq', date).filter('donnees->>autoGenStage', 'eq', 'true')`
-- Permet de publier sans visuel, puis d'uploader le visuel dans Paramètres → toutes les publications du stage sont mises à jour automatiquement
+- Champ texte libre `mil.tarif` (ex : `"10€ / 5€ adhérents"`) dans `_renderMilongaInfoContent`, ID `mil-tarif-<idx>`
+- `sauverMilongaInfo(idx)` : lit `((gel('mil-tarif-'+idx)||{}).value||'').trim()` → `mil.tarif`
+- Après `sauverMilongas()` : appelle `syncToutesPublicationsMilongas(sai)` pour re-générer le contenu de toutes les publications milonga
 
-### ✅ Génération automatique de publications stages (`genererPublicationsStages`)
+### ✅ Champs Démonstration + Tarif par date de milonga — bouton `[···]`
 
-- Bouton **"🗓 Générer les publications stages [saison suivante]"** visible dans l'onglet Publications à partir du **15 mai** de la saison active (conditionné sur `today() >= saisonActive().split('-')[1] + '-05-15'`)
-- Génère **3 publications par date de stage** : J-20, J-14, J-7 avant la date
+- `var milDateDetailsOpen = {}` : dict `'milIdx-dateStr' → bool` pour les collapsibles par date
+- Bouton `[···]` inséré AVANT le bouton ✕ dans chaque date row (`margin-left:20px` sur le bouton ✕ pour l'espacement)
+  - Couleur : `var(--text)` (blanc) par défaut, `var(--gold)` si données présentes (`detOpen || hasDemo || hasTarifD`)
+- Bloc collapsible si `milDateDetailsOpen[idx+'-'+d.date]` :
+  - Input Démonstration : id `mil-demo-<idx>-<dateNoHyphens>`, value `d.demonstration||''`
+  - Input Tarif date : id `mil-tarif-d-<idx>-<dateNoHyphens>`, value `d.tarif||''`, placeholder `'laisse vide = tarif milonga'`
+  - Bouton `💾 Enregistrer` : data-action=`sauver-mil-date-details`
+- `sauverDatasMilongaDate(milIdx, dateStr)` : lit les inputs, sauvegarde `d.demonstration` et `d.tarif` (ou delete si vide) → `sauverMilongas()` → `syncPublicationsMilongaDate(milIdx, dateStr, sai)` → `renderTab()`
+- Handlers click : `toggle-mil-date-details`, `sauver-mil-date-details`
+- **Règle** : ne jamais utiliser `|| d.tarif` ou `|| d.demonstration` dans ces saves — toujours `.value.trim()` direct
+
+### ✅ Génération automatique de publications stages — `genererPublicationsStages()`
+
+- Bouton **"🗓 Générer les publications stages [saiNext]"** dans l'onglet Publications, visible à partir du **15 mai** de la saison active
+- Génère **3 publications par date de stage** de la saison suivante : J-20, J-14, J-7
 - Fetch Supabase : `tev_dates_stages_<saiNext>` + `tev_params_stages_<saiNext>` pour le contenu
 - Anti-doublon : vérifie `adminData.publications` en mémoire via clé `stageDate + '_' + jAvant`
-- Toutes les publications générées ont `publiee: false` (à valider par l'admin avant diffusion)
+- `publiee: true` — publications directement visibles dans l'espace élève à leur date programmée
 
-**Structure d'un objet donnees généré :**
+**Structure `donnees` des publications stages auto-générées :**
 ```javascript
 {
   cat: 'stage',
-  extrait: 'Thème 1 - Thème 2',       // thèmes joints par ' - ', sans "Technique"
+  extrait: 'Thème 1 - Thème 2',         // thèmes joints par ' - ', sans "Technique"
   image: st.image_url || '',
-  dateProgrammee: pubISO,              // date de publication (J-20, J-14 ou J-7)
+  dateProgrammee: pubISO,                // J-20, J-14 ou J-7 avant la date du stage
   datesProgrammees: [pubISO],
   cours: ['paris-deb','paris-int','vincennes-deb','vincennes-int'],
-  autoGenStage: true,                  // marqueur pour syncImageToPublications
-  stageDate: st.date,                  // date de la journée de stages (YYYY-MM-DD)
-  jAvant: 20,                          // 20, 14 ou 7
+  autoGenStage: true,                    // marqueur pour les sync
+  stageDate: st.date,                    // YYYY-MM-DD de la journée de stages
+  jAvant: 20,                            // 20, 14 ou 7
   lienInscription: 'https://app.tangoetvous.fr/stages-pwa.html'
 }
 ```
 
-**Format du titre généré :** `STAGE DU SAMEDI 11 AVRIL 14H-18H` (plage horaire = première heure début → dernière heure fin des slots du jour)
+**Format du titre :** `STAGE DU SAMEDI 11 AVRIL 14H-18H` (plage horaire = premier début → dernier fin des slots du jour)
 
-**Format du contenu généré :**
+**Format du contenu :**
 ```
 [intro selon jAvant]
 
@@ -1674,12 +1678,41 @@ Technique (1h) : 20€
 (Tarifs sur place le jour du stage)
 ```
 
-**Horaires par défaut (`DEFAULTS_HORAIRES.stages`) :**
+### ✅ `_genContenuStage(st, defHor, defTar, defAdr)` — pure function
+
+Extraite de `genererPublicationsStages()` pour être réutilisée par les fonctions de sync. Retourne `{titre, contenu, extrait, image}`. Toutes les données viennent des paramètres Supabase (zéro hardcodé) :
+- Horaires : par slot (`st.slots[i].horaire_debut/fin`), fallback `defHor` (paramètres globaux stages)
+- Tarifs : `st.tarifs || defTar` (override par date, fallback globaux stages)
+- Adresse : `st.adresse || defAdr` (override par date, fallback adresse globale stages)
+- Thèmes : `st.slots[i].theme` (saisi dans Paramètres → Stages → Thèmes)
+- Image : `st.image_url || ''`
+
+### ✅ Auto-sync contenu publications stages
+
+Quand les paramètres d'un stage changent dans Paramètres, les publications auto-générées sont mises à jour automatiquement (titre + contenu + extrait + image) :
+
 ```javascript
-{tech_deb:'14h', tech_fin:'15h', s1_deb:'15h', s1_fin:'16h30',
- s2_deb:'16h30', s2_fin:'18h', s3_deb:'11h30', s3_fin:'13h',
- s4_deb:'10h', s4_fin:'11h30'}
+async function syncPublicationsStage(date, sai) {
+  // Filtre JSONB: donnees->>stageDate = date ET donnees->>autoGenStage = 'true'
+  // UPDATE titre + contenu + extrait + image sur toutes les pubs trouvées
+}
+async function syncToutesPublicationsStages(sai) {
+  // Itère toutes les dates de STAGES → appelle syncPublicationsStage pour chacune
+}
 ```
+
+**Auto-sync hooks stages :**
+| Déclencheur | Fonction appelée |
+|---|---|
+| `sauverThemesStage(date, sai)` | `syncPublicationsStage(date, sai)` |
+| `sauverAdresseDate(date, sai)` | `syncPublicationsStage(date, sai)` |
+| `sauverHorairesDate(date, sai)` | `syncPublicationsStage(date, sai)` |
+| `sauverTarifsDate(date, sai)` | `syncPublicationsStage(date, sai)` |
+| `_uploadImageStage(date, sai, input)` | `syncPublicationsStage(date, sai)` |
+| `supprimerImageStage(date, sai)` | `syncPublicationsStage(date, sai)` |
+| `sauverHorairesType` (type=stages) | `syncToutesPublicationsStages(sai)` |
+| `sauverTarifsType` (type=stages) | `syncToutesPublicationsStages(sai)` |
+| `sauverAdresseType` (type=stages) | `syncToutesPublicationsStages(sai)` |
 
 ### ✅ Bouton "S'inscrire aux stages →" dans le modal publication (index.html)
 
@@ -1687,120 +1720,18 @@ Technique (1h) : 20€
 - Dans `openPub()` : si `p.lienInscription` existe → crée un `<a>` dans `#pub-modal-btn` avec `class="pub-modal-inscr-btn"`
 - CSS `.pub-modal-inscr-btn` : bouton doré pleine largeur, `background:var(--gold)`, `color:#1a1208`, `font-weight:700`, `padding:13px 20px`, `border-radius:8px`
 - `#pub-modal-btn` : `margin-top:20px`
-- **Règle** : le contenu `p.contenu` est rendu en `textContent` (pas `innerHTML`) — tout lien cliquable doit passer par `pub-modal-btn` ou un élément DOM dédié, jamais par le texte du contenu
+- **Règle** : `p.contenu` est rendu en `textContent` (pas `innerHTML`) — tout lien cliquable doit passer par `pub-modal-btn` ou un élément DOM dédié, jamais par le texte du contenu
 
-## Session 2026-05-15 (suite) — Publications milongas auto-générées
+### ✅ Génération automatique de publications milongas — `genererPublicationsMilongas()`
 
-### ✅ `publiee: true` pour publications stages auto-générées
-- `genererPublicationsStages()` : `publiee: true` (déjà en place, confirmé)
-
-### ✅ Champ `tarif` par milonga
-- Champ Tarif ajouté dans `_renderMilongaInfoContent(mil, idx)` avant les boutons (id `mil-tarif-<idx>`, placeholder "ex : 10€ / 5€ adhérents")
-- `sauverMilongaInfo(idx)` : lit `mil.tarif = ((gel('mil-tarif-'+idx)||{}).value||'').trim()`, puis appelle `syncToutesPublicationsMilongas(_saiMil)` après `sauverMilongas()`
-
-### ✅ Champs Démonstration + Tarif override par date de milonga
-- `milDateDetailsOpen = {}` : dict `{'milIdx-date': bool}` pour les collapsibles par date
-- `_renderMilongaDatesContent` : bouton `[···]` (data-action=`toggle-mil-date-details`) inline avant le bouton supprimer
-- Bloc collapsible si `detOpen` : input Démonstration (`mil-demo-<idx>-<did>`), input Tarif date (`mil-tarif-d-<idx>-<did>`), bouton Enregistrer (`sauver-mil-date-details`)
-- `sauverDatasMilongaDate(milIdx, dateStr)` : sauvegarde `d.demonstration` + `d.tarif` (ou delete si vide) → `sauverMilongas()` → `syncPublicationsMilongaDate`
-- Indicateur visuel : bouton `[···]` en `var(--gold)` si `detOpen || hasDemo || hasTarifD`
-
-### ✅ Auto-sync image → publications milonga
-- `_uploadImageMilongaDate` : appelle `syncPublicationsMilongaDate(milIdx, dateStr, _saiImg)` après `sauverMilongas()`
-- `supprimerImageMilongaDate` : appelle `syncPublicationsMilongaDate(milIdx, dateStr, _saiSup)` après `sauverMilongas()`
-
-### ✅ `_genContenuMilonga(mil, dateObj)` — pure function
-Retourne `{titre, extrait, contenu, image}`. Sources de données (aucune valeur hardcodée) :
-- `hdeb`/`hfin` : `dateObj.horaire_debut/fin || mil.horaire_debut/fin || ''`
-- `tarif` : `dateObj.tarif || mil.tarif || ''` (override par date, fallback milonga)
-- `demo` : `dateObj.demonstration || ''`
-- `image` : `dateObj.image_url || ''`
-- Titre : `'Milonga « ' + mil.nom + ' »'`
-- Extrait : date longue (JOUR JJ MOIS) + horaires
-- Contenu : bonjour, annonce date + horaires, démo si présente, adresse depuis `mil.lieu`, tarif si présent, texte conseils débutants
-
-### ✅ `syncPublicationsMilongaDate(milIdx, dateStr, sai)` — async
-Filtres JSONB : `milongaDate eq dateStr`, `milongaId eq mil.id`, `autoGenMilonga eq 'true'`. Met à jour titre + contenu + extrait + image sur toutes les pubs trouvées.
-
-### ✅ `syncToutesPublicationsMilongas(sai)` — async
-Itère `MILONGAS[mi].dates[di]` → appelle `_genContenuMilonga` + même filtres JSONB. Appelée depuis `sauverMilongaInfo` après chaque sauvegarde d'info milonga.
-
-### ✅ `genererPublicationsMilongas(sai)` — async
-- Bouton "🎶 Générer les publications milongas [saison]" dans `renderPublications()` (visible à partir du 15 mai, sous le bouton stages)
-- Handler click : `case 'generer-pub-milongas': genererPublicationsMilongas(saisonActive()); break;`
-- Génère 2 pubs par date future : J-14 et J-3
-- Anti-doublon : clé `milongaId + '_' + milongaDate + '_' + jAvant` dans `adminData.publications`
-- `publiee: true` (publications directement visibles dans l'espace élève)
-
-### Structure `donnees` des publications milonga auto-générées
-```javascript
-{
-  cat: 'milonga',
-  extrait: 'SAMEDI 14 MARS 17h30-23h30',
-  image: 'https://res.cloudinary.com/...' || '',
-  video: '',
-  dateProgrammee: '2026-03-01T08:00:00.000Z',   // J-14
-  datesProgrammees: ['2026-03-01T08:00:00.000Z'],
-  cours: ['paris-deb', 'paris-int', 'vincennes-deb', 'vincennes-int'],
-  autoGenMilonga: true,
-  milongaId: 'dolce-vita',   // mil.id
-  milongaDate: '2026-03-14', // date de la milonga
-  jAvant: 14                 // 14 ou 3
-  // pas de lienInscription — les milongas n'ont pas de formulaire d'inscription
-}
-```
-
-### Règle : aucune valeur hardcodée
-Tout vient de `MILONGAS` (chargé depuis `tev_milongas_<sai>` en Supabase via `chargerMilongas()`/`sauverMilongas()`). Ne jamais hardcoder nom, adresse, tarifs ou horaires dans les fonctions de génération.
-
-## Session 2026-05-15 (suite) — Publications milongas auto-générées
-
-### ✅ `publiee: true` pour publications stages auto-générées
-- `genererPublicationsStages()` : `publiee: false` → `publiee: true` — les publications sont directement visibles dans l'espace élève à leur date programmée
-
-### ✅ Champ Tarif par milonga (Paramètres → Milongas → Info)
-- Champ texte libre `mil.tarif` (ex : `"10€ / 5€ adhérents"`) dans `_renderMilongaInfoContent`, ID `mil-tarif-<idx>`
-- `sauverMilongaInfo(idx)` : lit `((gel('mil-tarif-'+idx)||{}).value||'').trim()` → `mil.tarif`
-- Après `sauverMilongas()` : appelle `syncToutesPublicationsMilongas(sai)` pour re-générer le contenu de toutes les publications milonga
-
-### ✅ Champs Démonstration + Tarif par date de milonga (bouton `[···]`)
-- `var milDateDetailsOpen = {}` : dict `'milIdx-dateStr' → bool` pour les collapsibles par date
-- Bouton `[···]` inséré AVANT le bouton ✕ dans chaque date row de `_renderMilongaDatesContent`
-  - Couleur : `var(--text)` (blanc) par défaut, `var(--gold)` si `detOpen || hasDemo || hasTarifD`
-  - `margin-left:20px` sur le bouton ✕ pour séparer visuellement les deux boutons
-- Bloc collapsible si `milDateDetailsOpen[idx+'-'+d.date]` :
-  - Input Démonstration : id `mil-demo-<idx>-<dateNoHyphens>`, value `d.demonstration||''`
-  - Input Tarif date : id `mil-tarif-d-<idx>-<dateNoHyphens>`, value `d.tarif||''`, placeholder `'laisse vide = tarif milonga'`
-  - Bouton `💾 Enregistrer` : data-action=`sauver-mil-date-details`
-- `sauverDatasMilongaDate(milIdx, dateStr)` : lit les inputs, sauvegarde `d.demonstration` et `d.tarif` (ou delete si vide) → `sauverMilongas()` → `syncPublicationsMilongaDate(milIdx, dateStr, sai)` → `renderTab()`
-- Handlers click : `toggle-mil-date-details`, `sauver-mil-date-details`
-- **Règle** : ne jamais utiliser `|| mil.horaire_xxx` dans ces saves — toujours `.value.trim()` direct
-
-### ✅ `_genContenuMilonga(mil, dateObj)` — pure function
-Retourne `{titre, extrait, contenu, image}`. Sources (aucune valeur hardcodée) :
-- `hdeb`/`hfin` : `dateObj.horaire_debut/fin || mil.horaire_debut/fin || ''`
-- `tarif` : `dateObj.tarif || mil.tarif || ''` (override par date, fallback milonga)
-- `demo` : `dateObj.demonstration || ''`
-- `image` : `dateObj.image_url || ''`
-- Titre : `'Milonga « ' + mil.nom + ' »'`
-- Extrait : date longue (JOUR JJ MOIS) + horaires
-- Contenu : bonjour, annonce date + horaires, ligne "Démonstration de [demo]" (seulement si non vide), espérons vous croiser, adresse depuis `mil.lieu`, tarif si présent, paragraphe conseils débutants
-
-### ✅ `syncPublicationsMilongaDate(milIdx, dateStr, sai)` — async
-Filtres JSONB : `milongaDate eq dateStr`, `milongaId eq mil.id`, `autoGenMilonga eq 'true'`. Met à jour titre + contenu + extrait + image. Toast "✅ N publication(s) mise(s) à jour".
-
-### ✅ `syncToutesPublicationsMilongas(sai)` — async
-Itère `MILONGAS[mi].dates[di]` → `_genContenuMilonga` + mêmes filtres JSONB → UPDATE. Appelée depuis `sauverMilongaInfo` après chaque sauvegarde d'info milonga.
-
-### ✅ `genererPublicationsMilongas()` — async
-- Bouton **"🎶 Générer les publications milongas [saiNext]"** dans `renderPublications()`, visible à partir du **15 mai** (même garde que stages : `today() >= y2 + '-05-15'`)
+- Bouton **"🎶 Générer les publications milongas [saiNext]"** dans l'onglet Publications, visible à partir du **15 mai** (même garde que stages)
 - Charge les milongas de **la saison prochaine** depuis Supabase : `tev_milongas_<saiNext>` (pas le `MILONGAS` courant)
 - Filtre : `dateAppartientSaison(dateObj.date, saiNext)` uniquement
-- Génère 2 pubs par date future : J-14 et J-3
+- Génère **2 publications par date de milonga** : J-14 et J-3
 - Anti-doublon : clé `milongaId + '_' + milongaDate + '_' + jAvant` dans `adminData.publications`
-- `publiee: true` (directement visibles à leur date programmée)
+- `publiee: true` — directement visibles à leur date programmée
 
-### Structure `donnees` des publications milonga auto-générées
+**Structure `donnees` des publications milonga auto-générées :**
 ```javascript
 {
   cat: 'milonga',
@@ -1811,13 +1742,37 @@ Itère `MILONGAS[mi].dates[di]` → `_genContenuMilonga` + mêmes filtres JSONB 
   datesProgrammees: ['2026-03-01T08:00:00.000Z'],
   cours: ['paris-deb', 'paris-int', 'vincennes-deb', 'vincennes-int'],
   autoGenMilonga: true,
-  milongaId: 'dolce-vita',
-  milongaDate: '2026-03-14',
-  jAvant: 14                                      // 14 ou 3
+  milongaId: 'dolce-vita',   // mil.id
+  milongaDate: '2026-03-14', // YYYY-MM-DD de la milonga
+  jAvant: 14                 // 14 ou 3
+  // pas de lienInscription — les milongas n'ont pas de formulaire d'inscription
 }
 ```
 
-### Auto-sync hooks milongas
+### ✅ `_genContenuMilonga(mil, dateObj)` — pure function
+
+Retourne `{titre, extrait, contenu, image}`. Sources (zéro hardcodé) :
+- `hdeb`/`hfin` : `dateObj.horaire_debut/fin || mil.horaire_debut/fin || ''`
+- `tarif` : `dateObj.tarif || mil.tarif || ''` (override par date, fallback milonga)
+- `demo` : `dateObj.demonstration || ''`
+- `image` : `dateObj.image_url || ''`
+- Titre : `'Milonga « ' + mil.nom + ' »'`
+- Extrait : date longue (JOUR JJ MOIS) + horaires
+- Contenu : bonjour, annonce date + horaires, ligne "Démonstration de [demo]" (seulement si non vide), adresse depuis `mil.lieu`, tarif si présent, paragraphe conseils débutants
+
+### ✅ Auto-sync contenu publications milongas
+
+```javascript
+async function syncPublicationsMilongaDate(milIdx, dateStr, sai) {
+  // Filtres JSONB: milongaDate eq dateStr, milongaId eq mil.id, autoGenMilonga eq 'true'
+  // UPDATE titre + contenu + extrait + image
+}
+async function syncToutesPublicationsMilongas(sai) {
+  // Itère MILONGAS[mi].dates[di] → _genContenuMilonga → mêmes filtres JSONB
+}
+```
+
+**Auto-sync hooks milongas :**
 | Déclencheur | Fonction appelée |
 |---|---|
 | `sauverMilongaInfo` (nom, horaires, tarif milonga) | `syncToutesPublicationsMilongas(sai)` |
@@ -1825,27 +1780,27 @@ Itère `MILONGAS[mi].dates[di]` → `_genContenuMilonga` + mêmes filtres JSONB 
 | `_uploadImageMilongaDate` | `syncPublicationsMilongaDate(milIdx, dateStr, sai)` |
 | `supprimerImageMilongaDate` | `syncPublicationsMilongaDate(milIdx, dateStr, sai)` |
 
-### Visibilité dans l'admin Publications (milongas = même logique que stages)
-- Générées en mai 2026 (saison 2025-2026) pour les milongas 2026-2027
+### Visibilité dans l'admin Publications — stages et milongas
+
+- Générées en mai 2026 (saison 2025-2026) pour la saison 2026-2027
 - Visibles en admin **2025-2026** : via filtre `saiNext` dans `renderPublications()`
 - Visibles en admin **2026-2027** : via filtre `sai` (saison active)
 - `renderPublications()` affiche toujours `saisonActive()` ET `saisonSuivante()` → les publications de la prochaine saison apparaissent dans les deux vues
 
-### Règle : aucune valeur hardcodée
-Tout vient de `MILONGAS` (chargé depuis `tev_milongas_<sai>` en Supabase via `chargerMilongas()`/`sauverMilongas()`). Ne jamais hardcoder nom, adresse, tarifs ou horaires dans les fonctions de génération.
+### Règle : aucune valeur hardcodée dans les fonctions de génération
 
-## Session 2026-05-15 (suite 2) — Fix scroll Publications
+Tout vient des paramètres Supabase. `_genContenuStage` et `_genContenuMilonga` sont des pure functions sans constantes hardcodées. Ne jamais réintroduire de montants, horaires ou adresses fixes dans ces fonctions.
 
 ### ✅ Fix scroll Publications — guard `_renderTabSiPasFormulaire`
 
-**Problème** : l'onglet Publications se remettait au début de la page toutes les 15s car `_renderTabSiPasFormulaire()` ne le protégeait que si `pub-ed` contenait du contenu (formulaire d'édition inline ouvert). En dehors d'une édition, le polling re-rendait tout le DOM → scroll reset.
+**Problème** : l'onglet Publications se remettait en haut de page toutes les 15s — le polling re-rendait tout le DOM même sans édition ouverte.
 
 **Fix** :
 ```javascript
 // AVANT :
-if (currentTab === 'publications' && gel('pub-ed') && gel('pub-ed').innerHTML.trim()) return; // formulaire pub ouvert
+if (currentTab === 'publications' && gel('pub-ed') && gel('pub-ed').innerHTML.trim()) return;
 // APRÈS :
-if (currentTab === 'publications') return; // consultation publications — ne pas interrompre avec le polling 15s
+if (currentTab === 'publications') return; // ne pas interrompre avec le polling 15s
 ```
 
-**Règle** : l'onglet Publications ne se re-rend jamais automatiquement via le polling. L'admin doit rafraîchir manuellement ou naviguer vers un autre onglet et revenir pour voir les nouvelles données. Les publications sont des données peu volatiles (pas de polling nécessaire).
+**Règle** : l'onglet Publications ne se re-rend jamais automatiquement. L'admin navigue vers un autre onglet et revient pour voir les nouvelles données. Publications = données peu volatiles, pas de polling nécessaire.
