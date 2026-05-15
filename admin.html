@@ -10370,12 +10370,22 @@ function voirPub(idx) {
   gel('pv-body').textContent=p.contenu||p.extrait||'';
   var pvBtn=gel('pv-btn'); pvBtn.innerHTML='';
   var isStage=p.cat==='stage'||p.autoGenStage===true||(p.donnees&&p.donnees.cat==='stage');
+  var isMilonga=p.cat==='milonga'||p.autoGenMilonga===true||(p.donnees&&p.donnees.cat==='milonga');
   if(isStage){
     var pvBtnEl=document.createElement('button');
     pvBtnEl.textContent="S'inscrire →";
     pvBtnEl.style.cssText='display:block;width:100%;text-align:center;background:var(--gold);color:#1a1208;font-weight:700;font-size:15px;padding:13px 20px;border-radius:8px;letter-spacing:.3px;border:none;cursor:pointer;font-family:inherit;';
     pvBtnEl.onclick=function(){fermerPubView();switchTab('stages');};
     pvBtn.appendChild(pvBtnEl);
+  } else if(isMilonga){
+    var milId=p.milongaId||(p.donnees&&p.donnees.milongaId)||'';
+    var milColor='#ff8c00';
+    (MILONGAS||[]).forEach(function(m){if(m.id===milId&&m.color)milColor=m.color;});
+    var pvMilBtn=document.createElement('button');
+    pvMilBtn.textContent='Je pense venir →';
+    pvMilBtn.style.cssText='display:block;width:100%;text-align:center;background:'+milColor+';color:#000;font-weight:700;font-size:15px;padding:13px 20px;border-radius:8px;letter-spacing:.3px;border:none;cursor:default;font-family:inherit;opacity:.85;';
+    pvMilBtn.title='Aperçu uniquement — bouton actif dans l\'espace élève';
+    pvBtn.appendChild(pvMilBtn);
   }
   var m=gel('pub-view-modal');m.style.display='flex';m.scrollTop=0;
 }
