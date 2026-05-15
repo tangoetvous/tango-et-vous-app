@@ -344,6 +344,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <div id="pv-date" style="font-size:11px;color:#9a7f5a;margin-bottom:16px;"></div>
     <div id="pv-body" style="font-size:17px;color:#000;line-height:1.75;white-space:pre-wrap;font-weight:600;"></div>
     <div id="pv-btn" style="margin-top:20px;"></div>
+    <div id="pv-tarif" style="font-size:17px;color:#000;line-height:1.75;white-space:pre-wrap;font-weight:600;margin-top:16px;"></div>
   </div>
 </div>
 
@@ -10367,10 +10368,15 @@ function voirPub(idx) {
     }
     gel('pv-inner').style.paddingTop=hasMedia?'20px':'52px';
   })();
-  gel('pv-body').textContent=p.contenu||p.extrait||'';
-  var pvBtn=gel('pv-btn'); pvBtn.innerHTML='';
   var isStage=p.cat==='stage'||p.autoGenStage===true||(p.donnees&&p.donnees.cat==='stage');
   var isMilonga=p.cat==='milonga'||p.autoGenMilonga===true||(p.donnees&&p.donnees.cat==='milonga');
+  var contenu=p.contenu||p.extrait||'';
+  var splitMarker=isStage?'\nTarifs :\n':isMilonga?'\nTarif :\n':null;
+  var bodyPart1=contenu, bodyPart2='';
+  if(splitMarker){var si=contenu.indexOf(splitMarker);if(si>=0){bodyPart1=contenu.slice(0,si);bodyPart2=contenu.slice(si+1);}}
+  gel('pv-body').textContent=bodyPart1;
+  gel('pv-tarif').textContent=bodyPart2;
+  var pvBtn=gel('pv-btn'); pvBtn.innerHTML='';
   if(isStage){
     var pvBtnEl=document.createElement('button');
     pvBtnEl.textContent="S'inscrire →";

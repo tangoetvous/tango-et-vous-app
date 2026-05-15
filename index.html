@@ -2932,7 +2932,15 @@
     $('pub-modal-cat').textContent   = p.cat || '';
     $('pub-modal-titre').textContent = p.titre || '';
     $('pub-modal-date').textContent  = formatDate(p.dateProgrammee || p.date || '');
-    $('pub-modal-body').textContent  = p.contenu || p.extrait || '';
+    const isStageEarly = p.cat === 'stage' || p.autoGenStage === true || (p.donnees && p.donnees.cat === 'stage');
+    const isMilongaEarly = p.cat === 'milonga' || p.autoGenMilonga === true || (p.donnees && p.donnees.cat === 'milonga');
+    const contenuFull = p.contenu || p.extrait || '';
+    const splitMrk = isStageEarly ? '\nTarifs :\n' : isMilongaEarly ? '\nTarif :\n' : null;
+    let bodyPart1 = contenuFull, bodyPart2 = '';
+    if (splitMrk) { const si = contenuFull.indexOf(splitMrk); if (si >= 0) { bodyPart1 = contenuFull.slice(0, si); bodyPart2 = contenuFull.slice(si + 1); } }
+    $('pub-modal-body').textContent  = bodyPart1;
+    const tarifDiv = $('pub-modal-tarif');
+    if (tarifDiv) tarifDiv.textContent = bodyPart2;
     const media = $('pub-modal-media');
     const modal = $('pub-modal');
     if (media) {
@@ -2958,10 +2966,8 @@
     const btnDiv = $('pub-modal-btn');
     if (btnDiv) {
       btnDiv.innerHTML = '';
-      const isStage = p.cat === 'stage' || p.autoGenStage === true
-        || (p.donnees && p.donnees.cat === 'stage');
-      const isMilonga = p.cat === 'milonga' || p.autoGenMilonga === true
-        || (p.donnees && p.donnees.cat === 'milonga');
+      const isStage = isStageEarly;
+      const isMilonga = isMilongaEarly;
       if (isStage) {
         const btn = document.createElement('button');
         btn.className = 'pub-modal-inscr-btn';
@@ -4932,6 +4938,7 @@ a{color:var(--gold);text-decoration:none;}
       <div class="pub-modal-date" id="pub-modal-date"></div>
       <div class="pub-modal-body" id="pub-modal-body"></div>
       <div id="pub-modal-btn"></div>
+      <div class="pub-modal-body" id="pub-modal-tarif" style="margin-top:8px;"></div>
     </div>
   </div>
 
