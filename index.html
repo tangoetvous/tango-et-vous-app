@@ -2960,6 +2960,8 @@
       btnDiv.innerHTML = '';
       const isStage = p.cat === 'stage' || p.autoGenStage === true
         || (p.donnees && p.donnees.cat === 'stage');
+      const isMilonga = p.cat === 'milonga' || p.autoGenMilonga === true
+        || (p.donnees && p.donnees.cat === 'milonga');
       if (isStage) {
         const btn = document.createElement('button');
         btn.className = 'pub-modal-inscr-btn';
@@ -2970,6 +2972,44 @@
           switchTab('stages');
         };
         btnDiv.appendChild(btn);
+      } else if (isMilonga) {
+        const milDate = p.milongaDate || (p.donnees && p.donnees.milongaDate) || '';
+        const milId   = p.milongaId   || (p.donnees && p.donnees.milongaId)   || '';
+        let milNom = '', milColor = '#ff8c00';
+        if (MILONGAS_OBJ) {
+          const mil = MILONGAS_OBJ.find(m => m.id === milId);
+          if (mil) { milNom = mil.nom || ''; milColor = mil.color || milColor; }
+        }
+        const todayS = new Date().toLocaleDateString('sv');
+        if (milDate && milDate >= todayS) {
+          const elv = (eleveData && eleveData.eleve) || {};
+          const emailLow = (elv.email || '').toLowerCase().trim();
+          const isComing = _loadMilPresences().some(pr =>
+            pr.date === milDate && (pr.email||'').toLowerCase() === emailLow);
+          window._pubMil = { date: milDate, id: milId, nom: milNom, color: milColor };
+          window._pubMilVenir = function() {
+            if (!window._pubMil) return;
+            window._milJeViens(window._pubMil.date, window._pubMil.id, window._pubMil.nom);
+            window._renderPubMilBtn(true);
+          };
+          window._pubMilAnnuler = function() {
+            if (!window._pubMil) return;
+            window._milAnnuler(window._pubMil.date, window._pubMil.id, window._pubMil.nom);
+            window._renderPubMilBtn(false);
+          };
+          window._renderPubMilBtn = function(coming) {
+            const bd = $('pub-modal-btn');
+            if (!bd || !window._pubMil) return;
+            const mc = window._pubMil.color;
+            bd.innerHTML = coming
+              ? '<div style="display:flex;gap:8px;align-items:center;">'
+                + '<span style="flex:1;display:block;text-align:center;background:'+mc+';color:#000;font-weight:700;font-size:15px;padding:13px 16px;border-radius:8px;">J\'y vais !</span>'
+                + '<button onclick="window._pubMilAnnuler()" style="padding:13px 14px;font-size:13px;font-weight:600;border-radius:8px;border:1.5px solid rgba(0,0,0,.15);cursor:pointer;background:transparent;color:#444;font-family:inherit;">Annuler</button>'
+                + '</div>'
+              : '<button onclick="window._pubMilVenir()" style="display:block;width:100%;text-align:center;background:'+mc+';color:#000;font-weight:700;font-size:15px;padding:13px 20px;border-radius:8px;letter-spacing:.3px;border:none;cursor:pointer;font-family:inherit;">Je pense venir →</button>';
+          };
+          window._renderPubMilBtn(isComing);
+        }
       }
     }
     $('pub-modal').classList.add('open');
