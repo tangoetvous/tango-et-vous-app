@@ -1834,24 +1834,7 @@ Itère `MILONGAS[mi].dates[di]` → `_genContenuMilonga` + mêmes filtres JSONB 
 ### Règle : aucune valeur hardcodée
 Tout vient de `MILONGAS` (chargé depuis `tev_milongas_<sai>` en Supabase via `chargerMilongas()`/`sauverMilongas()`). Ne jamais hardcoder nom, adresse, tarifs ou horaires dans les fonctions de génération.
 
-## Session 2026-05-15 (suite 2) — Section Articles dans Paramètres + fix scroll Publications
-
-### ✅ Section "Articles" dans Paramètres
-
-- Nouvelle section collapsible **"📝 Articles"** dans `renderParametres()`, rendue par `_renderArticlesSection()`
-- Champs du formulaire :
-  - **Titre** : `input#art-titre` (required)
-  - **Résumé** : `textarea#art-resume` (1-2 phrases, affiché dans la liste des publications)
-  - **Contenu** : `textarea#art-contenu` (corps complet de l'article)
-  - **Date de publication** : `input#art-date` (type date, default = aujourd'hui)
-  - **Visuel** : `input#art-img` (type file, upload Cloudinary) — bouton "📷 Choisir une image", prévisualisation 80×80 ou placeholder si absent
-- Bouton **"📝 Publier l'article"** : data-action=`publier-article`
-- Variable globale `_articleImageUrl = ''` : tient l'URL Cloudinary pendant la saisie du formulaire
-- `_uploadImageArticle(input)` : upload vers Cloudinary (`upload_preset:'tango_uploads'`, cloud `dnggqa2kw`) → `_articleImageUrl = url` → toast + prévisualisation
-- `publierArticle()` async : INSERT dans `publications` avec `cat:'article'`, `publiee:true`, `donnees:{image, extrait (= résumé), dateProgrammee, datesProgrammees, cours:['paris-deb','paris-int','vincennes-deb','vincennes-int']}` → toast + `chargerDonnees()`
-- En dessous du formulaire : liste des 5 derniers articles (`adminData.publications.filter(cat==='article')`, triés par date desc)
-- Handler click : `case 'publier-article': publierArticle(); break;`
-- Handler change : `if (e.target.id==='art-img') _uploadImageArticle(e.target);`
+## Session 2026-05-15 (suite 2) — Fix scroll Publications
 
 ### ✅ Fix scroll Publications — guard `_renderTabSiPasFormulaire`
 
