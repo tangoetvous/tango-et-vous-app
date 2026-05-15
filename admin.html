@@ -343,6 +343,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
     <div id="pv-titre" style="font-size:20px;font-weight:700;color:#1a1208;line-height:1.35;margin-bottom:4px;"></div>
     <div id="pv-date" style="font-size:11px;color:#9a7f5a;margin-bottom:16px;"></div>
     <div id="pv-body" style="font-size:17px;color:#000;line-height:1.75;white-space:pre-wrap;font-weight:600;"></div>
+    <div id="pv-btn" style="margin-top:20px;"></div>
   </div>
 </div>
 
@@ -10367,6 +10368,11 @@ function voirPub(idx) {
     gel('pv-inner').style.paddingTop=hasMedia?'20px':'52px';
   })();
   gel('pv-body').textContent=p.contenu||p.extrait||'';
+  var pvBtn=gel('pv-btn'); pvBtn.innerHTML='';
+  var isStage=p.cat==='stage'||p.autoGenStage===true||(p.donnees&&p.donnees.cat==='stage');
+  if(isStage){
+    pvBtn.innerHTML='<div style="display:block;text-align:center;background:var(--gold);color:#1a1208;font-weight:700;font-size:15px;padding:13px 20px;border-radius:8px;letter-spacing:.3px;">S\'inscrire →</div>';
+  }
   var m=gel('pub-view-modal');m.style.display='flex';m.scrollTop=0;
 }
 function fermerPubView() {
