@@ -5151,6 +5151,9 @@ function handleAction(action, btn) {
     case 'nouvelle-pub':
       ouvrirPub(null);
       break;
+    case 'generer-pub-stages':
+      genererPublicationsStages();
+      break;
     case 'editer-pub':
       ouvrirPub((adminData.publications||[])[parseInt(btn.dataset.idx)]);
       break;
@@ -9808,6 +9811,163 @@ function renderMilongaPresences() {
   return h;
 }
 
+async function genererPublicationsStages() {
+  var saiNext = saisonSuivante();
+  var saiCur  = saisonActive();
+  var y2 = parseInt(saiCur.split('-')[1]);
+  var dateSeuil = y2 + '-05-15';
+  if (today() < dateSeuil) {
+    afficherToast('⚠️ Génération disponible à partir du 15 mai');
+    return;
+  }
+
+  afficherToast('⏳ Chargement des stages ' + saiNext + '…');
+
+  // Charger les stages et paramètres de la saison suivante depuis Supabase
+  var [stagesRes, paramsRes] = await Promise.all([
+    TEV.client.from('parametres').select('valeur').eq('cle', 'tev_dates_stages_' + saiNext).maybeSingle(),
+    TEV.client.from('parametres').select('valeur').eq('cle', 'tev_params_stages_' + saiNext).maybeSingle()
+  ]);
+  var stagesData = stagesRes && stagesRes.data && stagesRes.data.valeur && stagesRes.data.valeur.stages || [];
+  if (!stagesData.length) {
+    afficherToast('⚠️ Aucun stage trouvé pour ' + saiNext + ' — ajoutez les dates dans Paramètres → Stages');
+    return;
+  }
+  var paramsVal = paramsRes && paramsRes.data && paramsRes.data.valeur || {};
+  var defHor = Object.assign({}, DEFAULTS_HORAIRES.stages, paramsVal.horaires || {});
+  var defTar = Object.assign({}, TARIFS_DEFAUT, paramsVal.tarifs || {});
+  var defAdr = paramsVal.adresse || {};
+
+  // Clés déjà générées (depuis adminData en mémoire — évite un appel Supabase supplémentaire)
+  var existKeys = new Set();
+  (adminData.publications || []).forEach(function(p) {
+    if (p.autoGenStage && p.stageDate && p.jAvant != null) existKeys.add(p.stageDate + '_' + p.jAvant);
+  });
+
+  // Helpers
+  function parseH(s) {
+    if (!s) return 9999;
+    var m = (s + '').match(/(\d+)h(\d*)/i);
+    return m ? parseInt(m[1]) * 60 + (parseInt(m[2]) || 0) : 9999;
+  }
+  function fmtH(s) {
+    return (s || '').toUpperCase().replace(/H00$/, 'H').replace(/H0(\b|$)/, 'H');
+  }
+  function getTarif(k) {
+    var v = defTar[k]; return v !== undefined ? v : (TARIFS_DEFAUT[k] !== undefined ? TARIFS_DEFAUT[k] : '?');
+  }
+
+  var toInsert = [];
+
+  stagesData.forEach(function(st) {
+    st = _migrateStageItem(st);
+    var hor = Object.assign({}, defHor, st.horaires || {});
+    var tar = Object.assign({}, defTar, st.tarifs || {});
+    var adr = st.adresse && (st.adresse.nom || st.adresse.rue) ? st.adresse : defAdr;
+
+    // Créneaux triés par heure
+    var slots = [];
+    if (st.technique !== false) {
+      slots.push({lbl: 'TECHNIQUE LEADER & FOLLOWER', deb: hor.tech_deb || '', fin: hor.tech_fin || ''});
+    }
+    var n = st.nStages || 2;
+    for (var i = 0; i < n; i++) {
+      var k = 's' + (i + 1);
+      slots.push({
+        lbl: (st.themes && st.themes[i] && st.themes[i].trim() ? st.themes[i] : 'Créneau ' + (i + 1)).toUpperCase(),
+        deb: hor[k + '_deb'] || '',
+        fin: hor[k + '_fin'] || ''
+      });
+    }
+    slots.sort(function(a, b) { return parseH(a.deb) - parseH(b.deb); });
+
+    var startTime = fmtH(slots.length ? slots[0].deb : '');
+    var endTime   = fmtH(slots.length ? slots[slots.length - 1].fin : '');
+
+    // Formatage de la date
+    var d = new Date(st.date + 'T12:00:00');
+    var jourUp  = DOW_LONG[d.getDay()].toUpperCase();
+    var moisUp  = MOIS_FR[d.getMonth()].toUpperCase();
+    var moisTit = MOIS_FR[d.getMonth()];
+    var dayNum  = d.getDate();
+
+    // Titre
+    var titre = 'STAGE DU ' + jourUp + ' ' + dayNum + ' ' + moisUp + ' ' + startTime + '-' + endTime;
+
+    // Résumé : thèmes uniquement (pas la technique)
+    var themes = (st.themes || []).filter(function(t) { return t && t.trim(); });
+    var extrait = themes.map(function(t) { return t.toUpperCase(); }).join(' - ');
+
+    // Contenu
+    var introDate = jourUp + ' ' + dayNum + ' ' + moisUp;
+    var contenu = 'Bonjour à tous,\n\nNotre Stage du mois de ' + moisTit + ' aura lieu le '
+      + introDate + ' de ' + startTime + ' à ' + endTime + '\n\n';
+    slots.forEach(function(sl) {
+      contenu += fmtH(sl.deb) + '-' + fmtH(sl.fin) + ' ' + sl.lbl + '\n';
+    });
+    contenu += '\nVous pouvez vous inscrire seul.e ou avec un.e partenaire, '
+      + 'nous nous chargeons de garantir la parité guideur.se.s/guidé.e.s.\n\n';
+    contenu += 'Le Lieu :\n';
+    if (adr && (adr.nom || adr.rue)) {
+      if (adr.nom) contenu += adr.nom + '\n';
+      if (adr.rue) contenu += adr.rue + '\n';
+      if (adr.transport) contenu += adr.transport + '\n';
+    } else {
+      contenu += '(lieu à préciser)\n';
+    }
+    contenu += '\nTarifs :\n';
+    if (st.technique !== false) {
+      contenu += 'TECHNIQUE > ' + getTarif('stage_technique') + '€\n';
+    }
+    for (var ni = 1; ni <= n; ni++) {
+      contenu += ni + ' STAGE' + (ni > 1 ? 'S' : '') + ' > ' + getTarif('stage_' + ni) + '€\n';
+      if (st.technique !== false && ni >= 2) {
+        contenu += ni + ' STAGES + TECHNIQUE > ' + getTarif('stage_' + ni + '_tech') + '€\n';
+      }
+    }
+    contenu += '\n👉 S\'inscrire : https://app.tangoetvous.fr/stages-pwa.html';
+
+    // 3 publications : J-20, J-14, J-7
+    [20, 14, 7].forEach(function(jAvant) {
+      if (existKeys.has(st.date + '_' + jAvant)) return;
+      var pubD = new Date(st.date + 'T12:00:00');
+      pubD.setDate(pubD.getDate() - jAvant);
+      var pubISO = pubD.toISOString().slice(0, 10) + 'T08:00:00.000Z';
+      toInsert.push({
+        titre: titre,
+        contenu: contenu,
+        publiee: false,
+        donnees: {
+          cat: 'stage',
+          extrait: extrait,
+          image: st.image_url || '',
+          video: '',
+          dateProgrammee: pubISO,
+          datesProgrammees: [pubISO],
+          cours: ['paris-deb', 'paris-int', 'vincennes-deb', 'vincennes-int'],
+          autoGenStage: true,
+          stageDate: st.date,
+          jAvant: jAvant
+        }
+      });
+    });
+  });
+
+  if (!toInsert.length) {
+    afficherToast('✅ Toutes les publications de stages ' + saiNext + ' sont déjà générées');
+    return;
+  }
+
+  var res = await Promise.resolve(TEV.client.from('publications').insert(toInsert)).catch(function(e){ return {error:e}; });
+  if (res && res.error) {
+    afficherToast('❌ Erreur : ' + (res.error.message || 'échec insert'));
+    return;
+  }
+  afficherToast('✅ ' + toInsert.length + ' publication' + (toInsert.length > 1 ? 's' : '') + ' générée' + (toInsert.length > 1 ? 's' : '') + ' pour les stages ' + saiNext);
+  await chargerDonnees();
+  renderTab();
+}
+
 function renderPublications() {
   var sai = saisonActive();
   var saiNext = saisonSuivante();
@@ -9824,7 +9984,15 @@ function renderPublications() {
     // Pas de date programmée → fallback sur created_at
     return dateAppartientSaison(((p.created_at||today())).slice(0,10), sai);
   });
-  var h='<button class="btn btn-gold" data-action="nouvelle-pub" style="width:100%;margin-bottom:14px;">✏️ Nouvelle publication</button><div id="pub-ed"></div>';
+  var y2Gen = parseInt(sai.split('-')[1]);
+  var showGenBtn = today() >= (y2Gen + '-05-15');
+  var h='<button class="btn btn-gold" data-action="nouvelle-pub" style="width:100%;margin-bottom:8px;">✏️ Nouvelle publication</button>';
+  if (showGenBtn) {
+    h += '<button class="btn btn-ghost" data-action="generer-pub-stages"'
+      +' style="width:100%;margin-bottom:14px;border:1px solid var(--gold);color:var(--gold);">'
+      +'🗓 Générer les publications stages ' + saiNext + '</button>';
+  }
+  h += '<div id="pub-ed"></div>';
   if(!pubs.length)return h+'<div class="empty-state">Aucune publication pour cette saison.</div>';
   pubs.forEach(function(p){
     var i = allPubs.indexOf(p); // index original pour les actions
