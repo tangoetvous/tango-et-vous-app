@@ -5214,7 +5214,7 @@ function handleAction(action, btn) {
       genererPublicationsStages();
       break;
     case 'generer-pub-milongas':
-      genererPublicationsMilongas(saisonActive());
+      genererPublicationsMilongas();
       break;
     case 'editer-pub':
       ouvrirPub((adminData.publications||[])[parseInt(btn.dataset.idx)]);
@@ -10124,12 +10124,27 @@ async function syncToutesPublicationsMilongas(sai) {
   if (synced) afficherToast('✅ ' + synced + ' publication' + (synced > 1 ? 's' : '') + ' milonga mise' + (synced > 1 ? 's' : '') + ' à jour');
 }
 
-async function genererPublicationsMilongas(sai) {
-  if (!MILONGAS || !MILONGAS.length) {
-    afficherToast('⚠️ Aucune milonga configurée dans Paramètres');
+async function genererPublicationsMilongas() {
+  var saiCur  = saisonActive();
+  var saiNext = saisonSuivante();
+  var y2 = parseInt(saiCur.split('-')[1]);
+  var dateSeuil = y2 + '-05-15';
+  if (today() < dateSeuil) {
+    afficherToast('⚠️ Génération disponible à partir du 15 mai');
     return;
   }
-  afficherToast('⏳ Génération des publications milongas…');
+
+  afficherToast('⏳ Chargement des milongas ' + saiNext + '…');
+
+  // Charger les milongas de la saison prochaine depuis Supabase
+  var milRes = await Promise.resolve(
+    TEV.client.from('parametres').select('valeur').eq('cle', 'tev_milongas_' + saiNext).maybeSingle()
+  ).catch(function(){ return null; });
+  var milongas = milRes && milRes.data && milRes.data.valeur && milRes.data.valeur.milongas || [];
+  if (!milongas.length) {
+    afficherToast('⚠️ Aucune milonga trouvée pour ' + saiNext + ' — configurez les milongas dans Paramètres pour cette saison');
+    return;
+  }
 
   // Clés déjà générées (depuis adminData en mémoire)
   var existKeys = new Set();
@@ -10140,11 +10155,10 @@ async function genererPublicationsMilongas(sai) {
   });
 
   var toInsert = [];
-  var tod = today();
 
-  MILONGAS.forEach(function(mil) {
+  milongas.forEach(function(mil) {
     (mil.dates||[]).forEach(function(dateObj) {
-      if (dateObj.date < tod) return; // ignorer les dates passées
+      if (!dateAppartientSaison(dateObj.date, saiNext)) return; // saison suivante uniquement
       var c = _genContenuMilonga(mil, dateObj);
       [14, 3].forEach(function(jAvant) {
         if (existKeys.has(mil.id + '_' + dateObj.date + '_' + jAvant)) return;
@@ -10174,7 +10188,7 @@ async function genererPublicationsMilongas(sai) {
   });
 
   if (!toInsert.length) {
-    afficherToast('✅ Toutes les publications milongas sont déjà générées');
+    afficherToast('✅ Toutes les publications milongas ' + saiNext + ' sont déjà générées');
     return;
   }
   var res = await Promise.resolve(TEV.client.from('publications').insert(toInsert)).catch(function(e){ return {error:e}; });
@@ -10182,7 +10196,7 @@ async function genererPublicationsMilongas(sai) {
     afficherToast('❌ Erreur : ' + (res.error.message || 'échec insert'));
     return;
   }
-  afficherToast('✅ ' + toInsert.length + ' publication' + (toInsert.length > 1 ? 's' : '') + ' milonga générée' + (toInsert.length > 1 ? 's' : ''));
+  afficherToast('✅ ' + toInsert.length + ' publication' + (toInsert.length > 1 ? 's' : '') + ' générée' + (toInsert.length > 1 ? 's' : '') + ' pour les milongas ' + saiNext);
   await chargerDonnees();
   renderTab();
 }
@@ -10293,7 +10307,7 @@ function renderPublications() {
       +'🗓 Générer les publications stages ' + saiNext + '</button>';
     h += '<button class="btn btn-ghost" data-action="generer-pub-milongas"'
       +' style="width:100%;margin-bottom:14px;border:1px solid var(--gold);color:var(--gold);font-size:12px;">'
-      +'🎶 Générer les publications milongas ' + sai + '</button>';
+      +'🎶 Générer les publications milongas ' + saiNext + '</button>';
   }
   h += '<div id="pub-ed"></div>';
   if(!pubs.length)return h+'<div class="empty-state">Aucune publication pour cette saison.</div>';
