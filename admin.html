@@ -3221,6 +3221,7 @@ function sauverAdresseType(type, sai) {
   };
   _saveParam(type, sai, 'adresse', data);
   afficherToast('✓ Adresse '+type+' '+sai+' enregistrée');
+  if (type === 'stages') syncToutesPublicationsStages(sai);
   renderTab();
 }
 
@@ -3882,6 +3883,7 @@ function sauverThemesStage(date, sai) {
   STAGES[idx] = st;
   sauverStagesLocal(sai);
   afficherToast('✓ Nom & thèmes enregistrés');
+  syncPublicationsStage(date, sai);
   renderTab();
 }
 
@@ -3965,6 +3967,7 @@ function sauverHorairesDate(date, sai) {
   STAGES[idx] = st;
   sauverStagesLocal(sai);
   afficherToast('✓ Horaires enregistrés');
+  syncPublicationsStage(date, sai);
   renderTab();
 }
 
@@ -4037,6 +4040,7 @@ function sauverTarifsDate(date, sai) {
   STAGES[idx] = st;
   sauverStagesLocal(sai);
   afficherToast('✓ Tarifs enregistrés');
+  syncPublicationsStage(date, sai);
   renderTab();
 }
 
@@ -4102,6 +4106,7 @@ function sauverAdresseDate(date, sai) {
   STAGES[idx] = st;
   sauverStagesLocal(sai);
   afficherToast('✓ Adresse enregistrée');
+  syncPublicationsStage(date, sai);
   renderTab();
 }
 
@@ -4173,6 +4178,7 @@ function sauverHorairesType(type, sai) {
   }
   _saveParam(type, sai, 'horaires', data);
   afficherToast('✓ Horaires '+type+' '+sai+' enregistrés');
+  if (type === 'stages') syncToutesPublicationsStages(sai);
   renderTab();
 }
 
@@ -4199,6 +4205,7 @@ function sauverTarifsType(type, sai) {
   _saveParam(type, sai, 'tarifs', data);
   Object.assign(TARIFS, data);
   afficherToast('✓ Tarifs '+type+' '+sai+' enregistrés');
+  if (type === 'stages') syncToutesPublicationsStages(sai);
   renderTab();
 }
 
@@ -9828,6 +9835,125 @@ async function syncImageToPublications(date, imageUrl) {
   afficherToast('✅ Visuel synchronisé sur ' + pubs.length + ' publication' + (pubs.length > 1 ? 's' : ''));
 }
 
+// ── Génération de contenu d'une publication stage (réutilisable) ──────────────
+function _genContenuStage(st, defHor, defTar, defAdr) {
+  function parseH(s) {
+    if (!s) return 9999;
+    var m = (s + '').match(/(\d+)h(\d*)/i);
+    return m ? parseInt(m[1]) * 60 + (parseInt(m[2]) || 0) : 9999;
+  }
+  function fmtH(s) {
+    return (s || '').toUpperCase().replace(/H00$/, 'H').replace(/H0(\b|$)/, 'H');
+  }
+  function getTarif(k) {
+    var merged = Object.assign({}, defTar, st.tarifs || {});
+    var v = merged[k]; return v !== undefined ? v : (TARIFS_DEFAUT[k] !== undefined ? TARIFS_DEFAUT[k] : '?');
+  }
+  var hor = Object.assign({}, defHor, st.horaires || {});
+  var adr = st.adresse && (st.adresse.nom || st.adresse.rue) ? st.adresse : defAdr;
+  var n = st.nStages || 2;
+  var slots = [];
+  if (st.technique !== false) {
+    slots.push({lbl: 'TECHNIQUE LEADER & FOLLOWER', deb: hor.tech_deb || '', fin: hor.tech_fin || ''});
+  }
+  for (var i = 0; i < n; i++) {
+    var k = 's' + (i + 1);
+    slots.push({
+      lbl: (st.themes && st.themes[i] && st.themes[i].trim() ? st.themes[i] : 'Créneau ' + (i + 1)).toUpperCase(),
+      deb: hor[k + '_deb'] || '', fin: hor[k + '_fin'] || ''
+    });
+  }
+  slots.sort(function(a, b) { return parseH(a.deb) - parseH(b.deb); });
+  var startTime = fmtH(slots.length ? slots[0].deb : '');
+  var endTime   = fmtH(slots.length ? slots[slots.length - 1].fin : '');
+  var d = new Date(st.date + 'T12:00:00');
+  var jourUp  = DOW_LONG[d.getDay()].toUpperCase();
+  var moisUp  = MOIS_FR[d.getMonth()].toUpperCase();
+  var moisTit = MOIS_FR[d.getMonth()];
+  var dayNum  = d.getDate();
+  var titre = 'STAGE DU ' + jourUp + ' ' + dayNum + ' ' + moisUp + ' ' + startTime + '-' + endTime;
+  var themes = (st.themes || []).filter(function(t) { return t && t.trim(); });
+  var extrait = themes.map(function(t) { return t.toUpperCase(); }).join(' - ');
+  var introDate = jourUp + ' ' + dayNum + ' ' + moisUp;
+  var contenu = 'Bonjour à tous,\n\nNotre Stage du mois de ' + moisTit + ' aura lieu le '
+    + introDate + ' de ' + startTime + ' à ' + endTime + '\n\n';
+  slots.forEach(function(sl) { contenu += fmtH(sl.deb) + '-' + fmtH(sl.fin) + ' ' + sl.lbl + '\n'; });
+  contenu += '\nVous pouvez vous inscrire seul.e ou avec un.e partenaire, '
+    + 'nous nous chargeons de garantir la parité guideur.se.s/guidé.e.s.\n\n';
+  contenu += 'Le Lieu :\n';
+  if (adr && (adr.nom || adr.rue)) {
+    if (adr.nom) contenu += adr.nom + '\n';
+    if (adr.rue) contenu += adr.rue + '\n';
+    if (adr.transport) contenu += adr.transport + '\n';
+  } else {
+    contenu += '(lieu à préciser)\n';
+  }
+  contenu += '\nTarifs :\n';
+  if (st.technique !== false) contenu += 'TECHNIQUE > ' + getTarif('stage_technique') + '€\n';
+  for (var ni = 1; ni <= n; ni++) {
+    contenu += ni + ' STAGE' + (ni > 1 ? 'S' : '') + ' > ' + getTarif('stage_' + ni) + '€\n';
+    if (st.technique !== false && ni >= 2) contenu += ni + ' STAGES + TECHNIQUE > ' + getTarif('stage_' + ni + '_tech') + '€\n';
+  }
+  contenu += '\n(Tarifs sur place le jour du stage)';
+  return { titre: titre, contenu: contenu, extrait: extrait, image: st.image_url || '' };
+}
+
+// Synchronise les publications d'une date de stage avec les données actuelles des Paramètres
+async function syncPublicationsStage(date, sai) {
+  var idx = STAGES.findIndex(function(s){ return s.date === date; });
+  if (idx < 0) return;
+  var st = _migrateStageItem(STAGES[idx]);
+  var defHor = Object.assign({}, DEFAULTS_HORAIRES.stages, _loadParam('stages', sai, 'horaires'));
+  var defTar = Object.assign({}, TARIFS_DEFAUT, _loadParam('stages', sai, 'tarifs'));
+  var defAdr = _loadParam('stages', sai, 'adresse') || {};
+  var c = _genContenuStage(st, defHor, defTar, defAdr);
+  var res = await Promise.resolve(
+    TEV.client.from('publications').select('id,donnees')
+      .filter('donnees->>stageDate', 'eq', date)
+      .filter('donnees->>autoGenStage', 'eq', 'true')
+  ).catch(function(){ return null; });
+  var pubs = res && res.data || [];
+  if (!pubs.length) return;
+  await Promise.all(pubs.map(function(pub) {
+    var dn = Object.assign({}, pub.donnees || {});
+    dn.extrait = c.extrait;
+    if (c.image) dn.image = c.image; else delete dn.image;
+    return Promise.resolve(
+      TEV.client.from('publications').update({ titre: c.titre, contenu: c.contenu, donnees: dn }).eq('id', pub.id)
+    ).catch(function(){});
+  }));
+  afficherToast('✅ ' + pubs.length + ' publication' + (pubs.length > 1 ? 's' : '') + ' mise' + (pubs.length > 1 ? 's' : '') + ' à jour');
+}
+
+// Synchronise les publications de TOUTES les dates de stages (après changement des paramètres globaux)
+async function syncToutesPublicationsStages(sai) {
+  var defHor = Object.assign({}, DEFAULTS_HORAIRES.stages, _loadParam('stages', sai, 'horaires'));
+  var defTar = Object.assign({}, TARIFS_DEFAUT, _loadParam('stages', sai, 'tarifs'));
+  var defAdr = _loadParam('stages', sai, 'adresse') || {};
+  var synced = 0;
+  for (var i = 0; i < STAGES.length; i++) {
+    var st = _migrateStageItem(STAGES[i]);
+    var c = _genContenuStage(st, defHor, defTar, defAdr);
+    var res = await Promise.resolve(
+      TEV.client.from('publications').select('id,donnees')
+        .filter('donnees->>stageDate', 'eq', st.date)
+        .filter('donnees->>autoGenStage', 'eq', 'true')
+    ).catch(function(){ return null; });
+    var pubs = res && res.data || [];
+    if (!pubs.length) continue;
+    await Promise.all(pubs.map(function(pub) {
+      var dn = Object.assign({}, pub.donnees || {});
+      dn.extrait = c.extrait;
+      if (c.image) dn.image = c.image; else delete dn.image;
+      return Promise.resolve(
+        TEV.client.from('publications').update({ titre: c.titre, contenu: c.contenu, donnees: dn }).eq('id', pub.id)
+      ).catch(function(){});
+    }));
+    synced += pubs.length;
+  }
+  if (synced) afficherToast('✅ ' + synced + ' publication' + (synced > 1 ? 's' : '') + ' mise' + (synced > 1 ? 's' : '') + ' à jour');
+}
+
 async function genererPublicationsStages() {
   var saiNext = saisonSuivante();
   var saiCur  = saisonActive();
@@ -9861,88 +9987,11 @@ async function genererPublicationsStages() {
     if (p.autoGenStage && p.stageDate && p.jAvant != null) existKeys.add(p.stageDate + '_' + p.jAvant);
   });
 
-  // Helpers
-  function parseH(s) {
-    if (!s) return 9999;
-    var m = (s + '').match(/(\d+)h(\d*)/i);
-    return m ? parseInt(m[1]) * 60 + (parseInt(m[2]) || 0) : 9999;
-  }
-  function fmtH(s) {
-    return (s || '').toUpperCase().replace(/H00$/, 'H').replace(/H0(\b|$)/, 'H');
-  }
-  function getTarif(k) {
-    var v = defTar[k]; return v !== undefined ? v : (TARIFS_DEFAUT[k] !== undefined ? TARIFS_DEFAUT[k] : '?');
-  }
-
   var toInsert = [];
 
   stagesData.forEach(function(st) {
     st = _migrateStageItem(st);
-    var hor = Object.assign({}, defHor, st.horaires || {});
-    var tar = Object.assign({}, defTar, st.tarifs || {});
-    var adr = st.adresse && (st.adresse.nom || st.adresse.rue) ? st.adresse : defAdr;
-
-    // Créneaux triés par heure
-    var slots = [];
-    if (st.technique !== false) {
-      slots.push({lbl: 'TECHNIQUE LEADER & FOLLOWER', deb: hor.tech_deb || '', fin: hor.tech_fin || ''});
-    }
-    var n = st.nStages || 2;
-    for (var i = 0; i < n; i++) {
-      var k = 's' + (i + 1);
-      slots.push({
-        lbl: (st.themes && st.themes[i] && st.themes[i].trim() ? st.themes[i] : 'Créneau ' + (i + 1)).toUpperCase(),
-        deb: hor[k + '_deb'] || '',
-        fin: hor[k + '_fin'] || ''
-      });
-    }
-    slots.sort(function(a, b) { return parseH(a.deb) - parseH(b.deb); });
-
-    var startTime = fmtH(slots.length ? slots[0].deb : '');
-    var endTime   = fmtH(slots.length ? slots[slots.length - 1].fin : '');
-
-    // Formatage de la date
-    var d = new Date(st.date + 'T12:00:00');
-    var jourUp  = DOW_LONG[d.getDay()].toUpperCase();
-    var moisUp  = MOIS_FR[d.getMonth()].toUpperCase();
-    var moisTit = MOIS_FR[d.getMonth()];
-    var dayNum  = d.getDate();
-
-    // Titre
-    var titre = 'STAGE DU ' + jourUp + ' ' + dayNum + ' ' + moisUp + ' ' + startTime + '-' + endTime;
-
-    // Résumé : thèmes uniquement (pas la technique)
-    var themes = (st.themes || []).filter(function(t) { return t && t.trim(); });
-    var extrait = themes.map(function(t) { return t.toUpperCase(); }).join(' - ');
-
-    // Contenu
-    var introDate = jourUp + ' ' + dayNum + ' ' + moisUp;
-    var contenu = 'Bonjour à tous,\n\nNotre Stage du mois de ' + moisTit + ' aura lieu le '
-      + introDate + ' de ' + startTime + ' à ' + endTime + '\n\n';
-    slots.forEach(function(sl) {
-      contenu += fmtH(sl.deb) + '-' + fmtH(sl.fin) + ' ' + sl.lbl + '\n';
-    });
-    contenu += '\nVous pouvez vous inscrire seul.e ou avec un.e partenaire, '
-      + 'nous nous chargeons de garantir la parité guideur.se.s/guidé.e.s.\n\n';
-    contenu += 'Le Lieu :\n';
-    if (adr && (adr.nom || adr.rue)) {
-      if (adr.nom) contenu += adr.nom + '\n';
-      if (adr.rue) contenu += adr.rue + '\n';
-      if (adr.transport) contenu += adr.transport + '\n';
-    } else {
-      contenu += '(lieu à préciser)\n';
-    }
-    contenu += '\nTarifs :\n';
-    if (st.technique !== false) {
-      contenu += 'TECHNIQUE > ' + getTarif('stage_technique') + '€\n';
-    }
-    for (var ni = 1; ni <= n; ni++) {
-      contenu += ni + ' STAGE' + (ni > 1 ? 'S' : '') + ' > ' + getTarif('stage_' + ni) + '€\n';
-      if (st.technique !== false && ni >= 2) {
-        contenu += ni + ' STAGES + TECHNIQUE > ' + getTarif('stage_' + ni + '_tech') + '€\n';
-      }
-    }
-    contenu += '\n(Tarifs sur place le jour du stage)';
+    var c = _genContenuStage(st, defHor, defTar, defAdr);
 
     // 3 publications : J-20, J-14, J-7
     [20, 14, 7].forEach(function(jAvant) {
@@ -9951,13 +10000,13 @@ async function genererPublicationsStages() {
       pubD.setDate(pubD.getDate() - jAvant);
       var pubISO = pubD.toISOString().slice(0, 10) + 'T08:00:00.000Z';
       toInsert.push({
-        titre: titre,
-        contenu: contenu,
+        titre: c.titre,
+        contenu: c.contenu,
         publiee: false,
         donnees: {
           cat: 'stage',
-          extrait: extrait,
-          image: st.image_url || '',
+          extrait: c.extrait,
+          image: c.image,
           video: '',
           dateProgrammee: pubISO,
           datesProgrammees: [pubISO],
