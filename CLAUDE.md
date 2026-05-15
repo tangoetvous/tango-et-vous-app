@@ -1752,3 +1752,84 @@ Itère `MILONGAS[mi].dates[di]` → appelle `_genContenuMilonga` + même filtres
 
 ### Règle : aucune valeur hardcodée
 Tout vient de `MILONGAS` (chargé depuis `tev_milongas_<sai>` en Supabase via `chargerMilongas()`/`sauverMilongas()`). Ne jamais hardcoder nom, adresse, tarifs ou horaires dans les fonctions de génération.
+
+## Session 2026-05-15 (suite) — Publications milongas auto-générées
+
+### ✅ `publiee: true` pour publications stages auto-générées
+- `genererPublicationsStages()` : `publiee: false` → `publiee: true` — les publications sont directement visibles dans l'espace élève à leur date programmée
+
+### ✅ Champ Tarif par milonga (Paramètres → Milongas → Info)
+- Champ texte libre `mil.tarif` (ex : `"10€ / 5€ adhérents"`) dans `_renderMilongaInfoContent`, ID `mil-tarif-<idx>`
+- `sauverMilongaInfo(idx)` : lit `((gel('mil-tarif-'+idx)||{}).value||'').trim()` → `mil.tarif`
+- Après `sauverMilongas()` : appelle `syncToutesPublicationsMilongas(sai)` pour re-générer le contenu de toutes les publications milonga
+
+### ✅ Champs Démonstration + Tarif par date de milonga (bouton `[···]`)
+- `var milDateDetailsOpen = {}` : dict `'milIdx-dateStr' → bool` pour les collapsibles par date
+- Bouton `[···]` inséré AVANT le bouton ✕ dans chaque date row de `_renderMilongaDatesContent`
+  - Couleur : `var(--text)` (blanc) par défaut, `var(--gold)` si `detOpen || hasDemo || hasTarifD`
+  - `margin-left:20px` sur le bouton ✕ pour séparer visuellement les deux boutons
+- Bloc collapsible si `milDateDetailsOpen[idx+'-'+d.date]` :
+  - Input Démonstration : id `mil-demo-<idx>-<dateNoHyphens>`, value `d.demonstration||''`
+  - Input Tarif date : id `mil-tarif-d-<idx>-<dateNoHyphens>`, value `d.tarif||''`, placeholder `'laisse vide = tarif milonga'`
+  - Bouton `💾 Enregistrer` : data-action=`sauver-mil-date-details`
+- `sauverDatasMilongaDate(milIdx, dateStr)` : lit les inputs, sauvegarde `d.demonstration` et `d.tarif` (ou delete si vide) → `sauverMilongas()` → `syncPublicationsMilongaDate(milIdx, dateStr, sai)` → `renderTab()`
+- Handlers click : `toggle-mil-date-details`, `sauver-mil-date-details`
+- **Règle** : ne jamais utiliser `|| mil.horaire_xxx` dans ces saves — toujours `.value.trim()` direct
+
+### ✅ `_genContenuMilonga(mil, dateObj)` — pure function
+Retourne `{titre, extrait, contenu, image}`. Sources (aucune valeur hardcodée) :
+- `hdeb`/`hfin` : `dateObj.horaire_debut/fin || mil.horaire_debut/fin || ''`
+- `tarif` : `dateObj.tarif || mil.tarif || ''` (override par date, fallback milonga)
+- `demo` : `dateObj.demonstration || ''`
+- `image` : `dateObj.image_url || ''`
+- Titre : `'Milonga « ' + mil.nom + ' »'`
+- Extrait : date longue (JOUR JJ MOIS) + horaires
+- Contenu : bonjour, annonce date + horaires, ligne "Démonstration de [demo]" (seulement si non vide), espérons vous croiser, adresse depuis `mil.lieu`, tarif si présent, paragraphe conseils débutants
+
+### ✅ `syncPublicationsMilongaDate(milIdx, dateStr, sai)` — async
+Filtres JSONB : `milongaDate eq dateStr`, `milongaId eq mil.id`, `autoGenMilonga eq 'true'`. Met à jour titre + contenu + extrait + image. Toast "✅ N publication(s) mise(s) à jour".
+
+### ✅ `syncToutesPublicationsMilongas(sai)` — async
+Itère `MILONGAS[mi].dates[di]` → `_genContenuMilonga` + mêmes filtres JSONB → UPDATE. Appelée depuis `sauverMilongaInfo` après chaque sauvegarde d'info milonga.
+
+### ✅ `genererPublicationsMilongas()` — async
+- Bouton **"🎶 Générer les publications milongas [saiNext]"** dans `renderPublications()`, visible à partir du **15 mai** (même garde que stages : `today() >= y2 + '-05-15'`)
+- Charge les milongas de **la saison prochaine** depuis Supabase : `tev_milongas_<saiNext>` (pas le `MILONGAS` courant)
+- Filtre : `dateAppartientSaison(dateObj.date, saiNext)` uniquement
+- Génère 2 pubs par date future : J-14 et J-3
+- Anti-doublon : clé `milongaId + '_' + milongaDate + '_' + jAvant` dans `adminData.publications`
+- `publiee: true` (directement visibles à leur date programmée)
+
+### Structure `donnees` des publications milonga auto-générées
+```javascript
+{
+  cat: 'milonga',
+  extrait: 'SAMEDI 14 MARS 17H30-23H30',
+  image: 'https://res.cloudinary.com/...' || '',
+  video: '',
+  dateProgrammee: '2026-03-01T08:00:00.000Z',   // J-14 ou J-3
+  datesProgrammees: ['2026-03-01T08:00:00.000Z'],
+  cours: ['paris-deb', 'paris-int', 'vincennes-deb', 'vincennes-int'],
+  autoGenMilonga: true,
+  milongaId: 'dolce-vita',
+  milongaDate: '2026-03-14',
+  jAvant: 14                                      // 14 ou 3
+}
+```
+
+### Auto-sync hooks milongas
+| Déclencheur | Fonction appelée |
+|---|---|
+| `sauverMilongaInfo` (nom, horaires, tarif milonga) | `syncToutesPublicationsMilongas(sai)` |
+| `sauverDatasMilongaDate` (démo, tarif date) | `syncPublicationsMilongaDate(milIdx, dateStr, sai)` |
+| `_uploadImageMilongaDate` | `syncPublicationsMilongaDate(milIdx, dateStr, sai)` |
+| `supprimerImageMilongaDate` | `syncPublicationsMilongaDate(milIdx, dateStr, sai)` |
+
+### Visibilité dans l'admin Publications (milongas = même logique que stages)
+- Générées en mai 2026 (saison 2025-2026) pour les milongas 2026-2027
+- Visibles en admin **2025-2026** : via filtre `saiNext` dans `renderPublications()`
+- Visibles en admin **2026-2027** : via filtre `sai` (saison active)
+- `renderPublications()` affiche toujours `saisonActive()` ET `saisonSuivante()` → les publications de la prochaine saison apparaissent dans les deux vues
+
+### Règle : aucune valeur hardcodée
+Tout vient de `MILONGAS` (chargé depuis `tev_milongas_<sai>` en Supabase via `chargerMilongas()`/`sauverMilongas()`). Ne jamais hardcoder nom, adresse, tarifs ou horaires dans les fonctions de génération.
