@@ -3051,26 +3051,24 @@ function _renderMilongaDatesContent(mil, idx) {
       var hasOvr = !!(d.horaire_debut || d.horaire_fin);
       var hasImg = !!d.image_url;
       h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;'+(past?'opacity:0.5;':'')+'">'
-        +'<span style="font-size:12px;color:var(--text);flex:1;">'+(d.label||fmtDate(d.date))+'</span>';
+        +'<span style="font-size:12px;color:var(--text);">'+(d.label||fmtDate(d.date))+'</span>'
+        // Visuel coll\u00e9 \u00e0 la date
+        +'<label style="cursor:pointer;display:inline-flex;align-items:center;flex-shrink:0;margin-right:auto;" title="'+(hasImg?'Changer le visuel':'Ajouter un visuel')+'">'
+        +(hasImg
+          ? '<img src="'+_escAttr(d.image_url)+'" style="width:28px;height:28px;border-radius:4px;object-fit:cover;border:1px solid var(--border);">'
+          : '<span style="font-size:15px;opacity:0.35;line-height:1;">\ud83d\uddbc</span>')
+        +'<input type="file" accept="image/*" style="display:none;"'
+        +' onchange="_uploadImageMilongaDate('+idx+',\''+d.date+'\',this)"></label>';
       if (hasOvr) {
         h += '<span style="font-size:10px;color:var(--gold);">'
           +(d.horaire_debut||mil.horaire_debut)+'\u2013'+(d.horaire_fin||mil.horaire_fin)+'</span>';
       }
-      // Visuel par date
-      h += '<label style="cursor:pointer;display:inline-flex;align-items:center;flex-shrink:0;" title="'+(hasImg?'Changer le visuel':'Ajouter un visuel')+'">';
-      if (hasImg) {
-        h += '<img src="'+_escAttr(d.image_url)+'" style="width:32px;height:32px;border-radius:4px;object-fit:cover;border:1px solid var(--border);">';
-      } else {
-        h += '<span style="font-size:16px;opacity:0.4;line-height:1;">\ud83d\uddbc</span>';
-      }
-      h += '<input type="file" accept="image/*" style="display:none;"'
-        +' onchange="_uploadImageMilongaDate('+idx+',\''+d.date+'\',this)"></label>';
       if (hasImg) {
         h += '<button data-action="suppr-image-mil-date" data-idx="'+idx+'" data-date="'+d.date+'"'
           +' style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:10px;padding:0 2px;" title="Supprimer le visuel">\u2715</button>';
       }
       h += '<button data-action="suppr-date-milonga" data-idx="'+idx+'" data-date="'+d.date+'"'
-        +' style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;font-size:13px;padding:0 4px;" title="Supprimer la date">\u2715</button>'
+        +' style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;font-size:13px;padding:0 4px;margin-left:4px;" title="Supprimer la date">\u2715</button>'
         +'</div>';
     });
     h += '</div>';
