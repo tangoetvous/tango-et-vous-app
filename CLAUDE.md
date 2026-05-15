@@ -1688,3 +1688,67 @@ Technique (1h) : 20€
 - CSS `.pub-modal-inscr-btn` : bouton doré pleine largeur, `background:var(--gold)`, `color:#1a1208`, `font-weight:700`, `padding:13px 20px`, `border-radius:8px`
 - `#pub-modal-btn` : `margin-top:20px`
 - **Règle** : le contenu `p.contenu` est rendu en `textContent` (pas `innerHTML`) — tout lien cliquable doit passer par `pub-modal-btn` ou un élément DOM dédié, jamais par le texte du contenu
+
+## Session 2026-05-15 (suite) — Publications milongas auto-générées
+
+### ✅ `publiee: true` pour publications stages auto-générées
+- `genererPublicationsStages()` : `publiee: true` (déjà en place, confirmé)
+
+### ✅ Champ `tarif` par milonga
+- Champ Tarif ajouté dans `_renderMilongaInfoContent(mil, idx)` avant les boutons (id `mil-tarif-<idx>`, placeholder "ex : 10€ / 5€ adhérents")
+- `sauverMilongaInfo(idx)` : lit `mil.tarif = ((gel('mil-tarif-'+idx)||{}).value||'').trim()`, puis appelle `syncToutesPublicationsMilongas(_saiMil)` après `sauverMilongas()`
+
+### ✅ Champs Démonstration + Tarif override par date de milonga
+- `milDateDetailsOpen = {}` : dict `{'milIdx-date': bool}` pour les collapsibles par date
+- `_renderMilongaDatesContent` : bouton `[···]` (data-action=`toggle-mil-date-details`) inline avant le bouton supprimer
+- Bloc collapsible si `detOpen` : input Démonstration (`mil-demo-<idx>-<did>`), input Tarif date (`mil-tarif-d-<idx>-<did>`), bouton Enregistrer (`sauver-mil-date-details`)
+- `sauverDatasMilongaDate(milIdx, dateStr)` : sauvegarde `d.demonstration` + `d.tarif` (ou delete si vide) → `sauverMilongas()` → `syncPublicationsMilongaDate`
+- Indicateur visuel : bouton `[···]` en `var(--gold)` si `detOpen || hasDemo || hasTarifD`
+
+### ✅ Auto-sync image → publications milonga
+- `_uploadImageMilongaDate` : appelle `syncPublicationsMilongaDate(milIdx, dateStr, _saiImg)` après `sauverMilongas()`
+- `supprimerImageMilongaDate` : appelle `syncPublicationsMilongaDate(milIdx, dateStr, _saiSup)` après `sauverMilongas()`
+
+### ✅ `_genContenuMilonga(mil, dateObj)` — pure function
+Retourne `{titre, extrait, contenu, image}`. Sources de données (aucune valeur hardcodée) :
+- `hdeb`/`hfin` : `dateObj.horaire_debut/fin || mil.horaire_debut/fin || ''`
+- `tarif` : `dateObj.tarif || mil.tarif || ''` (override par date, fallback milonga)
+- `demo` : `dateObj.demonstration || ''`
+- `image` : `dateObj.image_url || ''`
+- Titre : `'Milonga « ' + mil.nom + ' »'`
+- Extrait : date longue (JOUR JJ MOIS) + horaires
+- Contenu : bonjour, annonce date + horaires, démo si présente, adresse depuis `mil.lieu`, tarif si présent, texte conseils débutants
+
+### ✅ `syncPublicationsMilongaDate(milIdx, dateStr, sai)` — async
+Filtres JSONB : `milongaDate eq dateStr`, `milongaId eq mil.id`, `autoGenMilonga eq 'true'`. Met à jour titre + contenu + extrait + image sur toutes les pubs trouvées.
+
+### ✅ `syncToutesPublicationsMilongas(sai)` — async
+Itère `MILONGAS[mi].dates[di]` → appelle `_genContenuMilonga` + même filtres JSONB. Appelée depuis `sauverMilongaInfo` après chaque sauvegarde d'info milonga.
+
+### ✅ `genererPublicationsMilongas(sai)` — async
+- Bouton "🎶 Générer les publications milongas [saison]" dans `renderPublications()` (visible à partir du 15 mai, sous le bouton stages)
+- Handler click : `case 'generer-pub-milongas': genererPublicationsMilongas(saisonActive()); break;`
+- Génère 2 pubs par date future : J-14 et J-3
+- Anti-doublon : clé `milongaId + '_' + milongaDate + '_' + jAvant` dans `adminData.publications`
+- `publiee: true` (publications directement visibles dans l'espace élève)
+
+### Structure `donnees` des publications milonga auto-générées
+```javascript
+{
+  cat: 'milonga',
+  extrait: 'SAMEDI 14 MARS 17h30-23h30',
+  image: 'https://res.cloudinary.com/...' || '',
+  video: '',
+  dateProgrammee: '2026-03-01T08:00:00.000Z',   // J-14
+  datesProgrammees: ['2026-03-01T08:00:00.000Z'],
+  cours: ['paris-deb', 'paris-int', 'vincennes-deb', 'vincennes-int'],
+  autoGenMilonga: true,
+  milongaId: 'dolce-vita',   // mil.id
+  milongaDate: '2026-03-14', // date de la milonga
+  jAvant: 14                 // 14 ou 3
+  // pas de lienInscription — les milongas n'ont pas de formulaire d'inscription
+}
+```
+
+### Règle : aucune valeur hardcodée
+Tout vient de `MILONGAS` (chargé depuis `tev_milongas_<sai>` en Supabase via `chargerMilongas()`/`sauverMilongas()`). Ne jamais hardcoder nom, adresse, tarifs ou horaires dans les fonctions de génération.

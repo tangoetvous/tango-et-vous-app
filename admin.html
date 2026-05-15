@@ -2501,6 +2501,7 @@ var stageTarifsOpen    = {};       // {date: bool}  true=tarifs par date ouverts
 var stageAdresseOpen   = {};       // {date: bool}  true=adresse par date ouverte
 var stageVisuelOpen    = {};       // {date: bool}  true=visuel par date ouvert
 var milongaAccordion  = {};       // {mil-idx-section: bool}  true=ouvert
+var milDateDetailsOpen = {};       // {'idx-date': bool}  true=détails date milonga ouverts
 
 var STAGE_NOM_DEFAUT = 'Stages avec Florencia Garcia et Jérémy Braitbart';
 
@@ -3028,6 +3029,7 @@ function _renderMilongaInfoContent(mil, idx) {
     + '<input id="mil-color-'+idx+'" type="color" value="'+(mil.color||'#ff8c00')+'"'
     + ' style="width:40px;height:36px;border:1px solid var(--border);border-radius:6px;padding:2px;cursor:pointer;background:var(--s3);"></div>'
     + '</div>'
+    + field('Tarif', 'mil-tarif-'+idx, mil.tarif||'', 'ex\u00a0: 10\u20ac\u00a0/\u00a05\u20ac adh\u00e9rents')
     + '<div class="btn-row" style="flex-wrap:wrap;gap:8px;">'
     + '<button class="btn btn-gold" data-action="sauver-milonga-info" data-idx="'+idx+'"'
     + ' style="font-size:12px;">\ud83d\udcbe Enregistrer</button>'
@@ -3041,6 +3043,8 @@ function _renderMilongaDatesContent(mil, idx) {
   var fut = dates.filter(function(d){return d.date>=tod;}).length;
   var inputStyle = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);'
     +'border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-family:monospace;';
+  var inpS = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);'
+    +'border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;';
   var h = '<div class="box-info" style="font-size:11px;margin-bottom:10px;">'
     +'<strong>'+dates.length+'</strong> date'+(dates.length!==1?'s':'')+' \u2014 '
     +'<span style="color:var(--ok-text);">'+fut+' \u00e0 venir</span></div>';
@@ -3050,7 +3054,13 @@ function _renderMilongaDatesContent(mil, idx) {
       var past = d.date < tod;
       var hasOvr = !!(d.horaire_debut || d.horaire_fin);
       var hasImg = !!d.image_url;
-      h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;'+(past?'opacity:0.5;':'')+'">'
+      var dKey = idx + '-' + d.date;
+      var detOpen = !!milDateDetailsOpen[dKey];
+      var did = d.date.replace(/-/g,'');
+      var hasDemo = !!(d.demonstration);
+      var hasTarifD = !!(d.tarif);
+      h += '<div style="margin-bottom:4px;">';
+      h += '<div style="display:flex;align-items:center;gap:6px;'+(past?'opacity:0.5;':'')+'">'
         +'<span style="font-size:12px;color:var(--text);">'+(d.label||fmtDate(d.date))+'</span>'
         // Visuel coll\u00e9 \u00e0 la date
         +'<label style="cursor:pointer;display:inline-flex;align-items:center;flex-shrink:0;margin-right:auto;" title="'+(hasImg?'Changer le visuel':'Ajouter un visuel')+'">'
@@ -3067,9 +3077,28 @@ function _renderMilongaDatesContent(mil, idx) {
         h += '<button data-action="suppr-image-mil-date" data-idx="'+idx+'" data-date="'+d.date+'"'
           +' style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:10px;padding:0 2px;" title="Supprimer le visuel">\u2715</button>';
       }
+      // Bouton d\u00e9tails [\u00b7\u00b7\u00b7] avant le bouton supprimer
+      h += '<button data-action="toggle-mil-date-details" data-idx="'+idx+'" data-date="'+d.date+'"'
+        +' style="background:none;border:1px solid var(--border);color:'+(detOpen||hasDemo||hasTarifD?'var(--gold)':'var(--dim)')+';cursor:pointer;font-size:10px;padding:1px 5px;border-radius:4px;" title="D\u00e9monstration / Tarif">\u00b7\u00b7\u00b7</button>';
       h += '<button data-action="suppr-date-milonga" data-idx="'+idx+'" data-date="'+d.date+'"'
-        +' style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;font-size:13px;padding:0 4px;margin-left:4px;" title="Supprimer la date">\u2715</button>'
+        +' style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;font-size:13px;padding:0 4px;margin-left:2px;" title="Supprimer la date">\u2715</button>'
         +'</div>';
+      // Bloc collapsible d\u00e9tails
+      if (detOpen) {
+        h += '<div style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-top:4px;margin-bottom:6px;">'
+          +'<div style="margin-bottom:8px;">'
+          +'<label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">D\u00e9monstration</label>'
+          +'<input id="mil-demo-'+idx+'-'+did+'" type="text" value="'+(d.demonstration||'').replace(/"/g,'&quot;')+'"'
+          +' placeholder="ex : Duo Amara" style="'+inpS+'"></div>'
+          +'<div style="margin-bottom:8px;">'
+          +'<label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Tarif date (laisse vide = tarif milonga)</label>'
+          +'<input id="mil-tarif-d-'+idx+'-'+did+'" type="text" value="'+(d.tarif||'').replace(/"/g,'&quot;')+'"'
+          +' placeholder="laisse vide = tarif milonga" style="'+inpS+'"></div>'
+          +'<button class="btn btn-gold" data-action="sauver-mil-date-details" data-idx="'+idx+'" data-date="'+d.date+'"'
+          +' style="font-size:12px;">\ud83d\udcbe Enregistrer</button>'
+          +'</div>';
+      }
+      h += '</div>';
     });
     h += '</div>';
   }
@@ -3722,8 +3751,11 @@ function sauverMilongaInfo(idx) {
   mil.horaire_debut = ((gel('mil-hdeb-'+idx)||{}).value||'').trim();
   mil.horaire_fin   = ((gel('mil-hfin-'+idx)||{}).value||'').trim();
   mil.color = (gel('mil-color-'+idx)||{}).value || mil.color;
+  mil.tarif = ((gel('mil-tarif-'+idx)||{}).value||'').trim();
   sauverMilongas();
   afficherToast('\u2713 Milonga ' + mil.nom + ' enregistr\u00e9e');
+  var _saiMil = saisonParametres || saisonCourante();
+  syncToutesPublicationsMilongas(_saiMil);
   renderTab();
 }
 function _uploadImageMilongaDate(milIdx, dateStr, input) {
@@ -3740,6 +3772,8 @@ function _uploadImageMilongaDate(milIdx, dateStr, input) {
           if (di >= 0) {
             MILONGAS[milIdx].dates[di] = Object.assign({}, MILONGAS[milIdx].dates[di], {image_url: d.secure_url});
             sauverMilongas();
+            var _saiImg = saisonParametres || saisonCourante();
+            syncPublicationsMilongaDate(milIdx, dateStr, _saiImg);
             afficherToast('\u2705 Visuel enregistr\u00e9');
             renderTab();
           }
@@ -3757,9 +3791,26 @@ function supprimerImageMilongaDate(milIdx, dateStr) {
   if (di >= 0) {
     delete MILONGAS[milIdx].dates[di].image_url;
     sauverMilongas();
+    var _saiSup = saisonParametres || saisonCourante();
+    syncPublicationsMilongaDate(milIdx, dateStr, _saiSup);
     afficherToast('\u2713 Visuel supprim\u00e9');
     renderTab();
   }
+}
+function sauverDatasMilongaDate(milIdx, dateStr) {
+  chargerMilongas(saisonParametres || saisonCourante());
+  if (!MILONGAS || !MILONGAS[milIdx]) return;
+  var di = (MILONGAS[milIdx].dates||[]).findIndex(function(x){ return x.date===dateStr; });
+  if (di < 0) return;
+  var did = dateStr.replace(/-/g,'');
+  MILONGAS[milIdx].dates[di].demonstration = ((gel('mil-demo-'+milIdx+'-'+did)||{}).value||'').trim();
+  var tVal = ((gel('mil-tarif-d-'+milIdx+'-'+did)||{}).value||'').trim();
+  if (tVal) MILONGAS[milIdx].dates[di].tarif = tVal; else delete MILONGAS[milIdx].dates[di].tarif;
+  sauverMilongas();
+  afficherToast('✓ Données enregistrées');
+  var _sai = saisonParametres || saisonCourante();
+  syncPublicationsMilongaDate(milIdx, dateStr, _sai);
+  renderTab();
 }
 function ajouterDatesMilonga(idx) {
   chargerMilongas(saisonParametres || saisonCourante());
@@ -5162,6 +5213,9 @@ function handleAction(action, btn) {
     case 'generer-pub-stages':
       genererPublicationsStages();
       break;
+    case 'generer-pub-milongas':
+      genererPublicationsMilongas(saisonActive());
+      break;
     case 'editer-pub':
       ouvrirPub((adminData.publications||[])[parseInt(btn.dataset.idx)]);
       break;
@@ -5404,6 +5458,16 @@ function handleAction(action, btn) {
       break;
     case 'suppr-image-mil-date':
       supprimerImageMilongaDate(parseInt(btn.dataset.idx)||0, btn.dataset.date||'');
+      break;
+    case 'toggle-mil-date-details':
+      (function(){
+        var _k = (btn.dataset.idx||'') + '-' + (btn.dataset.date||'');
+        milDateDetailsOpen[_k] = !milDateDetailsOpen[_k];
+        renderTab();
+      })();
+      break;
+    case 'sauver-mil-date-details':
+      sauverDatasMilongaDate(parseInt(btn.dataset.idx)||0, btn.dataset.date||'');
       break;
     case 'add-mil-presence':
       (function() {
@@ -9954,6 +10018,175 @@ async function syncToutesPublicationsStages(sai) {
   if (synced) afficherToast('✅ ' + synced + ' publication' + (synced > 1 ? 's' : '') + ' mise' + (synced > 1 ? 's' : '') + ' à jour');
 }
 
+// ── Génération de contenu d'une publication milonga (pure function) ───────────
+function _genContenuMilonga(mil, dateObj) {
+  var dateStr = dateObj.date;
+  var hdeb = dateObj.horaire_debut || mil.horaire_debut || '';
+  var hfin = dateObj.horaire_fin  || mil.horaire_fin  || '';
+  var tarif = dateObj.tarif || mil.tarif || '';
+  var demo  = dateObj.demonstration || '';
+  var image = dateObj.image_url || '';
+
+  var d = new Date(dateStr + 'T12:00:00');
+  var jourUp = DOW_LONG[d.getDay()].toUpperCase();
+  var moisUp = MOIS_FR[d.getMonth()].toUpperCase();
+  var dayNum = d.getDate();
+  var dateLongue = jourUp + ' ' + dayNum + ' ' + moisUp;
+
+  var titre = 'Milonga « ' + (mil.nom||'') + ' »';
+  var extrait = dateLongue + (hdeb ? ' ' + hdeb + (hfin ? '-' + hfin : '') : '');
+
+  var contenu = 'Bonjour à tous,\n\n'
+    + 'La prochaine date de la Milonga « ' + (mil.nom||'') + ' » aura lieu le '
+    + dateLongue.toLowerCase().replace(/^./, function(c){return c.toUpperCase();})
+    + (hdeb ? ' de ' + hdeb + (hfin ? ' à ' + hfin : '') : '')
+    + '.\n';
+  if (demo) {
+    contenu += '\nDémonstration de ' + demo + '\n';
+  }
+  contenu += '\nNous espérons vous croiser sur la piste !\n';
+  contenu += "\nL’adresse :\n";
+  var lieuNom = mil.lieu && mil.lieu.nom ? mil.lieu.nom : "";
+  var lieuRue = mil.lieu && mil.lieu.rue ? mil.lieu.rue : "";
+  var lieuTransport = mil.lieu && mil.lieu.transport ? mil.lieu.transport : "";
+  if (lieuNom || lieuRue) {
+    if (lieuNom && lieuRue) contenu += lieuNom + " - " + lieuRue;
+    else contenu += lieuNom || lieuRue;
+    if (lieuTransport) contenu += ", " + lieuTransport;
+    contenu += "\n";
+  } else {
+    contenu += "(adresse à préciser)\n";
+  }
+  if (tarif) {
+    contenu += "\nTarif :\n" + tarif + "\n";
+  }
+  contenu += "\nPour les personnes du niveau débutant ça peut être l’occasion de découvrir un bal de Tango. "
+    + "On vous conseille de venir à plusieurs, c’est moins intimidant au début, "
+    + "et de venir tôt pour profiter d’une piste où il y aura encore de la place !\n"
+    + "Quand la piste se remplit ensuite vous pouvez en profiter pour observer comment fonctionne la milonga, "
+    + "observer comment les danseurs utilisent les séquences que vous avez travaillé depuis le début de la saison. "
+    + "Ce sera aussi l’occasion de voir comment danser quand il y a beaucoup de monde sur la piste !";
+
+  return { titre: titre, extrait: extrait, contenu: contenu, image: image };
+}
+
+async function syncPublicationsMilongaDate(milIdx, dateStr, sai) {
+  if (!MILONGAS || !MILONGAS[milIdx]) return;
+  var mil = MILONGAS[milIdx];
+  var dateObj = (mil.dates||[]).find(function(x){ return x.date===dateStr; }) || {date:dateStr};
+  var c = _genContenuMilonga(mil, dateObj);
+  var res = await Promise.resolve(
+    TEV.client.from('publications').select('id,donnees')
+      .filter('donnees->>milongaDate', 'eq', dateStr)
+      .filter('donnees->>milongaId', 'eq', mil.id)
+      .filter('donnees->>autoGenMilonga', 'eq', 'true')
+  ).catch(function(){ return null; });
+  var pubs = res && res.data || [];
+  if (!pubs.length) return;
+  await Promise.all(pubs.map(function(pub) {
+    var dn = Object.assign({}, pub.donnees || {});
+    dn.extrait = c.extrait;
+    if (c.image) dn.image = c.image; else delete dn.image;
+    return Promise.resolve(
+      TEV.client.from('publications').update({ titre: c.titre, contenu: c.contenu, donnees: dn }).eq('id', pub.id)
+    ).catch(function(){});
+  }));
+  afficherToast('✅ ' + pubs.length + ' publication' + (pubs.length > 1 ? 's' : '') + ' mise' + (pubs.length > 1 ? 's' : '') + ' à jour');
+}
+
+async function syncToutesPublicationsMilongas(sai) {
+  if (!MILONGAS || !MILONGAS.length) return;
+  var synced = 0;
+  for (var mi = 0; mi < MILONGAS.length; mi++) {
+    var mil = MILONGAS[mi];
+    for (var di = 0; di < (mil.dates||[]).length; di++) {
+      var dateObj = mil.dates[di];
+      var c = _genContenuMilonga(mil, dateObj);
+      var res = await Promise.resolve(
+        TEV.client.from('publications').select('id,donnees')
+          .filter('donnees->>milongaDate', 'eq', dateObj.date)
+          .filter('donnees->>milongaId', 'eq', mil.id)
+          .filter('donnees->>autoGenMilonga', 'eq', 'true')
+      ).catch(function(){ return null; });
+      var pubs = res && res.data || [];
+      if (!pubs.length) continue;
+      await Promise.all(pubs.map(function(pub) {
+        var dn = Object.assign({}, pub.donnees || {});
+        dn.extrait = c.extrait;
+        if (c.image) dn.image = c.image; else delete dn.image;
+        return Promise.resolve(
+          TEV.client.from('publications').update({ titre: c.titre, contenu: c.contenu, donnees: dn }).eq('id', pub.id)
+        ).catch(function(){});
+      }));
+      synced += pubs.length;
+    }
+  }
+  if (synced) afficherToast('✅ ' + synced + ' publication' + (synced > 1 ? 's' : '') + ' milonga mise' + (synced > 1 ? 's' : '') + ' à jour');
+}
+
+async function genererPublicationsMilongas(sai) {
+  if (!MILONGAS || !MILONGAS.length) {
+    afficherToast('⚠️ Aucune milonga configurée dans Paramètres');
+    return;
+  }
+  afficherToast('⏳ Génération des publications milongas…');
+
+  // Clés déjà générées (depuis adminData en mémoire)
+  var existKeys = new Set();
+  (adminData.publications || []).forEach(function(p) {
+    if (p.autoGenMilonga && p.milongaId && p.milongaDate && p.jAvant != null) {
+      existKeys.add(p.milongaId + '_' + p.milongaDate + '_' + p.jAvant);
+    }
+  });
+
+  var toInsert = [];
+  var tod = today();
+
+  MILONGAS.forEach(function(mil) {
+    (mil.dates||[]).forEach(function(dateObj) {
+      if (dateObj.date < tod) return; // ignorer les dates passées
+      var c = _genContenuMilonga(mil, dateObj);
+      [14, 3].forEach(function(jAvant) {
+        if (existKeys.has(mil.id + '_' + dateObj.date + '_' + jAvant)) return;
+        var pubD = new Date(dateObj.date + 'T12:00:00');
+        pubD.setDate(pubD.getDate() - jAvant);
+        var pubISO = pubD.toISOString().slice(0, 10) + 'T08:00:00.000Z';
+        toInsert.push({
+          titre: c.titre,
+          contenu: c.contenu,
+          publiee: true,
+          donnees: {
+            cat: 'milonga',
+            extrait: c.extrait,
+            image: c.image,
+            video: '',
+            dateProgrammee: pubISO,
+            datesProgrammees: [pubISO],
+            cours: ['paris-deb', 'paris-int', 'vincennes-deb', 'vincennes-int'],
+            autoGenMilonga: true,
+            milongaId: mil.id,
+            milongaDate: dateObj.date,
+            jAvant: jAvant
+          }
+        });
+      });
+    });
+  });
+
+  if (!toInsert.length) {
+    afficherToast('✅ Toutes les publications milongas sont déjà générées');
+    return;
+  }
+  var res = await Promise.resolve(TEV.client.from('publications').insert(toInsert)).catch(function(e){ return {error:e}; });
+  if (res && res.error) {
+    afficherToast('❌ Erreur : ' + (res.error.message || 'échec insert'));
+    return;
+  }
+  afficherToast('✅ ' + toInsert.length + ' publication' + (toInsert.length > 1 ? 's' : '') + ' milonga générée' + (toInsert.length > 1 ? 's' : ''));
+  await chargerDonnees();
+  renderTab();
+}
+
 async function genererPublicationsStages() {
   var saiNext = saisonSuivante();
   var saiCur  = saisonActive();
@@ -10002,7 +10235,7 @@ async function genererPublicationsStages() {
       toInsert.push({
         titre: c.titre,
         contenu: c.contenu,
-        publiee: false,
+        publiee: true,
         donnees: {
           cat: 'stage',
           extrait: c.extrait,
@@ -10056,8 +10289,11 @@ function renderPublications() {
   var h='<button class="btn btn-gold" data-action="nouvelle-pub" style="width:100%;margin-bottom:8px;">✏️ Nouvelle publication</button>';
   if (showGenBtn) {
     h += '<button class="btn btn-ghost" data-action="generer-pub-stages"'
-      +' style="width:100%;margin-bottom:14px;border:1px solid var(--gold);color:var(--gold);">'
+      +' style="width:100%;margin-bottom:6px;border:1px solid var(--gold);color:var(--gold);">'
       +'🗓 Générer les publications stages ' + saiNext + '</button>';
+    h += '<button class="btn btn-ghost" data-action="generer-pub-milongas"'
+      +' style="width:100%;margin-bottom:14px;border:1px solid var(--gold);color:var(--gold);font-size:12px;">'
+      +'🎶 Générer les publications milongas ' + sai + '</button>';
   }
   h += '<div id="pub-ed"></div>';
   if(!pubs.length)return h+'<div class="empty-state">Aucune publication pour cette saison.</div>';
