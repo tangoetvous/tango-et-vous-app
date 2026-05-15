@@ -3028,18 +3028,6 @@ function _renderMilongaInfoContent(mil, idx) {
     + '<input id="mil-color-'+idx+'" type="color" value="'+(mil.color||'#ff8c00')+'"'
     + ' style="width:40px;height:36px;border:1px solid var(--border);border-radius:6px;padding:2px;cursor:pointer;background:var(--s3);"></div>'
     + '</div>'
-    + '<div style="margin-bottom:12px;">'
-    + '<label style="font-size:11px;color:var(--dim);display:block;margin-bottom:6px;">Visuel (affiche, flyer\u2026)</label>'
-    + (mil.image_url ? '<img src="'+_escAttr(mil.image_url)+'" style="max-height:140px;border-radius:6px;display:block;margin-bottom:8px;object-fit:cover;">' : '')
-    + '<input type="hidden" id="mil-img-url-'+idx+'" value="'+(mil.image_url||'').replace(/"/g,'&quot;')+'">'
-    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
-    + '<label style="cursor:pointer;font-size:12px;padding:6px 14px;border-radius:6px;background:var(--gold);color:#000;font-weight:600;display:inline-flex;align-items:center;gap:5px;">'
-    + '\ud83d\udcf7 '+(mil.image_url?'Changer l\'image':'Ajouter une image')
-    + '<input type="file" accept="image/*" style="display:none;" onchange="_uploadImageMilonga('+idx+',this)"></label>'
-    + (mil.image_url ? '<button data-action="suppr-image-milonga" data-idx="'+idx+'" style="font-size:12px;padding:6px 12px;border-radius:6px;background:transparent;border:1px solid var(--err-text,#e57373);color:var(--err-text,#e57373);cursor:pointer;">\ud83d\uddd1 Supprimer</button>' : '')
-    + '</div>'
-    + '<div id="prog-milimg-'+idx+'" style="font-size:11px;margin-top:6px;display:none;"></div>'
-    + '</div>'
     + '<div class="btn-row" style="flex-wrap:wrap;gap:8px;">'
     + '<button class="btn btn-gold" data-action="sauver-milonga-info" data-idx="'+idx+'"'
     + ' style="font-size:12px;">\ud83d\udcbe Enregistrer</button>'
@@ -3061,14 +3049,28 @@ function _renderMilongaDatesContent(mil, idx) {
     dates.forEach(function(d) {
       var past = d.date < tod;
       var hasOvr = !!(d.horaire_debut || d.horaire_fin);
+      var hasImg = !!d.image_url;
       h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;'+(past?'opacity:0.5;':'')+'">'
         +'<span style="font-size:12px;color:var(--text);flex:1;">'+(d.label||fmtDate(d.date))+'</span>';
       if (hasOvr) {
         h += '<span style="font-size:10px;color:var(--gold);">'
           +(d.horaire_debut||mil.horaire_debut)+'\u2013'+(d.horaire_fin||mil.horaire_fin)+'</span>';
       }
+      // Visuel par date
+      h += '<label style="cursor:pointer;display:inline-flex;align-items:center;flex-shrink:0;" title="'+(hasImg?'Changer le visuel':'Ajouter un visuel')+'">';
+      if (hasImg) {
+        h += '<img src="'+_escAttr(d.image_url)+'" style="width:32px;height:32px;border-radius:4px;object-fit:cover;border:1px solid var(--border);">';
+      } else {
+        h += '<span style="font-size:16px;opacity:0.4;line-height:1;">\ud83d\uddbc</span>';
+      }
+      h += '<input type="file" accept="image/*" style="display:none;"'
+        +' onchange="_uploadImageMilongaDate('+idx+',\''+d.date+'\',this)"></label>';
+      if (hasImg) {
+        h += '<button data-action="suppr-image-mil-date" data-idx="'+idx+'" data-date="'+d.date+'"'
+          +' style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:10px;padding:0 2px;" title="Supprimer le visuel">\u2715</button>';
+      }
       h += '<button data-action="suppr-date-milonga" data-idx="'+idx+'" data-date="'+d.date+'"'
-        +' style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;font-size:13px;padding:0 4px;" title="Supprimer">\u2715</button>'
+        +' style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;font-size:13px;padding:0 4px;" title="Supprimer la date">\u2715</button>'
         +'</div>';
     });
     h += '</div>';
@@ -3721,41 +3723,44 @@ function sauverMilongaInfo(idx) {
   mil.horaire_debut = ((gel('mil-hdeb-'+idx)||{}).value||'').trim();
   mil.horaire_fin   = ((gel('mil-hfin-'+idx)||{}).value||'').trim();
   mil.color = (gel('mil-color-'+idx)||{}).value || mil.color;
-  var imgUrl = ((gel('mil-img-url-'+idx)||{}).value||'').trim();
-  if (imgUrl) mil.image_url = imgUrl; else delete mil.image_url;
   sauverMilongas();
   afficherToast('\u2713 Milonga ' + mil.nom + ' enregistr\u00e9e');
   renderTab();
 }
-function _uploadImageMilonga(idx, input) {
+function _uploadImageMilongaDate(milIdx, dateStr, input) {
   var file = input.files[0]; if (!file) return;
-  var prog = gel('prog-milimg-'+idx);
-  if (prog) { prog.style.display='block'; prog.style.color='var(--gold)'; prog.textContent='\u23f3 Upload en cours\u2026'; }
+  afficherToast('\u23f3 Upload en cours\u2026');
   var fd = new FormData(); fd.append('file', file); fd.append('upload_preset', 'tango_uploads');
   fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_NAME+'/image/upload', {method:'POST', body:fd})
     .then(function(r){ return r.json(); })
     .then(function(d) {
       if (d.secure_url) {
         chargerMilongas(saisonParametres || saisonCourante());
-        if (MILONGAS && MILONGAS[idx]) {
-          MILONGAS[idx].image_url = d.secure_url;
-          sauverMilongas();
+        if (MILONGAS && MILONGAS[milIdx]) {
+          var di = (MILONGAS[milIdx].dates||[]).findIndex(function(x){ return x.date===dateStr; });
+          if (di >= 0) {
+            MILONGAS[milIdx].dates[di] = Object.assign({}, MILONGAS[milIdx].dates[di], {image_url: d.secure_url});
+            sauverMilongas();
+            afficherToast('\u2705 Visuel enregistr\u00e9');
+            renderTab();
+          }
         }
-        if (prog) { prog.textContent='\u2705 Image enregistr\u00e9e'; prog.style.color='#4caf50'; }
-        setTimeout(function(){ renderTab(); }, 800);
       } else {
-        if (prog) { prog.textContent='\u274c '+(d.error&&d.error.message?d.error.message:'\u00c9chec'); prog.style.color='#e53935'; }
+        afficherToast('\u274c '+(d.error&&d.error.message?d.error.message:'\u00c9chec upload'));
       }
     })
-    .catch(function(){ if (prog) { prog.textContent='\u274c Erreur r\u00e9seau'; prog.style.color='#e53935'; } });
+    .catch(function(){ afficherToast('\u274c Erreur r\u00e9seau'); });
 }
-function supprimerImageMilonga(idx) {
+function supprimerImageMilongaDate(milIdx, dateStr) {
   chargerMilongas(saisonParametres || saisonCourante());
-  if (!MILONGAS || !MILONGAS[idx]) return;
-  delete MILONGAS[idx].image_url;
-  sauverMilongas();
-  afficherToast('\u2713 Image supprim\u00e9e');
-  renderTab();
+  if (!MILONGAS || !MILONGAS[milIdx]) return;
+  var di = (MILONGAS[milIdx].dates||[]).findIndex(function(x){ return x.date===dateStr; });
+  if (di >= 0) {
+    delete MILONGAS[milIdx].dates[di].image_url;
+    sauverMilongas();
+    afficherToast('\u2713 Visuel supprim\u00e9');
+    renderTab();
+  }
 }
 function ajouterDatesMilonga(idx) {
   chargerMilongas(saisonParametres || saisonCourante());
@@ -5388,8 +5393,8 @@ function handleAction(action, btn) {
     case 'supprimer-milonga':
       supprimerMilonga(parseInt(btn.dataset.idx)||0);
       break;
-    case 'suppr-image-milonga':
-      supprimerImageMilonga(parseInt(btn.dataset.idx)||0);
+    case 'suppr-image-mil-date':
+      supprimerImageMilongaDate(parseInt(btn.dataset.idx)||0, btn.dataset.date||'');
       break;
     case 'add-mil-presence':
       (function() {
