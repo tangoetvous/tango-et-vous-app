@@ -10371,7 +10371,11 @@ function voirPub(idx) {
   var pvBtn=gel('pv-btn'); pvBtn.innerHTML='';
   var isStage=p.cat==='stage'||p.autoGenStage===true||(p.donnees&&p.donnees.cat==='stage');
   if(isStage){
-    pvBtn.innerHTML='<div style="display:block;text-align:center;background:var(--gold);color:#1a1208;font-weight:700;font-size:15px;padding:13px 20px;border-radius:8px;letter-spacing:.3px;">S\'inscrire →</div>';
+    var pvBtnEl=document.createElement('button');
+    pvBtnEl.textContent="S'inscrire →";
+    pvBtnEl.style.cssText='display:block;width:100%;text-align:center;background:var(--gold);color:#1a1208;font-weight:700;font-size:15px;padding:13px 20px;border-radius:8px;letter-spacing:.3px;border:none;cursor:pointer;font-family:inherit;';
+    pvBtnEl.onclick=function(){fermerPubView();switchTab('stages');};
+    pvBtn.appendChild(pvBtnEl);
   }
   var m=gel('pub-view-modal');m.style.display='flex';m.scrollTop=0;
 }
