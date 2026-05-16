@@ -1815,3 +1815,65 @@ if (currentTab === 'publications') return; // ne pas interrompre avec le polling
 
 - `ouvrirPub()` : ajout de `requestAnimationFrame(function(){ el.scrollIntoView({behavior:'smooth',block:'start'}); })` après injection du formulaire dans `#pub-ed`
 - **Cause** : `#pub-ed` est en haut de la liste, le formulaire apparaissait hors écran quand l'admin était scrollé vers le bas — donnait l'impression que «rien ne se passait»
+
+## Session 2026-05-16 — Modal publications : design beige, boutons S'inscrire / Je pense venir
+
+### ✅ Design modal publications — fond beige, image en premier, texte noir
+
+**admin.html et index.html** :
+- Fond du modal : `background:#fdf6ec` (beige clair)
+- Structure : `#pv-img` / `#pub-modal-media` EN PREMIER (avant le bouton ✕ et le texte)
+- Bouton ✕ : `position:absolute;top:10px;right:14px;background:rgba(0,0,0,.45)` — superposé sur l'image
+- Texte body : `font-size:17px;color:#000;font-weight:600;line-height:1.75;white-space:pre-wrap`
+- Fond onglet Publications : `background:#fdf6ec;min-height:100vh` (index.html `#actu-pane`) + même fond dans admin.html `renderPublications()`
+- Textes boutons "Générer..." dans admin : couleur `#000` (sur fond beige)
+- **Police** : Montserrat — seuls les weights 300, 400, 600, 700 sont chargés. `font-weight:500` n'a aucun effet — toujours utiliser `font-weight:600`
+
+### ✅ Tri chronologique des publications
+
+Dans `renderPublications()` (admin.html) et avant `window._pubs = pubs` (index.html) : sort par `dateProgrammee || date` croissant.
+
+### ✅ Bouton "S'inscrire →" dans les publications stages
+
+- **Espace élève** : bouton `pub-modal-inscr-btn` en bas du modal → `switchTab('stages')`
+- **Admin** : bouton créé via `document.createElement('button')` (pas un `<div>`) avec `onclick = function(){ fermerPubView(); switchTab('stages'); }` — était inactif si `<div>` utilisé
+- **Détection triple** : `p.cat==='stage' || p.autoGenStage===true || (p.donnees&&p.donnees.cat==='stage')` — nécessaire car localStorage peut ne pas avoir mergé `donnees`
+
+### ✅ Bouton "Je pense venir →" dans les publications milongas (espace élève)
+
+- Ajouté dans `openPub()` (index.html) — détecté via triple check (`cat`, `autoGenMilonga`, `donnees.cat`)
+- Extrait `milongaDate` et `milongaId` depuis `p` ou `p.donnees`
+- Couleur depuis `MILONGAS_OBJ.find(m => m.id === milId).color`
+- Vérifie RSVP actuel via `_loadMilPresences()` → affiche "J'y vais ! [Annuler]" ou "Je pense venir →"
+- Globals `window._pubMil`, `window._pubMilVenir`, `window._pubMilAnnuler`, `window._renderPubMilBtn` pour les handlers inline onclick
+- `_renderPubMilBtn(coming)` re-rend uniquement le div `#pub-modal-btn` (le div `#pub-modal-tarif` est séparé, non écrasé)
+- **Admin** : bouton affiché en aperçu uniquement (`cursor:default`, `opacity:.85`, `title` explicatif)
+
+### ✅ Bouton positionné AVANT les tarifs dans le modal
+
+**Principe** : le contenu (`p.contenu`) est splitté au marqueur de tarif. Le bouton est injecté entre les deux parties.
+
+**Marqueurs de split** :
+- Stages : `'\nTarifs :\n'`
+- Milongas : `'\nTarif :\n'`
+- Autres publications : pas de split, bouton en fin de contenu
+
+**Structure HTML modifiée** (identique dans admin.html `#pv-*` et index.html `#pub-modal-*`) :
+```
+[body part 1 — contenu avant tarifs]
+[#pv-btn / #pub-modal-btn — bouton S'inscrire ou Je pense venir]
+[#pv-tarif / #pub-modal-tarif — contenu après le marqueur tarif]
+```
+
+**Règle** : `#pub-modal-tarif` est un div séparé de `#pub-modal-btn` — `_renderPubMilBtn` fait `bd.innerHTML=...` sur `pub-modal-btn` sans toucher `pub-modal-tarif`.
+
+### ✅ Format titre et contenu milonga (`_genContenuMilonga`)
+
+- **Titre** : `'Milonga ' + mil.nom + ' - ' + DOW_LONG[d.getDay()] + ' ' + dayNum + ' ' + MOIS_FR[d.getMonth()] + ' ' + hdeb.toUpperCase() + '-' + hfin.toUpperCase()`
+  - Exemple : `Milonga La Dolce Vita - Dimanche 13 Septembre 17H30-23H30`
+- **Intro contenu** : `'La prochaine Milonga ' + mil.nom.toUpperCase() + ' aura lieu le:\n'` + date (sans point à la fin de la ligne date)
+
+### ✅ SW cache — versioning
+
+- `sw.js CACHE` : passé de `tv-cartes-v1` → `v2` → `v3` au fil des sessions pour forcer la mise à jour
+- **Règle** : incrémenter `CACHE` à chaque fois que des changements visuels dans `index.html` ne s'affichent pas malgré un Cmd+Shift+R — le SW a mis en cache l'ancienne version
