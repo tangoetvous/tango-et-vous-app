@@ -10924,13 +10924,47 @@ function renderCoursTango() {
 
   Object.keys(grp).sort().forEach(function(cours){
     var items = grp[cours];
-    h += '<div class="section-hdr">'+cours+' ('+items.length+')</div>'
+    var ville = (items[0] && items[0].ville) || '';
+    var niveau = (items[0] && items[0].niveau) || '';
+    var badgeHtml = '';
+    var inscritsHtml = '';
+    if (sousOngletCoursTango === 'attente_paiement' && ville && niveau) {
+      badgeHtml = ' &nbsp; ' + capBadge(ville, niveau);
+      var sai = saisonActive();
+      var inscrits = (adminData.coursTango||[]).filter(function(e){
+        return e.statut === 'inscrit' && !e._isRenewalRow
+          && e.ville === ville && e.niveau === niveau
+          && (e.saison || saisonCourante()) === sai;
+      });
+      var seenIns = {};
+      inscrits = inscrits.filter(function(e){
+        var k = _normNom((e.prenom||'')+' '+(e.nom||''));
+        if (!k) return true;
+        if (seenIns[k]) return false;
+        seenIns[k] = true; return true;
+      });
+      inscrits.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
+      if (inscrits.length) {
+        inscritsHtml = '<div style="padding:4px 16px 10px;opacity:0.45;">'
+          + '<div style="font-size:10px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:4px 0 4px;">Déjà inscrits ('+inscrits.length+')</div>';
+        inscrits.forEach(function(e){
+          var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
+          inscritsHtml += '<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:13px;">'
+            + '<span style="flex:1;">'+(e.prenom||'')+' '+(e.nom||'')+'</span>'
+            + '<span class="pill '+rcls+'" style="font-size:8px;padding:1px 4px;">'+(e.role==='guideur'?'Guideur':'Guidée')+'</span>'
+            + '</div>';
+        });
+        inscritsHtml += '</div>';
+      }
+    }
+    h += '<div class="section-hdr">'+cours+' ('+items.length+')'+badgeHtml+'</div>'
       +'<div style="padding:0 16px;">';
     _groupCouples(items).forEach(function(g){
       if(g.type==='couple') h+=_coupleWrap(ficheEleve(g.persons[0])+ficheEleve(g.persons[1]));
       else h+=ficheEleve(g.person);
     });
     h += '</div>';
+    h += inscritsHtml;
   });
   return h;
 }
