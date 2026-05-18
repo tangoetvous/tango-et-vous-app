@@ -1877,3 +1877,95 @@ Dans `renderPublications()` (admin.html) et avant `window._pubs = pubs` (index.h
 
 - `sw.js CACHE` : passé de `tv-cartes-v1` → `v2` → `v3` au fil des sessions pour forcer la mise à jour
 - **Règle** : incrémenter `CACHE` à chaque fois que des changements visuels dans `index.html` ne s'affichent pas malgré un Cmd+Shift+R — le SW a mis en cache l'ancienne version
+
+## Session 2026-05-18 — Quotas tango/yoga, Inscriptions Tango Att. Paiement
+
+### ✅ Onglet "Forfait / Carte" (espace élève)
+- Onglet renommé : `'Forfait'` → `'Forfait / Carte'` dans `_TAB_LABELS` et `NAV_TABS` de `index.html`
+
+### ✅ Espacement boutons fiches essai (admin.html)
+- `gap:4px`/`gap:5px` → `gap:8px` sur les rangées de boutons dans `_attEssaiCard`, `_mkEssaiPtCard`, `_mkAttPtCard`, fiches présents/absents, vue par date, `rowYoga`
+
+### ✅ Inscriptions Tango → Att. Paiement : badge quota + liste inscrits grisée
+
+**Nouveau dans chaque groupe de cours du sous-onglet "Att. Paiement"** :
+- Badge quota `👨 X/22 👩 X/23` (couleur verte/orange/rouge) dans l'en-tête du cours
+- Section grisée "Déjà inscrits (N)" en dessous de la liste att. paiement → affiche les élèves `statut='inscrit'` du même cours avec leur rôle en pill
+- Le badge compte `inscrit + attente_paiement` (quota réel) — cohérent avec ce qu'il faut surveiller pour ne pas sur-inscrire
+
+**Groupement par `ville+niveau`** (4 groupes fixes) :
+- **Problème** : l'ancienne clé `e.cours` avait plusieurs formats (`'paris—debutant'`, `'Paris — Jeudi — Débutant'`, etc.) → plusieurs listes pour le même cours
+- **Fix** : grouper par `(e.ville||'')+'—'+(e.niveau||'')` → exactement 4 groupes : `paris—debutant`, `paris—intermediaire`, `vincennes—debutant`, `vincennes—intermediaire`
+- Labels affichés : `COURS_LBL2` = `{'paris—debutant':'Paris — Débutants', ...}`
+- Ordre fixe via `COURS_ORDRE` array → toujours Paris Débutants en premier
+- **Ce fix s'applique aussi aux sous-onglets "Tous" et "Att. Validation"** — le code de groupement est partagé
+
+### ✅ Élèves Tango : badge guideurs/guidées cohérent avec la liste affichée
+
+**Problème** : dans `_elevesResultatsHTML`, le badge appelait `capaciteCours()` → comptait `inscrit + attente_paiement` = 19 alors que la liste ne montre que les `inscrit` = 16.
+**Fix** : compter directement depuis `liste` (déjà filtrée à `inscrit` + dédupliquée) :
+```javascript
+var _gui = liste.filter(function(e){ return e.role==='guideur'; }).length;
+var _gde = liste.filter(function(e){ return e.role!=='guideur'; }).length;
+```
+Le badge (ex: 👩 16/23) correspond exactement aux élèves visibles.
+
+**Règle mémo** : le badge dans Élèves Tango = inscrits seulement. Le badge dans Att. Paiement = inscrit + attente_paiement (quota complet).
+
+### ✅ Système de quotas tango (recap complet)
+
+**Constantes** : `CAP_GUI=22`, `CAP_GDE=23`
+
+**`nbInscritsCours(ville, niveau, role)`** :
+- Filtre `STATUTS_QUOTA = ['inscrit','attente_paiement']` uniquement — jamais 'demande', 'valide', 'attente'
+- `!e._isRenewalRow` — exclut les renouvellements
+- Déduplication par `_normNom(prenom + ' ' + nom)` dans le cours
+- **Règle** : 'validé' = 'attente_paiement' en DB — ne jamais les compter séparément
+
+**`noLimitsTangoToday()`** : toujours `false` pour les inscriptions régulières (quota appliqué toute l'année).
+
+**Formulaire public `inscription-cours.html`** :
+- Quota vérifié dans `finalize()` après l'anti-doublon
+- Requête Supabase : `inscriptions_cours` filtré `statut IN ['inscrit','attente_paiement']`, exclut `isRenewal=true` via parsing `donnees`
+- Si quota atteint → `_quotaFull=true` → statut forcé `'demande'` + message orange `#quota-full-notice` affiché dans l'écran de succès
+- `isWaitlist()` retourne `true` si guidée seule OU `_quotaFull`
+
+**Admin formulaires** (Inscrire + Valider Paiement) : quota vérifié avec bouton ⚡ Forcer si atteint.
+
+**Essai tango** : quota via RPC SQL `compter_inscrits_essai()` (soustrait absences, sept-nov uniquement). Admin peut toujours forcer via "✓ Valider".
+
+### ✅ Système de quotas yoga
+
+**Constante** : `CAP_YOGA = 14`
+
+**`nbInscritsYoga(cours)`** :
+- `cours` = `'yin'` ou `'hatha'` — les élèves en `forfait` comptent dans **les deux**
+- Filtre `statut !== 'supprimé'` + `saison === saisonActive()`
+- Déduplication par email (ou nom normalisé si email vide)
+
+**`nbInscritsYogaDate(cours, date)`** :
+- Pour l'essai yoga : compte les **inscrits réguliers non absents ce jour** + les **élèves essai pour cette date**
+- Absences depuis `adminData.absencesJour` filtré sur `date`
+- Forfait compte dans yin ET hatha
+
+**`capBadgeYoga(cours)`** et **`capBadgeYogaDate(cours, date)`** :
+- Badge coloré vert/orange/rouge + "COMPLET" si atteint
+- Affichés dans Élèves Yoga (sections yin/hatha) et dans chaque sous-section par date de l'Essai Yoga
+
+**Admin "Inscrire Élève" yoga** (`soumettreInscriptionDirecteYoga(force)`) :
+- Paramètre `force` pour le forçage
+- Si quota atteint et `!force` → message rouge + bouton ⚡ "Forcer l'inscription"
+- Forfait vérifie yin ET hatha séparément
+
+**Admin "💳 Inscrire" depuis essai** (case `confirmer-yoga-inscr`) :
+- `confirm()` si quota atteint → admin confirme ou annule
+- Forfait vérifie yin ET hatha
+
+**Formulaire public `essai-yoga.html`** :
+- Quota vérifié avant INSERT dans `soumettre()` via 3 requêtes Supabase en parallèle par cours à vérifier :
+  1. `inscriptions_essai_yoga` WHERE date_essai=date AND cours IN [cours, 'forfait']
+  2. `cours_yoga` WHERE statut='inscrit' AND saison=... AND cours IN [cours, 'forfait']
+  3. `absences_jour` WHERE date=date
+- Soustrait les absents des inscrits réguliers
+- Forfait déclenche la vérification pour yin ET hatha (boucle `for...of _coursCheck`)
+- Message d'erreur explicite avec le nom du cours complet
