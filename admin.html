@@ -1091,11 +1091,12 @@ function isSaisonPassee() { return saisonActive()<saisonCourante(); }
 
 // Capacité max par rôle dans les cours réguliers
 var CAP_GUI = 22, CAP_GDE = 23;
-// Nombre d'élèves inscrits (statut==='inscrit') pour une ville+niveau+rôle
+// Nombre d'élèves comptant pour le quota (inscrit + demande + attente_paiement + valide + attente)
 function nbInscritsCours(ville, niveau, role) {
   var sai = saisonActive();
+  var STATUTS_QUOTA = ['inscrit','demande','attente_paiement','valide','attente'];
   var entries = (adminData.coursTango||[]).filter(function(e){
-    return e.statut==='inscrit' && !e._isRenewalRow
+    return STATUTS_QUOTA.indexOf(e.statut) >= 0 && !e._isRenewalRow
       && e.ville===ville && e.niveau===niveau
       && e.role===role && (e.saison||saisonCourante())===sai;
   });
@@ -1114,10 +1115,9 @@ function capaciteCours(ville, niveau) {
   return { gui:gui, gde:gde, maxGui:CAP_GUI, maxGde:CAP_GDE,
            fullGui:gui>=CAP_GUI, fullGde:gde>=CAP_GDE };
 }
-// Pas de limites tango à partir du 1/12 (déc–juin = seconde moitié de saison)
+// Quota inscriptions régulières : s'applique toute l'année
 function noLimitsTangoToday() {
-  var mm = parseInt(today().slice(5,7), 10);
-  return mm < 9 || mm >= 12;
+  return false;
 }
 // Rendu d'un petit badge de capacité (inline)
 function capBadge(ville, niveau) {

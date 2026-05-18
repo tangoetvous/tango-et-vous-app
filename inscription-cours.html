@@ -164,6 +164,7 @@ select option{background:var(--s2);}
 <div class="success" id="success-wait">
   <span class="s-icon">⏳</span>
   <div class="s-title">DEMANDE ENREGISTRÉE</div>
+  <div id="quota-full-notice" style="display:none;background:rgba(255,152,0,0.15);border:1px solid #ffaa44;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#e07800;font-weight:600;">⚠️ Le cours est actuellement complet. Votre demande a été enregistrée en liste d'attente — vous serez contacté·e si une place se libère.</div>
   <div class="s-card">
     <div class="s-line"><span class="s-ico">⏳</span><span>Vous êtes sur <b>liste d'attente</b>. Nous maintenons la parité guideurs&nbsp;/ guidé·e·s et nous vous recontacterons dès qu'une place se libère.</span></div>
     <div class="s-line"><span class="s-ico">📧</span><span>Vous allez recevoir un email de confirmation. On vous tient au courant !</span></div>
@@ -1037,11 +1038,36 @@ async function finalize() {
       }
     }
   }
+
+  // Vérification quota (inscrit + demande + attente_paiement + valide + attente)
+  let _quotaFull = false;
+  if (window.TEV) {
+    const _coursesToCheck = [{ ville: S.c1.ville, niveau: S.c1.niveau, role: S.role }];
+    if (S.nbCours === 2 && S.c2.ville && S.c2.niveau) {
+      _coursesToCheck.push({ ville: S.c2.ville, niveau: S.c2.niveau, role: S.role2 || S.role });
+    }
+    for (const _cc of _coursesToCheck) {
+      const { data: _rows } = await TEV.client.from('inscriptions_cours')
+        .select('role, donnees')
+        .eq('ville', _cc.ville).eq('niveau', _cc.niveau).eq('saison', S.saison)
+        .in('statut', ['inscrit','demande','attente_paiement','valide','attente']);
+      const _nonRen = (_rows || []).filter(function(r) {
+        try { var d = typeof r.donnees === 'string' ? JSON.parse(r.donnees) : (r.donnees || {}); return d.isRenewal !== true; } catch(e) { return true; }
+      });
+      const _gui = _nonRen.filter(function(r){ return r.role === 'guideur'; }).length;
+      const _gde = _nonRen.filter(function(r){ return r.role === 'guidee'; }).length;
+      if ((_cc.role === 'guideur' && _gui >= 22) || (_cc.role === 'guidee' && _gde >= 23)) {
+        _quotaFull = true; break;
+      }
+    }
+  }
+
   $('form-zone').style.display='none';
   $('prog-zone').style.display='none';
 
-  // Guidée sans partenaire dans tous ses cours → attente
-  const wait = isWaitlist();
+  // Guidée sans partenaire dans tous ses cours → attente. Quota plein → attente aussi.
+  const wait = isWaitlist() || _quotaFull;
+  if (_quotaFull && $('quota-full-notice')) $('quota-full-notice').style.display = 'block';
   const id = wait ? 'success-wait' : 'success-asso';
   const rid = wait ? 'recap-wait'  : 'recap-asso';
 
