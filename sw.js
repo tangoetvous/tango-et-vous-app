@@ -2,7 +2,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
-const CACHE = 'tv-cartes-v3';
+const CACHE = 'tv-cartes-v4';
 const PRECACHE = ['/', '/index.html'];
 
 // ── Firebase Messaging (notifications push discussions) ──────────
