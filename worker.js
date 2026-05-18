@@ -117,7 +117,11 @@ export default {
         return handleRemplacantData(request, url, env);
       }
 
-      return env.ASSETS.fetch(request);
+      try {
+        return await env.ASSETS.fetch(request);
+      } catch (assetErr) {
+        return new Response('Page introuvable', { status: 404, headers: { 'Content-Type': 'text/plain;charset=UTF-8' } });
+      }
     } catch (e) {
       console.error('Worker error:', e);
       return jsonError(500, 'Une erreur est survenue');
