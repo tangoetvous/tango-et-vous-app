@@ -6261,6 +6261,7 @@ function renderElevesTango() {
   if (sousOngletEleves === 'supprimes') {
     return h + _elevesSupprimes(supprimes);
   }
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:6px;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerElevesTango()">🖨️ Imprimer / PDF</button></div>';
   h+='<div style="margin-bottom:10px;"><input type="search" id="rech-eleve" value="'+rechercheEleve.replace(/"/g,'&quot;')+'" placeholder="🔍 Rechercher parmi tous les cours..." oninput="majRechercheEleve(this.value)" style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;" autocomplete="off"></div>';
   h+='<div id="eleves-resultats">'+_elevesResultatsHTML(inscrits)+'</div>';
   return h;
@@ -6915,7 +6916,7 @@ function renderEssai() {
     +'<button class="sub-tab'+(filtreEssai==='inscrire'?' active':'')+'" data-filt-essai="inscrire">&#43; Inscrire</button>'
     +'</div>'
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" data-action="rafraichir-essais">&#8635; Rafraîchir</button>':'')
-    +(filtreEssai==='pointage'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerEssaiTango()">🖨️ Imprimer</button>':'')
+    +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerEssaiTango()">🖨️ Imprimer</button>':'')
     +'</div>';
   if(filtreEssai!=='inscrire') h+=_tevSearchBar();
   // Trier : date ASC, puis niveau (debutant avant intermediaire), puis rôle
@@ -7884,6 +7885,95 @@ function imprimerEssaiYoga() {
   });
   if (!sections.length) { afficherToast('Aucune donnée à imprimer'); return; }
   _tevPrint('Pointage Essai Yoga', sections);
+}
+
+function imprimerElevesTango() {
+  var sai = saisonActive();
+  var ONGLETS = [
+    {id:'paris-deb',     lbl:'Paris Débutants',         ville:'paris',     niv:'debutant'},
+    {id:'paris-int',     lbl:'Paris Intermédiaires',     ville:'paris',     niv:'intermediaire'},
+    {id:'vincennes-deb', lbl:'Vincennes Débutants',      ville:'vincennes', niv:'debutant'},
+    {id:'vincennes-int', lbl:'Vincennes Intermédiaires', ville:'vincennes', niv:'intermediaire'}
+  ];
+  var inscrits = (adminData.coursTango||[]).filter(function(e){ return e.statut==='inscrit' && !e._isRenewalRow && (e.saison||saisonCourante())===sai; });
+  var ong = ONGLETS.find(function(o){ return o.id===sousOngletEleves; }) || ONGLETS[0];
+  var liste = inscrits.filter(function(e){ return e.ville===ong.ville && e.niveau===ong.niv; });
+  var seen = {}; liste = liste.filter(function(e){ var k=_normNom((e.prenom||'')+' '+(e.nom||'')); if(!k)return true; if(seen[k])return false; seen[k]=true; return true; });
+  liste.sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom,'fr'); });
+  if (!liste.length) { afficherToast('Aucun élève dans ce cours'); return; }
+  var gui = liste.filter(function(e){ return e.role==='guideur'; }).length;
+  var gde = liste.filter(function(e){ return e.role!=='guideur'; }).length;
+  var rows = liste.map(function(e){ return [e.prenom+' '+e.nom, e.role==='guideur'?'Guideur':'Guidée', e.partenaire||'—', e.tel||'—', '']; });
+  _tevPrint('Élèves Tango · '+ong.lbl+' ('+gui+' guid. / '+gde+' guidées)', [{headers:['Nom','Rôle','Partenaire','Tél','✓'],rows:rows}]);
+}
+
+function imprimerInscriptionsTango() {
+  var sai = saisonActive();
+  var tous = (adminData.coursTango||[]).filter(function(e){ return e.statut!=='inscrit' && e.statut!=='supprimé' && (e.saison||saisonCourante())===sai; });
+  var COURS_LBL2 = {'paris—debutant':'Paris Débutants','paris—intermediaire':'Paris Intermédiaires','vincennes—debutant':'Vincennes Débutants','vincennes—intermediaire':'Vincennes Intermédiaires'};
+  var liste;
+  var titreAff;
+  if (sousOngletCoursTango==='attente_validation') {
+    liste = tous.filter(function(e){ return e.statut==='demande'||e.statut==='attente'; });
+    titreAff = 'Inscriptions Tango · En attente de validation';
+  } else if (sousOngletCoursTango==='attente_paiement') {
+    liste = tous.filter(function(e){ return e.statut==='valide'||e.statut==='attente_paiement'; });
+    titreAff = 'Inscriptions Tango · En attente de paiement';
+  } else {
+    liste = tous.slice();
+    titreAff = 'Inscriptions Tango · Toutes les demandes';
+  }
+  if (!liste.length) { afficherToast('Aucune donnée à imprimer'); return; }
+  // Grouper par ville+niveau
+  var COURS_ORDRE = ['paris—debutant','paris—intermediaire','vincennes—debutant','vincennes—intermediaire'];
+  var grp = {};
+  liste.forEach(function(e){ var k=(e.ville||'')+'—'+(e.niveau||''); if(!grp[k])grp[k]=[]; grp[k].push(e); });
+  var sections = [];
+  COURS_ORDRE.forEach(function(k){
+    var items = grp[k]; if(!items||!items.length) return;
+    var lbl = COURS_LBL2[k]||k;
+    var rows = items.map(function(e){ return [e.prenom+' '+e.nom, e.role==='guideur'?'Guideur':'Guidée', e.partenaire||'—', e.statut||'—', e.tel||'—', '']; });
+    sections.push({title:lbl+' ('+items.length+')', headers:['Nom','Rôle','Partenaire','Statut','Tél','✓'], rows:rows});
+  });
+  if (!sections.length) { afficherToast('Aucune donnée à imprimer'); return; }
+  _tevPrint(titreAff, sections);
+}
+
+function imprimerYogaEleves() {
+  var sai = saisonActive();
+  var liste = (adminData.coursYoga||[]).filter(function(e){ return (e.saison||saisonCourante())===sai && e.statut!=='supprimé'; });
+  if (!liste.length) { afficherToast('Aucun élève yoga à imprimer'); return; }
+  liste.sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom,'fr'); });
+  var COURS_YOGA_LBL2 = {yin:'🌙 Yin Yoga 10h30', hatha:'☀️ Hatha Yoga 11h30', forfait:'🌙+☀️ Forfait'};
+  var yin   = liste.filter(function(e){ return e.cours==='yin'||e.cours==='forfait'; });
+  var hatha = liste.filter(function(e){ return e.cours==='hatha'||e.cours==='forfait'; });
+  function toRows(arr){ return arr.map(function(e){ return [e.prenom+' '+e.nom, COURS_YOGA_LBL2[e.cours]||e.cours, e.tel||'—', PAI_LBL[e.paiement]||e.paiement||'—', e.montant?e.montant+'€':'—', '']; }); }
+  var sections = [
+    {title:'🌙 Yin Yoga 10h30 ('+yin.length+')', headers:['Nom','Cours','Tél','Paiement','Montant','✓'], rows:toRows(yin)},
+    {title:'☀️ Hatha Yoga 11h30 ('+hatha.length+')', headers:['Nom','Cours','Tél','Paiement','Montant','✓'], rows:toRows(hatha)}
+  ].filter(function(s){ return s.rows.length; });
+  _tevPrint('Élèves Yoga · Saison '+sai, sections);
+}
+
+function imprimerSorano() {
+  var sai = saisonActive();
+  var reg = {};
+  (adminData.coursTango||[]).forEach(function(ct){ if((ct.ville||'')==='vincennes'&&(ct.saison||saisonCourante())===sai&&ct.email){ if(ct.paiement_sorano===true)reg[ct.email]=true; else if(reg[ct.email]===undefined)reg[ct.email]=false; } });
+  (adminData.coursYoga||[]).forEach(function(cy){ if((cy.saison||saisonCourante())===sai&&cy.email){ if(cy.paiement_sorano===true)reg[cy.email]=true; else if(reg[cy.email]===undefined)reg[cy.email]=false; } });
+  function alpha(a,b){ return (a.nom).localeCompare(b.nom,'fr'); }
+  var groups = [
+    {lbl:'Tango Vincennes Débutants',   src:(adminData.coursTango||[]).filter(function(ct){ return (ct.statut==='inscrit'||ct.statut==='supprimé')&&ct.ville==='vincennes'&&ct.niveau==='debutant'&&(ct.saison||saisonCourante())===sai; }).map(function(ct){ return{nom:ct.prenom+' '+ct.nom,email:ct.email,paye:!!reg[ct.email]}; }).sort(alpha)},
+    {lbl:'Tango Vincennes Intermédiaires', src:(adminData.coursTango||[]).filter(function(ct){ return (ct.statut==='inscrit'||ct.statut==='supprimé')&&ct.ville==='vincennes'&&ct.niveau==='intermediaire'&&(ct.saison||saisonCourante())===sai; }).map(function(ct){ return{nom:ct.prenom+' '+ct.nom,email:ct.email,paye:!!reg[ct.email]}; }).sort(alpha)},
+    {lbl:'Yin Yoga 10h30',  src:(adminData.coursYoga||[]).filter(function(cy){ return (cy.cours==='yin'||cy.cours==='forfait')&&cy.statut==='inscrit'&&(cy.saison||saisonCourante())===sai; }).map(function(cy){ return{nom:cy.prenom+' '+cy.nom,email:cy.email,paye:!!reg[cy.email]}; }).sort(alpha)},
+    {lbl:'Hatha Yoga 11h30', src:(adminData.coursYoga||[]).filter(function(cy){ return (cy.cours==='hatha'||cy.cours==='forfait')&&cy.statut==='inscrit'&&(cy.saison||saisonCourante())===sai; }).map(function(cy){ return{nom:cy.prenom+' '+cy.nom,email:cy.email,paye:!!reg[cy.email]}; }).sort(alpha)}
+  ];
+  var emailsSeen = {}, total=0, paye=0;
+  groups.forEach(function(g){ g.src.forEach(function(s){ var k=s.email||s.nom; if(!emailsSeen[k]){ emailsSeen[k]=true; total++; if(s.paye)paye++; } }); });
+  var sections = groups.filter(function(g){ return g.src.length; }).map(function(g){
+    return {title:g.lbl+' ('+g.src.length+')', headers:['Nom','Adhésion Sorano','✓'], rows:g.src.map(function(s){ return [s.nom, s.paye?'✓ Réglée':'Non réglée', '']; })};
+  });
+  if (!sections.length) { afficherToast('Aucune donnée à imprimer'); return; }
+  _tevPrint('Adhésions Sorano · Saison '+sai+' ('+paye+'/'+total+' réglées)', sections);
 }
 
 function renderCartes() {
@@ -9197,6 +9287,7 @@ function renderSorano() {
   var totalPaye=allDedup.filter(function(s){return s.paiementSorano;}).length;
   var totalNonPaye=allDedup.length-totalPaye;
   var h='<div class="stats-row stats-3"><div class="stat"><div class="stat-n n-gold">'+allDedup.length+'</div><div class="stat-l">Total</div></div><div class="stat"><div class="stat-n n-ok">'+totalPaye+'</div><div class="stat-l">Réglé</div></div><div class="stat"><div class="stat-n n-warn">'+totalNonPaye+'</div><div class="stat-l">En attente</div></div></div>';
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:4px;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerSorano()">🖨️ Imprimer / PDF</button></div>';
   h+=_tevSearchBar();
   groups.forEach(function(g){
     h+='<div class="section-hdr" style="color:'+g.color+'">'+g.lbl+' ('+g.list.length+')</div>';
@@ -10696,7 +10787,8 @@ function renderYogaEleves() {
   var sorted = liste.slice().sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom); });
   var yin   = sorted.filter(function(e){ return e.cours==='yin'||e.cours==='forfait'; });
   var hatha = sorted.filter(function(e){ return e.cours==='hatha'||e.cours==='forfait'; });
-  var h = _tevSearchBar()+'<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">'+liste.length+' élève'+(liste.length>1?'s':'')+' inscrit'+(liste.length>1?'s':'')+' en yoga — saison '+sai+'</div>';
+  var h = '<div style="display:flex;justify-content:flex-end;margin-bottom:6px;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerYogaEleves()">🖨️ Imprimer / PDF</button></div>'
+    +_tevSearchBar()+'<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">'+liste.length+' élève'+(liste.length>1?'s':'')+' inscrit'+(liste.length>1?'s':'')+' en yoga — saison '+sai+'</div>';
   function eleveRow(e) {
     var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
     var paiLbl = PAI_LBL[e.paiement]||e.paiement||'';
@@ -10978,6 +11070,7 @@ function renderCoursTango() {
 
   if(!liste.length) return h+'<div class="empty-state">Aucun élève dans cette catégorie.</div>';
 
+  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:4px;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerInscriptionsTango()">🖨️ Imprimer / PDF</button></div>';
   h+=_tevSearchBar();
   liste = liste.slice().sort(function(a,b){
     var ka=(a.ville||'')+(a.niveau||'')+(a.nom||'');
