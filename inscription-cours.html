@@ -1050,7 +1050,7 @@ async function finalize() {
       const { data: _rows } = await TEV.client.from('inscriptions_cours')
         .select('role, donnees')
         .eq('ville', _cc.ville).eq('niveau', _cc.niveau).eq('saison', S.saison)
-        .in('statut', ['inscrit','demande','attente_paiement','valide','attente']);
+        .in('statut', ['inscrit','attente_paiement']);
       const _nonRen = (_rows || []).filter(function(r) {
         try { var d = typeof r.donnees === 'string' ? JSON.parse(r.donnees) : (r.donnees || {}); return d.isRenewal !== true; } catch(e) { return true; }
       });
