@@ -2579,7 +2579,7 @@ function _iAccord(type, section) {
 }
 
 var DEFAULTS_ADRESSES = {
-  paris:    {nom:'Espace Danse Studio', rue:'24 villa Riberolle, Paris 20e',          gps:'48.8568,2.3960', transport:'M° Alexandre Dumas (L2)',             metrogps:'48.8566,2.3944'},
+  paris:    {nom:'Espas Danse Studio', rue:'24 villa Riberolle, Paris 20e',          gps:'48.8568,2.3960', transport:'M° Alexandre Dumas (L2)',             metrogps:'48.8566,2.3944'},
   vincennes:{nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)', metrogps:'48.8490,2.4393'},
   yoga:     {nom:'Espace Sorano',       rue:'16 rue Charles Pathé, 94300 Vincennes',   gps:'48.8471,2.4395', transport:'RER A — Vincennes (pl. Pierre Sémard)', metrogps:'48.8490,2.4393'},
   stages:   {nom:'Centre Kim Kan',      rue:'64 rue Orfila, Paris 20e',               gps:'48.8616,2.3970', transport:'M° Gambetta (L3)',                      metrogps:'48.8652,2.3988'},
@@ -2963,7 +2963,7 @@ function _renderAdhesionSoranoContent(sai) {
 // ── Carte d'un cours (header fixe + sections accordion) ─────
 function _renderParamCard(type, sai) {
   var cfg = {
-    paris:    {icon:'🕺', label:'Tango Paris',     sub:'Cours du jeudi — Espace Danse Studio'},
+    paris:    {icon:'🕺', label:'Tango Paris',     sub:'Cours du jeudi — Espas Danse Studio'},
     vincennes:{icon:'💃', label:'Tango Vincennes', sub:'Cours du lundi — Espace Sorano'},
     yoga:     {icon:'🧘', label:'Yoga',            sub:'Cours du mardi — Espace Sorano'},
     stages:   {icon:'🎭', label:'Stages',          sub:''},
@@ -2989,6 +2989,11 @@ function _renderParamCard(type, sai) {
 
   // Section Dates (tous les types)
   h += _renderAccordSection(type, 'dates', '📅 Dates', _renderSecDatesContent(type, sai));
+
+  // Section Journée des associations (Vincennes uniquement)
+  if (type === 'vincennes') {
+    h += _renderAccordSection(type, 'journee_asso', '🏘 Journée des associations', _renderSecJourneeAssoContent(sai));
+  }
 
   // Section Livret (sauf Stages)
   if (type !== 'stages') {
@@ -3277,7 +3282,7 @@ function _renderSecAdresseContent(type, sai) {
       +'🗺 Voir sur Google Maps</a>'
     : '';
   return '<div style="margin-bottom:4px;">'
-    + field('Nom de la salle', 'pm-'+type+'-adr-nom', 'text', 'ex : Espace Danse Studio')
+    + field('Nom de la salle', 'pm-'+type+'-adr-nom', 'text', 'ex : Espas Danse Studio')
     + field('Adresse complète', 'pm-'+type+'-adr-rue', 'text', 'ex : 24 villa Riberolle, Paris 20e')
     + field('Coordonnées GPS salle (lat,lng)', 'pm-'+type+'-adr-gps', 'text', 'ex : 48.8568,2.3960')
     + field('Transport le plus proche', 'pm-'+type+'-adr-transport', 'text', 'ex : M° Alexandre Dumas (L2)')
@@ -3302,6 +3307,30 @@ function sauverAdresseType(type, sai) {
   _saveParam(type, sai, 'adresse', data);
   afficherToast('✓ Adresse '+type+' '+sai+' enregistrée');
   if (type === 'stages') syncToutesPublicationsStages(sai);
+  renderTab();
+}
+
+// ── Contenu : Journée des associations (Vincennes) ──────────
+function _renderSecJourneeAssoContent(sai) {
+  var d = _loadParam('vincennes', sai, 'journee_asso');
+  var iS = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);'
+         + 'border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;';
+  var dateVal = d.date || '';
+  return '<div style="margin-bottom:4px;">'
+    +'<div style="margin-bottom:8px;">'
+    +'<label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Date de la journée des associations à Vincennes</label>'
+    +'<input id="pm-vincennes-journee-asso-date" type="date" value="'+dateVal+'" style="'+iS+'">'
+    +'</div>'
+    +'</div>'
+    +'<div class="btn-row">'
+    +'<button class="btn btn-gold" data-action="sauver-journee-asso" data-saison="'+sai+'" style="font-size:12px;">💾 Enregistrer</button>'
+    +'</div>';
+}
+
+function sauverJourneeAsso(sai) {
+  var val = ((gel('pm-vincennes-journee-asso-date')||{}).value||'').trim();
+  _saveParam('vincennes', sai, 'journee_asso', { date: val });
+  afficherToast('✓ Journée des associations enregistrée');
   renderTab();
 }
 
@@ -5326,6 +5355,9 @@ function handleAction(action, btn) {
       break;
     case 'sauver-horaires-type':
       sauverHorairesType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
+      break;
+    case 'sauver-journee-asso':
+      sauverJourneeAsso(btn.dataset.saison||saisonCourante());
       break;
     case 'reset-horaires-type':
       (function(){
@@ -9644,7 +9676,7 @@ function renderAgendaModif() {
     +'<div id="am-fields-reporte" style="display:'+(amActionAgenda==='reporte'?'block':'none')+';">'
     +'<div class="field"><label>Nouvelle date</label><input type="date" id="am-newdate"/></div>'
     +'<div class="field"><label>Nouvel horaire (optionnel)</label><input type="text" id="am-newheure" placeholder="Ex: 21h00"/></div>'
-    +'<div class="field"><label>Nouveau lieu (optionnel)</label><input type="text" id="am-newlieu" placeholder="Ex: Espace Danse Studio"/></div>'
+    +'<div class="field"><label>Nouveau lieu (optionnel)</label><input type="text" id="am-newlieu" placeholder="Ex: Espas Danse Studio"/></div>'
     +'</div>'
     // Champs conditionnels — modification
     +'<div id="am-fields-modif" style="display:'+(amActionAgenda==='modif'?'block':'none')+';">'
@@ -11954,7 +11986,7 @@ function _renderResaSallesSection() {
       +(salles.length>1?'<button data-action="suppr-resa-salle" data-idx="'+idx+'" style="background:none;border:none;color:var(--err-text,#e57373);cursor:pointer;font-size:14px;padding:0 4px;" title="Supprimer">✕</button>':'')
       +'</div>'
       +'<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Nom</label>'
-      +'<input id="resa-nom-'+idx+'" type="text" value="'+(salle.nom||'').replace(/"/g,'&quot;')+'" placeholder="ex : Espace Danse Studio" style="'+iS+'"></div>'
+      +'<input id="resa-nom-'+idx+'" type="text" value="'+(salle.nom||'').replace(/"/g,'&quot;')+'" placeholder="ex : Espas Danse Studio" style="'+iS+'"></div>'
       +'<div><label style="font-size:11px;color:var(--dim);display:block;margin-bottom:3px;">Lien vers le site</label>'
       +'<input id="resa-lien-'+idx+'" type="url" value="'+(salle.lien||'').replace(/"/g,'&quot;')+'" placeholder="https://..." style="'+iS+'"></div>'
       +'</div>';
