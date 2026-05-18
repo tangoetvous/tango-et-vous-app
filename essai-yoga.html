@@ -471,6 +471,26 @@ async function soumettre() {
     err.textContent='⚠️ '+prenom+' '+nom+' est déjà inscrit·e à ce cours d\'essai yoga.';
     err.style.display='block';btn.disabled=false;btn.textContent='S\'inscrire au cours d\'essai';return;
   }
+  // Quota yoga : max 14 par cours (yin/hatha séparément, forfait compte dans les deux)
+  const _dateD = new Date(date + 'T12:00:00');
+  const _yr = _dateD.getFullYear(), _mo = _dateD.getMonth() + 1;
+  const _saiYoga = _mo >= 9 ? _yr+'-'+(_yr+1) : (_yr-1)+'-'+_yr;
+  const _coursCheck = coursSelectionne === 'forfait' ? ['yin','hatha'] : [coursSelectionne];
+  for (const _c of _coursCheck) {
+    const [{ data:_ess }, { data:_reg }, { data:_abs }] = await Promise.all([
+      TEV.client.from('inscriptions_essai_yoga').select('email').eq('date_essai',date).in('cours',[_c,'forfait']),
+      TEV.client.from('cours_yoga').select('email').eq('statut','inscrit').eq('saison',_saiYoga).in('cours',[_c,'forfait']),
+      TEV.client.from('absences_jour').select('email').eq('date',date),
+    ]);
+    const _absSet = new Set((_abs||[]).map(a=>a.email));
+    const _total = (_ess||[]).length + (_reg||[]).filter(r=>!_absSet.has(r.email)).length;
+    if (_total >= 14) {
+      const _cn = _c==='yin' ? 'Yin Yoga' : 'Hatha Yoga';
+      err.textContent = '⚠️ Le cours de '+_cn+' est complet pour cette date ('+_total+'/14 participants). Veuillez choisir une autre date.';
+      err.style.display='block'; btn.disabled=false; btn.textContent='S\'inscrire au cours d\'essai'; return;
+    }
+  }
+
   // INSERT Supabase EN PREMIER (avant BroadcastChannel — évite la détachement d'iframe)
   const { error: insErr } = await TEV.client.from('inscriptions_essai_yoga').insert({
     prenom, nom, email, tel,

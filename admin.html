@@ -1133,6 +1133,58 @@ function capBadge(ville, niveau) {
   return badge;
 }
 
+// ── Quotas Yoga ──────────────────────────────────────────────────
+var CAP_YOGA = 14;
+
+function nbInscritsYoga(cours) {
+  // cours: 'yin' ou 'hatha' — forfait compte dans les deux
+  var sai = saisonActive();
+  var seen = {};
+  return (adminData.coursYoga||[]).filter(function(e){
+    return (e.saison||saisonCourante())===sai && e.statut!=='supprimé'
+      && (e.cours===cours||e.cours==='forfait');
+  }).filter(function(e){
+    var k=e.email||_normNom((e.prenom||'')+' '+(e.nom||''));
+    if(!k)return true; if(seen[k])return false; seen[k]=true; return true;
+  }).length;
+}
+
+function nbInscritsYogaDate(cours, date) {
+  // Pour l'essai : inscrits réguliers (non absents ce jour) + inscrits essai pour cette date
+  var sai = saisonActive();
+  var absEmails = (adminData.absencesJour||[]).filter(function(a){return a.date===date;}).map(function(a){return a.email;});
+  var seenR={};
+  var regular = (adminData.coursYoga||[]).filter(function(e){
+    return (e.saison||saisonCourante())===sai && e.statut!=='supprimé'
+      && (e.cours===cours||e.cours==='forfait') && absEmails.indexOf(e.email)<0;
+  }).filter(function(e){
+    var k=e.email||_normNom((e.prenom||'')+' '+(e.nom||''));
+    if(!k)return true; if(seenR[k])return false; seenR[k]=true; return true;
+  }).length;
+  var seenE={};
+  var essai = (adminData.essaiYoga||[]).filter(function(e){
+    return e.date===date && (e.cours===cours||e.cours==='forfait');
+  }).filter(function(e){
+    var k=e.email||_normNom((e.prenom||'')+' '+(e.nom||''));
+    if(!k)return true; if(seenE[k])return false; seenE[k]=true; return true;
+  }).length;
+  return regular + essai;
+}
+
+function capBadgeYoga(cours) {
+  var n=nbInscritsYoga(cours);
+  function col(x){return x>=CAP_YOGA?'#ff6b6b':x>=Math.round(CAP_YOGA*0.85)?'#ffaa44':'#4ade80';}
+  return '<span style="font-size:10px;color:'+col(n)+';font-weight:600;">'+n+'/'+CAP_YOGA+'</span>'
+    +(n>=CAP_YOGA?' <span style="font-size:9px;color:#ff6b6b;font-weight:700;">COMPLET</span>':'');
+}
+
+function capBadgeYogaDate(cours, date) {
+  var n=nbInscritsYogaDate(cours, date);
+  function col(x){return x>=CAP_YOGA?'#ff6b6b':x>=Math.round(CAP_YOGA*0.85)?'#ffaa44':'#4ade80';}
+  return '<span style="font-size:10px;color:'+col(n)+';font-weight:600;">'+n+'/'+CAP_YOGA+'</span>'
+    +(n>=CAP_YOGA?' <span style="font-size:9px;color:#ff6b6b;font-weight:700;">COMPLET</span>':'');
+}
+
 function dateAppartientSaison(dateStr, saison) {
   // Saison "Y1-Y2" : du 01/09/Y1 au 31/08/Y2
   var p=saison.split('-'), y1=parseInt(p[0]);
@@ -5058,6 +5110,10 @@ function handleAction(action, btn) {
         var nom    = btn.dataset.nom||'';
         var cours  = (gel('modal-yoga-cours-sel')||{}).value || 'yin';
         var sai    = saisonActive();
+        // Quota check avec forçage
+        var _cc = cours==='forfait'?['yin','hatha']:[cours];
+        var _over=false; _cc.forEach(function(c){if(nbInscritsYoga(c)>=CAP_YOGA)_over=true;});
+        if(_over && !confirm('⚠️ Ce cours est complet ('+CAP_YOGA+' élèves max).\nForcer l\'inscription ?')) return;
         if (!adminData.coursYoga) adminData.coursYoga=[];
         var existe = adminData.coursYoga.some(function(x){ return x.email===email && (x.saison||saisonCourante())===sai; });
         if (!existe) {
@@ -10613,11 +10669,13 @@ function renderYogaEssai() {
       h += '<div style="'+subHdrStyle+'">🌙 Yin Yoga 10h30'
         +' <span style="font-weight:400;color:var(--dim);">'+yin.length+' inscrit'+(yin.length>1?'s':'')+'</span>'
         +' <span style="font-weight:400;">— ✓'+yinPres+' ✗'+yinAbs+' ?'+(yin.length-yinPres-yinAbs)+'</span>'
+        +' &nbsp;'+capBadgeYogaDate('yin',date)
         +'</div>';
       yin.forEach(function(e){ h += rowYoga(e); });
       h += '<div style="'+subHdrStyle+'margin-top:10px;">☀️ Hatha Yoga 11h30'
         +' <span style="font-weight:400;color:var(--dim);">'+hatha.length+' inscrit'+(hatha.length>1?'s':'')+'</span>'
         +' <span style="font-weight:400;">— ✓'+hPres+' ✗'+hAbs+' ?'+(hatha.length-hPres-hAbs)+'</span>'
+        +' &nbsp;'+capBadgeYogaDate('hatha',date)
         +'</div>';
       hatha.forEach(function(e){ h += rowYoga(e); });
       var toutPointe = rest === 0;
@@ -10659,10 +10717,10 @@ function renderYogaEleves() {
       +'</div></div>';
   }
   var secStyle = 'font-size:12px;font-weight:700;color:#a78bfa;padding:10px 0 6px;border-bottom:1px solid rgba(167,139,250,0.3);margin-bottom:6px;';
-  h += '<div style="'+secStyle+'">🌙 Yin Yoga 10h30 <span style="font-weight:400;color:var(--dim);">'+yin.length+' élève'+(yin.length>1?'s':'')+'</span></div>';
+  h += '<div style="'+secStyle+'">🌙 Yin Yoga 10h30 <span style="font-weight:400;color:var(--dim);">'+yin.length+' élève'+(yin.length>1?'s':'')+'</span> &nbsp;'+capBadgeYoga('yin')+'</div>';
   if (yin.length) yin.forEach(function(e){ h += eleveRow(e); });
   else h += '<div style="font-size:11px;color:var(--dim);padding:4px 0 8px;">Aucun élève inscrit.</div>';
-  h += '<div style="'+secStyle+'margin-top:16px;">☀️ Hatha Yoga 11h30 <span style="font-weight:400;color:var(--dim);">'+hatha.length+' élève'+(hatha.length>1?'s':'')+'</span></div>';
+  h += '<div style="'+secStyle+'margin-top:16px;">☀️ Hatha Yoga 11h30 <span style="font-weight:400;color:var(--dim);">'+hatha.length+' élève'+(hatha.length>1?'s':'')+'</span> &nbsp;'+capBadgeYoga('hatha')+'</div>';
   if (hatha.length) hatha.forEach(function(e){ h += eleveRow(e); });
   else h += '<div style="font-size:11px;color:var(--dim);padding:4px 0 8px;">Aucun élève inscrit.</div>';
   return h;
@@ -10804,7 +10862,7 @@ window.diyPrefillFromEssai = function(id) {
 // Pré-remplir montant au rendu
 setTimeout(function(){ if(gel('diy-montant')&&!gel('diy-montant').value) window.diyUpdateMontant(); }, 50);
 
-window.soumettreInscriptionDirecteYoga = function() {
+window.soumettreInscriptionDirecteYoga = function(force) {
   var prenom = ((gel('diy-prenom')||{}).value||'').trim();
   var nom    = ((gel('diy-nom')||{}).value||'').trim();
   var email  = ((gel('diy-email')||{}).value||'').trim().toLowerCase();
@@ -10815,6 +10873,15 @@ window.soumettreInscriptionDirecteYoga = function() {
   var err = gel('diy-err'), ok = gel('diy-ok');
   if(err) err.style.display='none'; if(ok) ok.style.display='none';
   if (!prenom||!nom||!email) { if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';} return; }
+  if (!force) {
+    var _coursCheck = cours==='forfait' ? ['yin','hatha'] : [cours];
+    var _overCap = false;
+    _coursCheck.forEach(function(c){ if(nbInscritsYoga(c)>=CAP_YOGA) _overCap=true; });
+    if (_overCap) {
+      if(err){err.innerHTML='⚠️ Cours complet ('+CAP_YOGA+' élèves max).<br><button class="btn btn-warn" style="margin-top:6px;" onclick="soumettreInscriptionDirecteYoga(true)">⚡ Forcer l\'inscription</button>';err.style.display='block';}
+      return;
+    }
+  }
   var sai = saisonActive();
   var ts  = Date.now();
   var defMt = cours==='forfait' ? (TARIFS.yoga_forfait_2cours||0) : (TARIFS.yoga_forfait_1cours||0);
