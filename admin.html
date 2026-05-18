@@ -10913,17 +10913,28 @@ function renderCoursTango() {
 
   h+=_tevSearchBar();
   liste = liste.slice().sort(function(a,b){
-    if(a.cours!==b.cours)return(a.cours||'').localeCompare(b.cours||'');
-    return(a.nom||'').localeCompare(b.nom||'');
+    var ka=(a.ville||'')+(a.niveau||'')+(a.nom||'');
+    var kb=(b.ville||'')+(b.niveau||'')+(b.nom||'');
+    return ka.localeCompare(kb);
   });
 
+  // Grouper par ville+niveau (4 groupes max) — évite les doublons liés aux variantes de libellé cours
+  var COURS_ORDRE = ['paris—debutant','paris—intermediaire','vincennes—debutant','vincennes—intermediaire'];
+  var COURS_LBL2  = {'paris—debutant':'Paris — Débutants','paris—intermediaire':'Paris — Intermédiaires','vincennes—debutant':'Vincennes — Débutants','vincennes—intermediaire':'Vincennes — Intermédiaires'};
   var grp = {};
-  liste.forEach(function(e){var k=e.cours||'—';if(!grp[k])grp[k]=[];grp[k].push(e);});
+  liste.forEach(function(e){
+    var v=(e.ville||'').toLowerCase(), n=(e.niveau||'').toLowerCase();
+    var k = (v&&n) ? v+'—'+n : (e.cours||'—');
+    if(!grp[k])grp[k]=[];
+    grp[k].push(e);
+  });
 
-  Object.keys(grp).sort().forEach(function(cours){
-    var items = grp[cours];
-    var ville = (items[0] && items[0].ville) || '';
-    var niveau = (items[0] && items[0].niveau) || '';
+  COURS_ORDRE.concat(Object.keys(grp).filter(function(k){return COURS_ORDRE.indexOf(k)<0;})).forEach(function(cKey){
+    var items = grp[cKey];
+    if(!items || !items.length) return;
+    var ville = (items[0] && items[0].ville) || cKey.split('—')[0] || '';
+    var niveau = (items[0] && items[0].niveau) || cKey.split('—')[1] || '';
+    var lbl = COURS_LBL2[cKey] || cKey;
     var badgeHtml = '';
     var inscritsHtml = '';
     if (sousOngletCoursTango === 'attente_paiement' && ville && niveau) {
@@ -10955,7 +10966,7 @@ function renderCoursTango() {
         inscritsHtml += '</div>';
       }
     }
-    h += '<div class="section-hdr">'+cours+' ('+items.length+')'+badgeHtml+'</div>'
+    h += '<div class="section-hdr">'+lbl+' ('+items.length+')'+badgeHtml+'</div>'
       +'<div style="padding:0 16px;">';
     _groupCouples(items).forEach(function(g){
       if(g.type==='couple') h+=_coupleWrap(ficheEleve(g.persons[0])+ficheEleve(g.persons[1]));
