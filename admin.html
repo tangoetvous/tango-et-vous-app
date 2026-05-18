@@ -6243,16 +6243,14 @@ function _elevesResultatsHTML(inscrits) {
     if(!k) return true;
     if(_seenKeys[k])return false; _seenKeys[k]=true; return true;
   });
-  var cap=capaciteCours(ong.ville,ong.niv);
-  var noLimEl=noLimitsTangoToday();
+  // Compter depuis liste (inscrit seulement) — cohérent avec ce qui est affiché
+  var _gui=liste.filter(function(e){return e.role==='guideur';}).length;
+  var _gde=liste.filter(function(e){return e.role!=='guideur';}).length;
   function capCol(n,max){return n>=max?'#ff6b6b':n>=Math.round(max*0.85)?'#ffaa44':'#4ade80';}
   var r='<div style="display:flex;align-items:center;gap:12px;padding:8px 4px 10px;border-bottom:1px solid var(--border);margin-bottom:6px;flex-wrap:wrap;">'
-    +(noLimEl
-      ?'<span style="font-size:12px;font-weight:600;color:#4ade80;">👨 '+cap.gui+' guideurs</span>'
-       +'<span style="font-size:12px;font-weight:600;color:#4ade80;">👩 '+cap.gde+' guidées</span>'
-      :'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gui,cap.maxGui)+';">👨 '+cap.gui+' / '+cap.maxGui+' guideurs</span>'
-       +'<span style="font-size:12px;font-weight:600;color:'+capCol(cap.gde,cap.maxGde)+';">👩 '+cap.gde+' / '+cap.maxGde+' guidées</span>'
-       +(cap.fullGui||cap.fullGde?'<span style="font-size:11px;font-weight:700;color:#ff6b6b;border:1px solid #ff6b6b;border-radius:4px;padding:1px 6px;">COMPLET</span>':''))
+    +'<span style="font-size:12px;font-weight:600;color:'+capCol(_gui,CAP_GUI)+';">👨 '+_gui+' / '+CAP_GUI+' guideurs</span>'
+    +'<span style="font-size:12px;font-weight:600;color:'+capCol(_gde,CAP_GDE)+';">👩 '+_gde+' / '+CAP_GDE+' guidées</span>'
+    +(_gui>=CAP_GUI||_gde>=CAP_GDE?'<span style="font-size:11px;font-weight:700;color:#ff6b6b;border:1px solid #ff6b6b;border-radius:4px;padding:1px 6px;">COMPLET</span>':'')
     +'</div>';
   if(!liste.length) return r+'<div class="empty-state">Aucun élève inscrit dans ce cours.</div>';
   var groups=_groupCouples(liste);
