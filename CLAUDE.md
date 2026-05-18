@@ -1969,3 +1969,23 @@ Le badge (ex: 👩 16/23) correspond exactement aux élèves visibles.
 - Soustrait les absents des inscrits réguliers
 - Forfait déclenche la vérification pour yin ET hatha (boucle `for...of _coursCheck`)
 - Message d'erreur explicite avec le nom du cours complet
+
+### ✅ Impression PDF — bouton 🖨️ dans 6 onglets admin
+
+**`_tevPrint(titre, sections)`** — fonction partagée :
+- Ouvre une nouvelle fenêtre avec un tableau HTML formaté, déclenche `window.print()`
+- `sections` = array de `{title, headers, rows}` — une section par groupe ou sous-onglet
+- Style : fond blanc, police Arial, tableau avec bordures fines, en-tête gris clair, impression optimisée (`@media print`)
+
+**Onglets couverts :**
+
+| Onglet | Fonction | Colonnes / contenu |
+|--------|----------|--------------------|
+| Élèves Tango | `imprimerElevesTango()` | Nom, Rôle, Partenaire, Tél — liste du sous-onglet actif (débutant/intermédiaire × Paris/Vincennes) |
+| Essai Tango | bouton existant étendu | Visible dans toutes les vues sauf "Inscrire" (condition `filtreEssai!=='inscrire'`) |
+| Inscriptions Tango | `imprimerInscriptionsTango()` | 4 groupes par cours, colonnes selon sous-onglet actif (tous/att.valid/att.paiement) |
+| Stages | bouton existant | Inchangé |
+| Yoga Élèves | `imprimerYogaEleves()` | Sections yin + hatha, colonnes : Nom, Cours, Tél, Paiement, Montant |
+| Sorano | `imprimerSorano()` | Groupes par cours, colonnes : Nom, Statut, Tél |
+
+**Règle** : les fonctions d'impression lisent `adminData` en mémoire (pas de requête Supabase) — l'état affiché est l'état imprimé.
