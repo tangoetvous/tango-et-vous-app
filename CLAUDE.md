@@ -775,6 +775,9 @@ Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Co
 | **E0** | Toute inscription | — | Admin (tangoetvous@gmail.com) | Encadré or : nom/email/tel/rôle/cours/date/lieu + badge statut + boutons 📞/✉️/SMS/admin |
 | **E1** | Inscription confirmée, date **>7j** à partir d'aujourd'hui | `confirme` | Élève | Bandeau vert · boîte cours bleue · livret (selon ville+niveau) · checklist débutants uniquement · boutons annuler/reporter · mention "rappel J-7 à venir" |
 | **E2** | Guidée seule inscrite (toujours attente) | `attente` | Élève | Bandeau orange · boîte cours · encadré explication parité · bouton "Nous contacter" |
+| **E-mod** | Admin modifie date/ville/niveau d'un essai (✏️ → `validerEditEssai`) | tout | Élève (+ partenaire si couple) | Bandeau bleu 📋 · boîte cours avec ancienne date barrée + nouvelle date en vert · bouton "✕ Annuler" · si couple même email → un seul email avec 2 prénoms |
+| **E-J1a** | Cron lendemain essai · élève présent (`presence_confirmee=true` ou marqué présent admin) | `confirme` | Élève | Bandeau vert ✓ · "On espère que ce cours vous a plu !" · boîte "Rejoindre les cours réguliers" + bouton AssoConnect · lien cours d'essai secondaire |
+| **E-J1b** | Cron lendemain essai · élève `confirme` non présent non annulé | `confirme` | Élève | Bandeau orange 💙 "Vous nous avez manqué" · bouton "↩ Choisir une nouvelle date" · note pas de pénalité |
 | **E4** | Déclencheur cron quotidien, J-7 avant la date du cours | `confirme` | Élève | Bandeau bleu 🗓 · boîte cours · **bouton vert "👍 Je confirme ma présence"** (au-dessus du livret) · boutons annuler/reporter · livret · checklist débutants uniquement. Couvre les élèves ayant reçu E1, E7, E15 ou E15b. |
 | **E5** | Guideur seul ou couple, quota GUI≥22, **mois sept-nov uniquement** | `attente` | Élève | Bandeau orange · boîte cours · encadré "Ce créneau est complet pour votre rôle ce jour-là" · bouton reporter · "Nous contacter" |
 | **E5b** | Couple, quota plein sur **un** rôle, sept-nov | `attente` | Les deux (ou email partagé → un seul) | Bandeau orange · encadré "complet pour l'un des deux rôles, confirmés ensemble dès qu'une place se libère" |
@@ -852,6 +855,8 @@ if(partEntry){ partEntry.date=newDate; ... }
 |------|-------------|--------------|-------------|
 | **S0** | Toute inscription (une notif par date) | Admin (tangoetvous@gmail.com) | Header vert foncé · encadré or : nom/email/tel/rôle/date/slots+thèmes/prix · statut (confirmé ou attente) · boutons 📞/✉️/SMS/admin |
 | **S1** | `type_confirmation='confirme'`, **>3 jours** avant la date | Élève (ou couple email partagé) | Bandeau vert · stage-box avec slots + lieu + total + note paiement · "Vous recevrez un rappel 3 jours avant le stage" |
+| **S-admin** | Admin inscrit directement depuis l'onglet Stages (pas le formulaire public) | Élève | **Même template que S1 ou S1b** selon le délai — pas de template distinct. Note dans l'email : "Votre inscription a été enregistrée par l'équipe Tango & Vous." au lieu de la formulation formulaire public. |
+| **S-cancel** | Admin annule une inscription stage (un créneau ou toute la journée) | Élève | Bandeau orange ✕ · stage-box rouge "STAGE ANNULÉ" avec slots barrés · bouton "Voir les prochains stages →" (`stages-pwa.html`) · Push : "✕ Votre inscription au stage du [date] a été annulée" |
 | **S1b** | `type_confirmation='confirme'`, **≤3 jours** avant la date | Élève | Identique S1 sans mention rappel + bouton 👍 + encadré texte parité |
 | **S2** | `type_confirmation='attente'` (guidée seule) | Élève | Bandeau orange · stage-box · encadré parité : "Nous veillons à avoir autant de guideurs que de guidées. Votre inscription sera confirmée selon l'équilibre des inscrits." |
 | **S3** | Admin valide depuis attente → `confirme`, **>3j** | Élève | Bandeau vert · "Bonne nouvelle !" · "Suite à l'évolution des inscriptions…" · stage-box · mention rappel J-3 |
@@ -956,6 +961,9 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 | **Y2 ≤3j** | Admin valide → `'confirme'`, **≤3j** avant le cours | Élève | Bandeau vert ✓ · yoga-box · bouton 👍 vert "Je confirme ma présence" · encadré prévenance |
 | **Y3** | Cron quotidien, J-3 avant la date | Élève `confirme` | Bandeau bleu 🗓 · yoga-box · bouton 👍 vert (au-dessus de l'adresse) · encadré orange "En cas d'empêchement, prévenez-nous même au dernier moment" |
 | **YI1** | Inscription validée / premier pointage yoga | Élève | Bandeau vert ✓ Bienvenue · yoga-box avec horaires hebdomadaires · checklist (tenue, tapis, ponctualité, pas manger avant) · lien livret · bouton "Accéder à mon espace élève →" |
+| **Y-mod** | Admin modifie date/cours d'un essai yoga (✏️) | Élève | Bandeau bleu 📋 · yoga-box avec ancienne date barrée + nouvelle date en vert · bouton "Nous contacter" |
+| **Y-J1a** | Cron lendemain essai yoga · élève présent | Élève | Bandeau vert ✓ "On espère que ce cours vous a plu !" · yoga-box "Rejoindre les cours réguliers" (yin/hatha/forfait, tarifs depuis params) · bouton AssoConnect |
+| **Y-J1b** | Cron lendemain essai yoga · élève `confirme` non présent non annulé | Élève | Bandeau orange 💙 "Vous nous avez manqué" · bouton "↩ Choisir une nouvelle date" (`essai-yoga.html`) · note pas de pénalité |
 
 #### Notifications admin yoga (3 canaux)
 
@@ -1018,6 +1026,7 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 | **I17** | Mode pré-inscription (mai-août) | `attente_paiement` ou `demande` | Élève | "Votre pré-inscription tango [saison suivante]" · même structure que I01-val mais badge saison prochaine + mention "reprise en septembre" |
 | **I02** | Admin valide guidée → `attente_paiement` | `attente_paiement` | Élève | "Votre demande d'inscription au tango est validée" · même structure que I01-val (bouton AssoConnect + Quelques précisions) |
 | **I03** | Admin valide le paiement → `inscrit` | `inscrit` | Élève | "Votre inscription est confirmée, à bientôt !" · cours-box + bouton "Accéder à mon espace élève" (violet) + livret |
+| **I04** | Admin modifie le cours d'un élève inscrit (✏️ → `validerChangementCours`, changement ville/niveau) | `inscrit` | Élève | Bandeau bleu 📋 · cours-box avec ancien cours barré + nouveau cours en vert · contact button · Push : "📋 Votre inscription a été modifiée : Paris Débutants → Paris Intermédiaires" |
 
 #### Email admin (I0)
 
@@ -1065,6 +1074,9 @@ app.tangoetvous.fr
 | **C4** | Cron : lendemain du dernier cours Paris de juin | Élèves avec cours restants | Bandeau bleu 📅 · "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" · lien AssoConnect pré-inscriptions · avertissement expiration fin août |
 | **C5** | Cron quotidien le 25 août | Élèves avec cours restants non ré-inscrits | Bandeau orange ⚠️ Dernier rappel · "Ces cours expireront le 31 août si vous ne vous réinscrivez pas" · bouton AssoConnect |
 | **C6** | Vendredi matin (Paris) / mardi matin (Vincennes) — cron | Élève carte10 absent 2 cours consécutifs | Ton "tu" (informel) · "Coucou [Prénom], on ne t'a pas vu·e aux 2 derniers cours. Tout va bien ?" · rappel cours préservés (N restants) · contact tel + email · Signature "Florencia & Jérémy" |
+| **C-pay** | Admin valide le paiement d'une carte (modal "✓ Enregistrer" dans Cartes 10 → `paye=true`) | Élève | Bandeau vert ✓ · carte-box (✓ Payée, montant, mode, date, cours actifs) · "Votre carte est active" · bouton espace élève · Push : "✓ Paiement de N€ enregistré · Votre carte est active" |
+| **C-report** | Admin clique "↩ Reporter" en fin de saison (crée ligne `isReport=true` saison suivante) | Élève | Bandeau vert ✓ · carte-box "Votre carte 2026-2027" (N cours reportés) · bouton pré-inscriptions AssoConnect · Push : "↩ Votre carte reportée · N cours préservés pour 2026-2027" |
+| **D-msg** | Admin envoie un message dans l'onglet Discussions | Élève | **Pas d'email** — push OS uniquement + notification in-app (`notifications_eleve`) · "💬 Nouveau message — [Prénom admin] : [début message...]" → onglet Discussions |
 
 **Règles C6** : déclenché même si l'élève a déclaré son absence via 🚫. Logique : dates cours depuis `tev_cours_dates` (Paramètres) − présences (`presences` table) = absences. Anti-doublon : colonne `derniere_relance_abs DATE` sur `eleves` (ne renvoie pas si déjà envoyé pour ces 2 mêmes dates). Script Node.js dans `.github/scripts/relance-absences.js` + workflow `relance-absences.yml`.
 
