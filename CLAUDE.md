@@ -929,6 +929,66 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 | S3 / S3b | `Tango & Vous` | `🎭 Bonne nouvelle — votre place au stage du [Jour JJ Mois] est confirmée !` |
 | S4 (cron J-3) | `Tango & Vous` | `📅 Votre stage a lieu dans 3 jours — [Jour JJ Mois] · [HH:MM–HH:MM]` |
 
+### Essai yoga
+
+**Fichier de référence** : `preview-emails-yoga-v1.html`
+
+#### Règles fondamentales
+- **Pas de notion de rôle ni de couple** — individuel uniquement.
+- **Statut initial toujours `'demande'`** — l'admin valide manuellement depuis l'onglet Essai Yoga.
+- **Table** : `inscriptions_essai_yoga` (distincte de `inscriptions_essai`).
+- **Cours** : `'yin'`, `'hatha'`, ou `'forfait'` (forfait = yin + hatha les deux jours).
+- **Gratuit** : les 2 premiers cours de septembre de chaque saison (`estGratuit()` dans le formulaire).
+- **Tarif** : depuis `tev_params_yoga_<sai>.tarifs.yoga_essai`, fallback 15€.
+- **Horaires + lieu** : depuis `tev_params_yoga_<sai>.horaires` et `.adresse` — zéro hardcodé.
+- **Livrets** : `tev_params_yoga_<sai>.livret.url_yin` / `url_hatha` — jamais hardcodés.
+- **Action élève via email** : `PATCH /api/essai-yoga/confirmer?id=...&token=...` → `presence_confirmee=true` → badge 👍 sur fiche admin.
+- **Quotas yoga** : `CAP_YOGA=14` par cours. Vérifiés dans `essai-yoga.html` avant INSERT.
+
+#### Catalogue emails élève
+
+| Code | Déclencheur | Destinataire | Contenu clé |
+|------|-------------|--------------|-------------|
+| **Y0** | Toute inscription | Admin (tangoetvous@gmail.com) | Header admin · encadré or : nom/email/tel/cours/date/gratuit/statut · badge ⏳ Att. validation · "Validation manuelle requise" · boutons 📞/✉️/SMS/admin |
+| **YI0** | Inscription directe par l'admin | Admin | Header admin · encadré or : nom/email/tel/cours/saison/paiement/montant · badge ✓ Inscrit·e · "Email YI1 peut être envoyé manuellement" |
+| **Y1** | Inscription reçue (statut=`'demande'`) | Élève | Bandeau orange ⏳ · yoga-box (cours, date, horaire, lieu) · encadré explication : "Votre demande a été reçue, nous confirmons selon disponibilités" · bouton "Nous contacter" |
+| **Y2 >3j** | Admin valide → `'confirme'`, **>3j** avant le cours | Élève | Bandeau vert ✓ · yoga-box complète · "Vous recevrez un rappel 3 jours avant votre cours" · livret |
+| **Y2 ≤3j** | Admin valide → `'confirme'`, **≤3j** avant le cours | Élève | Bandeau vert ✓ · yoga-box · bouton 👍 vert "Je confirme ma présence" · encadré prévenance |
+| **Y3** | Cron quotidien, J-3 avant la date | Élève `confirme` | Bandeau bleu 🗓 · yoga-box · bouton 👍 vert (au-dessus de l'adresse) · encadré orange "En cas d'empêchement, prévenez-nous même au dernier moment" |
+| **YI1** | Inscription validée / premier pointage yoga | Élève | Bandeau vert ✓ Bienvenue · yoga-box avec horaires hebdomadaires · checklist (tenue, tapis, ponctualité, pas manger avant) · lien livret · bouton "Accéder à mon espace élève →" |
+
+#### Notifications admin yoga (3 canaux)
+
+**Toast** : `🧘 Nouvelle demande essai yoga : Marie DUPONT`
+
+**Panel 🔔** (table `notifications`) :
+
+| Scénario | Couleur | Message |
+|----------|---------|---------|
+| Nouvel essai yoga reçu | jaune `#1f1800`/`#e8c84a` | `🧘 Demande essai yoga — Marie DUPONT · Jeudi 24 sept. · Yin yoga · ⏳ Att. validation · → Yoga → Essai` |
+| Essai yoga confirmé (admin valide) | vert `#0f1f0f`/`#4caf50` | `🧘 Essai yoga confirmé — Marie DUPONT · Jeudi 24 sept. · ✓ Confirmé·e · Email Y2 envoyé · → Yoga → Essai` |
+| Présence confirmée 👍 (Y3) | vert clair | `👍 Présence confirmée — Marie DUPONT · Essai yoga Jeudi 24 sept.` |
+
+**Push OS admin** : `🧘 Demande essai yoga — Marie DUPONT · Jeudi 24 sept. · Yin yoga`
+
+#### Notifications élève yoga (2 canaux)
+
+**In-app** (table `notifications_eleve`) :
+
+| Déclencheur | Message |
+|-------------|---------|
+| Y2 envoyé | `🧘 Votre essai yoga du Jeudi 24 septembre est confirmé` |
+| Y3 envoyé (cron J-3) | `📅 Rappel : votre essai yoga a lieu dans 3 jours — Jeudi 24 sept. · 19h00–20h15` |
+
+**Push OS élève** :
+
+| Déclencheur | Titre | Corps |
+|-------------|-------|-------|
+| Y2 | `Tango & Vous` | `🧘 Votre essai yoga du Jeudi 24 sept. est confirmé !` |
+| Y3 (cron J-3) | `Tango & Vous` | `📅 Votre essai yoga a lieu dans 3 jours — Jeudi 24 sept. · 19h00–20h15` |
+
+---
+
 ### Inscription cours tango régulier
 
 **Fichier de référence** : `preview-emails-inscription-v1.html`
@@ -994,31 +1054,95 @@ app.tangoetvous.fr
 ```
 
 ### Cartes 10 cours
-| Code | Déclencheur | Destinataire | Objet |
-|------|-------------|--------------|-------|
-| **Bienvenue** | Premier pointage de la saison | Élève | "Bienvenue dans votre cours !" + instructions PWA |
-| **Renouvelée sans payer** | Élève clique "Renouveler sans payer" dans son espace (carte à 10/10) | Élève | "Nouvelle carte ouverte, pensez à payer sur AssoConnect" + lien renouvellement |
-| **E10** | Admin renouvelle manuellement depuis Cartes 10 → Détails | Élève | "Carte renouvelée, à bientôt !" |
-| **Fin saison J+1** | Déclencheur : lendemain dernier cours Paris juin | Élèves avec cours restants | "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" |
-| **Fin saison 25 août** | Déclencheur quotidien le 25 août | Élèves avec cours restants non ré-inscrits | "Dernier rappel : vos cours expirent" |
-| **Relance 2 absences** | Vendredi matin (Paris) / mardi matin (Vincennes) via GitHub Actions cron | Élève carte10 absent aux 2 derniers cours d'affilée | "On prend de tes nouvelles…" — déclenché même si l'élève a déclaré son absence via 🚫. Logique : dates cours depuis `parametres` (`tev_cours_dates`) − présences (`presences` table) = absences. Anti-doublon : colonne `derniere_relance_abs DATE` sur `eleves` (ne renvoie pas si déjà envoyé pour ces 2 mêmes dates). Script Node.js dans `.github/scripts/relance-absences.js` + workflow `relance-absences.yml`. **À implémenter en même temps que les autres emails Brevo.** |
+
+**Fichier de référence** : `preview-emails-cartes-v1.html`
+
+| Code | Déclencheur | Destinataire | Contenu clé |
+|------|-------------|--------------|-------------|
+| **C1** | Premier pointage de la saison sur une carte10 | Élève | Bandeau vert ✓ Bienvenue · carte-box (cours, 1/10, date début, expiration estimée) · section PWA (installer l'app, pointer, suivre) · bouton "Accéder à mon espace élève →" |
+| **C2** | Élève clique "↻ Renouveler sans payer" (carte à 10/10) | Élève | Bandeau orange ⚠️ · carte-box (0/10, ⚠️ Non payée) · encadré "Finalisez votre paiement sur AssoConnect" · bouton AssoConnect `#LIEN_ASSOCONNECT_RENOUV` |
+| **C3 (E10)** | Admin renouvelle manuellement depuis Cartes 10 → Détails | Élève | Bandeau vert ✓ · carte-box (0/10, cours, saison) · "À très bientôt !" · bouton espace élève |
+| **C4** | Cron : lendemain du dernier cours Paris de juin | Élèves avec cours restants | Bandeau bleu 📅 · "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" · lien AssoConnect pré-inscriptions · avertissement expiration fin août |
+| **C5** | Cron quotidien le 25 août | Élèves avec cours restants non ré-inscrits | Bandeau orange ⚠️ Dernier rappel · "Ces cours expireront le 31 août si vous ne vous réinscrivez pas" · bouton AssoConnect |
+| **C6** | Vendredi matin (Paris) / mardi matin (Vincennes) — cron | Élève carte10 absent 2 cours consécutifs | Ton "tu" (informel) · "Coucou [Prénom], on ne t'a pas vu·e aux 2 derniers cours. Tout va bien ?" · rappel cours préservés (N restants) · contact tel + email · Signature "Florencia & Jérémy" |
+
+**Règles C6** : déclenché même si l'élève a déclaré son absence via 🚫. Logique : dates cours depuis `tev_cours_dates` (Paramètres) − présences (`presences` table) = absences. Anti-doublon : colonne `derniere_relance_abs DATE` sur `eleves` (ne renvoie pas si déjà envoyé pour ces 2 mêmes dates). Script Node.js dans `.github/scripts/relance-absences.js` + workflow `relance-absences.yml`.
+
+#### Notifications admin cartes (2 canaux)
+
+**Toast** :
+- `↻ Carte renouvelée sans payer : Felipe DIAZ`
+
+**Panel 🔔** :
+
+| Scénario | Couleur | Message |
+|----------|---------|---------|
+| Renouvelée sans payer (élève) | orange `#1f0e00`/`#e65100` | `↻ Carte renouvelée sans payer — Felipe DIAZ · Paris Débutants · ⚠️ Paiement en attente · → Cartes 10 → Détails` |
+| 2 absences détectées (cron) | gris-bleu `#0a1520`/`#5c9dc2` | `💙 2 absences consécutives — Felipe DIAZ · Paris Débutants · Email C6 envoyé · → Cartes 10 → Détails` |
+
+#### Notifications élève cartes (push OS)
+
+| Déclencheur | Titre | Corps |
+|-------------|-------|-------|
+| C2 (renouvelée sans payer) | `Tango & Vous` | `⚠️ Nouvelle carte créée — pensez à finaliser votre paiement` |
+| C4 (fin saison J+1) | `Tango & Vous` | `📅 Il vous reste N cours — pré-inscrivez-vous pour 2026-2027` |
+| C6 (relance absences) | `Tango & Vous` | `💙 On prend de tes nouvelles — tes cours sont préservés` |
+
+---
 
 ### Cours particuliers
-| Déclencheur | Destinataire | Objet |
-|-------------|--------------|-------|
-| Formulaire soumis | Admin (tangoetvous@gmail.com) | "Cours particulier — Prénom Nom" + récap complet (prof, durée, lieu, objectifs, urgence) |
-| Formulaire soumis | Élève | "Demande de cours particulier reçue" + récap + contact (06 61 72 79 98 / tangoetvous@gmail.com) |
+
+**Fichier de référence** : `preview-emails-cp-v1.html`
+
+| Code | Déclencheur | Destinataire | Contenu clé |
+|------|-------------|--------------|-------------|
+| **CP0** | Formulaire `cours-particuliers.html` soumis | Admin (tangoetvous@gmail.com) | Header admin · encadré or : nom/email/tel/prof souhaité/durée/niveau/lieu/urgence (badge rouge si haute) · table : objectifs, disponibilités, nb cours, dates souhaitées, comment connu · boutons 📞/✉️/SMS/admin |
+| **CP1** | Formulaire soumis (en parallèle de CP0) | Personne qui a soumis le formulaire | Bandeau bleu 📋 "Votre demande est bien enregistrée" · cp-box violet : prof, durée, lieu, objectifs, disponibilités · encadré "Nous vous contactons dans les meilleurs délais" · contact tel + email |
+
+**Notifications admin CP (3 canaux)** :
+- **Toast** : `🎯 Nouvelle demande cours particulier : Sophie MARTIN`
+- **Panel 🔔** : fond `#1a0828`, bordure `#9c27b0` (violet) · `🎯 Cours particulier — Sophie MARTIN · Prof. souhaité : Jérémy BRAITBART · Urgence haute · ⏳ À traiter · → Cours particuliers`
+- **Push OS admin** : `🎯 Cours particulier — Sophie MARTIN · Urgence haute`
+
+**Pas de push OS côté client** — les demandeurs de CP ne sont pas nécessairement élèves et n'ont pas la PWA installée.
+
+---
 
 ### Profil élève
-| Code | Déclencheur | Destinataire | Objet |
-|------|-------------|--------------|-------|
-| **Activation** | Admin active un profil (statut='Actif') | Élève | "Votre espace élève est prêt" + lien PWA + instructions connexion magic link |
-| **Nouveau profil** | Création automatique depuis formulaire | Admin | "Nouveau profil : Prénom Nom" + source (essai/inscription/stage/CP) |
+
+**Fichier de référence** : `preview-emails-cartes-v1.html` (section P0/P1)
+
+| Code | Déclencheur | Destinataire | Contenu clé |
+|------|-------------|--------------|-------------|
+| **P0** | Création d'un profil élève (depuis essai, inscription, stage ou CP) | Admin | Header admin · encadré or : nom/email/tel/source · badge source coloré (orange essai, vert inscription, or stage, violet CP) · lien admin |
+| **P1** | Admin active un profil (statut='Actif') | Élève | Bandeau vert ✓ "Votre espace élève est prêt !" · info-box bleue : étapes numérotées (ouvrir app.tangoetvous.fr → entrer email → clic lien magique → installer l'app) · liste fonctionnalités (pointer, carte, milongas, publications) · bouton "Accéder à mon espace élève →" · note magic link (pas de mot de passe) |
+
+---
+
+### Devis
+
+**Fichier de référence** : `preview-emails-devis-v1.html`
+
+| Code | Déclencheur | Destinataire | Contenu clé |
+|------|-------------|--------------|-------------|
+| **D0a** | Soumission `demande-devis.html`, mode Événement | Admin (tangoetvous@gmail.com) | Header admin · encadré or : nom/email/tel/badge Événement · table tous champs event (type, date, horaire, lieu, invités, durée, prestations, budget, message) · boutons 📞/✉️/SMS/admin/📋 Créer un devis → |
+| **D0b** | Soumission `demande-devis.html`, mode Cours Privé | Admin | Idem D0a avec badge Cours privé · table champs privé (type demande, pour qui, niveau, prof, lieu, durée, nb cours, disponibilités) |
+| **D1** | Admin clique "✉️ Email" sur un devis généré | Admin (draft Gmail) | Template pré-rempli Gmail (non automatique) · corps : formule de politesse + devis-box teal (DEVIS-YYYY-NNNN, prestations, totaux, acompte) + instruction "renvoyer signé avec mention Bon pour accord" · Signature Association Le Regard Se Pose / SIRET |
+| **D2** | Soumission `demande-devis.html`, en parallèle de D0 | Personne qui a soumis le formulaire | Bandeau bleu 📋 · déclencheur Worker POST `/admin/api/devis` → appel Brevo · récap demande (type, prestations, date si event) · "Nous répondons généralement sous 24-48h" · contact tel + email |
+
+**Notifications admin devis (3 canaux)** :
+- **Toast** : `💼 Nouvelle demande de devis : Agnès MOREAU (Mariage · 15 juin)`
+- **Panel 🔔** : fond `#00141a`, bordure `#26a69a` (teal) · `💼 Demande devis — Agnès MOREAU · Mariage · 15 juin 2026 · 80 invités · Budget 800-1200€ · ⏳ À traiter · → Devis → Demandes`
+- **Push OS admin** : `💼 Demande devis — Agnès MOREAU · Mariage · 15 juin 2026`
+
+**Pas de push OS côté client/demandeur** — pas de PWA installée pour les contacts occasionnels devis.
+
+---
 
 ### Récapitulatif fin de saison (déclencheurs automatiques)
 - **1er septembre** : désactivation des élèves sans carte reportée → email admin récap (N élèves désactivés)
-- **J+1 après dernier cours Paris** : emails fin de saison aux élèves avec cours restants
-- **25 août** : relance finale aux élèves avec cours restants non ré-inscrits
+- **J+1 après dernier cours Paris** : emails fin de saison (C4) aux élèves avec cours restants
+- **25 août** : relance finale (C5) aux élèves avec cours restants non ré-inscrits
 
 ## SQL utiles — à exécuter dans Supabase SQL Editor
 
