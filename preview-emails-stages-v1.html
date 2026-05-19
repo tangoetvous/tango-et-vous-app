@@ -37,6 +37,14 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
 .stage-price{font-size:15px;font-weight:700;color:#B8962E;margin-top:8px;}
 .stage-total{background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;text-align:right;}
 .note-paiement{font-size:12px;color:#7a6020;font-style:italic;margin-top:6px;}
+/* Push OS mockup */
+.push-mockup{background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.35);padding:14px 16px;max-width:360px;display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
+.push-mockup-icon{width:36px;height:36px;border-radius:8px;background:#111;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.push-mockup-body{flex:1;}
+.push-mockup-app{font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
+.push-mockup-title{font-size:13px;font-weight:700;color:#111;margin-bottom:2px;}
+.push-mockup-text{font-size:12px;color:#444;line-height:1.4;}
+.push-mockup-time{font-size:11px;color:#999;margin-top:4px;}
 </style>
 </head>
 <body>
@@ -45,6 +53,9 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
   <a href="#s0">S0 Admin solo</a>
   <a href="#s0-att">S0 Admin en attente</a>
   <a href="#s0-couple">S0 Admin couple slots ≠</a>
+  <a href="#notifs-admin">Notifs admin</a>
+  <a href="#notifs-eleve">Notifs élève</a>
+  <a href="#push-os">Push OS</a>
   <a href="#s1">S1 Solo &gt;3j</a>
   <a href="#s1b">S1b Solo ≤3j (👍)</a>
   <a href="#s1c">S1c Couple emails distincts</a>
@@ -811,6 +822,200 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
   </div>
 </div>
 </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     NOTIFICATIONS ADMIN — Panel 🔔 + Toast
+     ═══════════════════════════════════════════════ -->
+<div class="email-block" id="notifs-admin">
+<div class="email-label"><strong>Notifications admin</strong> — Panel 🔔 (table <code>notifications</code>) + Toast &nbsp;|&nbsp; <em>Déclencheur : BroadcastChannel message.type==='stageInscription'</em></div>
+
+<!-- Toast -->
+<div style="margin-bottom:24px;">
+  <div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Toast (bas d'écran · 3s · toujours le même)</div>
+  <div style="display:inline-flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #444;border-radius:10px;padding:12px 18px;box-shadow:0 4px 16px rgba(0,0,0,.5);">
+    <span style="font-size:18px;">🎭</span>
+    <span style="font-size:13px;color:#f0f0f0;font-weight:600;">Nouvelle inscription stage : Thomas DUPONT</span>
+  </div>
+</div>
+
+<!-- Panel 🔔 -->
+<div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Panel 🔔 — onglet Notifications (table <code>notifications</code>)</div>
+<div style="max-width:480px;background:#1a1a1a;border-radius:12px;padding:16px;border:1px solid #333;">
+  <div style="font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #2a2a2a;">Notifications récentes</div>
+
+  <!-- N-vert : Solo guideur confirmé -->
+  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
+    <div style="font-size:20px;flex-shrink:0;">🟢</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Inscription stage — Thomas DUPONT</div>
+      <div style="font-size:12px;color:#ccc;">Sam. 11 avril 2026 · <strong style="color:#7ab4ff;">Guideur·se</strong> · Seul·e · 2 stages</div>
+      <div style="font-size:11px;color:#4caf50;margin-top:5px;font-weight:700;">✓ Confirmé·e · Email S1 envoyé</div>
+      <div style="font-size:11px;color:#666;margin-top:3px;">à l'instant · → Stages</div>
+    </div>
+  </div>
+
+  <!-- N-vert : Couple emails distincts, slots différents -->
+  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
+    <div style="font-size:20px;flex-shrink:0;">🟢</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Inscription stage — Thomas &amp; Marie DUPONT</div>
+      <div style="font-size:12px;color:#ccc;">Sam. 11 avril 2026 · <strong style="color:#ce93d8;">En couple</strong> · Emails distincts · Slots différents</div>
+      <div style="font-size:11px;color:#4caf50;margin-top:5px;font-weight:700;">✓ Tous les deux confirmés · Emails S1 ×2</div>
+      <div style="font-size:11px;color:#666;margin-top:3px;">il y a 3 min · → Stages</div>
+    </div>
+  </div>
+
+  <!-- N-vert : Couple email partagé -->
+  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
+    <div style="font-size:20px;flex-shrink:0;">🟢</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Inscription stage — Thomas &amp; Marie DUPONT</div>
+      <div style="font-size:12px;color:#ccc;">Sam. 11 avril 2026 · <strong style="color:#ce93d8;">En couple</strong> · Email partagé</div>
+      <div style="font-size:11px;color:#4caf50;margin-top:5px;font-weight:700;">✓ Tous les deux confirmés · Email S1d ×1</div>
+      <div style="font-size:11px;color:#666;margin-top:3px;">il y a 8 min · → Stages</div>
+    </div>
+  </div>
+
+  <!-- N-vert : Plusieurs dates -->
+  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
+    <div style="font-size:20px;flex-shrink:0;">🟢</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Inscription stage — Thomas DUPONT</div>
+      <div style="font-size:12px;color:#ccc;"><strong style="color:#7ab4ff;">Guideur·se</strong> · 3 dates : 11 avr. · 10 mai · 14 juin</div>
+      <div style="font-size:11px;color:#4caf50;margin-top:5px;font-weight:700;">✓ Confirmé·e · Emails S1 ×3</div>
+      <div style="font-size:11px;color:#666;margin-top:3px;">il y a 15 min · → Stages</div>
+    </div>
+  </div>
+
+  <!-- N-vert : Présence confirmée via 👍 (S4) -->
+  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f2a0f;border-radius:8px;border-left:3px solid #66bb6a;margin-bottom:10px;">
+    <div style="font-size:20px;flex-shrink:0;">👍</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Présence confirmée — Thomas DUPONT</div>
+      <div style="font-size:12px;color:#ccc;">Stage sam. 11 avril · <strong style="color:#7ab4ff;">Guideur·se</strong></div>
+      <div style="font-size:11px;color:#66bb6a;margin-top:5px;font-weight:700;">👍 Confirmé via email S4 (rappel J-3)</div>
+      <div style="font-size:11px;color:#666;margin-top:3px;">il y a 2h · → Stages (badge 👍 sur la fiche)</div>
+    </div>
+  </div>
+
+  <!-- N-jaune : Guidée seule en attente -->
+  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#1f1800;border-radius:8px;border-left:3px solid #e8c84a;">
+    <div style="font-size:20px;flex-shrink:0;">🟡</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Demande stage — Sophie MARTIN</div>
+      <div style="font-size:12px;color:#ccc;">Sam. 11 avril 2026 · <strong style="color:#f48fb1;">Guidée</strong> · Seule · 2 stages</div>
+      <div style="font-size:11px;color:#e8c84a;margin-top:5px;font-weight:700;">⏳ En attente — parité guideurs/guidées · Email S2 envoyé</div>
+      <div style="font-size:11px;color:#666;margin-top:3px;">il y a 22 min · → Stages → Att. Validation</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     NOTIFICATIONS ÉLÈVE — Panel 🔔 dans index.html (notifications_eleve)
+     ═══════════════════════════════════════════════ -->
+<div class="email-block" id="notifs-eleve">
+<div class="email-label"><strong>Notifications élève</strong> — Panel 🔔 dans l'espace élève (table <code>notifications_eleve</code>) &nbsp;|&nbsp; <em>Icône 🔔 header · badge rouge si non lu</em></div>
+
+<div style="max-width:400px;background:#1a1a1a;border-radius:12px;padding:16px;border:1px solid #333;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #2a2a2a;">
+    <div style="font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase;">Mes notifications</div>
+    <span style="background:#ef5350;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">3</span>
+  </div>
+
+  <!-- S1 — Confirmation inscription -->
+  <div style="padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
+    <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">🎭 Stage confirmé</div>
+    <div style="font-size:12px;color:#ccc;line-height:1.5;">Votre inscription au stage du <strong>samedi 11 avril</strong> est confirmée.</div>
+    <div style="font-size:11px;color:#666;margin-top:6px;">à l'instant · non lu</div>
+  </div>
+
+  <!-- S3 — Validé depuis attente -->
+  <div style="padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
+    <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">🎭 Bonne nouvelle !</div>
+    <div style="font-size:12px;color:#ccc;line-height:1.5;">Votre place au stage du <strong>samedi 10 mai</strong> est confirmée suite à l'évolution des inscriptions.</div>
+    <div style="font-size:11px;color:#666;margin-top:6px;">il y a 2 jours · non lu</div>
+  </div>
+
+  <!-- S4 — Rappel J-3 -->
+  <div style="padding:12px;background:#0d1a2e;border-radius:8px;border-left:3px solid #1565c0;margin-bottom:10px;">
+    <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">📅 Rappel — dans 3 jours</div>
+    <div style="font-size:12px;color:#ccc;line-height:1.5;">Votre stage a lieu dans 3 jours — <strong>samedi 11 avril · 14h00–16h00</strong>.</div>
+    <div style="font-size:11px;color:#666;margin-top:6px;">il y a 4h · non lu</div>
+  </div>
+
+  <!-- Notification lue (grisée) -->
+  <div style="padding:12px;background:#111;border-radius:8px;border-left:3px solid #333;">
+    <div style="font-size:13px;font-weight:700;color:#888;margin-bottom:4px;">🎭 Stage confirmé</div>
+    <div style="font-size:12px;color:#666;line-height:1.5;">Votre inscription au stage du <strong style="color:#777;">samedi 14 juin</strong> est confirmée.</div>
+    <div style="font-size:11px;color:#555;margin-top:6px;">il y a 3 semaines · lu</div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PUSH OS — Mockup bulle navigateur
+     ═══════════════════════════════════════════════ -->
+<div class="email-block" id="push-os">
+<div class="email-label"><strong>Push OS</strong> — Bulle navigateur (visible même onglet fermé) &nbsp;|&nbsp; <em>Nécessite VAPID key + fcm_tokens + Edge Function — à implémenter</em></div>
+
+<div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Côté admin — nouvelle inscription</div>
+<div class="push-mockup">
+  <div class="push-mockup-icon">🎭</div>
+  <div class="push-mockup-body">
+    <div class="push-mockup-app">Tango &amp; Vous — Admin</div>
+    <div class="push-mockup-title">Inscription stage — Thomas DUPONT</div>
+    <div class="push-mockup-text">Samedi 11 avril · Guideur·se · ✓ Confirmé·e</div>
+    <div class="push-mockup-time">à l'instant · app.tangoetvous.fr</div>
+  </div>
+</div>
+
+<div class="push-mockup">
+  <div class="push-mockup-icon">🎭</div>
+  <div class="push-mockup-body">
+    <div class="push-mockup-app">Tango &amp; Vous — Admin</div>
+    <div class="push-mockup-title">Demande stage — Sophie MARTIN</div>
+    <div class="push-mockup-text">Samedi 11 avril · Guidée · ⏳ Att. validation</div>
+    <div class="push-mockup-time">à l'instant · app.tangoetvous.fr</div>
+  </div>
+</div>
+
+<div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:20px;">Côté élève — confirmation inscription (S1)</div>
+<div class="push-mockup">
+  <div class="push-mockup-icon">🎭</div>
+  <div class="push-mockup-body">
+    <div class="push-mockup-app">Tango &amp; Vous</div>
+    <div class="push-mockup-title">Votre stage du samedi 11 avril est confirmé !</div>
+    <div class="push-mockup-text">Un récapitulatif vous a été envoyé par email.</div>
+    <div class="push-mockup-time">à l'instant · app.tangoetvous.fr</div>
+  </div>
+</div>
+
+<div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:20px;">Côté élève — validé·e depuis liste d'attente (S3)</div>
+<div class="push-mockup">
+  <div class="push-mockup-icon">🎭</div>
+  <div class="push-mockup-body">
+    <div class="push-mockup-app">Tango &amp; Vous</div>
+    <div class="push-mockup-title">Bonne nouvelle — stage du 11 avril confirmé !</div>
+    <div class="push-mockup-text">Votre place est confirmée suite à l'évolution des inscriptions.</div>
+    <div class="push-mockup-time">à l'instant · app.tangoetvous.fr</div>
+  </div>
+</div>
+
+<div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:20px;">Côté élève — rappel J-3 (S4 · envoyé en même temps que l'email)</div>
+<div class="push-mockup">
+  <div class="push-mockup-icon">📅</div>
+  <div class="push-mockup-body">
+    <div class="push-mockup-app">Tango &amp; Vous</div>
+    <div class="push-mockup-title">Votre stage a lieu dans 3 jours</div>
+    <div class="push-mockup-text">Samedi 11 avril · 14h00–16h00 · Centre Kim Kan</div>
+    <div class="push-mockup-time">cron J-3 · app.tangoetvous.fr</div>
+  </div>
+</div>
+
 </div>
 
 </body>
