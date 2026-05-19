@@ -1039,12 +1039,16 @@ async function finalize() {
     }
   }
 
-  // Vérification quota (inscrit + demande + attente_paiement + valide + attente)
-  let _quotaFull = false;
+  // Vérification quota par cours — vérifie le rôle principal ET le rôle du partenaire
+  const _quotaFullArr = [false, false]; // [C1, C2]
+  const _incl2 = S.nbCours === 2 && S.c2.ville && S.c2.niveau;
   if (window.TEV) {
-    const _coursesToCheck = [{ ville: S.c1.ville, niveau: S.c1.niveau, role: S.role }];
-    if (S.nbCours === 2 && S.c2.ville && S.c2.niveau) {
-      _coursesToCheck.push({ ville: S.c2.ville, niveau: S.c2.niveau, role: S.role2 || S.role });
+    const _role2 = S.role2 || S.role;
+    const _coursesToCheck = [
+      { idx: 0, ville: S.c1.ville, niveau: S.c1.niveau, role: S.role, partRole: S.venue === 'avec-part' ? getRoleAuto(S.role) : null },
+    ];
+    if (_incl2) {
+      _coursesToCheck.push({ idx: 1, ville: S.c2.ville, niveau: S.c2.niveau, role: _role2, partRole: S.venue2 === 'avec-part' ? getRoleAuto(_role2) : null });
     }
     for (const _cc of _coursesToCheck) {
       const { data: _rows } = await TEV.client.from('inscriptions_cours')
@@ -1056,22 +1060,24 @@ async function finalize() {
       });
       const _gui = _nonRen.filter(function(r){ return r.role === 'guideur'; }).length;
       const _gde = _nonRen.filter(function(r){ return r.role === 'guidee'; }).length;
-      if ((_cc.role === 'guideur' && _gui >= 22) || (_cc.role === 'guidee' && _gde >= 23)) {
-        _quotaFull = true; break;
-      }
+      const _mainFull = (_cc.role === 'guideur' && _gui >= 22) || (_cc.role === 'guidee' && _gde >= 23);
+      const _partFull = _cc.partRole ? ((_cc.partRole === 'guideur' && _gui >= 22) || (_cc.partRole === 'guidee' && _gde >= 23)) : false;
+      if (_mainFull || _partFull) _quotaFullArr[_cc.idx] = true;
     }
   }
 
   $('form-zone').style.display='none';
   $('prog-zone').style.display='none';
 
-  // Guidée sans partenaire dans tous ses cours → attente. Quota plein → attente aussi.
-  const wait = isWaitlist() || _quotaFull;
-  if (_quotaFull && $('quota-full-notice')) $('quota-full-notice').style.display = 'block';
+  // Guidée sans partenaire → attente. Quota plein (rôle principal ou partenaire) → attente. Indépendant par cours.
+  const _isWait1 = (S.role === 'guidee' && S.venue !== 'avec-part') || _quotaFullArr[0];
+  const _isWait2 = _incl2 ? ((S.role2 === 'guidee' && S.venue2 !== 'avec-part') || _quotaFullArr[1]) : false;
+  const wait = _isWait1 || _isWait2;
+  if ((_quotaFullArr[0] || _quotaFullArr[1]) && $('quota-full-notice')) $('quota-full-notice').style.display = 'block';
   const id = wait ? 'success-wait' : 'success-asso';
   const rid = wait ? 'recap-wait'  : 'recap-asso';
 
-  const incl2 = S.nbCours===2 && S.c2.ville && S.c2.niveau;
+  const incl2 = _incl2;
   const recapHtml = buildRecapFinal(!!incl2);
   $(rid).innerHTML = recapHtml;
 
@@ -1115,7 +1121,7 @@ async function finalize() {
       role: S.role||'', niveau: S.c1.niveau||'',
       cours: S.c1.ville+'—'+S.c1.niveau,
       ville: S.c1.ville||'',
-      statut: wait ? 'demande' : 'attente_paiement',
+      statut: _isWait1 ? 'demande' : 'attente_paiement',
       partenaire: S.venue==='avec-part' && S.pPrenom ? (S.pPrenom+' '+S.pNom).trim() : '',
       email_partenaire: S.venue==='avec-part' ? (S.pEmail||'').toLowerCase() : '',
       saison: S.saison||'',
@@ -1130,7 +1136,7 @@ async function finalize() {
         niveau: S.c1.niveau||'',
         cours: S.c1.ville+'—'+S.c1.niveau,
         ville: S.c1.ville||'',
-        statut: 'attente_paiement',
+        statut: _isWait1 ? 'demande' : 'attente_paiement',
         partenaire: (S.prenom+' '+S.nom).trim(),
         email_partenaire: (S.email||'').toLowerCase(),
         saison: S.saison||'',
@@ -1145,7 +1151,7 @@ async function finalize() {
         role: S.role2||'', niveau: S.c2.niveau||'',
         cours: S.c2.ville+'—'+S.c2.niveau,
         ville: S.c2.ville||'',
-        statut: wait ? 'demande' : 'attente_paiement',
+        statut: _isWait2 ? 'demande' : 'attente_paiement',
         partenaire: S.venue2==='avec-part' && p2Pre ? (p2Pre+' '+p2Nom).trim() : '',
         email_partenaire: S.venue2==='avec-part' ? (p2Eml||'').toLowerCase() : '',
         saison: S.saison||'',
@@ -1160,7 +1166,7 @@ async function finalize() {
           niveau: S.c2.niveau||'',
           cours: S.c2.ville+'—'+S.c2.niveau,
           ville: S.c2.ville||'',
-          statut: 'attente_paiement',
+          statut: _isWait2 ? 'demande' : 'attente_paiement',
           partenaire: (S.prenom+' '+S.nom).trim(),
           email_partenaire: (S.email||'').toLowerCase(),
           saison: S.saison||'',
