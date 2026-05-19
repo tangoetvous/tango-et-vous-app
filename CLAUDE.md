@@ -790,13 +790,68 @@ Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Co
 | **Admin** | À chaque nouvelle inscription | Admin | Récap complet |
 
 ### Inscription cours tango régulier
-| Code | Déclencheur | Destinataire | Objet |
-|------|-------------|--------------|-------|
-| **E01** | Demande reçue (formulaire inscription-cours) | Élève | "Votre demande a bien été reçue" + prochaines étapes (48-72h validation, paiement) |
-| **E02** | Admin valide la demande → statut='valide' | Élève | "Votre inscription est validée" + montant (170€ par défaut) + modalités paiement |
-| **E03** | Admin valide le paiement → statut='inscrit' | Élève | "Inscription confirmée, à bientôt !" + lien espace élève PWA |
-| **E17** | Mode pré-inscription (mai-août) | Élève | "Pré-inscription 2026-2027 reçue" + info reprise septembre |
-| **Admin** | Chaque nouvelle demande | Admin | Récap (prénom, email, cours, rôle) |
+
+**Fichier de référence** : `preview-emails-inscription-v1.html`
+
+#### Règles métier emails — rappel
+- **Quota toute l'année** (≠ essai qui limite seulement sept-nov) : CAP_GUI=22, CAP_GDE=23
+- **Guidée seule** dans tous ses cours → `statut='demande'` → email I01-att
+- **Guideur seul ou couple** → `statut='attente_paiement'` → email I01-val avec bouton AssoConnect
+- **Couple + quota plein sur un rôle** → les DEUX en `demande` → email I01-quota-att (pas de traitement séparé)
+- **2 cours** → 2 emails distincts par personne, quotas vérifiés indépendamment par cours (`_quotaFullArr[0/1]`)
+- **Email différent obligatoire** : en couple, les deux partenaires doivent avoir des adresses email différentes sur AssoConnect (avertissement en rouge dans l'encadré "Quelques précisions")
+- **Lien AssoConnect 2026-2027** : `https://le-regard-se-pose.assoconnect.com/collect/description/695654-a-inscription-aux-cours-de-tango-argentin-avec-florencia-garcia-jeremy-braitbart-septembre-2026-juin-2027`
+- **Livrets** : depuis `tev_params_paris/vincennes_<sai>.livret.url_deb/url_int` — jamais hardcodés
+- **Adhésion Sorano** : encadré jaune "🏛 Adhésion à l'Espace Sorano" dans les emails Vincennes. Lien `#LIEN_SORANO_A_RENSEIGNER` — à mettre à jour quand l'utilisateur fournit l'URL
+- **Dates** : depuis `tev_cours_dates` en Supabase (clé `tev_params_paris/vincennes_<sai>`) — jamais hardcodées, pas de valeur par défaut
+
+#### Catalogue emails élève
+
+| Code | Déclencheur | Statut | Destinataire | Objet email |
+|------|-------------|--------|--------------|-------------|
+| **I01-att** | Guidée seule dans tous ses cours | `demande` | Élève | "Votre demande d'inscription au tango — liste d'attente" · bandeau orange · encadré explication parité · 3 options (attente / autre créneau / cours d'essai → `#URL_FORMULAIRE_ESSAI_A_RENSEIGNER`) |
+| **I01-val** | Guideur seul ou couple, pas de quota | `attente_paiement` | Élève (+ partenaire si email renseigné) | "Votre inscription au tango [saison]" · bandeau vert · cours-box (cours, saison, rôle, partenaire) · bouton AssoConnect · "Quelques précisions" (modes de paiement + avertissement emails différents) · livret |
+| **I01-vinc** | Idem I01-val mais cours Vincennes | `attente_paiement` | Élève | Idem + encadré jaune "🏛 Adhésion à l'Espace Sorano" avant le bouton AssoConnect |
+| **I01-quota-att** | Couple, quota plein sur un rôle | `demande` | Les DEUX (élève + partenaire) | "Votre demande d'inscription au tango en couple — liste d'attente" · bandeau orange · encadré "Ce cours est actuellement complet pour les guideur·se·s. Vous serez confirmé·e·s tous les deux ensemble." |
+| **I01-complet** | Couple ou solo, les deux quotas atteints | `demande` | Élève (+ partenaire) | "Votre demande d'inscription au tango — cours complet, liste d'attente" · "Ce cours affiche complet pour les guideur·se·s et les guidé·e·s." · mêmes 3 options que I01-att |
+| **I01 · 2 cours** | Inscription à 2 cours | selon quota par cours | Élève (+ partenaire·s) | 2 emails distincts — un par cours — avec mention "cours 1/2" et "cours 2/2" + note verte signalant l'autre cours. Quota indépendant : C1 peut être en attente et C2 validé pour la même personne |
+| **I17** | Mode pré-inscription (mai-août) | `attente_paiement` ou `demande` | Élève | "Votre pré-inscription tango [saison suivante]" · même structure que I01-val mais badge saison prochaine + mention "reprise en septembre" |
+| **I02** | Admin valide guidée → `attente_paiement` | `attente_paiement` | Élève | "Votre demande d'inscription au tango est validée" · même structure que I01-val (bouton AssoConnect + Quelques précisions) |
+| **I03** | Admin valide le paiement → `inscrit` | `inscrit` | Élève | "Votre inscription est confirmée, à bientôt !" · cours-box + bouton "Accéder à mon espace élève" (violet) + livret |
+
+#### Email admin (I0)
+
+| Code | Déclencheur | Destinataire | Contenu |
+|------|-------------|--------------|---------|
+| **I0** | Chaque nouvelle demande/inscription | tangoetvous@gmail.com | Header vert foncé (`#0d2b0d`, `#2e7d32`) pour distinguer des emails essai (or). Encadré or : nom/email/tel/rôle/cours/statut. Boutons : 📞 Appeler · ✉️ Gmail · 💬 SMS · Ouvrir l'admin. Pour 2 cours : 2 encadrés or distincts (un par cours). |
+
+#### Notifications admin temps réel (inscriptions tango régulier)
+
+**3 canaux** — déclenché à chaque `message.type === 'coursInscription'` reçu via BroadcastChannel :
+
+**Canal 1 — Toast** (bas d'écran, 3s, `afficherToast`) :
+```
+🔔 Nouvelle inscription (Cours régulier) : Prénom NOM
+```
+Pas de détail statut dans le toast — sert uniquement d'alerte visuelle immédiate.
+
+**Canal 2 — Panel 🔔** (onglet Notifications, table `notifications`, badge rouge si non lues) :
+
+| Scénario | Couleur fond / bordure | Message |
+|----------|----------------------|---------|
+| Guideur seul, att. paiement | vert `#0f1f0f` / `#4caf50` | `🎓 Nouvelle inscription tango — Prénom NOM` · Paris Débutant · Guideur·se · Seul·e · ✓ Att. paiement · Email I01 envoyé · → Inscriptions Tango → Att. Paiement |
+| Couple, att. paiement | vert `#0f1f0f` / `#4caf50` | `🎓 Nouvelle inscription tango — Prénom & Prénom NOM` · En couple · ✓ Att. paiement · Emails I01 envoyés ×2 |
+| Guidée seule, att. validation | jaune `#1f1800` / `#e8c84a` | `🎓 Demande inscription tango — Prénom NOM` · Guidée · Seule · ⏳ Att. validation — parité guidées · Email I01-att envoyé · → Att. Validation |
+| Couple quota plein, att. validation | jaune `#1f1800` / `#e8c84a` | `🎓 Demande inscription tango — Prénom & Prénom NOM` · En couple · ⏳ Att. validation — cours complet guideurs · Emails I01-quota envoyés ×2 |
+| 2 cours, les 2 ok | vert `#0f1f0f` / `#4caf50` | `🎓 Nouvelle inscription tango — Prénom NOM (2 cours)` · C1 + C2 · En couple (×2) · ✓ Att. paiement · Emails I01 envoyés ×4 |
+| 2 cours, statuts mixtes | vert+jaune / `#555` (lue) | C1 att. validation (quota) · C2 att. paiement · Emails envoyés séparément |
+
+**Canal 3 — Push OS** (bulle navigateur, visible même onglet fermé — **à implémenter**, nécessite VAPID key + `fcm_tokens` + Edge Function) :
+```
+Tango & Vous
+🎓 Nouvelle inscription — Prénom NOM · Cours · statut
+app.tangoetvous.fr
+```
 
 ### Cartes 10 cours
 | Code | Déclencheur | Destinataire | Objet |
