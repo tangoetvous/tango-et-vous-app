@@ -9039,14 +9039,37 @@ function validerEditEssai(id) {
   if (!newDate || !newVille || !newNiveau) { afficherToast('⚠️ Remplissez tous les champs'); return; }
   var e = (adminData.essai||[]).find(function(x){ return String(x.id)===String(id); });
   if (!e) { afficherToast('Inscription introuvable'); return; }
+
+  // Chercher le partenaire AVANT de modifier l'état local (on matche sur les anciennes valeurs)
+  var partEntry = null;
+  if (e.partenaire) {
+    var partNorm = _normNom(e.partenaire);
+    partEntry = (adminData.essai||[]).find(function(x){
+      return x.date === e.date
+        && x.niveau === e.niveau
+        && x.ville === e.ville
+        && String(x.id) !== String(id)
+        && _normNom(x.prenom+' '+x.nom) === partNorm;
+    });
+  }
+
   fermerContact();
   e.date = newDate; e.ville = newVille; e.niveau = newNiveau;
+  if (partEntry) { partEntry.date = newDate; partEntry.ville = newVille; partEntry.niveau = newNiveau; }
   renderTab();
   if (IS_DEMO) return;
-  Promise.resolve(TEV.client.from('inscriptions_essai').update({date_essai:newDate,ville:newVille,niveau:newNiveau}).eq('id',id))
-  .then(function(res){
-    if (res&&res.error){ afficherToast('⚠️ Erreur : '+(res.error.message||res.error.code||'')); chargerDonnees(); return; }
-    afficherToast('✓ Modifié');
+
+  var ops = [
+    Promise.resolve(TEV.client.from('inscriptions_essai').update({date_essai:newDate,ville:newVille,niveau:newNiveau}).eq('id',id))
+  ];
+  if (partEntry && partEntry.id) {
+    ops.push(Promise.resolve(TEV.client.from('inscriptions_essai').update({date_essai:newDate,ville:newVille,niveau:newNiveau}).eq('id',String(partEntry.id))));
+  }
+  Promise.all(ops)
+  .then(function(results){
+    var err = results.find(function(r){ return r&&r.error; });
+    if (err){ afficherToast('⚠️ Erreur : '+(err.error.message||err.error.code||'')); chargerDonnees(); return; }
+    afficherToast(partEntry ? '✓ Modifié (partenaire mis à jour aussi)' : '✓ Modifié');
   })
   .catch(function(){ afficherToast('⚠️ Erreur réseau'); chargerDonnees(); });
 }
