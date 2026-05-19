@@ -829,12 +829,57 @@ if(partEntry){ partEntry.date=newDate; ... }
 - **↩ Reporter** → redirige vers le formulaire cours d'essai (`#URL_FORMULAIRE_ESSAI_A_RENSEIGNER` — à mettre à jour)
 
 ### Stages
-| Code | Déclencheur | Destinataire | Objet |
-|------|-------------|--------------|-------|
-| **Confirmé** | Inscription type_confirmation='confirme' | Élève | "Votre stage est confirmé !" + récap dates+slots+prix + adresse Centre Kim Kan |
-| **Attente** | Inscription type_confirmation='attente' | Élève | "Demande de stage reçue" + récap + explication parité |
-| **Tardive** | Admin valide une inscrite en attente | Élève | "Bonne nouvelle ! Votre stage est confirmé !" |
-| **Admin** | À chaque nouvelle inscription | Admin | Récap complet |
+
+**Fichier de référence** : `preview-emails-stages-v1.html`
+
+#### Règles fondamentales
+- **Un email par ligne DB** = un email par date de stage par personne. Inscription à 3 dates → 3 emails S1 distincts.
+- **Pas de double rôle** dans le formulaire stages (abandonné).
+- **Rôles stockés** : `'Guideur(se)'` ou `'Guidé(e)'` (format avec parenthèses).
+- **Couple — slots peuvent différer** : Thomas et Marie peuvent choisir des stages différents le même jour. Chaque personne ne voit dans son email **que ses propres slots**.
+- **Couple email partagé** (`partenaire_email === email`) → un seul email "Bonjour Thomas & Marie" avec deux sections (chacun ses slots). Sinon → deux emails séparés.
+- **Délai ≤3 jours** : l'email de confirmation (S1/S3) contient directement le bouton 👍, pas de mention "rappel à venir".
+- **Délai >3 jours** : S1 et S3 mentionnent "Vous recevrez un rappel 3 jours avant le stage."
+- **Objet** : `Stage Tango & Vous — [Jour JJ Mois] · [HH:MM–HH:MM]` (plage horaire globale de SES slots ce jour-là).
+- **Toutes les données depuis `tev_params_stages_<sai>`** : thèmes, horaires, tarifs, adresse — zéro hardcodé. Tarifs : `st.tarifs || tev_params_stages_<sai>.tarifs`. Adresse : `st.adresse || tev_params_stages_<sai>.adresse`.
+- **Paiement** : "Le règlement se fait sur place. Merci de prévoir l'appoint." — ne jamais préciser le mode de paiement.
+- **`presence_confirmee`** : colonne à ajouter à `inscriptions_stages` via `ALTER TABLE inscriptions_stages ADD COLUMN IF NOT EXISTS presence_confirmee BOOLEAN NOT NULL DEFAULT FALSE;`
+- **Clic bouton 👍** → `PATCH /api/stages/confirmer?id=...&token=...` → `presence_confirmee=true` → 👍 sur la fiche admin Stages.
+
+#### Catalogue emails élève
+
+| Code | Déclencheur | Destinataire | Contenu clé |
+|------|-------------|--------------|-------------|
+| **S0** | Toute inscription (une notif par date) | Admin (tangoetvous@gmail.com) | Header vert foncé · encadré or : nom/email/tel/rôle/date/slots+thèmes/prix · statut (confirmé ou attente) · boutons 📞/✉️/SMS/admin |
+| **S1** | `type_confirmation='confirme'`, **>3 jours** avant la date | Élève (ou couple email partagé) | Bandeau vert · stage-box avec slots + lieu + total + note paiement · "Vous recevrez un rappel 3 jours avant le stage" |
+| **S1b** | `type_confirmation='confirme'`, **≤3 jours** avant la date | Élève | Identique S1 sans mention rappel + bouton 👍 + encadré texte parité |
+| **S2** | `type_confirmation='attente'` (guidée seule) | Élève | Bandeau orange · stage-box · encadré parité : "Nous veillons à avoir autant de guideurs que de guidées. Votre inscription sera confirmée selon l'équilibre des inscrits." |
+| **S3** | Admin valide depuis attente → `confirme`, **>3j** | Élève | Bandeau vert · "Bonne nouvelle !" · "Suite à l'évolution des inscriptions…" · stage-box · mention rappel J-3 |
+| **S3b** | Admin valide depuis attente → `confirme`, **≤3j** | Élève | Idem S3 + bouton 👍 + encadré texte parité |
+| **S4** | Cron quotidien, J-3 avant la date | Élève `confirme` | Bandeau bleu 🗓 "Rappel — votre stage a lieu dans 3 jours !" · stage-box complète avec slots · bouton vert 👍 "Je confirme ma présence" · encadré texte : "Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidés." |
+
+#### Structure stage-box (= récap formulaire)
+
+Pour chaque date inscrite, l'email contient :
+```
+📅 [Jour JJ Mois AAAA]
+
+[Prénom NOM — Guideur·se]            ← SES slots uniquement
+  • HH:MM–HH:MM — [Thème] (Stage 1h / Technique 1h)
+  Prix : [N]€ — [N] stage(s)
+
+[Si couple email partagé — Prénom NOM — Guidé·e]  ← SES slots (peuvent différer)
+  • HH:MM–HH:MM — [Thème]
+  Prix : [N]€
+
+Total à régler sur place [le Jour JJ Mois] : [total]€
+Le règlement se fait sur place. Merci de prévoir l'appoint.
+
+📍 [Nom lieu]
+   [Rue] · [Accès transport]
+```
+
+**Sources** : slots + thèmes depuis `donnees.inscriptionsParDate[i].stagesDetail[]` (ligne principale), ou `stage_nom.split('|')` × `tev_params_stages_<sai>.dates[date].slots[j]` (ligne partenaire). Tarifs : `tev_params_stages_<sai>.dates[date].tarifs || tev_params_stages_<sai>.tarifs`. Adresse : `tev_params_stages_<sai>.dates[date].adresse || tev_params_stages_<sai>.adresse`.
 
 ### Inscription cours tango régulier
 
