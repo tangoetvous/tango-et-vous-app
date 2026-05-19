@@ -1989,3 +1989,165 @@ Le badge (ex: 👩 16/23) correspond exactement aux élèves visibles.
 | Sorano | `imprimerSorano()` | Groupes par cours, colonnes : Nom, Statut, Tél |
 
 **Règle** : les fonctions d'impression lisent `adminData` en mémoire (pas de requête Supabase) — l'état affiché est l'état imprimé.
+
+## Session 2026-05-19 — Charte emails + preview cours d'essai tango
+
+### ✅ Champ "Journée des associations" dans Paramètres Vincennes
+- Nouvelle section accordéon "🏘 Journée des associations" dans `_renderSecContent(type='vincennes')`
+- Stocké via `_saveParam('vincennes', sai, 'journee_asso', { date: val })`
+- Lu via `_loadParam('vincennes', sai, 'journee_asso')`
+- Injecté dans les emails E1 Vincennes si la date du cours d'essai est **après** la journée des associations (et inscription avant la JA)
+
+### ✅ Livrets d'information — source Supabase
+Les liens Google Drive des livrets sont stockés dans Supabase (Paramètres → Tango Paris/Vincennes → Livret d'information) :
+- `tev_params_paris_<sai>.livret.url_deb` → Paris Débutant
+- `tev_params_paris_<sai>.livret.url_int` → Paris Intermédiaire & Avancé
+- `tev_params_vincennes_<sai>.livret.url_deb` → Vincennes Débutant
+- `tev_params_vincennes_<sai>.livret.url_int` → Vincennes Intermédiaire & Avancé
+- `tev_params_yoga_<sai>.livret.url_yin` → Yin Yoga
+- `tev_params_yoga_<sai>.livret.url_hatha` → Hatha Yoga
+
+**Règle** : dans toute Edge Function d'envoi email, fetch ces paramètres depuis Supabase et injecter le bon lien selon ville + niveau de la personne. Ne jamais hardcoder des URLs de livrets.
+
+### ✅ Charte graphique emails — référence universelle
+
+**Fichier de référence** : `preview-emails-essai-v2.html`
+
+Cette charte s'applique à **tous** les emails et notifications automatiques du projet (essai tango, inscription régulière, stages, yoga, cours particuliers, devis…).
+
+#### Header email élève
+```html
+<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+  <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+  <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
+</div>
+```
+
+#### Bandeau statut (vert = confirmé, orange = attente, bleu = rappel)
+```html
+<!-- Confirmé -->
+<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
+  <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ [Message]</span>
+</div>
+<!-- En attente -->
+<div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+  <span style="font-size:14px;font-weight:700;color:#e65100;">⏳ [Message]</span>
+</div>
+<!-- Rappel (bleu) -->
+<div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
+  <span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 [Message]</span>
+</div>
+```
+
+#### Boîte info principale (fond bleu clair, bordure bleu foncé, coins arrondis)
+```html
+<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+  <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">TITRE DE LA BOÎTE</div>
+  <!-- contenu : tableau ou texte -->
+</div>
+```
+
+#### Badges rôle (inline dans les tableaux)
+- Guideur·se : `background:#1565c0` (bleu)
+- Guidée : `background:#c2185b` (rose/rouge)
+- En couple : `background:#6a1b9a` (violet)
+- Validé·e : `background:#2e7d32` (vert)
+- En attente : `background:#e65100` (orange)
+
+CSS partagé : `display:inline-block;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;`
+
+#### Bouton principal (or)
+```html
+<a href="URL" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">[Texte]</a>
+```
+
+#### Bouton confirmer présence (vert, E7)
+```html
+<a href="URL" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a>
+```
+
+#### Boutons annuler / reporter (contour seulement)
+```html
+<a href="URL_ANNUL" style="...;background:#fff;color:#c62828;border:2px solid #c62828;">✕ Annuler mon cours d'essai</a>
+<a href="URL_FORMULAIRE" style="...;background:#fff;color:#555;border:2px solid #999;">↩ Reporter à une autre date</a>
+```
+
+#### Encadré explication (fond beige-orange, E2/E5/E6)
+```html
+<div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
+  <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">[Titre explication]</p>
+  <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">[Texte]</p>
+</div>
+```
+
+#### Signature élève (obligatoire dans tous les emails élève)
+```html
+<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
+<strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
+<span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+```
+
+#### Footer email élève (obligatoire)
+```html
+<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+  <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+  <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+</div>
+```
+
+#### Header email admin (E0)
+```html
+<div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
+  <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>
+  <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription [type]</div>
+</div>
+```
+
+#### Encadré principal email admin (bordure or)
+```html
+<div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+  <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+    <div style="flex:1;">
+      <div style="font-size:18px;font-weight:700;color:#111;">[Prénom NOM]</div>
+      <div style="font-size:12px;color:#333;margin-top:2px;">[email] · [tel]</div>
+    </div>
+    <span class="badge-[role]">[Rôle]</span>
+  </div>
+  <div style="background:#fffdf8;padding:14px 16px;">
+    <div style="font-size:16px;font-weight:700;color:#111;">📍 [Ville Niveau]</div>
+    <div style="font-size:13px;color:#333;">[Jour date · horaire]</div>
+    <div style="font-size:12px;color:#666;">[Lieu]</div>
+  </div>
+</div>
+```
+
+#### Notifications admin (interface)
+- Fond général : `#1a1a1a`
+- Nouvelle inscription validée (vert) : fond `#0f1f0f`, border-left `#4caf50`
+- Liste d'attente (jaune) : fond `#1f1800`, border-left `#e8c84a`
+- Annulation (rouge) : fond `#1f0808`, border-left `#ef5350`
+- Couleurs rôle dans les notifs : guideur·se `#7ab4ff`, guidée `#f48fb1`, couple `#ce93d8`
+
+#### Règles de contenu selon niveau
+- **Débutant** : inclure la section checklist "Pour votre cours d'essai" (arrivée 5min, chaussures lisses, tenue)
+- **Intermédiaire** : **ne pas** inclure cette section (les élèves connaissent déjà)
+
+### ✅ Catalogue emails cours d'essai tango — VALIDÉ
+
+| Code | Déclencheur | Destinataire | Statut élève | Contenu clé |
+|------|-------------|--------------|--------------|-------------|
+| **E0** | Toute inscription | Admin (tangoetvous@gmail.com) | — | Encadré or : nom/email/tel/rôle/cours/date/lieu + badge statut + table infos + boutons appel/email/SMS/admin |
+| **E1** | Inscription confirmée **>7j** avant le cours | Élève | `confirme` | Bandeau vert + boîte cours (bleu) + livret + checklist (débutant seulement) + boutons annuler/reporter + rappel J-7 annoncé |
+| **E6** | Inscription confirmée **<7j** avant le cours | Élève | `confirme` | Identique E1 mais sans mention du rappel J-7 |
+| **E7** | Rappel J-7 | Élève | `confirme` | Bandeau bleu + boîte cours + livret + checklist (débutant) + **bouton vert "👍 Je confirme"** + boutons annuler/reporter |
+| **E2** | Guidée seule inscrite | Élève | `attente` | Bandeau orange + boîte cours + encadré explication parité + bouton "Nous contacter" |
+| **E5** | Guideur seul, quota GUI≥22, sept-nov | Élève | `attente` | Bandeau orange + boîte cours + encadré "Ce créneau est complet pour votre rôle ce jour-là" + bouton reporter + "Nous contacter" |
+| **E5b** | Couple, un rôle quota plein, sept-nov | Élève (les deux) | `attente` | Bandeau orange + boîte cours + encadré "Ce créneau est complet pour l'un des deux rôles" + bouton reporter |
+| **E15** | Admin valide une personne en attente → `confirme` | Élève | `confirme` | Même structure que E1/E6 selon délai restant |
+
+**Actions élève via email :**
+- Clic "✕ Annuler" → Worker API → `UPDATE inscriptions_essai SET statut='annulé'` → fiche grisée dans admin Pointage (opacity 0.55, boutons désactivés, 📞+🗑 actifs, non comptée dans quotas) → notification admin N3 (rouge)
+- Clic "👍 Je confirme ma présence" (E7) → Worker API → `UPDATE inscriptions_essai SET presence_confirmee=true` → badge 👍 sur fiche admin → notification admin
+- Clic "↩ Reporter" → redirige vers le formulaire cours d'essai (`URL_FORMULAIRE_A_RENSEIGNER` — à mettre à jour quand l'utilisateur fournit l'URL)
+
+**Règle livret** : lire `tev_params_<ville>_<sai>.livret.url_deb` ou `url_int` selon ville + niveau de l'élève. Ne jamais hardcoder.
