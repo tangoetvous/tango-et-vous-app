@@ -7305,17 +7305,46 @@ function renderEssai() {
 }
 function valGuideeEssai(email, date, btn, id) {
   btn.disabled=true; btn.textContent='⏳';
+
+  // Trouver l'entrée à valider
+  var entry = id
+    ? (adminData.essai||[]).find(function(x){return String(x.id)===String(id);})
+    : (adminData.essai||[]).find(function(x){return x.email===email&&x.date===date;});
+
+  // Chercher le partenaire en attente sur la même date (même date + niveau + ville)
+  var partEntry = null;
+  if (entry && entry.partenaire) {
+    var partNorm = _normNom(entry.partenaire);
+    partEntry = (adminData.essai||[]).find(function(x){
+      return x.date === entry.date
+        && x.niveau === entry.niveau
+        && x.ville === entry.ville
+        && x.statut === 'attente'
+        && String(x.id) !== String(entry.id || id)
+        && _normNom(x.prenom+' '+x.nom) === partNorm;
+    });
+  }
+
   if (IS_DEMO) {
-    var e = id
-      ? adminData.essai.find(function(x){return String(x.id)===String(id);})
-      : adminData.essai.find(function(x){return x.email===email&&x.date===date;});
-    if(e){ e.statut='confirme'; e.presenceConfirmee=true; }
+    if(entry){ entry.statut='confirme'; entry.presenceConfirmee=true; }
+    if(partEntry){ partEntry.statut='confirme'; partEntry.presenceConfirmee=true; }
     renderTab(); return;
   }
+
+  var ops = [];
   var q = id
     ? TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('id',id)
     : TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('email',email).eq('date_essai',date);
-  q.then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;btn.textContent='✓ Valider';});
+  ops.push(Promise.resolve(q));
+
+  if (partEntry) {
+    var qPart = partEntry.id
+      ? TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('id',String(partEntry.id))
+      : TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('email',partEntry.email).eq('date_essai',date);
+    ops.push(Promise.resolve(qPart));
+  }
+
+  Promise.all(ops).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;btn.textContent='✓ Valider';});
 }
 function marquerAbsenceJour(date, email, btn) {
   var idx = -1;
