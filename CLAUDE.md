@@ -831,6 +831,8 @@ if(partEntry){ partEntry.date=newDate; ... }
 - **✕ Annuler** → `PATCH /api/essai/annuler?id=...&token=...` → `statut='annulé'` → fiche grisée admin (opacity:0.55, non comptée dans quotas) → notification admin N3 (rouge)
 - **↩ Reporter** → redirige vers le formulaire cours d'essai (`#URL_FORMULAIRE_ESSAI_A_RENSEIGNER` — à mettre à jour)
 
+**Pas de push OS élève pour les emails essai tango** (E1, E2, E4, E5, E5b, E6, E7, E15, E15b, E-mod, E-J1a, E-J1b) — les personnes en cours d'essai ne sont pas encore élèves et n'ont pas la PWA installée.
+
 ### Stages
 
 **Fichier de référence** : `preview-emails-stages-v1.html`
@@ -988,12 +990,7 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 | Y2 envoyé | `🧘 Votre essai yoga du Jeudi 24 septembre est confirmé` |
 | Y3 envoyé (cron J-3) | `📅 Rappel : votre essai yoga a lieu dans 3 jours — Jeudi 24 sept. · 19h00–20h15` |
 
-**Push OS élève** :
-
-| Déclencheur | Titre | Corps |
-|-------------|-------|-------|
-| Y2 | `Tango & Vous` | `🧘 Votre essai yoga du Jeudi 24 sept. est confirmé !` |
-| Y3 (cron J-3) | `Tango & Vous` | `📅 Votre essai yoga a lieu dans 3 jours — Jeudi 24 sept. · 19h00–20h15` |
+**Pas de push OS élève pour les emails essai yoga** (Y1, Y2, Y3, Y-mod, Y-J1a, Y-J1b) — les personnes en cours d'essai ne sont pas encore élèves et n'ont pas la PWA installée.
 
 ---
 
