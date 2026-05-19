@@ -765,21 +765,68 @@ Claude ne saisit des données directement en SQL qu'exceptionnellement, sur dema
 Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Code.gs ne fonctionne plus.
 
 ### Cours d'essai Tango
-| Code | Déclencheur | Destinataire | Objet |
-|------|-------------|--------------|-------|
-| **E1** | Inscription confirme (>7j avant le cours) | Élève | "Cours d'essai confirmé !" + rappel J-7 annoncé |
-| **E2** | Inscription guidée seule (toujours attente) | Élève | "Cours d'essai : liste d'attente" |
-| **E4** | 7 jours avant le cours (déclencheur quotidien) | Élève confirmé | "Rappel J-7" avec boutons ✓ Je serai là / 📅 Reporter / ✕ Annuler |
-| **E5** | Inscription confirme mais quota dépassé | Élève | "Cours d'essai : liste d'attente" (créneau complet) |
-| **E6** | Inscription confirme <7j avant le cours | Élève | "Cours d'essai confirmé !" (sans rappel J-7 à venir) |
-| **E15** | Quand admin valide une guidée de la liste d'attente | Élève | "Cours d'essai confirmé !" avec bouton de confirmation de présence |
-| **J+1a** | Lendemain du cours, si présent | Élève présent | "À bientôt sur la piste !" + lien inscription cours réguliers |
-| **J+1b** | Lendemain du cours, si absent | Élève absent | "On vous attend bientôt !" + lien cours d'essai |
-| **Admin** | À chaque nouvelle inscription | Admin | Récap complet avec statut (E1/E2/E5/E6) |
 
-**Contenus clés E1/E6 :** confirmation, infobox (date, heure, lieu, tarif), livret téléchargeable, conseils (chaussures lisses, arriver 5min avant, etc.)
-**Contenu E4 :** infobox + 3 boutons (confirmer/reporter/annuler) → liens vers Apps Script → à remplacer par liens Supabase Edge Function
-**Livrets :** URLs par saison dans `LIVRETS` dans Code.gs — à intégrer dans les Paramètres admin
+**Fichier de référence** : `preview-emails-essai-v2.html`
+
+#### Catalogue emails élève
+
+| Code | Déclencheur | Statut élève | Destinataire | Contenu clé |
+|------|-------------|--------------|--------------|-------------|
+| **E0** | Toute inscription | — | Admin (tangoetvous@gmail.com) | Encadré or : nom/email/tel/rôle/cours/date/lieu + badge statut + boutons 📞/✉️/SMS/admin |
+| **E1** | Inscription confirmée, date **>7j** à partir d'aujourd'hui | `confirme` | Élève | Bandeau vert · boîte cours bleue · livret (selon ville+niveau) · checklist débutants uniquement · boutons annuler/reporter · mention "rappel J-7 à venir" |
+| **E2** | Guidée seule inscrite (toujours attente) | `attente` | Élève | Bandeau orange · boîte cours · encadré explication parité · bouton "Nous contacter" |
+| **E4** | Déclencheur cron quotidien, J-7 avant la date du cours | `confirme` | Élève | Bandeau bleu 🗓 · boîte cours · **bouton vert "👍 Je confirme ma présence"** (au-dessus du livret) · boutons annuler/reporter · livret · checklist débutants uniquement. Couvre les élèves ayant reçu E1, E7, E15 ou E15b. |
+| **E5** | Guideur seul ou couple, quota GUI≥22, **mois sept-nov uniquement** | `attente` | Élève | Bandeau orange · boîte cours · encadré "Ce créneau est complet pour votre rôle ce jour-là" · bouton reporter · "Nous contacter" |
+| **E5b** | Couple, quota plein sur **un** rôle, sept-nov | `attente` | Les deux (ou email partagé → un seul) | Bandeau orange · encadré "complet pour l'un des deux rôles, confirmés ensemble dès qu'une place se libère" |
+| **E6** | Inscription confirmée, date **≤7j** à partir d'aujourd'hui | `confirme` | Élève | Même structure que E1 MAIS **bouton vert "👍 Je confirme ma présence"** présent (pas de rappel J-7 futur), sans mention "rappel à venir" |
+| **E7** | Utilisé uniquement dans le preview — alias de E6 | `confirme` | — | *Ancienne désignation conservée dans le fichier de preview pour clarté. En pratique = E6 (confirmation <7j). Ne pas utiliser E7 dans le code, utiliser E6.* |
+| **E15** | Admin valide une personne en `attente` → `confirme` (solo ou couple emails distincts) | `confirme` | Élève (un email par personne) | Bandeau vert · "Suite à l'évolution des disponibilités…" · boîte cours · si >7j : mention rappel J-7 · si <7j : bouton 👍 confirmer présence · livret · checklist débutants |
+| **E15b** | Admin valide un couple en `attente` avec **email partagé** | `confirme` | Les deux (un seul email envoyé) | "Bonjour Marie & Thomas" · bandeau vert "vous êtes tous les deux confirmés" · boîte cours avec les deux rôles côte à côte · même contenu que E15 |
+| **J+1a** | Lendemain du cours, élève présent | `confirme` | Élève présent | "À bientôt sur la piste !" + lien inscription cours réguliers |
+| **J+1b** | Lendemain du cours, élève absent | `confirme` | Élève absent | "On vous attend bientôt !" + lien formulaire cours d'essai |
+
+#### Règles de détermination de l'email à envoyer à l'inscription
+- Guidée seule → toujours `statut='attente'` → **E2**
+- Guideur seul, quota GUI<22 (ou hors sept-nov) → `statut='confirme'` → **E1** ou **E6** selon délai
+- Guideur seul, quota GUI≥22, mois sept-nov → `statut='attente'` → **E5**
+- Couple (emails distincts), pas de quota → `statut='confirme'` pour les deux → **E1** ou **E6**
+- Couple (emails distincts), quota plein sur un rôle, sept-nov → les deux en `attente` → **E5b** séparé × 2
+- Couple (email partagé), pas de quota → `statut='confirme'` → **E1** ou **E6** (un email avec les deux noms)
+- Délai <7j : E6 (avec bouton 👍 présent) ; délai ≥7j : E1 (bouton 👍 absent, rappel J-7 annoncé)
+
+#### Auto-validation couple dans `valGuideeEssai()` (admin.html)
+Quand l'admin valide une personne en attente, la fonction cherche son partenaire via :
+```javascript
+_normNom(x.prenom+' '+x.nom) === _normNom(entry.partenaire)
+// + filtre : même date, niveau, ville, statut='attente', id différent
+```
+Si partenaire trouvé → `Promise.all([UPDATE entry, UPDATE partEntry])` — les deux passent à `statut='confirme', presence_confirmee:true` en parallèle.
+**Email à déclencher** : si `entry.email === partEntry.email` → **E15b** (un email) ; sinon → deux **E15** séparés.
+
+#### Propagation des modifications de date/ville/niveau dans `validerEditEssai()` (admin.html)
+Le partenaire doit être trouvé **AVANT** de modifier l'état local (les champs de recherche `date/ville/niveau` auraient changé sinon) :
+```javascript
+// Trouver le partenaire sur les ANCIENNES valeurs
+var partEntry = essai.find(x => x.date===e.date && x.niveau===e.niveau && x.ville===e.ville
+  && _normNom(x.prenom+' '+x.nom) === _normNom(e.partenaire));
+fermerContact();
+// PUIS modifier l'état local
+e.date=newDate; e.ville=newVille; e.niveau=newNiveau;
+if(partEntry){ partEntry.date=newDate; ... }
+// PUIS Promise.all([UPDATE e, UPDATE partEntry]) en DB
+```
+
+#### Contenus E1/E6/E15 — règles importantes
+- **Livret** : `tev_params_<ville>_<sai>.livret.url_deb` ou `url_int` selon ville + niveau — jamais hardcodé
+- **Checklist** (arrivée 5min, chaussures lisses, tenue) : **débutants uniquement** — ne pas inclure pour intermédiaires
+- **Bouton 👍** : présent dans E4, E6, et E15/<7j — absent dans E1 et E15/>7j
+- **Ordre dans E4 et E6** : boîte cours → **👍 confirmer** → annuler/reporter → livret → checklist
+- **Adresse** : depuis `tev_params_<ville>_<sai>.adresse` — jamais hardcodée
+
+#### Actions élève via email (liens Worker API)
+- **👍 Je confirme ma présence** → `PATCH /api/essai/confirmer?id=...&token=...` → `presence_confirmee=true`
+- **✕ Annuler** → `PATCH /api/essai/annuler?id=...&token=...` → `statut='annulé'` → fiche grisée admin (opacity:0.55, non comptée dans quotas) → notification admin N3 (rouge)
+- **↩ Reporter** → redirige vers le formulaire cours d'essai (`#URL_FORMULAIRE_ESSAI_A_RENSEIGNER` — à mettre à jour)
 
 ### Stages
 | Code | Déclencheur | Destinataire | Objet |
