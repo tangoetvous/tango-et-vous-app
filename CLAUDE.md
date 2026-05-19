@@ -881,6 +881,54 @@ Le règlement se fait sur place. Merci de prévoir l'appoint.
 
 **Sources** : slots + thèmes depuis `donnees.inscriptionsParDate[i].stagesDetail[]` (ligne principale), ou `stage_nom.split('|')` × `tev_params_stages_<sai>.dates[date].slots[j]` (ligne partenaire). Tarifs : `tev_params_stages_<sai>.dates[date].tarifs || tev_params_stages_<sai>.tarifs`. Adresse : `tev_params_stages_<sai>.dates[date].adresse || tev_params_stages_<sai>.adresse`.
 
+#### Notifications admin temps réel (stages)
+
+**3 canaux** — déclenché à chaque `message.type === 'stageInscription'` reçu via BroadcastChannel :
+
+**Canal 1 — Toast** (bas d'écran, 3s) :
+```
+🎭 Nouvelle inscription stage : Prénom NOM
+```
+
+**Canal 2 — Panel 🔔** (onglet Notifications, table `notifications`, badge rouge si non lues) :
+
+| Scénario | Couleur fond / bordure | Message |
+|----------|----------------------|---------|
+| Solo guideur, confirmé | vert `#0f1f0f` / `#4caf50` | `🎭 Inscription stage — Prénom NOM` · Jour JJ Mois · Guideur·se · Seul·e · ✓ Confirmé·e · Email S1 envoyé · → Stages |
+| Couple emails distincts, confirmé | vert `#0f1f0f` / `#4caf50` | `🎭 Inscription stage — Prénom & Prénom NOM` · Jour JJ Mois · En couple · Emails distincts · ✓ Confirmés · Emails S1 ×2 |
+| Couple email partagé, confirmé | vert `#0f1f0f` / `#4caf50` | `🎭 Inscription stage — Prénom & Prénom NOM` · Jour JJ Mois · En couple · Email partagé · Email S1d ×1 |
+| Plusieurs dates | vert `#0f1f0f` / `#4caf50` | `🎭 Inscription stage — Prénom NOM` · N dates : JJ avr. · JJ mai… · ✓ Confirmé·e · Emails S1 ×N |
+| Présence confirmée via 👍 (S4) | vert clair `#0f2a0f` / `#66bb6a` | `👍 Présence confirmée — Prénom NOM` · Stage Jour JJ Mois · badge 👍 sur la fiche → Stages |
+| Guidée seule, attente | jaune `#1f1800` / `#e8c84a` | `🎭 Demande stage — Prénom NOM` · Jour JJ Mois · Guidée · ⏳ Att. validation — parité · Email S2 envoyé · → Stages → Att. Validation |
+
+**Canal 3 — Push OS** (bulle navigateur, visible même onglet fermé — **à implémenter**) :
+```
+Tango & Vous — Admin
+🎭 Inscription stage — Prénom NOM · Samedi JJ Mois
+app.tangoetvous.fr
+```
+Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ Att. validation`
+
+#### Notifications élève stages
+
+**2 canaux** :
+
+**Canal 1 — In-app** (icône 🔔 header espace élève, table `notifications_eleve`) :
+
+| Déclencheur | Message |
+|-------------|---------|
+| S1 / S1b envoyé | `🎭 Votre inscription au stage du [Jour JJ Mois] est confirmée` |
+| S3 / S3b envoyé | `🎭 Bonne nouvelle — votre place au stage du [Jour JJ Mois] est confirmée !` |
+| S4 envoyé (cron J-3) | `📅 Rappel : votre stage a lieu dans 3 jours — [Jour JJ Mois] · [HH:MM–HH:MM]` |
+
+**Canal 2 — Push OS** (même timing que l'email correspondant) :
+
+| Déclencheur | Titre | Corps |
+|-------------|-------|-------|
+| S1 / S1b | `Tango & Vous` | `🎭 Votre stage du [Jour JJ Mois] est confirmé !` |
+| S3 / S3b | `Tango & Vous` | `🎭 Bonne nouvelle — votre place au stage du [Jour JJ Mois] est confirmée !` |
+| S4 (cron J-3) | `Tango & Vous` | `📅 Votre stage a lieu dans 3 jours — [Jour JJ Mois] · [HH:MM–HH:MM]` |
+
 ### Inscription cours tango régulier
 
 **Fichier de référence** : `preview-emails-inscription-v1.html`
