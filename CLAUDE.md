@@ -626,6 +626,32 @@ La saison du formulaire (`MODE`) détermine automatiquement quelle grille utilis
 
 **Champs collectés :** `prenom, nom, email, tel, niveauEleve, prof, duree, lieu, lieuDetail, objectifs, remarque, dispoTexte, urgence, source ('pwa' ou 'wix')`
 
+**Valeurs réelles des champs — référence Edge Function :**
+- `prof` : `'florencia'` | `'jeremy'` | `'les-deux'` → labels : `Florencia Garcia` / `Jérémy Braitbart` / `Florencia & Jérémy`
+- `duree` : `'1 heure'` | `'1h30'` | `'2 heures'` — exactement ces 3 valeurs
+- `lieu` = `lieuLabel(S.lieux)` + code postal éventuel entre parenthèses. Labels LIEUX :
+  - `nation` → `Nation — Paris`
+  - `gambetta` → `Gambetta — Paris`
+  - `vincennes` → `Vincennes / Montreuil / Fontenay` (**jamais "Espace Sorano" — n'existe pas dans le formulaire**)
+  - `domicile` → `À domicile (code postal)` — `lieuDetail` = code postal
+  - `vos-locaux` → `Dans vos locaux (code postal)` — `lieuDetail` = code postal
+- `objectifs` = `S.objectifs.join(', ')` — IDs joints (ex : `'passer-cap, choregraphie'`). Labels OBJECTIFS :
+  - `decouverte` → `🌱 Découverte du tango`
+  - `passer-cap` → `🎯 Passer un cap`
+  - `accordage` → `💑 Accordage de couple`
+  - `sequence` → `🔄 Travail sur une séquence`
+  - `scene` → `🎭 Tango de scène`
+  - `choregraphie` → `💍 Chorégraphie`
+  - `autre` → `✨ Autre objectif`
+- `niveauEleve` : `'debutant'` | `'quelques'` | `'1an'` | `'2ans'` | `'plus'` | `'milonga'` → labels : `Débutant(e) — jamais dansé` / `Quelques cours` / `1 an — bases acquises` / `2 ans de cours` / `Plus de 2 ans` / `Je sors régulièrement en milonga`
+- `dispoTexte` = multilignes construit depuis `dispoParts.join('\n')` :
+  - `'Jours : Lundi, Mercredi'` (si jours sélectionnés)
+  - `'Horaires : 19h – 21h'` (si heureDebut ou heureFin saisis)
+  - `'Dates proposées : ...'` (si propositionsDates saisi)
+  - `'Autres : ...'` (si dispoTexte libre saisi)
+- `remarque` : texte libre (textarea) — **distinct de `objectifs`**
+- ⚠️ Champs **inexistants** dans le payload : `pourQui`, `nbCours`, `commentConnu`, `datesSouhaitees` — ne jamais les inventer dans une Edge Function ou un template email
+
 ---
 
 ## Règles métier — espace admin (`admin.html`)
@@ -1117,8 +1143,8 @@ app.tangoetvous.fr
 
 | Code | Déclencheur | Destinataire | Contenu clé |
 |------|-------------|--------------|-------------|
-| **CP0** | Formulaire `cours-particuliers.html` soumis | Admin (tangoetvous@gmail.com) | Header admin · encadré or : nom/email/tel/prof souhaité/durée/niveau/lieu/urgence (badge rouge si haute) · table : objectifs, disponibilités, nb cours, dates souhaitées, comment connu · boutons 📞/✉️/SMS/admin |
-| **CP1** | Formulaire soumis (en parallèle de CP0) | Personne qui a soumis le formulaire | Bandeau bleu 📋 "Votre demande est bien enregistrée" · cp-box violet : prof, durée, lieu, objectifs, disponibilités · encadré "Nous vous contactons dans les meilleurs délais" · contact tel + email |
+| **CP0** | Formulaire `cours-particuliers.html` soumis | Admin (tangoetvous@gmail.com) | Header admin · encadré or : nom/email/tel/prof souhaité/durée/niveau/lieu/urgence (badge rouge si haute) · table détails : objectifs (labels des cases cochées joints par `, `), disponibilités (multilignes : Jours / Horaires / Dates proposées), remarques · boutons 📞/✉️/SMS/admin |
+| **CP1** | Formulaire soumis (en parallèle de CP0) | Personne qui a soumis le formulaire | Bandeau bleu 📋 "Votre demande est bien enregistrée" · cp-box violet : prof, durée, lieu, objectifs, disponibilités, remarques · encadré "Nous vous contactons dans les meilleurs délais" · contact tel + email |
 
 **Notifications admin CP (3 canaux)** :
 - **Toast** : `🎯 Nouvelle demande cours particulier : Sophie MARTIN`
