@@ -16,6 +16,7 @@
 //   GET   /api/calendar/token          — génère l'URL ICS personnalisée (JWT requis)
 //   GET   /calendar/e-{token}.ics      — flux iCalendar élève (token signé HMAC)
 //   GET   /devis/p/:token              — vue publique d'un devis (sans auth, token UUID)
+//   POST  /api/notify/yoga-date         — admin → emails Brevo élèves yoga (JWT admin requis)
 //   POST  /api/remplacant/generate     — génère URL remplaçant signée (JWT admin requis)
 //   GET   /api/remplacant/data         — données pointage pour le remplaçant (token signé)
 //   *                                  — assets statiques (Cloudflare Static Assets)
@@ -104,6 +105,12 @@ export default {
       const dvPubM = pathname.match(/^\/devis\/p\/([A-Za-z0-9-]+)$/);
       if (dvPubM && method === 'GET') {
         return handlePublicDevisView(dvPubM[1], env);
+      }
+
+      // POST /api/notify/yoga-date — admin → emails Brevo élèves yoga (JWT admin requis)
+      if (pathname === '/api/notify/yoga-date' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyYogaDate(request, env);
       }
 
       // POST /api/remplacant/generate — génère URL remplaçant (JWT admin requis)
@@ -397,6 +404,94 @@ async function handleUpdateAuthEmail(request, serviceKey) {
 // ================================================================
 // Brevo — notification email admin (optionnel)
 // ================================================================
+// ================================================================
+// POST /api/notify/yoga-date — envoie emails Brevo aux élèves yoga
+// ================================================================
+async function handleNotifyYogaDate(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const { addedDates = [], removedDates = [], emails = [] } = body;
+  if (!emails.length) return corsResponse({ ok: true, sent: 0 }, 200, {}, request);
+
+  if (!env.BREVO_API_KEY) {
+    console.log('[notify yoga] BREVO_API_KEY absent — skip');
+    return corsResponse({ ok: true, sent: 0, skipped: true }, 200, {}, request);
+  }
+
+  const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  const addedLines  = addedDates.map(d  => `<li style="margin:4px 0;color:#2e7d32;"><strong>+ ${_esc(fmtDate(d))}</strong></li>`).join('');
+  const removedLines = removedDates.map(d => `<li style="margin:4px 0;color:#c62828;"><strong>✕ ${_esc(fmtDate(d))}</strong></li>`).join('');
+
+  const hasAdded   = addedDates.length > 0;
+  const hasRemoved = removedDates.length > 0;
+  const subject = hasAdded && hasRemoved ? '📅 Modifications de vos cours de yoga — Tango & Vous'
+    : hasAdded   ? '📅 Nouveau cours de yoga ajouté — Tango & Vous'
+    : '⚠️ Cours de yoga annulé — Tango & Vous';
+
+  const bandeauBg  = hasRemoved ? '#fff8e1' : '#e8f5e9';
+  const bandeauBrd = hasRemoved ? '#ffe082' : '#c8e6c9';
+  const bandeauTxt = hasRemoved ? '#e65100' : '#2e7d32';
+  const bandeauMsg = hasAdded && hasRemoved ? '📅 Modification de vos cours de yoga'
+    : hasAdded ? '📅 Nouvelle date de yoga ajoutée'
+    : '⚠️ Date de yoga annulée';
+
+  const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;">
+    <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+      <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin &amp; yoga</div>
+    </div>
+    <div style="background:${bandeauBg};padding:14px 24px;text-align:center;border-bottom:1px solid ${bandeauBrd};">
+      <span style="font-size:14px;font-weight:700;color:${bandeauTxt};">${bandeauMsg}</span>
+    </div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour,</p>
+      <p style="font-size:15px;color:#333;margin:0 0 16px;">Des modifications ont été apportées au calendrier de yoga :</p>
+      ${addedLines ? `<div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:8px;padding:14px 18px;margin:0 0 16px;">
+        <p style="font-size:13px;font-weight:700;color:#2e7d32;margin:0 0 8px;">📅 Date${addedDates.length>1?'s':''} ajoutée${addedDates.length>1?'s':''}</p>
+        <ul style="margin:0;padding-left:18px;">${addedLines}</ul></div>` : ''}
+      ${removedLines ? `<div style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:14px 18px;margin:0 0 16px;">
+        <p style="font-size:13px;font-weight:700;color:#c62828;margin:0 0 8px;">✕ Date${removedDates.length>1?'s':''} annulée${removedDates.length>1?'s':''}</p>
+        <ul style="margin:0;padding-left:18px;">${removedLines}</ul></div>` : ''}
+      <p style="font-size:14px;color:#888;margin:20px 0 0;">Pour toute question, n'hésitez pas à nous contacter.</p>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
+      <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
+      <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div>
+    <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+      <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+      <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+    </div>
+  </div></body></html>`;
+
+  let sent = 0;
+  await Promise.all(emails.map(async (email) => {
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
+          to: [{ email: String(email) }],
+          subject,
+          htmlContent: html,
+        }),
+      });
+      if (r.ok) sent++;
+      else console.error('[notify yoga] Brevo error for', email, await r.text());
+    } catch(e) { console.error('[notify yoga] fetch error', e); }
+  }));
+
+  return corsResponse({ ok: true, sent }, 200, {}, request);
+}
+
 function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 async function sendBrevoNotification(apiKey, body) {

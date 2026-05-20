@@ -2505,6 +2505,21 @@ function sauverDatesYoga(sai) {
   });
   dates.sort();
   if (!dates.length) { afficherToast('⚠️ Aucune date valide'); return; }
+  // Diff pour notifications (saison active uniquement)
+  if (sai === saisonActive()) {
+    var y1y = parseInt(sai.split('-')[0]);
+    var debutY = y1y+'-09-01', finY = (y1y+1)+'-08-31';
+    var oldDates = COURS_YOGA.filter(function(d){ return d>=debutY && d<=finY; });
+    var addedY  = dates.filter(function(d){ return oldDates.indexOf(d) < 0; });
+    var removedY = oldDates.filter(function(d){ return dates.indexOf(d) < 0; });
+    if (addedY.length && removedY.length) {
+      setTimeout(function(){ _notifDateChange('yoga', addedY, 'ajout', {yogaRemoved: removedY}); }, 300);
+    } else if (addedY.length) {
+      setTimeout(function(){ _notifDateChange('yoga', addedY, 'ajout'); }, 300);
+    } else if (removedY.length) {
+      setTimeout(function(){ _notifDateChange('yoga', removedY, 'suppression'); }, 300);
+    }
+  }
   var _yogaVal = {saison:sai, dates:dates, modifie:today()};
   try { localStorage.setItem('tev_dates_yoga_'+sai, JSON.stringify(_yogaVal)); } catch(e){}
   if (!IS_DEMO) TEV.setParam('tev_dates_yoga_'+sai, _yogaVal).catch(function(){});
@@ -3637,12 +3652,103 @@ function _renderSecDatesContent(type, sai) {
     +'</div>';
 }
 
+// ── Notifications élèves : changements de dates ──────────────────────────────
+
+function _dateNotifFmt(iso) {
+  var JOURS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  var MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  var d = new Date(iso + 'T12:00:00');
+  return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS_L[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function _emailsUniques(liste) {
+  var seen = {};
+  return (liste || []).reduce(function(acc, e) {
+    if (e.email && !seen[e.email]) { seen[e.email] = true; acc.push(e.email); }
+    return acc;
+  }, []);
+}
+
+// dates : string ISO ou tableau de strings ISO
+// type  : 'paris'|'vincennes'|'stages'|'milonga'|'yoga'
+// action: 'ajout'|'suppression'
+// opts  : { milNom, yogaRemoved }
+function _notifDateChange(type, dates, action, opts) {
+  opts = opts || {};
+  if (!Array.isArray(dates)) dates = [dates];
+  dates = dates.filter(Boolean);
+  if (!dates.length) return;
+  var sai = saisonActive();
+  if ((saisonParametres || saisonCourante()) !== sai) return;
+
+  var saiInscrits = (adminData.coursTango || []).filter(function(e) {
+    return e.statut === 'inscrit' && !e._isRenewalRow && (e.saison || saisonCourante()) === sai;
+  });
+
+  function _buildMsg(prefixe, labelCours) {
+    if (dates.length === 1) return prefixe + ' le ' + _dateNotifFmt(dates[0]);
+    var mois4 = ['jan.','fév.','mar.','avr.','mai','juin','juil.','aoû.','sep.','oct.','nov.','déc.'];
+    var liste = dates.map(function(d){
+      var dt = new Date(d + 'T12:00:00');
+      return dt.getDate() + ' ' + mois4[dt.getMonth()];
+    }).join(', ');
+    return prefixe + 's (' + dates.length + ') : ' + liste;
+  }
+
+  var msg, emails;
+
+  if (type === 'paris') {
+    msg = _buildMsg(action === 'ajout' ? '📅 Nouveau cours de tango Paris' : '⚠️ Cours de tango Paris annulé');
+    emails = _emailsUniques(saiInscrits.filter(function(e){ return e.ville === 'paris'; }));
+  } else if (type === 'vincennes') {
+    msg = _buildMsg(action === 'ajout' ? '📅 Nouveau cours de tango Vincennes' : '⚠️ Cours de tango Vincennes annulé');
+    emails = _emailsUniques(saiInscrits.filter(function(e){ return e.ville === 'vincennes'; }));
+  } else if (type === 'stages') {
+    msg = _buildMsg(action === 'ajout' ? '🎭 Nouveau stage' : '🎭 Stage annulé');
+    emails = _emailsUniques(saiInscrits);
+  } else if (type === 'milonga') {
+    var milNom = opts.milNom || 'Milonga';
+    msg = _buildMsg(action === 'ajout' ? '🎶 Nouvelle date milonga ' + milNom : '🎶 Milonga ' + milNom + ' annulée');
+    emails = _emailsUniques(saiInscrits);
+  } else if (type === 'yoga') {
+    var yogaInscrits = (adminData.coursYoga || []).filter(function(e) {
+      return e.statut === 'inscrit' && (e.saison || saisonCourante()) === sai;
+    });
+    emails = _emailsUniques(yogaInscrits);
+    if (!emails.length || IS_DEMO) return;
+    var jwt = '';
+    try { var _r = localStorage.getItem('sb-qhngqzvvllktuwspojxc-auth-token'); if (_r) jwt = (JSON.parse(_r).access_token || ''); } catch(e) {}
+    var payload = {
+      addedDates: opts.yogaRemoved ? dates : (action==='ajout' ? dates : []),
+      removedDates: opts.yogaRemoved || (action==='suppression' ? dates : []),
+      emails: emails
+    };
+    Promise.resolve(fetch('/api/notify/yoga-date', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
+      body: JSON.stringify(payload)
+    })).then(function(r){ return r.json(); })
+      .then(function(d){ if (d && d.sent > 0) afficherToast('📧 ' + d.sent + ' email' + (d.sent > 1 ? 's' : '') + ' envoyé' + (d.sent > 1 ? 's' : '') + ' aux élèves yoga'); })
+      .catch(function(err){ console.error('[notif yoga]', err); });
+    return;
+  }
+
+  if (!emails || !emails.length || IS_DEMO) return;
+  var rows = emails.map(function(email){ return { email: email, type: 'info', message: msg }; });
+  Promise.resolve(TEV.client.from('notifications_eleve').insert(rows))
+    .then(function(res) {
+      if (res && res.error) { console.error('[notif] Insert error:', res.error.message || res.error.code); return; }
+      afficherToast('🔔 ' + emails.length + ' élève' + (emails.length > 1 ? 's' : '') + ' notifié' + (emails.length > 1 ? 's' : ''));
+    })
+    .catch(function(err){ console.error('[notif] Error:', err); });
+}
+
 // Ajout en lot de dates Paris/Vincennes depuis l'onglet Paramètres
 function ajouterDatesParams(type) {
   var raw = ((gel('pm-lot-dates-'+type)||{}).value||'').trim();
   if (!raw) { afficherToast('⚠️ Aucune date saisie'); return; }
   var lines = raw.split(/\n/).map(function(l){return l.trim();}).filter(Boolean);
-  var added = 0;
+  var added = 0, addedDates = [];
   lines.forEach(function(line) {
     var m1 = line.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
     var m2 = line.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -3651,12 +3757,15 @@ function ajouterDatesParams(type) {
     else if (m2) d = line;
     if (!d || isNaN(new Date(d+'T12:00:00').getTime())) return;
     if (type==='paris' && COURS_PARIS.indexOf(d)<0) {
-      COURS_PARIS.push(d); COURS_PARIS.sort(); added++;
+      COURS_PARIS.push(d); COURS_PARIS.sort(); added++; addedDates.push(d);
     } else if (type==='vincennes' && COURS_VINCENNES.indexOf(d)<0) {
-      COURS_VINCENNES.push(d); COURS_VINCENNES.sort(); added++;
+      COURS_VINCENNES.push(d); COURS_VINCENNES.sort(); added++; addedDates.push(d);
     }
   });
-  if (added > 0) saveCoursDatesRemote();
+  if (added > 0) {
+    saveCoursDatesRemote();
+    if (addedDates.length) _notifDateChange(type, addedDates, 'ajout');
+  }
   afficherToast(added>0 ? '✓ '+added+' date'+(added>1?'s':'')+' ajoutée'+(added>1?'s':'') : '⚠️ Aucune date valide');
   renderTab();
 }
@@ -3666,9 +3775,11 @@ function supprimerDateParam(type, date) {
   if (type==='paris') {
     COURS_PARIS = COURS_PARIS.filter(function(d){return d!==date;});
     saveCoursDatesRemote();
+    _notifDateChange('paris', date, 'suppression');
   } else if (type==='vincennes') {
     COURS_VINCENNES = COURS_VINCENNES.filter(function(d){return d!==date;});
     saveCoursDatesRemote();
+    _notifDateChange('vincennes', date, 'suppression');
   } else if (type==='yoga') {
     COURS_YOGA = COURS_YOGA.filter(function(d){return d!==date;});
     // re-sauvegarder yoga
@@ -3678,9 +3789,11 @@ function supprimerDateParam(type, date) {
     var remaining = COURS_YOGA.filter(function(d){return d>=debut&&d<=fin;});
     try { localStorage.setItem('tev_dates_yoga_'+sai, JSON.stringify({saison:sai, dates:remaining, modifie:today()})); } catch(e){}
     saveCoursDatesLocal();
+    _notifDateChange('yoga', date, 'suppression');
   } else if (type==='stages') {
     STAGES = STAGES.filter(function(s){return s.date!==date;});
     if (adminData.stages && adminData.stages[date]) delete adminData.stages[date];
+    _notifDateChange('stages', date, 'suppression');
   }
   afficherToast('✓ Date supprimée');
   renderTab();
@@ -3904,7 +4017,7 @@ function ajouterDatesMilonga(idx) {
   var mil = MILONGAS[idx];
   var raw = ((gel('mil-newdates-'+idx)||{}).value||'').trim();
   var lines = raw.split(/\n/).map(function(l){return l.trim().replace(/#.*/,'').trim();}).filter(Boolean);
-  var added = 0;
+  var added = 0, addedDates = [];
   lines.forEach(function(line) {
     var d = _parseDateLine(line);
     if (!d || isNaN(new Date(d+'T12:00:00').getTime())) return;
@@ -3913,11 +4026,12 @@ function ajouterDatesMilonga(idx) {
     var jours = ['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'];
     var label = jours[dd.getDay()]+' '+dd.getDate()+' '+MOIS_FR[dd.getMonth()].slice(0,3)+' '+dd.getFullYear();
     mil.dates.push({date:d, label:label});
-    added++;
+    added++; addedDates.push(d);
   });
   if (!added) { afficherToast('\u26a0\ufe0f Aucune date valide'); return; }
   mil.dates.sort(function(a,b){return a.date.localeCompare(b.date);});
   sauverMilongas();
+  if (addedDates.length) _notifDateChange('milonga', addedDates, 'ajout', {milNom: mil.nom});
   afficherToast('\u2713 ' + added + ' date' + (added>1?'s':'') + ' ajout\u00e9e' + (added>1?'s':'') + ' \u00e0 ' + mil.nom);
   renderTab();
 }
@@ -3925,10 +4039,12 @@ function supprimerDateMilonga(idx, date) {
   chargerMilongas(saisonParametres || saisonCourante());
   if (!MILONGAS || !MILONGAS[idx]) return;
   var mil = MILONGAS[idx];
+  var milNom = mil.nom;
   var before = mil.dates.length;
   mil.dates = mil.dates.filter(function(d){return d.date!==date;});
   if (mil.dates.length < before) {
     sauverMilongas();
+    _notifDateChange('milonga', date, 'suppression', {milNom: milNom});
     afficherToast('\u2713 Date supprim\u00e9e');
     renderTab();
   }
@@ -4039,6 +4155,7 @@ function ajouterDateStage(sai) {
   if (!adminData.stages) adminData.stages = {};
   if (!adminData.stages[d]) adminData.stages[d] = {label:lbl, inscrits:[]};
   sauverStagesLocal(sai);
+  _notifDateChange('stages', d, 'ajout');
   afficherToast('✓ Date ajoutée');
   renderTab();
 }
