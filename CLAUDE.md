@@ -200,6 +200,34 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - Ne jamais intercepter les ressources cross-origin (Supabase, jsDelivr, Firebase, Google) — `caches.match()` retourne `undefined` pour les CDN non cachés, ce qui cause `FetchEvent.respondWith: null response`
 - Pattern correct dans `sw.js` : `if (!e.request.url.startsWith(self.location.origin)) return;`
 
+## Boutons de pointage ✓/✗ — pattern CSS et JS
+
+### Problème initial
+Les boutons `btn-pres.on` et `btn-abs.on` utilisaient `--ok-bg: #0a1200` et `--err-bg: #140000` — couleurs quasi-noires, invisibles sur fond sombre. De plus, `q.catch(function(){})` sur le builder Supabase jetait une `TypeError` (`.catch` non exposé directement) qui faisait crasher `pointerEssai` avant `renderTab()`.
+
+### CSS corrigée (admin.html)
+```css
+.btn-pres.on  { background:#2e7d32; color:#fff; border-color:#2e7d32; }  /* vert vif */
+.btn-pres.off { opacity:.3; pointer-events:none; }                         /* grisé si opposé actif */
+.btn-abs.on   { background:#c62828; color:#fff; border-color:#c62828; }   /* rouge vif */
+.btn-abs.off  { opacity:.3; pointer-events:none; }
+```
+
+### Pattern JS `pointerEssai` — règles
+- Écrire **uniquement** `presence_declaree` (pas `presence_confirmee`, réservé à la confirmation email élève)
+- Utiliser `Promise.resolve(q).catch(function(){})` — jamais `q.catch()` directement sur le builder Supabase
+- Manipulation DOM directe avant `renderTab()` : `presBtn.classList.add('on'); absBtn.classList.add('off');`
+- `renderTab()` appelé ensuite pour mettre à jour les compteurs ✓✗? dans l'en-tête de date
+- Classer `.off` sur le bouton opposé + rendre `.off` dans `_mkEssaiPtCard` au re-render
+
+### Survie au polling 15s
+- `_mapEssai` dans `tev-supabase.js` mappe `presence_declaree → present`
+- `chargerDonnees` preserve `e.present` depuis `presence_declaree` DB (ou depuis l'ancien objet local si colonne NULL)
+- La garde `if (currentTab === 'essai' && filtreEssai === 'pointage') return;` dans `_renderTabSiPasFormulaire` protège le DOM du polling automatique — mais l'état local dans `adminData.essai` est quand même restauré au prochain `renderTab()` déclenché par l'utilisateur
+
+### Règle universelle — Supabase builder + `.catch()`
+**Ne jamais** écrire `q.catch(function(){})` directement sur un builder Supabase. Toujours : `Promise.resolve(q).catch(function(){})`. Le builder est thenable mais n'expose pas `.catch()` comme méthode directe dans toutes les versions — la TypeError fait crasher silencieusement la fonction appelante.
+
 ## Règles obligatoires — formulaires publics (à appliquer à tout nouveau formulaire)
 
 ### 1. Vérification d'erreur sur les inserts Supabase
@@ -885,7 +913,7 @@ if(partEntry){ partEntry.date=newDate; ... }
 - **Horaires par défaut (`DEFAULTS_HORAIRES_STAGES` dans `stages-pwa.html`)** : Technique `14h–15h` · Stage 1 `15h–16h30` · Stage 2 `16h30–18h` · Stage 3 `11h30–13h` · Stage 4 `10h–11h30`. Overridables par journée via Paramètres → Stages → Horaires.
 - **Paiement** : "Le règlement se fait sur place. Merci de prévoir l'appoint." — ne jamais préciser le mode de paiement.
 - **`presence_confirmee`** : colonne à ajouter à `inscriptions_stages` via `ALTER TABLE inscriptions_stages ADD COLUMN IF NOT EXISTS presence_confirmee BOOLEAN NOT NULL DEFAULT FALSE;`
-- **`presence_declaree` dans `inscriptions_essai`** : colonne nullable distincte de `presence_confirmee` — `NULL` = non pointé, `true` = admin cliqué ✓ Présent, `false` = admin cliqué 🚫 Absent. Permet au cron E-J1a/J1b de distinguer "absent déclaré" de "jamais pointé". SQL : `ALTER TABLE inscriptions_essai ADD COLUMN IF NOT EXISTS presence_declaree BOOLEAN DEFAULT NULL;`. `pointerEssai` dans admin.html pose les deux champs simultanément.
+- **`presence_declaree` dans `inscriptions_essai`** : colonne nullable distincte de `presence_confirmee` — `NULL` = non pointé, `true` = admin cliqué ✓ Présent, `false` = admin cliqué 🚫 Absent. Permet au cron E-J1a/J1b de distinguer "absent déclaré" de "jamais pointé". SQL : `ALTER TABLE inscriptions_essai ADD COLUMN IF NOT EXISTS presence_declaree BOOLEAN DEFAULT NULL;`. ✅ Exécuté. `pointerEssai` dans admin.html écrit **uniquement** `presence_declaree` (pas `presence_confirmee` — réservé à la confirmation email élève).
 - **Cron E-J1a/J1b** : workflow `.github/workflows/essai-j1.yml` — cron `0 7 * * *` UTC (9h Paris été) → POST `https://app.tangoetvous.fr/api/cron/essai-j1` avec header `X-Cron-Secret`. Secret `CRON_SECRET` à configurer dans : GitHub → Settings → Secrets → Actions ET Cloudflare Workers → Settings → Variables → Secret variables. Worker route : `handleCronEssaiJ1` → requête Supabase pour `date_essai=hier AND presence_declaree IS NOT NULL` → Brevo emails.
 - **Clic bouton 👍** → `PATCH /api/stages/confirmer?id=...&token=...` → `presence_confirmee=true` → 👍 sur la fiche admin Stages.
 
