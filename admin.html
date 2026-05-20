@@ -4842,7 +4842,19 @@ async function chargerDonnees() {
         }
         return cy;
       })(),
-      essai:             d.coursEssai         || adminData.essai || [],
+      essai:             (function(){
+        var newEssai = d.coursEssai || adminData.essai || [];
+        // Restaurer e.present depuis presence_declaree (si la colonne existe) ou depuis l'état local précédent
+        var oldEssai = adminData.essai || [];
+        return newEssai.map(function(ne) {
+          var pd = ne.presence_declaree;
+          if (pd !== null && pd !== undefined) return Object.assign({}, ne, { present: pd });
+          // Colonne absente ou NULL → conserver l'état local s'il existe
+          var old = oldEssai.find(function(oe){ return String(oe.id) === String(ne.id); });
+          if (old && old.present !== undefined) return Object.assign({}, ne, { present: old.present });
+          return ne;
+        });
+      })(),
       essaiYoga:         d.essaiYoga          || adminData.essaiYoga || [],
       publications:      d.publications       || [],
       agendaModifs:      d.agendaModifs       || [],
@@ -7578,14 +7590,26 @@ function pointerEssai(date, email, present, id) {
     ? adminData.essai.find(function(x){return String(x.id)===String(id);})
     : adminData.essai.find(function(x){return x.email===email&&x.date===date;});
   if (e) { e.present = present; e.presence_declaree = present; }
+  // Feedback visuel immédiat : mettre à jour les classes directement dans le DOM
+  var tc = document.getElementById('tab-content');
+  if (tc) {
+    var sid = (id && String(id)) || '';
+    var presBtn = sid
+      ? tc.querySelector('[data-action="pointer-essai-pres"][data-id="'+sid+'"]')
+      : tc.querySelector('[data-action="pointer-essai-pres"][data-email="'+email+'"][data-date="'+date+'"]');
+    var absBtn = sid
+      ? tc.querySelector('[data-action="pointer-essai-abs"][data-id="'+sid+'"]')
+      : tc.querySelector('[data-action="pointer-essai-abs"][data-email="'+email+'"][data-date="'+date+'"]');
+    if (presBtn) presBtn.classList.toggle('on', present === true);
+    if (absBtn)  absBtn.classList.toggle('on',  present === false);
+  }
   if (!IS_DEMO) {
-    var payload = { presence_confirmee: !!present, presence_declaree: !!present };
+    var payload = { presence_declaree: present };
     var q = id
       ? TEV.client.from('inscriptions_essai').update(payload).eq('id',id)
       : TEV.client.from('inscriptions_essai').update(payload).eq('email',email).eq('date_essai',date);
-    q.catch(function(){});
+    Promise.resolve(q).catch(function(){});
   }
-  renderTab();
 }
 function toggleMoisAcc(id) {
   var body = document.getElementById(id);

@@ -326,6 +326,7 @@ async function tevGetAdminData() {
     ...e,
     date:             e.date_essai,
     presenceConfirmee: e.presence_confirmee,
+    present:          (e.presence_declaree !== null && e.presence_declaree !== undefined) ? e.presence_declaree : undefined,
     emailPartenaire:  e.email_partenaire || '',
     partenaire:       [e.part_prenom, e.part_nom].filter(Boolean).join(' ').trim() || e.partenaire || '',
     role:             _normalizeRole(e.role),
