@@ -952,7 +952,7 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 - **Tarif** : depuis `tev_params_yoga_<sai>.tarifs.yoga_essai` — zéro hardcodé, zéro valeur par défaut.
 - **Horaires + lieu** : depuis `tev_params_yoga_<sai>.horaires` et `.adresse` — zéro hardcodé.
 - **Livrets** : `tev_params_yoga_<sai>.livret.url_yin` / `url_hatha` — jamais hardcodés.
-- **Lien AssoConnect yoga** : depuis `tev_params_yoga_<sai>.lien_assoconnect` — utilisé dans Y-J1a.
+- **Lien AssoConnect yoga** : depuis `tev_liens_assoconnect[saison].yoga` (clé Supabase `tev_liens_assoconnect`, objet `{saison: {yoga: url}}`) — configuré dans Paramètres → AssoConnect → Yoga. ⚠️ Clé distincte de `tev_params_yoga_<sai>` — utilisé dans Y-J1a.
 - **Action élève via email** : `PATCH /api/essai-yoga/confirmer?id=...&token=...` → `presence_confirmee=true` → **badge 👍 sur la fiche admin Yoga → Essai yoga**.
 - **Quotas yoga — deux niveaux** :
   - **Niveau 1 — cours régulier plein** : `cours_yoga` ≥ 14 inscrits pour ce cours (yin ou hatha) sur la saison → `statut='attente'` dans `inscriptions_essai_yoga` → email **Y-att** → admin valide manuellement si une place se libère
@@ -973,7 +973,7 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 | **Y3** | Cron quotidien, J-3 avant la date | Élève `confirme` | Bandeau bleu 🗓 · yoga-box · bouton 👍 vert · encadré orange "En cas d'empêchement, prévenez-nous même au dernier moment" · clic 👍 → badge 👍 sur fiche admin |
 | **YI1** | Inscription régulière validée | Élève | Bandeau vert ✓ Bienvenue · yoga-box avec horaires hebdomadaires · checklist (tenue, tapis, ponctualité) · lien livret depuis params |
 | **Y-mod** | Admin modifie date/cours d'un essai yoga (✏️) | Élève | Bandeau bleu 📋 · yoga-box avec ancienne date barrée + nouvelle date en vert · bouton "Nous contacter" |
-| **Y-J1a** | Cron lendemain essai yoga · élève présent | Élève | Bandeau vert ✓ · yoga-box "Rejoindre les cours réguliers" (yin/hatha/forfait avec tarifs réels 340€/500€) · bouton AssoConnect depuis `tev_params_yoga_<sai>.lien_assoconnect` |
+| **Y-J1a** | Cron lendemain essai yoga · élève présent | Élève | Bandeau vert ✓ · yoga-box "Rejoindre les cours réguliers" (yin/hatha/forfait avec tarifs réels 340€/500€) · bouton AssoConnect depuis `tev_liens_assoconnect[saison].yoga` |
 | **Y-J1b** | Cron lendemain essai yoga · élève `confirme` non présent non annulé | Élève | Bandeau orange 💙 "Vous nous avez manqué" · bouton "↩ Choisir une nouvelle date" (`essai-yoga.html`) · note pas de pénalité |
 
 #### Notifications admin yoga (3 canaux)
