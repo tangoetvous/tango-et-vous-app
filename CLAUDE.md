@@ -1107,12 +1107,17 @@ app.tangoetvous.fr
 | **C2** | Élève clique "↻ Renouveler sans payer" (carte à 10/10) | Élève | Bandeau orange ⚠️ · carte-box (0/10, ⚠️ Non payée) · encadré "Finalisez votre paiement sur AssoConnect" · bouton AssoConnect `#LIEN_ASSOCONNECT_RENOUV` |
 | **C2b** | Admin clique "Non payé" dans la modal Renouveler (Cartes 10 → Détails) | Élève | Identique C2 — bandeau orange ⚠️ · carte-box (0/10, ⚠️ Non payée) · bouton AssoConnect renouv |
 | **C3 (E10)** | Admin choisit "Payé" dans la modal Renouveler → valide "✓ Enregistrer le paiement" | Élève | Bandeau vert ✓ · carte-box (0/10, cours, saison) · "À très bientôt !" · bouton espace élève |
-| **C4** | Cron : lendemain du dernier cours Paris de juin | Élèves avec cours restants | Bandeau bleu 📅 · "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" · lien AssoConnect pré-inscriptions · avertissement expiration fin août |
+| **C4** | Cron : lendemain du dernier cours Paris de juin | Élèves avec cours restants | Bandeau bleu 📅 · "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" · "Il vous suffit de régler l'adhésion à notre association pour l'instant." · lien AssoConnect pré-inscriptions · avertissement expiration fin août |
 | **C5** | Cron quotidien le 25 août | Élèves avec cours restants non ré-inscrits | Bandeau orange ⚠️ Dernier rappel · "Ces cours expireront le 31 août si vous ne vous réinscrivez pas" · bouton AssoConnect |
-| **C6** | Vendredi matin (Paris) / mardi matin (Vincennes) — cron | Élève carte10 absent 2 cours consécutifs | Ton "tu" (informel) · "Coucou [Prénom], on ne t'a pas vu·e aux 2 derniers cours. Tout va bien ?" · rappel cours préservés (N restants) · contact tel + email · Signature "Florencia & Jérémy" |
+| **C6** | Vendredi matin (Paris) / mardi matin (Vincennes) — cron | Élève carte10 absent 2 cours consécutifs | Ton "tu" (informel) · "Coucou [Prénom], on ne t'a pas vu·e aux 2 derniers cours. Tout va bien ?" · "Nous sommes là pour t'accompagner dès que tu reprends pour te partager ce qui a été vu dernièrement." · rappel cours préservés (N restants) · contact tel + email · Signature "Florencia & Jérémy" |
 | **C-pay** | Admin clique badge "⚠️ Non payée" ou "✓ Payée" sur une fiche dans Cartes 10 → Détails → valide "✓ Enregistrer" dans le modal paiement | Élève | Bandeau vert ✓ · carte-box (✓ Payée, montant depuis Paramètres, mode, date paiement, cours actifs, expiration depuis `datePremierCours`) · "Votre carte de 10 cours est payée. Bon cours !" · bouton espace élève · Push : "✓ Paiement enregistré · Votre carte est active" |
 | **C-report** | Admin clique "↩ Reporter" en fin de saison (crée ligne `isReport=true` saison suivante) | Élève | Bandeau vert ✓ · carte-box "Votre carte 2026-2027" (N cours reportés) · message "Votre carte vous attend à la rentrée de septembre" · Push : "↩ Votre carte reportée · N cours préservés pour 2026-2027" |
 | **D-msg** | Admin envoie un message dans l'onglet Discussions | Élève | **Pas d'email** — push OS uniquement + notification in-app (`notifications_eleve`) · "💬 Nouveau message — [Prénom admin] : [début message...]" → onglet Discussions |
+
+**Règles d'implémentation emails cartes** :
+- **Expiration** : toujours calculée depuis `datePremierCours` (date du 1er cours pointé sur la carte), **jamais** depuis la date de paiement. Dans C-pay, le paiement peut intervenir des semaines après le premier cours — l'expiration ne change pas.
+- **Montants/tarifs** : toujours lus depuis `tev_params_paris_<sai>.tarifs` (Paramètres → Tango Paris → Tarifs). Aucune valeur hardcodée, aucune valeur par défaut dans les Edge Functions.
+- **Lien renouvellement** (C2, C2b) : `tev_liens_assoconnect[saison].renouv` (Paramètres → Tango Paris → Liens AssoConnect → "Renouvellement carte (10/20 cours)").
 
 **Règles C6** : déclenché même si l'élève a déclaré son absence via 🚫. Logique : dates cours depuis `tev_cours_dates` (Paramètres) − présences (`presences` table) = absences. Anti-doublon : colonne `derniere_relance_abs DATE` sur `eleves` (ne renvoie pas si déjà envoyé pour ces 2 mêmes dates). Script Node.js dans `.github/scripts/relance-absences.js` + workflow `relance-absences.yml`.
 
@@ -1125,7 +1130,8 @@ app.tangoetvous.fr
 
 | Scénario | Couleur | Message |
 |----------|---------|---------|
-| Renouvelée sans payer (élève) | orange `#1f0e00`/`#e65100` | `↻ Carte renouvelée sans payer — Felipe DIAZ · Paris Débutants · ⚠️ Paiement en attente · → Cartes 10 → Détails` |
+| Renouvelée sans payer — élève (C2) | orange `#1f0e00`/`#e65100` | `↻ Carte renouvelée sans payer — Felipe DIAZ · Paris Débutants · ⚠️ Paiement en attente · → Cartes 10 → Détails` |
+| Renouvelée sans payer — admin (C2b) | orange `#1f0e00`/`#e65100` | `↻ Carte renouvelée par l'admin sans payer — Felipe DIAZ · Paris Débutants · ⚠️ Paiement en attente · → Cartes 10 → Détails` |
 | 2 absences détectées (cron) | gris-bleu `#0a1520`/`#5c9dc2` | `💙 2 absences consécutives — Felipe DIAZ · Paris Débutants · Email C6 envoyé · → Cartes 10 → Détails` |
 
 #### Notifications élève cartes (push OS)
