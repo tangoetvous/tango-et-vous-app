@@ -1640,6 +1640,14 @@ function soumettreEssaiStatut(email, statut) {
   var lbls={demande:'Demande en attente',attente_paiement:'Validé·e'};
   afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' · '+cours+(ess.partenaire?' + partenaire':''));
   if(!IS_DEMO){
+    var partEssForNotif = ess.partenaire ? (
+      ess.emailPartenaire
+        ? (adminData.essai||[]).find(function(e){return e.email===ess.emailPartenaire&&e.date===ess.date;})
+        : (adminData.essai||[]).find(function(e){return _normNom((e.prenom||'')+' '+(e.nom||''))===_normNom(ess.partenaire)&&e.date===ess.date;})
+    ) : null;
+    var partEmailNotif = ess.emailPartenaire || (partEssForNotif ? partEssForNotif.email : '');
+    var partPrenomNotif = partEssForNotif ? (partEssForNotif.prenom||'') : (ess.partenaire||'').split(' ')[0]||'';
+    var partNomNotif = partEssForNotif ? (partEssForNotif.nom||'') : (ess.partenaire||'').split(' ').slice(1).join(' ')||'';
     Promise.all(dbOps.map(function(op){
       if(op.type==='update') return Promise.resolve(TEV.client.from('inscriptions_cours').update(op.data).eq('id',String(op.id)));
       return Promise.resolve(TEV.client.from('inscriptions_cours').insert(op.data));
@@ -1647,6 +1655,7 @@ function soumettreEssaiStatut(email, statut) {
       var err=results.find(function(r){return r&&r.error;});
       if(err){afficherToast('⚠️ Erreur DB: '+(err.error.message||err.error.code||''));return;}
       Object.keys(_pendingCoursInserts).forEach(function(em){delete _pendingCoursInserts[em];});
+      _notifEssaiTransfer(ess, statut, cours, ville, niveau, partEmailNotif, partPrenomNotif, partNomNotif);
       chargerDonnees();
     }).catch(function(){Object.keys(_pendingCoursInserts).forEach(function(em){delete _pendingCoursInserts[em];});});
   }
@@ -3741,6 +3750,54 @@ function _notifDateChange(type, dates, action, opts) {
       afficherToast('🔔 ' + emails.length + ' élève' + (emails.length > 1 ? 's' : '') + ' notifié' + (emails.length > 1 ? 's' : ''));
     })
     .catch(function(err){ console.error('[notif] Error:', err); });
+}
+
+function _getJwt() {
+  try { var _r = localStorage.getItem('sb-qhngqzvvllktuwspojxc-auth-token'); if (_r) return JSON.parse(_r).access_token || ''; } catch(e) {} return '';
+}
+
+// Notification in-app + email admin/élève lors d'une modification d'essai tango
+function _notifEssaiEdit(prenom, nom, email, oldDate, oldVille, oldNiveau, newDate, newVille, newNiveau, partEmail, partPrenom, partNom) {
+  if (IS_DEMO) return;
+  var villeL = newVille === 'vincennes' ? 'Vincennes' : 'Paris';
+  var nivL = newNiveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
+  var msg = '📋 Votre cours d\'essai a été modifié : ' + villeL + ' ' + nivL + ' · ' + _dateNotifFmt(newDate);
+  var notifEmails = [email];
+  if (partEmail && partEmail !== email) notifEmails.push(partEmail);
+  var rows = notifEmails.map(function(em) { return { email: em, type: 'info', message: msg }; });
+  Promise.resolve(TEV.client.from('notifications_eleve').insert(rows)).catch(function(err){ console.error('[notif essai-edit in-app]', err); });
+  Promise.resolve(fetch('/api/notify/essai-action', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+    body: JSON.stringify({ action: 'edit-essai', prenom: prenom, nom: nom, email: email,
+      oldDate: oldDate, oldVille: oldVille, oldNiveau: oldNiveau,
+      newDate: newDate, newVille: newVille, newNiveau: newNiveau,
+      partPrenom: partPrenom || '', partNom: partNom || '', partEmail: partEmail || '' })
+  })).catch(function(err){ console.error('[notif essai-edit email]', err); });
+}
+
+// Notification in-app + email admin/élève lors d'un transfert essai → inscriptions tango
+function _notifEssaiTransfer(ess, statut, cours, ville, niveau, partEmail, partPrenom, partNom) {
+  if (IS_DEMO) return;
+  var villeL = ville === 'vincennes' ? 'Vincennes' : 'Paris';
+  var nivL = niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
+  var msg = statut === 'demande'
+    ? '📋 Votre demande d\'inscription tango est enregistrée : ' + villeL + ' ' + nivL
+    : '🎓 Votre inscription tango est validée : ' + villeL + ' ' + nivL;
+  var notifEmails = [ess.email];
+  if (partEmail && partEmail !== ess.email) notifEmails.push(partEmail);
+  var notifType = statut === 'demande' ? 'info' : 'success';
+  var rows = notifEmails.map(function(em) { return { email: em, type: notifType, message: msg }; });
+  Promise.resolve(TEV.client.from('notifications_eleve').insert(rows)).catch(function(err){ console.error('[notif essai-transfer in-app]', err); });
+  Promise.resolve(fetch('/api/notify/essai-action', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+    body: JSON.stringify({ action: statut === 'demande' ? 'transfer-demande' : 'transfer-valide',
+      prenom: ess.prenom || '', nom: ess.nom || '', email: ess.email,
+      tel: ess.tel || '', role: ess.role || '', cours: cours, ville: ville, niveau: niveau,
+      date: ess.date || '',
+      partPrenom: partPrenom || '', partNom: partNom || '', partEmail: partEmail || '' })
+  })).catch(function(err){ console.error('[notif essai-transfer email]', err); });
 }
 
 // Ajout en lot de dates Paris/Vincennes depuis l'onglet Paramètres
@@ -9180,6 +9237,8 @@ function validerEditEssai(id) {
   var e = (adminData.essai||[]).find(function(x){ return String(x.id)===String(id); });
   if (!e) { afficherToast('Inscription introuvable'); return; }
 
+  var oldDate = e.date, oldVille = e.ville, oldNiveau = e.niveau;
+
   // Chercher le partenaire AVANT de modifier l'état local (on matche sur les anciennes valeurs)
   var partEntry = null;
   if (e.partenaire) {
@@ -9210,6 +9269,9 @@ function validerEditEssai(id) {
     var err = results.find(function(r){ return r&&r.error; });
     if (err){ afficherToast('⚠️ Erreur : '+(err.error.message||err.error.code||'')); chargerDonnees(); return; }
     afficherToast(partEntry ? '✓ Modifié (partenaire mis à jour aussi)' : '✓ Modifié');
+    _notifEssaiEdit(e.prenom||'', e.nom||'', e.email||'',
+      oldDate, oldVille, oldNiveau, newDate, newVille, newNiveau,
+      partEntry ? (partEntry.email||'') : '', partEntry ? (partEntry.prenom||'') : '', partEntry ? (partEntry.nom||'') : '');
   })
   .catch(function(){ afficherToast('⚠️ Erreur réseau'); chargerDonnees(); });
 }
