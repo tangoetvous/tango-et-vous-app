@@ -6280,7 +6280,14 @@ function renderElevesTango() {
   var sai = saisonActive();
   var tous = (adminData.coursTango||[]).filter(function(e){return (e.saison||saisonCourante())===sai;});
   var inscrits = tous.filter(function(e){return e.statut==='inscrit' && !e._isRenewalRow;});
-  var supprimes = tous.filter(function(e){return e.statut==='supprimé';});
+  var supprimes = tous.filter(function(e){
+    if(e.statut!=='supprimé') return false;
+    // Exclure les supprimés depuis "Inscriptions Tango" — ils ont leur propre onglet là-bas
+    if(e._suppriméDeInscriptions) return false;
+    var d = e.donnees||{};
+    if(d.supprimé_de==='inscriptions_tango') return false;
+    return true;
+  });
   var ONGLETS = [
     {id:'paris-deb',     lbl:'Paris Débutants',          ville:'paris',     niv:'debutant'},
     {id:'paris-int',     lbl:'Paris Intermédiaires',      ville:'paris',     niv:'intermediaire'},
