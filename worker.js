@@ -119,6 +119,12 @@ export default {
         return handleNotifyEssaiAction(request, env);
       }
 
+      // POST /api/notify/sorano — email + notification in-app pour relance ou paiement réglé
+      if (pathname === '/api/notify/sorano' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifySorano(request, env);
+      }
+
       // POST /api/cron/essai-j1 — cron GitHub Actions → emails E-J1a / E-J1b le lendemain du cours
       if (pathname === '/api/cron/essai-j1' && method === 'POST') {
         const cronSecret = request.headers.get('X-Cron-Secret');
@@ -874,6 +880,105 @@ async function sendBrevoNotification(apiKey, body) {
   });
 }
 
+
+// ================================================================
+// POST /api/notify/sorano — email + notification in-app
+// type: 'relance' | 'regle'
+// ================================================================
+async function handleNotifySorano(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const { type, prenom, nom, email, cours } = body;
+  if (!email) return jsonError(400, 'email manquant');
+
+  const prenomAff = _esc(prenom || (nom || '').split(' ')[0] || '');
+  const adminEmail = 'tangoetvous@gmail.com';
+
+  // Notification in-app (toujours, même sans Brevo)
+  const notifMsg = type === 'regle'
+    ? '✓ Votre adhésion Sorano a été enregistrée pour cette saison'
+    : '⏳ Rappel : votre adhésion à l\'Espace Sorano n\'est pas encore réglée';
+  const notifType = type === 'regle' ? 'sorano_regle' : 'sorano_relance';
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ email, type: notifType, message: notifMsg, lu: false }),
+    });
+  } catch(e) { console.error('[notify sorano] notifications_eleve error', e); }
+
+  if (!env.BREVO_API_KEY) {
+    console.log('[notify sorano] BREVO_API_KEY absent — skip email');
+    return corsResponse({ ok: true, sent: 0, notified: true, skipped: true }, 200, {}, request);
+  }
+
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
+    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
+    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  let sent = 0;
+  async function sendBrevo(toEmail, subject, html) {
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
+      });
+      if (r.ok) sent++;
+      else console.error('[notify sorano] Brevo error', toEmail, await r.text());
+    } catch(e) { console.error('[notify sorano] fetch error', e); }
+  }
+
+  const coursLabel = _esc(cours || 'Tango Vincennes');
+
+  if (type === 'regle') {
+    const html = wrap(`${headerEleve}
+      <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
+        <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Adhésion Sorano enregistrée</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">ADHÉSION ESPACE SORANO · VINCENNES</div>
+          <div style="font-size:15px;font-weight:700;color:#2e7d32;margin-bottom:8px;">✓ Enregistrée pour cette saison</div>
+          <div style="font-size:14px;color:#444;">${coursLabel}</div>
+        </div>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">Votre adhésion à l'Espace Sorano est bien enregistrée pour cette saison. Vous pouvez participer à tous vos cours de tango à Vincennes.</p>
+        ${signEleve}
+      </div>${footer}`);
+    await sendBrevo(email, `✓ Adhésion Sorano enregistrée · Tango & Vous`, html);
+  } else {
+    const html = wrap(`${headerEleve}
+      <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+        <span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Rappel — Adhésion Sorano</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">Votre cours de tango se déroulant à l'Espace Sorano de Vincennes, une <strong>adhésion à cet espace culturel est nécessaire</strong> pour participer aux cours.</p>
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
+          <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">📋 Comment procéder</p>
+          <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Rendez-vous à l'accueil de l'Espace Sorano (2 rue de Montreuil, Vincennes) et indiquez que vous suivez des cours de tango avec Tango & Vous.</p>
+        </div>
+        <p style="font-size:14px;color:#333;margin:0 0 24px;">Si vous avez déjà réglé votre adhésion, vous pouvez ignorer ce message — notre équipe mettra à jour votre dossier.</p>
+        <p style="text-align:center;margin:0 0 24px;"><a href="mailto:tangoetvous@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a></p>
+        ${signEleve}
+      </div>${footer}`);
+    await sendBrevo(email, `⏳ Rappel — Adhésion Sorano · Tango & Vous`, html);
+  }
+
+  return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
+}
 
 // ================================================================
 // GET /devis/p/:token — vue publique d'un devis (sans auth)

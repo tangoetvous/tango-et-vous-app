@@ -5445,7 +5445,7 @@ function handleAction(action, btn) {
       soranoAction(id, false, btn);
       break;
     case 'relance-sorano':
-      relanceSorano(btn.dataset.email, btn.dataset.nom, btn);
+      relanceSorano(btn.dataset.email, btn.dataset.nom, btn.dataset.prenom||'', btn.dataset.cours||'', btn);
       break;
     case 'inscrire-stage-admin':
       soumettreInscriptionStageAdmin();
@@ -9591,15 +9591,15 @@ function renderSorano() {
       '<div class="card-top"><div>'+
       '<div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+nomQ+'" data-email="'+(s.email||'')+'" data-tel="" data-ctx="sorano">'+s.nom+supprTag+'</div>'+
       '</div><span class="pill pill-warn">Non réglé</span></div>'+
-      '<div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'">✓ Marquer réglé</button>'+
-      '<button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email+'" data-nom="'+nomQ+'" data-id="'+s.id+'">✉️ Relance</button>'+
+      '<div class="btn-row"><button class="btn btn-ok" data-action="sorano-paye" data-id="'+s.id+'" data-email="'+s.email.replace(/"/g,'&quot;')+'" data-prenom="'+(s.prenom||'').replace(/"/g,'&quot;')+'" data-nom="'+nomQ+'" data-cours="'+(s.cours||'').replace(/"/g,'&quot;')+'">✓ Marquer réglé</button>'+
+      '<button class="btn btn-warn" data-action="relance-sorano" data-email="'+s.email.replace(/"/g,'&quot;')+'" data-nom="'+nomQ+'" data-prenom="'+(s.prenom||'').replace(/"/g,'&quot;')+'" data-cours="'+(s.cours||'').replace(/"/g,'&quot;')+'" data-id="'+s.id+'">✉️ Relance</button>'+
       '<button class="btn btn-err" style="font-size:10px;" data-action="suppr-sorano-inscr" data-id="'+s.id+'" title="Supprimer l\'inscription">✕ Supprimer</button></div></div>';
   }
   var groups=[
-    {lbl:'Tango Vincennes Débutants',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return (ct.statut==='inscrit'||ct.statut==='supprimé')&&ct.ville==='vincennes'&&ct.niveau==='debutant'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email],supprime:ct.statut==='supprimé'};}).sort(alpha)},
-    {lbl:'Tango Vincennes Intermédiaires',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return (ct.statut==='inscrit'||ct.statut==='supprimé')&&ct.ville==='vincennes'&&ct.niveau==='intermediaire'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,email:ct.email||'',paiementSorano:!!reg[ct.email],supprime:ct.statut==='supprimé'};}).sort(alpha)},
-    {lbl:'🌙 Yin Yoga 10h30',color:'#a78bfa',list:(adminData.coursYoga||[]).filter(function(cy){return (cy.cours==='yin'||cy.cours==='forfait')&&cy.statut==='inscrit'&&(cy.saison||saisonCourante())===sai;}).map(function(cy){return{id:cy.id,nom:cy.prenom+' '+cy.nom,email:cy.email||'',paiementSorano:!!reg[cy.email]};}).sort(alpha)},
-    {lbl:'☀️ Hatha Yoga 11h30',color:'#a78bfa',list:(adminData.coursYoga||[]).filter(function(cy){return (cy.cours==='hatha'||cy.cours==='forfait')&&cy.statut==='inscrit'&&(cy.saison||saisonCourante())===sai;}).map(function(cy){return{id:cy.id,nom:cy.prenom+' '+cy.nom,email:cy.email||'',paiementSorano:!!reg[cy.email]};}).sort(alpha)}
+    {lbl:'Tango Vincennes Débutants',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return (ct.statut==='inscrit'||ct.statut==='supprimé')&&ct.ville==='vincennes'&&ct.niveau==='debutant'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,prenom:ct.prenom||'',cours:'Tango Vincennes Débutants',email:ct.email||'',paiementSorano:!!reg[ct.email],supprime:ct.statut==='supprimé'};}).sort(alpha)},
+    {lbl:'Tango Vincennes Intermédiaires',color:'#40d8c0',list:(adminData.coursTango||[]).filter(function(ct){return (ct.statut==='inscrit'||ct.statut==='supprimé')&&ct.ville==='vincennes'&&ct.niveau==='intermediaire'&&(ct.saison||saisonCourante())===sai;}).map(function(ct){return{id:ct.id,nom:ct.prenom+' '+ct.nom,prenom:ct.prenom||'',cours:'Tango Vincennes Intermédiaires',email:ct.email||'',paiementSorano:!!reg[ct.email],supprime:ct.statut==='supprimé'};}).sort(alpha)},
+    {lbl:'🌙 Yin Yoga 10h30',color:'#a78bfa',list:(adminData.coursYoga||[]).filter(function(cy){return (cy.cours==='yin'||cy.cours==='forfait')&&cy.statut==='inscrit'&&(cy.saison||saisonCourante())===sai;}).map(function(cy){return{id:cy.id,nom:cy.prenom+' '+cy.nom,prenom:cy.prenom||'',cours:'Yoga Yin',email:cy.email||'',paiementSorano:!!reg[cy.email]};}).sort(alpha)},
+    {lbl:'☀️ Hatha Yoga 11h30',color:'#a78bfa',list:(adminData.coursYoga||[]).filter(function(cy){return (cy.cours==='hatha'||cy.cours==='forfait')&&cy.statut==='inscrit'&&(cy.saison||saisonCourante())===sai;}).map(function(cy){return{id:cy.id,nom:cy.prenom+' '+cy.nom,prenom:cy.prenom||'',cours:'Yoga Hatha',email:cy.email||'',paiementSorano:!!reg[cy.email]};}).sort(alpha)}
   ];
   var emailsSeen={};var allDedup=[];
   groups.forEach(function(g){g.list.forEach(function(s){var k=s.email||s.nom;if(!emailsSeen[k]){emailsSeen[k]=true;allDedup.push(s);}});});
@@ -9634,22 +9634,42 @@ function soranoAction(id, paye, btn) {
   var p1=Promise.resolve(TEV.client.from('inscriptions_cours').update({paiement_sorano:paye}).eq('email',email).eq('ville','vincennes'));
   var p2=Promise.resolve(TEV.client.from('cours_yoga').update({paiement_sorano:paye}).eq('email',email));
   // _pendingSoranoPayé[email] reste jusqu'à confirmation DB — jamais supprimé sur erreur
+  var _ctPrenom=ct.prenom||''; var _ctNom=ct.nom||''; var _ctCours=btn.dataset.cours||'';
   Promise.all([p1,p2]).then(function(results){
     var tErr=results[0]&&results[0].error, yErr=results[1]&&results[1].error;
     if(!tErr || !yErr) {
       // Au moins une mise à jour DB réussie — la DB a la bonne valeur, lever la protection
       delete _pendingSoranoPayé[email];
+      // Notification email + in-app si marqué réglé
+      if(paye) {
+        Promise.resolve(fetch('https://app.tangoetvous.fr/api/notify/sorano', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
+          body:JSON.stringify({type:'regle',email:email,nom:_ctPrenom+' '+_ctNom,prenom:_ctPrenom,cours:_ctCours})
+        })).catch(function(){});
+      }
     }
     // Si les deux échouent : le pending reste actif → le polling ne peut pas écraser
     // Ne pas appeler chargerDonnees() — le polling 15s synchronisera
   });
+  btn.disabled=false;
 }
-function relanceSorano(email, nom, btn) {
+function relanceSorano(email, nom, prenom, cours, btn) {
   btn.disabled=true; btn.textContent='⏳';
   if(IS_DEMO){setTimeout(function(){btn.disabled=false;btn.textContent='✓ Envoyé (démo)';},800);return;}
-  // TODO: implémenter via Brevo + Edge Function
-  afficherToast('⚠️ Emails non encore configurés (Brevo à implémenter)');
-  btn.disabled=false; btn.textContent='✉️ Relance';
+  if(!email){btn.disabled=false;btn.textContent='✉️ Relance';return;}
+  fetch('https://app.tangoetvous.fr/api/notify/sorano', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
+    body:JSON.stringify({type:'relance',email:email,nom:nom,prenom:prenom||nom.split(' ')[0],cours:cours})
+  }).then(function(r){return r.json();}).then(function(){
+    btn.disabled=false; btn.textContent='✓ Envoyé';
+    afficherToast('✉️ Relance envoyée à '+nom);
+    setTimeout(function(){btn.textContent='✉️ Relance';},3000);
+  }).catch(function(){
+    btn.disabled=false; btn.textContent='✉️ Relance';
+    afficherToast('⚠️ Erreur lors de l\'envoi de la relance');
+  });
 }
 
 // ================================================================
