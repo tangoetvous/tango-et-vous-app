@@ -78,7 +78,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
   - SQL à exécuter si colonnes absentes : `ALTER TABLE inscriptions_cours ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false; ALTER TABLE cours_yoga ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false;`
 - **`inscriptions_stages`** : inscriptions aux stages — ⚠️ colonne `telephone` (pas `tel`)
 - **`inscriptions_essai`** : cours d'essai tango — colonne `tel`
-- **`inscriptions_essai_yoga`** : cours d'essai yoga — table séparée. Colonnes : `prenom, nom, email, tel, date_essai, cours, gratuit, statut, presence_confirmee`. `statut` toujours `'confirme'` à l'inscription si une place est disponible — **pas de validation manuelle admin** (contrairement à l'essai tango). ⚠️ Table distincte de `inscriptions_essai` — ne pas confondre.
+- **`inscriptions_essai_yoga`** : cours d'essai yoga — table séparée. Colonnes : `prenom, nom, email, tel, date_essai, cours, gratuit, statut, presence_confirmee, presence_declaree`. `statut` toujours `'confirme'` à l'inscription si une place est disponible — **pas de validation manuelle admin** (contrairement à l'essai tango). `presence_declaree BOOLEAN DEFAULT NULL` : `NULL`=non pointé, `true`=admin ✓ Présent, `false`=admin 🚫 Absent — même logique que `inscriptions_essai`. SQL : `ALTER TABLE inscriptions_essai_yoga ADD COLUMN IF NOT EXISTS presence_declaree BOOLEAN DEFAULT NULL;` ✅ Exécuté. ⚠️ Table distincte de `inscriptions_essai` — ne pas confondre.
 - **`presences`** : pointage des présences
 - **`cours_particuliers`** : cours particuliers
 - **`publications`** : publications/annonces
@@ -86,7 +86,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **`demandes_devis`** : demandes reçues via formulaire public `demande-devis.html` — voir section Devis ci-dessous
 - **`devis`** : devis officiels créés par l'admin — voir section Devis ci-dessous
 - **`compteurs_devis`** : numérotation annuelle des devis (accès via fonction SECURITY DEFINER uniquement)
-- **`notifications`** : historique des notifications admin — colonnes : id, created_at, type, message, lu (bool), lien_tab — à créer quand push implémenté
+- **`notifications`** : historique des notifications admin — colonnes : id, created_at, type, message, lu (bool), lien_tab. Alimentée par le worker (routes `carte-pointage`, `notify/yoga-date`, etc.) et par `traiterMsgInscription` dans admin.html. Lue par le panel 🔔 dans l'admin.
 - **`absences_jour`** : absences déclarées sur les cours réguliers — colonnes : id, created_at, date (date), email (text), UNIQUE(date, email). GRANT SELECT/INSERT/UPDATE/DELETE accordé à anon + authenticated. Alimentée par l'admin (bouton Absent dans Pointage) ET par l'espace élève (bouton sur carte Prochain Cours).
 
 ## Architecture JS clé
@@ -914,7 +914,9 @@ if(partEntry){ partEntry.date=newDate; ... }
 - **Paiement** : "Le règlement se fait sur place. Merci de prévoir l'appoint." — ne jamais préciser le mode de paiement.
 - **`presence_confirmee`** : colonne à ajouter à `inscriptions_stages` via `ALTER TABLE inscriptions_stages ADD COLUMN IF NOT EXISTS presence_confirmee BOOLEAN NOT NULL DEFAULT FALSE;`
 - **`presence_declaree` dans `inscriptions_essai`** : colonne nullable distincte de `presence_confirmee` — `NULL` = non pointé, `true` = admin cliqué ✓ Présent, `false` = admin cliqué 🚫 Absent. Permet au cron E-J1a/J1b de distinguer "absent déclaré" de "jamais pointé". SQL : `ALTER TABLE inscriptions_essai ADD COLUMN IF NOT EXISTS presence_declaree BOOLEAN DEFAULT NULL;`. ✅ Exécuté. `pointerEssai` dans admin.html écrit **uniquement** `presence_declaree` (pas `presence_confirmee` — réservé à la confirmation email élève).
+- **`presence_declaree` dans `inscriptions_essai_yoga`** : même logique exacte que tango. SQL : `ALTER TABLE inscriptions_essai_yoga ADD COLUMN IF NOT EXISTS presence_declaree BOOLEAN DEFAULT NULL;`. ✅ Exécuté. `pointerYoga(date, email, present, id)` dans admin.html écrit `presence_declaree`. `_mapEssai` dans `tev-supabase.js` mappe `presence_declaree → present` — partagé entre tango et yoga.
 - **Cron E-J1a/J1b** : workflow `.github/workflows/essai-j1.yml` — cron `0 7 * * *` UTC (9h Paris été) → POST `https://app.tangoetvous.fr/api/cron/essai-j1` avec header `X-Cron-Secret`. Secret `CRON_SECRET` à configurer dans : GitHub → Settings → Secrets → Actions ET Cloudflare Workers → Settings → Variables → Secret variables. Worker route : `handleCronEssaiJ1` → requête Supabase pour `date_essai=hier AND presence_declaree IS NOT NULL` → Brevo emails.
+- **Cron Y-J1a/J1b** : workflow `.github/workflows/essai-yoga-j1.yml` — même cron `0 7 * * *` UTC → POST `https://app.tangoetvous.fr/api/cron/essai-yoga-j1`. Worker route : `handleCronEssaiYogaJ1` → `inscriptions_essai_yoga` filtrée sur `date_essai=hier AND presence_declaree IS NOT NULL` → Y-J1a (présent) ou Y-J1b (absent) via Brevo → `regardsepose@gmail.com`.
 - **Clic bouton 👍** → `PATCH /api/stages/confirmer?id=...&token=...` → `presence_confirmee=true` → 👍 sur la fiche admin Stages.
 
 #### Catalogue emails élève
@@ -2562,3 +2564,80 @@ CSS partagé : `display:inline-block;color:#fff;font-size:12px;font-weight:700;p
 - Clic "↩ Reporter" → redirige vers le formulaire cours d'essai (`URL_FORMULAIRE_A_RENSEIGNER` — à mettre à jour quand l'utilisateur fournit l'URL)
 
 **Règle livret** : lire `tev_params_<ville>_<sai>.livret.url_deb` ou `url_int` selon ville + niveau de l'élève. Ne jamais hardcoder.
+
+## Session 2026-05-20 — Notifications Agenda, pointage yoga 3 états, cron Y-J1, notifs carte 10
+
+### ✅ Agenda → Modifier/Annuler — notifications élèves identiques aux Paramètres
+
+La même logique `_notifDateChange(type, dates, action, opts)` qui s'exécute dans Paramètres lors de l'ajout/suppression de dates est maintenant aussi déclenchée depuis l'onglet Agenda → Modifier/Annuler :
+
+- **`sauverModifAgenda`** (ajout d'une annulation ou d'un report) :
+  - Si `action==='annule'` ou `action==='reporte'` → `_notifDateChange` avec `'suppression'` sur la date annulée
+  - Si `action==='reporte'` et `newDate` → second `_notifDateChange` avec `'ajout'` sur la nouvelle date (delay 300ms)
+  - Mapping type : `'stage'` → `'stages'`, `'milonga-xxx'` → `'milonga'` + `{milNom}`, yoga → direct
+
+- **`supprimerModifAgenda`** (restauration d'une entrée depuis l'historique) :
+  - Si l'entrée restaurée était une annulation → `_notifDateChange('ajout')` sur la date
+  - Si l'entrée restaurée était un report → `_notifDateChange('suppression')` sur `newDate` + `_notifDateChange('ajout')` sur la date d'origine
+
+- **`ajouterDatesLot`** (ajout en lot depuis Agenda) :
+  - Accumule `addedDates` → `_notifDateChange('ajout', addedDates, ...)` après les saves
+
+**Règle** : chercher le partenaire sur les **anciennes** valeurs de date/ville/niveau AVANT de modifier l'état local — sinon les champs de recherche ont changé et le partenaire ne se retrouve plus.
+
+### ✅ Essai Yoga — boutons pointage 3 états (non pointé / présent / absent)
+
+Pattern identique aux boutons ✓/✗ de l'essai tango :
+- `.btn-pres.on` + `.btn-abs.off` = présent (vert, opposé grisé)
+- `.btn-pres.off` + `.btn-abs.on` = absent (rouge, opposé grisé)
+- Ni `.on` ni `.off` sur les deux = non pointé
+
+**`pointerYoga(date, email, present, id)`** — réécriture complète :
+- Lookup par `id` (priorité) ou par `email+date` dans `adminData.essaiYoga`
+- Pose `e.present` ET `e.presence_declaree` sur l'objet local
+- Manipulation DOM directe des classes `.on`/`.off` avant `renderTab()` (évite le flash)
+- UPDATE Supabase : `inscriptions_essai_yoga.presence_declaree` (pas `presence_confirmee`)
+- `Promise.resolve(q).catch(...)` — jamais `q.catch()` directement sur le builder Supabase
+- Boutons dans `rowYoga` portent `data-id` en plus de `data-date` et `data-email` pour lookup fiable
+
+### ✅ Cron Y-J1a / Y-J1b — emails lendemain essai yoga
+
+- Workflow `.github/workflows/essai-yoga-j1.yml` — cron `0 7 * * *` UTC → POST `/api/cron/essai-yoga-j1` avec `X-Cron-Secret`
+- Worker `handleCronEssaiYogaJ1` : lit `inscriptions_essai_yoga` WHERE `date_essai=hier AND presence_declaree IS NOT NULL`
+- Lit les params yoga depuis Supabase (`tev_params_yoga_<sai>`, `tev_liens_assoconnect`) pour horaires, lieu, lien AssoConnect
+- **Y-J1a** (présent, `presence_declaree=true`) : email "À bientôt !" avec tarifs cours réguliers + bouton AssoConnect yoga
+- **Y-J1b** (absent, `presence_declaree=false`) : email "Vous nous avez manqué" + bouton `essai-yoga.html`
+- Envoi à l'élève + copie admin `regardsepose@gmail.com`
+- `CRON_SECRET` déjà configuré (partagé avec le cron essai tango)
+
+### ✅ Notifications pointage carte 10 — deux sens
+
+#### Élève → Admin (élève pointe sa propre carte)
+
+Déclenché depuis **trois sources** : `confirmerPointerSelf()` dans index.html (espace élève), `pointer.html` (QR code).
+
+Après le pointage Supabase réussi :
+1. `fetch('/api/notify/carte-pointage', {method:'POST', body:{email, prenom, nom, date, nbAdded, utilises, restants, source:'app'|'qr'}})` — fire and forget, sans auth
+2. `BroadcastChannel('tev_inscriptions').postMessage({type:'cartePointage', data:{...}})` — mise à jour immédiate si l'admin est dans le même navigateur
+
+Worker `handleNotifyCartePointage` (sans JWT) :
+- INSERT dans `notifications` (panel 🔔 admin) avec `type:'carte_pointage'`, `lien_tab:'cartes'`
+- Email Brevo à `tangoetvous@gmail.com` : encadré or (nom, email, date, nb cours, source), bouton "Ouvrir l'admin → Cartes 10"
+
+**Règle BroadcastChannel** : le handler `traiterMsgInscription` dans admin.html gérait déjà `cartePointage` (existait pour la branche démo). Il est null-safe (`d.utilises != null ? d.utilises : c.utilises`) et déduplique les dates (`dejaDansAdmin`). Ajouter le BroadcastChannel en prod ne casse rien.
+
+#### Admin → Élève (admin pointe la carte d'un élève)
+
+Déclenché dans `pointerCoursAction()` (admin.html — Cartes 10 → Détails ou Pointage), après `_broadcastAdminSync`.
+
+`fetch('/api/notify/carte-pointee-admin', {method:'POST', headers:{Authorization:'Bearer '+_getJwt()}, body:{email, prenom, nom, date, nbAdded, utilises, restants, expiration}})` — fire and forget, JWT admin requis.
+
+Worker `handleNotifyCartePonteeAdmin` (JWT admin) :
+- INSERT dans `notifications_eleve` avec `type:'carte_pointee'`
+- Email Brevo à l'élève : bandeau vert ✓, boîte bleue (date, nb cours pointés, utilises/10, restants, expiration si dispo), bouton "Accéder à mon espace élève →", signature Florencia & Jérémy
+
+#### Nouvelles routes worker
+| Route | Auth | Handler | Direction |
+|-------|------|---------|-----------|
+| `POST /api/notify/carte-pointage` | Aucune | `handleNotifyCartePointage` | Élève → Admin |
+| `POST /api/notify/carte-pointee-admin` | JWT admin | `handleNotifyCartePonteeAdmin` | Admin → Élève |
