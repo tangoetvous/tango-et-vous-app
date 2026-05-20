@@ -2766,7 +2766,7 @@ async function _getFcmAccessToken(serviceAccountJson) {
     body:    `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwtStr}`,
   });
   const tokenData = await tokenResp.json();
-  if (!tokenData.access_token) throw new Error('Impossible d'obtenir un access token FCM: ' + JSON.stringify(tokenData));
+  if (!tokenData.access_token) throw new Error("Impossible d'obtenir un access token FCM: " + JSON.stringify(tokenData));
   return { accessToken: tokenData.access_token, projectId: sa.project_id };
 }
 
