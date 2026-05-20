@@ -982,6 +982,8 @@ function validateInfos(){
   const email  = e ? e.value.trim() : S.email;
   const tel    = t ? t.value.trim() : S.tel;
   if(!prenom||!nom||!email||!tel){showErr('Merci de remplir tous les champs obligatoires.');return false;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showErr('Adresse email invalide.');return false;}
+  if(tel.replace(/\D/g,'').length<10){showErr('Numéro de téléphone invalide (10 chiffres minimum).');return false;}
   return true;
 }
 

@@ -415,7 +415,8 @@ async function soumettre() {
   err.style.display='none';
 
   if (!prenom || !nom) { err.textContent='Prénom et nom requis.'; err.style.display='block'; return; }
-  if (!email || !email.includes('@')) { err.textContent='Email invalide.'; err.style.display='block'; return; }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent='Adresse email invalide.'; err.style.display='block'; return; }
+  if (tel && tel.replace(/\D/g,'').length < 10) { err.textContent='Numéro de téléphone invalide (10 chiffres minimum).'; err.style.display='block'; return; }
   if (!date) { err.textContent='Veuillez choisir une date.'; err.style.display='block'; return; }
 
   if (!_inIframe) {

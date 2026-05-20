@@ -506,6 +506,8 @@ function nextQui() {
   S.email  = v('i-eml'); S.tel = v('i-tel');
   S.niveauEleve = v('i-niv');
   if (!S.prenom||!S.nom||!S.email||!S.tel) { showErr('Merci de remplir tous les champs obligatoires (*).'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(S.email)) { showErr('Adresse email invalide.'); return; }
+  if (S.tel.replace(/\D/g,'').length<10) { showErr('Numéro de téléphone invalide (10 chiffres minimum).'); return; }
   S.step++; render();
 }
 

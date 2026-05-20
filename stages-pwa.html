@@ -314,6 +314,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}body { background: #11
     <div class="champ">
       <label>Téléphone</label>
       <input type="tel" id="telephone" placeholder="06 00 00 00 00">
+      <span class="err-msg" id="err-telephone">Numéro de téléphone invalide (10 chiffres minimum).</span>
     </div>
   </div>
 
@@ -1017,9 +1018,10 @@ function validerChamp(id, testFn){
 
 function validerEtape1(){
   var ok=true;
-  if(!validerChamp('prenom', function(v){ return v.trim()!==''; })) ok=false;
-  if(!validerChamp('nom',    function(v){ return v.trim()!==''; })) ok=false;
-  if(!validerChamp('email',  function(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); })) ok=false;
+  if(!validerChamp('prenom',    function(v){ return v.trim()!==''; })) ok=false;
+  if(!validerChamp('nom',       function(v){ return v.trim()!==''; })) ok=false;
+  if(!validerChamp('email',     function(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); })) ok=false;
+  if(!validerChamp('telephone', function(v){ return !v.trim() || v.replace(/\D/g,'').length>=10; })) ok=false;
   affErr('err-role',      !state.role);      if(!state.role) ok=false;
   affErr('err-niveau',    !state.niveau);    if(!state.niveau) ok=false;
   affErr('err-situation', !state.situation); if(!state.situation) ok=false;
