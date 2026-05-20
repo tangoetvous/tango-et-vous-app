@@ -954,21 +954,26 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 - **Livrets** : `tev_params_yoga_<sai>.livret.url_yin` / `url_hatha` — jamais hardcodés.
 - **Lien AssoConnect yoga** : depuis `tev_params_yoga_<sai>.lien_assoconnect` — utilisé dans Y-J1a.
 - **Action élève via email** : `PATCH /api/essai-yoga/confirmer?id=...&token=...` → `presence_confirmee=true` → **badge 👍 sur la fiche admin Yoga → Essai yoga**.
-- **Quotas yoga** : `CAP_YOGA=14` par cours. Vérifiés dans `essai-yoga.html` avant INSERT.
+- **Quotas yoga — deux niveaux** :
+  - **Niveau 1 — cours régulier plein** : `cours_yoga` ≥ 14 inscrits pour ce cours (yin ou hatha) sur la saison → `statut='attente'` dans `inscriptions_essai_yoga` → email **Y-att** → admin valide manuellement si une place se libère
+  - **Niveau 2 — date spécifique pleine** : total ≥ 14 pour cette date (inscrits réguliers non absents + essais ce jour) → email **Y-full** → redirection vers `essai-yoga.html` pour choisir une autre date — pas d'INSERT ou INSERT avec statut spécial
 - **Y2 obsolète** : Y2 n'est plus envoyé automatiquement (l'inscription est directement confirmée via Y1). Y2 peut être renvoyé manuellement depuis la fiche admin si nécessaire.
+- **Pas de tarifs dans les emails élève** : les emails Y1, Y2, Y3, Y-mod, Y-J1a ne contiennent pas de tarifs. Seul Y0 (admin) indique le tarif essai. Y-J1a affiche les tarifs des cours réguliers.
 
 #### Catalogue emails élève
 
 | Code | Déclencheur | Destinataire | Contenu clé |
 |------|-------------|--------------|-------------|
-| **Y0** | Toute inscription | Admin (regardsepose@gmail.com) | Header admin · encadré or : nom/email/tel/cours/date/gratuit/statut · badge ✓ Confirmé·e automatiquement · note "Inscription automatique" · boutons 📞/✉️/SMS/admin |
+| **Y0** | Toute inscription (confirmée) | Admin (regardsepose@gmail.com) | Header admin · encadré or : nom/email/tel/cours/date/tarif essai/statut · badge ✓ Confirmé·e automatiquement · note "Inscription automatique" · boutons 📞/✉️/SMS/admin |
 | **YI0** | Inscription directe par l'admin | Admin (regardsepose@gmail.com) | Header admin · encadré or : nom/email/tel/cours/saison/paiement/montant · badge ✓ Inscrit·e · "Email YI1 peut être envoyé manuellement" |
-| **Y1** | Inscription confirmée automatiquement (place disponible) | Élève | Bandeau vert ✓ · yoga-box (cours, date, horaire depuis params, lieu depuis params, tarif depuis params) · encadré prévenance annulation · bouton "Nous contacter" |
+| **Y1** | Inscription confirmée automatiquement (place disponible) | Élève | Bandeau vert ✓ · yoga-box (cours, date, horaire, lieu) · encadré prévenance annulation · bouton "Nous contacter" · **pas de tarifs** |
+| **Y-att** | Cours régulier plein (≥14 dans `cours_yoga` pour ce cours) | Élève | Bandeau orange ⏳ · yoga-box avec badge "⏳ Liste d'attente" · encadré "Cours limités à 14 participants, des places se libèrent parfois" · bouton "Nous contacter" · `statut='attente'` en DB |
+| **Y-full** | Date d'essai pleine (≥14 total ce jour-là) | Élève | Bandeau orange ⏳ · yoga-box avec date barrée (rouge) + yoga-total rouge "Complet (14/14)" · encadré explication · bouton vert "↩ Choisir une autre date" → `essai-yoga.html` |
 | **Y2** | ~~Plus envoyé automatiquement~~ — renvoi manuel uniquement si nécessaire | Élève | Bandeau vert ✓ · yoga-box · si >3j : "rappel J-3 à venir" · si ≤3j : bouton 👍 + encadré prévenance |
 | **Y3** | Cron quotidien, J-3 avant la date | Élève `confirme` | Bandeau bleu 🗓 · yoga-box · bouton 👍 vert · encadré orange "En cas d'empêchement, prévenez-nous même au dernier moment" · clic 👍 → badge 👍 sur fiche admin |
 | **YI1** | Inscription régulière validée | Élève | Bandeau vert ✓ Bienvenue · yoga-box avec horaires hebdomadaires · checklist (tenue, tapis, ponctualité) · lien livret depuis params |
 | **Y-mod** | Admin modifie date/cours d'un essai yoga (✏️) | Élève | Bandeau bleu 📋 · yoga-box avec ancienne date barrée + nouvelle date en vert · bouton "Nous contacter" |
-| **Y-J1a** | Cron lendemain essai yoga · élève présent | Élève | Bandeau vert ✓ · yoga-box "Rejoindre les cours réguliers" (yin/hatha/forfait, tarifs + jours depuis params) · bouton AssoConnect depuis `tev_params_yoga_<sai>.lien_assoconnect` |
+| **Y-J1a** | Cron lendemain essai yoga · élève présent | Élève | Bandeau vert ✓ · yoga-box "Rejoindre les cours réguliers" (yin/hatha/forfait avec tarifs réels 340€/500€) · bouton AssoConnect depuis `tev_params_yoga_<sai>.lien_assoconnect` |
 | **Y-J1b** | Cron lendemain essai yoga · élève `confirme` non présent non annulé | Élève | Bandeau orange 💙 "Vous nous avez manqué" · bouton "↩ Choisir une nouvelle date" (`essai-yoga.html`) · note pas de pénalité |
 
 #### Notifications admin yoga (3 canaux)
@@ -979,10 +984,12 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 
 | Scénario | Couleur | Message |
 |----------|---------|---------|
-| Nouvel essai yoga (auto-confirmé) | vert `#0f1f0f`/`#4caf50` | `🧘 Essai yoga — Marie DUPONT · Jeudi 24 sept. · Yin yoga · ✓ Confirmé·e automatiquement · Email Y1 envoyé · → Yoga → Essai` |
-| Présence confirmée 👍 (Y3) | vert clair | `👍 Présence confirmée — Marie DUPONT · Essai yoga Jeudi 24 sept. · badge 👍 sur la fiche` |
+| Nouvel essai yoga (auto-confirmé) | vert `#0f1f0f`/`#4caf50` | `🧘 Essai yoga — Marie DUPONT · Mardi 15 sept. · Yin yoga · ✓ Confirmé·e automatiquement · Email Y1 envoyé · → Yoga → Essai` |
+| Liste d'attente (cours régulier plein) | jaune `#1f1800`/`#e8c84a` | `🧘 Essai yoga — Sophie MARTIN · Mardi 22 sept. · Yin yoga · ⏳ Cours complet (14/14) — Liste d'attente · Email Y-att envoyé · → Yoga → Essai yoga → Liste d'attente` |
+| Présence confirmée 👍 (Y3) | vert clair | `👍 Présence confirmée — Marie DUPONT · Essai yoga Mardi 15 sept. · badge 👍 sur la fiche` |
 
-**Push OS admin** : `🧘 Essai yoga — Marie DUPONT · Jeudi 24 sept. · Yin yoga · ✓ auto`
+**Push OS admin** : `🧘 Essai yoga — Marie DUPONT · Mardi 15 sept. · Yin yoga · ✓ auto`
+**Push OS admin (attente)** : `🟡 Essai yoga — Sophie MARTIN · Mardi 22 sept. · Yin yoga · ⏳ Cours complet — liste d'attente`
 
 #### Notifications élève yoga (2 canaux)
 
