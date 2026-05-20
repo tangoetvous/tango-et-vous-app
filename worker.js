@@ -19,6 +19,8 @@
 //   POST  /api/notify/yoga-date         — admin → emails Brevo élèves yoga (JWT admin requis)
 //   POST  /api/remplacant/generate     — génère URL remplaçant signée (JWT admin requis)
 //   GET   /api/remplacant/data         — données pointage pour le remplaçant (token signé)
+//   POST  /api/notify/carte-pointage   — élève pointe sa carte → notif email admin (sans auth)
+//   POST  /api/notify/carte-pointee-admin — admin pointe carte élève → email + notif in-app élève
 //   *                                  — assets statiques (Cloudflare Static Assets)
 
 const SUPABASE_URL  = 'https://qhngqzvvllktuwspojxc.supabase.co';
@@ -137,6 +139,17 @@ export default {
         const cronSecret = request.headers.get('X-Cron-Secret');
         if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
         return handleCronEssaiYogaJ1(request, env);
+      }
+
+      // POST /api/notify/carte-pointage — élève pointe sa carte → email admin (sans auth)
+      if (pathname === '/api/notify/carte-pointage' && method === 'POST') {
+        return handleNotifyCartePointage(request, env);
+      }
+
+      // POST /api/notify/carte-pointee-admin — admin pointe → email + notif in-app élève (JWT admin)
+      if (pathname === '/api/notify/carte-pointee-admin' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyCartePonteeAdmin(request, env);
       }
 
       // POST /api/remplacant/generate — génère URL remplaçant (JWT admin requis)
@@ -1143,6 +1156,192 @@ async function handleNotifySorano(request, env) {
       </div>${footer}`);
     await sendBrevo(email, `⏳ Rappel — Adhésion Sorano · Tango & Vous`, html);
   }
+
+  return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/carte-pointage — élève pointe sa carte → email admin
+// Aucune auth requise (appelé depuis QR page ou espace élève sans JWT admin)
+// ================================================================
+async function handleNotifyCartePointage(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const { email, prenom, nom, date, nbAdded, utilises, restants, source } = body;
+  if (!email || !date) return jsonError(400, 'Paramètres manquants');
+
+  const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return JOURS_L[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS_L[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  const adminEmail = 'tangoetvous@gmail.com';
+  const nb = Number(nbAdded) || 1;
+  const sourceLabel = source === 'qr' ? 'QR code' : 'Espace élève';
+  const nomAff = _esc((nom || email).trim());
+  const dateLabel = fmtDate(date);
+  const notifMsg = `📍 Pointage carte — ${nomAff} · ${dateLabel} · +${nb} cours via ${sourceLabel}`;
+
+  // Notification panel admin (table notifications)
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ type: 'carte_pointage', message: notifMsg, lu: false, lien_tab: 'cartes' }),
+    });
+  } catch(e) { console.error('[notify carte-pointage] notifications error', e); }
+
+  if (!env.BREVO_API_KEY) {
+    console.log('[notify carte-pointage] BREVO_API_KEY absent — skip email');
+    return corsResponse({ ok: true, sent: 0, notified: true, skipped: true }, 200, {}, request);
+  }
+
+  const restantsRow = (utilises != null)
+    ? `<div style="font-size:13px;color:#666;margin-top:4px;">Carte : ${utilises}/10 cours utilisés${restants != null ? ' — ' + restants + ' restant' + (restants !== 1 ? 's' : '') : ''}</div>`
+    : '';
+
+  const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;background:#fff;">
+  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
+    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>
+    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Pointage carte de 10</div>
+  </div>
+  <div style="padding:24px;">
+    <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <div style="background:#D4AF37;padding:10px 16px;">
+        <div style="font-size:18px;font-weight:700;color:#111;">${nomAff}</div>
+        <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email)}</div>
+      </div>
+      <div style="background:#fffdf8;padding:14px 16px;">
+        <div style="font-size:15px;font-weight:700;color:#111;">📅 ${dateLabel}</div>
+        <div style="font-size:14px;color:#333;margin-top:6px;">+${nb} cours pointé${nb > 1 ? 's' : ''} via ${sourceLabel}</div>
+        ${restantsRow}
+      </div>
+    </div>
+    <p style="text-align:center;margin:0;"><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#D4AF37;color:#111;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Ouvrir l'admin → Cartes 10</a></p>
+  </div>
+</div>
+</body></html>`;
+
+  let sent = 0;
+  try {
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: { name: 'Tango & Vous', email: adminEmail },
+        to: [{ email: adminEmail }],
+        subject: `📍 Pointage carte — ${nomAff} · ${dateLabel} (+${nb} cours)`,
+        htmlContent: html,
+      }),
+    });
+    if (r.ok) sent++;
+    else console.error('[notify carte-pointage] Brevo error', await r.text());
+  } catch(e) { console.error('[notify carte-pointage] fetch error', e); }
+
+  return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/carte-pointee-admin — admin pointe → email + notif in-app élève
+// ================================================================
+async function handleNotifyCartePonteeAdmin(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const { email, prenom, nom, date, nbAdded, utilises, restants, expiration } = body;
+  if (!email || !date) return jsonError(400, 'Paramètres manquants');
+
+  const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return JOURS_L[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS_L[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  const adminEmail = 'tangoetvous@gmail.com';
+  const nb = Number(nbAdded) || 1;
+  const prenomAff = _esc(prenom || (nom || '').split(' ')[0] || '');
+  const dateLabel = fmtDate(date);
+  const notifMsg = `✓ ${nb} cours pointé${nb > 1 ? 's' : ''} le ${dateLabel}${restants != null ? ' — ' + restants + ' restant' + (restants !== 1 ? 's' : '') : ''}`;
+
+  // Notification in-app élève
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ email, type: 'carte_pointee', message: notifMsg, lu: false }),
+    });
+  } catch(e) { console.error('[notify carte-pointee-admin] notifications_eleve error', e); }
+
+  if (!env.BREVO_API_KEY) {
+    console.log('[notify carte-pointee-admin] BREVO_API_KEY absent — skip email');
+    return corsResponse({ ok: true, sent: 0, notified: true, skipped: true }, 200, {}, request);
+  }
+
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+  <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+  <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+  <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+  <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
+  <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
+  <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+
+  const expirationRow = expiration
+    ? `<div style="font-size:13px;color:#444;margin-top:6px;padding-top:6px;border-top:1px solid #b3d9f5;">Validité carte : jusqu'au ${fmtDate(expiration)}</div>`
+    : '';
+
+  const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;background:#fff;">
+  ${headerEleve}
+  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
+    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Cours pointé</span>
+  </div>
+  <div style="padding:28px 24px;">
+    <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+    <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE CARTE DE 10 COURS</div>
+      <div style="font-size:16px;font-weight:700;color:#111;">📅 ${dateLabel}</div>
+      <div style="font-size:14px;color:#333;margin-top:8px;">+${nb} cours pointé${nb > 1 ? 's' : ''}${utilises != null ? ' · ' + utilises + '/10 cours utilisés' : ''}</div>
+      ${restants != null ? `<div style="font-size:14px;color:#2e7d32;font-weight:700;margin-top:6px;">Il vous reste ${restants} cours</div>` : ''}
+      ${expirationRow}
+    </div>
+    <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Retrouvez l'état de votre carte et votre historique de présences dans votre espace élève.</p>
+    <p style="text-align:center;margin:0 0 24px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></p>
+    ${signEleve}
+  </div>
+  ${footer}
+</div>
+</body></html>`;
+
+  let sent = 0;
+  try {
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: { name: 'Tango & Vous', email: adminEmail },
+        to: [{ email: String(email) }],
+        subject: `✓ Cours pointé le ${dateLabel} — Votre carte Tango & Vous`,
+        htmlContent: html,
+      }),
+    });
+    if (r.ok) sent++;
+    else console.error('[notify carte-pointee-admin] Brevo error', await r.text());
+  } catch(e) { console.error('[notify carte-pointee-admin] fetch error', e); }
 
   return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
 }

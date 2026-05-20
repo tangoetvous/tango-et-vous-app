@@ -3385,6 +3385,36 @@
       fermerModalPointerSelf();
       const d2 = await TEV.getEleve(eleveData.eleve.email);
       if (d2 && d2.carte) { var _pt=eleveData.carte&&eleveData.carte.type; eleveData.carte=d2.carte; if(_pt&&!eleveData.carte.type)eleveData.carte.type=_pt; eleveData.presences=d2.presences||eleveData.presences; renderDashboard(); renderAccueil(); }
+      // Notification admin — fire and forget
+      try {
+        fetch('/api/notify/carte-pointage', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            email: eleveData.eleve.email,
+            prenom: eleveData.eleve.prenom || '',
+            nom: eleveData.eleve.nom || '',
+            date: date,
+            nbAdded: (data && data.added) || nb,
+            utilises: (d2 && d2.carte) ? (d2.carte.coursUtilises || null) : null,
+            restants: (d2 && d2.carte) ? (d2.carte.coursRestants != null ? d2.carte.coursRestants : null) : null,
+            source: 'app',
+          }),
+        }).catch(function(){});
+      } catch(e) {}
+      // BroadcastChannel vers admin si même navigateur
+      try {
+        if (window.BroadcastChannel) {
+          const _bc = new BroadcastChannel('tev_inscriptions');
+          _bc.postMessage({type:'cartePointage', data:{
+            email: eleveData.eleve.email,
+            nom: ((eleveData.eleve.prenom||'') + ' ' + (eleveData.eleve.nom||'')).trim(),
+            date: date,
+            nbAdded: (data && data.added) || nb,
+          }});
+          _bc.close();
+        }
+      } catch(e) {}
     } catch(err) {
       msgEl.textContent='Erreur de connexion. Réessayez.'; msgEl.style.display='block';
       btn.disabled=false; btn.textContent='✓ Valider';

@@ -149,6 +149,31 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'He
           +'<div class="info-row"><span class="info-lbl">Heure :</span><span class="info-val">'+heureStr+'</span></div>';
         document.getElementById('card').classList.add('state-ok');
         show('ok');
+        // Notification admin — fire and forget
+        try {
+          fetch('/api/notify/carte-pointage', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              email: email,
+              prenom: '',
+              nom: nom || email,
+              date: dateStr,
+              nbAdded: d.added || 1,
+              utilises: null,
+              restants: d.restants !== undefined ? d.restants : null,
+              source: 'qr',
+            }),
+          }).catch(function(){});
+        } catch(e) {}
+        // BroadcastChannel vers admin si même navigateur
+        try {
+          if (window.BroadcastChannel) {
+            var _bc = new BroadcastChannel('tev_inscriptions');
+            _bc.postMessage({type:'cartePointage', data:{email:email, nom:nom||email, date:dateStr, nbAdded:d.added||1}});
+            _bc.close();
+          }
+        } catch(e) {}
       })
       .catch(function(e) {
         document.getElementById('err-msg').textContent = 'Erreur réseau — vérifiez votre connexion et réessayez.';

@@ -8525,6 +8525,23 @@ function pointerCoursAction(id, date, nbCours, btn) {
             datePremierCours:c.datePremierCours||date,expiration:c.expiration};
         }
         _broadcastAdminSync('carteUpdate',syncData);
+        // Email + notif in-app élève — fire and forget
+        if (c.email) {
+          Promise.resolve(fetch('/api/notify/carte-pointee-admin', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
+            body: JSON.stringify({
+              email: c.email,
+              prenom: c.prenom || '',
+              nom: c.nom || '',
+              date: date,
+              nbAdded: added,
+              utilises: syncData ? syncData.utilises : null,
+              restants: syncData ? syncData.restants : null,
+              expiration: syncData ? (syncData.expiration || null) : null,
+            }),
+          })).catch(function(){});
+        }
       }
       chargerDonnees();
     })
