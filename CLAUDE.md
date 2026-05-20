@@ -1008,6 +1008,14 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 
 **Fichier de référence** : `preview-emails-yoga-v1.html`
 
+#### Règle branding yoga — obligatoire pour tous les emails yoga envoyés aux élèves/participants
+- **Header** : `COURS DE YOGA AVEC FLORENCIA GARCIA` (pas "Tango & Vous")
+- **Signature** : `Florencia Garcia / Association Le Regard Se Pose / Ma Page YOGA (https://www.tangoetvous.com/cours-de-yoga) / garciabraitbart@gmail.com · 06 63 23 35 70`
+- **Footer** : lien `/cours-de-yoga` + `garciabraitbart@gmail.com`
+- **Objet** : `— Cours de yoga avec Florencia Garcia` (pas `— Tango & Vous`)
+- **Interdit** dans les emails yoga : `tangoetvous@gmail.com`, `07 73 27 59 06`, `Tango & Vous`, `Florencia et Jérémy`, `Florencia Garcia et Jérémy Braitbart`
+- **Exception** : les 3 push OS admin (`Tango & Vous — Admin`) conservent ce nom (= nom de l'appli, pas un email)
+
 #### Règles fondamentales
 - **Pas de notion de rôle ni de couple** — individuel uniquement.
 - **Inscription automatique** — pas de validation manuelle admin. Si une place est disponible (max 14 / cours), `statut='confirme'` dès l'inscription. Email Y1 envoyé immédiatement.
@@ -1135,6 +1143,32 @@ Tango & Vous
 app.tangoetvous.fr
 ```
 
+### Transfert essai → inscription tango
+
+**Fichier de référence** : `preview-emails-a-valider-v1.html`
+
+#### Déclencheur — chemin exact dans l'admin
+1. Dans l'onglet **Essai Tango**, cliquer sur le **nom** d'un·e élève → fiche modale s'ouvre
+2. Cliquer **"Demande en att."** (→ statut `demande`) ou **"Validé·e"** (→ statut `attente_paiement`)
+3. Une fenêtre s'ouvre pour sélectionner le cours d'inscription (ville + niveau)
+4. L'admin coche le cours et enregistre → la personne passe d'Essai Tango vers **Inscriptions Tango**
+
+| Code | Statut résultant | Cas | Destinataire | Contenu clé |
+|------|-----------------|-----|--------------|-------------|
+| **T1-dem** | `demande` | Guidée seule → att. validation admin | Élève + Admin | Admin : encadré or (nom/email/tel/rôle/cours/statut). Élève : bandeau orange ⏳ · boîte cours (cours + statut "En attente de validation") · encadré "Nous veillons à maintenir l'équilibre guideurs/guidées, vous recevrez une confirmation dès validation" |
+| **T1-val** | `attente_paiement` | Guideur ou couple → att. paiement | Élève + Admin | Admin : encadré or (nom/email/tel/rôle/cours/statut ✓). Élève : **quasi-identique à I01-val** avec mention du cours d'essai dans l'intro (voir détail ci-dessous) |
+
+#### Email T1-val élève — contenu complet (quasi-I01-val)
+- Bandeau vert ✓ "Votre inscription au tango est validée — finalisez votre inscription"
+- Intro : "Suite à votre cours d'essai, nous sommes ravis de vous accueillir dans nos cours de tango pour la saison..."
+- **Boîte cours** (fond bleu #e8f4fd) : cours / prochain cours (date) / heure / lieu (adresse + métro) / rôle (badge couleur) / statut ✓ Validé·e
+- **Bouton AssoConnect** (or) + note "Votre place sera réservée une fois l'inscription en ligne et le premier paiement effectués."
+- **Quelques précisions** (fond gris #f9f9f9) : avertissement 2 emails différents en couple (encadré rouge), étapes AssoConnect ("J'adhère"), moyens de paiement (CB 1×/3×, espèces, chèque), note pourboire 0€
+- **Bouton livret** (contour bleu) : `📖 Télécharger le livret [Niveau] [Ville]` → URL depuis `tev_params_<ville>_<sai>.livret.url_deb/url_int`
+- Signature + footer standard Tango & Vous
+
+---
+
 ### Cartes 10 cours
 
 **Fichier de référence** : `preview-emails-cartes-v1.html`
@@ -1179,6 +1213,47 @@ app.tangoetvous.fr
 | C2 (renouvelée sans payer) | `Tango & Vous` | `⚠️ Nouvelle carte créée — pensez à finaliser votre paiement` |
 | C4 (fin saison J+1) | `Tango & Vous` | `📅 Il vous reste N cours — pré-inscrivez-vous pour 2026-2027` |
 | C6 (relance absences) | `Tango & Vous` | `💙 On prend de tes nouvelles — tes cours sont préservés` |
+
+---
+
+### Sorano — emails élève
+
+**Fichier de référence** : `preview-emails-a-valider-v1.html`
+
+| Code | Déclencheur | Destinataire | Contenu clé |
+|------|-------------|--------------|-------------|
+| **SR1** | Admin clique **✉️ Relance** dans l'onglet Sorano (élève non réglé) | Élève tango Vincennes (ou yoga si applicable) | Bandeau orange ⏳ "Rappel — Adhésion Sorano" · intro : "L'Espace Sorano demande pour toutes les activités qui y ont lieu une adhésion nécessaire pour participer aux cours. Mais sachez que cette adhésion permet de bénéficier de réductions sur tous les spectacles proposés au Théâtre Sorano ainsi que sur ceux programmés par les services culturels de la Ville de Vincennes." · encadré "Comment procéder" : "Nous vous enverrons prochainement un lien pour régler cette adhésion." ⚠️ À remplacer par le vrai lien quand disponible · "Si vous avez déjà réglé votre adhésion pour une autre activité à l'Espace Sorano merci de nous l'indiquer." · bouton "Nous contacter" |
+| **SR2** | Admin clique **✓ Marquer réglé** dans l'onglet Sorano | Élève | Bandeau vert ✓ "Adhésion Sorano enregistrée" · "Votre adhésion à l'Espace Sorano est bien enregistrée pour cette saison." (sans "Vous pouvez participer à tous vos cours") · notification in-app `notifications_eleve` : "✓ Votre adhésion Sorano a été enregistrée pour cette saison" |
+
+**⚠️ TODO** : remplacer `"Nous vous enverrons prochainement un lien pour régler cette adhésion."` par le lien réel AssoConnect/Sorano quand l'utilisateur le fournit (dans SR1 et dans `preview-emails-a-valider-v1.html`).
+
+---
+
+### Carte pointée — cron lendemain matin
+
+**Fichier de référence** : `preview-emails-a-valider-v1.html`
+
+| Code | Déclencheur | Destinataire | Contenu clé |
+|------|-------------|--------------|-------------|
+| **CP-A** | Admin pointe la carte depuis Cartes 10 → Détails ou Pointage → notification admin immédiate | Admin (tangoetvous@gmail.com) | Encadré or : nom/email · table avec **"⬤ Cours pointés CE JOUR"** en ligne verte en évidence (1 / 2 max ou 2 / 2 max) · "Utilisés au total (carte)" · cours restants · expiration · bouton admin |
+| **CP-E** | Cron lendemain matin (9h Paris) — envoyé le lendemain du cours, pas immédiatement | Élève | Bandeau vert ✓ "Présence enregistrée pour votre carte" · boîte bleue : date du cours · **"⬤ Cours pointés CE JOUR"** en ligne verte en évidence (ex: "1 cours") · utilisés au total / 10 · cours restants · validité · bouton "Accéder à mon espace élève" |
+
+**Règles CP-E** :
+- Envoi le **lendemain matin** (cron 9h Paris) — agrège tous les pointages admin de la veille
+- "Cours pointés CE JOUR" = nombre de cours pointés ce jour-là uniquement (1 ou 2), **sans mentionner le maximum possible**
+- Route : `POST /api/notify/carte-pointee-admin` (JWT admin) — fire and forget depuis `pointerCoursAction()`
+
+---
+
+### Carte expirée — cron élève
+
+**Fichier de référence** : `preview-emails-a-valider-v1.html`
+
+| Code | Déclencheur | Destinataire | Contenu clé |
+|------|-------------|--------------|-------------|
+| **CX** | Cron quotidien 9h Paris — élèves dont `carte_expiration = aujourd'hui` ET `carte_restants > 0` | Élève | Bandeau orange ⏰ "Votre carte de 10 cours a expiré" · encadré avec nombre de cours non utilisés + date de fin de validité + "Si vous souhaitez continuer à danser, vous pouvez renouveler votre carte sur AssoConnect" · "Pour toute question n'hésitez pas à nous contacter." · bouton "Renouveler ma carte sur AssoConnect" + bouton "Nous contacter" |
+
+**Note** : notification in-app `notifications_eleve` associée : `⏰ Votre carte de 10 cours a expiré — N cours non utilisés`
 
 ---
 
