@@ -2548,20 +2548,7 @@ async function handleCronRelanceCb3x(request, env) {
   }
 
   // Lien AssoConnect depuis Supabase params (fallback : page principale)
-  let lienAssoConnect = 'https://le-regard-se-pose.assoconnect.com';
-  try {
-    const m = parseInt(today.slice(5, 7)), y = parseInt(today.slice(0, 4));
-    const sai = m >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
-    const pr = await fetch(
-      `${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_liens_assoconnect&select=valeur`,
-      { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
-    );
-    if (pr.ok) {
-      const rows = await pr.json();
-      const lien = rows.length > 0 && rows[0].valeur && rows[0].valeur[sai] && rows[0].valeur[sai].cours;
-      if (lien) lienAssoConnect = lien;
-    }
-  } catch(e) { console.warn('[relance-cb3x] params fetch error', e); }
+  const lienAssoConnect = 'https://app.assoconnect.com/login';
 
   // Inscriptions CB 3× actives
   const res = await fetch(
