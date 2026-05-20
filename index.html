@@ -13,6 +13,21 @@
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
 <script src="js/tev-supabase.js?v=5"></script>
+<!-- Firebase Messaging (push notifications) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+<script>
+  try {
+    firebase.initializeApp({
+      apiKey: "AIzaSyD-STk_VpUIe6mjOh7kX9bsaOE8OvPNEcs",
+      authDomain: "tango-et-vous.firebaseapp.com",
+      projectId: "tango-et-vous",
+      storageBucket: "tango-et-vous.firebasestorage.app",
+      messagingSenderId: "778867090916",
+      appId: "1:778867090916:web:697fab0815e79f336493f1"
+    });
+  } catch(e) { /* already initialized */ }
+</script>
 <script>
   // ================================================================
   // DEMO MODE — true uniquement quand l'utilisateur clique sur "Démo"
@@ -243,6 +258,7 @@
     renderDashboard();
     showScreen('screen-dashboard');
     _initAdminSync();
+    _activerPushEleve();
   };
 
   // ================================================================
@@ -1073,7 +1089,43 @@
     setTimeout(() => { const t = $('disc-form-titre'); if (t) t.focus(); }, 100);
   }
 
-  // ── Notifications push (à implémenter via Supabase/Resend) ────
+  // ── Notifications push — enregistrement token FCM ────────────
+  // Clé publique VAPID — récupérable depuis Firebase Console → Project Settings
+  // → Cloud Messaging → Web Push certificates → Generate key pair
+  const TEV_VAPID_KEY = localStorage.getItem('tev_vapid_key') || '';
+
+  async function _registerFcmToken() {
+    try {
+      if (!TEV_VAPID_KEY) return;
+      if (!window.firebase || !window.firebase.messaging) return;
+      if (Notification.permission !== 'granted') return;
+      const reg = await navigator.serviceWorker.ready;
+      const messaging = window.firebase.messaging();
+      const token = await messaging.getToken({ vapidKey: TEV_VAPID_KEY, serviceWorkerRegistration: reg });
+      if (!token) return;
+      if (localStorage.getItem('tev_fcm_token') === token) return; // déjà enregistré
+      const session = TEV.client.auth.session ? TEV.client.auth.session() : null;
+      const jwt = session ? session.access_token : null;
+      if (!jwt) return;
+      const r = await fetch('/api/register-token', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, platform: 'web', userAgent: navigator.userAgent.slice(0, 300) })
+      });
+      if (r.ok) localStorage.setItem('tev_fcm_token', token);
+    } catch(e) { /* push non prioritaire, échec silencieux */ }
+  }
+
+  // Demander la permission push et enregistrer le token (appelé après login)
+  async function _activerPushEleve() {
+    try {
+      if (!('Notification' in window) || !TEV_VAPID_KEY) return;
+      if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+      await _registerFcmToken();
+    } catch(e) { /* silencieux */ }
+  }
 
   // ================================================================
   // YOGA PANE

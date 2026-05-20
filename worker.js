@@ -1,10 +1,11 @@
 // Cloudflare Worker — Tango & Vous
 // Gère les routes dynamiques + sert les assets statiques en fallback
 //
-// Aucun secret Cloudflare requis :
-//   - Clé anon Supabase : publique (déjà dans le frontend)
-//   - Opérations admin : JWT de l'utilisateur passé en Authorization
-//   - Brevo : optionnel, si BREVO_API_KEY défini dans les secrets Cloudflare
+// Secrets Cloudflare optionnels :
+//   - BREVO_API_KEY          : API Brevo → emails automatiques
+//   - FIREBASE_SERVICE_ACCOUNT : JSON service account Firebase → push FCM v1
+//   - CRON_SECRET            : protège les routes cron GitHub Actions
+//   - SUPABASE_SERVICE_KEY   : auth admin Supabase (update-auth-email)
 //
 // Routes :
 //   POST  /admin/api/devis             — formulaire public → demandes_devis
@@ -16,7 +17,9 @@
 //   GET   /api/calendar/token          — génère l'URL ICS personnalisée (JWT requis)
 //   GET   /calendar/e-{token}.ics      — flux iCalendar élève (token signé HMAC)
 //   GET   /devis/p/:token              — vue publique d'un devis (sans auth, token UUID)
-//   POST  /api/notify/yoga-date         — admin → emails Brevo élèves yoga (JWT admin requis)
+//   POST  /api/notify/yoga-date        — admin → emails Brevo élèves yoga (JWT admin requis)
+//   POST  /api/register-token          — enregistre token FCM push (JWT requis)
+//   GET   /api/config-check            — diagnostic secrets configurés (JWT admin requis)
 //   POST  /api/remplacant/generate     — génère URL remplaçant signée (JWT admin requis)
 //   GET   /api/remplacant/data         — données pointage pour le remplaçant (token signé)
 //   POST  /api/notify/carte-pointage   — élève pointe sa carte → notif email admin (sans auth)
@@ -186,6 +189,25 @@ export default {
       if (pathname === '/api/notify/discussion-message' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
         return handleNotifyDiscussionMessage(request, jwt, env);
+      }
+
+      // POST /api/register-token — enregistre/met à jour le token FCM push de l'utilisateur (JWT requis)
+      if (pathname === '/api/register-token' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleRegisterToken(request, jwt, env);
+      }
+
+      // GET /api/config-check — diagnostic : quels secrets sont configurés (JWT admin requis)
+      if (pathname === '/api/config-check' && method === 'GET') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        const ok = await checkAdminJwt(jwt, env);
+        if (!ok) return jsonError(403, 'Admin requis');
+        return corsResponse({
+          brevo_api_key:           !!env.BREVO_API_KEY,
+          firebase_service_account: !!env.FIREBASE_SERVICE_ACCOUNT,
+          cron_secret:             !!env.CRON_SECRET,
+          supabase_service_key:    !!env.SUPABASE_SERVICE_KEY,
+        }, 200, {}, request);
       }
 
       // POST /api/remplacant/generate — génère URL remplaçant (JWT admin requis)
@@ -2658,4 +2680,197 @@ async function handleCronRelanceCb3x(request, env) {
   }
 
   return corsResponse({ ok: true, checked: inscriptions.length, sent2, sent3, date: today }, 200, {}, request);
+}
+
+
+// ================================================================
+// PUSH FCM — infrastructure complète
+// ================================================================
+
+// ── Enregistrement token FCM ─────────────────────────────────────
+async function handleRegisterToken(request, jwt, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const { token, platform = 'web', userAgent = '' } = body;
+  if (!token) return jsonError(400, 'Token requis');
+
+  // Extraire l'email depuis le JWT (payload base64 non vérifié — confiance accordée car JWT validé par Supabase en amont)
+  let email;
+  try {
+    const payload = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    email = payload.email;
+  } catch { return jsonError(400, 'JWT invalide'); }
+  if (!email) return jsonError(400, 'Email introuvable dans le JWT');
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const r = await fetch(
+    `${SUPABASE_URL}/rest/v1/fcm_tokens?on_conflict=token`,
+    {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${svcKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({ email, token, platform, user_agent: userAgent.slice(0, 300), updated_at: new Date().toISOString() }),
+    }
+  );
+  if (!r.ok) {
+    const err = await r.text();
+    console.error('[register-token] Supabase error:', err);
+    return jsonError(500, 'Erreur enregistrement token');
+  }
+  return corsResponse({ ok: true });
+}
+
+// ── OAuth2 access token depuis service account Firebase ──────────
+async function _getFcmAccessToken(serviceAccountJson) {
+  const sa = JSON.parse(serviceAccountJson);
+  const now = Math.floor(Date.now() / 1000);
+
+  function _b64url(obj) {
+    return btoa(JSON.stringify(obj)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  }
+
+  const header  = _b64url({ alg: 'RS256', typ: 'JWT' });
+  const payload = _b64url({
+    iss:   sa.client_email,
+    sub:   sa.client_email,
+    aud:   'https://oauth2.googleapis.com/token',
+    iat:   now,
+    exp:   now + 3600,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+  });
+
+  const sigInput = `${header}.${payload}`;
+
+  // Importer la clé RSA privée du service account
+  const pem = sa.private_key.replace(/-----BEGIN PRIVATE KEY-----/, '').replace(/-----END PRIVATE KEY-----/, '').replace(/\n/g, '');
+  const binaryDer = Uint8Array.from(atob(pem), c => c.charCodeAt(0));
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryDer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const sigBytes = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, new TextEncoder().encode(sigInput));
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sigBytes))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const jwtStr = `${sigInput}.${sigB64}`;
+
+  const tokenResp = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwtStr}`,
+  });
+  const tokenData = await tokenResp.json();
+  if (!tokenData.access_token) throw new Error('Impossible d'obtenir un access token FCM: ' + JSON.stringify(tokenData));
+  return { accessToken: tokenData.access_token, projectId: sa.project_id };
+}
+
+// ── Envoyer une notification push via FCM v1 ─────────────────────
+// tokens  : string[] — tokens FCM
+// notif   : { title, body, link? }
+// data    : { key: string } — payload additionnel (toutes valeurs en string)
+async function sendFcmPush(env, tokens, notif, data = {}) {
+  if (!env.FIREBASE_SERVICE_ACCOUNT) { console.log('[FCM] FIREBASE_SERVICE_ACCOUNT absent — skip push'); return { skipped: true }; }
+  if (!tokens || !tokens.length) return { skipped: true, reason: 'no_tokens' };
+
+  let accessToken, projectId;
+  try {
+    ({ accessToken, projectId } = await _getFcmAccessToken(env.FIREBASE_SERVICE_ACCOUNT));
+  } catch (e) {
+    console.error('[FCM] Erreur access token:', e.message);
+    return { ok: false, error: e.message };
+  }
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const results = [];
+  for (const token of tokens) {
+    const message = {
+      message: {
+        token,
+        notification: { title: notif.title || 'Tango & Vous', body: notif.body || '' },
+        data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+        webpush: {
+          notification: { icon: '/icon-192.png', badge: '/icon-192.png' },
+          fcm_options:  { link: notif.link || 'https://app.tangoetvous.fr/' },
+        },
+      },
+    };
+
+    const r = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify(message),
+    });
+    const result = await r.json();
+    results.push({ token: token.slice(-8), ok: r.ok });
+
+    // Nettoyer les tokens invalides automatiquement
+    if (!r.ok && (result.error?.status === 'NOT_FOUND' || result.error?.status === 'UNREGISTERED')) {
+      fetch(`${SUPABASE_URL}/rest/v1/fcm_tokens?token=eq.${encodeURIComponent(token)}`, {
+        method:  'DELETE',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` },
+      }).catch(() => {});
+    }
+  }
+  return { ok: true, results };
+}
+
+// ── Récupérer les tokens FCM d'un email ─────────────────────────
+async function getFcmTokensForEmail(email, svcKey) {
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/fcm_tokens?email=eq.${encodeURIComponent(email)}&select=token`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (!r.ok) return [];
+    const rows = await r.json();
+    return Array.isArray(rows) ? rows.map(x => x.token).filter(Boolean) : [];
+  } catch { return []; }
+}
+
+// ── Récupérer tous les tokens admin ─────────────────────────────
+// Retourne les tokens des comptes is_admin() (vérifié via le rôle dans la table eleves)
+async function getFcmTokensAdmin(svcKey) {
+  try {
+    // Récupérer les emails admin depuis la table eleves
+    const rEleves = await fetch(
+      `${SUPABASE_URL}/rest/v1/eleves?role=eq.admin&select=email`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (!rEleves.ok) return [];
+    const admins = await rEleves.json();
+    if (!admins.length) return [];
+
+    const emails = admins.map(a => a.email).filter(Boolean);
+    const inFilter = emails.map(e => `"${e}"`).join(',');
+    const rTokens = await fetch(
+      `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${inFilter})&select=token`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (!rTokens.ok) return [];
+    const rows = await rTokens.json();
+    return Array.isArray(rows) ? rows.map(x => x.token).filter(Boolean) : [];
+  } catch { return []; }
+}
+
+// ── Helper : vérifier si le JWT est admin ───────────────────────
+async function checkAdminJwt(jwt, env) {
+  try {
+    const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    const payload = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const email = payload.email;
+    if (!email) return false;
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/eleves?email=eq.${encodeURIComponent(email)}&role=eq.admin&select=email&limit=1`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (!r.ok) return false;
+    const rows = await r.json();
+    return Array.isArray(rows) && rows.length > 0;
+  } catch { return false; }
 }

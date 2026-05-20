@@ -485,6 +485,21 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
 <script src="js/tev-supabase.js?v=5"></script>
+<!-- Firebase Messaging (push notifications) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+<script>
+  try {
+    firebase.initializeApp({
+      apiKey: "AIzaSyD-STk_VpUIe6mjOh7kX9bsaOE8OvPNEcs",
+      authDomain: "tango-et-vous.firebaseapp.com",
+      projectId: "tango-et-vous",
+      storageBucket: "tango-et-vous.firebasestorage.app",
+      messagingSenderId: "778867090916",
+      appId: "1:778867090916:web:697fab0815e79f336493f1"
+    });
+  } catch(e) { /* already initialized */ }
+</script>
 <script>
 // ================================================================
 // CONFIG
@@ -4952,19 +4967,47 @@ function _updateActiverBtn() {
   else if (p === 'denied') { btn.textContent = '🔕 Bloquées'; btn.style.color = '#ef4444'; btn.disabled = true; }
   else { btn.textContent = '🔔 Activer'; btn.style.color = 'var(--dim)'; btn.disabled = false; }
 }
+// Clé publique VAPID Firebase — à remplir depuis Firebase Console → Project Settings → Cloud Messaging → Web Push certificates
+const TEV_VAPID_KEY = localStorage.getItem('tev_vapid_key') || '';
+
 async function activerNotifications() {
   if (!('Notification' in window)) { afficherToast('❌ Notifications non supportées par ce navigateur'); return; }
-  if (Notification.permission === 'granted') { afficherToast('✓ Notifications déjà activées'); return; }
   try {
-    var perm = await Notification.requestPermission();
+    var perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
     if (perm === 'granted') {
-      afficherToast('✓ Notifications activées !');
+      afficherToast('✓ Notifications activées — enregistrement en cours…');
       _updateActiverBtn();
+      await _registerFcmToken();
     } else {
       afficherToast('❌ Permission refusée — vérifie les réglages du navigateur');
       _updateActiverBtn();
     }
   } catch(e) { afficherToast('❌ Erreur : ' + e.message); }
+}
+
+async function _registerFcmToken() {
+  try {
+    if (!TEV_VAPID_KEY) { console.warn('[push] TEV_VAPID_KEY non configurée — token FCM non obtenu'); return; }
+    if (!window.firebase || !window.firebase.messaging) { console.warn('[push] Firebase Messaging SDK non disponible'); return; }
+    var reg = await navigator.serviceWorker.ready;
+    var messaging = window.firebase.messaging();
+    var token = await messaging.getToken({ vapidKey: TEV_VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) { console.warn('[push] Aucun token FCM obtenu'); return; }
+    var cached = localStorage.getItem('tev_fcm_token');
+    if (cached === token) return; // déjà enregistré
+    var jwt = _getJwt();
+    if (!jwt) return;
+    var r = await fetch('/api/register-token', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, platform: 'web', userAgent: navigator.userAgent.slice(0, 300) })
+    });
+    if (r.ok) {
+      localStorage.setItem('tev_fcm_token', token);
+      afficherToast('🔔 Token push enregistré');
+      console.log('[push] Token FCM enregistré:', token.slice(-8));
+    }
+  } catch(e) { console.warn('[push] Erreur _registerFcmToken:', e.message); }
 }
 async function testerNotifications() {
   if (!('Notification' in window)) { afficherToast('❌ Notifications non supportées'); return; }
