@@ -119,6 +119,13 @@ export default {
         return handleNotifyEssaiAction(request, env);
       }
 
+      // POST /api/cron/essai-j1 — cron GitHub Actions → emails E-J1a / E-J1b le lendemain du cours
+      if (pathname === '/api/cron/essai-j1' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronEssaiJ1(request, env);
+      }
+
       // POST /api/remplacant/generate — génère URL remplaçant (JWT admin requis)
       if (pathname === '/api/remplacant/generate' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
@@ -664,6 +671,178 @@ async function handleNotifyEssaiAction(request, env) {
   }
 
   return corsResponse({ ok: true, sent }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/cron/essai-j1 — emails E-J1a / E-J1b le lendemain du cours
+// Appelé par GitHub Actions chaque matin (7h UTC) avec X-Cron-Secret
+// ================================================================
+async function handleCronEssaiJ1(request, env) {
+  let body = {};
+  try { body = await request.json(); } catch {}
+
+  // date explicite dans le body, sinon hier (Paris = UTC+1/UTC+2)
+  let targetDate = body.date;
+  if (!targetDate) {
+    const now = new Date();
+    const parisOffset = 2; // CEST (été). À affiner si nécessaire.
+    const paris = new Date(now.getTime() + parisOffset * 3600000);
+    paris.setUTCDate(paris.getUTCDate() - 1);
+    targetDate = paris.toISOString().slice(0, 10);
+  }
+
+  if (!env.BREVO_API_KEY) {
+    console.log('[cron essai-j1] BREVO_API_KEY absent — skip');
+    return corsResponse({ ok: true, sent: 0, skipped: true, date: targetDate }, 200, {}, request);
+  }
+
+  // Récupère les essais de la date cible avec presence_declaree non null
+  const sbUrl = 'https://qhngqzvvllktuwspojxc.supabase.co';
+  const sbKey = SUPABASE_ANON;
+  const qs = `date_essai=eq.${targetDate}&presence_declaree=not.is.null&select=id,prenom,nom,email,ville,niveau,presence_declaree`;
+  const resp = await fetch(`${sbUrl}/rest/v1/inscriptions_essai?${qs}`, {
+    headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` }
+  });
+  if (!resp.ok) {
+    console.error('[cron essai-j1] Supabase error', await resp.text());
+    return jsonError(500, 'Erreur lecture Supabase');
+  }
+  const inscrits = await resp.json();
+  if (!inscrits.length) return corsResponse({ ok: true, sent: 0, date: targetDate }, 200, {}, request);
+
+  // Récupère les paramètres (horaires) depuis Supabase
+  const paramsResp = await fetch(`${sbUrl}/rest/v1/parametres?select=cle,valeur`, {
+    headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` }
+  });
+  let params = {};
+  if (paramsResp.ok) {
+    const rows = await paramsResp.json();
+    rows.forEach(r => { try { params[r.cle] = typeof r.valeur === 'string' ? JSON.parse(r.valeur) : r.valeur; } catch {} });
+  }
+
+  // Détermine la saison depuis la date
+  const dt = new Date(targetDate + 'T12:00:00');
+  const y = dt.getFullYear(), m = dt.getMonth() + 1;
+  const sai = m >= 9 ? `${y}-${y+1}` : `${y-1}-${y}`;
+
+  const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return JOURS_L[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS_L[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  const villeLabel = (v) => v === 'vincennes' ? 'Vincennes' : 'Paris';
+  const nivLabel   = (n) => n === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
+  const adminEmail = 'tangoetvous@gmail.com';
+
+  function getHoraire(ville) {
+    const key = `tev_params_${ville}_${sai}`;
+    const p = params[key] || {};
+    const hor = (p.horaires || {})[ville === 'vincennes' ? 'vincennes' : 'paris'] || {};
+    const deb = hor.debut || (ville === 'vincennes' ? '20h30' : '20h30');
+    const fin = hor.fin   || (ville === 'vincennes' ? '22h00' : '22h00');
+    return `${deb}–${fin}`;
+  }
+  function getAdresse(ville) {
+    const key = `tev_params_${ville}_${sai}`;
+    const p = params[key] || {};
+    return (p.adresse || {}).nom || (ville === 'vincennes' ? 'Espace Sorano — Vincennes' : 'Paris');
+  }
+  function getLivret(ville, niveau) {
+    const key = `tev_params_${ville}_${sai}`;
+    const p = params[key] || {};
+    const liv = p.livret || {};
+    return niveau === 'intermediaire' ? (liv.url_int || '') : (liv.url_deb || '');
+  }
+
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
+    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
+    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  let sent = 0;
+  async function sendBrevo(toEmail, subject, html) {
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
+      });
+      if (r.ok) sent++;
+      else console.error('[cron essai-j1] Brevo error', toEmail, await r.text());
+    } catch(e) { console.error('[cron essai-j1] fetch error', e); }
+  }
+
+  for (const ins of inscrits) {
+    if (!ins.email) continue;
+    const prenomAff = _esc(ins.prenom || '');
+    const dateCours = fmtDate(targetDate);
+    const ville = ins.ville || 'paris';
+    const niveau = ins.niveau || 'debutant';
+    const horaire = getHoraire(ville);
+    const adresse = getAdresse(ville);
+    const livret = getLivret(ville, niveau);
+    const coursAff = `${villeLabel(ville)} — ${nivLabel(niveau)}`;
+    const coursBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">COURS D'ESSAI TANGO</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr><td style="color:#888;padding:3px 0;width:120px;">Cours</td><td style="font-weight:700;color:#111;">${_esc(coursAff)}</td></tr>
+        <tr><td style="color:#888;padding:3px 0;">Date</td><td style="font-weight:700;color:#111;">${_esc(dateCours)}</td></tr>
+        <tr><td style="color:#888;padding:3px 0;">Horaire</td><td style="font-weight:700;color:#111;">${_esc(horaire)}</td></tr>
+        <tr><td style="color:#888;padding:3px 0;">Lieu</td><td style="color:#444;">${_esc(adresse)}</td></tr>
+      </table></div>`;
+    const livretBtn = livret ? `<p style="text-align:center;margin:16px 0;"><a href="${_esc(livret)}" style="display:inline-block;background:#D4AF37;color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">📖 Télécharger le livret du cours</a></p>` : '';
+
+    if (ins.presence_declaree === true) {
+      // E-J1a — élève présent
+      const inscriptionBtn = `<p style="text-align:center;margin:16px 0;"><a href="https://app.tangoetvous.fr/inscription-cours.html" style="display:inline-block;background:#2e7d32;color:#fff;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Demande d'inscription →</a></p>`;
+      const html = wrap(`${headerEleve}
+        <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
+          <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Merci pour votre cours d'essai !</span></div>
+        <div style="padding:28px 24px;">
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">Nous espérons que ce cours d'essai de tango vous a plu !</p>
+          ${coursBox}
+          <p style="font-size:14px;color:#333;margin:0 0 16px;">Les cours continuent dès la semaine prochaine. Si vous souhaitez rejoindre nos cours réguliers, vous pouvez faire une demande d'inscription :</p>
+          ${inscriptionBtn}
+          ${niveau === 'debutant' ? `<p style="font-size:14px;color:#333;margin:16px 0 8px;"><strong>Pour rejoindre les cours :</strong></p>
+          <ul style="font-size:14px;color:#444;line-height:1.8;margin:0 0 16px;padding-left:20px;">
+            <li>Vous pouvez venir avec ou sans partenaire</li>
+            <li>Aucune connaissance préalable requise</li>
+            <li>Tenue décontractée, chaussures confortables à semelles lisses</li>
+          </ul>` : ''}
+          ${livretBtn}
+          ${signEleve}
+        </div>${footer}`);
+      await sendBrevo(ins.email, `✓ Merci pour votre cours d'essai de tango — Tango & Vous`, html);
+    } else if (ins.presence_declaree === false) {
+      // E-J1b — élève absent
+      const retourBtn = `<p style="text-align:center;margin:16px 0;"><a href="https://app.tangoetvous.fr/cours-essai.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">↩ Choisir une nouvelle date</a></p>`;
+      const html = wrap(`${headerEleve}
+        <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+          <span style="font-size:14px;font-weight:700;color:#e65100;">💙 Vous nous avez manqué !</span></div>
+        <div style="padding:28px 24px;">
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">Nous avons remarqué votre absence au cours d'essai d'hier. Pas d'inquiétude, il vous reste tout le temps de venir !</p>
+          ${coursBox}
+          <p style="font-size:14px;color:#333;margin:0 0 16px;">Votre cours d'essai n'a pas encore eu lieu — vous pouvez choisir une nouvelle date qui vous convient :</p>
+          ${retourBtn}
+          <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:16px 0 0;">
+            <p style="font-size:13px;color:#bf360c;margin:0;">Aucune pénalité — votre inscription reste valide pour le prochain cours disponible.</p>
+          </div>
+          ${signEleve}
+        </div>${footer}`);
+      await sendBrevo(ins.email, `💙 On vous attend bientôt pour votre cours d'essai de tango !`, html);
+    }
+  }
+
+  return corsResponse({ ok: true, sent, date: targetDate, processed: inscrits.length }, 200, {}, request);
 }
 
 function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

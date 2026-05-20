@@ -7577,11 +7577,12 @@ function pointerEssai(date, email, present, id) {
   var e = id
     ? adminData.essai.find(function(x){return String(x.id)===String(id);})
     : adminData.essai.find(function(x){return x.email===email&&x.date===date;});
-  if (e) e.present = present;
+  if (e) { e.present = present; e.presence_declaree = present; }
   if (!IS_DEMO) {
+    var payload = { presence_confirmee: !!present, presence_declaree: !!present };
     var q = id
-      ? TEV.client.from('inscriptions_essai').update({presence_confirmee:!!present}).eq('id',id)
-      : TEV.client.from('inscriptions_essai').update({presence_confirmee:!!present}).eq('email',email).eq('date_essai',date);
+      ? TEV.client.from('inscriptions_essai').update(payload).eq('id',id)
+      : TEV.client.from('inscriptions_essai').update(payload).eq('email',email).eq('date_essai',date);
     q.catch(function(){});
   }
   renderTab();
