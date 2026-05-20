@@ -2941,6 +2941,7 @@ function _renderAdhesionSoranoContent(sai) {
   var def = chargerAdhesionSorano();
   function v(k) { return stored[k] !== undefined ? stored[k] : def[k]; }
   var iS = 'width:72px;text-align:right;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;';
+  var iUrl = 'flex:1;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;';
   function champ(id, lbl, val) {
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
       +'<span style="font-size:13px;color:var(--text);">'+lbl+'</span>'
@@ -2949,12 +2950,17 @@ function _renderAdhesionSoranoContent(sai) {
       +'<span style="color:var(--dim);font-size:12px;">€</span>'
       +'</div></div>';
   }
+  var lien = stored.lien !== undefined ? stored.lien : '';
   return '<div style="padding:12px 16px;">'
     +'<div class="box-info" style="margin-bottom:12px;font-size:12px;">Réglée directement à Sorano — cours Vincennes uniquement. Tarif selon âge et résidence.</div>'
     +champ('m16-vinc', 'Moins de 16 ans — résident·e à Vincennes',     v('m16_vinc'))
     +champ('m16-ext',  'Moins de 16 ans — non résident·e à Vincennes',  v('m16_ext'))
     +champ('p16-vinc', 'Plus de 16 ans — résident·e à Vincennes',       v('p16_vinc'))
     +champ('p16-ext',  'Plus de 16 ans — non résident·e à Vincennes',   v('p16_ext'))
+    +'<div style="display:flex;align-items:center;gap:8px;padding:10px 0 4px;border-bottom:1px solid var(--border);">'
+    +'<span style="font-size:13px;color:var(--text);white-space:nowrap;">Lien pour s\'inscrire</span>'
+    +'<input type="url" id="sor-lien" placeholder="https://..." value="'+escHtml(lien)+'" style="'+iUrl+'">'
+    +'</div>'
     +'<div class="btn-row" style="margin-top:14px;">'
     +'<button class="btn btn-gold" data-action="sauver-adhesion-sorano" data-saison="'+sai+'" style="font-size:12px;">💾 Enregistrer</button>'
     +'</div>'
@@ -6017,7 +6023,8 @@ function handleAction(action, btn) {
           m16_vinc: parseFloat((gel('sor-m16-vinc')||{}).value)||0,
           m16_ext:  parseFloat((gel('sor-m16-ext') ||{}).value)||0,
           p16_vinc: parseFloat((gel('sor-p16-vinc')||{}).value)||0,
-          p16_ext:  parseFloat((gel('sor-p16-ext') ||{}).value)||0
+          p16_ext:  parseFloat((gel('sor-p16-ext') ||{}).value)||0,
+          lien:     ((gel('sor-lien')||{}).value||'').trim()
         };
         _saveParam('adhesions', sai, 'sorano', sor);
         // Garder l'ancienne clé à jour pour la saison courante (compatibilité chargerAdhesionSorano)
@@ -11113,17 +11120,20 @@ var STATUT_LBL = {
 function renderCoursTango() {
   var sai = saisonActive();
   var tous = (adminData.coursTango||[]).filter(function(e){return e.statut!=='inscrit'&&e.statut!=='supprimé'&&(e.saison||saisonCourante())===sai;});
+  var supprimesInscr = (adminData.coursTango||[]).filter(function(e){return e.statut==='supprimé'&&!e._isRenewalRow&&(e.saison||saisonCourante())===sai;});
   var nbAV  = tous.filter(function(e){return e.statut==='demande'||e.statut==='attente';}).length;
   var nbAP  = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';}).length;
+  var nbSup = supprimesInscr.length;
   // Si un état 'inscrit' ou 'valide' était mémorisé, revenir à 'tous'
   if (sousOngletCoursTango==='inscrit'||sousOngletCoursTango==='valide') sousOngletCoursTango='tous';
 
-  var filtre = (sousOngletCoursTango==='inscrire'||sousOngletCoursTango==='valider_paiement') ? 'tous' : sousOngletCoursTango;
+  var filtre = (sousOngletCoursTango==='inscrire'||sousOngletCoursTango==='valider_paiement'||sousOngletCoursTango==='preinscription') ? 'tous' : sousOngletCoursTango;
 
-  var h = '<div class="stats-row stats-3">'
+  var h = '<div class="stats-row stats-4">'
     +'<div class="stat'+(filtre==='tous'?' stat-active':'')+'" data-sous-ct="tous"><div class="stat-n">'+tous.length+'</div><div class="stat-l">Total</div></div>'
     +'<div class="stat'+(filtre==='attente_validation'?' stat-active':'')+'" data-sous-ct="attente_validation"><div class="stat-n n-warn">'+nbAV+'</div><div class="stat-l">Att. valid.</div></div>'
     +'<div class="stat'+(filtre==='attente_paiement'?' stat-active':'')+'" data-sous-ct="attente_paiement"><div class="stat-n" style="color:var(--gold)">'+nbAP+'</div><div class="stat-l">Att. paiement</div></div>'
+    +'<div class="stat'+(filtre==='supprimes'?' stat-active':'')+'" data-sous-ct="supprimes"><div class="stat-n" style="color:var(--err-text)">'+nbSup+'</div><div class="stat-l">Supprimé·e·s</div></div>'
     +'</div>'
     +'<div class="sub-tabs" style="flex-wrap:wrap;">'
     +'<button class="sub-tab'+(sousOngletCoursTango==='inscrire'?' active':'')+'" data-sous-ct="inscrire">✏️ Nouvelle demande</button>'
@@ -11141,6 +11151,29 @@ function renderCoursTango() {
     return h + renderValiderPaiement();
   }
 
+  // ── Onglet Supprimés ──────────────────────────────────────────
+  if(sousOngletCoursTango==='supprimes'){
+    if(!nbSup) return h+'<div class="empty-state">Aucune inscription supprimée.</div>';
+    var COURS_ORDRE_S = ['paris—debutant','paris—intermediaire','vincennes—debutant','vincennes—intermediaire'];
+    var COURS_LBL2_S  = {'paris—debutant':'Paris — Débutants','paris—intermediaire':'Paris — Intermédiaires','vincennes—debutant':'Vincennes — Débutants','vincennes—intermediaire':'Vincennes — Intermédiaires'};
+    var grpS = {};
+    supprimesInscr.forEach(function(e){
+      var v=(e.ville||'').toLowerCase(), n=(e.niveau||'').toLowerCase();
+      var k=(v&&n)?v+'—'+n:'—';
+      if(!grpS[k])grpS[k]=[];
+      grpS[k].push(e);
+    });
+    COURS_ORDRE_S.concat(Object.keys(grpS).filter(function(k){return COURS_ORDRE_S.indexOf(k)<0;})).forEach(function(cKey){
+      var items=grpS[cKey]; if(!items||!items.length) return;
+      var lbl=COURS_LBL2_S[cKey]||cKey;
+      h+='<div class="section-hdr" style="color:var(--err-text);">'+lbl+' ('+items.length+')</div>'
+        +'<div style="padding:0 16px;">';
+      items.forEach(function(e){ h+=ficheSupprime(e); });
+      h+='</div>';
+    });
+    return h;
+  }
+
   var liste;
   if(sousOngletCoursTango==='tous') {
     liste = tous.slice();
@@ -11152,10 +11185,12 @@ function renderCoursTango() {
     liste = tous.filter(function(e){return e.statut===sousOngletCoursTango;});
   }
 
-  if(!liste.length) return h+'<div class="empty-state">Aucun élève dans cette catégorie.</div>';
+  if(!liste.length && !nbSup) return h+'<div class="empty-state">Aucun élève dans cette catégorie.</div>';
 
-  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:4px;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerInscriptionsTango()">🖨️ Imprimer / PDF</button></div>';
-  h+=_tevSearchBar();
+  if(liste.length) {
+    h+='<div style="display:flex;justify-content:flex-end;margin-bottom:4px;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerInscriptionsTango()">🖨️ Imprimer / PDF</button></div>';
+    h+=_tevSearchBar();
+  }
   liste = liste.slice().sort(function(a,b){
     var ka=(a.ville||'')+(a.niveau||'')+(a.nom||'');
     var kb=(b.ville||'')+(b.niveau||'')+(b.nom||'');
@@ -11219,7 +11254,32 @@ function renderCoursTango() {
     h += '</div>';
     h += inscritsHtml;
   });
+
+  // Supprimés en rouge au bas de la liste
+  if(nbSup) {
+    h+='<div style="margin:14px 16px 0;padding-top:10px;border-top:1px solid var(--err);">'
+      +'<div style="font-size:10px;color:var(--err-text);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Supprimé·e·s ('+nbSup+')</div>';
+    supprimesInscr.forEach(function(e){ h+=ficheSupprime(e); });
+    h+='</div>';
+  }
+
   return h;
+}
+
+function ficheSupprime(e) {
+  var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
+  var roleLbl = e.role==='guideur'?'Guideur·se':'Guidée';
+  return '<div class="point-row" style="flex-wrap:wrap;align-items:flex-start;gap:6px;padding:8px 0 8px 10px;border-left:3px solid var(--err);opacity:0.75;">'
+    +'<div style="flex:1;min-width:160px;">'
+    +'<div class="point-nom" style="color:var(--err-text);">'+escHtml((e.prenom||'')+' '+(e.nom||''))+'</div>'
+    +(e.partenaire?'<div class="point-sub">♥ '+escHtml(e.partenaire)+'</div>':'')
+    +(e.email?'<div class="point-sub" style="font-size:11px;">'+escHtml(e.email)+'</div>':'')
+    +'</div>'
+    +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
+    +'<span class="pill '+rcls+'" style="opacity:0.7;">'+roleLbl+'</span>'
+    +'<span class="pill pill-err">✕ Supprimé·e</span>'
+    +(e.email?'<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;opacity:0.7;" title="Envoyer un email">✉️</a>':'')
+    +'</div></div>';
 }
 
 function ficheEleve(e) {
