@@ -1,0 +1,24 @@
+name: Carte Expirée — notification quotidienne
+
+on:
+  schedule:
+    # 9h heure de Paris (UTC+1 en hiver, UTC+2 en été)
+    # Cron UTC : 8h (hiver CET) — décalage naturel l'été (10h CEST) acceptable
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notifier les élèves dont la carte expire aujourd'hui
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            https://app.tangoetvous.fr/api/cron/carte-expiree \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "Erreur — code HTTP $response"
+            exit 1
+          fi

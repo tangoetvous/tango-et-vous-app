@@ -3415,6 +3415,22 @@
           _bc.close();
         }
       } catch(e) {}
+      // Si carte épuisée (10/10) sans renouvellement automatique
+      try {
+        if (d2 && d2.carte && d2.carte.coursUtilises >= 10 && !data.renouvAuto) {
+          fetch('/api/notify/carte-epuisee', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              email: eleveData.eleve.email,
+              prenom: eleveData.eleve.prenom || '',
+              nom: eleveData.eleve.nom || '',
+              utilises: d2.carte.coursUtilises,
+              restants: d2.carte.coursRestants != null ? d2.carte.coursRestants : 0,
+            }),
+          }).catch(function(){});
+        }
+      } catch(e) {}
     } catch(err) {
       msgEl.textContent='Erreur de connexion. Réessayez.'; msgEl.style.display='block';
       btn.disabled=false; btn.textContent='✓ Valider';

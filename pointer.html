@@ -174,6 +174,16 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'He
             _bc.close();
           }
         } catch(e) {}
+        // Si carte épuisée (10/10) sans renouvellement automatique
+        try {
+          if (d.restants === 0 && !d.renouvAuto) {
+            fetch('/api/notify/carte-epuisee', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({email: email, prenom: '', nom: nom || email, utilises: 10, restants: 0}),
+            }).catch(function(){});
+          }
+        } catch(e) {}
       })
       .catch(function(e) {
         document.getElementById('err-msg').textContent = 'Erreur réseau — vérifiez votre connexion et réessayez.';

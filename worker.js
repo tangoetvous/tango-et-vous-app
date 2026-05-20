@@ -21,6 +21,10 @@
 //   GET   /api/remplacant/data         — données pointage pour le remplaçant (token signé)
 //   POST  /api/notify/carte-pointage   — élève pointe sa carte → notif email admin (sans auth)
 //   POST  /api/notify/carte-pointee-admin — admin pointe carte élève → email + notif in-app élève
+//   POST  /api/notify/carte-epuisee    — carte 10/10 → email + notif élève + notif admin (sans auth)
+//   POST  /api/cron/carte-expiree      — cron quotidien → emails cartes expirées aujourd'hui
+//   POST  /api/notify/discussion-nouvelle — nouvelle discussion → notif in-app élèves (JWT admin)
+//   POST  /api/notify/discussion-message  — nouveau message → notif in-app élèves (JWT admin)
 //   *                                  — assets statiques (Cloudflare Static Assets)
 
 const SUPABASE_URL  = 'https://qhngqzvvllktuwspojxc.supabase.co';
@@ -150,6 +154,30 @@ export default {
       if (pathname === '/api/notify/carte-pointee-admin' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
         return handleNotifyCartePonteeAdmin(request, env);
+      }
+
+      // POST /api/notify/carte-epuisee — carte 10/10 → email + notif élève + notif admin (sans auth)
+      if (pathname === '/api/notify/carte-epuisee' && method === 'POST') {
+        return handleNotifyCarteEpuisee(request, env);
+      }
+
+      // POST /api/cron/carte-expiree — cron quotidien → emails cartes expirées (X-Cron-Secret)
+      if (pathname === '/api/cron/carte-expiree' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronCarteExpiree(request, env);
+      }
+
+      // POST /api/notify/discussion-nouvelle — nouvelle discussion → notif in-app élèves + admin (JWT admin)
+      if (pathname === '/api/notify/discussion-nouvelle' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyDiscussionNouvelle(request, jwt, env);
+      }
+
+      // POST /api/notify/discussion-message — nouveau message → notif in-app élèves + admin (JWT admin)
+      if (pathname === '/api/notify/discussion-message' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyDiscussionMessage(request, jwt, env);
       }
 
       // POST /api/remplacant/generate — génère URL remplaçant (JWT admin requis)
@@ -2171,4 +2199,317 @@ function _buildICS(calName, events) {
   });
   lines.push('END:VCALENDAR');
   return lines.join('\r\n');
+}
+
+// ================================================================
+// POST /api/notify/carte-epuisee — carte 10/10 sans renouvellement
+// → email élève + notif in-app élève + notif panel admin
+// Sans auth (appelé depuis QR, espace élève, admin)
+// ================================================================
+async function handleNotifyCarteEpuisee(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const { email, prenom, nom, utilises, restants } = body;
+  if (!email) return jsonError(400, 'email manquant');
+
+  const prenomAff = _esc(prenom || (nom || '').split(' ')[0] || '');
+  const nomAff    = _esc(nom || email);
+
+  const notifMsgEleve = '💳 Votre carte de 10 cours est terminée — pensez à la renouveler';
+  const notifMsgAdmin = `💳 Carte terminée — ${nom || email} · 10/10 cours utilisés`;
+
+  // Notif in-app élève
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email, type: 'carte_epuisee', message: notifMsgEleve, lu: false }),
+    });
+  } catch(e) { console.error('[carte-epuisee] notifications_eleve error', e); }
+
+  // Notif panel admin
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ type: 'carte_epuisee', message: notifMsgAdmin, lu: false, lien_tab: 'cartes' }),
+    });
+  } catch(e) { console.error('[carte-epuisee] notifications error', e); }
+
+  if (!env.BREVO_API_KEY) {
+    return corsResponse({ ok: true, sent: 0, notified: true, skipped: true }, 200, {}, request);
+  }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  // Email élève
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+      <span style="font-size:14px;font-weight:700;color:#e65100;">💳 Votre carte de 10 cours est terminée</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Vous avez utilisé vos 10 cours. Pour continuer à venir danser, pensez à renouveler votre carte !</p>
+      <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
+        <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">⚠️ Carte terminée — 10/10 cours utilisés</p>
+        <p style="font-size:13px;color:#444;margin:0;">Rendez-vous sur AssoConnect pour renouveler votre carte ou contactez-nous directement.</p>
+      </div>
+      <p style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></p>
+      ${signEleve}
+    </div>${footer}`);
+
+  // Email admin
+  const htmlAdmin = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;background:#fff;">
+  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
+    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>
+    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Carte terminée</div>
+  </div>
+  <div style="padding:24px;">
+    <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <div style="background:#D4AF37;padding:10px 16px;">
+        <div style="font-size:18px;font-weight:700;color:#111;">${nomAff}</div>
+        <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email)}</div>
+      </div>
+      <div style="background:#fffdf8;padding:14px 16px;">
+        <div style="font-size:15px;font-weight:700;color:#c62828;">💳 10/10 cours utilisés</div>
+        <div style="font-size:13px;color:#666;margin-top:6px;">Renouvellement en attente</div>
+      </div>
+    </div>
+    <p style="text-align:center;"><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#D4AF37;color:#111;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Ouvrir l'admin → Cartes 10</a></p>
+  </div>
+</div></body></html>`;
+
+  let sent = 0;
+  const sendMail = async (to, subject, html) => {
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: to }], subject, htmlContent: html }),
+      });
+      if (r.ok) sent++; else console.error('[carte-epuisee] Brevo error', await r.text());
+    } catch(e) { console.error('[carte-epuisee] fetch error', e); }
+  };
+  await sendMail(String(email), '💳 Votre carte de 10 cours est terminée — Tango & Vous', htmlEleve);
+  await sendMail(adminEmail, `💳 Carte terminée — ${nom || email}`, htmlAdmin);
+
+  return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/cron/carte-expiree — cron quotidien
+// Notifie les élèves dont la carte expire aujourd'hui (X-Cron-Secret)
+// ================================================================
+async function handleCronCarteExpiree(request, env) {
+  const today = new Date().toISOString().slice(0, 10);
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  // Chercher les élèves dont la carte expire aujourd'hui avec des cours restants
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/eleves?carte_expiration=eq.${today}&carte_statut=in.(Active,Nouvelle carte)&select=email,prenom,nom,carte_utilises,carte_restants,carte_expiration`,
+    { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+  );
+  if (!res.ok) {
+    console.error('[cron carte-expiree] Supabase error', await res.text());
+    return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
+  }
+  const eleves = await res.json();
+
+  // Filtrer : seulement ceux avec des cours restants (pas encore épuisés)
+  const aNotifier = eleves.filter(e => (e.carte_restants || 0) > 0);
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return JOURS_L[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS_L[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  let sent = 0;
+  for (const e of aNotifier) {
+    const prenomAff = _esc(e.prenom || (e.nom || '').split(' ')[0] || '');
+    const nomAff    = _esc((e.prenom || '') + ' ' + (e.nom || '')).trim();
+    const restants  = e.carte_restants || 0;
+    const dateLabel = fmtDate(today);
+
+    const notifMsg = `⏰ Votre carte expire aujourd'hui — il vous reste ${restants} cours non utilisés`;
+
+    // Notif in-app élève
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ email: e.email, type: 'carte_expiree', message: notifMsg, lu: false }),
+      });
+    } catch(err) { console.error('[cron carte-expiree] notif error', err); }
+
+    // Notif panel admin
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ type: 'carte_expiree', message: `⏰ Carte expirée — ${nomAff || e.email} · ${restants} cours perdus`, lu: false, lien_tab: 'cartes' }),
+      });
+    } catch(err) { console.error('[cron carte-expiree] admin notif error', err); }
+
+    if (!env.BREVO_API_KEY) continue;
+
+    // Email élève
+    const htmlEleve = wrap(`${headerEleve}
+      <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+        <span style="font-size:14px;font-weight:700;color:#e65100;">⏰ Votre carte de cours expire aujourd'hui</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
+          <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">⚠️ Carte expirée le ${dateLabel}</p>
+          <p style="font-size:13px;color:#444;margin:0;">Il vous restait <strong>${restants} cours</strong> non utilisé${restants > 1 ? 's' : ''} sur votre carte.</p>
+        </div>
+        <p style="font-size:14px;color:#333;margin:0 0 20px;">Pour continuer à venir danser, contactez-nous pour organiser le report de vos cours ou l'ouverture d'une nouvelle carte.</p>
+        <p style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></p>
+        ${signEleve}
+      </div>${footer}`);
+
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: 'Tango & Vous', email: adminEmail },
+          to: [{ email: String(e.email) }],
+          subject: `⏰ Votre carte Tango & Vous expire aujourd'hui — ${restants} cours restants`,
+          htmlContent: htmlEleve,
+        }),
+      });
+      if (r.ok) sent++; else console.error('[cron carte-expiree] Brevo error', e.email, await r.text());
+    } catch(err) { console.error('[cron carte-expiree] fetch error', err); }
+  }
+
+  return corsResponse({ ok: true, sent, checked: eleves.length, notified: aNotifier.length, date: today }, 200, {}, request);
+}
+
+// ================================================================
+// Helper : récupère les emails des élèves inscrits dans des groupes
+// groupes : ['paris-debutants', 'paris-intermediaires', ...]
+// saison  : '2025-2026'
+// ================================================================
+async function _getEmailsByGroupes(groupes, saison, jwt) {
+  const GROUP_MAP = {
+    'paris-debutants':          { ville: 'paris',    niveau: 'debutant' },
+    'paris-intermediaires':     { ville: 'paris',    niveau: 'intermediaire' },
+    'vincennes-debutants':      { ville: 'vincennes', niveau: 'debutant' },
+    'vincennes-intermediaires': { ville: 'vincennes', niveau: 'intermediaire' },
+  };
+  const emailsSet = new Set();
+  for (const grp of groupes) {
+    const mapping = GROUP_MAP[grp];
+    if (!mapping) continue;
+    try {
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/inscriptions_cours?select=email&ville=eq.${mapping.ville}&niveau=eq.${mapping.niveau}&statut=eq.inscrit&saison=eq.${encodeURIComponent(saison)}`,
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${jwt}` } }
+      );
+      if (r.ok) {
+        const rows = await r.json();
+        rows.forEach(row => { if (row.email && row.email.trim()) emailsSet.add(row.email.trim().toLowerCase()); });
+      }
+    } catch(e) { console.error('[getEmailsByGroupes] error', grp, e); }
+  }
+  return Array.from(emailsSet);
+}
+
+// ================================================================
+// POST /api/notify/discussion-nouvelle — nouvelle discussion ouverte
+// → notif in-app pour chaque élève des groupes + notif panel admin
+// JWT admin requis
+// ================================================================
+async function handleNotifyDiscussionNouvelle(request, jwt, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const { titre, discussionId, groupes, saison, adminNom } = body;
+  if (!titre || !saison) return jsonError(400, 'Paramètres manquants');
+
+  const emails = Array.isArray(groupes) && groupes.length > 0
+    ? await _getEmailsByGroupes(groupes, saison, jwt)
+    : [];
+
+  const notifMsgEleve = `💬 Nouvelle discussion : ${titre}`;
+  const notifMsgAdmin = `💬 Discussion créée : "${titre}" · ${emails.length} élève${emails.length !== 1 ? 's' : ''} notifié${emails.length !== 1 ? 's' : ''}`;
+
+  // Notifs in-app élèves (une par email, fire-and-forget)
+  const inserts = emails.map(email =>
+    fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email, type: 'discussion_nouvelle', message: notifMsgEleve, lu: false }),
+    }).catch(e => console.error('[discussion-nouvelle] notif_eleve error', e))
+  );
+
+  // Notif panel admin
+  const adminInsert = fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ type: 'discussion_nouvelle', message: notifMsgAdmin, lu: false, lien_tab: 'discussions' }),
+  }).catch(e => console.error('[discussion-nouvelle] notifications error', e));
+
+  await Promise.all([...inserts, adminInsert]);
+
+  return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/discussion-message — nouveau message dans discussion
+// → notif in-app pour chaque élève des groupes + notif panel admin
+// JWT admin requis
+// ================================================================
+async function handleNotifyDiscussionMessage(request, jwt, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const { discussionId, contenu, groupes, saison, adminNom, titre } = body;
+  if (!saison) return jsonError(400, 'Paramètres manquants');
+
+  const emails = Array.isArray(groupes) && groupes.length > 0
+    ? await _getEmailsByGroupes(groupes, saison, jwt)
+    : [];
+
+  const titreLabel  = titre || 'Discussion';
+  const extrait     = contenu ? (contenu.length > 60 ? contenu.slice(0, 60) + '…' : contenu) : '';
+  const auteur      = adminNom || 'Florencia & Jérémy';
+  const notifMsgEleve = `💬 ${auteur} : ${extrait || titreLabel}`;
+  const notifMsgAdmin = `💬 Message envoyé dans "${titreLabel}" · ${emails.length} élève${emails.length !== 1 ? 's' : ''} notifié${emails.length !== 1 ? 's' : ''}`;
+
+  const inserts = emails.map(email =>
+    fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email, type: 'discussion_message', message: notifMsgEleve, lu: false }),
+    }).catch(e => console.error('[discussion-message] notif_eleve error', e))
+  );
+
+  const adminInsert = fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+      'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ type: 'discussion_message', message: notifMsgAdmin, lu: false, lien_tab: 'discussions' }),
+  }).catch(e => console.error('[discussion-message] notifications error', e));
+
+  await Promise.all([...inserts, adminInsert]);
+
+  return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
 }

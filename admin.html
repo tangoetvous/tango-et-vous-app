@@ -5644,6 +5644,14 @@ function handleAction(action, btn) {
             afficherToast('\uD83D\uDCAC Discussion ouverte\u00a0!');
             _discCurrentId=r.id; _discCurrentTitle=titre; _discCurrentStatut='ouvert'; _discMsgs=[];
             _discView='chat';
+            // Notif in-app \u00E9l\u00E8ves des groupes + panel admin \u2014 fire and forget
+            if (groupes.length > 0) {
+              Promise.resolve(fetch('/api/notify/discussion-nouvelle', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
+                body: JSON.stringify({titre:titre, discussionId:r.id, groupes:groupes, saison:saisonActive(), adminNom:nom}),
+              })).catch(function(){});
+            }
             chargerDiscussions(function(){ renderTab(); });
           })
           .catch(function(e){
@@ -8541,6 +8549,14 @@ function pointerCoursAction(id, date, nbCours, btn) {
               expiration: syncData ? (syncData.expiration || null) : null,
             }),
           })).catch(function(){});
+          // Si carte épuisée (10/10) sans renouvellement automatique
+          if (!r.renouvAuto && syncData && syncData.utilises >= 10) {
+            Promise.resolve(fetch('/api/notify/carte-epuisee', {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({email:c.email, prenom:c.prenom||'', nom:c.nom||'', utilises:10, restants:0}),
+            })).catch(function(){});
+          }
         }
       }
       chargerDonnees();
@@ -13232,6 +13248,18 @@ function _discEnvoyerMsg() {
     return;
   }
   TEV.postMessage({discussionId:_discCurrentId,auteur:'admin',auteurEmail:adminData._email||'',auteurNom:nom,contenu:msg}).catch(function(){});
+  // Notif in-app élèves des groupes + panel admin — fire and forget
+  (function(){
+    var _disc=(adminData.discussions||[]).find(function(d){return d.id===_discCurrentId;});
+    var _groupes=_disc?(_disc.groupes||[]):[];
+    if(_groupes.length>0){
+      Promise.resolve(fetch('/api/notify/discussion-message',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
+        body:JSON.stringify({discussionId:_discCurrentId,contenu:msg,titre:_discCurrentTitle||'Discussion',groupes:_groupes,saison:saisonActive(),adminNom:nom}),
+      })).catch(function(){});
+    }
+  })();
 }
 
 function renderCompta() {
