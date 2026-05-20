@@ -1,0 +1,24 @@
+name: Relances CB 3× — rappels échéances paiement
+
+on:
+  schedule:
+    # 9h heure de Paris (UTC+1 hiver / UTC+2 été — décalage naturel l'été acceptable)
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  relance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer les relances CB 3× du jour
+        run: |
+          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X POST \
+            https://app.tangoetvous.fr/api/cron/relance-cb3x \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "HTTP status: $response"
+          cat /tmp/body.txt
+          if [ "$response" != "200" ]; then
+            echo "Erreur — code HTTP $response"
+            exit 1
+          fi

@@ -23,6 +23,7 @@
 //   POST  /api/notify/carte-pointee-admin — admin pointe carte élève → email + notif in-app élève
 //   POST  /api/notify/carte-epuisee    — carte 10/10 → email + notif élève + notif admin (sans auth)
 //   POST  /api/cron/carte-expiree      — cron quotidien → emails cartes expirées aujourd'hui
+//   POST  /api/cron/relance-cb3x       — cron quotidien → rappels 2ème/3ème échéance CB 3×
 //   POST  /api/notify/discussion-nouvelle — nouvelle discussion → notif in-app élèves (JWT admin)
 //   POST  /api/notify/discussion-message  — nouveau message → notif in-app élèves (JWT admin)
 //   *                                  — assets statiques (Cloudflare Static Assets)
@@ -166,6 +167,13 @@ export default {
         const cronSecret = request.headers.get('X-Cron-Secret');
         if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
         return handleCronCarteExpiree(request, env);
+      }
+
+      // POST /api/cron/relance-cb3x — rappels 2ème/3ème échéance paiement CB 3×
+      if (pathname === '/api/cron/relance-cb3x' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronRelanceCb3x(request, env);
       }
 
       // POST /api/notify/discussion-nouvelle — nouvelle discussion → notif in-app élèves + admin (JWT admin)
@@ -2512,4 +2520,155 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
   await Promise.all([...inserts, adminInsert]);
 
   return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/cron/relance-cb3x
+// Rappels 2ème (J+2 mois) et 3ème (J+4 mois) échéance paiement CB 3×
+// Flag anti-doublon : donnees.relance_cb3x_2_sent / relance_cb3x_3_sent
+// ================================================================
+async function handleCronRelanceCb3x(request, env) {
+  const today  = new Date().toISOString().slice(0, 10);
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  function addMonths(isoDate, months) {
+    const d = new Date(isoDate + 'T12:00:00');
+    d.setMonth(d.getMonth() + months);
+    return d.toISOString().slice(0, 10);
+  }
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return JOURS_L[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS_L[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  function coursLabel(ville, niveau) {
+    return (ville === 'paris' ? 'Paris' : 'Vincennes') + ' ' +
+           (niveau === 'debutant' ? 'Débutants' : 'Intermédiaires');
+  }
+
+  // Lien AssoConnect depuis Supabase params (fallback : page principale)
+  let lienAssoConnect = 'https://le-regard-se-pose.assoconnect.com';
+  try {
+    const m = parseInt(today.slice(5, 7)), y = parseInt(today.slice(0, 4));
+    const sai = m >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+    const pr = await fetch(
+      `${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_liens_assoconnect&select=valeur`,
+      { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (pr.ok) {
+      const rows = await pr.json();
+      const lien = rows.length > 0 && rows[0].valeur && rows[0].valeur[sai] && rows[0].valeur[sai].cours;
+      if (lien) lienAssoConnect = lien;
+    }
+  } catch(e) { console.warn('[relance-cb3x] params fetch error', e); }
+
+  // Inscriptions CB 3× actives
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/inscriptions_cours?paiement=eq.cb3x&statut=eq.inscrit&select=id,prenom,nom,email,ville,niveau,donnees`,
+    { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+  );
+  if (!res.ok) {
+    console.error('[cron relance-cb3x] Supabase error', await res.text());
+    return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
+  }
+  const inscriptions = await res.json();
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  function buildHtml(prenomAff, cours, dateEcheance, ordinal) {
+    return wrap(`${headerEleve}
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
+        <span style="font-size:14px;font-weight:700;color:#1565c0;">💳 Rappel — ${ordinal} échéance de paiement CB</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">Votre inscription aux cours de tango <strong>${cours}</strong> a été réglée en 3 fois par CB. Le <strong>${ordinal} prélèvement</strong> (sur 3) va prochainement être effectué sur votre carte bancaire.</p>
+        <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE PAIEMENT CB 3×</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <tr><td style="padding:5px 0;color:#555;">Cours</td><td style="padding:5px 0;font-weight:700;color:#222;text-align:right;">${cours}</td></tr>
+            <tr><td style="padding:5px 0;color:#555;">Prélèvement</td><td style="padding:5px 0;font-weight:700;color:#222;text-align:right;">${ordinal} sur 3</td></tr>
+            <tr><td style="padding:5px 0;color:#555;">Date du prélèvement</td><td style="padding:5px 0;font-weight:700;color:#1565c0;text-align:right;">${fmtDate(dateEcheance)}</td></tr>
+          </table>
+        </div>
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
+          <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">✓ Vérifiez votre carte bancaire</p>
+          <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 10px;">Assurez-vous que votre carte bancaire n'est pas expirée ou opposée avant la date du prélèvement. Si vous avez changé de carte ou souhaitez modifier votre moyen de paiement, rendez-vous sur AssoConnect.</p>
+          <p style="font-size:12px;color:#888;margin:0;">Si votre carte est toujours valide, aucune action n'est nécessaire — le prélèvement se fera automatiquement.</p>
+        </div>
+        <p style="text-align:center;margin:0 0 14px;"><a href="${lienAssoConnect}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Mettre à jour mon moyen de paiement →</a></p>
+        <p style="font-size:13px;color:#888;text-align:center;margin:0 0 22px;">Une question ? <a href="mailto:tangoetvous@gmail.com" style="color:#D4AF37;">tangoetvous@gmail.com</a> · 07 73 27 59 06</p>
+        ${signEleve}
+      </div>${footer}`);
+  }
+
+  async function sendBrevo(toEmail, subject, html) {
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: { name: 'Tango & Vous', email: adminEmail },
+        to: [{ email: String(toEmail) }],
+        subject, htmlContent: html,
+      }),
+    });
+    if (!r.ok) console.error('[relance-cb3x] Brevo error', toEmail, await r.text());
+    return r.ok;
+  }
+
+  async function saveDonnees(id, donnees) {
+    await fetch(`${SUPABASE_URL}/rest/v1/inscriptions_cours?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ donnees }),
+    });
+  }
+
+  let sent2 = 0, sent3 = 0;
+
+  for (const ins of inscriptions) {
+    if (!ins.email) continue;
+    let donnees = (typeof ins.donnees === 'object' && ins.donnees !== null) ? ins.donnees
+                : (typeof ins.donnees === 'string'
+                    ? (() => { try { return JSON.parse(ins.donnees); } catch(e) { return {}; } })()
+                    : {});
+    const dateP = donnees.datePremierPaiement;
+    if (!dateP) continue;
+
+    const cours     = coursLabel(ins.ville, ins.niveau);
+    const prenomAff = _esc(ins.prenom || '');
+
+    // ── 2ème échéance : 2 mois après le 1er paiement ─────────────
+    const date2 = addMonths(dateP, 2);
+    if (today >= date2 && !donnees.relance_cb3x_2_sent) {
+      const html = buildHtml(prenomAff, cours, date2, '2ème');
+      let ok = !env.BREVO_API_KEY;
+      if (env.BREVO_API_KEY) ok = await sendBrevo(ins.email, `💳 Rappel — 2ème prélèvement CB · Cours de tango ${cours}`, html);
+      if (ok) {
+        sent2++;
+        donnees = { ...donnees, relance_cb3x_2_sent: true, relance_cb3x_2_date: today };
+        await saveDonnees(ins.id, donnees);
+      }
+    }
+
+    // ── 3ème échéance : 4 mois après le 1er paiement ─────────────
+    const date3 = addMonths(dateP, 4);
+    if (today >= date3 && !donnees.relance_cb3x_3_sent) {
+      const html = buildHtml(prenomAff, cours, date3, '3ème');
+      let ok = !env.BREVO_API_KEY;
+      if (env.BREVO_API_KEY) ok = await sendBrevo(ins.email, `💳 Rappel — 3ème prélèvement CB · Cours de tango ${cours}`, html);
+      if (ok) {
+        sent3++;
+        donnees = { ...donnees, relance_cb3x_3_sent: true, relance_cb3x_3_date: today };
+        await saveDonnees(ins.id, donnees);
+      }
+    }
+  }
+
+  return corsResponse({ ok: true, checked: inscriptions.length, sent2, sent3, date: today }, 200, {}, request);
 }
