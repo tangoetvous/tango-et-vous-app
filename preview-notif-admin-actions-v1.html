@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Preview — Notifications &amp; Emails · Actions admin · Tango &amp; Vous</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;position:sticky;top:0;background:#1e1e1e;padding:12px 0;z-index:10;border-bottom:1px solid #444;}
+.nav a{color:#D4AF37;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-decoration:none;padding:7px 12px;border:1px solid #D4AF37;border-radius:6px;}
+.nav a:hover{background:#D4AF37;color:#000;}
+.section{margin-bottom:60px;}
+.section-title{color:#D4AF37;font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-bottom:8px;border-bottom:1px solid #333;}
+.section-sub{color:#888;font-size:11px;margin-bottom:24px;}
+.block{margin-bottom:40px;}
+.block-label{color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;padding-left:4px;}
+.block-label strong{color:#D4AF37;}
+.block-label em{color:#aaa;font-style:normal;font-size:10px;}
+.trigger{background:#252525;border:1px solid #444;border-radius:6px;padding:10px 14px;max-width:700px;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.trigger-icon{font-size:16px;}
+.trigger-text{font-size:12px;color:#ccc;line-height:1.5;}
+.trigger-text strong{color:#fff;}
+.channel-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 9px;border-radius:20px;margin-bottom:10px;}
+.channel-inapp{background:#1a2a1a;color:#66bb6a;border:1px solid #4caf50;}
+.channel-email{background:#0d1e2d;color:#64b5f6;border:1px solid #1565c0;}
+.channel-push{background:#1e1a2d;color:#ce93d8;border:1px solid #9c27b0;}
+
+/* ── Notification in-app mockup ── */
+.notif-inapp-wrap{max-width:420px;}
+.notif-inapp-header{background:#111;border-radius:10px 10px 0 0;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333;}
+.notif-inapp-header-title{font-size:12px;font-weight:700;color:#D4AF37;letter-spacing:1px;}
+.notif-inapp-badge{background:#e53935;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:2px 7px;}
+.notif-inapp-item{background:#1a1a1a;border-bottom:1px solid #2a2a2a;padding:11px 14px;display:flex;gap:10px;align-items:flex-start;}
+.notif-inapp-item.unread{border-left:3px solid #D4AF37;}
+.notif-inapp-item-dot{width:8px;height:8px;border-radius:50%;background:#D4AF37;flex-shrink:0;margin-top:4px;}
+.notif-inapp-item-dot.read{background:#444;}
+.notif-inapp-item-body{flex:1;}
+.notif-inapp-item-msg{font-size:13px;color:#eee;line-height:1.5;}
+.notif-inapp-item-time{font-size:11px;color:#666;margin-top:3px;}
+.notif-inapp-footer{background:#111;border-radius:0 0 10px 10px;padding:8px 14px;text-align:center;font-size:11px;color:#555;}
+
+/* ── Email wrap ── */
+.email-wrap{max-width:600px;}
+.email-subj{color:#ccc;font-size:12px;margin-bottom:12px;padding-left:4px;}
+.email-subj span{color:#fff;font-weight:700;}
+
+/* ── Toast mockup ── */
+.toast-mock{background:#222;border:1px solid #444;border-radius:8px;padding:11px 16px;max-width:380px;font-size:13px;color:#eee;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.toast-mock-icon{font-size:18px;}
+
+/* ── Séparateur action ── */
+.action-row{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px;}
+.action-col{flex:1;min-width:260px;}
+.action-col-title{font-size:11px;font-weight:700;color:#D4AF37;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #333;}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="#paris">🗓 Tango Paris</a>
+  <a href="#vincennes">🗓 Tango Vincennes</a>
+  <a href="#stages">🎭 Stages</a>
+  <a href="#milonga-dv">🎶 Dolce Vita</a>
+  <a href="#milonga-co">🎶 Colectivo</a>
+  <a href="#yoga">🧘 Yoga (email)</a>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TANGO PARIS                                                    -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="paris">
+  <div class="section-title">🗓 Paramètres → Tango Paris — Dates</div>
+  <div class="section-sub">Destinataires : tous les élèves tango inscrits à Paris (débutants + intermédiaires) · Saison active uniquement</div>
+
+  <div class="action-row">
+
+    <!-- AJOUT -->
+    <div class="action-col">
+      <div class="action-col-title">➕ Ajout d'une date</div>
+
+      <div class="trigger">
+        <span class="trigger-icon">⚡</span>
+        <div class="trigger-text"><strong>Déclencheur</strong> : admin saisit une date dans le lot et clique "Ajouter"<br/>
+        <em>Saison affichée dans Paramètres = saison active</em></div>
+      </div>
+
+      <span class="channel-badge channel-inapp">🔔 Notification in-app</span>
+
+      <div class="notif-inapp-wrap">
+        <div class="notif-inapp-header">
+          <span class="notif-inapp-header-title">🔔 Notifications</span>
+          <span class="notif-inapp-badge">1</span>
+        </div>
+        <div class="notif-inapp-item unread">
+          <div class="notif-inapp-item-dot"></div>
+          <div class="notif-inapp-item-body">
+            <div class="notif-inapp-item-msg">📅 Nouveau cours de tango Paris le <strong>Jeudi 12 mars 2026</strong></div>
+            <div class="notif-inapp-item-time">À l'instant</div>
+          </div>
+        </div>
+        <div class="notif-inapp-footer">Tout marquer comme lu</div>
+      </div>
+
+      <div style="margin-top:10px;font-size:11px;color:#666;font-style:italic;">
+        Si plusieurs dates ajoutées en lot :<br/>
+        "📅 Nouveaux cours de tango Paris (3) : 12 mar., 19 mar., 26 mar."
+      </div>
+    </div>
+
+    <!-- SUPPRESSION -->
+    <div class="action-col">
+      <div class="action-col-title">✕ Suppression d'une date</div>
+
+      <div class="trigger">
+        <span class="trigger-icon">⚡</span>
+        <div class="trigger-text"><strong>Déclencheur</strong> : admin clique ✕ sur une date dans la liste<br/>
+        <em>Saison affichée dans Paramètres = saison active</em></div>
+      </div>
+
+      <span class="channel-badge channel-inapp">🔔 Notification in-app</span>
+
+      <div class="notif-inapp-wrap">
+        <div class="notif-inapp-header">
+          <span class="notif-inapp-header-title">🔔 Notifications</span>
+          <span class="notif-inapp-badge">1</span>
+        </div>
+        <div class="notif-inapp-item unread">
+          <div class="notif-inapp-item-dot"></div>
+          <div class="notif-inapp-item-body">
+            <div class="notif-inapp-item-msg">⚠️ Cours de tango Paris annulé : <strong>Jeudi 12 mars 2026</strong></div>
+            <div class="notif-inapp-item-time">À l'instant</div>
+          </div>
+        </div>
+        <div class="notif-inapp-footer">Tout marquer comme lu</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TANGO VINCENNES                                                -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="vincennes">
+  <div class="section-title">🗓 Paramètres → Tango Vincennes — Dates</div>
+  <div class="section-sub">Destinataires : tous les élèves tango inscrits à Vincennes · Saison active uniquement</div>
+
+  <div class="action-row">
+
+    <div class="action-col">
+      <div class="action-col-title">➕ Ajout d'une date</div>
+      <div class="trigger">
+        <span class="trigger-icon">⚡</span>
+        <div class="trigger-text"><strong>Déclencheur</strong> : admin saisit une date dans le lot et clique "Ajouter"</div>
+      </div>
+      <span class="channel-badge channel-inapp">🔔 Notification in-app</span>
+      <div class="notif-inapp-wrap">
+        <div class="notif-inapp-header">
+          <span class="notif-inapp-header-title">🔔 Notifications</span>
+          <span class="notif-inapp-badge">1</span>
+        </div>
+        <div class="notif-inapp-item unread">
+          <div class="notif-inapp-item-dot"></div>
+          <div class="notif-inapp-item-body">
+            <div class="notif-inapp-item-msg">📅 Nouveau cours de tango Vincennes le <strong>Lundi 16 mars 2026</strong></div>
+            <div class="notif-inapp-item-time">À l'instant</div>
+          </div>
+        </div>
+        <div class="notif-inapp-footer">Tout marquer comme lu</div>
+      </div>
+    </div>
+
+    <div class="action-col">
+      <div class="action-col-title">✕ Suppression d'une date</div>
+      <div class="trigger">
+        <span class="trigger-icon">⚡</span>
+        <div class="trigger-text"><strong>Déclencheur</strong> : admin clique ✕ sur une date dans la liste</div>
+      </div>
+      <span class="channel-badge channel-inapp">🔔 Notification in-app</span>
+      <div class="notif-inapp-wrap">
+        <div class="notif-inapp-header">
+          <span class="notif-inapp-header-title">🔔 Notifications</span>
+          <span class="notif-inapp-badge">1</span>
+        </div>
+        <div class="notif-inapp-item unread">
+          <div class="notif-inapp-item-dot"></div>
+          <div class="notif-inapp-item-body">
+            <div class="notif-inapp-item-msg">⚠️ Cours de tango Vincennes annulé : <strong>Lundi 16 mars 2026</strong></div>
+            <div class="notif-inapp-item-time">À l'instant</div>
+          </div>
+        </div>
+        <div class="notif-inapp-footer">Tout marquer comme lu</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- STAGES                                                         -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="stages">
+  <div class="section-title">🎭 Paramètres → Stages — Dates</div>
+  <div class="section-sub">Destinataires : tous les élèves tango inscrits (Paris + Vincennes) · Saison active uniquement</div>
+
+  <div class="action-row">
+
+    <div class="action-col">
+      <div class="action-col-title">➕ Ajout d'une date</div>
+      <div class="trigger">
+        <span class="trigger-icon">⚡</span>
+        <div class="trigger-text"><strong>Déclencheur</strong> : admin choisit une date et clique "Ajouter cette date de stage"</div>
+      </div>
+      <span class="channel-badge channel-inapp">🔔 Notification in-app</span>
+      <div class="notif-inapp-wrap">
+        <div class="notif-inapp-header">
+          <span class="notif-inapp-header-title">🔔 Notifications</span>
+          <span class="notif-inapp-badge">1</span>
+        </div>
+        <div class="notif-inapp-item unread">
+          <div class="notif-inapp-item-dot"></div>
+          <div class="notif-inapp-item-body">
+            <div class="notif-inapp-item-msg">🎭 Nouveau stage le <strong>Samedi 11 avril 2026</strong></div>
+            <div class="notif-inapp-item-time">À l'instant</div>
+          </div>
+        </div>
+        <div class="notif-inapp-footer">Tout marquer comme lu</div>
+      </div>
+    </div>
+
+    <div class="action-col">
+      <div class="action-col-title">✕ Suppression d'une date</div>
+      <div class="trigger">
+        <span class="trigger-icon">⚡</span>
+        <div class="trigger-text"><strong>Déclencheur</strong> : admin clique ✕ sur une date de stage dans la liste</div>
+      </div>
+      <span class="channel-badge channel-inapp">🔔 Notification in-app</span>
+      <div class="notif-inapp-wrap">
+        <div class="notif-inapp-header">
+          <span class="notif-inapp-header-title">🔔 Notifications</span>
+          <span class="notif-inapp-badge">1</span>
+        </div>
+        <div class="notif-inapp-item unread">
+          <div class="notif-inapp-item-dot"></div>
+          <div class="notif-inapp-item-body">
+            <div class="notif-inapp-item-msg">🎭 Stage annulé : <strong>Samedi 11 avril 2026</strong></div>
+            <div class="notif-inapp-item-time">À l'instant</div>
+          </div>
+        </div>
+        <div class="notif-inapp-footer">Tout marquer comme lu</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- MILONGA LA DOLCE VITA                                          -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="milonga-dv">
+  <div class="section-title">🎶 Paramètres → Milonga La Dolce Vita — Dates</div>
+  <div class="section-sub">Destinataires : tous les élèves tango inscrits (Paris + Vincennes) · Saison active uniquement</div>
+
+  <div class="action-row">
+
+    <div class="action-col">
+      <div class="action-col-title">➕ Ajout d'une date</div>
+      <div class="trigger">
+        <span class="trigger-icon">⚡</span>
+        <div class="trigger-text"><strong>Déclencheur</strong> : admin saisit une ou plusieurs dates et clique "Ajouter"</div>
+      </div>
+      <span class="channel-badge channel-inapp">🔔 Notification in-app</span>
+      <div class="notif-inapp-wrap">
+        <div class="notif-inapp-header">
+          <span class="notif-inapp-header-title">🔔 Notifications</span>
+          <span class="notif-inapp-badge">1</span>
+        </div>
+        <div class="notif-inapp-item unread">
+          <div class="notif-inapp-item-dot"></div>
+          <div class="notif-inapp-item-body">
+            <div class="notif-inapp-item-msg">🎶 Nouvelle date milonga <strong>La Dolce Vita</strong> : <strong>Dimanche 22 mars 2026</strong></div>
+            <div class="notif-inapp-item-time">À l'instant</div>
+          </div>
+        </div>
+        <div class="notif-inapp-footer">Tout marquer comme lu</div>
+      </div>
+    </div>
+
+    <div class="action-col">
+      <div class="action-col-title">✕ Suppression d'une date</div>
+      <div class="trigger">
+        <span class="trigger-icon">⚡</span>
+        <div class="trigger-text"><strong>Déclencheur</strong> : admin clique ✕ sur une date de milonga</div>
+      </div>
+      <span class="channel-badge channel-inapp">🔔 Notification in-app</span>
+      <div class="notif-inapp-wrap">
+        <div class="notif-inapp-header">
+          <span class="notif-inapp-header-title">🔔 Notifications</span>
+          <span class="notif-inapp-badge">1</span>
+        </div>
+        <div class="notif-inapp-item unread">
+          <div class="notif-inapp-item-dot"></div>
+          <div class="notif-inapp-item-body">
+            <div class="notif-inapp-item-msg">🎶 Milonga <strong>La Dolce Vita</strong> annulée : <strong>Dimanche 22 mars 2026</strong></div>
+            <div class="notif-inapp-item-time">À l'instant</div>
+          </div>
+        </div>
+        <div class="notif-inapp-footer">Tout marquer comme lu</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- MILONGA LE COLECTIVO                                           -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="milonga-co">
+  <div class="section-title">🎶 Paramètres → Milonga Le Colectivo — Dates</div>
+  <div class="section-sub">Destinataires : tous les élèves tango inscrits (Paris + Vincennes) · Saison active uniquement</div>
+
+  <div class="action-row">
+
+    <div class="action-col">
+      <div class="action-col-title">➕ Ajout d'une date</div>
+      <div class="trigger">
+        <span class="trigger-icon">⚡</span>
+        <div class="trigger-text"><strong>Déclencheur</strong> : admin saisit une ou plusieurs dates et clique "Ajouter"</div>
+      </div>
+      <span class="channel-badge channel-inapp">🔔 Notification in-app</span>
+      <div class="notif-inapp-wrap">
+        <div class="notif-inapp-header">
+          <span class="notif-inapp-header-title">🔔 Notifications</span>
+          <span class="notif-inapp-badge">1</span>
+        </div>
+        <div class="notif-inapp-item unread">
+          <div class="notif-inapp-item-dot"></div>
+          <div class="notif-inapp-item-body">
+            <div class="notif-inapp-item-msg">🎶 Nouvelle date milonga <strong>Le Colectivo</strong> : <strong>Samedi 28 mars 2026</strong></div>
+            <div class="notif-inapp-item-time">À l'instant</div>
+          </div>
+        </div>
+        <div class="notif-inapp-footer">Tout marquer comme lu</div>
+      </div>
+    </div>
+
+    <div class="action-col">
+      <div class="action-col-title">✕ Suppression d'une date</div>
+      <div class="trigger">
+        <span class="trigger-icon">⚡</span>
+        <div class="trigger-text"><strong>Déclencheur</strong> : admin clique ✕ sur une date de milonga</div>
+      </div>
+      <span class="channel-badge channel-inapp">🔔 Notification in-app</span>
+      <div class="notif-inapp-wrap">
+        <div class="notif-inapp-header">
+          <span class="notif-inapp-header-title">🔔 Notifications</span>
+          <span class="notif-inapp-badge">1</span>
+        </div>
+        <div class="notif-inapp-item unread">
+          <div class="notif-inapp-item-dot"></div>
+          <div class="notif-inapp-item-body">
+            <div class="notif-inapp-item-msg">🎶 Milonga <strong>Le Colectivo</strong> annulée : <strong>Samedi 28 mars 2026</strong></div>
+            <div class="notif-inapp-item-time">À l'instant</div>
+          </div>
+        </div>
+        <div class="notif-inapp-footer">Tout marquer comme lu</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- YOGA                                                           -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section" id="yoga">
+  <div class="section-title">🧘 Paramètres → Yoga — Dates</div>
+  <div class="section-sub">Destinataires : tous les élèves yoga inscrits · Canal : email Brevo (pas de notification in-app) · Saison active uniquement</div>
+
+  <!-- AJOUT SEUL -->
+  <div class="block">
+    <div class="block-label"><strong>YD-ajout</strong> &nbsp;·&nbsp; <em>Déclenché quand l'admin enregistre les dates yoga et qu'au moins une date a été ajoutée</em></div>
+    <div class="trigger">
+      <span class="trigger-icon">⚡</span>
+      <div class="trigger-text"><strong>Déclencheur</strong> : admin modifie le textarea yoga et clique "💾 Enregistrer dates yoga" — diff détecte des dates ajoutées</div>
+    </div>
+    <span class="channel-badge channel-email">📧 Email Brevo</span>
+    <div class="email-subj"><span>📅 Nouveau cours de yoga ajouté — Tango &amp; Vous</span></div>
+    <div class="email-wrap">
+      <div style="background:#fff;font-family:Arial,sans-serif;">
+        <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+          <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin &amp; yoga</div>
+        </div>
+        <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
+          <span style="font-size:14px;font-weight:700;color:#2e7d32;">📅 Nouvelle date de yoga ajoutée</span>
+        </div>
+        <div style="padding:28px 24px;">
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour,</p>
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Des modifications ont été apportées au calendrier de yoga :</p>
+          <div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:8px;padding:14px 18px;margin:0 0 16px;">
+            <p style="font-size:13px;font-weight:700;color:#2e7d32;margin:0 0 8px;">📅 Date ajoutée</p>
+            <ul style="margin:0;padding-left:18px;">
+              <li style="margin:4px 0;color:#2e7d32;"><strong>+ Mardi 8 septembre 2026</strong></li>
+            </ul>
+          </div>
+          <p style="font-size:14px;color:#888;margin:20px 0 0;">Pour toute question, n'hésitez pas à nous contacter.</p>
+          <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
+          <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
+          <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+        </div>
+        <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+          <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+          <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPRESSION SEULE -->
+  <div class="block">
+    <div class="block-label"><strong>YD-suppression</strong> &nbsp;·&nbsp; <em>Déclenché quand l'admin enregistre les dates yoga et qu'au moins une date a été retirée</em></div>
+    <div class="trigger">
+      <span class="trigger-icon">⚡</span>
+      <div class="trigger-text"><strong>Déclencheur</strong> : admin retire une date du textarea yoga et clique "💾 Enregistrer dates yoga" — diff détecte des dates supprimées</div>
+    </div>
+    <span class="channel-badge channel-email">📧 Email Brevo</span>
+    <div class="email-subj"><span>⚠️ Cours de yoga annulé — Tango &amp; Vous</span></div>
+    <div class="email-wrap">
+      <div style="background:#fff;font-family:Arial,sans-serif;">
+        <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+          <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin &amp; yoga</div>
+        </div>
+        <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+          <span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Date de yoga annulée</span>
+        </div>
+        <div style="padding:28px 24px;">
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour,</p>
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Des modifications ont été apportées au calendrier de yoga :</p>
+          <div style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:14px 18px;margin:0 0 16px;">
+            <p style="font-size:13px;font-weight:700;color:#c62828;margin:0 0 8px;">✕ Date annulée</p>
+            <ul style="margin:0;padding-left:18px;">
+              <li style="margin:4px 0;color:#c62828;"><strong>✕ Mardi 23 septembre 2026</strong></li>
+            </ul>
+          </div>
+          <p style="font-size:14px;color:#888;margin:20px 0 0;">Pour toute question, n'hésitez pas à nous contacter.</p>
+          <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
+          <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
+          <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+        </div>
+        <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+          <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+          <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AJOUT + SUPPRESSION EN MÊME TEMPS -->
+  <div class="block">
+    <div class="block-label"><strong>YD-mix</strong> &nbsp;·&nbsp; <em>Déclenché quand l'admin enregistre et que le diff contient à la fois des ajouts ET des suppressions</em></div>
+    <div class="trigger">
+      <span class="trigger-icon">⚡</span>
+      <div class="trigger-text"><strong>Déclencheur</strong> : admin modifie plusieurs lignes du textarea yoga et clique "💾 Enregistrer" — un seul email couvre toutes les modifications</div>
+    </div>
+    <span class="channel-badge channel-email">📧 Email Brevo</span>
+    <div class="email-subj"><span>📅 Modifications de vos cours de yoga — Tango &amp; Vous</span></div>
+    <div class="email-wrap">
+      <div style="background:#fff;font-family:Arial,sans-serif;">
+        <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+          <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+          <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin &amp; yoga</div>
+        </div>
+        <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+          <span style="font-size:14px;font-weight:700;color:#e65100;">📅 Modification de vos cours de yoga</span>
+        </div>
+        <div style="padding:28px 24px;">
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour,</p>
+          <p style="font-size:15px;color:#333;margin:0 0 16px;">Des modifications ont été apportées au calendrier de yoga :</p>
+          <div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:8px;padding:14px 18px;margin:0 0 12px;">
+            <p style="font-size:13px;font-weight:700;color:#2e7d32;margin:0 0 8px;">📅 Dates ajoutées</p>
+            <ul style="margin:0;padding-left:18px;">
+              <li style="margin:4px 0;color:#2e7d32;"><strong>+ Mardi 8 septembre 2026</strong></li>
+              <li style="margin:4px 0;color:#2e7d32;"><strong>+ Mardi 15 septembre 2026</strong></li>
+            </ul>
+          </div>
+          <div style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:14px 18px;margin:0 0 16px;">
+            <p style="font-size:13px;font-weight:700;color:#c62828;margin:0 0 8px;">✕ Date annulée</p>
+            <ul style="margin:0;padding-left:18px;">
+              <li style="margin:4px 0;color:#c62828;"><strong>✕ Mardi 23 septembre 2026</strong></li>
+            </ul>
+          </div>
+          <p style="font-size:14px;color:#888;margin:20px 0 0;">Pour toute question, n'hésitez pas à nous contacter.</p>
+          <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
+          <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
+          <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+        </div>
+        <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+          <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+          <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /yoga -->
+
+</body>
+</html>
