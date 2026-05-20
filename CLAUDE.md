@@ -78,7 +78,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
   - SQL à exécuter si colonnes absentes : `ALTER TABLE inscriptions_cours ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false; ALTER TABLE cours_yoga ADD COLUMN IF NOT EXISTS paiement_sorano BOOLEAN DEFAULT false;`
 - **`inscriptions_stages`** : inscriptions aux stages — ⚠️ colonne `telephone` (pas `tel`)
 - **`inscriptions_essai`** : cours d'essai tango — colonne `tel`
-- **`inscriptions_essai_yoga`** : cours d'essai yoga — table séparée. Colonnes : `prenom, nom, email, tel, date_essai, cours, gratuit, statut, presence_confirmee`. `statut` toujours `'demande'` à l'inscription (admin valide manuellement). ⚠️ Table distincte de `inscriptions_essai` — ne pas confondre.
+- **`inscriptions_essai_yoga`** : cours d'essai yoga — table séparée. Colonnes : `prenom, nom, email, tel, date_essai, cours, gratuit, statut, presence_confirmee`. `statut` toujours `'confirme'` à l'inscription si une place est disponible — **pas de validation manuelle admin** (contrairement à l'essai tango). ⚠️ Table distincte de `inscriptions_essai` — ne pas confondre.
 - **`presences`** : pointage des présences
 - **`cours_particuliers`** : cours particuliers
 - **`publications`** : publications/annonces
@@ -510,12 +510,14 @@ La saison du formulaire (`MODE`) détermine automatiquement quelle grille utilis
 - Fallback hardcodé dans le fichier si localStorage absent
 - Filtre dynamique : seulement les **20 prochaines dates futures** affichées (`slice(0, 20)`)
 - Cours **gratuits** : les **2 premiers cours de septembre** de chaque saison (détectés automatiquement par `estGratuit()`)
-- Prix pour les dates non gratuites : lu depuis `localStorage.tev_tarifs_actifs`, fallback `15€`
+- Prix pour les dates non gratuites : lu depuis `localStorage.tev_tarifs_actifs` (clé `tev_params_yoga_<sai>.tarifs.yoga_essai`) — zéro valeur par défaut hardcodée
 - Pour mettre à jour les dates : Paramètres admin → Yoga → Dates
 - **Table cible** : `inscriptions_essai_yoga` (pas `inscriptions_essai`)
 - **Saison** : déterminée depuis la date elle-même via `dateAppartientSaison()` — pas besoin de stocker un champ `saison`
+- **Statut à l'inscription** : `'confirme'` directement (pas `'demande'`) — **pas de validation manuelle admin**
 - **Après soumission** : écran de succès + compte à rebours 8s → `restart()` + bouton manuel "← Retour"
 - **Ordre impératif** : INSERT Supabase **avant** BroadcastChannel (règle iframe détaché — voir CLAUDE.md)
+- **Email admin** : `regardsepose@gmail.com` — toutes les notifications yoga admin vont à cette adresse
 
 ## Règles métier — formulaires publics
 
@@ -942,44 +944,45 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 
 #### Règles fondamentales
 - **Pas de notion de rôle ni de couple** — individuel uniquement.
-- **Statut initial toujours `'demande'`** — l'admin valide manuellement depuis l'onglet Essai Yoga.
+- **Inscription automatique** — pas de validation manuelle admin. Si une place est disponible (max 14 / cours), `statut='confirme'` dès l'inscription. Email Y1 envoyé immédiatement.
+- **Email admin yoga** : `regardsepose@gmail.com` (pas `tangoetvous@gmail.com`)
 - **Table** : `inscriptions_essai_yoga` (distincte de `inscriptions_essai`).
 - **Cours** : `'yin'`, `'hatha'`, ou `'forfait'` (forfait = yin + hatha les deux jours).
 - **Gratuit** : les 2 premiers cours de septembre de chaque saison (`estGratuit()` dans le formulaire).
-- **Tarif** : depuis `tev_params_yoga_<sai>.tarifs.yoga_essai`, fallback 15€.
+- **Tarif** : depuis `tev_params_yoga_<sai>.tarifs.yoga_essai` — zéro hardcodé, zéro valeur par défaut.
 - **Horaires + lieu** : depuis `tev_params_yoga_<sai>.horaires` et `.adresse` — zéro hardcodé.
 - **Livrets** : `tev_params_yoga_<sai>.livret.url_yin` / `url_hatha` — jamais hardcodés.
-- **Action élève via email** : `PATCH /api/essai-yoga/confirmer?id=...&token=...` → `presence_confirmee=true` → badge 👍 sur fiche admin.
+- **Lien AssoConnect yoga** : depuis `tev_params_yoga_<sai>.lien_assoconnect` — utilisé dans Y-J1a.
+- **Action élève via email** : `PATCH /api/essai-yoga/confirmer?id=...&token=...` → `presence_confirmee=true` → **badge 👍 sur la fiche admin Yoga → Essai yoga**.
 - **Quotas yoga** : `CAP_YOGA=14` par cours. Vérifiés dans `essai-yoga.html` avant INSERT.
+- **Y2 obsolète** : Y2 n'est plus envoyé automatiquement (l'inscription est directement confirmée via Y1). Y2 peut être renvoyé manuellement depuis la fiche admin si nécessaire.
 
 #### Catalogue emails élève
 
 | Code | Déclencheur | Destinataire | Contenu clé |
 |------|-------------|--------------|-------------|
-| **Y0** | Toute inscription | Admin (tangoetvous@gmail.com) | Header admin · encadré or : nom/email/tel/cours/date/gratuit/statut · badge ⏳ Att. validation · "Validation manuelle requise" · boutons 📞/✉️/SMS/admin |
-| **YI0** | Inscription directe par l'admin | Admin | Header admin · encadré or : nom/email/tel/cours/saison/paiement/montant · badge ✓ Inscrit·e · "Email YI1 peut être envoyé manuellement" |
-| **Y1** | Inscription reçue (statut=`'demande'`) | Élève | Bandeau orange ⏳ · yoga-box (cours, date, horaire, lieu) · encadré explication : "Votre demande a été reçue, nous confirmons selon disponibilités" · bouton "Nous contacter" |
-| **Y2 >3j** | Admin valide → `'confirme'`, **>3j** avant le cours | Élève | Bandeau vert ✓ · yoga-box complète · "Vous recevrez un rappel 3 jours avant votre cours" · livret |
-| **Y2 ≤3j** | Admin valide → `'confirme'`, **≤3j** avant le cours | Élève | Bandeau vert ✓ · yoga-box · bouton 👍 vert "Je confirme ma présence" · encadré prévenance |
-| **Y3** | Cron quotidien, J-3 avant la date | Élève `confirme` | Bandeau bleu 🗓 · yoga-box · bouton 👍 vert (au-dessus de l'adresse) · encadré orange "En cas d'empêchement, prévenez-nous même au dernier moment" |
-| **YI1** | Inscription validée / premier pointage yoga | Élève | Bandeau vert ✓ Bienvenue · yoga-box avec horaires hebdomadaires · checklist (tenue, tapis, ponctualité, pas manger avant) · lien livret · bouton "Accéder à mon espace élève →" |
+| **Y0** | Toute inscription | Admin (regardsepose@gmail.com) | Header admin · encadré or : nom/email/tel/cours/date/gratuit/statut · badge ✓ Confirmé·e automatiquement · note "Inscription automatique" · boutons 📞/✉️/SMS/admin |
+| **YI0** | Inscription directe par l'admin | Admin (regardsepose@gmail.com) | Header admin · encadré or : nom/email/tel/cours/saison/paiement/montant · badge ✓ Inscrit·e · "Email YI1 peut être envoyé manuellement" |
+| **Y1** | Inscription confirmée automatiquement (place disponible) | Élève | Bandeau vert ✓ · yoga-box (cours, date, horaire depuis params, lieu depuis params, tarif depuis params) · encadré prévenance annulation · bouton "Nous contacter" |
+| **Y2** | ~~Plus envoyé automatiquement~~ — renvoi manuel uniquement si nécessaire | Élève | Bandeau vert ✓ · yoga-box · si >3j : "rappel J-3 à venir" · si ≤3j : bouton 👍 + encadré prévenance |
+| **Y3** | Cron quotidien, J-3 avant la date | Élève `confirme` | Bandeau bleu 🗓 · yoga-box · bouton 👍 vert · encadré orange "En cas d'empêchement, prévenez-nous même au dernier moment" · clic 👍 → badge 👍 sur fiche admin |
+| **YI1** | Inscription régulière validée | Élève | Bandeau vert ✓ Bienvenue · yoga-box avec horaires hebdomadaires · checklist (tenue, tapis, ponctualité) · lien livret depuis params |
 | **Y-mod** | Admin modifie date/cours d'un essai yoga (✏️) | Élève | Bandeau bleu 📋 · yoga-box avec ancienne date barrée + nouvelle date en vert · bouton "Nous contacter" |
-| **Y-J1a** | Cron lendemain essai yoga · élève présent | Élève | Bandeau vert ✓ "On espère que ce cours vous a plu !" · yoga-box "Rejoindre les cours réguliers" (yin/hatha/forfait, tarifs depuis params) · bouton AssoConnect |
+| **Y-J1a** | Cron lendemain essai yoga · élève présent | Élève | Bandeau vert ✓ · yoga-box "Rejoindre les cours réguliers" (yin/hatha/forfait, tarifs + jours depuis params) · bouton AssoConnect depuis `tev_params_yoga_<sai>.lien_assoconnect` |
 | **Y-J1b** | Cron lendemain essai yoga · élève `confirme` non présent non annulé | Élève | Bandeau orange 💙 "Vous nous avez manqué" · bouton "↩ Choisir une nouvelle date" (`essai-yoga.html`) · note pas de pénalité |
 
 #### Notifications admin yoga (3 canaux)
 
-**Toast** : `🧘 Nouvelle demande essai yoga : Marie DUPONT`
+**Toast** : `🧘 Essai yoga confirmé : Marie DUPONT`
 
 **Panel 🔔** (table `notifications`) :
 
 | Scénario | Couleur | Message |
 |----------|---------|---------|
-| Nouvel essai yoga reçu | jaune `#1f1800`/`#e8c84a` | `🧘 Demande essai yoga — Marie DUPONT · Jeudi 24 sept. · Yin yoga · ⏳ Att. validation · → Yoga → Essai` |
-| Essai yoga confirmé (admin valide) | vert `#0f1f0f`/`#4caf50` | `🧘 Essai yoga confirmé — Marie DUPONT · Jeudi 24 sept. · ✓ Confirmé·e · Email Y2 envoyé · → Yoga → Essai` |
-| Présence confirmée 👍 (Y3) | vert clair | `👍 Présence confirmée — Marie DUPONT · Essai yoga Jeudi 24 sept.` |
+| Nouvel essai yoga (auto-confirmé) | vert `#0f1f0f`/`#4caf50` | `🧘 Essai yoga — Marie DUPONT · Jeudi 24 sept. · Yin yoga · ✓ Confirmé·e automatiquement · Email Y1 envoyé · → Yoga → Essai` |
+| Présence confirmée 👍 (Y3) | vert clair | `👍 Présence confirmée — Marie DUPONT · Essai yoga Jeudi 24 sept. · badge 👍 sur la fiche` |
 
-**Push OS admin** : `🧘 Demande essai yoga — Marie DUPONT · Jeudi 24 sept. · Yin yoga`
+**Push OS admin** : `🧘 Essai yoga — Marie DUPONT · Jeudi 24 sept. · Yin yoga · ✓ auto`
 
 #### Notifications élève yoga (2 canaux)
 
@@ -987,8 +990,8 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 
 | Déclencheur | Message |
 |-------------|---------|
-| Y2 envoyé | `🧘 Votre essai yoga du Jeudi 24 septembre est confirmé` |
-| Y3 envoyé (cron J-3) | `📅 Rappel : votre essai yoga a lieu dans 3 jours — Jeudi 24 sept. · 19h00–20h15` |
+| Y1 envoyé (confirmation auto) | `🧘 Votre essai yoga du Jeudi 24 septembre est confirmé` |
+| Y3 envoyé (cron J-3) | `📅 Rappel : votre essai yoga a lieu dans 3 jours — Jeudi 24 sept. · [horaire depuis params]` |
 
 **Pas de push OS élève pour les emails essai yoga** (Y1, Y2, Y3, Y-mod, Y-J1a, Y-J1b) — les personnes en cours d'essai ne sont pas encore élèves et n'ont pas la PWA installée.
 
