@@ -10172,6 +10172,15 @@ function sauverModifAgenda() {
   if (type === 'stage') sauverDatesStages(saisonActive());
   if (!IS_DEMO) TEV.setParam('tev_agenda_overrides', agendaOverrides).catch(function(){});
   _broadcastAdminSync('agendaUpdate', {type:type, date:date, action:action, note:note, newDate:newDate, newHeure:newHeure, newLieu:newLieu});
+  // Notifications élèves (même logique que Paramètres)
+  if (!IS_DEMO && (action === 'annule' || action === 'reporte')) {
+    var _nType = _isMilongaType(type) ? 'milonga' : (type === 'stage' ? 'stages' : type);
+    var _nOpts = _isMilongaType(type) ? {milNom: _milNomFromType(type)} : {};
+    _notifDateChange(_nType, [date], 'suppression', _nOpts);
+    if (action === 'reporte' && newDate) {
+      setTimeout(function(){ _notifDateChange(_nType, [newDate], 'ajout', _nOpts); }, 300);
+    }
+  }
   renderTab();
 }
 
@@ -10181,6 +10190,17 @@ function supprimerModifAgenda(id) {
     _undoMutateAgendaArray(m);
     if (_isMilongaType(m.type)) sauverMilongas(saisonActive());
     _broadcastAdminSync('agendaUpdate', {type:m.type, date:m.date, action:'annule_modif', origAction:m.action, newDate:m.newDate});
+    // Notifications élèves lors de la restauration d'une modification
+    if (!IS_DEMO && (m.action === 'annule' || m.action === 'reporte')) {
+      var _nTypeU = _isMilongaType(m.type) ? 'milonga' : (m.type === 'stage' ? 'stages' : m.type);
+      var _nOptsU = _isMilongaType(m.type) ? {milNom: _milNomFromType(m.type)} : {};
+      if (m.action === 'annule') {
+        _notifDateChange(_nTypeU, [m.date], 'ajout', _nOptsU); // date originale restaurée
+      } else if (m.action === 'reporte') {
+        _notifDateChange(_nTypeU, [m.newDate], 'suppression', _nOptsU); // date reportée supprimée
+        setTimeout(function(){ _notifDateChange(_nTypeU, [m.date], 'ajout', _nOptsU); }, 300); // date originale restaurée
+      }
+    }
   }
   agendaModifs = agendaModifs.filter(function(x){return x.id!==id;});
   saveCoursDatesRemote();
@@ -10198,6 +10218,7 @@ function ajouterDatesLot() {
   if (!raw) { afficherToast('⚠️ Aucune date saisie'); return; }
   var lines = raw.split(/\n/).map(function(l){return l.trim();}).filter(Boolean);
   var added = 0;
+  var addedDates = [];
   lines.forEach(function(line) {
     var d = '';
     var m1 = line.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
@@ -10206,15 +10227,15 @@ function ajouterDatesLot() {
     else if (m2) d = line;
     if (!d || isNaN(new Date(d+'T12:00:00').getTime())) return;
     if (type==='paris' && COURS_PARIS.indexOf(d)<0) {
-      COURS_PARIS.push(d); COURS_PARIS.sort(); added++;
+      COURS_PARIS.push(d); COURS_PARIS.sort(); added++; addedDates.push(d);
     } else if (type==='vincennes' && COURS_VINCENNES.indexOf(d)<0) {
-      COURS_VINCENNES.push(d); COURS_VINCENNES.sort(); added++;
+      COURS_VINCENNES.push(d); COURS_VINCENNES.sort(); added++; addedDates.push(d);
     } else if (_isMilongaType(type)) {
       var _ddL=new Date(d+'T12:00:00'),_mJL=['Dim.','Lun.','Mar.','Mer.','Jeu.','Ven.','Sam.'],_mLL=_mJL[_ddL.getDay()]+' '+_ddL.getDate()+' '+MOIS_FR[_ddL.getMonth()].slice(0,3)+' '+_ddL.getFullYear();
       (MILONGAS||[]).filter(_milFilter(type)).forEach(function(mil){if(!mil.dates.find(function(x){return x.date===d;})){mil.dates.push({date:d,label:_mLL});mil.dates.sort(function(a,b){return a.date.localeCompare(b.date);});}});
-      added++;
+      added++; addedDates.push(d);
     } else if (type==='yoga' && COURS_YOGA.indexOf(d)<0) {
-      COURS_YOGA.push(d); COURS_YOGA.sort(); added++;
+      COURS_YOGA.push(d); COURS_YOGA.sort(); added++; addedDates.push(d);
     } else if (type==='stage' && !STAGES.find(function(s){return s.date===d;})) {
       var dd = new Date(d+'T12:00:00');
       var lbl = label || ('Sam. '+dd.getDate()+'/'+(dd.getMonth()+1)+'/'+dd.getFullYear());
@@ -10222,7 +10243,7 @@ function ajouterDatesLot() {
       STAGES.sort(function(a,b){return a.date.localeCompare(b.date);});
       if (!adminData.stages) adminData.stages = {};
       if (!adminData.stages[d]) adminData.stages[d] = {label:lbl, inscrits:[]};
-      added++;
+      added++; addedDates.push(d);
     }
   });
   afficherToast(added>0 ? '✓ '+added+' date'+(added>1?'s':'')+' ajoutée'+(added>1?'s':'')+' à l\'agenda' : '⚠️ Aucune date valide reconnue');
@@ -10230,6 +10251,12 @@ function ajouterDatesLot() {
     if (_isMilongaType(type)) sauverMilongas(saisonActive());
     else if (type === 'stage') sauverDatesStages(saisonActive());
     saveCoursDatesRemote();
+    // Notifications élèves (même logique que Paramètres)
+    if (!IS_DEMO && addedDates.length) {
+      var _nTypeLot = _isMilongaType(type) ? 'milonga' : (type === 'stage' ? 'stages' : type);
+      var _nOptsLot = _isMilongaType(type) ? {milNom: _milNomFromType(type)} : {};
+      _notifDateChange(_nTypeLot, addedDates, 'ajout', _nOptsLot);
+    }
   }
   renderTab();
 }
