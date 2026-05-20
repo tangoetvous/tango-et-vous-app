@@ -123,9 +123,11 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .btn-point.btn-warn{background:var(--warn-bg);color:var(--warn-text);border-color:var(--warn);}
 .btn-point.btn-ghost{background:transparent;color:var(--dim);border-color:var(--border);}
 .btn-pres{border-color:var(--ok);color:var(--ok-text);}
-.btn-pres.on{background:var(--ok-bg);}
+.btn-pres.on{background:#2e7d32;color:#fff;border-color:#2e7d32;}
+.btn-pres.off{opacity:.3;pointer-events:none;}
 .btn-abs{border-color:var(--err);color:var(--err-text);}
-.btn-abs.on{background:var(--err-bg);}
+.btn-abs.on{background:#c62828;color:#fff;border-color:#c62828;}
+.btn-abs.off{opacity:.3;pointer-events:none;}
 .inline-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
 .saison-archivee .btn{display:none!important;}
 .saison-archivee .btn-point{display:none!important;}
@@ -7324,8 +7326,8 @@ function renderEssai() {
           +pastille
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
           +'<button class="btn-heart'+(e.interesse?' on':'')+'" data-action="toggle-interet" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'" title="Élève intéressant·e">'+(e.interesse?'❤️':'🤍')+'</button>'
-          +'<button class="btn-point btn-pres'+(e.present===true?' on':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✓</button>'
-          +'<button class="btn-point btn-abs'+(e.present===false?' on':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
+          +'<button class="btn-point btn-pres'+(e.present===true?' on':e.present===false?' off':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✓</button>'
+          +'<button class="btn-point btn-abs'+(e.present===false?' on':e.present===true?' off':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
           +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
           +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +'</div></div>';
@@ -7590,7 +7592,7 @@ function pointerEssai(date, email, present, id) {
     ? adminData.essai.find(function(x){return String(x.id)===String(id);})
     : adminData.essai.find(function(x){return x.email===email&&x.date===date;});
   if (e) { e.present = present; e.presence_declaree = present; }
-  // Feedback visuel immédiat : mettre à jour les classes directement dans le DOM
+  // Feedback visuel immédiat dans le DOM existant (avant renderTab)
   var tc = document.getElementById('tab-content');
   if (tc) {
     var sid = (id && String(id)) || '';
@@ -7600,8 +7602,13 @@ function pointerEssai(date, email, present, id) {
     var absBtn = sid
       ? tc.querySelector('[data-action="pointer-essai-abs"][data-id="'+sid+'"]')
       : tc.querySelector('[data-action="pointer-essai-abs"][data-email="'+email+'"][data-date="'+date+'"]');
-    if (presBtn) presBtn.classList.toggle('on', present === true);
-    if (absBtn)  absBtn.classList.toggle('on',  present === false);
+    if (present === true) {
+      if (presBtn) { presBtn.classList.add('on'); presBtn.classList.remove('off'); }
+      if (absBtn)  { absBtn.classList.remove('on'); absBtn.classList.add('off'); }
+    } else {
+      if (presBtn) { presBtn.classList.remove('on'); presBtn.classList.add('off'); }
+      if (absBtn)  { absBtn.classList.add('on'); absBtn.classList.remove('off'); }
+    }
   }
   if (!IS_DEMO) {
     var payload = { presence_declaree: present };
@@ -7610,6 +7617,7 @@ function pointerEssai(date, email, present, id) {
       : TEV.client.from('inscriptions_essai').update(payload).eq('email',email).eq('date_essai',date);
     Promise.resolve(q).catch(function(){});
   }
+  renderTab(); // met à jour les compteurs ✓/✗/? dans l'en-tête de la date
 }
 function toggleMoisAcc(id) {
   var body = document.getElementById(id);
