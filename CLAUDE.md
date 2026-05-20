@@ -1105,12 +1105,13 @@ app.tangoetvous.fr
 |------|-------------|--------------|-------------|
 | **C1** | Premier pointage de la saison sur une carte10 | Élève | Bandeau vert ✓ Bienvenue · carte-box (cours, 1/10, date début, expiration estimée) · section PWA (installer l'app, pointer, suivre) · bouton "Accéder à mon espace élève →" |
 | **C2** | Élève clique "↻ Renouveler sans payer" (carte à 10/10) | Élève | Bandeau orange ⚠️ · carte-box (0/10, ⚠️ Non payée) · encadré "Finalisez votre paiement sur AssoConnect" · bouton AssoConnect `#LIEN_ASSOCONNECT_RENOUV` |
-| **C3 (E10)** | Admin renouvelle manuellement depuis Cartes 10 → Détails | Élève | Bandeau vert ✓ · carte-box (0/10, cours, saison) · "À très bientôt !" · bouton espace élève |
+| **C2b** | Admin clique "Non payé" dans la modal Renouveler (Cartes 10 → Détails) | Élève | Identique C2 — bandeau orange ⚠️ · carte-box (0/10, ⚠️ Non payée) · bouton AssoConnect renouv |
+| **C3 (E10)** | Admin choisit "Payé" dans la modal Renouveler → valide "✓ Enregistrer le paiement" | Élève | Bandeau vert ✓ · carte-box (0/10, cours, saison) · "À très bientôt !" · bouton espace élève |
 | **C4** | Cron : lendemain du dernier cours Paris de juin | Élèves avec cours restants | Bandeau bleu 📅 · "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" · lien AssoConnect pré-inscriptions · avertissement expiration fin août |
 | **C5** | Cron quotidien le 25 août | Élèves avec cours restants non ré-inscrits | Bandeau orange ⚠️ Dernier rappel · "Ces cours expireront le 31 août si vous ne vous réinscrivez pas" · bouton AssoConnect |
 | **C6** | Vendredi matin (Paris) / mardi matin (Vincennes) — cron | Élève carte10 absent 2 cours consécutifs | Ton "tu" (informel) · "Coucou [Prénom], on ne t'a pas vu·e aux 2 derniers cours. Tout va bien ?" · rappel cours préservés (N restants) · contact tel + email · Signature "Florencia & Jérémy" |
-| **C-pay** | Admin valide le paiement d'une carte (modal "✓ Enregistrer" dans Cartes 10 → `paye=true`) | Élève | Bandeau vert ✓ · carte-box (✓ Payée, montant, mode, date, cours actifs) · "Votre carte est active" · bouton espace élève · Push : "✓ Paiement de N€ enregistré · Votre carte est active" |
-| **C-report** | Admin clique "↩ Reporter" en fin de saison (crée ligne `isReport=true` saison suivante) | Élève | Bandeau vert ✓ · carte-box "Votre carte 2026-2027" (N cours reportés) · bouton pré-inscriptions AssoConnect · Push : "↩ Votre carte reportée · N cours préservés pour 2026-2027" |
+| **C-pay** | Admin clique badge "⚠️ Non payée" ou "✓ Payée" sur une fiche dans Cartes 10 → Détails → valide "✓ Enregistrer" dans le modal paiement | Élève | Bandeau vert ✓ · carte-box (✓ Payée, montant depuis Paramètres, mode, date paiement, cours actifs, expiration depuis `datePremierCours`) · "Votre carte de 10 cours est payée. Bon cours !" · bouton espace élève · Push : "✓ Paiement enregistré · Votre carte est active" |
+| **C-report** | Admin clique "↩ Reporter" en fin de saison (crée ligne `isReport=true` saison suivante) | Élève | Bandeau vert ✓ · carte-box "Votre carte 2026-2027" (N cours reportés) · message "Votre carte vous attend à la rentrée de septembre" · Push : "↩ Votre carte reportée · N cours préservés pour 2026-2027" |
 | **D-msg** | Admin envoie un message dans l'onglet Discussions | Élève | **Pas d'email** — push OS uniquement + notification in-app (`notifications_eleve`) · "💬 Nouveau message — [Prénom admin] : [début message...]" → onglet Discussions |
 
 **Règles C6** : déclenché même si l'élève a déclaré son absence via 🚫. Logique : dates cours depuis `tev_cours_dates` (Paramètres) − présences (`presences` table) = absences. Anti-doublon : colonne `derniere_relance_abs DATE` sur `eleves` (ne renvoie pas si déjà envoyé pour ces 2 mêmes dates). Script Node.js dans `.github/scripts/relance-absences.js` + workflow `relance-absences.yml`.
@@ -1157,12 +1158,13 @@ app.tangoetvous.fr
 
 ### Profil élève
 
-**Fichier de référence** : `preview-emails-cartes-v1.html` (section P0/P1)
+**Fichier de référence** : `preview-emails-cartes-v1.html` (section P1)
 
 | Code | Déclencheur | Destinataire | Contenu clé |
 |------|-------------|--------------|-------------|
-| **P0** | Création d'un profil élève (depuis essai, inscription, stage ou CP) | Admin | Header admin · encadré or : nom/email/tel/source · badge source coloré (orange essai, vert inscription, or stage, violet CP) · lien admin |
-| **P1** | Admin active un profil (statut='Actif') | Élève | Bandeau vert ✓ "Votre espace élève est prêt !" · info-box bleue : étapes numérotées (ouvrir app.tangoetvous.fr → entrer email → clic lien magique → installer l'app) · liste fonctionnalités (pointer, carte, milongas, publications) · bouton "Accéder à mon espace élève →" · note magic link (pas de mot de passe) |
+| **P1** | **J+7 après I03** (inscription validée + payée) — envoyé automatiquement 7 jours après I03 pour encourager l'activation de l'espace élève | Élève | Bandeau vert ✓ "Votre espace élève est prêt !" · info-box bleue : étapes numérotées (ouvrir app.tangoetvous.fr → entrer email → clic lien magique → 4. installer l'appli, iPhone : Partage ↑ → "Sur l'écran d'accueil" · Android : menu ⋮ → "Ajouter") · liste fonctionnalités (pointer, carte, milongas, publications) · bouton "Accéder à mon espace élève →" · note magic link (pas de mot de passe) |
+
+**Note** : P0 (notification admin création profil) supprimé — redondant avec E0/S0/CP0/I0 selon la source d'inscription. L'admin est déjà notifié à chaque étape.
 
 ---
 
