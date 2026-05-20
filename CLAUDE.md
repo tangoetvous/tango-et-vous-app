@@ -849,6 +849,8 @@ if(partEntry){ partEntry.date=newDate; ... }
 - **Délai >3 jours** : S1 et S3 mentionnent "Vous recevrez un rappel 3 jours avant le stage."
 - **Objet** : `Stage Tango & Vous — [Jour JJ Mois] · [HH:MM–HH:MM]` (plage horaire globale de SES slots ce jour-là).
 - **Toutes les données depuis `tev_params_stages_<sai>`** : thèmes, horaires, tarifs, adresse — zéro hardcodé. Tarifs : `st.tarifs || tev_params_stages_<sai>.tarifs`. Adresse : `st.adresse || tev_params_stages_<sai>.adresse`.
+- **Horaires par date — baked à l'inscription** : dans `stages-pwa.html`, `buildSlots(st)` calcule `hor(k) = st.horaires[k] || DEFAULTS_HORAIRES_STAGES[k]` au moment de la soumission. Les horaires réels (y compris les overrides par date configurés dans Paramètres → Stages) sont stockés tels quels dans `donnees.stagesDetail[i].horaire` (ex : `'16h–18h'`). La future Edge Function d'envoi email lit ces horaires depuis la DB — **pas depuis les Paramètres courants**. Conséquence : si l'admin modifie les horaires d'une journée après que des inscriptions ont déjà été prises, les emails de rappel (S4) enverront les horaires de l'époque de l'inscription. C'est le comportement attendu ; en cas de changement tardif, envoyer un email de modification manuellement.
+- **Horaires par défaut (`DEFAULTS_HORAIRES_STAGES` dans `stages-pwa.html`)** : Technique `14h–15h` · Stage 1 `15h–16h30` · Stage 2 `16h30–18h` · Stage 3 `11h30–13h` · Stage 4 `10h–11h30`. Overridables par journée via Paramètres → Stages → Horaires.
 - **Paiement** : "Le règlement se fait sur place. Merci de prévoir l'appoint." — ne jamais préciser le mode de paiement.
 - **`presence_confirmee`** : colonne à ajouter à `inscriptions_stages` via `ALTER TABLE inscriptions_stages ADD COLUMN IF NOT EXISTS presence_confirmee BOOLEAN NOT NULL DEFAULT FALSE;`
 - **Clic bouton 👍** → `PATCH /api/stages/confirmer?id=...&token=...` → `presence_confirmee=true` → 👍 sur la fiche admin Stages.
@@ -874,7 +876,7 @@ Pour chaque date inscrite, l'email contient :
 📅 [Jour JJ Mois AAAA]
 
 [Prénom NOM — Guideur·se]            ← SES slots uniquement
-  • HH:MM–HH:MM — [Thème] (Stage 1h / Technique 1h)
+  • HH:MM–HH:MM — [Thème] (Technique / Stage 1 / Stage 2 / …)
   Prix : [N]€ — [N] stage(s)
 
 [Si couple email partagé — Prénom NOM — Guidé·e]  ← SES slots (peuvent différer)
