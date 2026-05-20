@@ -1,0 +1,37 @@
+name: Essai Yoga — emails J+1 (Y-J1a présent / Y-J1b absent)
+
+on:
+  schedule:
+    # 7h UTC = 9h Paris en été (CEST) · 8h Paris en hiver (CET)
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date cible YYYY-MM-DD (défaut : hier)'
+        required: false
+
+jobs:
+  send-yoga-j1-emails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer emails Y-J1a / Y-J1b
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            TARGET_DATE="${{ github.event.inputs.date }}"
+          else
+            TARGET_DATE=$(date -d "yesterday" +%Y-%m-%d)
+          fi
+          echo "Date cible : $TARGET_DATE"
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            -X POST "https://app.tangoetvous.fr/api/cron/essai-yoga-j1" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -d "{\"date\":\"$TARGET_DATE\"}")
+          HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+          BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS:")
+          echo "Réponse : $BODY"
+          echo "Statut HTTP : $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::Échec de l'envoi (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
