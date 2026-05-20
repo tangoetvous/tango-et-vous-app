@@ -4641,14 +4641,19 @@ async function chargerDonnees() {
               ? Object.assign({},e,{paiement_sorano:_pendingSoranoPayé[e.email]}) : e;
           });
         }
-        // Marquer explicitement les lignes isRenewal (robuste : object ET string pour donnees)
+        // Marquer explicitement les lignes isRenewal et supprimé_de (robuste : object ET string pour donnees)
         ct = ct.map(function(e) {
-          if (e._isRenewalRow) return e;
           var dn = e.donnees;
-          var isRen = false;
-          if (dn && typeof dn === 'object') isRen = !!dn.isRenewal;
-          else if (dn && typeof dn === 'string') { try { isRen = !!(JSON.parse(dn)||{}).isRenewal; } catch(ex) {} }
-          return isRen ? Object.assign({}, e, {_isRenewalRow: true}) : e;
+          var dnObj = null;
+          if (dn && typeof dn === 'object') dnObj = dn;
+          else if (dn && typeof dn === 'string') { try { dnObj = JSON.parse(dn)||{}; } catch(ex) {} }
+          var isRen = !!(dnObj && dnObj.isRenewal);
+          var isSuppInscr = !!(dnObj && dnObj.supprimé_de === 'inscriptions_tango');
+          if (e._isRenewalRow && !isSuppInscr) return e;
+          var patch = {};
+          if (isRen) patch._isRenewalRow = true;
+          if (isSuppInscr) patch._suppriméDeInscriptions = true;
+          return Object.keys(patch).length ? Object.assign({}, e, patch) : e;
         });
         return ct;
       })(),
@@ -8956,11 +8961,15 @@ function renderStages() {
 function supprimerCoursInscr(id) {
   if (!adminData.coursTango) return;
   var e = adminData.coursTango.find(function(x){ return String(x.id)===String(id); });
-  if (e) e.statut = 'supprimé';
+  if (e) {
+    e.statut = 'supprimé';
+    e._suppriméDeInscriptions = true;
+  }
   _pendingSupprimes.add(String(id));
   renderTab();
   if (!IS_DEMO) {
-    Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('id',id))
+    var donneesMerge = Object.assign({}, (e && e.donnees)||{}, {supprimé_de: 'inscriptions_tango'});
+    Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé', donnees: donneesMerge}).eq('id',id))
       .then(function(res){
         if (res && res.error) {
           _pendingSupprimes.delete(String(id));
@@ -11120,7 +11129,11 @@ var STATUT_LBL = {
 function renderCoursTango() {
   var sai = saisonActive();
   var tous = (adminData.coursTango||[]).filter(function(e){return e.statut!=='inscrit'&&e.statut!=='supprimé'&&(e.saison||saisonCourante())===sai;});
-  var supprimesInscr = (adminData.coursTango||[]).filter(function(e){return e.statut==='supprimé'&&!e._isRenewalRow&&(e.saison||saisonCourante())===sai;});
+  var supprimesInscr = (adminData.coursTango||[]).filter(function(e){
+    if(e.statut!=='supprimé'||e._isRenewalRow||(e.saison||saisonCourante())!==sai) return false;
+    var d = e.donnees||{};
+    return e._suppriméDeInscriptions===true || d.supprimé_de==='inscriptions_tango';
+  });
   var nbAV  = tous.filter(function(e){return e.statut==='demande'||e.statut==='attente';}).length;
   var nbAP  = tous.filter(function(e){return e.statut==='valide'||e.statut==='attente_paiement';}).length;
   var nbSup = supprimesInscr.length;
