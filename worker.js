@@ -385,8 +385,8 @@ export default {
         return handleCronCartePonteeJ1(request, env);
       }
 
-      // PATCH /api/stages/confirmer — élève confirme sa présence via lien email (token HMAC)
-      if (pathname === '/api/stages/confirmer' && method === 'PATCH') {
+      // GET /api/stages/confirmer — élève confirme sa présence via lien email (token HMAC)
+      if (pathname === '/api/stages/confirmer' && (method === 'GET' || method === 'PATCH')) {
         return handleStagesConfirmer(request, url, env);
       }
 
@@ -1838,7 +1838,7 @@ async function handleCronCartePonteeJ1(request, env) {
 }
 
 // ================================================================
-// PATCH /api/stages/confirmer — élève confirme sa présence via lien email (token HMAC)
+// GET /api/stages/confirmer — élève confirme sa présence via lien email (token HMAC)
 // Params: email, date (YYYY-MM-DD), token (HMAC(email:date, SUPABASE_ANON).slice(0,32))
 // ================================================================
 async function handleStagesConfirmer(request, url, env) {
