@@ -1189,6 +1189,13 @@ async function finalize() {
     }
   }
 
+  // Emails automatiques via worker (fire and forget)
+  fetch('https://app.tangoetvous.fr/api/notify/inscription-cours', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(msg.data)
+  }).catch(function(){});
+
   // ── Notifier l'admin APRÈS l'INSERT (l'iframe sera retiré du DOM après cette notification)
   // BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
   try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e) {}

@@ -508,6 +508,17 @@ async function soumettre() {
     return;
   }
 
+  // Emails automatiques via worker (fire and forget)
+  fetch('https://app.tangoetvous.fr/api/notify/inscription-essai-yoga', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prenom, nom, email, tel,
+      cours: coursSelectionne, dateIso: date,
+      statut: 'demande', gratuit
+    })
+  }).catch(function(){});
+
   // INSERT réussi → notifier l'admin (BroadcastChannel + localStorage + postMessage)
   const msg = { type:'yogaEssaiInscription', data };
   try { const bc = new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } catch(e){}

@@ -980,6 +980,22 @@ async function soumettre(){
     }
     const {error}=await TEV.client.from('inscriptions_essai').insert(rowsToInsert);
     if(error) throw error;
+    // Emails automatiques via worker (fire and forget)
+    fetch('https://app.tangoetvous.fr/api/notify/inscription-essai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prenom: payload.prenom, nom: payload.nom,
+        email: payload.email.trim().toLowerCase(), tel: payload.tel,
+        role: payload.role, ville: (payload.lieu||'').toLowerCase(),
+        niveau: niveauNorm, dateIso: dateIso,
+        statut: statutFinal, enCouple: enCouple,
+        partPrenom: payload.partPrenom||'', partNom: payload.partNom||'',
+        partEmail: (payload.partEmail||'').trim().toLowerCase(),
+        partRole: payload.partRole||'',
+        gratuit: !!(rowPrincipal.gratuit)
+      })
+    }).catch(function(){});
     _showSuccess();
   } catch(e){
     const msg = e && e.message ? e.message : String(e);
