@@ -368,8 +368,8 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [x] Tester modification cours/paiement/montant → persiste après refresh — CORRIGÉ (2026-05-13, voir session VP)
 - [ ] Installer l'appli sur Mac (PWA déjà prête) : ouvrir admin dans Chrome → icône ⊕ dans la barre d'adresse → Installer
 - [ ] Vérifier formulaires publics (inscription cours, stages, essai) connectés à Supabase
-- [ ] Implémenter emails automatiques via Brevo + Supabase Edge Functions (remplace Code.gs/MailApp qui est inactif) — **inclut la relance absences carte10** (voir section Emails → Cartes 10 → Relance 2 absences)
-- [ ] Implémenter notifications push via FCM + Supabase Edge Functions — IMPORTANT : inclure nettoyage automatique des tokens invalides (FCM retourne les échecs dans la réponse → DELETE FROM fcm_tokens WHERE token IN (échecs))
+- [x] **Emails automatiques + notifications push** — FAIT (session 2026-05-21) : 27 handlers dans worker.js couvrent tous les emails du catalogue (essai tango E0–E15, yoga Y0–YI1, stages S0–S4, inscriptions I02–I04, cartes C1–C6/CX/CP, cours particuliers CP0/CP1, devis D0/D2, Sorano SR1/SR2, activation espace élève P1). FCM push câblé dans 8 handlers. Tables `fcm_tokens` + `notifications_eleve` créées. 7 workflows GitHub Actions créés (E4, S4, Y3, P1, C4, C5, C6). ⚠️ **SQL à exécuter avant premier run C6** : `ALTER TABLE eleves ADD COLUMN IF NOT EXISTS derniere_relance_abs DATE;`
+- [ ] **Nettoyage tokens FCM invalides** — à implémenter : FCM retourne les erreurs dans la réponse → après `sendFcmPush`, lire `result.results` → filtrer `registrationTokenNotRegistered` / `invalidRegistrationToken` → `DELETE FROM fcm_tokens WHERE token IN (...)`. Ajouter dans `sendFcmPush` directement.
 - [ ] **Notifications + emails lors des modifications ✏️ essai** : quand l'admin modifie un essai tango (date/ville/niveau) ou yoga (date/cours) via ✏️, envoyer à l'élève : (1) email Brevo "Votre cours d'essai a été modifié : [détails]" + (2) notification dans `notifications_eleve`. Table `notifications_eleve` à créer (SQL dans section "SQL utiles"). L'UI côté élève (icône 🔔 header, panneau) est déjà prête dans index.html.
 - [ ] Étendre icône 🔔 (badge rouge) + push aux événements suivants : essai tango, essai yoga, demande d'inscription tango, inscription stage, cours particuliers, demande de devis, RSVP milonga depuis espace élève — d'autres cas à lister par l'utilisateur
 - [ ] **Push élève — pas de cours la semaine prochaine** : le lendemain d'un cours, si le prochain cours est à plus de 7 jours, envoyer une notification push à tous les élèves inscrits à ce cours (Paris ou Vincennes). Même logique que le bandeau d'alerte dans l'accueil. Déclencheur : GitHub Actions cron le lendemain de chaque jour de cours (vendredi matin Paris / mardi matin Vincennes), ou Supabase Edge Function. À implémenter en même temps que l'infrastructure FCM.
@@ -1191,7 +1191,7 @@ app.tangoetvous.fr
 - **Montants/tarifs** : toujours lus depuis `tev_params_paris_<sai>.tarifs` (Paramètres → Tango Paris → Tarifs). Aucune valeur hardcodée, aucune valeur par défaut dans les Edge Functions.
 - **Lien renouvellement** (C2, C2b) : `tev_liens_assoconnect[saison].renouv` (Paramètres → Tango Paris → Liens AssoConnect → "Renouvellement carte (10/20 cours)").
 
-**Règles C6** : déclenché même si l'élève a déclaré son absence via 🚫. Logique : dates cours depuis `tev_cours_dates` (Paramètres) − présences (`presences` table) = absences. Anti-doublon : colonne `derniere_relance_abs DATE` sur `eleves` (ne renvoie pas si déjà envoyé pour ces 2 mêmes dates). Script Node.js dans `.github/scripts/relance-absences.js` + workflow `relance-absences.yml`.
+**Règles C6** : déclenché même si l'élève a déclaré son absence via 🚫. Logique : dates cours depuis `tev_cours_dates` (Paramètres) − présences (`presences` table) = absences. Anti-doublon : colonne `derniere_relance_abs DATE` sur `eleves` (ne renvoie pas si déjà envoyé pour ces 2 mêmes dates). Handler : `handleCronRelanceAbsences` dans `worker.js` + workflow `relance-absences.yml` (deux crons : vendredi = Paris, mardi = Vincennes). ⚠️ SQL à exécuter avant premier run : `ALTER TABLE eleves ADD COLUMN IF NOT EXISTS derniere_relance_abs DATE;`
 
 #### Notifications admin cartes (2 canaux)
 
@@ -2797,3 +2797,87 @@ fetch('/api/notify/<route>', {
 ```
 - **Sans JWT** : routes notify côté élève (carte-pointage, inscription-essai, inscription-essai-yoga, inscription-cours, inscription-stage, cours-particulier)
 - **JWT admin requis** : routes notify côté admin (carte-pointee-admin, carte-bienvenue, inscription-cours-validee, inscription-cours-payee, etc.) + tous les `/api/cron/*` (header `X-Cron-Secret` pour les crons GitHub Actions)
+
+## Session 2026-05-21 (suite) — FCM push, crons supplémentaires, C4/C5/C6, câblage admin.html
+
+### ✅ FCM push ajouté dans 8 handlers worker.js
+
+Tous les appels `sendFcmPush` sont fire-and-forget, conditionnés sur `env.FIREBASE_SERVICE_ACCOUNT` :
+
+| Handler | Destinataire | Message push |
+|---------|-------------|--------------|
+| `handleNotifyCarteRenouvellement` | Élève | `⚠️ Nouvelle carte créée — pensez à finaliser votre paiement` |
+| `handleNotifyCartePaiement` | Élève | `✓ Paiement enregistré · Votre carte est active` |
+| `handleNotifyCarteReport` | Élève | `↩ Votre carte reportée · N cours préservés pour saison suivante` |
+| `handleNotifyCartePonteeAdmin` | Élève | `✓ Cours pointé le [date] · N restants` |
+| `handleNotifyCartePointage` | Admin | `📍 Pointage carte — NOM · DATE` |
+| `handleCronCarteExpiree` | Élève (par boucle) | `⏰ Votre carte de 10 cours a expiré — N cours non utilisés` |
+| `handleNotifyInscriptionStage` | Admin | `🎭 Inscription stage — NOM · DATE` |
+| `handleNotifyCoursParticulier` | Admin | `🎯 Cours particulier — NOM` |
+
+### ✅ FIREBASE_SERVICE_ACCOUNT — procédure de configuration
+
+Firebase Console → Project Settings → Service accounts → **"Générer une nouvelle clé privée"** → télécharge un JSON → copier le contenu → Cloudflare Dashboard → Workers → tango-et-vous → Settings → Variables → **type : Secret** (pas Texte) → coller le JSON complet. Sans ça, tous les `sendFcmPush` retournent `{skipped:true}` silencieusement.
+
+### ✅ Tables Supabase créées (SQL exécuté par l'utilisateur)
+
+```sql
+CREATE TABLE IF NOT EXISTS fcm_tokens (
+  id BIGSERIAL PRIMARY KEY, created_at TIMESTAMPTZ DEFAULT NOW(),
+  email TEXT NOT NULL, token TEXT NOT NULL, UNIQUE(token)
+);
+ALTER TABLE fcm_tokens ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all_fcm" ON fcm_tokens FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON fcm_tokens TO anon, authenticated;
+GRANT USAGE, SELECT ON SEQUENCE fcm_tokens_id_seq TO anon, authenticated;
+```
+
+`notifications_eleve` également créée (voir SQL utiles section).
+
+### ✅ Nouveaux handlers et routes worker.js
+
+**C4/C5 — fin de saison :**
+- `handleCronFinSaisonC4` — POST `/api/cron/fin-saison-c4` — email bleu "Il vous reste N cours — pré-inscrivez-vous" aux élèves avec `carte_restants > 0 AND carte_statut IN ('Active','Nouvelle carte')`
+- `handleCronFinSaisonC5` — POST `/api/cron/fin-saison-c5` — email orange urgent "Dernier rappel — ces cours expireront le 31 août"
+
+**C6 — relance 2 absences :**
+- `handleCronRelanceAbsences` — POST `/api/cron/relance-absences` — email informel "tu" aux élèves carte10 absents aux 2 derniers cours
+- Lit dates depuis `parametres.tev_cours_dates.paris/vincennes`
+- Anti-doublon via `eleves.derniere_relance_abs DATE` (⚠️ **SQL à exécuter** : `ALTER TABLE eleves ADD COLUMN IF NOT EXISTS derniere_relance_abs DATE;`)
+- Accepte `{"ville":"paris"|"vincennes"}` dans le POST body (override du jour de semaine)
+
+**18 autres handlers** (stages S0–S4/S-cancel, cartes C1/C2/C-pay/C-report, inscriptions I02/I03/I04, essai E4/E15, yoga Y3/YI1/Y-mod, CP0/CP1, P1) — voir session 2026-05-21 pour la liste complète.
+
+### ✅ Nouveaux workflows GitHub Actions
+
+| Fichier | Handler | Cron |
+|---------|---------|------|
+| `essai-rappel-j7.yml` | E4 | `0 7 * * *` — date = +7 jours |
+| `rappel-stage-j3.yml` | S4 | `0 7 * * *` — date = +3 jours |
+| `essai-yoga-rappel-j3.yml` | Y3 | `0 7 * * *` — date = +3 jours |
+| `espace-eleve-activation.yml` | P1 | `0 8 * * *` |
+| `fin-saison-c4.yml` | C4 | `workflow_dispatch` uniquement (admin déclenche manuellement en juin) |
+| `fin-saison-c5.yml` | C5 | `0 8 25 8 *` (25 août) + `workflow_dispatch` |
+| `relance-absences.yml` | C6 | `0 7 * * 5` (vendredi = Paris) + `0 7 * * 2` (mardi = Vincennes) — deux jobs séparés |
+
+### ✅ Câblage admin.html → routes notify worker
+
+| Action admin | Route | Code email |
+|---|---|---|
+| `soumettreValiderPaiement` → `Promise.all().then()` | `POST /api/notify/inscription-cours-payee` (JWT) | I03 |
+| `valGuideeEssai` → `Promise.all(ops).then()` | `POST /api/notify/essai-valide` | E15/E15b |
+| `renouvelerCarteAction` → dernier `.then()` si `!paye` | `POST /api/notify/carte-renouvellement` | C2b |
+| `pointerCoursAction` → `.then()` si premier cours de la saison | `POST /api/notify/carte-bienvenue` (JWT) | C1 |
+| `reporterCarteJs` → INSERT `.then()` | `POST /api/notify/carte-report` | C-report |
+| `validerChangementCours` → `Promise.all(ops).then()` | `POST /api/notify/inscription-cours-modifiee` | I04 |
+| `annulerStageInscrit` → via `_notifyStageCancel` helper | `POST /api/notify/stage-annule` | S-cancel |
+| `valAttStage` → `q.then()` | `POST /api/notify/stage-valide` | S3 |
+
+### Architecture C6 — règles
+
+- **Cron vendredi 7h UTC** → handler Paris ; **cron mardi 7h UTC** → handler Vincennes
+- Passe `{"ville":"paris"}` ou `{"ville":"vincennes"}` dans le body POST
+- Handler accepte le body en priorité, fallback sur le jour de semaine si body absent
+- Anti-doublon : `derniere_relance_abs` stocke la date de la dernière relance → pas de doublon si mêmes 2 dates absentes la semaine suivante
+- Email en "tu" informel (seul email du catalogue avec ce ton) — signature "Florencia & Jérémy"
+- Ne pas envoyer si l'élève a déclaré son absence via 🚫 (la détection est basée sur les `presences` manquantes, pas les `absences_jour`)
