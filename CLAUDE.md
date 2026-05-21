@@ -21,6 +21,58 @@
 - La clé anon Supabase est intentionnellement publique (design Supabase) — sécurité dépend du RLS
 - `unsafe-inline` dans CSP inévitable tant que les scripts sont inline dans les HTML — accepté comme risque résiduel
 
+## Audit Supabase Security Advisor — 2026-05-21
+
+38 warnings analysés depuis Dashboard Supabase → Database → Security Advisor. SQL exécuté par l'utilisateur.
+
+### Corrigés ✅
+
+**Function Search Path Mutable (8 fonctions)** — Ajout de `SET search_path = public` sur toutes les fonctions SECURITY DEFINER. Purement déclaratif, zéro impact comportemental :
+```sql
+ALTER FUNCTION public.reserver_numero_devis(p_annee integer) SET search_path = public;
+ALTER FUNCTION public.protect_devis_numero() SET search_path = public;
+ALTER FUNCTION public.set_updated_at() SET search_path = public;
+ALTER FUNCTION public.compter_inscrits_essai(p_date_essai date, p_ville text, p_niveau text) SET search_path = public;
+ALTER FUNCTION public.compter_inscrits_essai(p_date_essai text, p_ville text, p_niveau text) SET search_path = public;
+ALTER FUNCTION public.pointer_cours_qr(p_email text, p_date date, p_nb integer) SET search_path = public;
+ALTER FUNCTION public.get_remplacant_eleves(p_ville text, p_niveau text, p_saison text) SET search_path = public;
+ALTER FUNCTION public.is_admin() SET search_path = public;
+```
+
+**REVOKE fonctions inutilement publiques** :
+```sql
+REVOKE EXECUTE ON FUNCTION public.reserver_numero_devis(p_annee integer) FROM anon;
+-- (le générateur de devis et le worker utilisent le JWT admin — anon n'en a jamais eu besoin)
+REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM authenticated;
+-- (fonction interne Supabase, jamais appelée par l'app)
+```
+
+**Policy `devis` resserrée à `is_admin()`** :
+```sql
+DROP POLICY IF EXISTS "allow_all_devis_authenticated" ON public.devis;
+CREATE POLICY "devis_admin" ON public.devis
+  FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());
+```
+
+**Policy UPDATE `demandes_devis` resserrée à `is_admin()`** :
+```sql
+DROP POLICY IF EXISTS "allow_update_demandes_devis" ON public.demandes_devis;
+CREATE POLICY "demandes_update_admin" ON public.demandes_devis
+  FOR UPDATE TO authenticated USING (is_admin()) WITH CHECK (is_admin());
+-- (le formulaire public ne fait que des INSERT — policy INSERT reste ouverte à anon)
+```
+
+### Risque résiduel accepté — clôturé le 2026-05-21
+
+- **RLS Policy Always True** sur `cours_yoga`, `milonga_presences`, `inscriptions_essai`, `inscriptions_essai_yoga`, `inscriptions_cours`, `absences_jour`, `fcm_tokens`, `notifications_eleve` — intentionnel : formulaires publics anon, pointage QR, notifications élève. La vraie sécurité est dans les UNIQUE indexes + validation admin + logique métier.
+- **Public Can Execute SECURITY DEFINER** sur `compter_inscrits_essai`, `pointer_cours_qr`, `get_remplacant_eleves` — intentionnel : ces fonctions sont appelées par des formulaires publics (`anon`) sans JWT. Elles exposent uniquement des comptes agrégés (quotas) ou des données non sensibles.
+- **Leaked Password Protection** — non applicable : l'app utilise des magic links uniquement, aucun mot de passe.
+- **REVOKE `is_admin()` de anon** — **ne pas faire** : `is_admin()` est utilisée dans les clauses USING des policies RLS, qui sont évaluées avec les droits du propriétaire (SECURITY DEFINER implicite côté RLS). Révoquer l'accès anon casserait l'évaluation RLS pour les connexions anon.
+
+### Aucun GRANT manquant
+Toutes les tables existantes ont leurs GRANTs. Les nouvelles tables créées depuis 2026-05 incluent toutes `GRANT ... TO anon, authenticated`. Deadline Supabase (30 octobre 2026) : sans risque.
+
 ## Supabase — changement GRANTs Data API (email 2026-05-14)
 
 ### Contexte
@@ -42,7 +94,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.ma_table TO anon, authenticated;
 ```
 
 ### À faire avec l'utilisateur
-- [ ] **Audit GRANTs existants** : ouvrir Dashboard Supabase → Database → Security Advisor → lister les tables sans grants explicites → générer le SQL de correction en une passe
+- [x] **Audit GRANTs existants** : ✅ fait le 2026-05-21 — Security Advisor vérifié (38 warnings analysés et corrigés). Aucune table sans GRANT — voir section "Audit Supabase Security Advisor — 2026-05-21".
 
 ## Vue d'ensemble
 Application de gestion d'une école de tango et yoga (Tango & Vous).
@@ -2843,7 +2895,7 @@ GRANT USAGE, SELECT ON SEQUENCE fcm_tokens_id_seq TO anon, authenticated;
 **C6 — relance 2 absences :**
 - `handleCronRelanceAbsences` — POST `/api/cron/relance-absences` — email informel "tu" aux élèves carte10 absents aux 2 derniers cours
 - Lit dates depuis `parametres.tev_cours_dates.paris/vincennes`
-- Anti-doublon via `eleves.derniere_relance_abs DATE` (⚠️ **SQL à exécuter** : `ALTER TABLE eleves ADD COLUMN IF NOT EXISTS derniere_relance_abs DATE;`)
+- Anti-doublon via `eleves.derniere_relance_abs DATE` (✅ SQL exécuté : `ALTER TABLE eleves ADD COLUMN IF NOT EXISTS derniere_relance_abs DATE;`)
 - Accepte `{"ville":"paris"|"vincennes"}` dans le POST body (override du jour de semaine)
 
 **18 autres handlers** (stages S0–S4/S-cancel, cartes C1/C2/C-pay/C-report, inscriptions I02/I03/I04, essai E4/E15, yoga Y3/YI1/Y-mod, CP0/CP1, P1) — voir session 2026-05-21 pour la liste complète.
@@ -2881,3 +2933,37 @@ GRANT USAGE, SELECT ON SEQUENCE fcm_tokens_id_seq TO anon, authenticated;
 - Anti-doublon : `derniere_relance_abs` stocke la date de la dernière relance → pas de doublon si mêmes 2 dates absentes la semaine suivante
 - Email en "tu" informel (seul email du catalogue avec ce ton) — signature "Florencia & Jérémy"
 - Ne pas envoyer si l'élève a déclaré son absence via 🚫 (la détection est basée sur les `presences` manquantes, pas les `absences_jour`)
+
+## Session 2026-05-21 (suite 2) — Security Advisor + Previews dynamiques
+
+### ✅ Audit Supabase Security Advisor — 38 warnings corrigés
+Voir section "Audit Supabase Security Advisor — 2026-05-21" pour le détail complet des SQL exécutés et des risques résiduels acceptés.
+
+### ✅ SQL `derniere_relance_abs` exécuté
+`ALTER TABLE eleves ADD COLUMN IF NOT EXISTS derniere_relance_abs DATE;` — exécuté par l'utilisateur. Requis pour le handler C6 (anti-doublon relance absences).
+
+### ✅ Previews emails mis à jour — variables dynamiques (zéro hardcodé)
+
+**Règle universelle renforcée** : aucune année, saison ou lien hardcodé dans les previews ni dans les handlers. Variables à utiliser :
+- `${sai}` — saison active (ex : `2025-2026`)
+- `${saiNext}` — saison suivante (ex : `2026-2027`)
+- `${anneeFin}` = `parseInt(sai.split('-')[1])` — année de fin de saison courante (ex : `2026`)
+- `${tev_liens_assoconnect[saiNext].cours}` — lien AssoConnect inscription saison prochaine (Supabase `parametres`)
+
+**`preview-emails-cartes-v1.html`** — sections C4 et C5 :
+- Label déclencheur C4 : "CRON DÉCLENCHÉ LE LENDEMAIN DU DERNIER COURS PARIS DE JUIN" (automatique, pas `workflow_dispatch`)
+- Sujet C4 : `"Votre carte de 10 cours — il vous reste N cours pour ${saiNext}"`
+- Corps C4 : "Les pré-inscriptions pour la saison ${saiNext} sont ouvertes. Réglez simplement l'adhésion à notre association avant le 25 août ${anneeFin} sur AssoConnect pour reporter les cours de votre carte à la saison prochaine."
+- Corps C5 : "Réglez simplement l'adhésion à notre association avant le 25 août ${anneeFin} sur AssoConnect pour reporter les cours de votre carte à la saison prochaine."
+- Bouton C4 et C5 : **"Reportez votre carte → Réglez votre adhésion de la saison prochaine"** (href : `${tev_liens_assoconnect[saiNext].cours}`)
+- Push C4 : `"📅 Il vous reste ${restants} cours — reportez-les sur ${saiNext} avant le 25 août ${anneeFin}"`
+
+**`preview-sources-cartes.html`** — sections C4 et C5 ajoutées :
+- `tev_liens_assoconnect[saiNext].cours` : Supabase `parametres`, clé `tev_liens_assoconnect`, chemin `[saisonSuivante()].cours`
+- `anneeFin` : calculé côté worker `parseInt(sai.split('-')[1])` — jamais hardcodé
+- `eleves.carte_statut IN ('Active','Nouvelle carte') AND carte_restants > 0` : filtre DB
+- Section C6 : correction route (était "GitHub Actions script" → maintenant `POST /api/cron/relance-absences (X-Cron-Secret)`)
+
+**`preview-emails-yoga-v1.html`** — section Y-J1a :
+- En-tête yoga-box : `"Saison ${sai} (dynamique)"` au lieu de `"Saison 2026-2027"` hardcodé
+- Titre tarifs : `"Tarifs ${sai} (dynamique)"` au lieu de `"Tarifs 2026-2027"`
