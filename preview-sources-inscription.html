@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Sources emails — Inscriptions Tango Régulier</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; background: #1a1a1a; color: #ccc; margin: 0; padding: 20px; }
+  h1 { color: #D4AF37; letter-spacing: 4px; font-size: 18px; }
+  h2 { color: #D4AF37; font-size: 14px; margin: 24px 0 6px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  .block { background: #222; border: 1px solid #333; border-radius: 6px; padding: 14px 16px; margin: 0 0 14px; }
+  .field { margin: 4px 0; }
+  .label { color: #888; width: 180px; display: inline-block; }
+  .var { color: #f0c030; font-weight: 700; }
+  .src { color: #6ab0f5; }
+  .cond { color: #c792ea; }
+  .note { color: #888; font-style: italic; font-size: 12px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .route { background: #0f1f0f; border: 1px solid #2e7d32; border-radius: 4px; padding: 4px 10px; font-size: 12px; color: #81c784; margin-bottom: 8px; display: inline-block; }
+</style>
+</head>
+<body>
+<h1>SOURCES EMAILS — INSCRIPTIONS TANGO RÉGULIER</h1>
+
+<h2>I0 — Notification admin (toute nouvelle inscription)</h2>
+<div class="route">POST /api/notify/inscription-cours (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">tangoetvous@gmail.com</span></div>
+  <div class="field"><span class="label">Header admin :</span> Fond #111 · bordure or · "Nouvelle inscription [tango/preinscription]"</div>
+  <div class="field"><span class="label">Sujet :</span> <code>🎓 Inscription tango — ${nom} · ${cours}</code></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, tel, role, ville, niveau, saison, statut, partenaire?, emailPartenaire?, type }</span></div>
+  <div class="field"><span class="label">Encadré or :</span> Nom/email/tel · Rôle (badge couleur) · Cours · Statut</div>
+  <div class="field"><span class="label">2 cours :</span> <span class="cond">si 2 cours → 2 encadrés or distincts</span></div>
+  <div class="field"><span class="label">Boutons :</span> 📞 tel: · ✉️ mailto: · 💬 sms: · Ouvrir l'admin → Inscriptions Tango</div>
+</div>
+
+<h2>I01 — Guideur ou couple, att. paiement</h2>
+<div class="route">POST /api/notify/inscription-cours (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='attente_paiement' (guideur seul ou couple)</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre inscription au tango ${saison} — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre inscription au tango est validée — finalisez votre inscription"</div>
+  <div class="field"><span class="label">Cours box :</span> Cours · Saison · Rôle · Statut "✓ Att. paiement" · Partenaire (si couple)</div>
+  <div class="field"><span class="label">Bouton AssoConnect :</span> <span class="src">tev_liens_assoconnect[saison].cours (depuis admin Paramètres)</span></div>
+  <div class="field"><span class="label">Sorano :</span> <span class="cond">si ville='vincennes'</span> → encadré jaune 🏛 Adhésion Sorano</div>
+  <div class="field"><span class="label">Quelques précisions :</span> Avertissement 2 emails différents en couple · Modes paiement CB/espèces/chèque</div>
+  <div class="field"><span class="label">Livret :</span> <span class="src">tev_params_${ville}_${saison}.livret.url_deb / url_int</span></div>
+</div>
+
+<h2>I01-att — Guidée seule, att. validation</h2>
+<div class="route">POST /api/notify/inscription-cours (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='demande' (guidée seule dans tous ses cours)</span></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Votre demande d'inscription est enregistrée — liste d'attente"</div>
+  <div class="field"><span class="label">Encadré :</span> Explication parité · 3 options (attente / autre créneau / cours d'essai)</div>
+</div>
+
+<h2>I02 — Admin valide guidée → att. paiement</h2>
+<div class="route">POST /api/notify/inscription-cours-validee (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, tel, role, ville, niveau, saison, partenaire?, emailPartenaire?, livretUrl?, assoConnectUrl? }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre demande d'inscription au tango est validée — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓</div>
+  <div class="field"><span class="label">Cours box :</span> Cours · Saison · Rôle · Statut ✓ Validé·e · Partenaire</div>
+  <div class="field"><span class="label">Bouton AssoConnect :</span> Or → <span class="var">body.assoConnectUrl</span></div>
+  <div class="field"><span class="label">Sorano :</span> <span class="cond">si ville='vincennes'</span> → encadré jaune</div>
+  <div class="field"><span class="label">Quelques précisions :</span> Modes paiement</div>
+  <div class="field"><span class="label">Livret :</span> <span class="cond">si livretUrl</span></div>
+</div>
+
+<h2>I03 — Admin valide paiement → inscrit</h2>
+<div class="route">POST /api/notify/inscription-cours-payee (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, livretUrl?, role }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre inscription au tango est confirmée — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre inscription est confirmée, à bientôt !"</div>
+  <div class="field"><span class="label">Cours box :</span> Cours · Saison · Statut ✓ Inscrit·e</div>
+  <div class="field"><span class="label">Bouton :</span> Or "Accéder à mon espace élève →" → app.tangoetvous.fr</div>
+  <div class="field"><span class="label">Livret :</span> <span class="cond">si livretUrl</span></div>
+  <div class="field"><span class="label">J+7 :</span> Déclenche le cron P1 (espace élève) 7 jours plus tard</div>
+</div>
+
+<h2>I04 — Admin modifie le cours d'un élève inscrit</h2>
+<div class="route">POST /api/notify/inscription-cours-modifiee (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ancienCours, nouveauCours }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>📋 Votre inscription a été modifiée — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Bleu 📋</div>
+  <div class="field"><span class="label">Cours box :</span> Ancien cours barré rouge · Nouveau cours en vert</div>
+  <div class="field"><span class="label">Bouton :</span> Nous contacter (mailto admin)</div>
+</div>
+
+<h2>I17 — Mode pré-inscription (mai-août)</h2>
+<div class="route">POST /api/notify/inscription-cours (sans auth) avec mode='preinscription'</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">MODE === 'preinscription' (mai-août)</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre pré-inscription tango ${saisonSuivante} — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Différence :</span> Badge "Saison prochaine" · mention "reprise en septembre" · tarifs prochaine saison</div>
+  <div class="field"><span class="label">Tarifs :</span> <span class="src">localStorage.tev_tarifs_prochaine_saison (admin) → body.tarifs</span></div>
+</div>
+
+<h2>Règles guideur/guidée (rappel)</h2>
+<div class="block">
+  <div class="field"><span class="label">Guidée seule → tous ses cours :</span> <span class="cond">statut='demande' → I01-att</span></div>
+  <div class="field"><span class="label">Guideur seul ou couple :</span> <span class="cond">statut='attente_paiement' → I01</span></div>
+  <div class="field"><span class="label">2 cours :</span> <span class="cond">2 emails distincts — quota vérifié indépendamment par cours</span></div>
+  <div class="field"><span class="label">Couple email partagé :</span> <span class="cond">un seul email avec 2 prénoms</span></div>
+  <div class="field"><span class="label">CAP_GUI=22, CAP_GDE=23 :</span> <span class="src">comptés depuis inscriptions_cours statut IN ['inscrit','attente_paiement']</span></div>
+</div>
+</body>
+</html>

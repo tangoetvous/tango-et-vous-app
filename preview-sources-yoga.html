@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Sources emails — Yoga</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; background: #1a1a1a; color: #ccc; margin: 0; padding: 20px; }
+  h1 { color: #D4AF37; letter-spacing: 4px; font-size: 18px; }
+  h2 { color: #D4AF37; font-size: 14px; margin: 24px 0 6px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  .block { background: #222; border: 1px solid #333; border-radius: 6px; padding: 14px 16px; margin: 0 0 14px; }
+  .field { margin: 4px 0; }
+  .label { color: #888; width: 180px; display: inline-block; }
+  .var { color: #f0c030; font-weight: 700; }
+  .src { color: #6ab0f5; }
+  .cond { color: #c792ea; }
+  .note { color: #888; font-style: italic; font-size: 12px; }
+  .warn { color: #ff6b6b; font-weight: 700; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .route { background: #0f1f0f; border: 1px solid #2e7d32; border-radius: 4px; padding: 4px 10px; font-size: 12px; color: #81c784; margin-bottom: 8px; display: inline-block; }
+</style>
+</head>
+<body>
+<h1>SOURCES EMAILS — COURS D'ESSAI + INSCRIPTIONS YOGA</h1>
+<p class="note warn">⚠️ BRANDING YOGA OBLIGATOIRE : header "COURS DE YOGA avec Florencia Garcia" · footer garciabraitbart@gmail.com · signature Florencia Garcia seule · sender name "Florencia Garcia — Yoga" (email tangoetvous@gmail.com pour Brevo)</p>
+<p class="note">Admin yoga : <span class="var">regardsepose@gmail.com</span> — NE PAS utiliser tangoetvous@gmail.com ni "Tango &amp; Vous" ni "07 73 27 59 06" dans les emails yoga élèves</p>
+
+<h2>Y0 — Notification admin (toute inscription essai yoga)</h2>
+<div class="route">POST /api/notify/inscription-essai-yoga (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">regardsepose@gmail.com</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🧘 Essai yoga — ${prenom} ${nom} · ${cours} · ${dateEssai}</code></div>
+  <div class="field"><span class="label">Nom :</span> <span class="var">body.prenom + body.nom</span></div>
+  <div class="field"><span class="label">Email :</span> <span class="var">body.email</span></div>
+  <div class="field"><span class="label">Tél :</span> <span class="var">body.tel</span></div>
+  <div class="field"><span class="label">Cours :</span> <span class="var">body.cours</span> <span class="note">'yin'|'hatha'|'forfait'</span></div>
+  <div class="field"><span class="label">Date essai :</span> <span class="var">body.dateEssai</span></div>
+  <div class="field"><span class="label">Tarif essai :</span> <span class="src">tev_params_yoga_${saison}.tarifs.yoga_essai</span></div>
+  <div class="field"><span class="label">Statut :</span> <span class="var">body.statut</span> — badge "✓ Confirmé·e automatiquement"</div>
+  <div class="field"><span class="label">Note :</span> "Inscription automatique"</div>
+  <div class="field"><span class="label">Boutons :</span> 📞 tel: · ✉️ mailto: · 💬 sms: · Ouvrir l'admin → Yoga → Essai</div>
+</div>
+
+<h2>Y1 — Confirmation automatique élève</h2>
+<div class="route">POST /api/notify/inscription-essai-yoga (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='confirme' (place disponible → confirmation immédiate)</span></div>
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">body.email</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre cours d'essai yoga est confirmé — Cours de yoga avec Florencia Garcia</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre cours d'essai yoga est confirmé !"</div>
+  <div class="field"><span class="label">Yoga-box (vert) :</span> Date · Cours · <span class="src">Horaire depuis tev_params_yoga_${saison}.horaires.${cours}</span> · <span class="src">Lieu depuis .adresse.nom</span></div>
+  <div class="field"><span class="label">Encadré orange :</span> "En cas d'empêchement, merci de nous prévenir le plus tôt possible"</div>
+  <div class="field"><span class="label">Bouton :</span> Nous contacter (mailto:regardsepose@gmail.com)</div>
+  <div class="field"><span class="label">Pas de tarifs :</span> <span class="cond">les emails élève yoga ne contiennent JAMAIS les tarifs</span></div>
+</div>
+
+<h2>Y-att — Cours régulier plein</h2>
+<div class="route">POST /api/notify/inscription-essai-yoga (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">cours_yoga ≥ 14 inscrits pour ce cours (yin/hatha) sur la saison → statut='attente'</span></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Votre demande est en liste d'attente"</div>
+  <div class="field"><span class="label">Yoga-box :</span> Badge "⏳ Liste d'attente"</div>
+  <div class="field"><span class="label">Encadré :</span> "Cours limités à 14 participants, des places se libèrent parfois"</div>
+  <div class="field"><span class="label">Bouton :</span> Nous contacter</div>
+</div>
+
+<h2>Y3 — Rappel J-3 (cron)</h2>
+<div class="route">POST /api/cron/essai-yoga-rappel-j3 (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien · inscriptions_essai_yoga WHERE date_essai=today+3 AND statut='confirme'</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🗓 Rappel — votre cours d'essai yoga du ${dateLabel} — Cours de yoga avec Florencia Garcia</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Bleu 🗓 "Rappel — votre cours d'essai yoga a lieu dans 3 jours !"</div>
+  <div class="field"><span class="label">Yoga-box :</span> Date · Cours · <span class="src">Horaire tev_params_yoga_${saison}.horaires.${cours}</span> · Lieu</div>
+  <div class="field"><span class="label">Bouton 👍 :</span> Vert · URL: <code>/api/essai-yoga/confirmer?id=&amp;token=y3</code> → <code>presence_confirmee=true</code></div>
+  <div class="field"><span class="label">Encadré orange :</span> "En cas d'empêchement, merci de nous prévenir même au dernier moment"</div>
+  <div class="field"><span class="label">Notif in-app :</span> <code>notifications_eleve</code> — "📅 Rappel : votre cours d'essai yoga a lieu dans 3 jours"</div>
+</div>
+
+<h2>Y-mod — Modification admin</h2>
+<div class="route">POST /api/notify/essai-yoga-modifie (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, ancienneDate, nouvelleDateEssai, cours, ancienCours? }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>📋 Votre cours d'essai yoga a été modifié — Cours de yoga avec Florencia Garcia</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Bleu 📋</div>
+  <div class="field"><span class="label">Yoga-box :</span> Ancienne date barrée rouge · Nouvelle date en vert · Cours (si changé : ancien barré, nouveau en vert)</div>
+  <div class="field"><span class="label">Bouton :</span> Nous contacter (regardsepose@gmail.com)</div>
+</div>
+
+<h2>YI1 — Inscription régulière validée</h2>
+<div class="route">POST /api/notify/yoga-inscription-validee (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, cours, saison, horaires{}, adresse{}, paiement, montant, livretUrl? }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Bienvenue — votre inscription yoga est confirmée — Cours de yoga avec Florencia Garcia</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Bienvenue — votre inscription yoga est confirmée !"</div>
+  <div class="field"><span class="label">Yoga-box :</span> Cours · Saison · <span class="src">Horaires depuis body.horaires (lus depuis tev_params_yoga par l'admin)</span> · Lieu · Montant/Mode · Badge ✓ Bienvenue</div>
+  <div class="field"><span class="label">Encadré Sorano :</span> Jaune 🏛 "Adhésion à l'Espace Sorano" · <span class="note">⚠️ TODO : ajouter le lien réel quand disponible</span></div>
+  <div class="field"><span class="label">Checklist :</span> Tenue souple · Tapis · Ponctualité</div>
+  <div class="field"><span class="label">Livret :</span> <span class="cond">si livretUrl</span> → <span class="src">tev_params_yoga_${saison}.livret.url_yin / url_hatha</span></div>
+</div>
+
+<h2>Y-J1a — Lendemain essai yoga, élève présent</h2>
+<div class="route">POST /api/cron/essai-yoga-j1 (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 9h Paris · inscriptions_essai_yoga WHERE date_essai=hier AND presence_declaree=true</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🧘 À bientôt sur les tatamis — rejoignez nos cours ! — Cours de yoga avec Florencia Garcia</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓</div>
+  <div class="field"><span class="label">Contenu :</span> Tarifs cours réguliers · <span class="src">depuis tev_params_yoga_${saison}.tarifs (340€ yin / 500€ hatha / fallback)</span></div>
+  <div class="field"><span class="label">Lien AssoConnect :</span> <span class="src">tev_liens_assoconnect[saison].yoga</span></div>
+  <div class="field"><span class="label">Bouton :</span> Or → AssoConnect yoga</div>
+  <div class="field"><span class="label">Copie admin :</span> regardsepose@gmail.com</div>
+</div>
+
+<h2>Y-J1b — Lendemain essai yoga, élève absent</h2>
+<div class="route">POST /api/cron/essai-yoga-j1 (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">presence_declaree=false (null → pas d'email)</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>💙 On vous attend bientôt — Cours de yoga avec Florencia Garcia</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange 💙 "Vous nous avez manqué"</div>
+  <div class="field"><span class="label">Bouton :</span> ↩ Choisir une autre date → essai-yoga.html</div>
+  <div class="field"><span class="label">Copie admin :</span> regardsepose@gmail.com</div>
+</div>
+</body>
+</html>

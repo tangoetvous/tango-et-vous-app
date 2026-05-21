@@ -246,6 +246,114 @@ export default {
         return handleRemplacantData(request, url, env);
       }
 
+      // POST /api/notify/inscription-stage — nouvelle inscription stage (sans auth)
+      if (pathname === '/api/notify/inscription-stage' && method === 'POST') {
+        return handleNotifyInscriptionStage(request, env);
+      }
+
+      // POST /api/cron/rappel-stage-j3 — cron J-3 avant chaque stage (X-Cron-Secret)
+      if (pathname === '/api/cron/rappel-stage-j3' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronRappelStageJ3(request, env);
+      }
+
+      // POST /api/notify/stage-valide — admin valide une inscription stage en attente (JWT admin)
+      if (pathname === '/api/notify/stage-valide' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyStageValide(request, env);
+      }
+
+      // POST /api/notify/stage-annule — admin annule une inscription stage (JWT admin)
+      if (pathname === '/api/notify/stage-annule' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyStageAnnule(request, env);
+      }
+
+      // POST /api/notify/cours-particulier — nouvelle demande de cours particulier (sans auth)
+      if (pathname === '/api/notify/cours-particulier' && method === 'POST') {
+        return handleNotifyCoursParticulier(request, env);
+      }
+
+      // POST /api/notify/carte-bienvenue — premier pointage carte10 (sans auth)
+      if (pathname === '/api/notify/carte-bienvenue' && method === 'POST') {
+        return handleNotifyCarteBienvenue(request, env);
+      }
+
+      // POST /api/notify/carte-renouvellement — carte10 renouvelée (sans auth)
+      if (pathname === '/api/notify/carte-renouvellement' && method === 'POST') {
+        return handleNotifyCarteRenouvellement(request, env);
+      }
+
+      // POST /api/notify/carte-paiement — paiement carte10 enregistré admin (JWT admin)
+      if (pathname === '/api/notify/carte-paiement' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyCartePaiement(request, env);
+      }
+
+      // POST /api/notify/carte-report — carte10 reportée sur saison suivante (JWT admin)
+      if (pathname === '/api/notify/carte-report' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyCarteReport(request, env);
+      }
+
+      // POST /api/notify/inscription-cours-validee — admin valide guidée → attente_paiement (JWT admin)
+      if (pathname === '/api/notify/inscription-cours-validee' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyInscriptionCoursValidee(request, env);
+      }
+
+      // POST /api/notify/inscription-cours-payee — admin valide paiement → inscrit (JWT admin)
+      if (pathname === '/api/notify/inscription-cours-payee' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyInscriptionCoursPaye(request, env);
+      }
+
+      // POST /api/notify/inscription-cours-modifiee — admin modifie cours d'un élève inscrit (JWT admin)
+      if (pathname === '/api/notify/inscription-cours-modifiee' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyInscriptionCoursModifiee(request, env);
+      }
+
+      // POST /api/cron/essai-rappel-j7 — cron J-7 avant chaque cours d'essai tango (X-Cron-Secret)
+      if (pathname === '/api/cron/essai-rappel-j7' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronEssaiRappelJ7(request, env);
+      }
+
+      // POST /api/notify/essai-valide — admin valide essai en attente → confirme (JWT admin)
+      if (pathname === '/api/notify/essai-valide' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyEssaiValide(request, env);
+      }
+
+      // POST /api/cron/essai-yoga-rappel-j3 — cron J-3 avant essai yoga (X-Cron-Secret)
+      if (pathname === '/api/cron/essai-yoga-rappel-j3' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronEssaiYogaRappelJ3(request, env);
+      }
+
+      // POST /api/notify/essai-yoga-modifie — admin modifie date/cours d'un essai yoga (JWT admin)
+      if (pathname === '/api/notify/essai-yoga-modifie' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyEssaiYogaModifie(request, env);
+      }
+
+      // POST /api/notify/yoga-inscription-validee — admin valide paiement yoga → YI1 (JWT admin)
+      if (pathname === '/api/notify/yoga-inscription-validee' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyYogaInscriptionValidee(request, env);
+      }
+
+      // POST /api/cron/espace-eleve-activation — cron J+7 après I03 → email P1 (X-Cron-Secret)
+      if (pathname === '/api/cron/espace-eleve-activation' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronEspaceEleveActivation(request, env);
+      }
+
       try {
         return await env.ASSETS.fetch(request);
       } catch (assetErr) {
@@ -553,9 +661,9 @@ async function handleNotifyYogaDate(request, env) {
 
   const hasAdded   = addedDates.length > 0;
   const hasRemoved = removedDates.length > 0;
-  const subject = hasAdded && hasRemoved ? '📅 Modifications de vos cours de yoga — Tango & Vous'
-    : hasAdded   ? '📅 Nouveau cours de yoga ajouté — Tango & Vous'
-    : '⚠️ Cours de yoga annulé — Tango & Vous';
+  const subject = hasAdded && hasRemoved ? '📅 Modifications de vos cours de yoga — Cours de yoga avec Florencia Garcia'
+    : hasAdded   ? '📅 Nouveau cours de yoga ajouté — Cours de yoga avec Florencia Garcia'
+    : '⚠️ Cours de yoga annulé — Cours de yoga avec Florencia Garcia';
 
   const bandeauBg  = hasRemoved ? '#fff8e1' : '#e8f5e9';
   const bandeauBrd = hasRemoved ? '#ffe082' : '#c8e6c9';
@@ -564,12 +672,21 @@ async function handleNotifyYogaDate(request, env) {
     : hasAdded ? '📅 Nouvelle date de yoga ajoutée'
     : '⚠️ Date de yoga annulée';
 
+  const headerYoga = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+    <div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div>
+    <div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div>
+    </div>`;
+  const footerYoga = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">MA PAGE YOGA</a><br/>
+    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
+    </div>`;
+  const signYoga = `<p style="font-size:14px;color:#2e7d32;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/>
+    <strong style="color:#222;">Florencia Garcia</strong><br/>
+    <span style="font-size:12px;color:#888;">Association Le Regard Se Pose · 06 63 23 35 70</span></p>`;
+
   const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
   <div style="max-width:600px;margin:0 auto;background:#fff;">
-    <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-      <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-      <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin &amp; yoga</div>
-    </div>
+    ${headerYoga}
     <div style="background:${bandeauBg};padding:14px 24px;text-align:center;border-bottom:1px solid ${bandeauBrd};">
       <span style="font-size:14px;font-weight:700;color:${bandeauTxt};">${bandeauMsg}</span>
     </div>
@@ -582,17 +699,13 @@ async function handleNotifyYogaDate(request, env) {
       ${removedLines ? `<div style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:14px 18px;margin:0 0 16px;">
         <p style="font-size:13px;font-weight:700;color:#c62828;margin:0 0 8px;">✕ Date${removedDates.length>1?'s':''} annulée${removedDates.length>1?'s':''}</p>
         <ul style="margin:0;padding-left:18px;">${removedLines}</ul></div>` : ''}
-      <p style="font-size:14px;color:#888;margin:20px 0 0;">Pour toute question, n'hésitez pas à nous contacter.</p>
-      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
-      <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-      <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      <p style="font-size:14px;color:#888;margin:20px 0 0;">Pour toute question, n'hésitez pas à me contacter.</p>
+      ${signYoga}
     </div>
-    <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-      <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-      <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-    </div>
+    ${footerYoga}
   </div></body></html>`;
 
+  const yogaSender = 'regardsepose@gmail.com';
   let sent = 0;
   await Promise.all(emails.map(async (email) => {
     try {
@@ -600,7 +713,7 @@ async function handleNotifyYogaDate(request, env) {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
+          sender: { name: 'Florencia Garcia — Yoga', email: 'tangoetvous@gmail.com' },
           to: [{ email: String(email) }],
           subject,
           htmlContent: html,
@@ -761,17 +874,36 @@ async function handleNotifyEssaiAction(request, env) {
             ${signEleve}
           </div>${footer}`);
       } else {
+        // T1-val — bandeau vert, boîte cours bleue, bouton AssoConnect or, Quelques précisions, livret
+        const isVincennes = (ville || '').toLowerCase() === 'vincennes';
+        const lienACBtn = `<p style="text-align:center;margin:0 0 12px;"><a href="https://le-regard-se-pose.assoconnect.com/collect/description/695654-a-inscription-aux-cours-de-tango-argentin" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire sur AssoConnect →</a></p>
+          <p style="font-size:12px;color:#888;text-align:center;margin:0 0 22px;">Votre place sera réservée une fois l'inscription en ligne et le premier paiement effectués.</p>`;
+        const soranoBlock = isVincennes ? `<div style="background:#fff9e6;border:1px solid #f0c040;border-radius:8px;padding:16px 18px;margin:0 0 20px;">
+          <p style="font-size:13px;font-weight:700;color:#795500;margin:0 0 8px;">🏛 Adhésion à l'Espace Sorano</p>
+          <p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Votre cours a lieu à l'Espace Sorano à Vincennes. Une adhésion à cet espace culturel est nécessaire pour participer. Nous vous contacterons prochainement avec les informations pour la régler.</p>
+          </div>` : '';
+        const quelquesPrecisions = `<div style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:16px 18px;margin:0 0 20px;">
+          <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 12px;">📋 Quelques précisions</p>
+          <div style="background:#fff3e0;border:1px solid #ffcc02;border-radius:6px;padding:10px 14px;margin:0 0 10px;">
+            <p style="font-size:12px;color:#c65100;font-weight:700;margin:0;">⚠️ Si vous vous inscrivez en couple, chacun doit avoir une adresse email différente sur AssoConnect.</p>
+          </div>
+          <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 8px;"><strong>Modes de paiement acceptés :</strong> CB en 1× ou 3× sans frais, chèque à l'ordre de « Le Regard Se Pose », espèces, virement.</p>
+          <p style="font-size:12px;color:#888;margin:0;">Cours de tango : aucun pourboire n'est attendu ni nécessaire.</p>
+          </div>`;
         eleveHtml = wrap(`${headerEleve}
           <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-            <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription est validée !</span></div>
+            <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au tango est validée — finalisez votre inscription</span></div>
           <div style="padding:28px 24px;">
             <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${recipientPrenom},</p>
+            <p style="font-size:15px;color:#333;margin:0 0 20px;">Suite à votre cours d'essai, nous sommes ravis de vous accueillir dans nos cours de tango !</p>
             <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
               <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">INSCRIPTION TANGO</div>
               <div style="font-size:15px;font-weight:700;color:#111;">${_esc(coursAff)}</div>
-              <div style="margin-top:10px;"><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Inscription validée</span></div>
+              <div style="margin-top:10px;"><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Validé·e</span></div>
             </div>
-            <p style="font-size:14px;color:#333;margin:0 0 16px;">Votre inscription est validée. La prochaine étape est le paiement sur AssoConnect pour finaliser votre inscription.</p>
+            ${soranoBlock}
+            ${lienACBtn}
+            ${quelquesPrecisions}
             ${signEleve}
           </div>${footer}`);
       }
@@ -1027,15 +1159,17 @@ async function handleCronEssaiYogaJ1(request, env) {
   }
 
   const adminEmail = 'regardsepose@gmail.com';
-  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango &amp; yoga</div></div>`;
-  const footer = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:regardsepose@gmail.com" style="color:#888;text-decoration:none;">regardsepose@gmail.com</a></div>`;
-  const signEleve = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/>
-    <strong style="color:#222;">Florencia GARCIA</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · Le Regard Se Pose</span></p>`;
+  const headerYoga = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+    <div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div>
+    <div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div>
+    </div>`;
+  const footerYoga = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">MA PAGE YOGA</a><br/>
+    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
+    </div>`;
+  const signYoga = `<p style="font-size:14px;color:#2e7d32;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/>
+    <strong style="color:#222;">Florencia Garcia</strong><br/>
+    <span style="font-size:12px;color:#888;">Association Le Regard Se Pose · 06 63 23 35 70</span></p>`;
   const wrap = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   let sent = 0;
@@ -1044,12 +1178,23 @@ async function handleCronEssaiYogaJ1(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: 'tangoetvous@gmail.com' }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
       });
       if (r.ok) sent++;
       else console.error('[cron essai-yoga-j1] Brevo error', toEmail, await r.text());
     } catch(e) { console.error('[cron essai-yoga-j1] fetch error', e); }
   }
+
+  // Récupère les tarifs yoga depuis Supabase pour Y-J1a
+  const tarYoga = (yogaParams.tarifs || {});
+  const tarifsYinStr   = tarYoga.yoga_forfait_1cours ? `Yin Yoga (1 cours/sem) : ${tarYoga.yoga_forfait_1cours}€` : 'Yin Yoga (1 cours/sem) : 340€';
+  const tarifsHathaStr = tarYoga.yoga_forfait_1cours ? `Hatha Yoga (1 cours/sem) : ${tarYoga.yoga_forfait_1cours}€` : 'Hatha Yoga (1 cours/sem) : 340€';
+  const tarifsForfaitStr = tarYoga.yoga_forfait_2cours ? `Forfait Yin + Hatha (2 cours/sem) : ${tarYoga.yoga_forfait_2cours}€` : 'Forfait Yin + Hatha (2 cours/sem) : 590€';
+  // Fallback si non renseigné: 340/500/590
+  const tarifsBlock = `<div style="background:#f1f8f1;border:1px solid #a5d6a7;border-radius:8px;padding:14px 18px;margin:16px 0;">
+    <p style="font-size:13px;font-weight:700;color:#2e7d32;margin:0 0 8px;">💰 Tarifs annuels 2025-2026</p>
+    <p style="font-size:13px;color:#444;line-height:1.8;margin:0;">${tarifsYinStr}<br/>${tarifsHathaStr}<br/>${tarifsForfaitStr}</p>
+    </div>`;
 
   for (const ins of inscrits) {
     if (!ins.email) continue;
@@ -1058,8 +1203,8 @@ async function handleCronEssaiYogaJ1(request, env) {
     const horaire = getHoraire(ins.cours);
     const dateCours = fmtDate(targetDate);
 
-    const yogaBox = `<div style="background:#f3e5f5;border:2px solid #7b1fa2;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#7b1fa2;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #ce93d8;">COURS D'ESSAI YOGA</div>
+    const yogaBox = `<div style="background:#f1f8f1;border:2px solid #388e3c;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#388e3c;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #a5d6a7;">COURS D'ESSAI YOGA</div>
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <tr><td style="color:#888;padding:3px 0;width:120px;">Cours</td><td style="font-weight:700;color:#111;">${coursAff}</td></tr>
         <tr><td style="color:#888;padding:3px 0;">Date</td><td style="font-weight:700;color:#111;">${_esc(dateCours)}</td></tr>
@@ -1070,44 +1215,50 @@ async function handleCronEssaiYogaJ1(request, env) {
     if (ins.presence_declaree === true) {
       // Y-J1a — élève présent
       const acBtn = lienAC
-        ? `<p style="text-align:center;margin:16px 0;"><a href="${_esc(lienAC)}" style="display:inline-block;background:#7b1fa2;color:#fff;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire aux cours réguliers →</a></p>`
-        : `<p style="text-align:center;margin:16px 0;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#7b1fa2;color:#fff;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à l'espace élève →</a></p>`;
-      const html = wrap(`${headerEleve}
+        ? `<p style="text-align:center;margin:16px 0;"><a href="${_esc(lienAC)}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire aux cours réguliers →</a></p>`
+        : `<p style="text-align:center;margin:16px 0;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Voir les cours réguliers →</a></p>`;
+      const horaireBlock = (hor.yin || hor.hatha) ? `<div style="background:#f1f8f1;border:1px solid #a5d6a7;border-radius:8px;padding:14px 18px;margin:16px 0;">
+        <p style="font-size:13px;font-weight:700;color:#2e7d32;margin:0 0 8px;">📅 Les cours réguliers ont lieu :</p>
+        <p style="font-size:13px;color:#444;line-height:1.8;margin:0;">
+        ${hor.yin ? `Yin Yoga : ${_esc((hor.yin.jour||'')+(hor.yin.debut?' — '+hor.yin.debut+(hor.yin.fin?'–'+hor.yin.fin:''):''))}` : ''}
+        ${hor.yin && hor.hatha ? '<br/>' : ''}
+        ${hor.hatha ? `Hatha Yoga : ${_esc((hor.hatha.jour||'')+(hor.hatha.debut?' — '+hor.hatha.debut+(hor.hatha.fin?'–'+hor.hatha.fin:''):''))}` : ''}
+        </p></div>` : '';
+      const html = wrap(`${headerYoga}
         <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
           <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Merci pour votre cours d'essai yoga !</span></div>
         <div style="padding:28px 24px;">
           <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-          <p style="font-size:15px;color:#333;margin:0 0 20px;">Merci d'être venu·e à ce cours d'essai yoga ! Nous espérons que l'expérience vous a plu.</p>
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">Merci d'être venu·e à ce cours d'essai yoga ! J'espère que l'expérience vous a plu et que vous avez envie de rejoindre les cours réguliers.</p>
           ${yogaBox}
-          <p style="font-size:14px;color:#333;margin:0 0 16px;">Si vous souhaitez rejoindre nos cours réguliers, vous pouvez vous inscrire dès maintenant :</p>
+          <p style="font-size:14px;color:#333;margin:0 0 12px;">Pour rejoindre les cours réguliers, rendez-vous sur AssoConnect :</p>
           ${acBtn}
-          <div style="background:#f3e5f5;border:1px solid #ce93d8;border-radius:8px;padding:14px 18px;margin:16px 0 0;">
-            <p style="font-size:13px;color:#4a148c;margin:0;"><strong>Les cours réguliers ont lieu :</strong><br/>
-            ${hor.yin ? `Yin Yoga : ${_esc((hor.yin.jour||'')+(hor.yin.debut?' — '+hor.yin.debut+(hor.yin.fin?'–'+hor.yin.fin:''):''))}` : ''}
-            ${hor.yin && hor.hatha ? '<br/>' : ''}
-            ${hor.hatha ? `Hatha Yoga : ${_esc((hor.hatha.jour||'')+(hor.hatha.debut?' — '+hor.hatha.debut+(hor.hatha.fin?'–'+hor.hatha.fin:''):''))}` : ''}</p>
-          </div>
-          ${signEleve}
-        </div>${footer}`);
-      await sendBrevo(ins.email, `✓ Merci pour votre cours d'essai yoga — Tango & Vous`, html);
+          ${horaireBlock}
+          ${tarifsBlock}
+          ${signYoga}
+        </div>${footerYoga}`);
+      await sendBrevo(ins.email, `✓ Merci pour votre cours d'essai — Cours de yoga avec Florencia Garcia`, html);
+      // Copie admin
+      await sendBrevo(adminEmail, `[Copie] Y-J1a — ${_esc((ins.prenom||'')+' '+(ins.nom||''))} était présent·e`, html);
     } else if (ins.presence_declaree === false) {
       // Y-J1b — élève absent
       const retourBtn = `<p style="text-align:center;margin:16px 0;"><a href="https://app.tangoetvous.fr/essai-yoga.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">↩ Choisir une nouvelle date</a></p>`;
-      const html = wrap(`${headerEleve}
+      const html = wrap(`${headerYoga}
         <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
           <span style="font-size:14px;font-weight:700;color:#e65100;">💙 Vous nous avez manqué !</span></div>
         <div style="padding:28px 24px;">
           <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-          <p style="font-size:15px;color:#333;margin:0 0 20px;">Nous avons remarqué votre absence au cours d'essai d'hier. Pas d'inquiétude, il vous reste tout le temps de venir !</p>
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">J'ai remarqué votre absence au cours d'essai d'hier. Pas d'inquiétude, il vous reste tout le temps de venir !</p>
           ${yogaBox}
           <p style="font-size:14px;color:#333;margin:0 0 16px;">Votre cours d'essai n'a pas encore eu lieu — vous pouvez choisir une nouvelle date qui vous convient :</p>
           ${retourBtn}
           <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:16px 0 0;">
             <p style="font-size:13px;color:#bf360c;margin:0;">Aucune pénalité — votre inscription reste valide pour le prochain cours disponible.</p>
           </div>
-          ${signEleve}
-        </div>${footer}`);
-      await sendBrevo(ins.email, `💙 On vous attend bientôt pour votre cours d'essai yoga !`, html);
+          ${signYoga}
+        </div>${footerYoga}`);
+      await sendBrevo(ins.email, `💙 On vous attend bientôt — Cours de yoga avec Florencia Garcia`, html);
+      await sendBrevo(adminEmail, `[Copie] Y-J1b — ${_esc((ins.prenom||'')+' '+(ins.nom||''))} était absent·e`, html);
     }
   }
 
@@ -1118,29 +1269,150 @@ function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
 
 async function sendBrevoNotification(apiKey, body) {
   const prestations = (body.prestations_labels || []).map(_esc).join(', ') || '(non précisé)';
-  const nom = _esc(`${body.civilite || ''} ${body.prenom || ''} ${body.nom || ''}`.trim());
-  const html = `
-    <h2>Nouvelle demande de devis</h2>
-    <p><strong>Contact :</strong> ${nom} &lt;${_esc(body.email)}&gt; ${body.telephone ? '· ' + _esc(body.telephone) : ''}</p>
-    <p><strong>Mode :</strong> ${body.mode === 'event' ? 'Événement' : 'Cours privé'}</p>
-    <p><strong>Prestations :</strong> ${prestations}</p>
-    ${body.type_evenement ? `<p><strong>Type :</strong> ${_esc(body.type_evenement)}</p>` : ''}
-    ${body.date_evenement ? `<p><strong>Date :</strong> ${_esc(body.date_evenement)}</p>` : ''}
-    ${body.lieu ? `<p><strong>Lieu :</strong> ${_esc(body.lieu)} ${body.code_postal ? '(' + _esc(body.code_postal) + ')' : ''}</p>` : ''}
-    ${body.nombre_invites ? `<p><strong>Invités :</strong> ${_esc(body.nombre_invites)}</p>` : ''}
-    ${body.message ? `<p><strong>Message :</strong></p><p style="white-space:pre-wrap">${_esc(body.message)}</p>` : ''}
-    <hr><p><a href="https://app.tangoetvous.fr/admin.html">→ Voir dans l'admin</a></p>
-  `;
-  await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
-      to: [{ email: 'tangoetvous@gmail.com', name: 'Admin Tango & Vous' }],
-      subject: `📋 Nouvelle demande de devis — ${nom}`,
-      htmlContent: html,
-    }),
-  });
+  const nomAff = _esc(`${body.civilite || ''} ${body.prenom || ''} ${body.nom || ''}`.trim());
+  const isEvent = body.mode === 'event';
+  const modeBadge = isEvent
+    ? `<span style="background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">🎉 Événement</span>`
+    : `<span style="background:#6a1b9a;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">🎯 Cours privé</span>`;
+
+  function row(label, val) {
+    if (!val) return '';
+    return `<tr><td style="color:#888;padding:4px 0;white-space:nowrap;width:160px;font-size:13px;">${_esc(label)}</td><td style="font-weight:700;color:#111;font-size:13px;padding:4px 0;">${val}</td></tr>`;
+  }
+
+  let detailRows = '';
+  if (isEvent) {
+    detailRows = [
+      row('Type d\'événement', body.type_evenement ? _esc(body.type_evenement) : ''),
+      row('Date', body.date_evenement ? _esc(body.date_evenement) + (body.date_flexible === 'oui' ? ' <span style="color:#888;font-size:11px;">(flexible)</span>' : '') : ''),
+      row('Horaire', body.horaire_evenement ? _esc(body.horaire_evenement) : ''),
+      row('Lieu', body.lieu ? _esc(body.lieu) + (body.code_postal ? ' (' + _esc(body.code_postal) + ')' : '') : ''),
+      row('Nb invités', body.nombre_invites ? _esc(String(body.nombre_invites)) : ''),
+      row('Durée prestation', body.duree_prestation ? _esc(body.duree_prestation) : ''),
+      row('Budget', body.budget ? _esc(body.budget) : ''),
+    ].join('');
+  } else {
+    detailRows = [
+      row('Type de demande', body.type_demande ? _esc(body.type_demande) : ''),
+      row('Pour qui', body.pour_qui ? _esc(body.pour_qui) : ''),
+      row('Niveau tango', body.niveau_tango ? _esc(body.niveau_tango) : ''),
+      row('Professeur souhaité', body.professeur ? _esc(body.professeur) : ''),
+      row('Lieu cours', body.lieu_cours ? _esc(body.lieu_cours) : ''),
+      row('Durée cours', body.duree_cours ? _esc(body.duree_cours) : ''),
+      row('Nb de cours', body.nombre_cours ? _esc(String(body.nombre_cours)) : ''),
+      row('Disponibilités', body.dates_periodes ? _esc(body.dates_periodes) : ''),
+      row('Budget', body.budget ? _esc(body.budget) : ''),
+    ].join('');
+  }
+
+  const adminHtml = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;background:#fff;">
+  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
+    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>
+    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle demande de devis</div>
+  </div>
+  <div style="padding:24px;">
+    <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;">
+          <div style="font-size:18px;font-weight:700;color:#111;">${nomAff}</div>
+          <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(body.email || '')}${body.telephone ? ' · ' + _esc(body.telephone) : ''}</div>
+        </div>
+        ${modeBadge}
+      </div>
+      <div style="background:#fffdf8;padding:14px 16px;">
+        <p style="font-size:13px;font-weight:700;color:#555;margin:0 0 8px;">Prestations demandées</p>
+        <p style="font-size:14px;color:#111;font-weight:700;margin:0 0 12px;">${prestations}</p>
+        <table style="width:100%;border-collapse:collapse;">${detailRows}</table>
+        ${body.message ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid #e0d9c4;"><p style="font-size:12px;color:#888;margin:0 0 6px;">Message</p><div style="background:#f5f5f5;border-radius:6px;padding:10px 12px;font-size:13px;color:#333;white-space:pre-wrap;">${_esc(body.message)}</div></div>` : ''}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
+      ${body.telephone ? `<a href="tel:${_esc(body.telephone)}" style="display:inline-block;background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>` : ''}
+      <a href="mailto:${_esc(body.email || '')}" style="display:inline-block;background:#e3f2fd;color:#1565c0;border:1px solid #90caf9;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a>
+      ${body.telephone ? `<a href="sms:${_esc(body.telephone)}" style="display:inline-block;background:#f3e5f5;color:#6a1b9a;border:1px solid #ce93d8;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>` : ''}
+      <a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">→ Admin</a>
+      <a href="https://app.tangoetvous.fr/generateur-devis.html" style="display:inline-block;background:#fff8e1;color:#795500;border:1px solid #f0c040;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📋 Créer un devis →</a>
+    </div>
+  </div>
+</div>
+</body></html>`;
+
+  // D0a / D0b : email admin
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
+        to: [{ email: 'tangoetvous@gmail.com', name: 'Admin Tango & Vous' }],
+        subject: `💼 Nouvelle demande de devis — ${nomAff}${isEvent && body.type_evenement ? ' · ' + body.type_evenement : ''}`,
+        htmlContent: adminHtml,
+      }),
+    });
+  } catch(e) { console.error('[sendBrevoNotification] admin email error', e); }
+
+  // D2 : accusé réception au demandeur
+  if (body.email) {
+    const demandeurPrenom = _esc(body.prenom || body.nom || 'Madame, Monsieur');
+    const recapRows = isEvent ? [
+      row('Type d\'événement', body.type_evenement ? _esc(body.type_evenement) : ''),
+      row('Date', body.date_evenement ? _esc(body.date_evenement) : ''),
+      row('Prestations', prestations),
+    ].join('') : [
+      row('Type de demande', body.type_demande ? _esc(body.type_demande) : ''),
+      row('Prestations', prestations),
+    ].join('');
+
+    const d2Html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;background:#fff;">
+  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
+  </div>
+  <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
+    <span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre demande est bien enregistrée</span>
+  </div>
+  <div style="padding:28px 24px;">
+    <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${demandeurPrenom},</p>
+    <p style="font-size:15px;color:#333;margin:0 0 20px;">Nous avons bien reçu votre demande de devis. Voici un récapitulatif :</p>
+    <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE DEMANDE</div>
+      <table style="width:100%;border-collapse:collapse;">${recapRows}</table>
+      ${body.message ? `<div style="margin-top:10px;font-size:13px;color:#555;"><strong>Message :</strong><br/>${_esc(body.message)}</div>` : ''}
+    </div>
+    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 18px;margin:0 0 22px;">
+      <p style="font-size:14px;color:#e65100;font-weight:700;margin:0 0 8px;">⏱ Délai de réponse</p>
+      <p style="font-size:14px;color:#444;margin:0;">Nous répondons généralement sous 24 à 48h. Nous vous contacterons pour affiner les détails et vous envoyer un devis personnalisé.</p>
+    </div>
+    <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Pour toute question urgente, vous pouvez nous contacter directement :</p>
+    <div style="text-align:center;margin:0 0 24px;">
+      <a href="tel:07 73 27 59 06" style="display:inline-block;margin:4px;background:#D4AF37;color:#111;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">📞 07 73 27 59 06</a>
+      <a href="mailto:tangoetvous@gmail.com" style="display:inline-block;margin:4px;background:#fff;border:2px solid #D4AF37;color:#111;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">✉️ tangoetvous@gmail.com</a>
+    </div>
+    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À bientôt !<br/>
+    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
+    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+  </div>
+  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+  </div>
+</div>
+</body></html>`;
+    try {
+      await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
+          to: [{ email: String(body.email) }],
+          subject: `📋 Votre demande de devis — Tango & Vous`,
+          htmlContent: d2Html,
+        }),
+      });
+    } catch(e) { console.error('[sendBrevoNotification] D2 email error', e); }
+  }
 }
 
 
@@ -1218,7 +1490,7 @@ async function handleNotifySorano(request, env) {
           <div style="font-size:15px;font-weight:700;color:#2e7d32;margin-bottom:8px;">✓ Enregistrée pour cette saison</div>
           <div style="font-size:14px;color:#444;">${coursLabel}</div>
         </div>
-        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">Votre adhésion à l'Espace Sorano est bien enregistrée pour cette saison. Vous pouvez participer à tous vos cours de tango à Vincennes.</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">Votre adhésion à l'Espace Sorano est bien enregistrée pour cette saison.</p>
         ${signEleve}
       </div>${footer}`);
     await sendBrevo(email, `✓ Adhésion Sorano enregistrée · Tango & Vous`, html);
@@ -1228,12 +1500,12 @@ async function handleNotifySorano(request, env) {
         <span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Rappel — Adhésion Sorano</span></div>
       <div style="padding:28px 24px;">
         <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">Votre cours de tango se déroulant à l'Espace Sorano de Vincennes, une <strong>adhésion à cet espace culturel est nécessaire</strong> pour participer aux cours.</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">L'Espace Sorano demande pour toutes les activités qui y ont lieu une adhésion nécessaire pour participer aux cours. Mais sachez que cette adhésion permet de bénéficier de réductions sur tous les spectacles proposés au Théâtre Sorano ainsi que sur ceux programmés par les services culturels de la Ville de Vincennes.</p>
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
           <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">📋 Comment procéder</p>
-          <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Rendez-vous à l'accueil de l'Espace Sorano (2 rue de Montreuil, Vincennes) et indiquez que vous suivez des cours de tango avec Tango & Vous.</p>
+          <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous vous enverrons prochainement un lien pour régler cette adhésion.</p>
         </div>
-        <p style="font-size:14px;color:#333;margin:0 0 24px;">Si vous avez déjà réglé votre adhésion, vous pouvez ignorer ce message — notre équipe mettra à jour votre dossier.</p>
+        <p style="font-size:14px;color:#333;margin:0 0 24px;">Si vous avez déjà réglé votre adhésion pour une autre activité à l'Espace Sorano merci de nous l'indiquer.</p>
         <p style="text-align:center;margin:0 0 24px;"><a href="mailto:tangoetvous@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a></p>
         ${signEleve}
       </div>${footer}`);
@@ -1286,9 +1558,9 @@ async function handleNotifyCartePointage(request, env) {
     return corsResponse({ ok: true, sent: 0, notified: true, skipped: true }, 200, {}, request);
   }
 
-  const restantsRow = (utilises != null)
-    ? `<div style="font-size:13px;color:#666;margin-top:4px;">Carte : ${utilises}/10 cours utilisés${restants != null ? ' — ' + restants + ' restant' + (restants !== 1 ? 's' : '') : ''}</div>`
-    : '';
+  const sourceBadge = source === 'qr'
+    ? `<span style="background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;">QR code</span>`
+    : `<span style="background:#388e3c;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;">Espace élève</span>`;
 
   const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
 <div style="max-width:600px;margin:0 auto;background:#fff;">
@@ -1298,14 +1570,23 @@ async function handleNotifyCartePointage(request, env) {
   </div>
   <div style="padding:24px;">
     <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-      <div style="background:#D4AF37;padding:10px 16px;">
-        <div style="font-size:18px;font-weight:700;color:#111;">${nomAff}</div>
-        <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email)}</div>
+      <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:18px;font-weight:700;color:#111;">${nomAff}</div>
+          <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email)}</div>
+        </div>
+        ${sourceBadge}
       </div>
       <div style="background:#fffdf8;padding:14px 16px;">
-        <div style="font-size:15px;font-weight:700;color:#111;">📅 ${dateLabel}</div>
-        <div style="font-size:14px;color:#333;margin-top:6px;">+${nb} cours pointé${nb > 1 ? 's' : ''} via ${sourceLabel}</div>
-        ${restantsRow}
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tr style="background:#e8f5e9;">
+            <td style="padding:6px 8px;font-weight:700;color:#2e7d32;">⬤ Cours pointés CE JOUR</td>
+            <td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">+${nb} cours</td>
+          </tr>
+          <tr><td style="padding:4px 8px;color:#888;">Date</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${dateLabel}</td></tr>
+          ${utilises != null ? `<tr><td style="padding:4px 8px;color:#888;">Utilisés au total (carte)</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${utilises}/10</td></tr>` : ''}
+          ${restants != null ? `<tr><td style="padding:4px 8px;color:#888;">Cours restants</td><td style="padding:4px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants}</td></tr>` : ''}
+        </table>
       </div>
     </div>
     <p style="text-align:center;margin:0;"><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#D4AF37;color:#111;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Ouvrir l'admin → Cartes 10</a></p>
@@ -1321,7 +1602,7 @@ async function handleNotifyCartePointage(request, env) {
       body: JSON.stringify({
         sender: { name: 'Tango & Vous', email: adminEmail },
         to: [{ email: adminEmail }],
-        subject: `📍 Pointage carte — ${nomAff} · ${dateLabel} (+${nb} cours)`,
+        subject: `📍 Pointage carte — ${nomAff} · ${dateLabel} (+${nb} cours via ${sourceLabel})`,
         htmlContent: html,
       }),
     });
@@ -1384,23 +1665,29 @@ async function handleNotifyCartePonteeAdmin(request, env) {
   <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
 
   const expirationRow = expiration
-    ? `<div style="font-size:13px;color:#444;margin-top:6px;padding-top:6px;border-top:1px solid #b3d9f5;">Validité carte : jusqu'au ${fmtDate(expiration)}</div>`
+    ? `<tr><td style="padding:4px 8px;color:#888;">Validité carte</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">jusqu'au ${fmtDate(expiration)}</td></tr>`
     : '';
 
   const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
 <div style="max-width:600px;margin:0 auto;background:#fff;">
   ${headerEleve}
   <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Cours pointé</span>
+    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Présence enregistrée pour votre carte</span>
   </div>
   <div style="padding:28px 24px;">
     <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
     <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE CARTE DE 10 COURS</div>
-      <div style="font-size:16px;font-weight:700;color:#111;">📅 ${dateLabel}</div>
-      <div style="font-size:14px;color:#333;margin-top:8px;">+${nb} cours pointé${nb > 1 ? 's' : ''}${utilises != null ? ' · ' + utilises + '/10 cours utilisés' : ''}</div>
-      ${restants != null ? `<div style="font-size:14px;color:#2e7d32;font-weight:700;margin-top:6px;">Il vous reste ${restants} cours</div>` : ''}
-      ${expirationRow}
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr style="background:#e8f5e9;">
+          <td style="padding:6px 8px;font-weight:700;color:#2e7d32;">⬤ Cours pointés CE JOUR</td>
+          <td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">${nb} cours</td>
+        </tr>
+        <tr><td style="padding:4px 8px;color:#888;">Date du cours</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${dateLabel}</td></tr>
+        ${utilises != null ? `<tr><td style="padding:4px 8px;color:#888;">Utilisés au total (carte)</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${utilises}/10</td></tr>` : ''}
+        ${restants != null ? `<tr><td style="padding:4px 8px;color:#888;">Cours restants</td><td style="padding:4px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants}</td></tr>` : ''}
+        ${expirationRow}
+      </table>
     </div>
     <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Retrouvez l'état de votre carte et votre historique de présences dans votre espace élève.</p>
     <p style="text-align:center;margin:0 0 24px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></p>
@@ -1418,7 +1705,7 @@ async function handleNotifyCartePonteeAdmin(request, env) {
       body: JSON.stringify({
         sender: { name: 'Tango & Vous', email: adminEmail },
         to: [{ email: String(email) }],
-        subject: `✓ Cours pointé le ${dateLabel} — Votre carte Tango & Vous`,
+        subject: `✓ Présence enregistrée le ${dateLabel} — Votre carte Tango & Vous`,
         htmlContent: html,
       }),
     });
@@ -2312,9 +2599,10 @@ async function handleNotifyCarteEpuisee(request, env) {
       <p style="font-size:15px;color:#333;margin:0 0 20px;">Vous avez utilisé vos 10 cours. Pour continuer à venir danser, pensez à renouveler votre carte !</p>
       <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
         <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">⚠️ Carte terminée — 10/10 cours utilisés</p>
-        <p style="font-size:13px;color:#444;margin:0;">Rendez-vous sur AssoConnect pour renouveler votre carte ou contactez-nous directement.</p>
+        <p style="font-size:13px;color:#444;margin:0;">Rendez-vous sur AssoConnect pour renouveler votre carte ou renouvelez directement depuis votre espace élève.</p>
       </div>
-      <p style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></p>
+      <p style="text-align:center;margin:0 0 16px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">💳 Renouveler ma carte depuis l'espace élève →</a></p>
+      <p style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#fff;border:2px solid #D4AF37;color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></p>
       ${signEleve}
     </div>${footer}`);
 
@@ -2332,8 +2620,14 @@ async function handleNotifyCarteEpuisee(request, env) {
         <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email)}</div>
       </div>
       <div style="background:#fffdf8;padding:14px 16px;">
-        <div style="font-size:15px;font-weight:700;color:#c62828;">💳 10/10 cours utilisés</div>
-        <div style="font-size:13px;color:#666;margin-top:6px;">Renouvellement en attente</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tr style="background:#fff3e0;">
+            <td style="padding:6px 8px;font-weight:700;color:#c62828;">💳 10/10 cours utilisés</td>
+            <td style="padding:6px 8px;font-weight:700;color:#c62828;text-align:right;">Badge 💳</td>
+          </tr>
+          <tr><td style="padding:4px 8px;color:#888;">Statut</td><td style="padding:4px 8px;font-weight:700;color:#e65100;text-align:right;">Renouvellement en attente</td></tr>
+          ${utilises != null ? `<tr><td style="padding:4px 8px;color:#888;">Utilisés</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${utilises}/10</td></tr>` : ''}
+        </table>
       </div>
     </div>
     <p style="text-align:center;"><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#D4AF37;color:#111;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Ouvrir l'admin → Cartes 10</a></p>
@@ -2423,18 +2717,21 @@ async function handleCronCarteExpiree(request, env) {
 
     if (!env.BREVO_API_KEY) continue;
 
-    // Email élève
+    // Email élève (CX)
     const htmlEleve = wrap(`${headerEleve}
       <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
-        <span style="font-size:14px;font-weight:700;color:#e65100;">⏰ Votre carte de cours expire aujourd'hui</span></div>
+        <span style="font-size:14px;font-weight:700;color:#e65100;">⏰ Votre carte de 10 cours a expiré</span></div>
       <div style="padding:28px 24px;">
         <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
-          <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">⚠️ Carte expirée le ${dateLabel}</p>
-          <p style="font-size:13px;color:#444;margin:0;">Il vous restait <strong>${restants} cours</strong> non utilisé${restants > 1 ? 's' : ''} sur votre carte.</p>
+          <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">Votre carte a expiré</p>
+          <p style="font-size:13px;color:#444;line-height:1.6;margin:0 0 8px;">Votre carte de 10 cours est arrivée à sa date de fin de validité le <strong>${dateLabel}</strong>.</p>
+          <p style="font-size:13px;color:#444;line-height:1.6;margin:0 0 8px;">Il vous reste <strong>${restants} cours</strong> non utilisé${restants > 1 ? 's' : ''} sur cette carte.</p>
+          <p style="font-size:13px;color:#444;line-height:1.6;margin:0;">Si vous souhaitez continuer à danser, vous pouvez renouveler votre carte sur AssoConnect.</p>
         </div>
-        <p style="font-size:14px;color:#333;margin:0 0 20px;">Pour continuer à venir danser, contactez-nous pour organiser le report de vos cours ou l'ouverture d'une nouvelle carte.</p>
-        <p style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></p>
+        <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 24px;">Pour toute question n'hésitez pas à nous contacter.</p>
+        <p style="text-align:center;margin:0 0 16px;"><a href="https://le-regard-se-pose.assoconnect.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Renouveler ma carte sur AssoConnect →</a></p>
+        <p style="text-align:center;margin:0 0 28px;"><a href="mailto:tangoetvous@gmail.com" style="display:inline-block;background:#fff;color:#555;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;letter-spacing:0.5px;text-decoration:none;border:2px solid #999;">Nous contacter</a></p>
         ${signEleve}
       </div>${footer}`);
 
@@ -2445,7 +2742,7 @@ async function handleCronCarteExpiree(request, env) {
         body: JSON.stringify({
           sender: { name: 'Tango & Vous', email: adminEmail },
           to: [{ email: String(e.email) }],
-          subject: `⏰ Votre carte Tango & Vous expire aujourd'hui — ${restants} cours restants`,
+          subject: `⏰ Votre carte de 10 cours a expiré — Tango & Vous`,
           htmlContent: htmlEleve,
         }),
       });
@@ -3771,6 +4068,848 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
   return corsResponse({ ok: true, sent }, 200, {}, request);
 }
 
+// ================================================================
+// POST /api/cron/essai-rappel-j7 — E4 : rappel J-7 avant essai tango
+// Lit inscriptions_essai confirme dont date_essai = dans 7 jours
+// ================================================================
+async function handleCronEssaiRappelJ7(request, env) {
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const d7 = new Date(); d7.setDate(d7.getDate()+7);
+  const targetDate = d7.toISOString().slice(0,10);
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/inscriptions_essai?date_essai=eq.${targetDate}&statut=eq.confirme&type=eq.tango&select=id,email,prenom,nom,ville,niveau,date_essai`,
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+  );
+  if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
+  const inscrits = await res.json();
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  // Fetch params for addresses
+  let paramsRaw = {};
+  try {
+    const pr = await fetch(`${SUPABASE_URL}/rest/v1/parametres?select=cle,valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } });
+    if (pr.ok) { const rows = await pr.json(); for (const row of rows) { try { paramsRaw[row.cle] = typeof row.valeur === 'string' ? JSON.parse(row.valeur) : row.valeur; } catch { paramsRaw[row.cle] = row.valeur; } } }
+  } catch(err) { console.error('[cron-essai-rappel-j7] params error', err); }
+
+  let sent = 0;
+  for (const e of inscrits) {
+    if (!e.email || !env.BREVO_API_KEY) continue;
+    const prenomAff   = _esc(e.prenom || '');
+    const dateLabel   = fmtDate(targetDate);
+    const niveauLabel = e.niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
+    const villeLabel  = e.ville === 'paris' ? 'Paris' : 'Vincennes';
+
+    const saiM = targetDate.slice(0,4); const mI = parseInt(targetDate.slice(5,7));
+    const saison = mI >= 9 ? `${saiM}-${parseInt(saiM)+1}` : `${parseInt(saiM)-1}-${saiM}`;
+    const parKey = `tev_params_${e.ville}_${saison}`;
+    const params = paramsRaw[parKey] || {};
+    const adresse = params.adresse || {};
+    const horaires = params.horaires || {};
+    const horLabel = (horaires[e.niveau === 'debutant' ? 'debutant' : 'intermediaire'] || '');
+
+    const coursBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">VOTRE COURS D'ESSAI</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr><td style="padding:5px 8px;color:#888;">Date</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${dateLabel}</td></tr>
+        <tr><td style="padding:5px 8px;color:#888;">Cours</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${villeLabel} — ${niveauLabel}</td></tr>
+        ${horLabel ? `<tr><td style="padding:5px 8px;color:#888;">Horaire</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(horLabel)}</td></tr>` : ''}
+        ${adresse.nom ? `<tr><td style="padding:5px 8px;color:#888;">Lieu</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(adresse.nom)}</td></tr>` : ''}
+      </table>
+    </div>`;
+    const confirmUrl = `https://app.tangoetvous.fr/api/essai/confirmer?id=${e.id}&token=j7`;
+    const annulUrl   = `https://app.tangoetvous.fr/api/essai/annuler?id=${e.id}&token=j7`;
+    const isDebutant = e.niveau === 'debutant';
+    const checklist  = isDebutant ? `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:12px 16px;margin:0 0 22px;"><p style="font-size:13px;font-weight:700;color:#333;margin:0 0 8px;">Pour votre cours d'essai</p><p style="font-size:13px;color:#555;line-height:1.7;margin:0;">• Arrivez 5 min avant · Chaussures à semelles lisses · Tenue confortable</p></div>` : '';
+    const htmlEleve  = wrap(`${headerEleve}
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre cours d'essai a lieu dans 7 jours !</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        ${coursBox}
+        <div style="text-align:center;margin:0 0 22px;"><a href="${confirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0 0 22px;">
+          <a href="${annulUrl}" style="display:inline-block;background:#fff;color:#c62828;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #c62828;">✕ Annuler mon cours d'essai</a>
+          <a href="https://app.tangoetvous.fr/cours-essai.html" style="display:inline-block;background:#fff;color:#555;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #999;">↩ Reporter à une autre date</a>
+        </div>
+        ${checklist}
+        ${signEleve}
+      </div>${footer}`);
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(e.email) }], subject: `🗓 Rappel — votre cours d'essai du ${dateLabel} — Tango & Vous`, htmlContent: htmlEleve }),
+      });
+      if (r.ok) sent++;
+    } catch(err) { console.error('[cron-essai-rappel-j7] brevo error', err); }
+  }
+  return corsResponse({ ok: true, sent, checked: inscrits.length, targetDate }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/essai-valide — E15/E15b
+// Admin valide essai en attente → confirme
+// Body: { email, prenom, nom, ville, niveau, dateEssai, role,
+//         partPrenom?, partNom?, emailPartage?, daysUntil, livretUrl? }
+// ================================================================
+async function handleNotifyEssaiValide(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, nom, ville, niveau, dateEssai, role, partPrenom, partNom, emailPartage, daysUntil = 99, livretUrl, id } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const proche      = daysUntil <= 7;
+  const dateLabel   = fmtDate(dateEssai);
+  const niveauLabel = niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
+  const villeLabel  = ville === 'paris' ? 'Paris' : 'Vincennes';
+  const isCouple    = !!(partPrenom || partNom);
+  const isDebutant  = niveau === 'debutant';
+  const greetName   = emailPartage && partPrenom ? `${_esc(prenom)} &amp; ${_esc(partPrenom)}` : _esc(prenom || '');
+
+  const coursBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">VOTRE COURS D'ESSAI</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 8px;color:#888;">Date</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${dateLabel}</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Cours</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${villeLabel} — ${niveauLabel}</td></tr>
+      ${isCouple ? `<tr><td style="padding:5px 8px;color:#888;">Partenaire</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(partPrenom||'')} ${_esc(partNom||'')}</td></tr>` : ''}
+      <tr><td style="padding:5px 8px;color:#888;">Statut</td><td style="padding:5px 8px;text-align:right;"><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">✓ Confirmé·e</span></td></tr>
+    </table>
+  </div>`;
+  const confirmUrl = id ? `https://app.tangoetvous.fr/api/essai/confirmer?id=${id}&token=e15` : '#';
+  const annulUrl   = id ? `https://app.tangoetvous.fr/api/essai/annuler?id=${id}&token=e15` : '#';
+  const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="${confirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : `<p style="font-size:13px;color:#555;text-align:center;margin:0 0 20px;">Vous recevrez un rappel 7 jours avant le cours.</p>`;
+  const checklist  = isDebutant ? `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:12px 16px;margin:0 0 22px;"><p style="font-size:13px;font-weight:700;color:#333;margin:0 0 8px;">Pour votre cours d'essai</p><p style="font-size:13px;color:#555;line-height:1.7;margin:0;">• Arrivez 5 min avant · Chaussures à semelles lisses · Tenue confortable</p></div>` : '';
+  const livretBtn  = livretUrl ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_esc(livretUrl)}" style="display:inline-block;background:#fff;color:#1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #1565c0;">📖 Livret ${niveauLabel} ${villeLabel}</a></div>` : '';
+
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bonne nouvelle — votre cours d'essai est confirmé !</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${greetName},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Suite à l'évolution des disponibilités, nous avons le plaisir de confirmer votre cours d'essai.</p>
+      ${coursBox}
+      ${confirmBtn}
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0 0 22px;">
+        <a href="${annulUrl}" style="display:inline-block;background:#fff;color:#c62828;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #c62828;">✕ Annuler</a>
+        <a href="https://app.tangoetvous.fr/cours-essai.html" style="display:inline-block;background:#fff;color:#555;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #999;">↩ Reporter</a>
+      </div>
+      ${checklist}
+      ${livretBtn}
+      ${signEleve}
+    </div>${footer}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `✓ Bonne nouvelle — votre cours d'essai du ${dateLabel} est confirmé ! — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-essai-valide] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/cron/essai-yoga-rappel-j3 — Y3 : rappel J-3 avant essai yoga
+// ================================================================
+async function handleCronEssaiYogaRappelJ3(request, env) {
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const d3 = new Date(); d3.setDate(d3.getDate()+3);
+  const targetDate = d3.toISOString().slice(0,10);
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/inscriptions_essai_yoga?date_essai=eq.${targetDate}&statut=eq.confirme&select=id,email,prenom,nom,cours,date_essai`,
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+  );
+  if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
+  const inscrits = await res.json();
+
+  const adminYogaEmail = 'regardsepose@gmail.com';
+  const adminEmail     = 'tangoetvous@gmail.com';
+  const headerYoga     = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div><div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div></div>`;
+  const footerYoga     = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">MA PAGE YOGA</a><br/><a href="mailto:${adminYogaEmail}" style="color:#888;text-decoration:none;">${adminYogaEmail}</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
+  const signYoga       = `<p style="font-size:14px;color:#2e7d32;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="font-size:12px;color:#888;">Association Le Regard Se Pose · 06 63 23 35 70</span></p>`;
+  const wrap           = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  // Fetch params
+  let paramsRaw = {};
+  try {
+    const pr = await fetch(`${SUPABASE_URL}/rest/v1/parametres?select=cle,valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } });
+    if (pr.ok) { const rows = await pr.json(); for (const row of rows) { try { paramsRaw[row.cle] = typeof row.valeur === 'string' ? JSON.parse(row.valeur) : row.valeur; } catch { paramsRaw[row.cle] = row.valeur; } } }
+  } catch(err) { console.error('[cron-essai-yoga-rappel-j3] params error', err); }
+
+  let sent = 0;
+  for (const e of inscrits) {
+    if (!e.email || !env.BREVO_API_KEY) continue;
+    const prenomAff = _esc(e.prenom || '');
+    const dateLabel = fmtDate(targetDate);
+    const coursLabel = e.cours === 'yin' ? 'Yin Yoga' : e.cours === 'hatha' ? 'Hatha Yoga' : 'Yin + Hatha Yoga';
+
+    const mI = parseInt(targetDate.slice(5,7)), yr = targetDate.slice(0,4);
+    const saison = mI >= 9 ? `${yr}-${parseInt(yr)+1}` : `${parseInt(yr)-1}-${yr}`;
+    const params = paramsRaw[`tev_params_yoga_${saison}`] || {};
+    const horaires = params.horaires || {};
+    const adresse  = params.adresse || {};
+    const horLabel = horaires[e.cours] || horaires['yin'] || '';
+
+    const yogaBox = `<div style="background:#f1f8f1;border:2px solid #388e3c;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#388e3c;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #a5d6a7;">COURS D'ESSAI YOGA</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr><td style="padding:5px 8px;color:#888;">Date</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${dateLabel}</td></tr>
+        <tr><td style="padding:5px 8px;color:#888;">Cours</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${coursLabel}</td></tr>
+        ${horLabel ? `<tr><td style="padding:5px 8px;color:#888;">Horaire</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(horLabel)}</td></tr>` : ''}
+        ${adresse.nom ? `<tr><td style="padding:5px 8px;color:#888;">Lieu</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(adresse.nom)}</td></tr>` : ''}
+      </table>
+    </div>`;
+    const confirmUrl = `https://app.tangoetvous.fr/api/essai-yoga/confirmer?id=${e.id}&token=y3`;
+    const htmlEleve  = wrap(`${headerYoga}
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre cours d'essai yoga a lieu dans 3 jours !</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        ${yogaBox}
+        <div style="text-align:center;margin:0 0 22px;"><a href="${confirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+          <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">En cas d'empêchement, merci de nous prévenir même au dernier moment, afin de permettre à quelqu'un d'autre de profiter de la place.</p>
+        </div>
+        ${signYoga}
+      </div>${footerYoga}`);
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminEmail }, to: [{ email: String(e.email) }], subject: `🗓 Rappel — votre cours d'essai yoga du ${dateLabel} — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
+      });
+      if (r.ok) sent++;
+    } catch(err) { console.error('[cron-essai-yoga-rappel-j3] brevo error', err); }
+
+    // Notif in-app élève
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ email: String(e.email), type: 'essai_yoga_rappel', message: `📅 Rappel : votre cours d'essai yoga a lieu dans 3 jours — ${dateLabel}`, lu: false }),
+      });
+    } catch(err) { console.error('[cron-essai-yoga-rappel-j3] notif error', err); }
+  }
+  return corsResponse({ ok: true, sent, checked: inscrits.length, targetDate }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/essai-yoga-modifie — Y-mod
+// Admin modifie date/cours d'un essai yoga
+// Body: { email, prenom, nom, ancienneDate, nouvelleDateEssai, cours, ancienCours? }
+// ================================================================
+async function handleNotifyEssaiYogaModifie(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const adminYogaEmail = 'regardsepose@gmail.com';
+  const adminEmail     = 'tangoetvous@gmail.com';
+  const headerYoga     = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div><div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div></div>`;
+  const footerYoga     = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">MA PAGE YOGA</a><br/><a href="mailto:${adminYogaEmail}" style="color:#888;text-decoration:none;">${adminYogaEmail}</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
+  const signYoga       = `<p style="font-size:14px;color:#2e7d32;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="font-size:12px;color:#888;">Association Le Regard Se Pose · 06 63 23 35 70</span></p>`;
+  const wrap           = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, ancienneDate, nouvelleDateEssai, cours, ancienCours } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff  = _esc(prenom || '');
+  const coursLabel = cours === 'yin' ? 'Yin Yoga' : cours === 'hatha' ? 'Hatha Yoga' : 'Yin + Hatha Yoga';
+  const yogaBox    = `<div style="background:#f1f8f1;border:2px solid #388e3c;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#388e3c;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #a5d6a7;">📋 MODIFICATION DE VOTRE ESSAI</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      ${ancienneDate ? `<tr><td style="padding:5px 8px;color:#888;">Ancienne date</td><td style="padding:5px 8px;color:#c62828;text-decoration:line-through;text-align:right;">${fmtDate(ancienneDate)}</td></tr>` : ''}
+      <tr><td style="padding:5px 8px;color:#888;">Nouvelle date</td><td style="padding:5px 8px;font-weight:700;color:#2e7d32;text-align:right;">${fmtDate(nouvelleDateEssai)}</td></tr>
+      ${ancienCours && ancienCours !== cours ? `<tr><td style="padding:5px 8px;color:#888;">Ancien cours</td><td style="padding:5px 8px;color:#c62828;text-decoration:line-through;text-align:right;">${_esc(ancienCours)}</td></tr>` : ''}
+      <tr><td style="padding:5px 8px;color:#888;">Cours</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${coursLabel}</td></tr>
+    </table>
+  </div>`;
+  const htmlEleve = wrap(`${headerYoga}
+    <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre cours d'essai yoga a été modifié</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre cours d'essai yoga a été modifié. Voici le récapitulatif des changements.</p>
+      ${yogaBox}
+      <div style="text-align:center;margin:0 0 22px;"><a href="mailto:${adminYogaEmail}" style="display:inline-block;background:#fff;color:#555;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #999;">Nous contacter</a></div>
+      ${signYoga}
+    </div>${footerYoga}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminEmail }, to: [{ email: String(email) }], subject: `📋 Votre cours d'essai yoga a été modifié — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-essai-yoga-modifie] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/yoga-inscription-validee — YI1
+// Admin valide paiement yoga → inscrit
+// Body: { email, prenom, nom, cours, saison, horaires, adresse,
+//         paiement, montant, livretUrl? }
+// ================================================================
+async function handleNotifyYogaInscriptionValidee(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const adminYogaEmail = 'regardsepose@gmail.com';
+  const adminEmail     = 'tangoetvous@gmail.com';
+  const headerYoga     = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div><div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div></div>`;
+  const footerYoga     = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">MA PAGE YOGA</a><br/><a href="mailto:${adminYogaEmail}" style="color:#888;text-decoration:none;">${adminYogaEmail}</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
+  const signYoga       = `<p style="font-size:14px;color:#2e7d32;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="font-size:12px;color:#888;">Association Le Regard Se Pose · 06 63 23 35 70</span></p>`;
+  const wrap           = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, nom, cours, saison, horaires = {}, adresse = {}, paiement, montant, livretUrl } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff  = _esc(prenom || '');
+  const coursLabel = cours === 'yin' ? 'Yin Yoga' : cours === 'hatha' ? 'Hatha Yoga' : 'Yin + Hatha Yoga';
+  const isForfait  = cours === 'forfait';
+
+  let horairesHtml = '';
+  if (isForfait) {
+    if (horaires.yin)   horairesHtml += `<tr><td style="padding:5px 8px;color:#888;">Yin Yoga</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(horaires.yin)}</td></tr>`;
+    if (horaires.hatha) horairesHtml += `<tr><td style="padding:5px 8px;color:#888;">Hatha Yoga</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(horaires.hatha)}</td></tr>`;
+  } else if (horaires[cours]) {
+    horairesHtml = `<tr><td style="padding:5px 8px;color:#888;">Horaire</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(horaires[cours])}</td></tr>`;
+  }
+
+  const yogaBox = `<div style="background:#f1f8f1;border:2px solid #388e3c;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#388e3c;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #a5d6a7;">VOTRE INSCRIPTION</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 8px;color:#888;">Cours</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${coursLabel}</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Saison</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(saison||'')}</td></tr>
+      ${horairesHtml}
+      ${adresse.nom ? `<tr><td style="padding:5px 8px;color:#888;">Lieu</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(adresse.nom)}</td></tr>` : ''}
+      ${montant ? `<tr><td style="padding:5px 8px;color:#888;">Montant</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${montant}€ ${_esc(paiement||'')}</td></tr>` : ''}
+      <tr><td style="padding:5px 8px;color:#888;">Statut</td><td style="padding:5px 8px;text-align:right;"><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">✓ Bienvenue</span></td></tr>
+    </table>
+  </div>`;
+
+  const soranoBlock = `<div style="background:#fff9c4;border:1px solid #f9a825;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+    <p style="font-size:13px;color:#e65100;font-weight:700;margin:0 0 6px;">🏛 Adhésion à l'Espace Sorano</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Les cours ont lieu à l'Espace Sorano à Vincennes. Une adhésion est demandée. Vous recevrez prochainement les informations.</p>
+  </div>`;
+
+  const checklist = `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+    <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 10px;">Pour bien commencer</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Tenue confortable et souple</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Tapis de yoga (ou location sur place)</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">• Ponctualité appréciée</p>
+  </div>`;
+  const livretBtn = livretUrl ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_esc(livretUrl)}" style="display:inline-block;background:#fff;color:#388e3c;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #388e3c;">📖 Télécharger le livret ${coursLabel}</a></div>` : '';
+
+  const htmlEleve = wrap(`${headerYoga}
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue — votre inscription yoga est confirmée !</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre inscription aux cours de yoga avec Florencia Garcia est confirmée. Nous sommes ravis de vous accueillir !</p>
+      ${yogaBox}
+      ${soranoBlock}
+      ${checklist}
+      ${livretBtn}
+      ${signYoga}
+    </div>${footerYoga}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminEmail }, to: [{ email: String(email) }], subject: `✓ Bienvenue — votre inscription yoga est confirmée — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-yoga-inscription-validee] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/cron/espace-eleve-activation — P1 : J+7 après I03
+// Lit eleves inscrits (statut='inscrit') dont inscription_date = il y a 7 jours
+// ================================================================
+async function handleCronEspaceEleveActivation(request, env) {
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  // Find inscriptions_cours updated 7 days ago to statut='inscrit'
+  const d7ago = new Date(); d7ago.setDate(d7ago.getDate()-7);
+  const targetDate = d7ago.toISOString().slice(0,10);
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/inscriptions_cours?statut=eq.inscrit&updated_at=gte.${targetDate}T00:00:00&updated_at=lt.${targetDate}T23:59:59&select=email,prenom,nom`,
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+  );
+  if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
+  const inscrits = await res.json();
+
+  // Deduplicate by email
+  const seen = new Set();
+  const unique = inscrits.filter(e => { if (!e.email || seen.has(e.email)) return false; seen.add(e.email); return true; });
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  let sent = 0;
+  for (const e of unique) {
+    if (!env.BREVO_API_KEY) continue;
+    const prenomAff = _esc(e.prenom || '');
+    const infoBox   = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">ACCÉDER À VOTRE ESPACE ÉLÈVE</div>
+      <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 8px;"><strong>1.</strong> Ouvrez <a href="https://app.tangoetvous.fr" style="color:#1565c0;">app.tangoetvous.fr</a> sur votre téléphone</p>
+      <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 8px;"><strong>2.</strong> Entrez votre adresse email</p>
+      <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 8px;"><strong>3.</strong> Cliquez sur le lien reçu par email (magic link — pas de mot de passe)</p>
+      <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 10px;"><strong>4.</strong> Installez l'appli sur votre téléphone</p>
+      <div style="background:#f9f9f9;border-radius:6px;padding:10px 14px;font-size:12px;color:#666;line-height:1.7;">
+        <strong>iPhone</strong> : Partage ↑ → "Sur l'écran d'accueil"<br/>
+        <strong>Android</strong> : Menu ⋮ → "Ajouter à l'écran d'accueil"
+      </div>
+    </div>`;
+    const fonctions = `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+      <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 8px;">Ce que vous pouvez faire depuis l'appli</p>
+      <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Pointer vos cours (carte de 10 cours)</p>
+      <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Suivre votre carte et les cours restants</p>
+      <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Retrouver les milongas et les stages</p>
+      <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">• Lire les publications de l'école</p>
+    </div>`;
+    const htmlEleve = wrap(`${headerEleve}
+      <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre espace élève est prêt !</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre espace élève Tango &amp; Vous est prêt. Accédez à votre espace depuis votre téléphone pour pointer vos cours et retrouver toutes les informations de l'école.</p>
+        ${infoBox}
+        ${fonctions}
+        <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
+        ${signEleve}
+      </div>${footer}`);
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(e.email) }], subject: `✓ Votre espace élève est prêt — Tango & Vous`, htmlContent: htmlEleve }),
+      });
+      if (r.ok) sent++;
+    } catch(err) { console.error('[cron-espace-eleve-activation] brevo error', err); }
+  }
+  return corsResponse({ ok: true, sent, checked: unique.length, targetDate }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/carte-bienvenue — C1 : premier pointage carte10
+// Body: { email, prenom, nom, utilises, restants, expiration, cours }
+// ================================================================
+async function handleNotifyCarteBienvenue(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, nom, utilises = 1, restants = 9, expiration, cours } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff = _esc(prenom || '');
+  const expiLabel = expiration ? fmtDate(expiration) : 'à calculer après le 1er cours';
+  const carteBox  = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE DE 10 COURS</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#1565c0;text-align:right;">${utilises}/10</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Cours restants</td><td style="padding:5px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants}</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Valide jusqu'au</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${expiLabel}</td></tr>
+    </table>
+  </div>`;
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue — votre carte de 10 cours est activée !</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre premier cours a été enregistré. Votre carte de 10 cours est maintenant active.</p>
+      ${carteBox}
+      <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+        <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 10px;">📱 Votre espace élève</p>
+        <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 6px;">• Pointez vos cours vous-même depuis votre téléphone</p>
+        <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 6px;">• Suivez votre carte et votre progression</p>
+        <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">• Retrouvez les milongas et les stages</p>
+      </div>
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
+      ${signEleve}
+    </div>${footer}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `🎫 Votre carte de 10 cours est activée — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-carte-bienvenue] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/carte-renouvellement — C2/C2b : carte renouvelée sans payer
+// Body: { email, prenom, nom, source ('eleve'|'admin'), liensAssoConnect }
+// ================================================================
+async function handleNotifyCarteRenouvellement(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, source = 'eleve', liensAssoConnect = '#' } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff  = _esc(prenom || '');
+  const isAdmin    = source === 'admin';
+  const carteBox   = `<div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #ffcc80;">🎫 NOUVELLE CARTE — PAIEMENT EN ATTENTE</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#e65100;text-align:right;">0/10</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Statut paiement</td><td style="padding:5px 8px;font-weight:700;color:#e65100;text-align:right;">⚠️ Non payée</td></tr>
+    </table>
+  </div>`;
+  const subjectPart = isAdmin ? 'renouvelée par l\'admin' : 'renouvelée';
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Nouvelle carte créée — finalisez votre paiement</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre carte de 10 cours a été renouvelée. Pour finaliser, veuillez régler votre nouvelle carte sur AssoConnect.</p>
+      ${carteBox}
+      <div style="text-align:center;margin:0 0 22px;"><a href="${_esc(String(liensAssoConnect))}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">💳 Renouveler ma carte sur AssoConnect →</a></div>
+      ${signEleve}
+    </div>${footer}`);
+
+  // Notif in-app élève + panel admin
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email: String(email), type: 'carte_renouvelee', message: '⚠️ Nouvelle carte créée — pensez à finaliser votre paiement', lu: false }),
+    });
+  } catch(err) { console.error('[notify-carte-renouvellement] notif-eleve error', err); }
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ type: 'carte_renouvelee', message: `↻ Carte renouvelée ${isAdmin ? 'par l\'admin ' : ''}sans payer — ${_esc((prenom||''))} · ⚠️ Paiement en attente`, lu: false, lien_tab: 'cartes' }),
+    });
+  } catch(err) { console.error('[notify-carte-renouvellement] notif-admin error', err); }
+
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `⚠️ Nouvelle carte créée — finalisez votre paiement — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-carte-renouvellement] brevo error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/carte-paiement — C-pay : paiement carte10 enregistré
+// Body: { email, prenom, nom, montant, modePaiement, datePaiement,
+//         utilises, restants, expiration, cours }
+// ================================================================
+async function handleNotifyCartePaiement(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, nom, montant, modePaiement, datePaiement, utilises = 0, restants = 10, expiration } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff = _esc(prenom || '');
+  const expiLabel = expiration ? fmtDate(expiration) : '';
+  const carteBox  = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE DE 10 COURS</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr style="background:#e8f5e9;"><td style="padding:6px 8px;font-weight:700;color:#2e7d32;">✓ Paiement enregistré</td><td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">${montant ? montant+'€' : ''} ${_esc(modePaiement||'')}</td></tr>
+      ${datePaiement ? `<tr><td style="padding:5px 8px;color:#888;">Date</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${fmtDate(datePaiement)}</td></tr>` : ''}
+      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${utilises}/10</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Cours restants</td><td style="padding:5px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants}</td></tr>
+      ${expiLabel ? `<tr><td style="padding:5px 8px;color:#888;">Valide jusqu'au</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${expiLabel}</td></tr>` : ''}
+    </table>
+  </div>`;
+
+  // Notif in-app élève
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email: String(email), type: 'carte_paiement', message: `✓ Paiement enregistré · Votre carte est active`, lu: false }),
+    });
+  } catch(err) { console.error('[notify-carte-paiement] notif error', err); }
+
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Paiement enregistré — votre carte est active</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre carte de 10 cours est payée. Bon cours !</p>
+      ${carteBox}
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
+      ${signEleve}
+    </div>${footer}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `✓ Paiement enregistré — votre carte de 10 cours est active — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-carte-paiement] brevo error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/carte-report — C-report : carte reportée saison suivante
+// Body: { email, prenom, nom, restants, saisonSuivante }
+// ================================================================
+async function handleNotifyCarteReport(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, restants = 0, saisonSuivante = '' } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff = _esc(prenom || '');
+  const carteBox  = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE ${_esc(saisonSuivante)}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr style="background:#e8f5e9;"><td style="padding:6px 8px;font-weight:700;color:#2e7d32;">↩ Cours reportés</td><td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants} cours préservés</td></tr>
+    </table>
+  </div>`;
+
+  // Notif in-app élève
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email: String(email), type: 'carte_reportee', message: `↩ Votre carte reportée · ${restants} cours préservés pour ${saisonSuivante}`, lu: false }),
+    });
+  } catch(err) { console.error('[notify-carte-report] notif error', err); }
+
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Vos cours sont reportés sur la prochaine saison</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Vos cours non utilisés ont été reportés sur la saison prochaine. Votre carte vous attend à la rentrée de septembre.</p>
+      ${carteBox}
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
+      ${signEleve}
+    </div>${footer}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `↩ Vos cours sont reportés sur ${saisonSuivante} — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-carte-report] brevo error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/inscription-cours-validee — I02
+// Admin valide guidée → statut attente_paiement
+// Body: { email, prenom, nom, tel, role, ville, niveau, saison,
+//         partenaire?, emailPartenaire?, livretUrl? }
+// ================================================================
+async function handleNotifyInscriptionCoursValidee(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, nom, tel, role, ville, niveau, saison, partenaire, emailPartenaire, livretUrl, assoConnectUrl = '#' } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff   = _esc(prenom || '');
+  const niveauLabel = niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
+  const villeLabel  = ville === 'paris' ? 'Paris' : 'Vincennes';
+  const coursLabel  = `${villeLabel} — ${niveauLabel}`;
+  const roleColor   = role === 'guideur' ? '#1565c0' : '#c2185b';
+  const roleLabel   = role === 'guideur' ? 'Guideur·se' : 'Guidé·e';
+
+  const coursBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">VOTRE COURS</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 8px;color:#888;">Cours</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${coursLabel}</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Saison</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(saison||'')}</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Rôle</td><td style="padding:5px 8px;text-align:right;"><span style="background:${roleColor};color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">${roleLabel}</span></td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Statut</td><td style="padding:5px 8px;text-align:right;"><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">✓ Validé·e</span></td></tr>
+      ${partenaire ? `<tr><td style="padding:5px 8px;color:#888;">Partenaire</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(partenaire)}</td></tr>` : ''}
+    </table>
+  </div>`;
+
+  const soranoBlock = ville === 'vincennes' ? `<div style="background:#fff9c4;border:1px solid #f9a825;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+    <p style="font-size:13px;color:#e65100;font-weight:700;margin:0 0 6px;">🏛 Adhésion à l'Espace Sorano</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Les cours à Vincennes ont lieu à l'Espace Sorano. Une adhésion à l'Espace Sorano est demandée. Vous recevrez prochainement les informations pour la régler.</p>
+  </div>` : '';
+
+  const quelquesPrec = `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+    <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 10px;">Quelques précisions</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 8px;">Pour finaliser votre inscription, rendez-vous sur AssoConnect pour régler la cotisation et le premier paiement.</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Modes de paiement acceptés : CB (1× ou 3×), espèces, chèque, virement.</p>
+  </div>`;
+
+  const livretBtn = livretUrl ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_esc(livretUrl)}" style="display:inline-block;background:#fff;color:#1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #1565c0;">📖 Télécharger le livret ${niveauLabel} ${villeLabel}</a></div>` : '';
+
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre demande d'inscription est validée</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Nous avons le plaisir de vous informer que votre demande d'inscription est validée. Pour finaliser votre inscription, veuillez vous rendre sur AssoConnect.</p>
+      ${coursBox}
+      ${soranoBlock}
+      <div style="text-align:center;margin:0 0 22px;"><a href="${_esc(assoConnectUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Finaliser mon inscription sur AssoConnect →</a></div>
+      ${quelquesPrec}
+      ${livretBtn}
+      ${signEleve}
+    </div>${footer}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `✓ Votre demande d'inscription au tango est validée — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-inscription-cours-validee] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/inscription-cours-payee — I03
+// Admin valide paiement → statut inscrit
+// Body: { email, prenom, nom, ville, niveau, saison, livretUrl? }
+// ================================================================
+async function handleNotifyInscriptionCoursPaye(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, nom, ville, niveau, saison, livretUrl, role } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff   = _esc(prenom || '');
+  const niveauLabel = niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
+  const villeLabel  = ville === 'paris' ? 'Paris' : 'Vincennes';
+  const coursBox    = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">VOTRE INSCRIPTION</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 8px;color:#888;">Cours</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${villeLabel} — ${niveauLabel}</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Saison</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(saison||'')}</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Statut</td><td style="padding:5px 8px;text-align:right;"><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">✓ Inscrit·e</span></td></tr>
+    </table>
+  </div>`;
+  const livretBtn = livretUrl ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_esc(livretUrl)}" style="display:inline-block;background:#fff;color:#1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #1565c0;">📖 Télécharger le livret ${niveauLabel} ${villeLabel}</a></div>` : '';
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription est confirmée, à bientôt !</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre inscription pour la saison ${_esc(saison||'')} est confirmée. Nous avons hâte de danser avec vous !</p>
+      ${coursBox}
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
+      ${livretBtn}
+      ${signEleve}
+    </div>${footer}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `✓ Votre inscription au tango est confirmée — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-inscription-cours-payee] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/inscription-cours-modifiee — I04
+// Admin modifie le cours d'un élève inscrit
+// Body: { email, prenom, nom, ancienCours, nouveauCours, ville, niveau }
+// ================================================================
+async function handleNotifyInscriptionCoursModifiee(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, ancienCours, nouveauCours } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff = _esc(prenom || '');
+  const coursBox  = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">📋 MODIFICATION DE VOTRE INSCRIPTION</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      ${ancienCours ? `<tr><td style="padding:5px 8px;color:#888;">Ancien cours</td><td style="padding:5px 8px;color:#c62828;text-decoration:line-through;text-align:right;">${_esc(ancienCours)}</td></tr>` : ''}
+      <tr><td style="padding:5px 8px;color:#888;">Nouveau cours</td><td style="padding:5px 8px;font-weight:700;color:#2e7d32;text-align:right;">${_esc(nouveauCours||'')}</td></tr>
+    </table>
+  </div>`;
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre inscription a été modifiée</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre inscription a été modifiée. Voici le récapitulatif des changements.</p>
+      ${coursBox}
+      <div style="text-align:center;margin:0 0 22px;"><a href="mailto:${adminEmail}" style="display:inline-block;background:#fff;color:#555;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #999;">Nous contacter</a></div>
+      ${signEleve}
+    </div>${footer}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `📋 Votre inscription a été modifiée — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-inscription-cours-modifiee] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
 // ── Helper : vérifier si le JWT est admin ───────────────────────
 async function checkAdminJwt(jwt, env) {
   try {
@@ -3786,4 +4925,434 @@ async function checkAdminJwt(jwt, env) {
     const rows = await r.json();
     return Array.isArray(rows) && rows.length > 0;
   } catch { return false; }
+}
+
+// ================================================================
+// POST /api/notify/inscription-stage
+// S0 (admin), S1/S1b (confirmé), S2 (attente guidée) + notif panel
+// Body: { email, prenom, nom, tel, role, statut, saison,
+//         inscriptionsParDate: [{date, slots:[{type,theme,horaire_debut,horaire_fin}], tarif}],
+//         partEmail?, partPrenom?, partNom?, emailPartage? }
+// ================================================================
+async function handleNotifyInscriptionStage(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const MOIS_CT = ['jan.','fév.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+  function fmtDateCourt(iso) { const d = new Date(iso+'T12:00:00'); return d.getDate()+' '+MOIS_CT[d.getMonth()]; }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const headerAdmin = `<div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, nom, tel, role, statut, saison, inscriptionsParDate = [], partEmail, partPrenom, partNom, emailPartage } = body;
+  const prenomAff = _esc(prenom || '');
+  const nomAff    = _esc((prenom||'')+' '+(nom||'')).trim();
+  const isConfirme = (statut === 'confirme');
+  const isPartage  = !!emailPartage;
+
+  // Build stage-box HTML for a given list of dates + slots
+  function buildStageBox(dates, prenomLabel, nomLabel, roleLabel) {
+    let html = '';
+    for (const d of dates) {
+      const dateLabel = fmtDate(d.date);
+      const slots = d.slots || [];
+      const total = d.tarif || 0;
+      html += `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 18px;">`;
+      html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:10px;font-weight:700;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">📅 ${dateLabel}</div>`;
+      if (prenomLabel) html += `<p style="font-size:13px;color:#333;font-weight:700;margin:0 0 8px;">${_esc(prenomLabel)} ${_esc(nomLabel||'')} — <span style="color:#1565c0;">${_esc(roleLabel||'')}</span></p>`;
+      for (const sl of slots) {
+        html += `<div style="font-size:13px;color:#444;margin:0 0 4px;">• ${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')} — ${_esc(sl.theme||sl.type||'')}</div>`;
+      }
+      if (total) html += `<p style="font-size:13px;color:#1565c0;font-weight:700;margin:8px 0 0;">Prix : ${total}€</p>`;
+      html += `</div>`;
+    }
+    return html;
+  }
+
+  // Notif panel admin
+  const dateLabels = inscriptionsParDate.map(d => fmtDateCourt(d.date)).join(' · ');
+  const statutLabel = isConfirme ? '✓ Confirmé·e' : '⏳ Att. validation — parité';
+  const notifBg     = isConfirme ? '#0f1f0f' : '#1f1800';
+  const notifBorder = isConfirme ? '#4caf50' : '#e8c84a';
+  const notifMsg    = `🎭 ${isConfirme ? 'Inscription' : 'Demande'} stage — ${nomAff} · ${dateLabels} · ${statutLabel}`;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ type: 'stage_inscription', message: notifMsg, lu: false, lien_tab: 'stages' }),
+    });
+  } catch(err) { console.error('[notify-stage] notif error', err); }
+
+  if (!env.BREVO_API_KEY) return corsResponse({ ok: true, notified: true }, 200, {}, request);
+
+  async function sendMail(to, subj, html) {
+    try {
+      await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
+      });
+    } catch(err) { console.error('[notify-stage] sendMail error', err); }
+  }
+
+  // S0 — admin email
+  const firstDate = inscriptionsParDate[0] || {};
+  const allSlots  = (firstDate.slots||[]).map(sl => `${sl.horaire_debut||''}–${sl.horaire_fin||''} : ${sl.theme||sl.type||''}`).join('<br/>');
+  const htmlAdmin = wrap(`${headerAdmin}
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:700;color:#111;">${nomAff}</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email||'')} · ${_esc(tel||'')}</div>
+          </div>
+          <span style="display:inline-block;background:${isConfirme?'#2e7d32':'#e65100'};color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">${isConfirme?'✓ Confirmé·e':'⏳ Attente'}</span>
+        </div>
+        <div style="background:#fffdf8;padding:14px 16px;">
+          <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:6px;">🎭 Stage · ${dateLabels}</div>
+          <div style="font-size:13px;color:#333;margin-bottom:4px;">Rôle : ${_esc(role||'')}</div>
+          <div style="font-size:13px;color:#333;">${allSlots}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="tel:${_esc(tel||'')}" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        <a href="mailto:${_esc(email||'')}" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
+        <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
+      </div>
+    </div>${footer}`);
+  await sendMail(adminEmail, `🎭 Inscription stage — ${nomAff} · ${dateLabels}`, htmlAdmin);
+
+  // S1/S1b ou S2 — email élève
+  const today    = new Date().toISOString().slice(0,10);
+  const daysUntil = inscriptionsParDate.length > 0
+    ? Math.round((new Date(inscriptionsParDate[0].date+'T12:00:00') - new Date(today+'T12:00:00')) / 86400000)
+    : 99;
+  const proche   = daysUntil <= 3;
+
+  if (isConfirme) {
+    const bandeau = proche
+      ? `<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée</span></div>`
+      : `<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée</span></div>`;
+    const rappelNote = proche ? '' : `<p style="font-size:13px;color:#555;text-align:center;margin:0 0 20px;">Vous recevrez un rappel 3 jours avant le stage.</p>`;
+    const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr/stages-pwa.html" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
+    const stageBoxHtml = buildStageBox(inscriptionsParDate, null, null, null);
+    const htmlEleve = wrap(`${headerEleve}${bandeau}
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre inscription au stage Tango &amp; Vous est bien enregistrée. Voici le récapitulatif.</p>
+        ${stageBoxHtml}
+        ${confirmBtn}
+        ${rappelNote}
+        <p style="font-size:13px;color:#555;line-height:1.6;margin:0 0 20px;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
+        ${signEleve}
+      </div>${footer}`);
+    const firstDateLabel = fmtDate(inscriptionsParDate[0]?.date || today);
+    await sendMail(String(email), `🎭 Votre inscription au stage du ${firstDateLabel} — Tango & Vous`, htmlEleve);
+  } else {
+    // S2 — attente guidée
+    const stageBoxHtml = buildStageBox(inscriptionsParDate, null, null, null);
+    const htmlEleve = wrap(`${headerEleve}
+      <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Votre demande d'inscription est enregistrée</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        ${stageBoxHtml}
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
+          <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">⏳ En attente de validation</p>
+          <p style="font-size:13px;color:#444;line-height:1.7;margin:0;">Nous veillons à avoir autant de guideurs que de guidées. Votre inscription sera confirmée selon l'équilibre des inscrits.</p>
+        </div>
+        <div style="text-align:center;margin:0 0 22px;"><a href="mailto:${adminEmail}" style="display:inline-block;background:#fff;color:#555;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #999;">Nous contacter</a></div>
+        ${signEleve}
+      </div>${footer}`);
+    const firstDateLabel = fmtDate(inscriptionsParDate[0]?.date || today);
+    await sendMail(String(email), `🎭 Votre demande d'inscription au stage du ${firstDateLabel} — Tango & Vous`, htmlEleve);
+  }
+
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/cron/rappel-stage-j3 — S4 : rappel J-3 avant chaque stage
+// Lit inscriptions_stages confirmées dont stage_date = dans 3 jours
+// ================================================================
+async function handleCronRappelStageJ3(request, env) {
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const d3 = new Date(); d3.setDate(d3.getDate()+3);
+  const targetDate = d3.toISOString().slice(0,10);
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=eq.${targetDate}&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees`,
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+  );
+  if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
+  const inscrits = await res.json();
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  let sent = 0;
+  for (const e of inscrits) {
+    if (!e.email || !env.BREVO_API_KEY) continue;
+    const prenomAff = _esc(e.prenom || '');
+    const dateLabel = fmtDate(targetDate);
+    const donnees   = typeof e.donnees === 'string' ? JSON.parse(e.donnees||'{}') : (e.donnees||{});
+    const slots     = donnees.stagesDetail || [];
+    let slotsHtml   = '';
+    for (const sl of slots) {
+      slotsHtml += `<div style="font-size:13px;color:#444;margin:0 0 4px;">• ${_esc(sl.horaire||'')} — ${_esc(sl.theme||sl.type||'')}</div>`;
+    }
+    const stageBox = `<div style="background:#e3f2fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:10px;font-weight:700;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">📅 ${dateLabel}</div>
+      ${slotsHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}
+    </div>`;
+    const htmlEleve = wrap(`${headerEleve}
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre stage a lieu dans 3 jours !</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        ${stageBox}
+        <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+          <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidées.</p>
+        </div>
+        ${signEleve}
+      </div>${footer}`);
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(e.email) }], subject: `🗓 Rappel stage du ${dateLabel} — Tango & Vous`, htmlContent: htmlEleve }),
+      });
+      if (r.ok) sent++;
+    } catch(err) { console.error('[cron-rappel-stage-j3] error', err); }
+  }
+  return corsResponse({ ok: true, sent, checked: inscrits.length, targetDate }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/stage-valide — S3/S3b : admin valide attente → confirme
+// Body: { email, prenom, nom, role, inscriptionsParDate, daysUntil }
+// ================================================================
+async function handleNotifyStageValide(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, nom, role, inscriptionsParDate = [], daysUntil = 99 } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff  = _esc(prenom || '');
+  const proche     = daysUntil <= 3;
+  let slotsHtml = '';
+  for (const d of inscriptionsParDate) {
+    const dateLabel = fmtDate(d.date);
+    slotsHtml += `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:14px 18px;margin:0 0 16px;">`;
+    slotsHtml += `<div style="font-size:10px;text-transform:uppercase;color:#1565c0;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">📅 ${dateLabel}</div>`;
+    for (const sl of (d.slots||[])) {
+      slotsHtml += `<div style="font-size:13px;color:#444;margin:0 0 3px;">• ${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')} — ${_esc(sl.theme||sl.type||'')}</div>`;
+    }
+    if (d.tarif) slotsHtml += `<p style="font-size:13px;color:#1565c0;font-weight:700;margin:8px 0 0;">Prix : ${d.tarif}€</p>`;
+    slotsHtml += `</div>`;
+  }
+  const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
+  const rappelNote = proche ? '' : `<p style="font-size:13px;color:#555;text-align:center;margin:0 0 20px;">Vous recevrez un rappel 3 jours avant le stage.</p>`;
+  const firstDateLabel = inscriptionsParDate[0] ? fmtDate(inscriptionsParDate[0].date) : '';
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bonne nouvelle — votre place au stage est confirmée !</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Suite à l'évolution des inscriptions, nous avons le plaisir de vous confirmer votre place au stage.</p>
+      ${slotsHtml}
+      ${confirmBtn}
+      ${rappelNote}
+      <p style="font-size:13px;color:#555;margin:0 0 20px;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
+      ${signEleve}
+    </div>${footer}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `🎭 Bonne nouvelle — votre place au stage du ${firstDateLabel} est confirmée ! — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-stage-valide] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/stage-annule — S-cancel : admin annule une inscription stage
+// Body: { email, prenom, nom, inscriptionsParDate }
+// ================================================================
+async function handleNotifyStageAnnule(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, inscriptionsParDate = [] } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  const prenomAff = _esc(prenom || '');
+  let slotsHtml = '';
+  for (const d of inscriptionsParDate) {
+    slotsHtml += `<div style="background:#ffebee;border:2px solid #c62828;border-radius:10px;padding:14px 18px;margin:0 0 16px;">
+      <div style="font-size:10px;text-transform:uppercase;color:#c62828;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #ef9a9a;">✕ STAGE ANNULÉ — ${fmtDate(d.date)}</div>
+      ${(d.slots||[]).map(sl => `<div style="font-size:13px;color:#777;text-decoration:line-through;margin:0 0 3px;">${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')} — ${_esc(sl.theme||sl.type||'')}</div>`).join('')}
+    </div>`;
+  }
+  const firstDateLabel = inscriptionsParDate[0] ? fmtDate(inscriptionsParDate[0].date) : '';
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#ffebee;padding:14px 24px;text-align:center;border-bottom:1px solid #ef9a9a;"><span style="font-size:14px;font-weight:700;color:#c62828;">✕ Votre inscription au stage a été annulée</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre inscription au stage a été annulée. Voici le récapitulatif des créneaux concernés.</p>
+      ${slotsHtml}
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr/stages-pwa.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Voir les prochains stages →</a></div>
+      ${signEleve}
+    </div>${footer}`);
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `✕ Votre inscription au stage du ${firstDateLabel} a été annulée — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-stage-annule] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/cours-particulier — CP0 (admin) + CP1 (élève) + notif panel
+// Body: { email, prenom, nom, tel, prof, duree, lieu, objectifs,
+//         niveauEleve, dispoTexte, remarque, urgence }
+// ================================================================
+async function handleNotifyCoursParticulier(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerAdmin = `<div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle demande cours particulier</div></div>`;
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const { email, prenom, nom, tel, prof, duree, lieu, objectifs, niveauEleve, dispoTexte, remarque, urgence } = body;
+  const nomAff    = _esc((prenom||'')+' '+(nom||'')).trim();
+  const prenomAff = _esc(prenom || '');
+
+  // Notif panel admin
+  const urgBadge = urgence === 'haute' ? ' · Urgence haute' : '';
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ type: 'cours_particulier', message: `🎯 Cours particulier — ${nomAff}${urgBadge} · ⏳ À traiter`, lu: false, lien_tab: 'cours-particuliers' }),
+    });
+  } catch(err) { console.error('[notify-cp] notif error', err); }
+
+  if (!env.BREVO_API_KEY) return corsResponse({ ok: true, notified: true }, 200, {}, request);
+
+  async function sendMail(to, subj, html) {
+    try {
+      await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
+      });
+    } catch(err) { console.error('[notify-cp] sendMail error', err); }
+  }
+
+  function row(label, val) {
+    if (!val) return '';
+    return `<tr><td style="padding:6px 10px;font-size:12px;color:#888;width:140px;vertical-align:top;">${label}</td><td style="padding:6px 10px;font-size:13px;color:#222;white-space:pre-wrap;">${_esc(String(val))}</td></tr>`;
+  }
+
+  const urgStyle = urgence === 'haute' ? 'display:inline-block;background:#c62828;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;margin-left:8px;' : '';
+  const urgSpan  = urgence === 'haute' ? `<span style="${urgStyle}">URGENCE HAUTE</span>` : '';
+
+  // CP0 — admin
+  const htmlAdmin = wrap(`${headerAdmin}
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;">
+          <div style="font-size:18px;font-weight:700;color:#111;">${nomAff} ${urgSpan}</div>
+          <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email||'')} · ${_esc(tel||'')}</div>
+        </div>
+        <div style="background:#fffdf8;padding:0;">
+          <table style="width:100%;border-collapse:collapse;">
+            ${row('Professeur', prof)}
+            ${row('Durée', duree)}
+            ${row('Niveau', niveauEleve)}
+            ${row('Lieu', lieu)}
+            ${row('Objectifs', objectifs)}
+            ${row('Disponibilités', dispoTexte)}
+            ${row('Remarques', remarque)}
+          </table>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="tel:${_esc(tel||'')}" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        <a href="mailto:${_esc(email||'')}" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
+        <a href="sms:${_esc(tel||'')}" style="background:#388e3c;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        <a href="https://app.tangoetvous.fr/admin.html#cours-particuliers" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
+      </div>
+    </div>${footer}`);
+  await sendMail(adminEmail, `🎯 Cours particulier — ${nomAff}${urgBadge}`, htmlAdmin);
+
+  // CP1 — élève (accusé réception)
+  if (email) {
+    const cpBox = `<div style="background:#ede7f6;border:2px solid #7b1fa2;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#7b1fa2;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #ce93d8;">VOTRE DEMANDE</div>
+      <table style="width:100%;border-collapse:collapse;">
+        ${row('Professeur', prof)}
+        ${row('Durée', duree)}
+        ${row('Lieu', lieu)}
+        ${row('Objectifs', objectifs)}
+        ${row('Disponibilités', dispoTexte)}
+        ${row('Remarques', remarque)}
+      </table>
+    </div>`;
+    const htmlEleve = wrap(`${headerEleve}
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre demande est bien enregistrée</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Nous avons bien reçu votre demande de cours particulier. Voici le récapitulatif.</p>
+        ${cpBox}
+        <div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+          <p style="font-size:14px;color:#2e7d32;font-weight:700;margin:0 0 6px;">Prochaine étape</p>
+          <p style="font-size:13px;color:#444;line-height:1.7;margin:0;">Nous vous contactons dans les meilleurs délais pour convenir d'un créneau.</p>
+        </div>
+        <p style="font-size:13px;color:#555;text-align:center;margin:0 0 6px;">📞 07 73 27 59 06</p>
+        <p style="font-size:13px;color:#555;text-align:center;margin:0 0 22px;"><a href="mailto:${adminEmail}" style="color:#B8962E;">${adminEmail}</a></p>
+        ${signEleve}
+      </div>${footer}`);
+    await sendMail(String(email), `📋 Votre demande de cours particulier — Tango & Vous`, htmlEleve);
+  }
+
+  return corsResponse({ ok: true }, 200, {}, request);
 }

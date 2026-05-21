@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Sources emails — Cours d'essai Tango</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; background: #1a1a1a; color: #ccc; margin: 0; padding: 20px; }
+  h1 { color: #D4AF37; letter-spacing: 4px; font-size: 18px; }
+  h2 { color: #D4AF37; font-size: 14px; margin: 24px 0 6px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  h3 { color: #aaa; font-size: 12px; margin: 12px 0 4px; }
+  .block { background: #222; border: 1px solid #333; border-radius: 6px; padding: 14px 16px; margin: 0 0 14px; }
+  .field { margin: 4px 0; }
+  .label { color: #888; width: 160px; display: inline-block; }
+  .var { color: #f0c030; font-weight: 700; }   /* variable JS / champ DB */
+  .src { color: #6ab0f5; }                      /* source de données */
+  .cond { color: #c792ea; }                     /* condition / logique */
+  .note { color: #888; font-style: italic; font-size: 12px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .route { background: #0f1f0f; border: 1px solid #2e7d32; border-radius: 4px; padding: 4px 10px; font-size: 12px; color: #81c784; margin-bottom: 8px; display: inline-block; }
+  .sep { border: none; border-top: 1px solid #333; margin: 20px 0; }
+</style>
+</head>
+<body>
+<h1>SOURCES EMAILS — COURS D'ESSAI TANGO</h1>
+<p class="note">Handler principal : <code>handleNotifyInscriptionEssai</code> · Fichier : <code>worker.js</code></p>
+
+<h2>E0 — Notification admin (toute inscription)</h2>
+<div class="route">POST /api/notify/inscription-essai (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">tangoetvous@gmail.com</span></div>
+  <div class="field"><span class="label">Sujet :</span> <span class="var">`🎭 Essai tango — ${prenom} ${nom} · ${ville} ${niveau} · ${dateEssai}`</span></div>
+  <div class="field"><span class="label">Nom élève :</span> <span class="var">body.prenom + body.nom</span></div>
+  <div class="field"><span class="label">Email :</span> <span class="var">body.email</span></div>
+  <div class="field"><span class="label">Tél :</span> <span class="var">body.tel</span></div>
+  <div class="field"><span class="label">Rôle :</span> <span class="var">body.role</span> <span class="note">'guideur'|'guidee'|'double'</span></div>
+  <div class="field"><span class="label">Ville :</span> <span class="var">body.ville</span> <span class="note">'paris'|'vincennes'</span></div>
+  <div class="field"><span class="label">Niveau :</span> <span class="var">body.niveau</span> <span class="note">'debutant'|'intermediaire'</span></div>
+  <div class="field"><span class="label">Date essai :</span> <span class="var">body.dateEssai</span> <span class="note">YYYY-MM-DD</span></div>
+  <div class="field"><span class="label">Partenaire :</span> <span class="var">body.partPrenom + body.partNom</span> <span class="cond">si avecPart=true</span></div>
+  <div class="field"><span class="label">Statut :</span> <span class="var">body.statut</span> <span class="note">'confirme'|'attente'</span></div>
+  <div class="field"><span class="label">Lieu :</span> <span class="src">tev_params_${ville}_${saison}.adresse.nom + .rue + .transport</span></div>
+  <div class="field"><span class="label">Horaire :</span> <span class="src">tev_params_${ville}_${saison}.horaires.${niveau}</span></div>
+  <div class="field"><span class="label">Boutons :</span> 📞 tel: · ✉️ mailto: · 💬 sms: · Ouvrir l'admin</div>
+</div>
+
+<h2>E1 — Confirmation élève (&gt;7 jours)</h2>
+<div class="route">POST /api/notify/inscription-essai (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='confirme' ET daysUntil &gt; 7</span></div>
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">body.email</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre cours d'essai du ${dateLabel} est confirmé — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre cours d'essai est confirmé !"</div>
+  <div class="field"><span class="label">Cours box :</span> Date · Cours · Horaire · Lieu · Rôle (badge) · Statut "✓ Confirmé·e"</div>
+  <div class="field"><span class="label">Horaire :</span> <span class="src">tev_params_${ville}_${saison}.horaires.${niveau}</span></div>
+  <div class="field"><span class="label">Adresse :</span> <span class="src">tev_params_${ville}_${saison}.adresse.nom + .rue</span></div>
+  <div class="field"><span class="label">Note rappel :</span> "Vous recevrez un rappel 7 jours avant le cours."</div>
+  <div class="field"><span class="label">Boutons :</span> ✕ Annuler (lien API) · ↩ Reporter (formulaire essai)</div>
+  <div class="field"><span class="label">Livret :</span> <span class="src">tev_params_${ville}_${saison}.livret.url_deb (débutant) / url_int (intermédiaire)</span></div>
+  <div class="field"><span class="label">Checklist :</span> <span class="cond">débutant uniquement</span> — arrivée 5min · chaussures lisses · tenue</div>
+  <div class="field"><span class="label">Pas de bouton 👍 :</span> <span class="cond">E1 &gt;7j → pas de bouton confirmer présence (E4/E6 s'en charge)</span></div>
+</div>
+
+<h2>E2 — Guidée seule en attente</h2>
+<div class="route">POST /api/notify/inscription-essai (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='attente' (guidée seule → toujours attente)</span></div>
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">body.email</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>⏳ Votre demande de cours d'essai tango — liste d'attente — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Votre demande est bien enregistrée"</div>
+  <div class="field"><span class="label">Encadré :</span> Explication parité guideurs/guidées</div>
+  <div class="field"><span class="label">Bouton :</span> Nous contacter (mailto admin)</div>
+</div>
+
+<h2>E4 — Rappel J-7 (cron)</h2>
+<div class="route">POST /api/cron/essai-rappel-j7 (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien · inscriptions_essai WHERE date_essai = today+7 AND statut='confirme' AND type='tango'</span></div>
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">e.email</span> <span class="src">(depuis inscriptions_essai)</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🗓 Rappel — votre cours d'essai du ${dateLabel} — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Bleu 🗓 "Rappel — votre cours d'essai a lieu dans 7 jours !"</div>
+  <div class="field"><span class="label">Cours box :</span> Date · Cours · <span class="src">horaires depuis tev_params_${ville}_${saison}</span> · Lieu</div>
+  <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence" → <code>/api/essai/confirmer?id=&amp;token=j7</code></div>
+  <div class="field"><span class="label">Boutons :</span> ✕ Annuler → <code>/api/essai/annuler</code> · ↩ Reporter → cours-essai.html</div>
+  <div class="field"><span class="label">Checklist :</span> <span class="cond">débutant uniquement</span></div>
+</div>
+
+<h2>E5 — Guideur seul en attente (quota sept-nov)</h2>
+<div class="route">POST /api/notify/inscription-essai (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='attente' + role='guideur' + quota GUI≥22 + mois 9/10/11</span></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange "Ce créneau est complet pour votre rôle ce jour-là"</div>
+  <div class="field"><span class="label">Boutons :</span> ↩ Reporter · Nous contacter</div>
+</div>
+
+<h2>E6 — Confirmation élève (&lt;7 jours)</h2>
+<div class="route">POST /api/notify/inscription-essai (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='confirme' ET daysUntil ≤ 7</span></div>
+  <div class="field"><span class="label">Différence E1/E6 :</span> E6 contient le bouton 👍 "Je confirme ma présence", pas de mention rappel futur</div>
+  <div class="field"><span class="label">Bouton 👍 :</span> Vert · position : APRÈS cours box, AVANT annuler/reporter</div>
+</div>
+
+<h2>E15 / E15b — Admin valide attente → confirmé</h2>
+<div class="route">POST /api/notify/essai-valide (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, dateEssai, role, partPrenom?, partNom?, emailPartage?, daysUntil, livretUrl?, id }</span></div>
+  <div class="field"><span class="label">E15b :</span> <span class="cond">si emailPartage=true → salutation "Prénom &amp; Prénom", sinon E15 normal</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Bonne nouvelle — votre cours d'essai du ${dateLabel} est confirmé !</code></div>
+  <div class="field"><span class="label">Texte intro :</span> "Suite à l'évolution des disponibilités..."</div>
+  <div class="field"><span class="label">Bouton 👍 :</span> <span class="cond">si daysUntil ≤ 7</span> · sinon → mention rappel J-7</div>
+</div>
+
+<h2>E-mod — Modification par l'admin</h2>
+<div class="route">POST /api/notify/essai-action (JWT admin) avec action='edit'</div>
+<div class="block">
+  <div class="field"><span class="label">Body :</span> <span class="var">{ action:'edit', essai:{}, newDate, newVille, newNiveau }</span></div>
+  <div class="field"><span class="label">Bandeau :</span> Bleu 📋 "Votre cours d'essai a été modifié"</div>
+  <div class="field"><span class="label">Cours box :</span> Ancienne date <span style="text-decoration:line-through;color:#c62828">barrée rouge</span> · Nouvelle date en vert</div>
+  <div class="field"><span class="label">Bouton :</span> ✕ Annuler</div>
+</div>
+
+<h2>E-J1a — Lendemain du cours, élève présent</h2>
+<div class="route">POST /api/cron/essai-j1 (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 9h Paris · inscriptions_essai WHERE date_essai=hier AND presence_declaree=true</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🎶 À bientôt sur la piste — et si vous rejoigniez nos cours ?</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "À bientôt sur la piste !"</div>
+  <div class="field"><span class="label">Contenu :</span> Présentation du process d'inscription · bouton AssoConnect</div>
+  <div class="field"><span class="label">Pas de lien autre essai :</span> <span class="cond">l'essai a eu lieu → pas de lien formulaire essai</span></div>
+</div>
+
+<h2>E-J1b — Lendemain du cours, élève absent</h2>
+<div class="route">POST /api/cron/essai-j1 (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 9h Paris · presence_declaree=false (null → pas d'email)</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>💙 On vous attend bientôt — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange 💙 "Vous nous avez manqué"</div>
+  <div class="field"><span class="label">Bouton :</span> ↩ Choisir une nouvelle date → cours-essai.html</div>
+  <div class="field"><span class="label">Note :</span> "Pas de pénalité · vos cours gratuits de septembre restent valables"</div>
+</div>
+</body>
+</html>

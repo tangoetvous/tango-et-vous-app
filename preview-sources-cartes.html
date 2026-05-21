@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Sources emails — Cartes 10 cours</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; background: #1a1a1a; color: #ccc; margin: 0; padding: 20px; }
+  h1 { color: #D4AF37; letter-spacing: 4px; font-size: 18px; }
+  h2 { color: #D4AF37; font-size: 14px; margin: 24px 0 6px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  .block { background: #222; border: 1px solid #333; border-radius: 6px; padding: 14px 16px; margin: 0 0 14px; }
+  .field { margin: 4px 0; }
+  .label { color: #888; width: 180px; display: inline-block; }
+  .var { color: #f0c030; font-weight: 700; }
+  .src { color: #6ab0f5; }
+  .cond { color: #c792ea; }
+  .note { color: #888; font-style: italic; font-size: 12px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .route { background: #0f1f0f; border: 1px solid #2e7d32; border-radius: 4px; padding: 4px 10px; font-size: 12px; color: #81c784; margin-bottom: 8px; display: inline-block; }
+</style>
+</head>
+<body>
+<h1>SOURCES EMAILS — CARTES 10 COURS</h1>
+
+<h2>C1 — Bienvenue (premier pointage de la saison)</h2>
+<div class="route">POST /api/notify/carte-bienvenue (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Premier pointage sur la carte de la saison (depuis Cartes 10 ou QR code)</span></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, utilises, restants, datePremierCours, expiration? }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🎉 Bienvenue — votre carte de 10 cours est activée — Tango & Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Bienvenue — votre carte de 10 cours est activée !"</div>
+  <div class="field"><span class="label">Carte-box :</span> Cours · Saison · Cours utilisés (1/10) · Cours restants · <span class="cond">si expiration</span> → Date de validité</div>
+  <div class="field"><span class="label">Section PWA :</span> Installer l'app · pointer · suivre sa carte · bouton "Accéder à mon espace élève →"</div>
+  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — "🎉 Votre carte de 10 cours est activée — 1 cours utilisé / 9 restants"</div>
+</div>
+
+<h2>C2 — Renouvellement sans payer (élève ou admin)</h2>
+<div class="route">POST /api/notify/carte-renouvellement (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheurs :</span></div>
+  <ul style="margin:4px 0 8px 20px;font-size:12px;">
+    <li><span class="cond">C2</span> — Élève clique "↻ Renouveler sans payer pour l'instant" dans espace élève</li>
+    <li><span class="cond">C2b</span> — Admin clique "Non payé" dans le modal Renouveler (Cartes 10 → Détails)</li>
+  </ul>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, source? ('eleve'|'admin') }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>⚠️ Nouvelle carte créée — finalisez votre paiement — Tango & Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange ⚠️ "Nouvelle carte créée — paiement en attente"</div>
+  <div class="field"><span class="label">Carte-box :</span> Cours · Saison · Badge "⚠️ Non payée" · 0/10 cours utilisés · 10 restants</div>
+  <div class="field"><span class="label">Bouton AssoConnect :</span> Or → <span class="src">tev_liens_assoconnect[saison].renouv</span></div>
+  <div class="field"><span class="label">Notif admin :</span> <code>notifications</code> — "↻ Carte renouvelée sans payer — Prénom NOM · badge ⚠️ → Cartes 10"</div>
+  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — "⚠️ Nouvelle carte créée — pensez à finaliser votre paiement"</div>
+  <div class="field"><span class="label">Push OS élève :</span> "⚠️ Nouvelle carte créée — pensez à finaliser votre paiement"</div>
+</div>
+
+<h2>C-pay — Paiement carte enregistré par l'admin</h2>
+<div class="route">POST /api/notify/carte-paiement (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin valide "✓ Enregistrer le paiement" dans le modal paiement (Cartes 10 → Détails)</span></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, montant, paiement, datePaiement, utilises, restants, datePremierCours, expiration? }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Paiement enregistré — votre carte de 10 cours est active — Tango & Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre paiement est enregistré — carte active !"</div>
+  <div class="field"><span class="label">Carte-box :</span> Cours · Saison · Badge "✓ Payée" · Montant · Mode paiement · Date paiement · <span class="src">Expiration depuis datePremierCours (calcExpiration côté serveur)</span></div>
+  <div class="field"><span class="label">Bouton :</span> Or "Accéder à mon espace élève →" → app.tangoetvous.fr</div>
+  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — "✓ Paiement enregistré · Votre carte est active"</div>
+  <div class="field"><span class="label">Push OS élève :</span> "✓ Paiement enregistré · Votre carte est active"</div>
+  <div class="field"><span class="note">⚠️ Expiration calculée depuis datePremierCours, jamais depuis la date de paiement</span></div>
+</div>
+
+<h2>C-report — Carte reportée en fin de saison</h2>
+<div class="route">POST /api/notify/carte-report (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin clique "↩ Reporter" en fin de saison (crée ligne isReport=true saison suivante)</span></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saisonSuivante, coursReportes }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>↩ Votre carte de 10 cours est reportée pour 2026-2027 — Tango & Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre carte est reportée pour la saison prochaine !"</div>
+  <div class="field"><span class="label">Carte-box :</span> Cours · Saison (saisonSuivante) · Badge "↩ Reportée" · coursReportes cours préservés</div>
+  <div class="field"><span class="label">Message :</span> "Votre carte vous attend à la rentrée de septembre."</div>
+  <div class="field"><span class="label">Bouton :</span> Or "Accéder à mon espace élève →"</div>
+  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — "↩ Votre carte reportée · N cours préservés pour 2026-2027"</div>
+  <div class="field"><span class="label">Push OS élève :</span> "↩ Votre carte reportée · N cours préservés pour 2026-2027"</div>
+</div>
+
+<h2>CX — Carte expirée (cron quotidien)</h2>
+<div class="route">POST /api/cron/carte-expiree (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien 9h Paris · eleves WHERE carte_expiration=aujourd'hui AND carte_restants&gt;0</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>⏰ Votre carte de 10 cours a expiré — Tango & Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange ⏰ "Votre carte de 10 cours a expiré"</div>
+  <div class="field"><span class="label">Encadré :</span> Titre "Votre carte a expiré" · carte_restants cours non utilisés · date fin de validité · "Si vous souhaitez continuer à danser, vous pouvez renouveler votre carte sur AssoConnect."</div>
+  <div class="field"><span class="label">Message :</span> "Pour toute question n'hésitez pas à nous contacter."</div>
+  <div class="field"><span class="label">Bouton 1 :</span> Or "Renouveler ma carte sur AssoConnect →"</div>
+  <div class="field"><span class="label">Bouton 2 :</span> Gris contour "Nous contacter" (mailto admin)</div>
+  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — "⏰ Votre carte de 10 cours a expiré — N cours non utilisés"</div>
+</div>
+
+<h2>C6 — Relance 2 absences consécutives (cron)</h2>
+<div class="route">GitHub Actions script relance-absences.js</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron vendredi matin (Paris) / mardi matin (Vincennes) · eleves carte10 absents 2 cours consécutifs</span></div>
+  <div class="field"><span class="label">Anti-doublon :</span> <span class="src">eleves.derniere_relance_abs DATE</span> — pas de renvoi si déjà envoyé pour ces 2 mêmes dates</div>
+  <div class="field"><span class="label">Sujet :</span> <code>💙 Coucou [Prénom], on ne t'a pas vu·e aux 2 derniers cours</code></div>
+  <div class="field"><span class="label">Ton :</span> Informel "tu" · "Tout va bien ?"</div>
+  <div class="field"><span class="label">Contenu :</span> Rappel N cours préservés · "Nous sommes là pour te partager ce qui a été vu" · contact tel + email</div>
+  <div class="field"><span class="label">Signature :</span> "Florencia & Jérémy"</div>
+  <div class="field"><span class="label">Notif admin :</span> <code>notifications</code> — "💙 2 absences consécutives — Prénom NOM · Email C6 envoyé → Cartes 10"</div>
+  <div class="field"><span class="label">Push OS élève :</span> "💙 On prend de tes nouvelles — tes cours sont préservés"</div>
+</div>
+
+<h2>CP-A — Carte pointée (notification admin immédiate)</h2>
+<div class="route">POST /api/notify/carte-pointage (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin pointe depuis Cartes 10 ou QR code (fire and forget)</span></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, date, nbAdded, utilises, restants, source ('app'|'qr'|'admin') }</span></div>
+  <div class="field"><span class="label">Destinataire :</span> tangoetvous@gmail.com</div>
+  <div class="field"><span class="label">Sujet :</span> <code>🎫 Carte pointée — ${prenom} ${nom} · ${date}</code></div>
+  <div class="field"><span class="label">Encadré or :</span> Nom/email · Table : <span class="var">"⬤ Cours pointés CE JOUR"</span> (vert en évidence) · Utilisés au total · Restants · Expiration</div>
+  <div class="field"><span class="label">Bouton :</span> "Ouvrir l'admin → Cartes 10"</div>
+  <div class="field"><span class="label">Notif admin :</span> <code>notifications</code> — INSERT type 'carte_pointage', lien_tab:'cartes'</div>
+</div>
+
+<h2>CP-E — Carte pointée (email élève, cron lendemain)</h2>
+<div class="route">POST /api/cron/carte-pointee-admin (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 9h Paris · agrège tous les pointages admin de la veille</span></div>
+  <div class="field"><span class="label">Source :</span> <span class="src">presences WHERE date=hier AND note='Admin' (ou source admin)</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Présence enregistrée pour votre carte — Tango & Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Présence enregistrée pour votre carte"</div>
+  <div class="field"><span class="label">Boîte bleue :</span> Date du cours · <span class="var">"⬤ Cours pointés CE JOUR"</span> (vert, ex: "1 cours") · Utilisés au total / 10 · Cours restants · Validité</div>
+  <div class="field"><span class="label">Bouton :</span> Or "Accéder à mon espace élève →"</div>
+  <div class="field"><span class="note">⚠️ "Cours pointés CE JOUR" = nombre ce jour uniquement (1 ou 2), sans mentionner le maximum possible</span></div>
+</div>
+
+<h2>P1 — Activation espace élève (J+7 après I03)</h2>
+<div class="route">POST /api/cron/espace-eleve-activation (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien · inscriptions_cours WHERE donnees->>p1_scheduled = today AND statut='inscrit'</span></div>
+  <div class="field"><span class="label">Planification :</span> <span class="src">donnees.p1_scheduled = date I03 + 7 jours (positionné par handleNotifyInscriptionCoursPaye)</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🎉 Votre espace élève est prêt ! — Tango & Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre espace élève est prêt !"</div>
+  <div class="field"><span class="label">Info-box bleue :</span> Étapes numérotées : ouvrir app.tangoetvous.fr → entrer email → clic lien magique → installer l'appli (iPhone: Partage↑ / Android: ⋮)</div>
+  <div class="field"><span class="label">Fonctionnalités :</span> Pointer, carte, milongas, publications</div>
+  <div class="field"><span class="label">Bouton :</span> Or "Accéder à mon espace élève →" → app.tangoetvous.fr</div>
+  <div class="field"><span class="label">Note :</span> Magic link — pas de mot de passe</div>
+</div>
+
+<h2>Structure carte-box (récapitulatif)</h2>
+<div class="block">
+  <div class="field"><span class="label">Fond :</span> <code>#e8f4fd</code> · border <code>#1565c0</code> · border-radius 10px</div>
+  <div class="field"><span class="label">Colonnes :</span> Cours · Saison · Cours utilisés X/10 · Cours restants · Expiration</div>
+  <div class="field"><span class="label">Expiration :</span> <span class="src">Calculée depuis datePremierCours via calcExpiration — jamais depuis date de paiement</span></div>
+  <div class="field"><span class="label">Montant :</span> <span class="src">tev_params_paris/vincennes_${saison}.tarifs</span> (Paramètres) — jamais hardcodé</div>
+  <div class="field"><span class="label">Lien renouv :</span> <span class="src">tev_liens_assoconnect[saison].renouv</span></div>
+</div>
+</body>
+</html>

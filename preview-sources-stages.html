@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Sources emails — Stages</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; background: #1a1a1a; color: #ccc; margin: 0; padding: 20px; }
+  h1 { color: #D4AF37; letter-spacing: 4px; font-size: 18px; }
+  h2 { color: #D4AF37; font-size: 14px; margin: 24px 0 6px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  .block { background: #222; border: 1px solid #333; border-radius: 6px; padding: 14px 16px; margin: 0 0 14px; }
+  .field { margin: 4px 0; }
+  .label { color: #888; width: 180px; display: inline-block; }
+  .var { color: #f0c030; font-weight: 700; }
+  .src { color: #6ab0f5; }
+  .cond { color: #c792ea; }
+  .note { color: #888; font-style: italic; font-size: 12px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .route { background: #0f1f0f; border: 1px solid #2e7d32; border-radius: 4px; padding: 4px 10px; font-size: 12px; color: #81c784; margin-bottom: 8px; display: inline-block; }
+</style>
+</head>
+<body>
+<h1>SOURCES EMAILS — STAGES</h1>
+<p class="note">Rôles stockés en DB : <span class="var">'Guideur(se)'</span> ou <span class="var">'Guidé(e)'</span> (avec parenthèses, différent des autres formulaires)</p>
+<p class="note">Statut : <span class="var">type_confirmation</span> = <code>'confirme'</code> | <code>'attente'</code> dans <code>inscriptions_stages</code></p>
+
+<h2>S0 — Notification admin (toute inscription)</h2>
+<div class="route">POST /api/notify/inscription-stage (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">tangoetvous@gmail.com</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🎭 Inscription stage — ${nom} · ${dateLabels}</code></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, tel, role, statut, saison, inscriptionsParDate[], partEmail?, partPrenom?, partNom? }</span></div>
+  <div class="field"><span class="label">inscriptionsParDate :</span> <code>[{ date:YYYY-MM-DD, slots:[{type, theme, horaire_debut, horaire_fin}], tarif }]</code></div>
+  <div class="field"><span class="label">Encadré or :</span> Nom/email/tel · Rôle · Dates · Slots+thèmes · Badge statut</div>
+  <div class="field"><span class="label">Boutons :</span> 📞 tel: · ✉️ mailto: · Ouvrir l'admin → Stages</div>
+</div>
+
+<h2>S1 — Confirmation élève (&gt;3 jours)</h2>
+<div class="route">POST /api/notify/inscription-stage (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">type_confirmation='confirme' ET daysUntil &gt; 3</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🎭 Votre inscription au stage du ${firstDateLabel} — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre inscription au stage est confirmée"</div>
+  <div class="field"><span class="label">Stage-box :</span> <span class="cond">Pour chaque date</span> : Date · Slots (horaire–horaire — Thème) · Prix</div>
+  <div class="field"><span class="label">Sources stage-box :</span>
+    <ul style="margin:4px 0;padding-left:20px;">
+      <li>Horaires : <span class="src">inscriptionsParDate[i].slots[j].horaire_debut/fin</span> (baked à l'inscription)</li>
+      <li>Thèmes : <span class="src">inscriptionsParDate[i].slots[j].theme</span></li>
+      <li>Tarif : <span class="src">inscriptionsParDate[i].tarif</span> ou <span class="src">tev_params_stages_${saison}.tarifs</span></li>
+      <li>Adresse : <span class="src">tev_params_stages_${saison}.adresse</span></li>
+    </ul>
+  </div>
+  <div class="field"><span class="label">Note rappel :</span> "Vous recevrez un rappel 3 jours avant le stage."</div>
+  <div class="field"><span class="label">Paiement :</span> "Le règlement se fait sur place. Merci de prévoir l'appoint."</div>
+  <div class="field"><span class="label">Pas de bouton 👍 :</span> <span class="cond">S1 &gt;3j → S4 s'en charge</span></div>
+</div>
+
+<h2>S1b — Confirmation élève (≤3 jours)</h2>
+<div class="route">POST /api/notify/inscription-stage (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">type_confirmation='confirme' ET daysUntil ≤ 3</span></div>
+  <div class="field"><span class="label">Différence S1/S1b :</span> S1b contient le bouton 👍 · pas de mention rappel futur</div>
+  <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence" → app.tangoetvous.fr/stages-pwa.html</div>
+</div>
+
+<h2>S2 — Guidée seule en attente</h2>
+<div class="route">POST /api/notify/inscription-stage (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">type_confirmation='attente' (guidée seule → toujours attente)</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🎭 Votre demande d'inscription au stage du ${firstDateLabel} — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange ⏳</div>
+  <div class="field"><span class="label">Stage-box :</span> Même contenu que S1</div>
+  <div class="field"><span class="label">Encadré parité :</span> "Nous veillons à avoir autant de guideurs que de guidées. Votre inscription sera confirmée selon l'équilibre des inscrits."</div>
+</div>
+
+<h2>S3 — Admin valide attente → confirmé (&gt;3 jours)</h2>
+<div class="route">POST /api/notify/stage-valide (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, role, inscriptionsParDate[], daysUntil }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🎭 Bonne nouvelle — votre place au stage du ${firstDateLabel} est confirmée !</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Bonne nouvelle — votre place au stage est confirmée !"</div>
+  <div class="field"><span class="label">Intro :</span> "Suite à l'évolution des inscriptions..."</div>
+  <div class="field"><span class="label">Note rappel :</span> <span class="cond">si daysUntil &gt; 3</span> → "Vous recevrez un rappel 3 jours avant le stage."</div>
+</div>
+
+<h2>S3b — Admin valide (≤3 jours)</h2>
+<div class="route">POST /api/notify/stage-valide (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Différence S3/S3b :</span> <span class="cond">daysUntil ≤ 3</span> → bouton 👍 + pas de mention rappel</div>
+</div>
+
+<h2>S4 — Rappel J-3 (cron)</h2>
+<div class="route">POST /api/cron/rappel-stage-j3 (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien · inscriptions_stages WHERE stage_date=today+3 AND type_confirmation='confirme'</span></div>
+  <div class="field"><span class="label">Source :</span> <span class="src">donnees.stagesDetail[i].horaire + .theme</span> (baked à l'inscription — pas les params courants)</div>
+  <div class="field"><span class="label">Sujet :</span> <code>🗓 Rappel stage du ${dateLabel} — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Bleu 🗓 "Rappel — votre stage a lieu dans 3 jours !"</div>
+  <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence"</div>
+  <div class="field"><span class="label">Encadré orange :</span> "Merci de confirmer votre présence. Si vous devez annuler merci de nous prévenir, même au dernier moment."</div>
+</div>
+
+<h2>S-cancel — Admin annule une inscription stage</h2>
+<div class="route">POST /api/notify/stage-annule (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, inscriptionsParDate[] }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✕ Votre inscription au stage du ${firstDateLabel} a été annulée — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Rouge ✕ "Votre inscription au stage a été annulée"</div>
+  <div class="field"><span class="label">Stage-box :</span> Fond rouge · créneaux barrés en rouge</div>
+  <div class="field"><span class="label">Bouton :</span> Or "Voir les prochains stages →" → stages-pwa.html</div>
+</div>
+
+<h2>Structure stage-box (récapitulatif)</h2>
+<div class="block">
+  <div class="field"><span class="label">Par date :</span></div>
+  <div style="background:#1a1a1a;padding:10px;border-radius:4px;font-size:12px;font-family:monospace;margin:6px 0;">
+    📅 Samedi 11 avril 2026<br/>
+    • 14h–15h — Technique<br/>
+    • 15h–16h30 — Thème 1<br/>
+    Prix : 45€<br/><br/>
+    Le règlement se fait sur place. Merci de prévoir l'appoint.<br/>
+    📍 Nom lieu · Adresse · Métro
+  </div>
+  <div class="field"><span class="label">Horaires baked :</span> <span class="src">donnees.stagesDetail[i].horaire_debut/fin</span> (stockés à l'inscription depuis buildSlots())</div>
+  <div class="field"><span class="label">Tarifs :</span> <span class="src">inscriptionsParDate[i].tarif || tev_params_stages_${saison}.tarifs</span></div>
+  <div class="field"><span class="label">Adresse :</span> <span class="src">tev_params_stages_${saison}.adresse</span></div>
+</div>
+</body>
+</html>
