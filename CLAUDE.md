@@ -2716,3 +2716,84 @@ Worker `handleNotifyCartePonteeAdmin` (JWT admin) :
 |-------|------|---------|-----------|
 | `POST /api/notify/carte-pointage` | Aucune | `handleNotifyCartePointage` | Élève → Admin |
 | `POST /api/notify/carte-pointee-admin` | JWT admin | `handleNotifyCartePonteeAdmin` | Admin → Élève |
+
+## Session 2026-05-21 — Complétion handlers emails worker.js + fichiers sources preview
+
+### ✅ 9 handlers existants corrigés dans `worker.js`
+
+Corrections appliquées sur des handlers incomplets ou bugués :
+
+| Handler | Correction |
+|---------|-----------|
+| `handleCronEssaiYogaJ1` | Lecture params Supabase + envoi Y-J1a/Y-J1b complet avec branding yoga |
+| `handleNotifyYogaDate` | Email Y0 (admin) + Y1/Y-att (élève) avec quota yoga |
+| `handleNotifyEssaiAction` | Emails T1-dem + T1-val (transfert essai → inscription) |
+| `handleDemandeDevis` | D0a/D0b (admin) + D2 (élève confirmation) via Brevo |
+| `handleNotifySorano` | SR1 (relance admin) + SR2 (confirmation réglé → élève) |
+| `handleNotifyCartePointage` | Email CP-A admin avec encadré or (nb cours, source) |
+| `handleNotifyCartePonteeAdmin` | Email CP-E élève (bandeau vert, boîte bleue, cron lendemain) |
+| `handleNotifyCarteEpuisee` | Email CE (carte épuisée 10/10) avec bouton renouvellement |
+| `handleCronCarteExpiree` | Email CX (carte expirée avec cours restants) |
+
+### ✅ 18 nouveaux handlers créés dans `worker.js`
+
+Nouvelles routes implémentées (worker.js passe de ~3 800 à **5 358 lignes**) :
+
+**Stages :**
+- `POST /api/notify/inscription-stage` → `handleNotifyInscriptionStage` — S0 (admin) + S1/S1b/S2 (élève selon statut et délai)
+- `POST /api/cron/rappel-stage-j3` → `handleCronRappelStageJ3` — S4 (rappel J-3 avec bouton 👍)
+- `POST /api/notify/stage-valide` → `handleNotifyStageValide` — S3/S3b (admin valide attente → confirmé)
+- `POST /api/notify/stage-annule` → `handleNotifyStageAnnule` — S-cancel (annulation par admin)
+
+**Cours particuliers :**
+- `POST /api/notify/cours-particulier` → `handleNotifyCoursParticulier` — CP0 (admin) + CP1 (élève récap demande)
+
+**Cartes 10 :**
+- `POST /api/notify/carte-bienvenue` → `handleNotifyCarteBienvenue` — C1 (premier pointage saison)
+- `POST /api/notify/carte-renouvellement` → `handleNotifyCarteRenouvellement` — C2/C2b (renouvelée sans payer)
+- `POST /api/notify/carte-paiement` → `handleNotifyCartePaiement` — C-pay (paiement enregistré)
+- `POST /api/notify/carte-report` → `handleNotifyCarteReport` — C-report (carte reportée saison suivante)
+
+**Inscriptions tango régulier :**
+- `POST /api/notify/inscription-cours-validee` → `handleNotifyInscriptionCoursValidee` — I02 (guidée validée → att. paiement)
+- `POST /api/notify/inscription-cours-payee` → `handleNotifyInscriptionCoursPaye` — I03 (paiement validé → inscrit)
+- `POST /api/notify/inscription-cours-modifiee` → `handleNotifyInscriptionCoursModifiee` — I04 (changement cours)
+
+**Essai tango :**
+- `POST /api/cron/essai-rappel-j7` → `handleCronEssaiRappelJ7` — E4 (rappel J-7 avec bouton 👍 + livret)
+- `POST /api/notify/essai-valide` → `handleNotifyEssaiValide` — E15/E15b (admin valide attente → confirmé, solo ou couple email partagé)
+
+**Essai yoga :**
+- `POST /api/cron/essai-yoga-rappel-j3` → `handleCronEssaiYogaRappelJ3` — Y3 (rappel J-3 yoga)
+- `POST /api/notify/essai-yoga-modifie` → `handleNotifyEssaiYogaModifie` — Y-mod (modification date/cours essai yoga)
+- `POST /api/notify/yoga-inscription-validee` → `handleNotifyYogaInscriptionValidee` — YI1 (inscription régulière yoga validée)
+
+**Espace élève :**
+- `POST /api/cron/espace-eleve-activation` → `handleCronEspaceEleveActivation` — P1 (J+7 après I03, encouragement activation espace élève)
+
+### ✅ 7 fichiers `preview-sources-*.html` créés
+
+Fichiers de référence annotant les sources de chaque variable dans les templates email — même design beige que les previews existants, variables en jaune, sources Supabase en bleu :
+
+| Fichier | Emails couverts |
+|---------|----------------|
+| `preview-sources-essai.html` | E0/E1/E2/E4/E5/E6/E15/E-mod/E-J1a/E-J1b |
+| `preview-sources-yoga.html` | Y0/Y1/Y-att/Y3/Y-mod/YI1/Y-J1a/Y-J1b |
+| `preview-sources-stages.html` | S0/S1/S1b/S2/S3/S3b/S4/S-cancel |
+| `preview-sources-inscription.html` | I0/I01/I01-att/I02/I03/I04/I17 |
+| `preview-sources-cartes.html` | C1/C2/C-pay/C-report/CX/C6/CP-A/CP-E/P1 |
+| `preview-sources-cp-devis.html` | CP0/CP1/D0a/D0b/D1/D2 |
+| `preview-sources-sorano-misc.html` | SR1/SR2/T1-dem/T1-val/CB3x |
+
+### Règle universelle — appel des handlers depuis admin.html / index.html
+
+Chaque handler suit le même pattern d'appel. L'appelant n'attend pas la réponse (fire and forget) :
+```javascript
+fetch('/api/notify/<route>', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', ...(jwtRequis ? {Authorization: 'Bearer ' + _getJwt()} : {}) },
+  body: JSON.stringify({ email, prenom, nom, /* champs selon handler */ })
+}).catch(function(){});
+```
+- **Sans JWT** : routes notify côté élève (carte-pointage, inscription-essai, inscription-essai-yoga, inscription-cours, inscription-stage, cours-particulier)
+- **JWT admin requis** : routes notify côté admin (carte-pointee-admin, carte-bienvenue, inscription-cours-validee, inscription-cours-payee, etc.) + tous les `/api/cron/*` (header `X-Cron-Secret` pour les crons GitHub Actions)
