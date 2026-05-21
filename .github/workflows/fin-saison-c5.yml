@@ -1,0 +1,23 @@
+name: Fin de saison — dernier rappel 25 août (C5)
+
+on:
+  schedule:
+    # 25 août à 8h UTC (10h Paris heure d'été CEST)
+    - cron: '0 8 25 8 *'
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer les emails C5 (dernier rappel avant expiration 31 août)
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            https://app.tangoetvous.fr/api/cron/fin-saison-c5 \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "Erreur — code HTTP $response"
+            exit 1
+          fi

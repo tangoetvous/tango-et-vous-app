@@ -1,0 +1,20 @@
+name: Fin de saison — rappel pré-inscription (C4)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer les emails C4 aux élèves avec des cours restants
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            https://app.tangoetvous.fr/api/cron/fin-saison-c4 \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "Erreur — code HTTP $response"
+            exit 1
+          fi

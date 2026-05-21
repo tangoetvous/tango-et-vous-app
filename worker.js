@@ -27,6 +27,9 @@
 //   POST  /api/notify/carte-epuisee    — carte 10/10 → email + notif élève + notif admin (sans auth)
 //   POST  /api/cron/carte-expiree      — cron quotidien → emails cartes expirées aujourd'hui
 //   POST  /api/cron/relance-cb3x       — cron quotidien → rappels 2ème/3ème échéance CB 3×
+//   POST  /api/cron/relance-absences   — cron vendredi/mardi → email C6 si 2 absences consécutives
+//   POST  /api/cron/fin-saison-c4      — rappel fin de saison → élèves avec cours restants (manuel)
+//   POST  /api/cron/fin-saison-c5      — dernier rappel 25 août → élèves avec cours restants
 //   POST  /api/notify/discussion-nouvelle — nouvelle discussion → notif in-app élèves (JWT admin)
 //   POST  /api/notify/discussion-message  — nouveau message → notif in-app élèves (JWT admin)
 //   *                                  — assets statiques (Cloudflare Static Assets)
@@ -204,6 +207,13 @@ export default {
         return handleCronRelanceCb3x(request, env);
       }
 
+      // POST /api/cron/relance-absences — cron vendredi/mardi → email C6 si 2 absences consécutives (X-Cron-Secret)
+      if (pathname === '/api/cron/relance-absences' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronRelanceAbsences(request, env);
+      }
+
       // POST /api/notify/discussion-nouvelle — nouvelle discussion → notif in-app élèves + admin (JWT admin)
       if (pathname === '/api/notify/discussion-nouvelle' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
@@ -352,6 +362,20 @@ export default {
         const cronSecret = request.headers.get('X-Cron-Secret');
         if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
         return handleCronEspaceEleveActivation(request, env);
+      }
+
+      // POST /api/cron/fin-saison-c4 — rappel fin de saison → élèves avec cours restants (X-Cron-Secret)
+      if (pathname === '/api/cron/fin-saison-c4' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronFinSaisonC4(request, env);
+      }
+
+      // POST /api/cron/fin-saison-c5 — dernier rappel 25 août → élèves avec cours restants (X-Cron-Secret)
+      if (pathname === '/api/cron/fin-saison-c5' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronFinSaisonC5(request, env);
       }
 
       try {
@@ -5422,4 +5446,169 @@ async function handleNotifyCoursParticulier(request, env) {
   }
 
   return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/cron/fin-saison-c4 — rappel fin de saison (C4)
+// Envoie un email à tous les élèves ayant des cours restants sur leur carte
+// Déclenché manuellement via workflow_dispatch en fin juin
+// ================================================================
+async function handleCronFinSaisonC4(request, env) {
+  const now = new Date();
+  const yr = now.getUTCFullYear();
+  const mo = now.getUTCMonth() + 1; // 1-based
+  const sai = mo >= 9 ? `${yr}-${yr + 1}` : `${yr - 1}-${yr}`;
+  const saiNext = mo >= 9 ? `${yr + 1}-${yr + 2}` : `${yr}-${yr + 1}`;
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  // Fetch élèves avec des cours restants et un statut de carte actif
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&saison=eq.${encodeURIComponent(sai)}&select=email,prenom,nom,carte_restants,carte_statut`,
+    { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+  );
+  if (!res.ok) {
+    console.error('[cron fin-saison-c4] Supabase error', await res.text());
+    return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
+  }
+  const eleves = await res.json();
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  let sent = 0;
+  for (const e of eleves) {
+    const prenomAff = _esc(e.prenom || (e.nom || '').split(' ')[0] || '');
+    const restants  = e.carte_restants || 0;
+    const notifMsg  = `📅 Il vous reste ${restants} cours — pré-inscrivez-vous pour ${saiNext}`;
+
+    // Notif in-app élève
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ email: e.email, type: 'fin_saison_c4', message: notifMsg, lu: false }),
+      });
+    } catch(err) { console.error('[cron fin-saison-c4] notif error', err); }
+
+    if (!env.BREVO_API_KEY) continue;
+
+    // Email élève (C4)
+    const htmlEleve = wrap(`${headerEleve}
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
+        <span style="font-size:14px;font-weight:700;color:#1565c0;">📅 Fin de saison — vos cours non utilisés</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">Il vous reste <strong>${restants} cours</strong> sur votre carte de 10 cours de la saison en cours.</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">Pour les conserver, pré-inscrivez-vous avant le 25 août sur AssoConnect. Il vous suffit de régler l'adhésion à notre association pour l'instant.</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Si vous ne vous réinscrivez pas, vos cours non utilisés expireront le 31 août.</p>
+        <div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 24px;text-align:center;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;margin-bottom:10px;font-weight:700;">Votre carte</div>
+          <div style="font-size:22px;font-weight:700;color:#c62828;">${restants} cours restant${restants > 1 ? 's' : ''}</div>
+          <div style="font-size:13px;color:#bf360c;margin-top:6px;">Expirent le 31 août</div>
+        </div>
+        <p style="text-align:center;margin:0 0 28px;"><a href="#LIEN_ASSOCONNECT_A_COMPLETER" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">💳 Me pré-inscrire sur AssoConnect →</a></p>
+        ${signEleve}
+      </div>${footer}`);
+
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: 'Tango & Vous', email: adminEmail },
+          to: [{ email: String(e.email) }],
+          subject: `📅 Il vous reste ${restants} cours — pré-inscrivez-vous pour la saison prochaine`,
+          htmlContent: htmlEleve,
+        }),
+      });
+      if (r.ok) sent++; else console.error('[cron fin-saison-c4] Brevo error', e.email, await r.text());
+    } catch(err) { console.error('[cron fin-saison-c4] fetch error', err); }
+  }
+
+  return corsResponse({ ok: true, sent, checked: eleves.length, saison: sai }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/cron/fin-saison-c5 — dernier rappel 25 août (C5)
+// Même logique que C4 mais ton d'urgence — planifié au 25 août
+// ================================================================
+async function handleCronFinSaisonC5(request, env) {
+  const now = new Date();
+  const yr = now.getUTCFullYear();
+  const mo = now.getUTCMonth() + 1;
+  const sai = mo >= 9 ? `${yr}-${yr + 1}` : `${yr - 1}-${yr}`;
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&saison=eq.${encodeURIComponent(sai)}&select=email,prenom,nom,carte_restants,carte_statut`,
+    { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+  );
+  if (!res.ok) {
+    console.error('[cron fin-saison-c5] Supabase error', await res.text());
+    return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
+  }
+  const eleves = await res.json();
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  let sent = 0;
+  for (const e of eleves) {
+    const prenomAff = _esc(e.prenom || (e.nom || '').split(' ')[0] || '');
+    const restants  = e.carte_restants || 0;
+    const notifMsg  = `⚠️ Dernier rappel — vos ${restants} cours expirent le 31 août`;
+
+    // Notif in-app élève
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ email: e.email, type: 'fin_saison_c5', message: notifMsg, lu: false }),
+      });
+    } catch(err) { console.error('[cron fin-saison-c5] notif error', err); }
+
+    if (!env.BREVO_API_KEY) continue;
+
+    // Email élève (C5)
+    const htmlEleve = wrap(`${headerEleve}
+      <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+        <span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Dernier rappel — vos cours expirent le 31 août</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Il vous reste <strong>${restants} cours</strong> qui expireront définitivement le <strong>31 août</strong> si vous ne vous réinscrivez pas pour la prochaine saison.</p>
+        <div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 24px;text-align:center;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;margin-bottom:10px;font-weight:700;">Votre carte</div>
+          <div style="font-size:22px;font-weight:700;color:#c62828;">${restants} cours restant${restants > 1 ? 's' : ''}</div>
+          <div style="font-size:13px;color:#bf360c;margin-top:6px;font-weight:700;">⚠️ Expirent définitivement le 31 août</div>
+        </div>
+        <p style="text-align:center;margin:0 0 28px;"><a href="#LIEN_ASSOCONNECT_A_COMPLETER" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">⚠️ Me réinscrire avant le 31 août →</a></p>
+        ${signEleve}
+      </div>${footer}`);
+
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: 'Tango & Vous', email: adminEmail },
+          to: [{ email: String(e.email) }],
+          subject: `⚠️ Dernier rappel — vos cours expirent le 31 août`,
+          htmlContent: htmlEleve,
+        }),
+      });
+      if (r.ok) sent++; else console.error('[cron fin-saison-c5] Brevo error', e.email, await r.text());
+    } catch(err) { console.error('[cron fin-saison-c5] fetch error', err); }
+  }
+
+  return corsResponse({ ok: true, sent, checked: eleves.length, saison: sai }, 200, {}, request);
 }
