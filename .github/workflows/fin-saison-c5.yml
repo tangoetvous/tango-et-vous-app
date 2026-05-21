@@ -10,12 +10,13 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Envoyer les emails C5 (dernier rappel avant expiration 31 août)
+      - name: Envoyer les emails C5 (dernier rappel — reportez vos cours avant le 31 août)
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X POST \
             https://app.tangoetvous.fr/api/cron/fin-saison-c5 \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json")
+          cat /tmp/body.txt
           echo "HTTP status: $response"
           if [ "$response" != "200" ]; then
             echo "Erreur — code HTTP $response"

@@ -1,7 +1,16 @@
-name: Fin de saison — rappel pré-inscription (C4)
+name: Fin de saison — rappel report carte (C4)
 
 on:
+  schedule:
+    # 8h UTC tous les jours du 20 au 30 juin
+    # Le handler vérifie si hier = dernier cours Paris de juin → envoie uniquement ce jour-là
+    - cron: '0 8 20-30 6 *'
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Forcer l'envoi sans vérification de date (true/false)'
+        required: false
+        default: 'false'
 
 jobs:
   notify:
@@ -9,10 +18,18 @@ jobs:
     steps:
       - name: Envoyer les emails C4 aux élèves avec des cours restants
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+          FORCE="${{ github.event.inputs.force }}"
+          if [ "$FORCE" = "true" ]; then
+            BODY='{"force":true}'
+          else
+            BODY='{}'
+          fi
+          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X POST \
             https://app.tangoetvous.fr/api/cron/fin-saison-c4 \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json")
+            -H "Content-Type: application/json" \
+            -d "$BODY")
+          cat /tmp/body.txt
           echo "HTTP status: $response"
           if [ "$response" != "200" ]; then
             echo "Erreur — code HTTP $response"

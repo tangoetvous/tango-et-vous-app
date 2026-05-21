@@ -1216,7 +1216,7 @@ async function handleCronEssaiYogaJ1(request, env) {
   const tarifsForfaitStr = tarYoga.yoga_forfait_2cours ? `Forfait Yin + Hatha (2 cours/sem) : ${tarYoga.yoga_forfait_2cours}€` : 'Forfait Yin + Hatha (2 cours/sem) : 590€';
   // Fallback si non renseigné: 340/500/590
   const tarifsBlock = `<div style="background:#f1f8f1;border:1px solid #a5d6a7;border-radius:8px;padding:14px 18px;margin:16px 0;">
-    <p style="font-size:13px;font-weight:700;color:#2e7d32;margin:0 0 8px;">💰 Tarifs annuels 2025-2026</p>
+    <p style="font-size:13px;font-weight:700;color:#2e7d32;margin:0 0 8px;">💰 Tarifs annuels ${sai}</p>
     <p style="font-size:13px;color:#444;line-height:1.8;margin:0;">${tarifsYinStr}<br/>${tarifsHathaStr}<br/>${tarifsForfaitStr}</p>
     </div>`;
 
@@ -5450,8 +5450,8 @@ async function handleNotifyCoursParticulier(request, env) {
 
 // ================================================================
 // POST /api/cron/fin-saison-c4 — rappel fin de saison (C4)
-// Envoie un email à tous les élèves ayant des cours restants sur leur carte
-// Déclenché manuellement via workflow_dispatch en fin juin
+// Déclenché le lendemain du dernier cours Paris de juin
+// Cron quotidien 20-30 juin — le handler vérifie si hier = dernier cours Paris de juin
 // ================================================================
 async function handleCronFinSaisonC4(request, env) {
   const now = new Date();
@@ -5459,8 +5459,53 @@ async function handleCronFinSaisonC4(request, env) {
   const mo = now.getUTCMonth() + 1; // 1-based
   const sai = mo >= 9 ? `${yr}-${yr + 1}` : `${yr - 1}-${yr}`;
   const saiNext = mo >= 9 ? `${yr + 1}-${yr + 2}` : `${yr}-${yr + 1}`;
+  const anneeFin = parseInt(sai.split('-')[1]); // ex: 2026 pour saison 2025-2026
+
+  // Lire le body pour override force (workflow_dispatch manuel)
+  let bodyForce = false;
+  try {
+    const bt = await request.text();
+    if (bt) { const parsed = JSON.parse(bt); bodyForce = parsed.force === true; }
+  } catch(e) {}
 
   const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  // Fetch tev_liens_assoconnect + tev_cours_dates depuis parametres
+  let lienCours = '';
+  let coursDatesParis = [];
+  try {
+    const pr = await fetch(
+      `${SUPABASE_URL}/rest/v1/parametres?cle=in.(tev_liens_assoconnect,tev_cours_dates)&select=cle,valeur`,
+      { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (pr.ok) {
+      const rows = await pr.json();
+      for (const row of rows) {
+        if (row.cle === 'tev_liens_assoconnect') {
+          const liens = row.valeur || {};
+          lienCours = (liens[saiNext] || {}).cours || (liens[saiNext] || {}).renouv || '';
+        }
+        if (row.cle === 'tev_cours_dates') {
+          coursDatesParis = Array.isArray((row.valeur || {}).paris) ? row.valeur.paris : [];
+        }
+      }
+    } else { console.error('[cron fin-saison-c4] Supabase params error', await pr.text()); }
+  } catch(e) { console.error('[cron fin-saison-c4] fetch params error', e); }
+
+  // Vérifier si hier = dernier cours Paris de juin (sauf si force=true)
+  if (!bodyForce) {
+    const parisOffset = now.getUTCMonth() >= 2 && now.getUTCMonth() <= 9 ? 2 : 1;
+    const parisDt = new Date(now.getTime() + parisOffset * 3600 * 1000);
+    const yesterdayISO = new Date(parisDt.getTime() - 86400000).toISOString().slice(0, 10);
+    const juneDates = coursDatesParis.filter(d => d.startsWith(`${anneeFin}-06`)).sort();
+    const lastJune = juneDates.length ? juneDates[juneDates.length - 1] : null;
+    if (!lastJune) {
+      return corsResponse({ ok: true, skipped: true, reason: 'no_june_dates_in_params' }, 200, {}, request);
+    }
+    if (lastJune !== yesterdayISO) {
+      return corsResponse({ ok: true, skipped: true, reason: 'not_the_day', lastJune, yesterdayISO }, 200, {}, request);
+    }
+  }
 
   // Fetch élèves avec des cours restants et un statut de carte actif
   const res = await fetch(
@@ -5468,7 +5513,7 @@ async function handleCronFinSaisonC4(request, env) {
     { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
   );
   if (!res.ok) {
-    console.error('[cron fin-saison-c4] Supabase error', await res.text());
+    console.error('[cron fin-saison-c4] Supabase eleves error', await res.text());
     return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
   }
   const eleves = await res.json();
@@ -5478,12 +5523,13 @@ async function handleCronFinSaisonC4(request, env) {
   const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
   const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap        = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+  const btnLienHref = lienCours || 'https://www.tangoetvous.com';
 
   let sent = 0;
   for (const e of eleves) {
     const prenomAff = _esc(e.prenom || (e.nom || '').split(' ')[0] || '');
     const restants  = e.carte_restants || 0;
-    const notifMsg  = `📅 Il vous reste ${restants} cours — pré-inscrivez-vous pour ${saiNext}`;
+    const notifMsg  = `📅 Il vous reste ${restants} cours — reportez votre carte sur la saison ${saiNext}`;
 
     // Notif in-app élève
     try {
@@ -5503,15 +5549,14 @@ async function handleCronFinSaisonC4(request, env) {
         <span style="font-size:14px;font-weight:700;color:#1565c0;">📅 Fin de saison — vos cours non utilisés</span></div>
       <div style="padding:28px 24px;">
         <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">Il vous reste <strong>${restants} cours</strong> sur votre carte de 10 cours de la saison en cours.</p>
-        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">Pour les conserver, pré-inscrivez-vous avant le 25 août sur AssoConnect. Il vous suffit de régler l'adhésion à notre association pour l'instant.</p>
-        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Si vous ne vous réinscrivez pas, vos cours non utilisés expireront le 31 août.</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Il vous reste <strong>${restants} cours</strong> sur votre carte de 10 cours de la saison en cours.</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Les pré-inscriptions pour la saison ${saiNext} sont ouvertes. Réglez simplement l'adhésion à notre association avant le 25 août ${anneeFin} sur AssoConnect pour reporter les cours de votre carte à la saison prochaine.</p>
         <div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 24px;text-align:center;">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;margin-bottom:10px;font-weight:700;">Votre carte</div>
           <div style="font-size:22px;font-weight:700;color:#c62828;">${restants} cours restant${restants > 1 ? 's' : ''}</div>
-          <div style="font-size:13px;color:#bf360c;margin-top:6px;">Expirent le 31 août</div>
+          <div style="font-size:13px;color:#bf360c;margin-top:6px;">À reporter avant le 31 août ${anneeFin}</div>
         </div>
-        <p style="text-align:center;margin:0 0 28px;"><a href="#LIEN_ASSOCONNECT_A_COMPLETER" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">💳 Me pré-inscrire sur AssoConnect →</a></p>
+        <p style="text-align:center;margin:0 0 28px;"><a href="${_esc(btnLienHref)}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Reportez votre carte → Réglez votre adhésion de la saison prochaine</a></p>
         ${signEleve}
       </div>${footer}`);
 
@@ -5522,7 +5567,7 @@ async function handleCronFinSaisonC4(request, env) {
         body: JSON.stringify({
           sender: { name: 'Tango & Vous', email: adminEmail },
           to: [{ email: String(e.email) }],
-          subject: `📅 Il vous reste ${restants} cours — pré-inscrivez-vous pour la saison prochaine`,
+          subject: `📅 Il vous reste ${restants} cours — reportez votre carte sur la saison ${saiNext}`,
           htmlContent: htmlEleve,
         }),
       });
@@ -5530,27 +5575,45 @@ async function handleCronFinSaisonC4(request, env) {
     } catch(err) { console.error('[cron fin-saison-c4] fetch error', err); }
   }
 
-  return corsResponse({ ok: true, sent, checked: eleves.length, saison: sai }, 200, {}, request);
+  return corsResponse({ ok: true, sent, checked: eleves.length, saison: sai, saiNext }, 200, {}, request);
 }
 
 // ================================================================
 // POST /api/cron/fin-saison-c5 — dernier rappel 25 août (C5)
-// Même logique que C4 mais ton d'urgence — planifié au 25 août
+// Planifié au 25 août — ton d'urgence
 // ================================================================
 async function handleCronFinSaisonC5(request, env) {
   const now = new Date();
   const yr = now.getUTCFullYear();
   const mo = now.getUTCMonth() + 1;
   const sai = mo >= 9 ? `${yr}-${yr + 1}` : `${yr - 1}-${yr}`;
+  const saiNext = mo >= 9 ? `${yr + 1}-${yr + 2}` : `${yr}-${yr + 1}`;
+  const anneeFin = parseInt(sai.split('-')[1]);
 
   const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  // Fetch tev_liens_assoconnect depuis parametres
+  let lienCours = '';
+  try {
+    const pr = await fetch(
+      `${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_liens_assoconnect&select=valeur`,
+      { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (pr.ok) {
+      const rows = await pr.json();
+      if (rows.length && rows[0].valeur) {
+        const liens = rows[0].valeur || {};
+        lienCours = (liens[saiNext] || {}).cours || (liens[saiNext] || {}).renouv || '';
+      }
+    } else { console.error('[cron fin-saison-c5] Supabase params error', await pr.text()); }
+  } catch(e) { console.error('[cron fin-saison-c5] fetch params error', e); }
 
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&saison=eq.${encodeURIComponent(sai)}&select=email,prenom,nom,carte_restants,carte_statut`,
     { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
   );
   if (!res.ok) {
-    console.error('[cron fin-saison-c5] Supabase error', await res.text());
+    console.error('[cron fin-saison-c5] Supabase eleves error', await res.text());
     return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
   }
   const eleves = await res.json();
@@ -5560,12 +5623,13 @@ async function handleCronFinSaisonC5(request, env) {
   const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
   const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap        = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+  const btnLienHref = lienCours || 'https://www.tangoetvous.com';
 
   let sent = 0;
   for (const e of eleves) {
     const prenomAff = _esc(e.prenom || (e.nom || '').split(' ')[0] || '');
     const restants  = e.carte_restants || 0;
-    const notifMsg  = `⚠️ Dernier rappel — vos ${restants} cours expirent le 31 août`;
+    const notifMsg  = `⚠️ Dernier rappel — reportez vos ${restants} cours avant le 31 août ${anneeFin}`;
 
     // Notif in-app élève
     try {
@@ -5582,16 +5646,16 @@ async function handleCronFinSaisonC5(request, env) {
     // Email élève (C5)
     const htmlEleve = wrap(`${headerEleve}
       <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
-        <span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Dernier rappel — vos cours expirent le 31 août</span></div>
+        <span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}</span></div>
       <div style="padding:28px 24px;">
         <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Il vous reste <strong>${restants} cours</strong> qui expireront définitivement le <strong>31 août</strong> si vous ne vous réinscrivez pas pour la prochaine saison.</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Il vous reste <strong>${restants} cours</strong>. Réglez simplement l'adhésion à notre association avant le 25 août ${anneeFin} sur AssoConnect pour reporter les cours de votre carte à la saison prochaine.</p>
         <div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 24px;text-align:center;">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;margin-bottom:10px;font-weight:700;">Votre carte</div>
           <div style="font-size:22px;font-weight:700;color:#c62828;">${restants} cours restant${restants > 1 ? 's' : ''}</div>
-          <div style="font-size:13px;color:#bf360c;margin-top:6px;font-weight:700;">⚠️ Expirent définitivement le 31 août</div>
+          <div style="font-size:13px;color:#bf360c;margin-top:6px;font-weight:700;">⚠️ À reporter avant le 31 août ${anneeFin}</div>
         </div>
-        <p style="text-align:center;margin:0 0 28px;"><a href="#LIEN_ASSOCONNECT_A_COMPLETER" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">⚠️ Me réinscrire avant le 31 août →</a></p>
+        <p style="text-align:center;margin:0 0 28px;"><a href="${_esc(btnLienHref)}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Reportez votre carte → Réglez votre adhésion de la saison prochaine</a></p>
         ${signEleve}
       </div>${footer}`);
 
@@ -5602,7 +5666,7 @@ async function handleCronFinSaisonC5(request, env) {
         body: JSON.stringify({
           sender: { name: 'Tango & Vous', email: adminEmail },
           to: [{ email: String(e.email) }],
-          subject: `⚠️ Dernier rappel — vos cours expirent le 31 août`,
+          subject: `⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}`,
           htmlContent: htmlEleve,
         }),
       });
@@ -5610,7 +5674,7 @@ async function handleCronFinSaisonC5(request, env) {
     } catch(err) { console.error('[cron fin-saison-c5] fetch error', err); }
   }
 
-  return corsResponse({ ok: true, sent, checked: eleves.length, saison: sai }, 200, {}, request);
+  return corsResponse({ ok: true, sent, checked: eleves.length, saison: sai, saiNext }, 200, {}, request);
 }
 
 // ================================================================
