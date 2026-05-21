@@ -411,8 +411,8 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
      C4 — Fin de saison J+1 (lendemain dernier cours Paris juin)
      ═══════════════════════════════════════════════ -->
 <div class="email-block" id="c4">
-<div class="email-label"><strong>C4</strong> — Fin de saison J+1 &nbsp;|&nbsp; <em>Cron déclenché le lendemain du dernier cours Paris de juin · élèves avec cours restants</em></div>
-<div class="email-subj">Objet : <span>Il vous reste 3 cours — pensez à vous réinscrire pour la saison 2026-2027</span></div>
+<div class="email-label"><strong>C4</strong> — Fin de saison J+1 &nbsp;|&nbsp; <em>Cron 8h UTC 20-30 juin · handler vérifie si hier = dernière date Paris de juin · élèves avec cours restants</em></div>
+<div class="email-subj">Objet : <span>📅 Il vous reste 3 cours — reportez votre carte sur la saison ${saiNext}</span></div>
 <div class="email-wrap">
 <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
   <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
@@ -421,16 +421,16 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
   </div>
   <!-- Bandeau bleu -->
   <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
-    <span style="font-size:14px;font-weight:700;color:#1565c0;">📅 La saison 2025-2026 se termine bientôt</span>
+    <span style="font-size:14px;font-weight:700;color:#1565c0;">📅 La saison ${sai} se termine bientôt</span>
   </div>
   <div style="padding:30px 28px;">
     <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Le dernier cours de la saison a eu lieu hier. <strong>Il vous reste encore 3 cours sur votre carte</strong> qui expirent fin août 2026.</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Le dernier cours de la saison a eu lieu hier. <strong>Il vous reste encore 3 cours sur votre carte.</strong></p>
 
     <!-- Carte box -->
     <div class="carte-box">
       <div class="carte-box-header">
-        <div class="carte-box-header-title">Votre carte de 10 cours — saison 2025-2026</div>
+        <div class="carte-box-header-title">Votre carte de 10 cours — saison ${sai}</div>
         <div class="carte-box-header-label">Paris — Débutants · Jeudi soir</div>
       </div>
       <div class="carte-box-body">
@@ -460,17 +460,13 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
       </div>
     </div>
 
-    <!-- Info pré-inscription -->
+    <!-- Info report carte -->
     <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Pré-inscriptions 2026-2027</div>
-      <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 14px;">Les pré-inscriptions pour la saison 2026-2027 sont ouvertes. Réservez votre place avant le <strong>25 août 2026</strong> sur AssoConnect.</p>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Reportez vos cours sur ${saiNext}</div>
+      <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 14px;">Les pré-inscriptions pour la saison ${saiNext} sont ouvertes. Réglez simplement l'adhésion à notre association avant le 25 août ${anneeFin} sur AssoConnect pour reporter les cours de votre carte à la saison prochaine.</p>
       <div style="text-align:center;">
-        <a href="#LIEN_ASSOCONNECT_PREINSCRIPTIONS" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Pré-inscriptions 2026-2027 →</a>
+        <a href="${tev_liens_assoconnect[saiNext].cours}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Reportez votre carte → Réglez votre adhésion de la saison prochaine</a>
       </div>
-    </div>
-
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#bf360c;margin:0;line-height:1.7;">Si vous ne vous réinscrivez pas avant le 25 août, vos cours restants seront perdus. Il vous suffit de régler l'adhésion à notre association pour l'instant.</p>
     </div>
 
     <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
@@ -489,8 +485,8 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
      C5 — Dernier rappel 25 août
      ═══════════════════════════════════════════════ -->
 <div class="email-block" id="c5">
-<div class="email-label"><strong>C5</strong> — Dernier rappel 25 août &nbsp;|&nbsp; <em>Cron chaque 25 août · élèves avec cours restants n'ayant pas encore effectué leur pré-inscription 2026-2027</em></div>
-<div class="email-subj">Objet : <span>⚠️ Dernier rappel — vos cours non utilisés expirent bientôt</span></div>
+<div class="email-label"><strong>C5</strong> — Dernier rappel 25 août &nbsp;|&nbsp; <em>Cron 8h UTC le 25 août · élèves avec cours restants</em></div>
+<div class="email-subj">Objet : <span>⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}</span></div>
 <div class="email-wrap">
 <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
   <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
@@ -499,16 +495,16 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
   </div>
   <!-- Bandeau orange -->
   <div style="background:#fff3e0;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe0b2;">
-    <span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Dernier rappel avant expiration de vos cours</span>
+    <span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}</span>
   </div>
   <div style="padding:30px 28px;">
     <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Il vous reste encore <strong>3 cours</strong> sur votre carte de 10 cours de la saison 2025-2026. Ces cours <strong style="color:#c62828;">expireront le 31 août 2026</strong> si vous ne vous réinscrivez pas pour la prochaine saison.</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Il vous reste encore <strong>3 cours</strong> sur votre carte de 10 cours de la saison ${sai}.</p>
 
     <!-- Carte box — état expirant -->
     <div class="carte-box" style="border-color:#c62828;">
       <div class="carte-box-header" style="background:#c62828;">
-        <div class="carte-box-header-title">Votre carte — expire le 31 août 2026</div>
+        <div class="carte-box-header-title">Votre carte — expire le 31 août ${anneeFin}</div>
         <div class="carte-box-header-label">Paris — Débutants · 3 cours restants</div>
       </div>
       <div class="carte-box-body">
@@ -518,18 +514,18 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
         </div>
         <div class="carte-row">
           <span class="carte-row-label">Cours restants</span>
-          <span class="carte-row-value" style="color:#c62828;font-weight:700;">3 cours — expirent le 31/08/2026</span>
+          <span class="carte-row-value" style="color:#c62828;font-weight:700;">3 cours — expirent le 31/08/${anneeFin}</span>
         </div>
       </div>
     </div>
 
-    <!-- Bouton pré-inscription -->
+    <!-- Bouton report carte -->
     <div style="text-align:center;margin:0 0 22px;">
-      <a href="#LIEN_ASSOCONNECT_PREINSCRIPTIONS" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Pré-inscriptions 2026-2027 →</a>
+      <a href="${tev_liens_assoconnect[saiNext].cours}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Reportez votre carte → Réglez votre adhésion de la saison prochaine</a>
     </div>
 
-    <div style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#c62828;margin:0;line-height:1.7;">Après le 31 août, les cours non utilisés ne pourront plus être reportés sur la saison suivante.</p>
+    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+      <p style="font-size:13px;color:#bf360c;margin:0;line-height:1.7;">Réglez simplement l'adhésion à notre association avant le 25 août ${anneeFin} sur AssoConnect pour reporter les cours de votre carte à la saison prochaine.</p>
     </div>
 
     <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
@@ -769,8 +765,8 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
   <div class="push-mockup-icon" style="background:#1565c0;">📅</div>
   <div class="push-mockup-body">
     <div class="push-mockup-app">Tango &amp; Vous</div>
-    <div class="push-mockup-title">3 cours restants — saison bientôt terminée</div>
-    <div class="push-mockup-text">Pré-inscrivez-vous avant le 25 août pour ne pas les perdre.</div>
+    <div class="push-mockup-title">3 cours restants — reportez votre carte</div>
+    <div class="push-mockup-text">Il vous reste ${restants} cours — reportez-les sur la saison ${saiNext} avant le 31 août ${anneeFin}.</div>
     <div class="push-mockup-time">Il y a quelques heures · app.tangoetvous.fr</div>
   </div>
 </div>

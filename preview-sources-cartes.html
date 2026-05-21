@@ -92,8 +92,34 @@
   <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — "⏰ Votre carte de 10 cours a expiré — N cours non utilisés"</div>
 </div>
 
+<h2>C4 — Fin de saison J+1 (lendemain dernier cours Paris juin)</h2>
+<div class="route">POST /api/cron/fin-saison-c4 (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 8h UTC 20-30 juin · handler vérifie si hier = dernière date Paris de juin dans tev_cours_dates.paris · sinon {skipped:true}</span></div>
+  <div class="field"><span class="label">Force :</span> <span class="cond">body {"force":true} → bypass la vérification de date (via workflow_dispatch)</span></div>
+  <div class="field"><span class="label">Filtre élèves :</span> <span class="src">eleves WHERE carte_statut IN ('Active','Nouvelle carte') AND carte_restants &gt; 0</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>📅 Il vous reste ${restants} cours — reportez votre carte sur la saison ${saiNext}</code></div>
+  <div class="field"><span class="label">saiNext :</span> <span class="var">sai = mo>=9 ? yr+'-'+(yr+1) : (yr-1)+'-'+yr ; saiNext = une saison plus tard</span> — jamais hardcodé</div>
+  <div class="field"><span class="label">anneeFin :</span> <span class="var">parseInt(sai.split('-')[1])</span> — jamais hardcodé</div>
+  <div class="field"><span class="label">Bouton :</span> "Reportez votre carte → Réglez votre adhésion de la saison prochaine" · href = <span class="src">tev_liens_assoconnect[saiNext].cours</span> (Paramètres → Tango Paris → Liens AssoConnect → "Inscription tango (formulaire cours)")</div>
+  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — <span class="var">"📅 Il vous reste ${restants} cours — reportez votre carte sur la saison ${saiNext}"</span></div>
+  <div class="field"><span class="label">Push OS élève :</span> <span class="var">"📅 Il vous reste ${restants} cours — reportez-les sur la saison ${saiNext}"</span></div>
+  <div class="field"><span class="note">⚠️ Toutes les années et saisons dynamiques — jamais hardcodées</span></div>
+</div>
+
+<h2>C5 — Dernier rappel 25 août</h2>
+<div class="route">POST /api/cron/fin-saison-c5 (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 8h UTC le 25 août · eleves WHERE carte_statut IN ('Active','Nouvelle carte') AND carte_restants &gt; 0</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange ⚠️ · <span class="var">"⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}"</span></div>
+  <div class="field"><span class="label">Bouton :</span> "Reportez votre carte → Réglez votre adhésion de la saison prochaine" · href = <span class="src">tev_liens_assoconnect[saiNext].cours</span> (même clé que C4)</div>
+  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — <span class="var">"⚠️ Dernier rappel — reportez vos ${restants} cours avant le 31 août ${anneeFin}"</span></div>
+  <div class="field"><span class="note">⚠️ anneeFin et saiNext dynamiques — jamais hardcodés</span></div>
+</div>
+
 <h2>C6 — Relance 2 absences consécutives (cron)</h2>
-<div class="route">GitHub Actions script relance-absences.js</div>
+<div class="route">POST /api/cron/relance-absences (X-Cron-Secret)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron vendredi matin (Paris) / mardi matin (Vincennes) · eleves carte10 absents 2 cours consécutifs</span></div>
   <div class="field"><span class="label">Anti-doublon :</span> <span class="src">eleves.derniere_relance_abs DATE</span> — pas de renvoi si déjà envoyé pour ces 2 mêmes dates</div>
