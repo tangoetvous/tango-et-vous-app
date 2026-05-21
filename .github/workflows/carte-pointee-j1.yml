@@ -1,0 +1,27 @@
+name: Cartes — email élève pointé (lendemain matin)
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 9h Paris (UTC+2 CEST)
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'Déclenchement manuel'
+        required: false
+
+jobs:
+  envoyer-emails-cp-e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer emails CP-E (présences pointées la veille)
+        run: |
+          response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST "https://app.tangoetvous.fr/api/cron/carte-pointee-j1" \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "HTTP status: $response"
+          cat /tmp/response.json
+          if [ "$response" != "200" ]; then
+            echo "Erreur HTTP $response"
+            exit 1
+          fi

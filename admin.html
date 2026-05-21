@@ -4761,6 +4761,7 @@ async function chargerDonnees() {
           slots: ins.stage_nom ? ins.stage_nom.split('|').map(function(s){var m=(s.trim()).match(/(technique|stage\d+)$/);return m?m[1]:s.trim();}).filter(Boolean) : [],
           present: null, montant: ins.total_inscrit || 0,
           attente: ins.type_confirmation === 'attente',
+          presenceConfirmee: ins.presence_confirmee === true,
           partenaire: ins.partenaire || '', emailPartenaire: ins.partenaire_email || ''
         });
       } else {
@@ -4781,6 +4782,7 @@ async function chargerDonnees() {
             slots: slots, present: null,
             montant: di.prixInscrit || ins.total_inscrit || 0,
             attente: ins.type_confirmation === 'attente',
+            presenceConfirmee: ins.presence_confirmee === true,
             partenaire: ins.partenaire || '', emailPartenaire: ins.partenaire_email || ''
           });
           if (avecPart) {
@@ -9184,10 +9186,11 @@ function renderStages() {
       var statPill=i.attente
         ?'<span class="pill pill-warn" style="font-size:9px;">Attente</span>'
         :'<span class="pill pill-ok" style="font-size:9px;">Validé·e</span>';
+      var confBadge = i.presenceConfirmee ? '<span class="pill pill-ok" style="font-size:8px;">👍</span>' : '';
       return '<div class="card'+(i.attente?' hl-warn':'')+'"'+(noMargin?' style="margin-bottom:0;"':'')+' data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top">'
         +'<div style="flex:1;min-width:0;">'
         +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
-        +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span>'+statPill+'</div>'
+        +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span>'+statPill+confBadge+'</div>'
         +'<div class="card-sub" style="margin-top:3px;">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.montant?' · '+(i.montant)+'€':'')+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:4px;flex-shrink:0;">'
@@ -9236,8 +9239,9 @@ function renderStages() {
       function _stPRow(i){
         var origIdx=ins.indexOf(i);
         var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+        var stpConfBadge = i.presenceConfirmee ? ' <span class="pill pill-ok" style="font-size:8px;">👍</span>' : '';
         return '<div class="point-row" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;"><div class="point-nom" style="display:flex;align-items:center;gap:6px;">'+i.prenom+' '+i.nom
-          +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span></div>'
+          +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span>'+stpConfBadge+'</div>'
           +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:6px;">'
           +'<button class="btn-point btn-pres'+(i.present===true?' on':'')+'" data-action="pointer-stage-pres" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✓</button>'
@@ -9336,9 +9340,10 @@ function renderStages() {
   function _rowSlot(i, noMargin){
     var origIdx=ins.indexOf(i);
     var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
+    var rowConfBadge = i.presenceConfirmee ? ' <span class="pill pill-ok" style="font-size:8px;">👍</span>' : '';
     return '<div class="point-row"'+(noMargin?' style="margin-bottom:0;"':'')+' data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;">'
       +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
-      +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
+      +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'+rowConfBadge+'</div>'
       +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</div></div>'
       +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'
       +'<button class="btn-point" style="font-size:10px;padding:2px 5px;" data-action="stage-move-up" data-date="'+filtreStage+'" data-idx="'+origIdx+'">▲</button>'

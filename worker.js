@@ -378,6 +378,18 @@ export default {
         return handleCronFinSaisonC5(request, env);
       }
 
+      // POST /api/cron/carte-pointee-j1 — CP-E : envoie emails élèves pointés la veille (X-Cron-Secret)
+      if (pathname === '/api/cron/carte-pointee-j1' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronCartePonteeJ1(request, env);
+      }
+
+      // PATCH /api/stages/confirmer — élève confirme sa présence via lien email (token HMAC)
+      if (pathname === '/api/stages/confirmer' && method === 'PATCH') {
+        return handleStagesConfirmer(request, url, env);
+      }
+
       try {
         return await env.ASSETS.fetch(request);
       } catch (assetErr) {
@@ -1681,40 +1693,104 @@ async function handleNotifyCartePonteeAdmin(request, env) {
     });
   } catch(e) { console.error('[notify carte-pointee-admin] notifications_eleve error', e); }
 
-  if (!env.BREVO_API_KEY) {
-    console.log('[notify carte-pointee-admin] BREVO_API_KEY absent — skip email');
-    return corsResponse({ ok: true, sent: 0, notified: true, skipped: true }, 200, {}, request);
+  // Mettre en file d'attente l'email CP-E (envoyé le lendemain matin via cron carte-pointee-j1)
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        email,
+        type: 'carte_pointee_pending_email',
+        message: JSON.stringify({ email, prenom, nom, date, nbAdded: nb, utilises, restants, expiration }),
+        lu: false,
+      }),
+    });
+  } catch(e) { console.error('[notify carte-pointee-admin] pending email queue error', e); }
+
+  const sent = 0;
+  // Push FCM élève
+  if (env.FIREBASE_SERVICE_ACCOUNT) {
+    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    getFcmTokensForEmail(String(email), _svcKey).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `✓ Présence enregistrée le ${dateLabel} — votre carte Tango & Vous` }).catch(function(){});
+    }).catch(function(){});
   }
 
-  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-  <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-  <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
-  const footer = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-  <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-  <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
-  const signEleve = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-  <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-  <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
+}
 
-  const expirationRow = expiration
-    ? `<tr><td style="padding:4px 8px;color:#888;">Validité carte</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">jusqu'au ${fmtDate(expiration)}</td></tr>`
-    : '';
+// ================================================================
+// POST /api/cron/carte-pointee-j1 — CP-E : envoie emails élèves pointés la veille
+// Lit notifications_eleve WHERE type='carte_pointee_pending_email' AND lu=false
+// ================================================================
+async function handleCronCartePonteeJ1(request, env) {
+  if (!env.BREVO_API_KEY) {
+    return corsResponse({ ok: false, skipped: true, reason: 'no_brevo_key' }, 200, {}, request);
+  }
 
-  const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
-<div style="max-width:600px;margin:0 auto;background:#fff;">
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return JOURS_L[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS_L[d.getMonth()] + ' ' + d.getFullYear();
+  }
+
+  const adminEmail = 'tangoetvous@gmail.com';
+
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/notifications_eleve?type=eq.carte_pointee_pending_email&lu=eq.false&select=id,email,message`,
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+  );
+  if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
+  const pending = await res.json();
+
+  if (!pending.length) return corsResponse({ ok: true, sent: 0, checked: 0 }, 200, {}, request);
+
+  // Grouper par email
+  const byEmail = {};
+  for (const row of pending) {
+    let data;
+    try { data = typeof row.message === 'string' ? JSON.parse(row.message) : row.message; } catch { data = {}; }
+    if (!byEmail[row.email]) byEmail[row.email] = { ids: [], entries: [] };
+    byEmail[row.email].ids.push(row.id);
+    byEmail[row.email].entries.push(data);
+  }
+
+  let sent = 0;
+  for (const [emailAddr, { ids, entries }] of Object.entries(byEmail)) {
+    const last = entries[entries.length - 1];
+    const nbAdded = entries.reduce((s, e) => s + (Number(e.nbAdded) || 1), 0);
+    const prenom = last.prenom || '';
+    const nom = last.nom || '';
+    const date = last.date || (entries[0] && entries[0].date) || '';
+    const utilises = last.utilises;
+    const restants = last.restants;
+    const expiration = last.expiration;
+
+    const prenomAff = _esc(prenom || (nom || '').split(' ')[0] || '');
+    const dateLabel = date ? fmtDate(date) : '';
+    const expirationRow = expiration
+      ? `<tr><td style="padding:4px 8px;color:#888;">Validité carte</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">jusqu'au ${fmtDate(expiration)}</td></tr>`
+      : '';
+
+    const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+    const footer = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+    const signEleve = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+
+    const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">
   ${headerEleve}
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Présence enregistrée pour votre carte</span>
-  </div>
+  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Présence enregistrée pour votre carte</span></div>
   <div style="padding:28px 24px;">
     <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
     <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE CARTE DE 10 COURS</div>
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <tr style="background:#e8f5e9;">
-          <td style="padding:6px 8px;font-weight:700;color:#2e7d32;">⬤ Cours pointés CE JOUR</td>
-          <td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">${nb} cours</td>
-        </tr>
+        <tr style="background:#e8f5e9;"><td style="padding:6px 8px;font-weight:700;color:#2e7d32;">⬤ Cours pointés CE JOUR</td><td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">${nbAdded} cours</td></tr>
         <tr><td style="padding:4px 8px;color:#888;">Date du cours</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${dateLabel}</td></tr>
         ${utilises != null ? `<tr><td style="padding:4px 8px;color:#888;">Utilisés au total (carte)</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${utilises}/10</td></tr>` : ''}
         ${restants != null ? `<tr><td style="padding:4px 8px;color:#888;">Cours restants</td><td style="padding:4px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants}</td></tr>` : ''}
@@ -1726,34 +1802,85 @@ async function handleNotifyCartePonteeAdmin(request, env) {
     ${signEleve}
   </div>
   ${footer}
-</div>
-</body></html>`;
+</div></body></html>`;
 
-  let sent = 0;
-  try {
-    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sender: { name: 'Tango & Vous', email: adminEmail },
-        to: [{ email: String(email) }],
-        subject: `✓ Présence enregistrée le ${dateLabel} — Votre carte Tango & Vous`,
-        htmlContent: html,
-      }),
-    });
-    if (r.ok) sent++;
-    else console.error('[notify carte-pointee-admin] Brevo error', await r.text());
-  } catch(e) { console.error('[notify carte-pointee-admin] fetch error', e); }
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: 'Tango & Vous', email: adminEmail },
+          to: [{ email: String(emailAddr) }],
+          subject: `✓ Présence enregistrée le ${dateLabel} — Votre carte Tango & Vous`,
+          htmlContent: html,
+        }),
+      });
+      if (r.ok) sent++;
+      else console.error('[cron-carte-pointee-j1] Brevo error', await r.text());
+    } catch(e) { console.error('[cron-carte-pointee-j1] email error', e); }
 
-  // Push FCM élève
-  if (env.FIREBASE_SERVICE_ACCOUNT) {
-    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-    getFcmTokensForEmail(String(email), _svcKey).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `✓ Présence enregistrée le ${dateLabel} — votre carte Tango & Vous` }).catch(function(){});
-    }).catch(function(){});
+    // Marquer les entrées comme traitées
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve?id=in.(${ids.join(',')})`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ lu: true }),
+      });
+    } catch(e) { console.error('[cron-carte-pointee-j1] mark processed error', e); }
   }
 
-  return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
+  return corsResponse({ ok: true, sent, checked: pending.length }, 200, {}, request);
+}
+
+// ================================================================
+// PATCH /api/stages/confirmer — élève confirme sa présence via lien email (token HMAC)
+// Params: email, date (YYYY-MM-DD), token (HMAC(email:date, SUPABASE_ANON).slice(0,32))
+// ================================================================
+async function handleStagesConfirmer(request, url, env) {
+  const email = url.searchParams.get('email');
+  const date  = url.searchParams.get('date');
+  const token = url.searchParams.get('token');
+  if (!email || !date || !token) return new Response('Paramètres manquants', { status: 400, headers: { 'Content-Type': 'text/plain' } });
+
+  const expectedHmac = await _calHmac(email + ':' + date, SUPABASE_ANON);
+  if (token !== expectedHmac.slice(0, 32)) return new Response('Token invalide', { status: 403, headers: { 'Content-Type': 'text/plain' } });
+
+  const upd = await fetch(
+    `${SUPABASE_URL}/rest/v1/inscriptions_stages?email=eq.${encodeURIComponent(email)}&stage_date=eq.${date}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ presence_confirmee: true }),
+    }
+  );
+
+  const dateDisp = date.split('-').reverse().join('/');
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Confirmation — Tango &amp; Vous</title>
+<style>body{margin:0;padding:20px;background:#f5f5f5;font-family:Arial,sans-serif;text-align:center;}
+.box{max-width:400px;margin:60px auto;background:#fff;border-radius:12px;padding:40px 32px;box-shadow:0 2px 16px rgba(0,0,0,.08);}
+.icon{font-size:48px;margin:0 0 16px;}h1{font-size:22px;color:#2e7d32;margin:0 0 10px;}
+p{font-size:15px;color:#555;line-height:1.6;margin:0 0 24px;}
+a{display:inline-block;background:#D4AF37;color:#111;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;}
+.sub{font-size:12px;color:#888;margin-top:10px;}</style></head><body>
+<div class="box"><div class="icon">👍</div>
+<h1>${upd.ok ? 'Présence confirmée !' : 'Déjà enregistré'}</h1>
+<p>${upd.ok ? `Merci, votre présence au stage du ${dateDisp} a bien été enregistrée.<br/>À très bientôt sur la piste !` : 'Votre présence était déjà confirmée pour ce stage.'}</p>
+<a href="https://www.tangoetvous.com">Retour au site →</a>
+<div class="sub">Tango &amp; Vous</div>
+</div></body></html>`;
+
+  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
 }
 
 // ================================================================
@@ -5116,7 +5243,10 @@ async function handleNotifyInscriptionStage(request, env) {
       ? `<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée</span></div>`
       : `<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée</span></div>`;
     const rappelNote = proche ? '' : `<p style="font-size:13px;color:#555;text-align:center;margin:0 0 20px;">Vous recevrez un rappel 3 jours avant le stage.</p>`;
-    const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr/stages-pwa.html" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
+    const _s1bFirstDate = inscriptionsParDate[0]?.date || '';
+    const _s1bToken = _s1bFirstDate ? (await _calHmac(String(email) + ':' + _s1bFirstDate, SUPABASE_ANON)).slice(0, 32) : '';
+    const _s1bConfirmUrl = _s1bFirstDate ? `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(email))}&date=${_s1bFirstDate}&token=${_s1bToken}` : '#';
+    const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_s1bConfirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
     const stageBoxHtml = buildStageBox(inscriptionsParDate, null, null, null);
     const htmlEleve = wrap(`${headerEleve}${bandeau}
       <div style="padding:28px 24px;">
@@ -5200,12 +5330,14 @@ async function handleCronRappelStageJ3(request, env) {
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:10px;font-weight:700;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">📅 ${dateLabel}</div>
       ${slotsHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}
     </div>`;
+    const _s4Token = (await _calHmac(String(e.email) + ':' + targetDate, SUPABASE_ANON)).slice(0, 32);
+    const _s4ConfirmUrl = `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(e.email))}&date=${targetDate}&token=${_s4Token}`;
     const htmlEleve = wrap(`${headerEleve}
       <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre stage a lieu dans 3 jours !</span></div>
       <div style="padding:28px 24px;">
         <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
         ${stageBox}
-        <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>
+        <div style="text-align:center;margin:0 0 22px;"><a href="${_s4ConfirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
           <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidées.</p>
         </div>
@@ -5256,7 +5388,10 @@ async function handleNotifyStageValide(request, env) {
     if (d.tarif) slotsHtml += `<p style="font-size:13px;color:#1565c0;font-weight:700;margin:8px 0 0;">Prix : ${d.tarif}€</p>`;
     slotsHtml += `</div>`;
   }
-  const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
+  const _s3bFirstDate = inscriptionsParDate[0]?.date || '';
+  const _s3bToken = proche && _s3bFirstDate ? (await _calHmac(String(email) + ':' + _s3bFirstDate, SUPABASE_ANON)).slice(0, 32) : '';
+  const _s3bConfirmUrl = proche && _s3bFirstDate ? `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(email))}&date=${_s3bFirstDate}&token=${_s3bToken}` : '#';
+  const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_s3bConfirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
   const rappelNote = proche ? '' : `<p style="font-size:13px;color:#555;text-align:center;margin:0 0 20px;">Vous recevrez un rappel 3 jours avant le stage.</p>`;
   const firstDateLabel = inscriptionsParDate[0] ? fmtDate(inscriptionsParDate[0].date) : '';
   const htmlEleve = wrap(`${headerEleve}
