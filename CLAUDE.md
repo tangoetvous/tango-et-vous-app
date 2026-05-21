@@ -2986,3 +2986,53 @@ Voir section "Audit Supabase Security Advisor — 2026-05-21" pour le détail co
 **`preview-emails-yoga-v1.html`** — section Y-J1a :
 - En-tête yoga-box : `"Saison ${sai} (dynamique)"` au lieu de `"Saison 2026-2027"` hardcodé
 - Titre tarifs : `"Tarifs ${sai} (dynamique)"` au lieu de `"Tarifs 2026-2027"`
+
+## Session 2026-05-21 (suite 3) — Corrections workflows GitHub Actions + CRON_SECRET + is_admin()
+
+### ✅ CRON_SECRET configuré dans Cloudflare Workers
+`CRON_SECRET` était présent dans GitHub Actions secrets mais manquait dans Cloudflare Workers → tous les crons retournaient 401 → exit 1 → emails d'échec GitHub. Ajouté dans Cloudflare Dashboard → Workers → tango-et-vous → Settings → Variables → Secret variables.
+
+### ✅ Incident is_admin() — données admin vides
+Après l'exécution du SQL Security Advisor, un second bloc SQL (non généré par Claude) a remplacé `is_admin()` par une implémentation plpgsql incorrecte qui cherchait `eleves.role = 'admin'`. Résultat : is_admin() retournait false pour tout le monde → toutes les données admin disparaissaient.
+
+**Fix** : restaurer la définition correcte :
+```sql
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$
+  SELECT COALESCE(auth.email(), '') = ANY(ARRAY[
+    'tangoetvous@gmail.com',
+    'jeremybraitbart@gmail.com',
+    'garciabraitbart@gmail.com',
+    'jeremy@tangoetvous.com'
+  ]);
+$$;
+```
+**Règle permanente** : ne jamais modifier `is_admin()` autrement qu'en ajoutant un email dans le `ARRAY[...]`. Pas de `SET search_path`, pas de `LANGUAGE plpgsql`, pas de lookup dans `eleves.role`.
+
+### ✅ Corrections YAML syntax errors — 3 fichiers workflow
+
+Apostrophe dans une chaîne YAML entre guillemets simples = erreur de parsing → workflow invalide → échecs sur chaque push.
+
+| Fichier | Ligne | Avant | Après |
+|---------|-------|-------|-------|
+| `essai-rappel-j7.yml` | 10 | `'Date du cours d'essai...'` | `"Date du cours d'essai..."` |
+| `essai-yoga-rappel-j3.yml` | 10 | `'Date de l'essai yoga...'` | `"Date de l'essai yoga..."` |
+| `fin-saison-c4.yml` | 11 | `'Forcer l'envoi...'` | `"Forcer l'envoi..."` |
+
+**Règle** : dans les fichiers YAML, toujours utiliser des guillemets doubles `"..."` pour les `description:` contenant des apostrophes françaises.
+
+### ✅ Fix handler P1 — `updated_at` → `created_at`
+
+`handleCronEspaceEleveActivation` (worker.js ligne ~4506) interrogeait `inscriptions_cours` avec `updated_at=gte.${date}` mais cette table n'a pas de colonne `updated_at` (seulement `created_at`) → Supabase retournait 400 → handler retournait 500.
+
+**Fix** : `updated_at` → `created_at` dans la requête.
+
+**Note** : `created_at` est la date d'insertion de la ligne, pas la date de validation du paiement. Acceptable pour P1 (l'email d'activation est informatif, un décalage de quelques jours n'a pas d'impact).
+
+### ✅ Tests workflows GitHub Actions — tous passent en vert
+- `Essai Tango — emails J+1` ✅ (testé en workflow_dispatch)
+- `Essai Tango — rappel J-7` ✅ (testé en workflow_dispatch après fix YAML)
+- `Essai Yoga — rappel J-3` ✅ (testé en workflow_dispatch après fix YAML)
+- `Espace élève — activation J+7` ✅ (testé en workflow_dispatch après fix updated_at)
+- `Stages — rappel J-3` ✅ (testé en workflow_dispatch)
+- Autres workflows (`carte-expiree`, `relance-cb3x`, `relance-absences`, `essai-yoga-j1`, `fin-saison-c5`, `keep-alive`, `backup-csv`) — à tester ultérieurement
