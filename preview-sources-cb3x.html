@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Sources emails — Rappels CB 3 fois</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; background: #1a1a1a; color: #ccc; margin: 0; padding: 20px; }
+  h1 { color: #D4AF37; letter-spacing: 4px; font-size: 18px; }
+  h2 { color: #D4AF37; font-size: 14px; margin: 24px 0 6px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  .block { background: #222; border: 1px solid #333; border-radius: 6px; padding: 14px 16px; margin: 0 0 14px; }
+  .field { margin: 4px 0; }
+  .label { color: #888; width: 180px; display: inline-block; }
+  .var { color: #f0c030; font-weight: 700; }
+  .src { color: #6ab0f5; }
+  .cond { color: #c792ea; }
+  .note { color: #888; font-style: italic; font-size: 12px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .route { background: #0f1f0f; border: 1px solid #2e7d32; border-radius: 4px; padding: 4px 10px; font-size: 12px; color: #81c784; margin-bottom: 8px; display: inline-block; }
+</style>
+</head>
+<body>
+<h1>SOURCES EMAILS — RAPPELS CB 3 FOIS</h1>
+<p class="note">Correspondance : <code>preview-emails-cb3x-v1.html</code></p>
+
+<h2>CB3x — Rappel échéance paiement CB 3 fois</h2>
+<div class="route">POST /api/cron/rappel-cb3x (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron mensuel · élèves avec paiement='cb3x' dont la prochaine échéance tombe dans 7 jours</span></div>
+  <div class="field"><span class="label">Source échéances :</span> <span class="src">inscriptions_cours.donnees.datesPaiement[i]</span> — 3 dates calculées à l'inscription par l'admin</div>
+  <div class="field"><span class="label">Body interne :</span> <span class="var">{ email, prenom, nom, montant_echeance, date_echeance, num_echeance (2 ou 3), cours }</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>💳 Rappel — Prochaine échéance CB (${num_echeance}/3) — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Bleu 💳 "Rappel — prochaine échéance de paiement"</div>
+  <div class="field"><span class="label">Contenu :</span> Échéance N/3 · Date · Montant · Cours · "Votre CB sera débité automatiquement via AssoConnect"</div>
+  <div class="field"><span class="label">Bouton :</span> "Accéder à mon espace élève →" → app.tangoetvous.fr</div>
+  <div class="field"><span class="label">Signature :</span> Florencia GARCIA &amp; Jérémy BRAITBART · Tango &amp; Vous</div>
+  <div class="field"><span class="note">⚠️ À implémenter : nécessite que l'admin renseigne les dates CB3x dans donnees.datesPaiement lors de l'inscription</span></div>
+</div>
+
+<h2>Workflow GitHub Actions</h2>
+<div class="block">
+  <div class="field"><span class="label">Fichier :</span> <code>.github/workflows/relance-cb3x.yml</code></div>
+  <div class="field"><span class="label">Cron :</span> <span class="cond">Mensuel — à définir selon les dates de début de saison</span></div>
+  <div class="field"><span class="label">Route :</span> <code>POST https://app.tangoetvous.fr/api/cron/rappel-cb3x</code> + header <code>X-Cron-Secret</code></div>
+  <div class="field"><span class="label">Statut :</span> <span class="cond">Workflow créé, handler à implémenter complètement dans worker.js</span></div>
+</div>
+</body>
+</html>

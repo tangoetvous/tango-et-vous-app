@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Sources emails — Devis</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; background: #1a1a1a; color: #ccc; margin: 0; padding: 20px; }
+  h1 { color: #D4AF37; letter-spacing: 4px; font-size: 18px; }
+  h2 { color: #D4AF37; font-size: 14px; margin: 24px 0 6px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  .block { background: #222; border: 1px solid #333; border-radius: 6px; padding: 14px 16px; margin: 0 0 14px; }
+  .field { margin: 4px 0; }
+  .label { color: #888; width: 180px; display: inline-block; }
+  .var { color: #f0c030; font-weight: 700; }
+  .src { color: #6ab0f5; }
+  .cond { color: #c792ea; }
+  .note { color: #888; font-style: italic; font-size: 12px; }
+  code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .route { background: #0f1f0f; border: 1px solid #2e7d32; border-radius: 4px; padding: 4px 10px; font-size: 12px; color: #81c784; margin-bottom: 8px; display: inline-block; }
+</style>
+</head>
+<body>
+<h1>SOURCES EMAILS — DEVIS</h1>
+<p class="note">Correspondance : <code>preview-emails-devis-v1.html</code> (D0a, D0b, D1, D2)</p>
+
+<h2>D0a — Notification admin (demande devis — mode Événement)</h2>
+<div class="route">POST /admin/api/devis (sans auth — clé anon)</div>
+<div class="block">
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">tangoetvous@gmail.com</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>💼 Demande de devis — ${prenom} ${nom} · Événement</code></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ mode:'event', type_evenement, date_evenement, date_flexible, horaire_evenement, lieu, code_postal, nombre_invites, duree_prestation, prestations_labels[], budget, message, comment_connu, civilite, prenom, nom, email, telephone, type_contact, nom_societe?, adresse_facturation? }</span></div>
+  <div class="field"><span class="label">Header admin :</span> Fond <code>#111</code> · Bordure teal <code>#26a69a</code> · "Nouvelle demande de devis — Événement"</div>
+  <div class="field"><span class="label">Encadré or :</span> Nom/email/tel · Badge "Société" si type_contact='societe' · Prestations demandées (or)</div>
+  <div class="field"><span class="label">Table event :</span> Type évén. · Date + "(flexible)" si date_flexible · Horaire · Lieu + CP · Nb invités · Durée prestation</div>
+  <div class="field"><span class="label">Budget :</span> Tranche sélectionnée (ex: "800€ – 1200€")</div>
+  <div class="field"><span class="label">Message :</span> Fond <code>var(--s3)</code> + bordure visible · texte libre</div>
+  <div class="field"><span class="label">Comment connu :</span> Si renseigné</div>
+  <div class="field"><span class="label">Facturation :</span> <span class="cond">si type_contact='societe'</span> → nom_societe + adresse_facturation dans encadré séparé</div>
+  <div class="field"><span class="label">Boutons :</span> 📞 tel: · ✉️ mailto: · 📋 "Créer un devis →" → generateur-devis.html</div>
+  <div class="field"><span class="label">Notif panel 🔔 :</span> Fond <code>#00141a</code> / Bordure <code>#26a69a</code> teal · <code>💼 Demande devis — ${nom} · Mariage · 15 juin 2026 · 80 invités · Budget 800-1200€ · ⏳ À traiter</code></div>
+  <div class="field"><span class="label">Push OS admin :</span> <code>💼 Demande devis — ${nom} · Mariage · 15 juin 2026</code></div>
+</div>
+
+<h2>D0b — Notification admin (demande devis — mode Cours Privé)</h2>
+<div class="route">POST /admin/api/devis (sans auth — clé anon)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">mode='private' dans le body</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>💼 Demande de devis — ${prenom} ${nom} · Cours privé</code></div>
+  <div class="field"><span class="label">Badge :</span> "Cours privé" (teal) au lieu de "Événement"</div>
+  <div class="field"><span class="label">Table cours privé :</span> Type demande · Pour qui · Niveau tango · Date butoir (si renseignée) · Prof souhaité · Lieu cours · Commune domicile · Durée cours · Nb cours · Disponibilités</div>
+  <div class="field"><span class="label">Reste identique à D0a :</span> Budget · Message · Comment connu · Facturation si société · Boutons</div>
+</div>
+
+<h2>D1 — Email devis (draft Gmail — non automatique)</h2>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin clique "✉️ Email" sur un devis généré dans l'onglet Devis</span></div>
+  <div class="field"><span class="label">Mécanisme :</span> <code>window.open('https://mail.google.com/mail/?view=cm&amp;...')</code> — ouvre Gmail pré-rempli, NON automatique</div>
+  <div class="field"><span class="label">Sujet pré-rempli :</span> <code>Devis DEVIS-YYYY-NNNN – Tango &amp; Vous / Le Regard Se Pose</code></div>
+  <div class="field"><span class="label">Corps pré-rempli :</span> Formule de politesse + mention pièce jointe + "Votre devis est valable 30 jours" + coordonnées</div>
+  <div class="field"><span class="label">Émetteur :</span> Association Le Regard Se Pose · SIRET 522 679 752 00025</div>
+  <div class="field"><span class="label">Note :</span> <span class="cond">Pas de route API — géré entièrement côté client dans generateur-devis.html</span></div>
+</div>
+
+<h2>D2 — Confirmation demandeur (accusé réception)</h2>
+<div class="route">POST /admin/api/devis (sans auth) — Worker envoie D2 en parallèle de D0a/D0b</div>
+<div class="block">
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">body.email</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>📋 Votre demande de devis — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Bandeau :</span> Bleu 📋 "Votre demande est bien enregistrée"</div>
+  <div class="field"><span class="label">Récap demande :</span> Type (<span class="cond">Événement ou Cours privé</span>) · Prestations demandées (liste) · Date (si event) · Lieu (si event)</div>
+  <div class="field"><span class="label">Encadré :</span> "Nous répondons généralement sous 24-48h ouvrés."</div>
+  <div class="field"><span class="label">Contact :</span> Tel 07 73 27 59 06 · mailto:tangoetvous@gmail.com</div>
+  <div class="field"><span class="label">Signature :</span> Florencia GARCIA &amp; Jérémy BRAITBART · Tango &amp; Vous</div>
+  <div class="field"><span class="label">Pas de tarifs :</span> <span class="cond">D2 ne contient JAMAIS de montants ni de tarifs</span></div>
+</div>
+</body>
+</html>
