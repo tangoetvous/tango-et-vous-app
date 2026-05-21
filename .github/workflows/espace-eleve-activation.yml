@@ -1,0 +1,28 @@
+name: Espace élève — activation J+7 (P1)
+
+on:
+  schedule:
+    # 8h UTC = 10h Paris en été (CEST) · 9h Paris en hiver (CET)
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  send-activation-p1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer emails P1 (activation espace élève J+7)
+        run: |
+          echo "Déclenchement activation espace élève J+7"
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            -X POST "https://app.tangoetvous.fr/api/cron/espace-eleve-activation" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -d "{}")
+          HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+          BODY=$(echo "$RESPONSE" | grep -v "HTTP_STATUS:")
+          echo "Réponse : $BODY"
+          echo "Statut HTTP : $HTTP_STATUS"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::Échec de l'envoi (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
