@@ -5612,3 +5612,198 @@ async function handleCronFinSaisonC5(request, env) {
 
   return corsResponse({ ok: true, sent, checked: eleves.length, saison: sai }, 200, {}, request);
 }
+
+// ================================================================
+// POST /api/cron/relance-absences — cron quotidien (vendredi Paris, mardi Vincennes)
+// Email C6 : relance informelle si 2 absences consécutives sur une carte10
+//
+// ⚠️ SQL à exécuter dans Supabase avant la première exécution :
+//   ALTER TABLE eleves ADD COLUMN IF NOT EXISTS derniere_relance_abs DATE;
+//
+// Anti-doublon : derniere_relance_abs = date du 2e cours absent → pas de double envoi
+// pour la même paire d'absences.
+// ================================================================
+async function handleCronRelanceAbsences(request, env) {
+  const todayDt = new Date();
+  // Approximation heure de Paris : UTC+2 en été (mars–oct), UTC+1 en hiver
+  const parisOffset = todayDt.getUTCMonth() >= 2 && todayDt.getUTCMonth() <= 9 ? 2 : 1;
+  const parisDt = new Date(todayDt.getTime() + parisOffset * 3600 * 1000);
+  const dow     = parisDt.getUTCDay(); // 0=dim, 1=lun, 2=mar, 3=mer, 4=jeu, 5=ven, 6=sam
+  const today   = parisDt.toISOString().slice(0, 10);
+
+  // Vendredi (5) → vérifier Paris ; Mardi (2) → vérifier Vincennes
+  const checkParis     = dow === 5;
+  const checkVincennes = dow === 2;
+  if (!checkParis && !checkVincennes) {
+    return corsResponse({ ok: true, skipped: true, reason: 'not_a_check_day', dow, today }, 200, {}, request);
+  }
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const MOIS_C6  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_C6 = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const wrapC6      = function(inner) { return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`; };
+
+  // Charger tev_cours_dates depuis parametres
+  let coursDatesParis    = [];
+  let coursDatesTous     = [];
+  let coursVincennes     = [];
+  try {
+    const pr = await fetch(
+      `${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_cours_dates&select=valeur`,
+      { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (pr.ok) {
+      const rows = await pr.json();
+      if (rows.length && rows[0].valeur) {
+        const val = rows[0].valeur;
+        coursDatesParis  = Array.isArray(val.paris)     ? val.paris     : [];
+        coursVincennes   = Array.isArray(val.vincennes) ? val.vincennes : [];
+      }
+    } else {
+      console.error('[relance-absences] Supabase parametres error', await pr.text());
+    }
+  } catch(e) { console.error('[relance-absences] fetch tev_cours_dates error', e); }
+
+  // Retourne les 2 dernières dates strictement < ref dans un tableau de dates ISO
+  function getDernieresDatesC6(arr, ref) {
+    const past = arr.filter(function(d) { return d < ref; }).sort();
+    return past.slice(-2); // [avant-dernière, dernière]
+  }
+
+  let totalSent    = 0;
+  let totalChecked = 0;
+
+  const villes = [];
+  if (checkParis)     villes.push({ ville: 'paris',     dates: getDernieresDatesC6(coursDatesParis, today) });
+  if (checkVincennes) villes.push({ ville: 'vincennes', dates: getDernieresDatesC6(coursVincennes,  today) });
+
+  for (const villeObj of villes) {
+    const ville = villeObj.ville;
+    const dates = villeObj.dates;
+
+    if (dates.length < 2) {
+      console.log('[relance-absences] pas assez de dates passées pour ' + ville + ' (trouvé ' + dates.length + ')');
+      continue;
+    }
+    const dateAvant    = dates[0]; // avant-dernière date de cours
+    const dateDerniere = dates[1]; // dernière date de cours
+
+    // Charger les élèves avec carte active pour cette ville
+    let eleves = [];
+    try {
+      const er = await fetch(
+        `${SUPABASE_URL}/rest/v1/eleves?carte_statut=in.(Active,Nouvelle%20carte)&ville=eq.${ville}&select=id,email,prenom,nom,carte_restants,derniere_relance_abs`,
+        { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+      );
+      if (!er.ok) {
+        console.error('[relance-absences] Supabase eleves error (' + ville + ')', await er.text());
+        continue;
+      }
+      eleves = await er.json();
+    } catch(e) { console.error('[relance-absences] fetch eleves error (' + ville + ')', e); continue; }
+
+    totalChecked += eleves.length;
+
+    for (const eleve of eleves) {
+      // Anti-doublon : déjà relancé pour cette dernière date d'absence
+      if (eleve.derniere_relance_abs === dateDerniere) continue;
+
+      // Vérifier présences sur les 2 dates dans la table presences
+      let presences = [];
+      try {
+        const pq = await fetch(
+          `${SUPABASE_URL}/rest/v1/presences?eleve_id=eq.${eleve.id}&date=in.(${dateAvant},${dateDerniere})&select=date`,
+          { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+        );
+        if (pq.ok) presences = await pq.json();
+      } catch(e) { console.error('[relance-absences] fetch presences error (' + eleve.email + ')', e); }
+
+      const datesPresentMap = new Set(presences.map(function(p) { return p.date; }));
+
+      // Absent = aucune présence enregistrée sur cette date
+      // (absence déclarée via absences_jour OU simple non-venue = même résultat)
+      const absentAvant    = !datesPresentMap.has(dateAvant);
+      const absentDerniere = !datesPresentMap.has(dateDerniere);
+
+      // N'envoyer que si absent sur les DEUX dates
+      if (!absentAvant || !absentDerniere) continue;
+
+      const prenomAff = _esc(eleve.prenom || '');
+      const nomAff    = _esc(((eleve.prenom || '') + ' ' + (eleve.nom || '')).trim());
+      const restants  = eleve.carte_restants != null ? eleve.carte_restants : '?';
+
+      // Email C6 (si Brevo configuré)
+      if (env.BREVO_API_KEY) {
+        const htmlEleve = wrapC6(`${headerEleve}
+          <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
+            <span style="font-size:14px;font-weight:700;color:#1565c0;">💙 On prend de tes nouvelles</span>
+          </div>
+          <div style="padding:28px 24px;">
+            <p style="font-size:15px;color:#333;margin:0 0 20px;">Coucou ${prenomAff},</p>
+            <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">On ne t'a pas vu·e aux 2 derniers cours. Tout va bien ?</p>
+            <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">Nous sommes là pour t'accompagner dès que tu reprends pour te partager ce qui a été vu dernièrement.</p>
+            <div style="background:#e8f4fd;border:1px solid #b3d9f5;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+              <p style="font-size:14px;color:#1565c0;font-weight:700;margin:0 0 6px;">Rappel</p>
+              <p style="font-size:14px;color:#333;line-height:1.6;margin:0;">Il te reste <strong>${restants} cours</strong> sur ta carte. Ils t'attendent !</p>
+            </div>
+            <p style="font-size:13px;color:#555;text-align:center;margin:0 0 6px;">📞 07 73 27 59 06</p>
+            <p style="font-size:13px;color:#555;text-align:center;margin:0 0 28px;"><a href="mailto:${adminEmail}" style="color:#B8962E;">${adminEmail}</a></p>
+            <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia &amp; Jérémy</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+          </div>${footer}`);
+
+        try {
+          const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sender: { name: 'Tango & Vous', email: adminEmail },
+              to: [{ email: String(eleve.email) }],
+              subject: '💙 On prend de tes nouvelles — Tango & Vous',
+              htmlContent: htmlEleve,
+            }),
+          });
+          if (r.ok) {
+            totalSent++;
+          } else {
+            console.error('[relance-absences] Brevo error', eleve.email, await r.text());
+          }
+        } catch(e) { console.error('[relance-absences] Brevo fetch error', e); }
+      }
+
+      // Notification panel admin 🔔
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+            'Content-Type': 'application/json', 'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            type: 'relance_absences',
+            message: '💙 2 absences consécutives — ' + (nomAff || eleve.email) + ' · ' + (ville === 'paris' ? 'Paris' : 'Vincennes') + ' · Email C6 envoyé · → Cartes 10 → Détails',
+            lu: false,
+            lien_tab: 'cartes',
+          }),
+        });
+      } catch(e) { console.error('[relance-absences] admin notif error', e); }
+
+      // Mettre à jour derniere_relance_abs pour éviter un double envoi la semaine prochaine
+      Promise.resolve(
+        fetch(`${SUPABASE_URL}/rest/v1/eleves?email=eq.${encodeURIComponent(String(eleve.email))}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': svcKey, 'Authorization': `Bearer ${svcKey}`,
+            'Content-Type': 'application/json', 'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({ derniere_relance_abs: dateDerniere }),
+        })
+      ).catch(function(e) { console.error('[relance-absences] patch derniere_relance_abs error', e); });
+    }
+  }
+
+  return corsResponse({ ok: true, sent: totalSent, checked: totalChecked, dow, today }, 200, {}, request);
+}

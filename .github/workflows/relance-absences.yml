@@ -1,0 +1,25 @@
+name: Cartes 10 — relance 2 absences (C6)
+
+on:
+  schedule:
+    # 9h heure de Paris (UTC+1 hiver / UTC+2 été)
+    # Le handler vérifie lui-même le jour de la semaine :
+    #   vendredi → Paris | mardi → Vincennes | autres jours → skip
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  relance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer emails relance 2 absences consécutives (C6)
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            https://app.tangoetvous.fr/api/cron/relance-absences \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "Erreur — code HTTP $response"
+            exit 1
+          fi
