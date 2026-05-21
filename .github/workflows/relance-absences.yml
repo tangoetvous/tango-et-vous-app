@@ -1,23 +1,49 @@
-name: Cartes 10 — relance 2 absences (C6)
+name: Relance absences — C6 (vendredi Paris / mardi Vincennes)
 
 on:
   schedule:
-    # 9h heure de Paris (UTC+1 hiver / UTC+2 été)
-    # Le handler vérifie lui-même le jour de la semaine :
-    #   vendredi → Paris | mardi → Vincennes | autres jours → skip
-    - cron: '0 7 * * *'
+    # Vendredi 7h UTC = 9h Paris (CEST été) — cours Paris le jeudi
+    - cron: '0 7 * * 5'
+    # Mardi 7h UTC = 9h Paris (CEST été) — cours Vincennes le lundi
+    - cron: '0 7 * * 2'
   workflow_dispatch:
+    inputs:
+      ville:
+        description: 'Ville (paris ou vincennes)'
+        required: true
+        default: 'paris'
 
 jobs:
-  relance:
+  relance-paris:
+    if: (github.event_name == 'workflow_dispatch' && github.event.inputs.ville == 'paris') || (github.event_name == 'schedule' && github.event.schedule == '0 7 * * 5')
     runs-on: ubuntu-latest
     steps:
-      - name: Envoyer emails relance 2 absences consécutives (C6)
+      - name: Envoyer emails C6 absences Paris
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X POST \
             https://app.tangoetvous.fr/api/cron/relance-absences \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json")
+            -H "Content-Type: application/json" \
+            -d '{"ville":"paris"}')
+          cat /tmp/body.txt
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "Erreur — code HTTP $response"
+            exit 1
+          fi
+
+  relance-vincennes:
+    if: (github.event_name == 'workflow_dispatch' && github.event.inputs.ville == 'vincennes') || (github.event_name == 'schedule' && github.event.schedule == '0 7 * * 2')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer emails C6 absences Vincennes
+        run: |
+          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X POST \
+            https://app.tangoetvous.fr/api/cron/relance-absences \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"ville":"vincennes"}')
+          cat /tmp/body.txt
           echo "HTTP status: $response"
           if [ "$response" != "200" ]; then
             echo "Erreur — code HTTP $response"

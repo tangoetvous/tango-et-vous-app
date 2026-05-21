@@ -5631,11 +5631,24 @@ async function handleCronRelanceAbsences(request, env) {
   const dow     = parisDt.getUTCDay(); // 0=dim, 1=lun, 2=mar, 3=mer, 4=jeu, 5=ven, 6=sam
   const today   = parisDt.toISOString().slice(0, 10);
 
-  // Vendredi (5) → vérifier Paris ; Mardi (2) → vérifier Vincennes
-  const checkParis     = dow === 5;
-  const checkVincennes = dow === 2;
-  if (!checkParis && !checkVincennes) {
-    return corsResponse({ ok: true, skipped: true, reason: 'not_a_check_day', dow, today }, 200, {}, request);
+  // Lire le body pour un éventuel override de ville (passé par les crons GitHub Actions)
+  let bodyVille = null;
+  try {
+    const bodyText = await request.text();
+    if (bodyText) { const parsed = JSON.parse(bodyText); bodyVille = parsed.ville || null; }
+  } catch(e) {}
+
+  // Si ville explicite dans le body → forcer ; sinon détecter via le jour de la semaine
+  let checkParis, checkVincennes;
+  if (bodyVille === 'paris')     { checkParis = true;  checkVincennes = false; }
+  else if (bodyVille === 'vincennes') { checkParis = false; checkVincennes = true; }
+  else {
+    // Vendredi (5) → vérifier Paris ; Mardi (2) → vérifier Vincennes
+    checkParis     = dow === 5;
+    checkVincennes = dow === 2;
+    if (!checkParis && !checkVincennes) {
+      return corsResponse({ ok: true, skipped: true, reason: 'not_a_check_day', dow, today }, 200, {}, request);
+    }
   }
 
   const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
