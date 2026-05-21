@@ -1610,6 +1610,14 @@ async function handleNotifyCartePointage(request, env) {
     else console.error('[notify carte-pointage] Brevo error', await r.text());
   } catch(e) { console.error('[notify carte-pointage] fetch error', e); }
 
+  // Push FCM admin
+  if (env.FIREBASE_SERVICE_ACCOUNT) {
+    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    getFcmTokensAdmin(_svcKey).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `📍 Pointage carte — ${nomAff} · ${dateLabel}` }).catch(function(){});
+    }).catch(function(){});
+  }
+
   return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
 }
 
@@ -1712,6 +1720,14 @@ async function handleNotifyCartePonteeAdmin(request, env) {
     if (r.ok) sent++;
     else console.error('[notify carte-pointee-admin] Brevo error', await r.text());
   } catch(e) { console.error('[notify carte-pointee-admin] fetch error', e); }
+
+  // Push FCM élève
+  if (env.FIREBASE_SERVICE_ACCOUNT) {
+    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    getFcmTokensForEmail(String(email), _svcKey).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `✓ Présence enregistrée le ${dateLabel} — votre carte Tango & Vous` }).catch(function(){});
+    }).catch(function(){});
+  }
 
   return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
 }
@@ -2748,6 +2764,14 @@ async function handleCronCarteExpiree(request, env) {
       });
       if (r.ok) sent++; else console.error('[cron carte-expiree] Brevo error', e.email, await r.text());
     } catch(err) { console.error('[cron carte-expiree] fetch error', err); }
+
+    // Push FCM élève
+    if (env.FIREBASE_SERVICE_ACCOUNT) {
+      const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+      getFcmTokensForEmail(String(e.email), _svcKey).then(function(tokens) {
+        if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `⏰ Votre carte de 10 cours a expiré — ${e.restants || 0} cours non utilisés` }).catch(function(){});
+      }).catch(function(){});
+    }
   }
 
   return corsResponse({ ok: true, sent, checked: eleves.length, notified: aNotifier.length, date: today }, 200, {}, request);
@@ -4629,6 +4653,15 @@ async function handleNotifyCarteRenouvellement(request, env) {
       body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `⚠️ Nouvelle carte créée — finalisez votre paiement — Tango & Vous`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-carte-renouvellement] brevo error', err); }
+
+  // Push FCM élève
+  if (env.FIREBASE_SERVICE_ACCOUNT) {
+    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    getFcmTokensForEmail(String(email), _svcKey).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: '⚠️ Nouvelle carte créée — pensez à finaliser votre paiement' }).catch(function(){});
+    }).catch(function(){});
+  }
+
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
@@ -4691,6 +4724,15 @@ async function handleNotifyCartePaiement(request, env) {
       body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `✓ Paiement enregistré — votre carte de 10 cours est active — Tango & Vous`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-carte-paiement] brevo error', err); }
+
+  // Push FCM élève
+  if (env.FIREBASE_SERVICE_ACCOUNT) {
+    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    getFcmTokensForEmail(String(email), _svcKey).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: '✓ Paiement enregistré · Votre carte est active' }).catch(function(){});
+    }).catch(function(){});
+  }
+
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
@@ -4743,6 +4785,15 @@ async function handleNotifyCarteReport(request, env) {
       body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `↩ Vos cours sont reportés sur ${saisonSuivante} — Tango & Vous`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-carte-report] brevo error', err); }
+
+  // Push FCM élève
+  if (env.FIREBASE_SERVICE_ACCOUNT) {
+    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    getFcmTokensForEmail(String(email), _svcKey).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `↩ Votre carte reportée · ${restants} cours préservés pour ${saisonSuivante}` }).catch(function(){});
+    }).catch(function(){});
+  }
+
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
@@ -5074,6 +5125,14 @@ async function handleNotifyInscriptionStage(request, env) {
     await sendMail(String(email), `🎭 Votre demande d'inscription au stage du ${firstDateLabel} — Tango & Vous`, htmlEleve);
   }
 
+  // Push FCM admin
+  if (env.FIREBASE_SERVICE_ACCOUNT) {
+    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    getFcmTokensAdmin(_svcKey).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `🎭 Inscription stage — ${nomAff} · ${inscriptionsParDate[0] ? fmtDateCourt(inscriptionsParDate[0].date) : ''}` }).catch(function(){});
+    }).catch(function(){});
+  }
+
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
@@ -5352,6 +5411,14 @@ async function handleNotifyCoursParticulier(request, env) {
         ${signEleve}
       </div>${footer}`);
     await sendMail(String(email), `📋 Votre demande de cours particulier — Tango & Vous`, htmlEleve);
+  }
+
+  // Push FCM admin
+  if (env.FIREBASE_SERVICE_ACCOUNT) {
+    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    getFcmTokensAdmin(_svcKey).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `🎯 Cours particulier — ${nomAff}${urgBadge}` }).catch(function(){});
+    }).catch(function(){});
   }
 
   return corsResponse({ ok: true }, 200, {}, request);
