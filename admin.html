@@ -9743,7 +9743,24 @@ function valAttStage(date, nom, btn) {
   // Utiliser l'id DB si disponible (le plus sûr), sinon fallback email+date
   if(st&&st._dbId) q=q.eq('id',st._dbId);
   else q=q.eq('email',st&&st.email||'').eq('stage_date',date);
-  q.then(function(){chargerDonnees();})
+  q.then(function(){
+    // S3 — admin valide inscription stage attente → confirme
+    if (st && st.email) {
+      Promise.resolve(fetch('/api/notify/stage-valide', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          email: st.email,
+          prenom: st.prenom||'',
+          nom: st.nom||'',
+          role: st.role||st.type||'',
+          statut: 'confirme',
+          inscriptionsParDate: [{ date: date, slots: (st.slots||[]).map(function(s){return {horaire:s,theme:''};}), tarif: st.montant||0 }],
+        }),
+      })).catch(function(){});
+    }
+    chargerDonnees();
+  })
    .catch(function(){if(st)st.attente=true;btn.disabled=false;btn.textContent='✓ Confirmer';renderTab();});
 }
 function pointerStage(date, idx, present) {
