@@ -1094,6 +1094,20 @@
   // → Cloud Messaging → Web Push certificates → Generate key pair
   const TEV_VAPID_KEY = localStorage.getItem('tev_vapid_key') || '';
 
+  function _pushPermission() {
+    return ('Notification' in window) ? Notification.permission : 'unsupported';
+  }
+
+  function _updatePushBtnEleve() {
+    var btn = $('eleve-btn-activer-notif');
+    if (!btn) return;
+    var p = _pushPermission();
+    if (p === 'granted')  { btn.textContent = '🔔 Activées'; btn.style.color = '#4ade80'; btn.disabled = true; }
+    else if (p === 'denied') { btn.textContent = '🔕 Bloquées (réglages nav.)'; btn.style.color = '#ef4444'; btn.disabled = true; }
+    else if (p === 'unsupported') { btn.textContent = '🔕 Non supporté'; btn.style.color = '#888'; btn.disabled = true; }
+    else { btn.textContent = '🔔 Activer les notifications'; btn.style.color = ''; btn.disabled = false; }
+  }
+
   async function _registerFcmToken() {
     try {
       if (!TEV_VAPID_KEY) return;
@@ -1126,6 +1140,50 @@
       await _registerFcmToken();
     } catch(e) { /* silencieux */ }
   }
+
+  // Boutons push exposés globalement pour les onclick du panneau Notifications
+  window.activerPushEleve = async function() {
+    var statusEl = $('push-status-msg');
+    if (!('Notification' in window)) {
+      if (statusEl) statusEl.textContent = '❌ Notifications non supportées par ce navigateur.';
+      return;
+    }
+    try {
+      var perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+      _updatePushBtnEleve();
+      if (perm === 'granted') {
+        if (statusEl) statusEl.textContent = '⏳ Enregistrement en cours…';
+        await _registerFcmToken();
+        if (statusEl) statusEl.textContent = '✓ Notifications activées !';
+        setTimeout(function(){ if(statusEl) statusEl.textContent=''; }, 3000);
+      } else {
+        if (statusEl) statusEl.textContent = '❌ Permission refusée — vérifie les réglages du navigateur.';
+      }
+    } catch(e) {
+      if (statusEl) statusEl.textContent = '❌ Erreur : ' + e.message;
+    }
+  };
+
+  window.testerPushEleve = async function() {
+    var statusEl = $('push-status-msg');
+    if (!('Notification' in window)) { if(statusEl) statusEl.textContent = '❌ Non supporté.'; return; }
+    if (Notification.permission !== 'granted') {
+      if (statusEl) statusEl.textContent = '⚠️ Active d\'abord les notifications.';
+      return;
+    }
+    try {
+      var reg = await navigator.serviceWorker.ready;
+      reg.showNotification('🔔 Tango & Vous', {
+        body: 'Les notifications fonctionnent correctement !',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: 'tev-test'
+      });
+      if (statusEl) { statusEl.textContent = '⚡ Notification envoyée !'; setTimeout(function(){ statusEl.textContent=''; }, 3000); }
+    } catch(e) {
+      if (statusEl) statusEl.textContent = '❌ Erreur : ' + e.message;
+    }
+  };
 
   // ================================================================
   // YOGA PANE
@@ -3166,8 +3224,28 @@
     var pane = $('notifications-pane');
     if (!pane) return;
     var notifs = (eleveData && eleveData.notifications) || [];
+    var p = _pushPermission();
+    var btnColor = p === 'granted' ? '#4ade80' : p === 'denied' ? '#ef4444' : 'var(--gold,#D4AF37)';
+    var btnText  = p === 'granted' ? '🔔 Activées' : p === 'denied' ? '🔕 Bloquées (réglages nav.)' : p === 'unsupported' ? '🔕 Non supporté' : '🔔 Activer les notifications';
+    var btnDis   = p === 'granted' || p === 'denied' || p === 'unsupported';
     var h = '<div class="dash-wrap">';
     h += '<div class="tab-section-title">🔔 Notifications</div>';
+    // ── Section push OS ─────────────────────────────────────────
+    h += '<div style="background:var(--card-bg,#1a1a1a);border-radius:10px;padding:14px 16px;margin-bottom:16px;">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--dim,#aaa);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Notifications push</div>'
+      + '<div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:12px;">Reçois une alerte sur ton téléphone même quand l\'appli est fermée — carte pointée, nouvelle milonga, message…</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+      + '<button id="eleve-btn-activer-notif" onclick="activerPushEleve()" '
+      + (btnDis ? 'disabled ' : '')
+      + 'style="background:var(--s3,#222);border:1px solid var(--border,#333);border-radius:6px;padding:8px 14px;font-size:13px;font-weight:600;cursor:'+(btnDis?'default':'pointer')+';color:'+btnColor+';">'
+      + btnText + '</button>'
+      + (p === 'granted'
+        ? '<button onclick="testerPushEleve()" style="background:var(--s3,#222);border:1px solid var(--border,#333);border-radius:6px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;color:var(--dim,#aaa);">⚡ Tester</button>'
+        : '')
+      + '</div>'
+      + '<div id="push-status-msg" style="font-size:12px;color:#4ade80;margin-top:8px;min-height:16px;"></div>'
+      + '</div>';
+    // ── Liste des notifications in-app ───────────────────────────
     if (!notifs.length) {
       h += '<div style="text-align:center;color:rgba(255,255,255,.4);font-size:14px;padding:40px 0;">Aucune notification pour l\'instant.</div>';
     } else {
