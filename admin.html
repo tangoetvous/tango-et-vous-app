@@ -6926,6 +6926,8 @@ function validerChangementCours(id) {
     e.partenaire=pNomP; e.emailPartenaire=pPart.email||'';
     pPart.partenaire=eNomP; pPart.emailPartenaire=e.email||'';
   }
+  var _oldVilleCC = e.ville||'';
+  var _oldNiveauCC = e.niveau||'';
   e.cours=cours;
   e.ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   e.niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
@@ -6970,7 +6972,22 @@ function validerChangementCours(id) {
       ops.push(Promise.resolve(TEV.client.from('eleves').update({partenaire:e.partenaire,email_partenaire:e.emailPartenaire}).eq('email',(e.email||'').toLowerCase())));
       if(pPart.email) ops.push(Promise.resolve(TEV.client.from('eleves').update({partenaire:pPart.partenaire,email_partenaire:pPart.emailPartenaire}).eq('email',pPart.email.toLowerCase())));
     }
-    Promise.all(ops).then(function(){ chargerDonnees(); })
+    Promise.all(ops).then(function(){
+      // I04 — changement de cours notifié à l'élève
+      Promise.resolve(fetch('/api/notify/inscription-cours-modifiee', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          email: e.email,
+          prenom: e.prenom||'',
+          nom: e.nom||'',
+          ancienCours: _oldVilleCC+' — '+_oldNiveauCC,
+          nouveauCours: e.ville+' — '+e.niveau,
+          saison: saisonActive(),
+        }),
+      })).catch(function(){});
+      chargerDonnees();
+    })
     .catch(function(err){ afficherToast('⚠️ Erreur sauvegarde: ' + ((err&&err.message)||'')); });
   }
 }
@@ -7602,7 +7619,34 @@ function valGuideeEssai(email, date, btn, id) {
     ops.push(Promise.resolve(qPart));
   }
 
-  Promise.all(ops).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;btn.textContent='✓ Valider';});
+  Promise.all(ops).then(function(){
+    // E15 — admin valide une inscription essai attente → confirme
+    if (entry) {
+      Promise.resolve(fetch('/api/notify/essai-valide', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          email: entry.email||'', prenom: entry.prenom||'', nom: entry.nom||'',
+          tel: entry.tel||'', role: entry.role||'',
+          ville: entry.ville||'', niveau: entry.niveau||'',
+          dateIso: entry.date||'', statut: 'confirme',
+        }),
+      })).catch(function(){});
+    }
+    if (partEntry) {
+      Promise.resolve(fetch('/api/notify/essai-valide', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          email: partEntry.email||'', prenom: partEntry.prenom||'', nom: partEntry.nom||'',
+          tel: partEntry.tel||'', role: partEntry.role||'',
+          ville: partEntry.ville||'', niveau: partEntry.niveau||'',
+          dateIso: partEntry.date||'', statut: 'confirme',
+        }),
+      })).catch(function(){});
+    }
+    chargerDonnees();
+  }).catch(function(){btn.disabled=false;btn.textContent='✓ Valider';});
 }
 function marquerAbsenceJour(date, email, btn) {
   var idx = -1;
@@ -8600,6 +8644,22 @@ function pointerCoursAction(id, date, nbCours, btn) {
               body: JSON.stringify({email:c.email, prenom:c.prenom||'', nom:c.nom||'', utilises:10, restants:0}),
             })).catch(function(){});
           }
+          // C1 — bienvenue au premier pointage de la saison
+          if (!r.renouvAuto && !c.datePremierCours && syncData) {
+            Promise.resolve(fetch('/api/notify/carte-bienvenue', {
+              method: 'POST',
+              headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
+              body: JSON.stringify({
+                email: c.email,
+                prenom: c.prenom||'',
+                nom: c.nom||'',
+                ville: c.ville||'paris',
+                niveau: c.niveau||'',
+                saison: saisonActive(),
+                datePremierCours: date,
+              }),
+            })).catch(function(){});
+          }
         }
       }
       chargerDonnees();
@@ -8634,6 +8694,20 @@ _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:10,datesCou
     }
     return insertProm;
   }).then(function(){
+    // C2b — carte renouvelée sans payer (par l'admin)
+    if (!(paye===true)) {
+      var _carteObjN = (adminData.cartes||[]).find(function(x){return x.id===id;});
+      Promise.resolve(fetch('/api/notify/carte-renouvellement', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          email: _carteObjN ? (_carteObjN.email||'') : '',
+          prenom: _carteObjN ? (_carteObjN.prenom||'') : '',
+          source: 'admin',
+          liensAssoConnect: '#',
+        }),
+      })).catch(function(){});
+    }
     chargerDonnees().then(function(){ if(onDone) onDone(); }).catch(function(){ if(onDone) onDone(); });
   }).catch(function(e){if(btn){btn.disabled=false;btn.textContent='↻ Renouveler';}});
 }
@@ -8888,6 +8962,17 @@ function reporterCarteJs(id, btn) {
     if(!adminData.coursTango)adminData.coursTango=[];
     adminData.coursTango.push(buildNewCT(newDbId));
     afficherToast('↩ Carte de '+c.nom+' reportée sur '+saiProch+' ('+restants+' cours reportés)');
+    // C-report — notification report de carte
+    Promise.resolve(fetch('/api/notify/carte-report', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        email: c.email,
+        prenom: c.prenom||prenom||'',
+        restants: restants,
+        saisonSuivante: saiProch,
+      }),
+    })).catch(function(){});
     chargerDonnees();
   })
   .catch(function(e){
@@ -11996,6 +12081,12 @@ window.soumettreValiderPaiement = function(force) {
     });
     Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?10:0,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     Promise.all(updates).then(function(){
+      // I03 — inscription validée et payée
+      Promise.resolve(fetch('/api/notify/inscription-cours-payee', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
+        body: JSON.stringify({email:email, prenom:prenom, nom:nom, ville:ville0, niveau:niveau0, saison:sai, livretUrl:''}),
+      })).catch(function(){});
       chargerDonnees();
       setTimeout(function(){sousOngletEleves=ville0+'-'+(niveau0==='intermediaire'?'int':'deb');switchTab('eleves-tango');},1500);
     }).catch(function(ex){if(err){err.textContent='Erreur: '+((ex&&ex.message)||'Update échoué');err.style.display='block';}chargerDonnees();});
