@@ -4503,7 +4503,7 @@ async function handleCronEspaceEleveActivation(request, env) {
   const targetDate = d7ago.toISOString().slice(0,10);
 
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/inscriptions_cours?statut=eq.inscrit&updated_at=gte.${targetDate}T00:00:00&updated_at=lt.${targetDate}T23:59:59&select=email,prenom,nom`,
+    `${SUPABASE_URL}/rest/v1/inscriptions_cours?statut=eq.inscrit&created_at=gte.${targetDate}T00:00:00&created_at=lt.${targetDate}T23:59:59&select=email,prenom,nom`,
     { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
   );
   if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
