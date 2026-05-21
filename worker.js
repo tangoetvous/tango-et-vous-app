@@ -2614,7 +2614,9 @@ async function handleCronRelanceCb3x(request, env) {
   const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap        = (inner) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
-  function buildHtml(prenomAff, cours, dateEcheance, ordinal) {
+  function buildHtml(prenomAff, cours, dateEcheance, ordinal, isLast) {
+    const prelLabel = isLast ? (ordinal + ' sur 3 — dernier') : (ordinal + ' sur 3');
+    const noteFinale = isLast ? ' Il s’agit du <strong>dernier pr\xe9l\xe8vement</strong> — votre inscription sera enti\xe8rement r\xe9gl\xe9e.' : '';
     return wrap(`${headerEleve}
       <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
         <span style="font-size:14px;font-weight:700;color:#1565c0;">💳 Rappel — ${ordinal} échéance de paiement CB</span></div>
@@ -2625,14 +2627,14 @@ async function handleCronRelanceCb3x(request, env) {
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE PAIEMENT CB 3×</div>
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
             <tr><td style="padding:5px 0;color:#555;">Cours</td><td style="padding:5px 0;font-weight:700;color:#222;text-align:right;">${cours}</td></tr>
-            <tr><td style="padding:5px 0;color:#555;">Prélèvement</td><td style="padding:5px 0;font-weight:700;color:#222;text-align:right;">${ordinal} sur 3</td></tr>
+            <tr><td style="padding:5px 0;color:#555;">Prélèvement</td><td style="padding:5px 0;font-weight:700;color:#222;text-align:right;">${prelLabel}</td></tr>
             <tr><td style="padding:5px 0;color:#555;">Date du prélèvement</td><td style="padding:5px 0;font-weight:700;color:#1565c0;text-align:right;">${fmtDate(dateEcheance)}</td></tr>
           </table>
         </div>
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
           <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">✓ Vérifiez votre carte bancaire</p>
           <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 10px;">Assurez-vous que votre carte bancaire n'est pas expirée ou opposée avant la date du prélèvement. Si vous avez changé de carte ou souhaitez modifier votre moyen de paiement, rendez-vous sur AssoConnect.</p>
-          <p style="font-size:12px;color:#888;margin:0;">Si votre carte est toujours valide, aucune action n'est nécessaire — le prélèvement se fera automatiquement.</p>
+          <p style="font-size:12px;color:#888;margin:0;">Si votre carte est toujours valide, aucune action n'est nécessaire — le prélèvement se fera automatiquement.${noteFinale}</p>
         </div>
         <p style="text-align:center;margin:0 0 14px;"><a href="${lienAssoConnect}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Mettre à jour mon moyen de paiement →</a></p>
         <p style="font-size:13px;color:#888;text-align:center;margin:0 0 22px;">Une question ? <a href="mailto:tangoetvous@gmail.com" style="color:#D4AF37;">tangoetvous@gmail.com</a> · 07 73 27 59 06</p>
@@ -2680,7 +2682,7 @@ async function handleCronRelanceCb3x(request, env) {
     // ── 2ème échéance : 2 mois après le 1er paiement ─────────────
     const date2 = addMonths(dateP, 2);
     if (today >= date2 && !donnees.relance_cb3x_2_sent) {
-      const html = buildHtml(prenomAff, cours, date2, '2ème');
+      const html = buildHtml(prenomAff, cours, date2, '2\xe8me', false);
       let ok = !env.BREVO_API_KEY;
       if (env.BREVO_API_KEY) ok = await sendBrevo(ins.email, `💳 Rappel — 2ème prélèvement CB · Cours de tango ${cours}`, html);
       if (ok) {
@@ -2693,7 +2695,7 @@ async function handleCronRelanceCb3x(request, env) {
     // ── 3ème échéance : 4 mois après le 1er paiement ─────────────
     const date3 = addMonths(dateP, 4);
     if (today >= date3 && !donnees.relance_cb3x_3_sent) {
-      const html = buildHtml(prenomAff, cours, date3, '3ème');
+      const html = buildHtml(prenomAff, cours, date3, '3\xe8me', true);
       let ok = !env.BREVO_API_KEY;
       if (env.BREVO_API_KEY) ok = await sendBrevo(ins.email, `💳 Rappel — 3ème prélèvement CB · Cours de tango ${cours}`, html);
       if (ok) {
