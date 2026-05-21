@@ -27,7 +27,7 @@
 
 ### Corrigés ✅
 
-**Function Search Path Mutable (8 fonctions)** — Ajout de `SET search_path = public` sur toutes les fonctions SECURITY DEFINER. Purement déclaratif, zéro impact comportemental :
+**Function Search Path Mutable (7 fonctions)** — Ajout de `SET search_path = public` sur les fonctions SECURITY DEFINER. Purement déclaratif, zéro impact comportemental :
 ```sql
 ALTER FUNCTION public.reserver_numero_devis(p_annee integer) SET search_path = public;
 ALTER FUNCTION public.protect_devis_numero() SET search_path = public;
@@ -36,8 +36,9 @@ ALTER FUNCTION public.compter_inscrits_essai(p_date_essai date, p_ville text, p_
 ALTER FUNCTION public.compter_inscrits_essai(p_date_essai text, p_ville text, p_niveau text) SET search_path = public;
 ALTER FUNCTION public.pointer_cours_qr(p_email text, p_date date, p_nb integer) SET search_path = public;
 ALTER FUNCTION public.get_remplacant_eleves(p_ville text, p_niveau text, p_saison text) SET search_path = public;
-ALTER FUNCTION public.is_admin() SET search_path = public;
 ```
+
+⚠️ **`is_admin()` — NE PAS ajouter `SET search_path = public`** : cette fonction est utilisée dans les clauses USING de TOUTES les policies RLS de l'app. `SET search_path = public` casse `auth.email()` dans ce contexte → `is_admin()` retourne `false` pour tout le monde → toutes les données deviennent invisibles dans l'admin. Risque résiduel accepté.
 
 **REVOKE fonctions inutilement publiques** :
 ```sql
@@ -69,6 +70,24 @@ CREATE POLICY "demandes_update_admin" ON public.demandes_devis
 - **Public Can Execute SECURITY DEFINER** sur `compter_inscrits_essai`, `pointer_cours_qr`, `get_remplacant_eleves` — intentionnel : ces fonctions sont appelées par des formulaires publics (`anon`) sans JWT. Elles exposent uniquement des comptes agrégés (quotas) ou des données non sensibles.
 - **Leaked Password Protection** — non applicable : l'app utilise des magic links uniquement, aucun mot de passe.
 - **REVOKE `is_admin()` de anon** — **ne pas faire** : `is_admin()` est utilisée dans les clauses USING des policies RLS, qui sont évaluées avec les droits du propriétaire (SECURITY DEFINER implicite côté RLS). Révoquer l'accès anon casserait l'évaluation RLS pour les connexions anon.
+- **`SET search_path = public` sur `is_admin()`** — **ne pas faire** : casse `auth.email()` dans le contexte RLS → toutes les données deviennent invisibles (incident 2026-05-21). Voir ci-dessous.
+
+### Définition correcte de `is_admin()` — NE PAS MODIFIER la logique
+```sql
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$
+  SELECT COALESCE(auth.email(), '') = ANY(ARRAY[
+    'tangoetvous@gmail.com',
+    'jeremybraitbart@gmail.com',
+    'garciabraitbart@gmail.com',
+    'jeremy@tangoetvous.com'
+  ]);
+$$;
+```
+- Pas de `SET search_path` — intentionnel (voir ci-dessus)
+- Pas de `LANGUAGE plpgsql` — doit rester `LANGUAGE sql`
+- Pas de lookup dans `eleves.role` — la logique est une liste d'emails hardcodée
+- Pour ajouter un admin : ajouter son email dans le `ARRAY[...]` et recréer la fonction
 
 ### Aucun GRANT manquant
 Toutes les tables existantes ont leurs GRANTs. Les nouvelles tables créées depuis 2026-05 incluent toutes `GRANT ... TO anon, authenticated`. Deadline Supabase (30 octobre 2026) : sans risque.
