@@ -9563,16 +9563,28 @@ function annulerStageInscrit(date, idx, slot, btn) {
   }
 
   var dbId=person._dbId;
+  var _notifyStageCancel=function(){
+    Promise.resolve(fetch('/api/notify/stage-annule', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        email: person.email||'',
+        prenom: person.prenom||'',
+        nom: person.nom||'',
+        inscriptionsParDate: [{date:date, slots:[{horaire:slot||'', theme:''}], tarif:0}],
+      }),
+    })).catch(function(){});
+  };
   var q;
   if(supprimerTout){
     q=TEV.client.from('inscriptions_stages').delete();
     q=dbId?q.eq('id',dbId):q.eq('email',person.email||'').is('stage_date',null);
-    q.then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+    q.then(function(){_notifyStageCancel();chargerDonnees();}).catch(function(){btn.disabled=false;});
   } else {
     if(!dbId){btn.disabled=false;afficherToast('⚠️ Rechargez la page puis réessayez');return;}
     var newSlots=personSlots.filter(function(s){return s!==slot;});
     TEV.client.from('inscriptions_stages').update({stage_nom:newSlots.join('|')}).eq('id',dbId)
-      .then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+      .then(function(){_notifyStageCancel();chargerDonnees();}).catch(function(){btn.disabled=false;});
   }
 }
 
