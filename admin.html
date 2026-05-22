@@ -1445,15 +1445,22 @@ function sauverContact(btn) {
         var msg=anyErr.error.message||anyErr.error.code||'Erreur DB';
         if(err){err.textContent=msg;err.style.display='block';} return;
       }
-      // Sync email dans Supabase Auth (non-bloquant — l'élève gardera son accès)
+      // Sync email dans Supabase Auth + email info élève (non-bloquant)
       if(emailNew !== emailOld){
         TEV.client.auth.getSession().then(function(s){
           var jwt2 = s && s.data && s.data.session && s.data.session.access_token;
           if(!jwt2) return;
+          // Sync Auth
           fetch('/api/admin/update-auth-email', {
             method: 'PATCH',
             headers: {'Content-Type':'application/json','Authorization':'Bearer '+jwt2},
             body: JSON.stringify({oldEmail: emailOld, newEmail: emailNew})
+          }).catch(function(){});
+          // Email à l'élève sur sa nouvelle adresse
+          fetch('/api/notify/email-change', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','Authorization':'Bearer '+jwt2},
+            body: JSON.stringify({oldEmail: emailOld, newEmail: emailNew, prenom: pr, nom: no})
           }).catch(function(){});
         });
       }

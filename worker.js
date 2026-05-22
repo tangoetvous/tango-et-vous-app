@@ -319,6 +319,12 @@ export default {
         return handleNotifyInscriptionCoursPaye(request, env);
       }
 
+      // POST /api/notify/email-change — admin modifie l'email d'un élève (JWT admin)
+      if (pathname === '/api/notify/email-change' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyEmailChange(request, env);
+      }
+
       // POST /api/notify/inscription-cours-modifiee — admin modifie cours d'un élève inscrit (JWT admin)
       if (pathname === '/api/notify/inscription-cours-modifiee' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
@@ -5142,6 +5148,71 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
       body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `✓ Votre inscription au tango est confirmée — à bientôt !`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-inscription-cours-payee] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/email-change — admin met à jour l'email d'un élève
+// Body: { oldEmail, newEmail, prenom, nom }
+// Envoyé à newEmail pour informer l'élève et expliquer comment se reconnecter
+// ================================================================
+async function handleNotifyEmailChange(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const { oldEmail, newEmail, prenom, nom } = body;
+  if (!newEmail || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const prenomAff   = _esc(prenom || '');
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
+
+  const emailBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">MODIFICATION D'ADRESSE EMAIL</div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      ${oldEmail ? `<tr><td style="padding:7px 0;color:#888;width:40%;vertical-align:top;">Ancienne adresse</td><td style="padding:7px 0;color:#999;text-decoration:line-through;">${_esc(oldEmail)}</td></tr>` : ''}
+      <tr><td style="padding:7px 0;color:#555;vertical-align:top;">Nouvelle adresse</td><td style="padding:7px 0;color:#2e7d32;font-weight:700;">${_esc(newEmail)}</td></tr>
+    </table>
+  </div>`;
+
+  const reconnectBox = `<div style="background:#f4f0ff;border:2px solid #7c4dff;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#7c4dff;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #d1c4e9;">📱 COMMENT SE RECONNECTER</div>
+    <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 12px;">Pour accéder à votre espace élève avec votre nouvelle adresse :</p>
+    <ol style="font-size:14px;color:#444;line-height:2.0;padding-left:20px;margin:0 0 16px;">
+      <li>Ouvrez <strong>app.tangoetvous.fr</strong></li>
+      <li>Entrez votre nouvelle adresse email : <strong style="color:#7c4dff;">${_esc(newEmail)}</strong></li>
+      <li>Cliquez sur le lien reçu dans cette boîte mail</li>
+    </ol>
+    <div style="text-align:center;">
+      <a href="https://app.tangoetvous.fr" style="display:inline-block;background:#7c4dff;color:#fff;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">🎵 Accéder à mon espace élève</a>
+    </div>
+  </div>`;
+
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre adresse email a été mise à jour</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">L'adresse email associée à votre espace élève Tango &amp; Vous a été mise à jour. Utilisez désormais cette nouvelle adresse pour vous connecter.</p>
+      ${emailBox}
+      ${reconnectBox}
+      ${signEleve}
+    </div>${footer}`);
+
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: { name: 'Tango & Vous', email: adminEmail },
+        to: [{ email: String(newEmail) }],
+        subject: `📋 Votre adresse email a été mise à jour — Tango & Vous`,
+        htmlContent: htmlEleve,
+      }),
+    });
+  } catch(err) { console.error('[notify-email-change] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
