@@ -11851,7 +11851,6 @@ function changerStatutCoursTango(id, statut, btn) {
     var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
     if(e){
       e.statut=statut;
-      // Règle : validation d'une demande avec partenaire → valider aussi le partenaire
       if(statut==='attente_paiement'&&e.emailPartenaire){
         var pt=(adminData.coursTango||[]).find(function(x){return x.email===e.emailPartenaire;});
         if(pt&&(pt.statut==='demande'||pt.statut==='attente'))pt.statut='attente_paiement';
@@ -11859,7 +11858,32 @@ function changerStatutCoursTango(id, statut, btn) {
     }
     renderTab(); return;
   }
-  TEV.client.from('inscriptions_cours').update({statut:statut}).eq('id',id).then(function(){chargerDonnees();}).catch(function(){btn.disabled=false;});
+  var entry=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
+  var ops=[Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:statut}).eq('id',id))];
+  // Valider aussi le partenaire en DB (était seulement en démo)
+  if(statut==='attente_paiement'&&entry&&entry.emailPartenaire){
+    var ptReal=(adminData.coursTango||[]).find(function(x){return x.email===entry.emailPartenaire&&(x.statut==='demande'||x.statut==='attente');});
+    if(ptReal) ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'attente_paiement'}).eq('id',ptReal.id)));
+  }
+  Promise.all(ops).then(function(){
+    if(statut==='attente_paiement'&&entry){
+      var _lp=JSON.parse(localStorage.getItem('tev_params_'+(entry.ville||'paris')+'_'+saisonActive())||'{}');
+      var livretUrl=((_lp.livret||{})['url_'+(entry.niveau==='debutant'?'deb':'int')])||'';
+      var _acLinks=JSON.parse(localStorage.getItem('tev_liens_assoconnect')||'{}');
+      var assoConnectUrl=((_acLinks[saisonActive()]||{}).cours)||'#';
+      Promise.resolve(fetch('/api/notify/inscription-cours-validee',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
+        body:JSON.stringify({
+          email:entry.email,prenom:entry.prenom,nom:entry.nom,tel:entry.tel||'',
+          role:entry.role,ville:entry.ville,niveau:entry.niveau,saison:saisonActive(),
+          partenaire:entry.partenaire||'',emailPartenaire:entry.emailPartenaire||'',
+          livretUrl:livretUrl,assoConnectUrl:assoConnectUrl
+        })
+      })).catch(function(){});
+    }
+    chargerDonnees();
+  }).catch(function(){btn.disabled=false;});
 }
 
 function prefillVP(id){ vpPrefill(id); }
