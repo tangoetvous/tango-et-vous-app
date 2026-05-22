@@ -5506,20 +5506,36 @@ async function handleNotifyInscriptionStage(request, env) {
   const isPartage  = !!emailPartage;
 
   // Build stage-box HTML for a given list of dates + slots
-  function buildStageBox(dates, prenomLabel, nomLabel, roleLabel) {
+  function buildStageBox(dates, prenomLabel, nomLabel, roleLabel, boxTitle) {
     let html = '';
     for (const d of dates) {
       const dateLabel = fmtDate(d.date);
       const slots = d.slots || [];
       const total = d.tarif || 0;
-      html += `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 18px;">`;
-      html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:10px;font-weight:700;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">📅 ${dateLabel}</div>`;
-      if (prenomLabel) html += `<p style="font-size:13px;color:#333;font-weight:700;margin:0 0 8px;">${_esc(prenomLabel)} ${_esc(nomLabel||'')} — <span style="color:#1565c0;">${_esc(roleLabel||'')}</span></p>`;
+      const adresse = d.adresse || {};
+      let slotsHtml = '';
       for (const sl of slots) {
-        html += `<div style="font-size:13px;color:#444;margin:0 0 4px;">• ${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')} — ${_esc(sl.theme||sl.type||'')}</div>`;
+        slotsHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')}</span> — ${_esc(sl.theme||sl.type||'')}</div>`;
       }
-      if (total) html += `<p style="font-size:13px;color:#1565c0;font-weight:700;margin:8px 0 0;">Prix : ${total}€</p>`;
-      html += `</div>`;
+      const roleSpan = roleLabel ? `&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">${_esc(roleLabel)}</span>` : '';
+      const personSection = `<div style="padding:10px 0 12px;">
+        ${prenomLabel ? `<div style="font-size:14px;font-weight:700;color:#333;margin-bottom:8px;">${_esc(prenomLabel)} ${_esc(nomLabel||'')}${roleSpan}</div>` : ''}
+        ${slotsHtml}
+        ${total ? `<div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">${total}€</div>` : ''}
+      </div>`;
+      const lieuSection = (adresse.nom || adresse.rue) ? `<div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;">${adresse.nom ? `<strong>${_esc(adresse.nom)}</strong><br/>` : ''}${adresse.rue ? `${_esc(adresse.rue)}<br/>` : ''}${adresse.transport ? `<span style="font-size:12px;color:#777;">${_esc(adresse.transport)}</span>` : ''}</div>
+      </div>` : '';
+      html += `<div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">${boxTitle||'Votre stage'}</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ${dateLabel}</div>
+        </div>
+        <div style="padding:4px 18px 0;">${personSection}${lieuSection}</div>
+        ${total ? `<div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : ${total}€</div>` : ''}
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>`;
     }
     return html;
   }
@@ -5585,40 +5601,37 @@ async function handleNotifyInscriptionStage(request, env) {
   const proche   = daysUntil <= 3;
 
   if (isConfirme) {
-    const bandeau = proche
-      ? `<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée</span></div>`
-      : `<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée</span></div>`;
-    const rappelNote = proche ? '' : `<p style="font-size:13px;color:#555;text-align:center;margin:0 0 20px;">Vous recevrez un rappel 3 jours avant le stage.</p>`;
+    const bandeau = `<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span></div>`;
+    const rappelNote = proche ? '' : `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;"><p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p></div>`;
     const _s1bFirstDate = inscriptionsParDate[0]?.date || '';
     const _s1bToken = _s1bFirstDate ? (await _calHmac(String(email) + ':' + _s1bFirstDate, SUPABASE_ANON)).slice(0, 32) : '';
     const _s1bConfirmUrl = _s1bFirstDate ? `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(email))}&date=${_s1bFirstDate}&token=${_s1bToken}` : '#';
     const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_s1bConfirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
     const stageBoxHtml = buildStageBox(inscriptionsParDate, null, null, null);
     const htmlEleve = wrap(`${headerEleve}${bandeau}
-      <div style="padding:28px 24px;">
-        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-        <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre inscription au stage Tango &amp; Vous est bien enregistrée. Voici le récapitulatif.</p>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">${proche ? 'Votre inscription au stage de tango est confirmée. Nous vous attendons dans moins de 3 jours — à très bientôt !' : 'Votre inscription au stage de tango est confirmée. Nous avons hâte de vous retrouver sur la piste ! Voici le récapitulatif de votre journée.'}</p>
         ${stageBoxHtml}
         ${confirmBtn}
         ${rappelNote}
-        <p style="font-size:13px;color:#555;line-height:1.6;margin:0 0 20px;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
         ${signEleve}
       </div>${footer}`, proche ? 'Votre stage a lieu dans 3 jours - confirmez votre presence ci-dessous' : 'Votre inscription au stage est confirmee - retrouvez les details ci-dessous');
     const firstDateLabel = fmtDate(inscriptionsParDate[0]?.date || today);
     await sendMail(String(email), `🎭 Votre inscription au stage du ${firstDateLabel} — Tango & Vous`, htmlEleve);
   } else {
     // S2 — attente guidée
-    const stageBoxHtml = buildStageBox(inscriptionsParDate, null, null, null);
+    const stageBoxHtml = buildStageBox(inscriptionsParDate, null, null, null, 'Votre demande de stage');
     const htmlEleve = wrap(`${headerEleve}
-      <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Votre demande d'inscription est enregistrée</span></div>
-      <div style="padding:28px 24px;">
-        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Votre demande d'inscription est bien reçue</span></div>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons bien enregistré votre demande pour le stage de tango. Voici votre récapitulatif.</p>
         ${stageBoxHtml}
-        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
-          <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">⏳ En attente de validation</p>
-          <p style="font-size:13px;color:#444;line-height:1.7;margin:0;">Nous veillons à avoir autant de guideurs que de guidées. Votre inscription sera confirmée selon l'équilibre des inscrits.</p>
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
+          <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">🔄 En attente de confirmation</p>
+          <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous veillons à avoir autant de guideurs·ses que de guidé·e·s dans chaque stage. Votre inscription sera confirmée selon l'équilibre des inscrits. Nous vous recontacterons rapidement !<br/><br/>Si vous souhaitez nous contacter : <a href="mailto:${adminEmail}" style="color:#e65100;">${adminEmail}</a> · 07 73 27 59 06</p>
         </div>
-        <div style="text-align:center;margin:0 0 22px;"><a href="mailto:${adminEmail}" style="display:inline-block;background:#fff;color:#555;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #999;">Nous contacter</a></div>
         ${signWaitS2}
       </div>${footer}`, 'Votre demande de stage est enregistree - confirmation en fonction de la parite guideurs/guidees');
     const firstDateLabel = fmtDate(inscriptionsParDate[0]?.date || today);
@@ -5670,22 +5683,26 @@ async function handleCronRappelStageJ3(request, env) {
     const slots     = donnees.stagesDetail || [];
     let slotsHtml   = '';
     for (const sl of slots) {
-      slotsHtml += `<div style="font-size:13px;color:#444;margin:0 0 4px;">• ${_esc(sl.horaire||'')} — ${_esc(sl.theme||sl.type||'')}</div>`;
+      slotsHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire||sl.horaire_debut||'')}</span> — ${_esc(sl.theme||sl.type||'')}</div>`;
     }
-    const stageBox = `<div style="background:#e3f2fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:10px;font-weight:700;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">📅 ${dateLabel}</div>
-      ${slotsHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}
+    const stageBox = `<div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+      <div style="background:#B8962E;padding:12px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ${dateLabel}</div>
+      </div>
+      <div style="padding:12px 18px;">${slotsHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}</div>
     </div>`;
     const _s4Token = (await _calHmac(String(e.email) + ':' + targetDate, SUPABASE_ANON)).slice(0, 32);
     const _s4ConfirmUrl = `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(e.email))}&date=${targetDate}&token=${_s4Token}`;
     const htmlEleve = wrap(`${headerEleve}
       <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre stage a lieu dans 3 jours !</span></div>
-      <div style="padding:28px 24px;">
-        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Dans 3 jours, rendez-vous pour votre stage de tango ! Voici tous les détails pour préparer votre journée.</p>
         ${stageBox}
-        <div style="text-align:center;margin:0 0 22px;"><a href="${_s4ConfirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>
+        <div style="text-align:center;margin:0 0 16px;"><a href="${_s4ConfirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a></div>
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-          <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidées.</p>
+          <p style="font-size:13px;color:#5d4037;line-height:1.7;margin:0;">Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidés.</p>
         </div>
         ${signEleve}
       </div>${footer}`, 'Rappel - votre stage a lieu dans 3 jours - confirmez votre presence');
@@ -5726,13 +5743,19 @@ async function handleNotifyStageValide(request, env) {
   let slotsHtml = '';
   for (const d of inscriptionsParDate) {
     const dateLabel = fmtDate(d.date);
-    slotsHtml += `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:14px 18px;margin:0 0 16px;">`;
-    slotsHtml += `<div style="font-size:10px;text-transform:uppercase;color:#1565c0;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">📅 ${dateLabel}</div>`;
+    let slHtml = '';
     for (const sl of (d.slots||[])) {
-      slotsHtml += `<div style="font-size:13px;color:#444;margin:0 0 3px;">• ${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')} — ${_esc(sl.theme||sl.type||'')}</div>`;
+      slHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')}</span> — ${_esc(sl.theme||sl.type||'')}</div>`;
     }
-    if (d.tarif) slotsHtml += `<p style="font-size:13px;color:#1565c0;font-weight:700;margin:8px 0 0;">Prix : ${d.tarif}€</p>`;
-    slotsHtml += `</div>`;
+    slotsHtml += `<div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 18px;">
+      <div style="background:#B8962E;padding:12px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ${dateLabel}</div>
+      </div>
+      <div style="padding:12px 18px;">${slHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}${d.tarif ? `<div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">${d.tarif}€</div>` : ''}</div>
+      ${d.tarif ? `<div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : ${d.tarif}€</div>` : ''}
+      <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+    </div>`;
   }
   const _s3bFirstDate = inscriptionsParDate[0]?.date || '';
   const _s3bToken = proche && _s3bFirstDate ? (await _calHmac(String(email) + ':' + _s3bFirstDate, SUPABASE_ANON)).slice(0, 32) : '';
@@ -5740,15 +5763,16 @@ async function handleNotifyStageValide(request, env) {
   const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_s3bConfirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
   const rappelNote = proche ? '' : `<p style="font-size:13px;color:#555;text-align:center;margin:0 0 20px;">Vous recevrez un rappel 3 jours avant le stage.</p>`;
   const firstDateLabel = inscriptionsParDate[0] ? fmtDate(inscriptionsParDate[0].date) : '';
+  const introText = proche
+    ? `Suite à l'évolution des inscriptions, votre place est confirmée. Le stage a lieu dans moins de 3 jours — nous vous attendons !`
+    : `Suite à l'évolution des inscriptions, votre place est confirmée pour le stage de tango. Nous vous attendons avec plaisir !`;
+  const rappelBox = proche ? '' : `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;"><p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p></div>`;
   const htmlEleve = wrap(`${headerEleve}
-    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bonne nouvelle — votre place au stage est confirmée !</span></div>
-    <div style="padding:28px 24px;">
-      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Suite à l'évolution des inscriptions, nous avons le plaisir de vous confirmer votre place au stage.</p>
-      ${slotsHtml}
-      ${confirmBtn}
-      ${rappelNote}
-      <p style="font-size:13px;color:#555;margin:0 0 20px;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bonne nouvelle — votre stage est confirmé !</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">${introText}</p>
+      ${slotsHtml}${confirmBtn}${rappelBox}
       ${signEleve}
     </div>${footer}`, 'Bonne nouvelle - votre place au stage est confirmee');
   try {
@@ -5785,19 +5809,27 @@ async function handleNotifyStageAnnule(request, env) {
   const prenomAff = _esc(prenom || '');
   let slotsHtml = '';
   for (const d of inscriptionsParDate) {
-    slotsHtml += `<div style="background:#ffebee;border:2px solid #c62828;border-radius:10px;padding:14px 18px;margin:0 0 16px;">
-      <div style="font-size:10px;text-transform:uppercase;color:#c62828;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #ef9a9a;">✕ STAGE ANNULÉ — ${fmtDate(d.date)}</div>
-      ${(d.slots||[]).map(sl => `<div style="font-size:13px;color:#777;text-decoration:line-through;margin:0 0 3px;">${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')} — ${_esc(sl.theme||sl.type||'')}</div>`).join('')}
+    const dateLabel = fmtDate(d.date);
+    let slHtml = (d.slots||[]).map(sl => `<div style="font-size:13px;color:#aaa;margin:0 0 3px;"><span style="text-decoration:line-through;font-weight:400;">${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')} — ${_esc(sl.theme||sl.type||'')}</span></div>`).join('');
+    const adresse = d.adresse || {};
+    const lieuHtml = (adresse.nom || adresse.rue) ? `<div style="border-top:1px solid #ef9a9a;padding-top:10px;margin-top:8px;"><div style="font-size:13px;font-weight:700;color:#c62828;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#aaa;line-height:1.8;">${adresse.nom?`<strong>${_esc(adresse.nom)}</strong><br/>`:''}${adresse.rue?`${_esc(adresse.rue)}<br/>`:''}${adresse.transport?`<span style="font-size:12px;">${_esc(adresse.transport)}</span>`:''}</div></div>` : '';
+    slotsHtml += `<div style="background:#fff8e8;border:2px solid #c62828;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+      <div style="background:#c62828;padding:12px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff;font-weight:700;">STAGE ANNULÉ</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ${dateLabel}</div>
+      </div>
+      <div style="padding:12px 18px 14px;">${slHtml || '<div style="font-size:13px;color:#aaa;">Stage Tango &amp; Vous</div>'}${lieuHtml}</div>
     </div>`;
   }
   const firstDateLabel = inscriptionsParDate[0] ? fmtDate(inscriptionsParDate[0].date) : '';
   const htmlEleve = wrap(`${headerEleve}
-    <div style="background:#ffebee;padding:14px 24px;text-align:center;border-bottom:1px solid #ef9a9a;"><span style="font-size:14px;font-weight:700;color:#c62828;">✕ Votre inscription au stage a été annulée</span></div>
-    <div style="padding:28px 24px;">
-      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre inscription au stage a été annulée. Voici le récapitulatif des créneaux concernés.</p>
+    <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">✕ Votre inscription au stage a été annulée</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons annulé votre inscription au stage ci-dessous. Nous sommes désolés pour ce contretemps.</p>
       ${slotsHtml}
-      <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr/stages-pwa.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Voir les prochains stages →</a></div>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous espérons pouvoir vous accueillir lors d'un prochain stage. N'hésitez pas à vous inscrire aux prochaines dates !</p>
+      <div style="text-align:center;margin:0 0 24px;"><a href="https://app.tangoetvous.fr/stages-pwa.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Voir les prochains stages →</a></div>
       ${signCancel}
     </div>${footer}`, 'Votre inscription au stage a ete annulee - retrouvez les prochains stages ci-dessous');
   try {
