@@ -3321,4 +3321,32 @@ Les handlers dans `worker.js` **ne recalculent pas** l'expiration. Ils utilisent
 → **Cartes existantes** dont l'expiration a été calculée avant les corrections : valeur fausse jusqu'à la prochaine sauvegarde manuelle depuis Cartes 10 → Détails. À corriger via ✏️ au cas par cas.
 → **Nouvelles cartes** (premier cours pointé après le 2026-05-22) : toujours calculées correctement.
 
+## Emails — problèmes Gmail connus et leurs causes exactes
+
+### Problème 1 — Gmail affiche "..." et l'élève doit cliquer pour voir la fin
+
+**Ce n'est PAS la limite 102 Ko** (les emails de ce projet font 3–8 Ko). La vraie cause :
+
+> Gmail collapse les emails dont **le contenu final est identique** à d'autres emails du même expéditeur. Tous les emails partageaient la même signature finale → Gmail détectait le doublon et tronquait.
+
+**Fix appliqué (2026-05-22)** :
+1. **Preheader caché unique** par email (texte de preview Gmail, différent d'un email à l'autre) — via `wrap(inner, "Texte preheader ASCII")`
+2. **Signatures différentes** selon le statut : `signEleve` (confirmé), `signWait` (attente), `signCancel` (annulé), etc.
+
+**Si le problème réapparaît sur un nouveau handler :** vérifier que `wrap()` est appelé avec un preheader unique **et** que la signature finale (`signEleve` etc.) est différente des autres emails du même expéditeur.
+
+**Règle** : jamais de `wrap(inner)` sans preheader sur un email élève. Voir section "Règle de synthèse — preheaders dans worker.js".
+
+---
+
+### Problème 2 — Les 2 cours n'apparaissent pas dans l'email I03
+
+**Symptôme** : l'élève inscrit à 2 cours ne reçoit un email I03 que pour 1 cours, ou les 2 cours n'apparaissent pas.
+
+**Cause** : le body envoyé à `/api/notify/inscription-cours-payee` passait `ville`/`niveau`/`role` au niveau racine (mono-cours) au lieu de `coursInfos: [{ville, niveau, role}, ...]` (multi-cours).
+
+**Fix appliqué (2026-05-22)** : `soumettreInscriptionDirecte` et `soumettreValiderPaiement` dans `admin.html` construisent `coursInfosDI` / `coursInfosVP` à partir de `insRows` / `coursCoches` et passent le tableau `coursInfos`.
+
+**Si le problème réapparaît :** vérifier que le body contient bien `coursInfos: [{ville, niveau, role}]` avec **un objet par cours**. Le handler `handleNotifyInscriptionCoursPaye` dans `worker.js` accepte les deux formats (backward compat racine → mono-cours), mais pour 2 cours, `coursInfos[]` est obligatoire.
+
 
