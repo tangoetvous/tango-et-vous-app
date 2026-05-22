@@ -12116,10 +12116,12 @@ window.soumettreValiderPaiement = function(force) {
     Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?10:0,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     Promise.all(updates).then(function(){
       // I03 — inscription validée et payée
+      var ci0vp = COURS_VALS_REF.indexOf(cours0);
+      var role0vp = ((document.querySelector('input[name="vp-role-'+ci0vp+'"]:checked')||{}).value)||'guideur';
       Promise.resolve(fetch('/api/notify/inscription-cours-payee', {
         method: 'POST',
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
-        body: JSON.stringify({email:email, prenom:prenom, nom:nom, ville:ville0, niveau:niveau0, saison:sai, livretUrl:''}),
+        body: JSON.stringify({email:email, prenom:prenom, nom:nom, ville:ville0, niveau:niveau0, saison:sai, role:role0vp}),
       })).catch(function(){});
       chargerDonnees();
       setTimeout(function(){sousOngletEleves=ville0+'-'+(niveau0==='intermediaire'?'int':'deb');switchTab('eleves-tango');},1500);
@@ -12368,7 +12370,7 @@ window.soumettreInscriptionDirecte = function(force) {
       Promise.resolve(fetch('/api/notify/inscription-cours-payee', {
         method: 'POST',
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
-        body: JSON.stringify({email:email, prenom:prenom, nom:nom, ville:ville0, niveau:niveau0, saison:sai, livretUrl:''}),
+        body: JSON.stringify({email:email, prenom:prenom, nom:nom, ville:ville0, niveau:niveau0, saison:sai, role:(insRows[0]&&insRows[0].role)||'guideur'}),
       })).catch(function(){});
       _gotoTab();
     });
