@@ -161,6 +161,12 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours }) {
   let renouvAuto = false, renouvOverflow = 0;
   let carteUpdate = {};
 
+  // S'assurer que tev_cours_dates est chargé pour le calcul d'expiration
+  let _storedDates = {};
+  try { _storedDates = JSON.parse(localStorage.getItem('tev_cours_dates') || '{}'); } catch(e) {}
+  const _coursDatesVille = eleve.ville === 'vincennes' ? _storedDates.vincennes : _storedDates.paris;
+  if (!_coursDatesVille || !_coursDatesVille.length) await tevRefreshCoursDates();
+
   if (totalApres > 10) {
     const overflow  = totalApres - 10;
     const nouvExp   = _calcExpirationSb(date, eleve.ville);
@@ -618,6 +624,26 @@ function tevSubscribeAdmin(callback) {
 
 function tevUnsubscribe(channel) {
   if (channel) _tev.removeChannel(channel);
+}
+
+// ================================================================
+// COURS DATES — Rafraîchir depuis Supabase si absent du localStorage
+// ================================================================
+let _coursDatesReady = false;
+async function tevRefreshCoursDates() {
+  if (_coursDatesReady) return;
+  _coursDatesReady = true;
+  try {
+    const { data } = await _tev.from('parametres').select('valeur').eq('cle', 'tev_cours_dates').single();
+    if (data && data.valeur) {
+      const val = typeof data.valeur === 'string' ? JSON.parse(data.valeur) : data.valeur;
+      if (val && (val.paris || val.vincennes || val.yoga)) {
+        localStorage.setItem('tev_cours_dates', JSON.stringify(
+          Object.assign({}, val, { modifie: new Date().toISOString().slice(0, 10) })
+        ));
+      }
+    }
+  } catch(e) { _coursDatesReady = false; }
 }
 
 // ================================================================

@@ -298,6 +298,8 @@
       eleveData = data;
       // Rafraîchir les milongas depuis Supabase (non-bloquant)
       chargerMilongasEleve();
+      // Rafraîchir les dates de cours depuis Supabase (pour calcul expiration carte 10)
+      tevRefreshCoursDates().catch(function(){});
       // Absences déclarées par l'élève — localStorage d'abord, puis sync DB en arrière-plan
       eleveData.absencesJour = [];
       try { eleveData.absencesJour = JSON.parse(localStorage.getItem('tev_abs_'+((data.eleve&&data.eleve.email)||'').toLowerCase())||'[]'); } catch(e) {}
