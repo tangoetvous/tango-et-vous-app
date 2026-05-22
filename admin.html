@@ -12136,13 +12136,18 @@ window.soumettreValiderPaiement = function(force) {
     });
     Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?10:0,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     Promise.all(updates).then(function(){
-      // I03 — inscription validée et payée
-      var ci0vp = COURS_VALS_REF.indexOf(cours0);
-      var role0vp = ((document.querySelector('input[name="vp-role-'+ci0vp+'"]:checked')||{}).value)||'guideur';
+      // I03 — inscription validée et payée (tous les cours cochés)
+      var coursInfosVP = coursCoches.map(function(cours) {
+        var ci = COURS_VALS_REF.indexOf(cours);
+        var vl = cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
+        var nv = cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
+        var rl = ((document.querySelector('input[name="vp-role-'+ci+'"]:checked')||{}).value)||'guideur';
+        return {ville:vl, niveau:nv, role:rl};
+      });
       Promise.resolve(fetch('/api/notify/inscription-cours-payee', {
         method: 'POST',
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
-        body: JSON.stringify({email:email, prenom:prenom, nom:nom, ville:ville0, niveau:niveau0, saison:sai, role:role0vp}),
+        body: JSON.stringify({email:email, prenom:prenom, nom:nom, saison:sai, coursInfos:coursInfosVP}),
       })).catch(function(){});
       chargerDonnees();
       setTimeout(function(){sousOngletEleves=ville0+'-'+(niveau0==='intermediaire'?'int':'deb');switchTab('eleves-tango');},1500);
@@ -12387,11 +12392,12 @@ window.soumettreInscriptionDirecte = function(force) {
       }
       return _elvProm;
     }).then(function(){
-      // I03 — email confirmation inscription directe
+      // I03 — email confirmation inscription directe (tous les cours insérés)
+      var coursInfosDI = insRows.filter(function(r){ return r.email===email; }).map(function(r){ return {ville:r.ville, niveau:r.niveau, role:r.role}; });
       Promise.resolve(fetch('/api/notify/inscription-cours-payee', {
         method: 'POST',
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
-        body: JSON.stringify({email:email, prenom:prenom, nom:nom, ville:ville0, niveau:niveau0, saison:sai, role:(insRows[0]&&insRows[0].role)||'guideur'}),
+        body: JSON.stringify({email:email, prenom:prenom, nom:nom, saison:sai, coursInfos:coursInfosDI}),
       })).catch(function(){});
       _gotoTab();
     });

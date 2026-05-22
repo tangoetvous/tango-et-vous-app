@@ -5238,8 +5238,17 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
     <p style="font-size:12px;color:#888;text-align:center;margin:10px 0 0;">Entrez votre adresse email pour recevoir votre lien de connexion.</p>
   </div>`;
 
+  // Date d'envoi — rend chaque email unique pour éviter le clipping Gmail en thread
+  const nowSend = new Date();
+  const sendDateLabel = JOURS[nowSend.getUTCDay()] + ' ' + nowSend.getUTCDate() + ' ' + MOIS[nowSend.getUTCMonth()] + ' ' + nowSend.getUTCFullYear();
+  const sendDateLine = `<p style="font-size:11px;color:#bbb;text-align:center;margin:18px 0 0;">Email envoyé le ${sendDateLabel}</p>`;
+
+  const bandeauConfirmation = coursInfos.length > 1
+    ? '✓ Inscriptions confirmées — bienvenue dans nos cours !'
+    : '✓ Inscription confirmée — bienvenue dans nos cours !';
+
   const htmlEleve = wrap(`${headerEleve}
-    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Inscription confirmée — bienvenue dans nos cours !</span></div>
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">${bandeauConfirmation}</span></div>
     <div style="padding:30px 28px;">
       <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
       <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Votre inscription au cours de <strong>${coursResume}</strong> est confirmée. Nous avons bien reçu votre paiement sur AssoConnect — nous vous attendons pour le prochain cours !</p>
@@ -5247,6 +5256,7 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
       ${pwaSection}
       ${livretSection}
       ${signEleve}
+      ${sendDateLine}
     </div>${footer}`, preheader);
 
   try {
