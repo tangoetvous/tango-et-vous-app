@@ -5291,14 +5291,12 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
     <p style="font-size:12px;color:#888;text-align:center;margin:10px 0 0;">Entrez votre adresse email pour recevoir votre lien de connexion.</p>
   </div>`;
 
-  // Date d'envoi — rend chaque email unique pour éviter le clipping Gmail en thread
-  const nowSend = new Date();
-  const sendDateLabel = JOURS[nowSend.getUTCDay()] + ' ' + nowSend.getUTCDate() + ' ' + MOIS[nowSend.getUTCMonth()] + ' ' + nowSend.getUTCFullYear();
-  const sendDateLine = `<p style="font-size:11px;color:#bbb;text-align:center;margin:18px 0 0;">Email envoyé le ${sendDateLabel}</p>`;
-
   const bandeauConfirmation = coursInfos.length > 1
     ? '✓ Inscriptions confirmées — bienvenue dans nos cours !'
     : '✓ Inscription confirmée — bienvenue dans nos cours !';
+
+  // Signature unique par email (inclut le cours) pour éviter le clipping Gmail
+  const signEleveI03 = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste — <strong>${coursResume}</strong>&nbsp;!<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
 
   const htmlEleve = wrap(`${headerEleve}
     <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">${bandeauConfirmation}</span></div>
@@ -5308,8 +5306,7 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
       ${coursBoxes}
       ${pwaSection}
       ${livretSection}
-      ${signEleve}
-      ${sendDateLine}
+      ${signEleveI03}
     </div>${footer}`, preheader);
 
   try {
