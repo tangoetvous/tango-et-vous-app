@@ -4355,9 +4355,34 @@ async function handleNotifyEssaiValide(request, env) {
   const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap        = h => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${h}</div></body></html>`;
 
-  const { email, prenom, nom, ville, niveau, dateEssai, role, partPrenom, partNom, emailPartage, daysUntil = 99, livretUrl, id } = body;
+  const { email, prenom, nom, ville, niveau, dateEssai, role, partPrenom, partNom, emailPartage, id } = body;
   if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
-  const proche      = daysUntil <= 7;
+
+  // Calculate daysUntil from dateEssai
+  const essaiDateObj = new Date((dateEssai||'') + 'T12:00:00');
+  const todayObj = new Date(); todayObj.setHours(12,0,0,0);
+  const daysUntil = Math.round((essaiDateObj - todayObj) / (1000*60*60*24));
+  const proche    = daysUntil <= 7;
+
+  // Fetch livret URL from Supabase params
+  let livretUrl = '';
+  if (ville && niveau && dateEssai) {
+    const essaiM = essaiDateObj.getMonth() + 1;
+    const essaiY = essaiDateObj.getFullYear();
+    const sai = essaiM >= 9 ? `${essaiY}-${essaiY+1}` : `${essaiY-1}-${essaiY}`;
+    const paramKey = `tev_params_${ville}_${sai}`;
+    try {
+      const pResp = await fetch(`${SUPABASE_URL}/rest/v1/parametres?select=valeur&cle=eq.${encodeURIComponent(paramKey)}`, {
+        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }
+      });
+      if (pResp.ok) {
+        const pData = await pResp.json();
+        const livret = pData[0]?.valeur?.livret || {};
+        livretUrl = niveau === 'debutant' ? (livret.url_deb || '') : (livret.url_int || '');
+      }
+    } catch(e) { /* livret non bloquant */ }
+  }
+
   const dateLabel   = fmtDate(dateEssai);
   const niveauLabel = niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
   const villeLabel  = ville === 'paris' ? 'Paris' : 'Vincennes';
