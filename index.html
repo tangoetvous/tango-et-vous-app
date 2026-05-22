@@ -3203,7 +3203,7 @@
   function _updateEleveNotifBadge() {
     var badge = $('eleve-notif-badge');
     if (!badge) return;
-    var notifs = (eleveData && eleveData.notifications) || [];
+    var notifs = ((eleveData && eleveData.notifications) || []).filter(function(n){ return !n.type || !n.type.endsWith('_pending_email'); });
     var unread = notifs.filter(function(n){ return !n.lu; }).length;
     badge.style.display = unread ? 'inline-block' : 'none';
   }
@@ -3223,7 +3223,7 @@
   function renderNotificationsPane() {
     var pane = $('notifications-pane');
     if (!pane) return;
-    var notifs = (eleveData && eleveData.notifications) || [];
+    var notifs = ((eleveData && eleveData.notifications) || []).filter(function(n){ return !n.type || !n.type.endsWith('_pending_email'); });
     var p = _pushPermission();
     var btnColor = p === 'granted' ? '#4ade80' : p === 'denied' ? '#ef4444' : 'var(--gold,#D4AF37)';
     var btnText  = p === 'granted' ? '🔔 Activées' : p === 'denied' ? '🔕 Bloquées (réglages nav.)' : p === 'unsupported' ? '🔕 Non supporté' : '🔔 Activer les notifications';
