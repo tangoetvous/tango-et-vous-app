@@ -3102,3 +3102,52 @@ const annulerUrl = `${APP_URL}/api/essai/annuler?id=${id}&token=${tk}`;
 ```
 Ne jamais utiliser de tokens statiques comme `"e15"`, `"j7"` etc. — ils ne sont pas validés par `handleEssaiConfirmerAnnuler`.
 
+## Session 2026-05-22 (suite 2) — Fix Gmail "..." + preheaders sur tous les handlers
+
+### Cause du problème Gmail
+
+L'email E2 (élève en liste d'attente) se terminait par `"..."` dans Gmail — l'élève devait cliquer pour voir la fin. **Ce n'est pas la limite 102 Ko** (E2 fait ~5 Ko). La vraie cause : **Gmail collapse les emails dont le contenu final est identique** à d'autres emails du même expéditeur. Tous les emails partageaient exactement la même signature finale → Gmail détectait le doublon et coupait.
+
+### Fix : preheader unique + signature différente pour les emails en attente/annulés
+
+**1. Preheader caché** ajouté avant le `<body>` visible dans chaque email élève. Gmail l'utilise comme texte de preview dans la boîte de réception ET pour son algorithme de déduplication :
+
+```javascript
+// Pattern wrap(inner, pre) — backward-compatible (pre optionnel)
+const wrap = (inner, pre) => `<!DOCTYPE html><html><body ...>${
+  pre ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${pre}&nbsp;&zwnj;...&nbsp;&zwnj;&nbsp;</div>` : ''
+}<div style="max-width:600px;...">${inner}</div></body></html>`;
+
+// Appel avec preheader personnalisé par email :
+wrap(`${header}${body}${footer}`, `${prenom}, votre cours d'essai du ${dateAff} est confirmé`);
+```
+
+**2. Signatures différentes** pour les emails attente/annulation (texte final différent = Gmail ne détecte plus le doublon avec les emails confirmés) :
+
+| Variable | Texte | Utilisée dans |
+|---|---|---|
+| `signEleve` | "À très bientôt sur la piste !" | Tous les emails confirmés (défaut) |
+| `signWait` | "Nous reviendrons vers vous très prochainement." | E2, E5, E5b (essai tango en attente) |
+| `signWaitI` | "Nous vous contacterons dès que votre inscription est validée." | T1-dem (transfert essai → inscription, attente) |
+| `signWaitS2` | "Nous vous contacterons dès que votre place est confirmée." | S2 (stage en attente) |
+| `signCancel` | "Nous espérons vous retrouver bientôt à l'un de nos stages." | S-cancel (stage annulé) |
+| `signYogaWait` | "Nous vous contacterons dès qu'une place se libère." | Y-att (yoga cours complet) — branding yoga |
+
+### Couverture complète — tous les handlers mis à jour
+
+Les ~30 handlers dans `worker.js` ont tous reçu :
+- `wrap(inner, pre)` — signature backward-compatible (déjà présent depuis la session précédente)
+- Preheader personnalisé par email sur chaque `sendBrevo`/`sendMail` côté élève
+- Signature variante pour les emails attente/annulation
+
+**Règle permanente** : toute nouvelle `sendBrevo` côté élève doit passer un preheader unique comme second argument à `wrap()`. Ne jamais laisser `wrap(inner)` sans preheader sur un email élève — cela risque le clipping Gmail si d'autres emails du même expéditeur ont un contenu final identique.
+
+**Règle permanente** : les emails "en attente" (attente = pas encore confirmé) et "annulés" **doivent toujours** utiliser une signature différente de `signEleve`. Choisir la variable appropriée parmi `signWait`, `signWaitI`, `signWaitS2`, `signCancel`, `signYogaWait` selon le contexte.
+
+### Fichiers de preview mis à jour
+
+- `preview-emails-essai-v2.html` : E2, E5, E5b → `signWait`
+- `preview-emails-stages-v1.html` : S2 → `signWaitS2`, S-cancel → `signCancel`
+- `preview-emails-yoga-v1.html` : Y-att → `signYogaWait`
+- `preview-emails-a-valider-v1.html` : T1-dem → `signWaitI`
+
