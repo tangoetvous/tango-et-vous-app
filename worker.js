@@ -1407,7 +1407,7 @@ async function sendBrevoNotification(apiKey, body) {
       row('Prestations', prestations),
     ].join('');
 
-    const d2Html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+    const d2Html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${demandeurPrenom}, votre demande de devis est bien enregistrée&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
 <div style="max-width:600px;margin:0 auto;background:#fff;">
   <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
     <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
@@ -2908,7 +2908,7 @@ async function handleCronCarteExpiree(request, env) {
         <p style="text-align:center;margin:0 0 16px;"><a href="https://le-regard-se-pose.assoconnect.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Renouveler ma carte sur AssoConnect →</a></p>
         <p style="text-align:center;margin:0 0 28px;"><a href="mailto:tangoetvous@gmail.com" style="display:inline-block;background:#fff;color:#555;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;letter-spacing:0.5px;text-decoration:none;border:2px solid #999;">Nous contacter</a></p>
         ${signEleve}
-      </div>${footer}`);
+      </div>${footer}`, `${prenomAff}, votre carte de 10 cours a expiré`);
 
     try {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -4248,7 +4248,8 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
       + '<span style="font-size:12px;color:#888;">Association Le Regard Se Pose \xb7 06 63 23 35 70</span><br/>'
       + '<a href="https://www.tangoetvous.com/cours-de-yoga" style="font-size:12px;color:#B8962E;text-decoration:none;">Ma Page YOGA</a>'
       + '</p>'
-      + '</div>' + footerYoga);
+      + '</div>' + footerYoga,
+      _esc(prenom) + ', votre essai yoga du ' + dateAff + ' est confirmé');
   }
 
   await sendBrevo(email, eleveSubj, eleveHtml);
@@ -5638,7 +5639,7 @@ async function handleNotifyStageValide(request, env) {
       ${rappelNote}
       <p style="font-size:13px;color:#555;margin:0 0 20px;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
       ${signEleve}
-    </div>${footer}`);
+    </div>${footer}`, `${prenomAff}, bonne nouvelle — votre place au stage est confirmée`);
   try {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -5803,7 +5804,7 @@ async function handleNotifyCoursParticulier(request, env) {
         <p style="font-size:13px;color:#555;text-align:center;margin:0 0 6px;">📞 07 73 27 59 06</p>
         <p style="font-size:13px;color:#555;text-align:center;margin:0 0 22px;"><a href="mailto:${adminEmail}" style="color:#B8962E;">${adminEmail}</a></p>
         ${signEleve}
-      </div>${footer}`);
+      </div>${footer}`, `${prenomAff}, votre demande de cours particulier est enregistrée`);
     await sendMail(String(email), `📋 Votre demande de cours particulier — Tango & Vous`, htmlEleve);
   }
 
@@ -5928,7 +5929,7 @@ async function handleCronFinSaisonC4(request, env) {
         </div>
         <p style="text-align:center;margin:0 0 28px;"><a href="${_esc(btnLienHref)}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Reportez votre carte → Réglez votre adhésion de la saison prochaine</a></p>
         ${signEleve}
-      </div>${footer}`);
+      </div>${footer}`, `${prenomAff}, il vous reste ${restants} cours`);
 
     try {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -6027,7 +6028,7 @@ async function handleCronFinSaisonC5(request, env) {
         </div>
         <p style="text-align:center;margin:0 0 28px;"><a href="${_esc(btnLienHref)}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Reportez votre carte → Réglez votre adhésion de la saison prochaine</a></p>
         ${signEleve}
-      </div>${footer}`);
+      </div>${footer}`, `${prenomAff}, dernier rappel — vos cours expirent le 31 août`);
 
     try {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -6200,7 +6201,7 @@ async function handleCronRelanceAbsences(request, env) {
             <p style="font-size:13px;color:#555;text-align:center;margin:0 0 6px;">📞 07 73 27 59 06</p>
             <p style="font-size:13px;color:#555;text-align:center;margin:0 0 28px;"><a href="mailto:${adminEmail}" style="color:#B8962E;">${adminEmail}</a></p>
             <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia &amp; Jérémy</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-          </div>${footer}`);
+          </div>${footer}`, `${prenomAff}, on prend de tes nouvelles !`);
 
         try {
           const r = await fetch('https://api.brevo.com/v3/smtp/email', {
