@@ -3166,3 +3166,38 @@ Le script Python ayant utilisé des guillemets simples comme délimiteurs JS pou
 
 **Règle** : les preheaders JS doivent toujours être entre guillemets doubles `"..."` — jamais entre guillemets simples si le texte peut contenir des apostrophes françaises.
 
+## Session 2026-05-22 (suite 3) — Mise à jour previews sources + preheader D2
+
+### ✅ Preheader rows ajoutés dans tous les fichiers `preview-sources-*.html`
+
+Chaque bloc email élève dans les 9 fichiers sources contient désormais une ligne "Preheader" avec la chaîne exacte utilisée dans `worker.js` (ASCII sans accents, guillemets doubles).
+
+| Fichier | Emails documentés avec preheader |
+|---------|----------------------------------|
+| `preview-sources-essai.html` | E1, E2, E4, E-J1a, E-J1b, E15 |
+| `preview-sources-yoga.html` | Y1, Y3, Y-mod, YI1, Y-J1a, Y-J1b |
+| `preview-sources-stages.html` | S1/S1b (partagé), S2, S3/S3b (partagé), S4, S-cancel |
+| `preview-sources-cartes.html` | C1, C2/C2b (partagé), C-pay, C-report, C4, C5, P1 |
+| `preview-sources-inscription.html` | I01, I01-att, I02, I03, I04 |
+| `preview-sources-a-valider.html` | T1-dem, T1-val, SR1, SR2, CP-E, CX |
+| `preview-sources-cp.html` | CP1 |
+| `preview-sources-cb3x.html` | CB3x |
+| `preview-sources-devis.html` | D2 |
+
+**Emails admin-only (pas de preheader)** : D0a, D0b, D1 (Gmail draft), S0, Y0, YI0, CP0, CP-A, I0.
+
+### ✅ Cas particuliers — preheader hors `wrap()`
+
+- **C6** : `wrapC6(inner)` est une fonction à **1 seul argument** — le second arg est ignoré. C6 n'a intentionnellement **pas de preheader** (email informel "tu", ton distinct). Ne pas ajouter `wrapC6(inner, pre)`.
+- **D2** : utilisait un raw template literal sans `wrap()`. Preheader ajouté directement dans le template à `worker.js` ligne ~1414 : `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre demande de devis est bien enregistree...</div>`. Même pattern que CP-E.
+- **CP-E** (`handleCronCartePonteeJ1`) : preheader embarqué directement dans le template `const html = \`...\`` (pas de `wrap()`). Ligne ~2825 dans `worker.js`.
+
+### Règle de synthèse — preheaders dans worker.js
+
+Pour tout nouvel email élève dans un handler :
+1. Si le handler utilise `wrap()` → passer le preheader en second argument : `wrap(inner, "Texte preheader ASCII")`
+2. Si le handler utilise un raw template literal → insérer le div preheader après `<body ...>` : `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Texte preheader ASCII&nbsp;&zwnj;&nbsp;</div>`
+3. **Jamais de guillemets simples** si le preheader peut contenir des apostrophes
+4. **Jamais d'accents** dans les preheaders (ASCII uniquement — compatibilité maximale)
+5. **C6 exception** : ne pas ajouter de preheader à cet email
+

@@ -49,6 +49,7 @@
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='confirme' ET daysUntil &gt; 7</span></div>
   <div class="field"><span class="label">Destinataire :</span> <span class="var">body.email</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>✓ Votre cours d'essai du ${dateLabel} est confirmé — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre cours d'essai est confirme - retrouvez tous les details ci-dessous"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre cours d'essai est confirmé !"</div>
   <div class="field"><span class="label">Cours box :</span> Date · Cours · Horaire · Lieu · Rôle (badge) · Statut "✓ Confirmé·e"</div>
   <div class="field"><span class="label">Horaire :</span> <span class="src">tev_params_${ville}_${saison}.horaires.${niveau}</span></div>
@@ -66,6 +67,7 @@
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='attente' (guidée seule → toujours attente)</span></div>
   <div class="field"><span class="label">Destinataire :</span> <span class="var">body.email</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>⏳ Votre demande de cours d'essai tango — liste d'attente — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre demande est enregistree - nous vous contactons des confirmation disponible"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Votre demande est bien enregistrée"</div>
   <div class="field"><span class="label">Encadré :</span> Explication parité guideurs/guidées</div>
   <div class="field"><span class="label">Bouton :</span> Nous contacter (mailto admin)</div>
@@ -77,6 +79,7 @@
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien · inscriptions_essai WHERE date_essai = today+7 AND statut='confirme' AND type='tango'</span></div>
   <div class="field"><span class="label">Destinataire :</span> <span class="var">e.email</span> <span class="src">(depuis inscriptions_essai)</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>🗓 Rappel — votre cours d'essai du ${dateLabel} — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Rappel essai tango dans 7 jours - confirmez votre presence en un clic"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Bleu 🗓 "Rappel — votre cours d'essai a lieu dans 7 jours !"</div>
   <div class="field"><span class="label">Cours box :</span> Date · Cours · <span class="src">horaires depuis tev_params_${ville}_${saison}</span> · Lieu</div>
   <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence" → <code>/api/essai/confirmer?id=&amp;token=j7</code></div>
@@ -106,6 +109,7 @@
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, dateEssai, role, partPrenom?, partNom?, emailPartage?, daysUntil, livretUrl?, id }</span></div>
   <div class="field"><span class="label">E15b :</span> <span class="cond">si emailPartage=true → salutation "Prénom &amp; Prénom", sinon E15 normal</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>✓ Bonne nouvelle — votre cours d'essai du ${dateLabel} est confirmé !</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Essai tango confirme - nous vous attendons avec impatience sur la piste"</span></div>
   <div class="field"><span class="label">Texte intro :</span> "Suite à l'évolution des disponibilités..."</div>
   <div class="field"><span class="label">Bouton 👍 :</span> <span class="cond">si daysUntil ≤ 7</span> · sinon → mention rappel J-7</div>
 </div>
@@ -124,6 +128,7 @@
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 9h Paris · inscriptions_essai WHERE date_essai=hier AND presence_declaree=true</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>🎶 À bientôt sur la piste — et si vous rejoigniez nos cours ?</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Merci pour votre cours essai tango - voici comment vous inscrire en cours regulier"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "À bientôt sur la piste !"</div>
   <div class="field"><span class="label">Contenu :</span> Présentation du process d'inscription · bouton AssoConnect</div>
   <div class="field"><span class="label">Pas de lien autre essai :</span> <span class="cond">l'essai a eu lieu → pas de lien formulaire essai</span></div>
@@ -134,6 +139,7 @@
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 9h Paris · presence_declaree=false (null → pas d'email)</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>💙 On vous attend bientôt — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"On vous attend bientot - revenez pour un prochain cours essai tango"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange 💙 "Vous nous avez manqué"</div>
   <div class="field"><span class="label">Bouton :</span> ↩ Choisir une nouvelle date → cours-essai.html</div>
   <div class="field"><span class="label">Note :</span> "Pas de pénalité · vos cours gratuits de septembre restent valables"</div>

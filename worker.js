@@ -1106,7 +1106,7 @@ async function handleCronEssaiJ1(request, env) {
           </ul>` : ''}
           ${livretBtn}
           ${signEleve}
-        </div>${footer}`);
+        </div>${footer}`, 'Merci pour votre cours essai tango - voici comment vous inscrire en cours regulier');
       await sendBrevo(ins.email, `✓ Merci pour votre cours d'essai de tango — Tango & Vous`, html);
     } else if (ins.presence_declaree === false) {
       // E-J1b — élève absent
@@ -1124,7 +1124,7 @@ async function handleCronEssaiJ1(request, env) {
             <p style="font-size:13px;color:#bf360c;margin:0;">Aucune pénalité — votre inscription reste valide pour le prochain cours disponible.</p>
           </div>
           ${signEleve}
-        </div>${footer}`);
+        </div>${footer}`, 'On vous attend bientot - revenez pour un prochain cours essai tango');
       await sendBrevo(ins.email, `💙 On vous attend bientôt pour votre cours d'essai de tango !`, html);
     }
   }
@@ -1411,6 +1411,7 @@ async function sendBrevoNotification(apiKey, body) {
     ].join('');
 
     const d2Html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre demande de devis est bien enregistree - nous vous repondons sous 24 a 48h&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
 <div style="max-width:600px;margin:0 auto;background:#fff;">
   <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
     <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
@@ -1538,7 +1539,7 @@ async function handleNotifySorano(request, env) {
         </div>
         <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">Votre adhésion à l'Espace Sorano est bien enregistrée pour cette saison.</p>
         ${signEleve}
-      </div>${footer}`);
+      </div>${footer}`, 'Adhesion Sorano enregistree - merci pour votre regularisation');
     await sendBrevo(email, `✓ Adhésion Sorano enregistrée · Tango & Vous`, html);
   } else {
     const html = wrap(`${headerEleve}
@@ -1554,7 +1555,7 @@ async function handleNotifySorano(request, env) {
         <p style="font-size:14px;color:#333;margin:0 0 24px;">Si vous avez déjà réglé votre adhésion pour une autre activité à l'Espace Sorano merci de nous l'indiquer.</p>
         <p style="text-align:center;margin:0 0 24px;"><a href="mailto:tangoetvous@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a></p>
         ${signEleve}
-      </div>${footer}`);
+      </div>${footer}`, 'Rappel adhesion Sorano - pensez a regulariser votre situation');
     await sendBrevo(email, `⏳ Rappel — Adhésion Sorano · Tango & Vous`, html);
   }
 
@@ -1792,7 +1793,8 @@ async function handleCronCartePonteeJ1(request, env) {
     const footer = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
     const signEleve = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
 
-    const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">
+    const preheader = `Votre presence au cours a ete enregistree - retrouvez le recap de votre carte ci-dessous`;
+    const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div><div style="max-width:600px;margin:0 auto;background:#fff;">
   ${headerEleve}
   <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Présence enregistrée pour votre carte</span></div>
   <div style="padding:28px 24px;">
@@ -2910,7 +2912,7 @@ async function handleCronCarteExpiree(request, env) {
         <p style="text-align:center;margin:0 0 16px;"><a href="https://le-regard-se-pose.assoconnect.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Renouveler ma carte sur AssoConnect →</a></p>
         <p style="text-align:center;margin:0 0 28px;"><a href="mailto:tangoetvous@gmail.com" style="display:inline-block;background:#fff;color:#555;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;letter-spacing:0.5px;text-decoration:none;border:2px solid #999;">Nous contacter</a></p>
         ${signEleve}
-      </div>${footer}`);
+      </div>${footer}`, 'Votre carte de 10 cours a expire - renouvelez pour continuer a danser');
 
     try {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -6197,7 +6199,7 @@ async function handleCronRelanceAbsences(request, env) {
             <p style="font-size:13px;color:#555;text-align:center;margin:0 0 6px;">📞 07 73 27 59 06</p>
             <p style="font-size:13px;color:#555;text-align:center;margin:0 0 28px;"><a href="mailto:${adminEmail}" style="color:#B8962E;">${adminEmail}</a></p>
             <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia &amp; Jérémy</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-          </div>${footer}`);
+          </div>${footer}`, 'On prend de tes nouvelles - tes cours sont preserves');
 
         try {
           const r = await fetch('https://api.brevo.com/v3/smtp/email', {

@@ -28,6 +28,7 @@
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Premier pointage sur la carte de la saison (depuis Cartes 10 ou QR code)</span></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, utilises, restants, datePremierCours, expiration? }</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>🎉 Bienvenue — votre carte de 10 cours est activée — Tango & Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Bienvenue - votre premiere seance a ete enregistree sur votre carte de 10 cours"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Bienvenue — votre carte de 10 cours est activée !"</div>
   <div class="field"><span class="label">Carte-box :</span> Cours · Saison · Cours utilisés (1/10) · Cours restants · <span class="cond">si expiration</span> → Date de validité</div>
   <div class="field"><span class="label">Section PWA :</span> Installer l'app · pointer · suivre sa carte · bouton "Accéder à mon espace élève →"</div>
@@ -44,6 +45,7 @@
   </ul>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, source? ('eleve'|'admin') }</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>⚠️ Nouvelle carte créée — finalisez votre paiement — Tango & Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Nouvelle carte de 10 cours creee - pensez a finaliser votre paiement sur AssoConnect"</span> <span class="note">(identique pour C2b)</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⚠️ "Nouvelle carte créée — paiement en attente"</div>
   <div class="field"><span class="label">Carte-box :</span> Cours · Saison · Badge "⚠️ Non payée" · 0/10 cours utilisés · 10 restants</div>
   <div class="field"><span class="label">Bouton AssoConnect :</span> Or → <span class="src">tev_liens_assoconnect[saison].renouv</span></div>
@@ -58,6 +60,7 @@
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin valide "✓ Enregistrer le paiement" dans le modal paiement (Cartes 10 → Détails)</span></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, montant, paiement, datePaiement, utilises, restants, datePremierCours, expiration? }</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>✓ Paiement enregistré — votre carte de 10 cours est active — Tango & Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre paiement a ete enregistre - votre carte de 10 cours est active"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre paiement est enregistré — carte active !"</div>
   <div class="field"><span class="label">Carte-box :</span> Cours · Saison · Badge "✓ Payée" · Montant · Mode paiement · Date paiement · <span class="src">Expiration depuis datePremierCours (calcExpiration côté serveur)</span></div>
   <div class="field"><span class="label">Bouton :</span> Or "Accéder à mon espace élève →" → app.tangoetvous.fr</div>
@@ -72,6 +75,7 @@
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin clique "↩ Reporter" en fin de saison (crée ligne isReport=true saison suivante)</span></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saisonSuivante, coursReportes }</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>↩ Votre carte de 10 cours est reportée pour 2026-2027 — Tango & Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre carte a ete reportee - vos cours sont preserves pour la prochaine saison"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre carte est reportée pour la saison prochaine !"</div>
   <div class="field"><span class="label">Carte-box :</span> Cours · Saison (saisonSuivante) · Badge "↩ Reportée" · coursReportes cours préservés</div>
   <div class="field"><span class="label">Message :</span> "Votre carte vous attend à la rentrée de septembre."</div>
@@ -86,6 +90,7 @@
   <div class="field"><span class="label">Force :</span> <span class="cond">body {"force":true} → bypass la vérification de date (via workflow_dispatch)</span></div>
   <div class="field"><span class="label">Filtre élèves :</span> <span class="src">eleves WHERE carte_statut IN ('Active','Nouvelle carte') AND carte_restants &gt; 0</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>📅 Il vous reste ${restants} cours — reportez votre carte sur la saison ${saiNext}</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Il vous reste des cours sur votre carte - pre-inscrivez-vous pour la saison prochaine"</span></div>
   <div class="field"><span class="label">saiNext :</span> <span class="var">sai = mo>=9 ? yr+'-'+(yr+1) : (yr-1)+'-'+yr ; saiNext = une saison plus tard</span> — jamais hardcodé</div>
   <div class="field"><span class="label">anneeFin :</span> <span class="var">parseInt(sai.split('-')[1])</span> — jamais hardcodé</div>
   <div class="field"><span class="label">Bouton :</span> "Reportez votre carte → Réglez votre adhésion de la saison prochaine" · href = <span class="src">tev_liens_assoconnect[saiNext].cours</span> (Paramètres → Tango Paris → Liens AssoConnect → "Inscription tango (formulaire cours)")</div>
@@ -99,6 +104,7 @@
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 8h UTC le 25 août · eleves WHERE carte_statut IN ('Active','Nouvelle carte') AND carte_restants &gt; 0</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Dernier rappel - vos cours non utilises expirent le 31 aout - reagissez maintenant"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⚠️ · <span class="var">"⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}"</span></div>
   <div class="field"><span class="label">Bouton :</span> "Reportez votre carte → Réglez votre adhésion de la saison prochaine" · href = <span class="src">tev_liens_assoconnect[saiNext].cours</span> (même clé que C4)</div>
   <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — <span class="var">"⚠️ Dernier rappel — reportez vos ${restants} cours avant le 31 août ${anneeFin}"</span></div>
@@ -124,6 +130,7 @@
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien · inscriptions_cours WHERE donnees->>p1_scheduled = today AND statut='inscrit'</span></div>
   <div class="field"><span class="label">Planification :</span> <span class="src">donnees.p1_scheduled = date I03 + 7 jours (positionné par handleNotifyInscriptionCoursPaye)</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>🎉 Votre espace élève est prêt ! — Tango & Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre espace eleve est pret - connectez-vous et installez l application"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre espace élève est prêt !"</div>
   <div class="field"><span class="label">Info-box bleue :</span> Étapes numérotées : ouvrir app.tangoetvous.fr → entrer email → clic lien magique → installer l'appli (iPhone: Partage↑ / Android: ⋮)</div>
   <div class="field"><span class="label">Fonctionnalités :</span> Pointer, carte, milongas, publications</div>
