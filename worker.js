@@ -5113,78 +5113,103 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
 // ================================================================
 // POST /api/notify/inscription-cours-payee — I03
 // Admin valide paiement → statut inscrit
-// Body: { email, prenom, nom, ville, niveau, saison, role? }
+// Body: { email, prenom, nom, saison, coursInfos: [{ville, niveau, role}] }
+//       (backward compat: ville, niveau, role au lieu de coursInfos)
 // ================================================================
 async function handleNotifyInscriptionCoursPaye(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
 
-  const { email, prenom, nom, ville, niveau, saison, role } = body;
+  const { email, prenom, nom, saison } = body;
   if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
 
-  const adminEmail  = 'tangoetvous@gmail.com';
-  const sbHeaders   = { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` };
+  // Support ancien format mono-cours + nouveau format multi-cours
+  const coursInfos = body.coursInfos && body.coursInfos.length
+    ? body.coursInfos
+    : [{ ville: body.ville || 'paris', niveau: body.niveau || 'debutant', role: body.role || 'guideur' }];
 
-  // Fetch params ville + dates depuis Supabase
-  let villeParams = {}, coursDatesList = {};
+  const adminEmail = 'tangoetvous@gmail.com';
+  const sbHeaders  = { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` };
+
+  // Fetch params pour toutes les villes uniques + dates
+  const villesUniques = [...new Set(coursInfos.map(c => c.ville))];
+  const paramKeys = villesUniques.map(v => `"tev_params_${v}_${saison}"`).concat(['"tev_cours_dates"']);
+  const villeParamsMap = {}, coursDatesList = {};
   try {
-    const keys = [`tev_params_${ville}_${saison}`, 'tev_cours_dates'];
-    const pr = await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=in.(${keys.map(k => '"'+k+'"').join(',')})&select=cle,valeur`, { headers: sbHeaders });
+    const pr = await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=in.(${paramKeys.join(',')})&select=cle,valeur`, { headers: sbHeaders });
     if (pr.ok) {
       const rows = await pr.json();
       for (const row of rows) {
         const val = typeof row.valeur === 'string' ? JSON.parse(row.valeur) : row.valeur;
-        if (row.cle === `tev_params_${ville}_${saison}`) villeParams = val || {};
-        else if (row.cle === 'tev_cours_dates') coursDatesList = val || {};
+        if (row.cle === 'tev_cours_dates') Object.assign(coursDatesList, val || {});
+        else for (const v of villesUniques) {
+          if (row.cle === `tev_params_${v}_${saison}`) villeParamsMap[v] = val || {};
+        }
       }
     }
   } catch {}
 
-  // Prochain cours
-  const today = new Date().toISOString().slice(0, 10);
-  const datesVille = (coursDatesList[ville] || []).filter(d => d >= today).sort();
-  const prochainISO = datesVille[0] || '';
-  let prochainLabel = '';
-  if (prochainISO) {
-    const d = new Date(prochainISO + 'T12:00:00Z');
-    const JOURS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-    const MOIS  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-    prochainLabel = JOURS[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MOIS[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
-  }
+  const today  = new Date().toISOString().slice(0, 10);
+  const JOURS  = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const MOIS   = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 
-  // Horaires + adresse + livret
-  const horaires    = villeParams.horaires || {};
-  const horaire     = _esc(horaires[niveau] || '');
-  const adresse     = villeParams.adresse  || {};
-  const adrNom      = _esc(adresse.nom       || '');
-  const adrRue      = _esc(adresse.rue       || '');
-  const adrTransp   = _esc(adresse.transport || '');
-  const livret      = villeParams.livret   || {};
-  const livretUrl   = niveau === 'debutant' ? (livret.url_deb || '') : (livret.url_int || '');
-
-  const niveauLabel = niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
-  const villeLabel  = ville === 'paris' ? 'Paris' : 'Vincennes';
-  const prenomAff   = _esc(prenom || '');
-  const roleBadge   = role === 'guidee'
-    ? `<span style="display:inline-block;background:#c2185b;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">Guidée</span>`
-    : `<span style="display:inline-block;background:#1565c0;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">Guideur·se</span>`;
+  const prenomAff = _esc(prenom || '');
 
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
   const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
   const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
-  const coursBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
-    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE INSCRIPTION CONFIRMÉE</div>
-    <table style="width:100%;border-collapse:collapse;font-size:14px;">
-      <tr><td style="padding:7px 0;color:#555;width:35%;vertical-align:top;">🎓 Cours</td><td style="color:#111;font-weight:700;">${villeLabel} — ${niveauLabel}</td></tr>
-      ${prochainLabel ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">📅 Prochain cours</td><td style="color:#111;font-weight:700;">${_esc(prochainLabel)}</td></tr>` : ''}
-      ${horaire ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">🕐 Heure</td><td style="color:#111;font-weight:700;">${horaire}</td></tr>` : ''}
-      ${adrNom ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">📍 Lieu</td><td style="color:#111;font-weight:700;">${adrNom}${adrRue ? `<br/><span style="font-size:13px;font-weight:400;color:#444;">${adrRue}${adrTransp ? ' · ' + adrTransp : ''}</span>` : ''}</td></tr>` : ''}
-      ${role ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">🎯 Votre rôle</td><td style="padding:4px 0;">${roleBadge}</td></tr>` : ''}
-      <tr><td style="padding:7px 0;color:#555;vertical-align:top;">✓ Statut</td><td><span style="display:inline-block;background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">✓ Inscrit·e</span></td></tr>
-    </table>
-  </div>`;
+  // Construire une cours-box par cours
+  const coursBoxes = coursInfos.map((ci, idx) => {
+    const { ville, niveau, role } = ci;
+    const vp = villeParamsMap[ville] || {};
+    const niveauLabel = niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
+    const villeLabel  = ville === 'paris' ? 'Paris' : 'Vincennes';
+    const horaires    = vp.horaires || {};
+    const horaire     = _esc(horaires[niveau] || '');
+    const adresse     = vp.adresse || {};
+    const adrNom      = _esc(adresse.nom || '');
+    const adrRue      = _esc(adresse.rue || '');
+    const adrTransp   = _esc(adresse.transport || '');
+    const datesVille  = (coursDatesList[ville] || []).filter(d => d >= today).sort();
+    const prochainISO = datesVille[0] || '';
+    let prochainLabel = '';
+    if (prochainISO) {
+      const d = new Date(prochainISO + 'T12:00:00Z');
+      prochainLabel = JOURS[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MOIS[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+    }
+    const roleBadge = role === 'guidee'
+      ? `<span style="display:inline-block;background:#c2185b;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">Guidée</span>`
+      : `<span style="display:inline-block;background:#1565c0;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">Guideur·se</span>`;
+    const titre = coursInfos.length > 1 ? `COURS ${idx + 1} — ${villeLabel.toUpperCase()} ${niveauLabel.toUpperCase()}` : 'VOTRE INSCRIPTION CONFIRMÉE';
+    return `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 18px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">${titre}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:7px 0;color:#555;width:35%;vertical-align:top;">🎓 Cours</td><td style="color:#111;font-weight:700;">${villeLabel} — ${niveauLabel}</td></tr>
+        ${prochainLabel ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">📅 Prochain cours</td><td style="color:#111;font-weight:700;">${_esc(prochainLabel)}</td></tr>` : ''}
+        ${horaire ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">🕐 Heure</td><td style="color:#111;font-weight:700;">${horaire}</td></tr>` : ''}
+        ${adrNom ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">📍 Lieu</td><td style="color:#111;font-weight:700;">${adrNom}${adrRue ? `<br/><span style="font-size:13px;font-weight:400;color:#444;">${adrRue}${adrTransp ? ' · ' + adrTransp : ''}</span>` : ''}</td></tr>` : ''}
+        <tr><td style="padding:7px 0;color:#555;vertical-align:top;">🎯 Votre rôle</td><td style="padding:4px 0;">${roleBadge}</td></tr>
+        <tr><td style="padding:7px 0;color:#555;vertical-align:top;">✓ Statut</td><td><span style="display:inline-block;background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">✓ Inscrit·e</span></td></tr>
+      </table>
+    </div>`;
+  }).join('');
+
+  // Livret : un bouton par couple (ville, niveau) distinct
+  const livretBtns = coursInfos.map(ci => {
+    const vp = villeParamsMap[ci.ville] || {};
+    const livret = vp.livret || {};
+    const url = ci.niveau === 'debutant' ? (livret.url_deb || '') : (livret.url_int || '');
+    const nl = ci.niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
+    const vl = ci.ville === 'paris' ? 'Paris' : 'Vincennes';
+    return url ? `<a href="${_esc(url)}" style="display:inline-block;background:#fff;color:#1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #1565c0;margin:0 8px 10px 0;">📖 Livret ${nl} ${vl}</a>` : '';
+  }).filter(Boolean);
+  const livretSection = livretBtns.length ? `<div style="text-align:center;margin:0 0 22px;">${livretBtns.join('')}</div>` : '';
+
+  // Intro avec nom du/des cours pour différencier les emails et éviter le repli Gmail
+  const coursResume = coursInfos.map(ci => `${ci.ville === 'paris' ? 'Paris' : 'Vincennes'} — ${ci.niveau === 'debutant' ? 'Débutants' : 'Intermédiaires'}`).join(' &amp; ');
+  const preheader = `Inscription confirmee ${coursInfos.map(ci => (ci.ville === 'paris' ? 'Paris' : 'Vincennes') + ' ' + (ci.niveau === 'debutant' ? 'Debutants' : 'Intermediaires')).join(' + ')} - nous vous attendons avec impatience`;
 
   const pwaSection = `<div style="background:#f4f0ff;border:2px solid #7c4dff;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
     <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#7c4dff;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #d1c4e9;">📱 VOTRE ESPACE ÉLÈVE — TANGO &amp; VOUS</div>
@@ -5213,24 +5238,25 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
     <p style="font-size:12px;color:#888;text-align:center;margin:10px 0 0;">Entrez votre adresse email pour recevoir votre lien de connexion.</p>
   </div>`;
 
-  const livretBtn = livretUrl ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_esc(livretUrl)}" style="display:inline-block;background:#fff;color:#1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #1565c0;">📖 Télécharger le livret ${niveauLabel} ${villeLabel}</a></div>` : '';
-
   const htmlEleve = wrap(`${headerEleve}
     <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Inscription confirmée — bienvenue dans nos cours !</span></div>
     <div style="padding:30px 28px;">
       <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Nous avons bien reçu votre paiement sur AssoConnect. Votre inscription est confirmée — nous vous attendons pour le prochain cours !</p>
-      ${coursBox}
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Votre inscription au cours de <strong>${coursResume}</strong> est confirmée. Nous avons bien reçu votre paiement sur AssoConnect — nous vous attendons pour le prochain cours !</p>
+      ${coursBoxes}
       ${pwaSection}
-      ${livretBtn}
+      ${livretSection}
       ${signEleve}
-    </div>${footer}`, 'Votre inscription tango est confirmee - a bientot pour votre premier cours');
+    </div>${footer}`, preheader);
 
   try {
+    const subject = coursInfos.length > 1
+      ? `✓ Vos inscriptions au tango sont confirmées — à bientôt !`
+      : `✓ Votre inscription au tango est confirmée — à bientôt !`;
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `✓ Votre inscription au tango est confirmée — à bientôt !`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-inscription-cours-payee] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
