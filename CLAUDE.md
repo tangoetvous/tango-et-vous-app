@@ -3036,3 +3036,69 @@ Apostrophe dans une chaîne YAML entre guillemets simples = erreur de parsing �
 - `Espace élève — activation J+7` ✅ (testé en workflow_dispatch après fix updated_at)
 - `Stages — rappel J-3` ✅ (testé en workflow_dispatch)
 - Autres workflows (`carte-expiree`, `relance-cb3x`, `relance-absences`, `essai-yoga-j1`, `fin-saison-c5`, `keep-alive`, `backup-csv`) — à tester ultérieurement
+
+## Session 2026-05-22 — Corrections emails E15 + câblage notifications
+
+### ✅ Fix E15 — email non envoyé lors de la validation d'une élève en attente
+
+**Cause** : `valGuideeEssai` dans `admin.html` appelait `/api/notify/essai-valide` sans header `Authorization: Bearer`. La route exige un JWT (`if (!jwt) return jsonError(401, ...)`) → 401 silencieusement avalé par `.catch(function(){})` → aucun email.
+
+**Fix** : ajout de `'Authorization': 'Bearer ' + _jwt15` sur les deux appels fetch dans `Promise.all(ops).then()`.
+
+### ✅ Fix E15 — date "undefined NaN undefined NaN"
+
+**Cause** : `admin.html` envoyait `dateIso` dans le body mais le handler destructure `dateEssai` → `undefined` → `fmtDate(undefined)` → "undefined NaN undefined NaN".
+
+**Fix** : renommé `dateIso` → `dateEssai` dans les deux appels depuis `valGuideeEssai`.
+
+### ✅ Réécriture complète du handler E15 (`handleNotifyEssaiValide`)
+
+Le handler précédent était un stub minimal (cours box simple sans horaire/lieu, livret jamais fetchéé, `daysUntil` hardcodé à 99, token HMAC fake `"e15"`). Réécrit pour matcher le preview `preview-emails-essai-v2.html` :
+
+**Nouvelles fonctionnalités** :
+- Fetch `tev_params_<ville>_<sai>` depuis Supabase → horaires, adresse, GPS, livret URL
+- `daysUntil` calculé depuis `dateEssai` (pas hardcodé) → détermine `proche = daysUntil <= 7`
+- Saison calculée dynamiquement depuis `dateEssai`
+
+**Cours box** complète (6 lignes) :
+- 📅 Date (formatée)
+- 🕐 Heure (depuis `horaires[niveau]` dans les Paramètres)
+- 📍 Lieu (nom, rue, transport, lien Google Maps si GPS disponible)
+- 🎓 Cours (Paris/Vincennes — Débutant/Intermédiaire)
+- 🎯 Votre rôle (badge coloré : bleu guideur·se / rose guidée)
+- 💶 Tarif (Gratuit si septembre+débutant, 30€ si couple, 15€ sinon)
+
+**Bouton livret** : doré `#D4AF37` "📖 Télécharger le livret Niveau Ville" (pas bleu contour)
+
+**Checklist** (débutants uniquement) : version longue avec 3 items détaillés (5min en avance, chaussures, tenue)
+
+**Bloc action — deux variantes** :
+- `>7j` (`proche=false`) : encadré vert "🗓 Vous recevrez un rappel 7 jours avant..." — **aucun bouton Annuler/Reporter**
+- `<7j` (`proche=true`) : bouton 👍 "Je confirme ma présence" + encadré "Empêchement de dernière minute ?" avec Annuler + Reporter (remplace le rappel J-7 qui ne viendra pas)
+
+**Tokens HMAC corrects** : `_calHmac(\`${id}:${email.toLowerCase()}\`, SUPABASE_ANON).slice(0,32)` — identiques aux liens E4/E6. Lien Annuler → `presence_confirmee=false`, Confirmer → `presence_confirmee=true`.
+
+**`admin.html` — champs ajoutés** dans les deux appels de `valGuideeEssai` :
+- `id: entry.id||''` — requis pour la génération du token HMAC
+- `partenaire: entry.partenaire||''` — requis pour détecter couple → tarif 30€
+
+### Règle — tous les handlers E/Y/S/I doivent calculer daysUntil depuis la date DB
+
+Ne jamais hardcoder `daysUntil = 99`. Toujours calculer :
+```javascript
+const dateObj = new Date((dateEssai||'') + 'T12:00:00');
+const todayObj = new Date(); todayObj.setHours(12,0,0,0);
+const daysUntil = Math.round((dateObj - todayObj) / (1000*60*60*24));
+const proche = daysUntil <= 7;
+```
+
+### Règle — tokens HMAC dans les handlers email
+
+Pattern à réutiliser pour tous les liens d'action (confirmer/annuler) dans les emails :
+```javascript
+const tk = (await _calHmac(`${id}:${(email||'').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
+const confirmUrl = `${APP_URL}/api/essai/confirmer?id=${id}&token=${tk}`;
+const annulerUrl = `${APP_URL}/api/essai/annuler?id=${id}&token=${tk}`;
+```
+Ne jamais utiliser de tokens statiques comme `"e15"`, `"j7"` etc. — ils ne sont pas validés par `handleEssaiConfirmerAnnuler`.
+
