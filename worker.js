@@ -903,21 +903,22 @@ async function handleNotifyEssaiAction(request, env) {
       if (isDemande) {
         eleveHtml = wrap(`${headerEleve}
           <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
-            <span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Votre demande d'inscription est enregistrée</span></div>
+            <span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Votre demande d'inscription est enregistrée — liste d'attente</span></div>
           <div style="padding:28px 24px;">
             <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${recipientPrenom},</p>
+            <p style="font-size:15px;color:#333;margin:0 0 20px;">Suite à votre cours d'essai, nous avons bien enregistré votre demande d'inscription. Vous êtes actuellement sur liste d'attente.</p>
             <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
               <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">INSCRIPTION TANGO</div>
               <div style="font-size:15px;font-weight:700;color:#111;">${_esc(coursAff)}</div>
-              <div style="margin-top:10px;"><span style="background:#e65100;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">⏳ En attente de validation</span></div>
+              <div style="margin-top:10px;"><span style="background:#e65100;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">⏳ Liste d'attente</span></div>
             </div>
             <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
-              <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">📋 Votre demande est bien enregistrée</p>
-              <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous veillons à maintenir l'équilibre entre guideurs et guidées. Vous recevrez une confirmation dès validation de votre inscription. En attendant, n'hésitez pas à nous contacter pour toute question.</p>
+              <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">ℹ️ Pourquoi liste d'attente ?</p>
+              <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous veillons à maintenir l'équilibre entre guideurs et guidées dans le cours. Votre inscription sera confirmée dès qu'une place se libère pour votre rôle. Vous recevrez un email de confirmation dès validation.</p>
             </div>
             ${signWaitI}
           </div>${footer}`,
-          'Votre demande d\'inscription tango est bien enregistree - confirmation en cours');
+          'Votre demande inscription tango enregistree - vous etes sur liste d\'attente');
       } else {
         // T1-val — bandeau vert, boîte cours bleue, bouton AssoConnect or, Quelques précisions, livret
         const isVincennes = (ville || '').toLowerCase() === 'vincennes';
