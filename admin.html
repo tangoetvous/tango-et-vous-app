@@ -12364,6 +12364,12 @@ window.soumettreInscriptionDirecte = function(force) {
       }
       return _elvProm;
     }).then(function(){
+      // I03 — email confirmation inscription directe
+      Promise.resolve(fetch('/api/notify/inscription-cours-payee', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
+        body: JSON.stringify({email:email, prenom:prenom, nom:nom, ville:ville0, niveau:niveau0, saison:sai, livretUrl:''}),
+      })).catch(function(){});
       _gotoTab();
     });
   } else {
