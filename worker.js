@@ -3453,7 +3453,8 @@ async function handleNotifyInscriptionEssai(request, env) {
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
   const footerEleve = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:${adminEmail}" style="color:#888;text-decoration:none;">${adminEmail}</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
   const signEleve = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
-  const wrap = inner => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+  const signWait  = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous reviendrons vers vous très prochainement.<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${pre}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>` : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   const coursDateAff  = fmtDate(dateIso);
   const coursVilleAff = `${villeLabel(ville)} — ${nivLabel(niveau)}`;
@@ -3591,7 +3592,7 @@ async function handleNotifyInscriptionEssai(request, env) {
           ${checklistDeb}
           ${sign7}
         </div>`;
-        await sendBrevo(to, `Votre cours d'essai tango a lieu ${dayName} — confirmez votre présence`, wrap(`${headerEleve}${banner7}${body7}${footerEleve}`));
+        await sendBrevo(to, `Votre cours d'essai tango a lieu ${dayName} — confirmez votre présence`, wrap(`${headerEleve}${banner7}${body7}${footerEleve}`, `${_esc(pren)}, votre cours d'essai a lieu ${dayName} — confirmez`));
       } else {
         // E1 — green banner, livret, checklist, reminder+annuler/reporter
         const intro1 = niveau === 'intermediaire'
@@ -3614,7 +3615,7 @@ async function handleNotifyInscriptionEssai(request, env) {
           ${signEleve}
         </div>`;
         const dateCourt2 = dt.getDate() + ' ' + MOIS_L[dt.getMonth()];
-        await sendBrevo(to, `Votre cours d'essai tango est confirmé — ${dayName} ${dateCourt2} à ${villeLabel(ville)}`, wrap(`${headerEleve}${banner1}${body1}${footerEleve}`));
+        await sendBrevo(to, `Votre cours d'essai tango est confirmé — ${dayName} ${dateCourt2} à ${villeLabel(ville)}`, wrap(`${headerEleve}${banner1}${body1}${footerEleve}`, `${_esc(pren)}, votre cours d'essai est confirmé — ${_esc(coursDateAff)}`));
       }
     } else {
       // Waitlist
@@ -3636,9 +3637,9 @@ async function handleNotifyInscriptionEssai(request, env) {
           <div style="text-align:center;margin:0 0 22px;">
             <a href="mailto:${adminEmail}" style="display:inline-block;background:#fff;color:#B8962E;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #D4AF37;">Nous contacter</a>
           </div>
-          ${signEleve}
+          ${signWait}
         </div>`;
-        await sendBrevo(to, `Votre demande de cours d'essai tango en duo est bien reçue — liste d'attente`, wrap(`${headerEleve}${bannerWait}${body6}${footerEleve}`));
+        await sendBrevo(to, `Votre demande de cours d'essai tango en duo est bien reçue — liste d'attente`, wrap(`${headerEleve}${bannerWait}${body6}${footerEleve}`, `${_esc(pren)}, votre demande en duo est bien enregistrée — ${_esc(coursDateAff)}`));
 
       } else if (r === 'guidee') {
         // E2 — guidée seule
@@ -3654,9 +3655,9 @@ async function handleNotifyInscriptionEssai(request, env) {
           <div style="text-align:center;margin:0 0 22px;">
             <a href="mailto:${adminEmail}" style="display:inline-block;background:#fff;color:#B8962E;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #D4AF37;">Nous contacter</a>
           </div>
-          ${signEleve}
+          ${signWait}
         </div>`;
-        await sendBrevo(to, `Votre demande de cours d'essai tango est bien reçue — liste d'attente`, wrap(`${headerEleve}${bannerWait}${body2}${footerEleve}`));
+        await sendBrevo(to, `Votre demande de cours d'essai tango est bien reçue — liste d'attente`, wrap(`${headerEleve}${bannerWait}${body2}${footerEleve}`, `${_esc(pren)}, votre demande est bien enregistrée — ${_esc(coursDateAff)}`));
 
       } else {
         // E5 — guideur quota plein
@@ -3674,9 +3675,9 @@ async function handleNotifyInscriptionEssai(request, env) {
           <div style="text-align:center;margin:0 0 22px;">
             <a href="mailto:${adminEmail}" style="display:inline-block;background:#fff;color:#B8962E;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #D4AF37;">Nous contacter</a>
           </div>
-          ${signEleve}
+          ${signWait}
         </div>`;
-        await sendBrevo(to, `Votre demande de cours d'essai tango est bien reçue — liste d'attente`, wrap(`${headerEleve}${bannerWait}${body5}${footerEleve}`));
+        await sendBrevo(to, `Votre demande de cours d'essai tango est bien reçue — liste d'attente`, wrap(`${headerEleve}${bannerWait}${body5}${footerEleve}`, `${_esc(pren)}, votre demande est bien enregistrée — ${_esc(coursDateAff)}`));
       }
     }
   }
