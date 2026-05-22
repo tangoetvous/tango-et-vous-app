@@ -714,17 +714,9 @@ async function handleNotifyYogaDate(request, env) {
     : hasAdded ? '📅 Nouvelle date de yoga ajoutée'
     : '⚠️ Date de yoga annulée';
 
-  const headerYoga = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div>
-    <div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div>
-    </div>`;
-  const footerYoga = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">MA PAGE YOGA</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-    </div>`;
-  const signYoga = `<p style="font-size:14px;color:#2e7d32;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="font-size:12px;color:#888;">Association Le Regard Se Pose · 06 63 23 35 70</span></p>`;
+  const headerYoga = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>`;
+  const footerYoga = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
+  const signYoga = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>`;
 
   const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
   <div style="max-width:600px;margin:0 auto;background:#fff;">
@@ -755,7 +747,7 @@ async function handleNotifyYogaDate(request, env) {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Florencia Garcia — Yoga', email: 'tangoetvous@gmail.com' },
+          sender: { name: 'Florencia Garcia — Yoga', email: 'regardsepose@gmail.com' },
           to: [{ email: String(email) }],
           subject,
           htmlContent: html,
@@ -1258,17 +1250,9 @@ async function handleCronEssaiYogaJ1(request, env) {
   }
 
   const adminEmail = 'regardsepose@gmail.com';
-  const headerYoga = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div>
-    <div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div>
-    </div>`;
-  const footerYoga = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">MA PAGE YOGA</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-    </div>`;
-  const signYoga = `<p style="font-size:14px;color:#2e7d32;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="font-size:12px;color:#888;">Association Le Regard Se Pose · 06 63 23 35 70</span></p>`;
+  const headerYoga = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>`;
+  const footerYoga = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
+  const signYoga = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   let sent = 0;
@@ -1277,7 +1261,7 @@ async function handleCronEssaiYogaJ1(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: 'tangoetvous@gmail.com' }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: 'regardsepose@gmail.com' }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
       });
       if (r.ok) sent++;
       else console.error('[cron essai-yoga-j1] Brevo error', toEmail, await r.text());
@@ -1325,10 +1309,10 @@ async function handleCronEssaiYogaJ1(request, env) {
         </p></div>` : '';
       const html = wrap(`${headerYoga}
         <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-          <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Merci pour votre cours d'essai yoga !</span></div>
+          <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ On espère que ce cours vous a plu !</span></div>
         <div style="padding:28px 24px;">
           <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-          <p style="font-size:15px;color:#333;margin:0 0 20px;">Merci d'être venu·e à ce cours d'essai yoga ! J'espère que l'expérience vous a plu et que vous avez envie de rejoindre les cours réguliers.</p>
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">Nous espérons que cette première séance de yoga vous a plu ! Si vous souhaitez poursuivre, voici comment rejoindre nos cours réguliers.</p>
           ${yogaBox}
           <p style="font-size:14px;color:#333;margin:0 0 12px;">Pour rejoindre les cours réguliers, rendez-vous sur AssoConnect :</p>
           ${acBtn}
@@ -1347,12 +1331,12 @@ async function handleCronEssaiYogaJ1(request, env) {
           <span style="font-size:14px;font-weight:700;color:#e65100;">💙 Vous nous avez manqué !</span></div>
         <div style="padding:28px 24px;">
           <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-          <p style="font-size:15px;color:#333;margin:0 0 20px;">J'ai remarqué votre absence au cours d'essai d'hier. Pas d'inquiétude, il vous reste tout le temps de venir !</p>
+          <p style="font-size:15px;color:#333;margin:0 0 20px;">Nous n'avons pas eu le plaisir de vous voir hier pour votre cours d'essai yoga. Pas d'inquiétude — re-inscrivez-vous quand vous voulez !</p>
           ${yogaBox}
-          <p style="font-size:14px;color:#333;margin:0 0 16px;">Votre cours d'essai n'a pas encore eu lieu — vous pouvez choisir une nouvelle date qui vous convient :</p>
+          <p style="font-size:14px;color:#333;margin:0 0 16px;">Vous pouvez vous réinscrire à n'importe quelle date disponible :</p>
           ${retourBtn}
           <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:16px 0 0;">
-            <p style="font-size:13px;color:#bf360c;margin:0;">Aucune pénalité — votre inscription reste valide pour le prochain cours disponible.</p>
+            <p style="font-size:13px;color:#bf360c;margin:0;">Votre inscription est annulée automatiquement — pas de pénalité.<br/>Vous pouvez vous réinscrire à n'importe quelle date disponible.</p>
           </div>
           ${signYoga}
         </div>${footerYoga}`, 'On prend de vos nouvelles - revenez quand vous voulez pour un autre essai yoga');
@@ -4134,7 +4118,7 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
     return c === 'yin' ? 'Yin Yoga' : c === 'hatha' ? 'Hatha Yoga' : 'Yin & Hatha Yoga (Forfait)';
   }
   const adminYogaEmail = 'regardsepose@gmail.com';
-  const senderEmail    = 'tangoetvous@gmail.com';
+  const senderEmail    = 'regardsepose@gmail.com';
   let sent = 0;
 
   async function sendBrevo(to, subj, html, senderName) {
@@ -4228,14 +4212,8 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
     'Tango & Vous — Admin');
 
   // ── Y1 / Y-att — email élève
-  const headerYoga = '<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">'
-    + '<div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div>'
-    + '<div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div>'
-    + '</div>';
-  const footerYoga = '<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">'
-    + '<a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">Ma Page YOGA</a><br/>'
-    + '<a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;\xb7&nbsp; 06 63 23 35 70'
-    + '</div>';
+  const headerYoga = '<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>';
+  const footerYoga = '<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;\xb7&nbsp; 06 63 23 35 70</div>';
 
   // Yoga-box (green header + sections)
   const yogaBoxRows = '<tr><td style="padding:7px 0;color:#555;width:120px;vertical-align:top;">🧘 Cours</td><td style="color:#111;font-weight:700;">' + _esc(coursAff) + '</td></tr>'
@@ -4277,7 +4255,9 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
       + '</div>'
       + '<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous vous contacterons d\xe8s qu\'une place se lib\xe8re.<br/>'
       + '<strong style="color:#222;">Florencia Garcia</strong><br/>'
-      + '<span style="font-size:12px;color:#888;">Association Le Regard Se Pose \xb7 06 63 23 35 70</span></p>'
+      + '<span style="color:#444;">Association Le Regard Se Pose</span><br/>'
+      + '<a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>'
+      + '<span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> \xb7 06 63 23 35 70</span></p>'
       + '</div>' + footerYoga,
       'Votre demande d\'essai yoga est enregistree - vous serez contacte(e) des qu\'une place se libere');
   } else {
@@ -4299,8 +4279,9 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
       + '</div>'
       + '<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">\xc0 tr\xe8s bient\xf4t sur le tapis\xa0!<br/>'
       + '<strong style="color:#222;">Florencia Garcia</strong><br/>'
-      + '<span style="font-size:12px;color:#888;">Association Le Regard Se Pose \xb7 06 63 23 35 70</span><br/>'
-      + '<a href="https://www.tangoetvous.com/cours-de-yoga" style="font-size:12px;color:#B8962E;text-decoration:none;">Ma Page YOGA</a>'
+      + '<span style="color:#444;">Association Le Regard Se Pose</span><br/>'
+      + '<a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>'
+      + '<span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> \xb7 06 63 23 35 70</span>'
       + '</p>'
       + '</div>' + footerYoga,
       'Votre cours d\'essai yoga est confirme - retrouvez les details ci-dessous');
@@ -4562,10 +4543,9 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
   const inscrits = await res.json();
 
   const adminYogaEmail = 'regardsepose@gmail.com';
-  const adminEmail     = 'tangoetvous@gmail.com';
-  const headerYoga     = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div><div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div></div>`;
-  const footerYoga     = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">MA PAGE YOGA</a><br/><a href="mailto:${adminYogaEmail}" style="color:#888;text-decoration:none;">${adminYogaEmail}</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
-  const signYoga       = `<p style="font-size:14px;color:#2e7d32;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="font-size:12px;color:#888;">Association Le Regard Se Pose · 06 63 23 35 70</span></p>`;
+  const headerYoga     = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>`;
+  const footerYoga     = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
+  const signYoga       = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   // Fetch params
@@ -4600,13 +4580,14 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
     </div>`;
     const confirmUrl = `https://app.tangoetvous.fr/api/essai-yoga/confirmer?id=${e.id}&token=y3`;
     const htmlEleve  = wrap(`${headerYoga}
-      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre cours d'essai yoga a lieu dans 3 jours !</span></div>
+      <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">🗓 Rappel — votre cours d'essai yoga a lieu dans 3 jours !</span></div>
       <div style="padding:28px 24px;">
         <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">Dans 3 jours, rendez-vous pour votre essai yoga ! Voici tous les détails pour préparer votre séance.</p>
         ${yogaBox}
         <div style="text-align:center;margin:0 0 22px;"><a href="${confirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-          <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">En cas d'empêchement, merci de nous prévenir même au dernier moment, afin de permettre à quelqu'un d'autre de profiter de la place.</p>
+          <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Merci de confirmer votre présence. En cas d'empêchement, prévenez-nous même au dernier moment afin que nous puissions proposer la place à quelqu'un d'autre. Merci pour votre compréhension !</p>
         </div>
         ${signYoga}
       </div>${footerYoga}`, "Rappel essai yoga dans 3 jours - confirmez votre presence en un clic");
@@ -4614,7 +4595,7 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminEmail }, to: [{ email: String(e.email) }], subject: `🗓 Rappel — votre cours d'essai yoga du ${dateLabel} — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminYogaEmail }, to: [{ email: String(e.email) }], subject: `🗓 Rappel — votre cours d'essai yoga du ${dateLabel} — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
       });
       if (r.ok) sent++;
     } catch(err) { console.error('[cron-essai-yoga-rappel-j3] brevo error', err); }
@@ -4645,10 +4626,9 @@ async function handleNotifyEssaiYogaModifie(request, env) {
   function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
 
   const adminYogaEmail = 'regardsepose@gmail.com';
-  const adminEmail     = 'tangoetvous@gmail.com';
-  const headerYoga     = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div><div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div></div>`;
-  const footerYoga     = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">MA PAGE YOGA</a><br/><a href="mailto:${adminYogaEmail}" style="color:#888;text-decoration:none;">${adminYogaEmail}</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
-  const signYoga       = `<p style="font-size:14px;color:#2e7d32;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="font-size:12px;color:#888;">Association Le Regard Se Pose · 06 63 23 35 70</span></p>`;
+  const headerYoga     = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>`;
+  const footerYoga     = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
+  const signYoga       = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   const { email, prenom, ancienneDate, nouvelleDateEssai, cours, ancienCours } = body;
@@ -4668,16 +4648,16 @@ async function handleNotifyEssaiYogaModifie(request, env) {
     <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre cours d'essai yoga a été modifié</span></div>
     <div style="padding:28px 24px;">
       <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre cours d'essai yoga a été modifié. Voici le récapitulatif des changements.</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre cours d'essai yoga a été déplacé. Voici votre nouveau créneau :</p>
       ${yogaBox}
-      <div style="text-align:center;margin:0 0 22px;"><a href="mailto:${adminYogaEmail}" style="display:inline-block;background:#fff;color:#555;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #999;">Nous contacter</a></div>
+      <div style="text-align:center;margin:0 0 22px;"><a href="mailto:${adminYogaEmail}" style="display:inline-block;background:#D4AF37;color:#111;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.5px;">Nous contacter</a></div>
       ${signYoga}
     </div>${footerYoga}`, "Essai yoga reprogramme - retrouvez les nouveaux details ci-dessous");
   try {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminEmail }, to: [{ email: String(email) }], subject: `📋 Votre cours d'essai yoga a été modifié — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminYogaEmail }, to: [{ email: String(email) }], subject: `📋 Votre cours d'essai yoga a été modifié — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-essai-yoga-modifie] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
@@ -4694,10 +4674,9 @@ async function handleNotifyYogaInscriptionValidee(request, env) {
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
 
   const adminYogaEmail = 'regardsepose@gmail.com';
-  const adminEmail     = 'tangoetvous@gmail.com';
-  const headerYoga     = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:400;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div><div style="font-family:Georgia,serif;font-size:15px;font-weight:300;letter-spacing:3px;color:#D4AF37;margin-top:5px;">avec Florencia Garcia</div></div>`;
-  const footerYoga     = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">MA PAGE YOGA</a><br/><a href="mailto:${adminYogaEmail}" style="color:#888;text-decoration:none;">${adminYogaEmail}</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
-  const signYoga       = `<p style="font-size:14px;color:#2e7d32;text-align:center;margin:24px 0 0;">À très bientôt sur les tatamis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="font-size:12px;color:#888;">Association Le Regard Se Pose · 06 63 23 35 70</span></p>`;
+  const headerYoga     = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>`;
+  const footerYoga     = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
+  const signYoga       = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   const { email, prenom, nom, cours, saison, horaires = {}, adresse = {}, paiement, montant, livretUrl } = body;
@@ -4733,14 +4712,14 @@ async function handleNotifyYogaInscriptionValidee(request, env) {
 
   const checklist = `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
     <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 10px;">Pour bien commencer</p>
-    <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Tenue confortable et souple</p>
-    <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Tapis de yoga (ou location sur place)</p>
-    <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">• Ponctualité appréciée</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Tenue confortable (pantalon, t-shirt souple)</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Tapis de yoga fourni — vous pouvez apporter le vôtre si vous le souhaitez</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">• Arrivez 5 minutes en avance pour l'installation</p>
   </div>`;
-  const livretBtn = livretUrl ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_esc(livretUrl)}" style="display:inline-block;background:#fff;color:#388e3c;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #388e3c;">📖 Télécharger le livret ${coursLabel}</a></div>` : '';
+  const livretBtn = livretUrl ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_esc(livretUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.5px;">📖 Télécharger le livret ${coursLabel}</a></div>` : '';
 
   const htmlEleve = wrap(`${headerYoga}
-    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue — votre inscription yoga est confirmée !</span></div>
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue dans votre cours de yoga !</span></div>
     <div style="padding:28px 24px;">
       <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
       <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre inscription aux cours de yoga avec Florencia Garcia est confirmée. Nous sommes ravis de vous accueillir !</p>
@@ -4754,7 +4733,7 @@ async function handleNotifyYogaInscriptionValidee(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminEmail }, to: [{ email: String(email) }], subject: `✓ Bienvenue — votre inscription yoga est confirmée — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminYogaEmail }, to: [{ email: String(email) }], subject: `✓ Bienvenue dans votre cours de yoga — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-yoga-inscription-validee] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
