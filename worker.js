@@ -920,36 +920,88 @@ async function handleNotifyEssaiAction(request, env) {
           </div>${footer}`,
           'Votre demande inscription tango enregistree - vous etes sur liste d\'attente');
       } else {
-        // T1-val — bandeau vert, boîte cours bleue, bouton AssoConnect or, Quelques précisions, livret
-        const isVincennes = (ville || '').toLowerCase() === 'vincennes';
-        const lienACBtn = `<p style="text-align:center;margin:0 0 12px;"><a href="https://le-regard-se-pose.assoconnect.com/collect/description/695654-a-inscription-aux-cours-de-tango-argentin" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire sur AssoConnect →</a></p>
-          <p style="font-size:12px;color:#888;text-align:center;margin:0 0 22px;">Votre place sera réservée une fois l'inscription en ligne et le premier paiement effectués.</p>`;
-        const soranoBlock = isVincennes ? `<div style="background:#fff9e6;border:1px solid #f0c040;border-radius:8px;padding:16px 18px;margin:0 0 20px;">
-          <p style="font-size:13px;font-weight:700;color:#795500;margin:0 0 8px;">🏛 Adhésion à l'Espace Sorano</p>
-          <p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Votre cours a lieu à l'Espace Sorano à Vincennes. Une adhésion à cet espace culturel est nécessaire pour participer. Nous vous contacterons prochainement avec les informations pour la régler.</p>
-          </div>` : '';
-        const quelquesPrecisions = `<div style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:16px 18px;margin:0 0 20px;">
-          <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 12px;">📋 Quelques précisions</p>
-          <div style="background:#fff3e0;border:1px solid #ffcc02;border-radius:6px;padding:10px 14px;margin:0 0 10px;">
-            <p style="font-size:12px;color:#c65100;font-weight:700;margin:0;">⚠️ Si vous vous inscrivez en couple, chacun doit avoir une adresse email différente sur AssoConnect.</p>
-          </div>
-          <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 8px;"><strong>Modes de paiement acceptés :</strong> CB en 1× ou 3× sans frais, chèque à l'ordre de « Le Regard Se Pose », espèces, virement.</p>
-          <p style="font-size:12px;color:#888;margin:0;">Cours de tango : aucun pourboire n'est attendu ni nécessaire.</p>
-          </div>`;
+        // T1-val — quasi-identique à I01-val : fetch params Supabase, boîte cours complète, Quelques précisions riche, livret
+        const saison = (() => {
+          if (!date) return '';
+          const d = new Date(date + 'T12:00:00');
+          const y = d.getFullYear(), m = d.getMonth() + 1;
+          return m >= 9 ? `${y}-${y+1}` : `${y-1}-${y}`;
+        })();
+        let lienAC = 'https://le-regard-se-pose.assoconnect.com/collect/description/695654-a-inscription-aux-cours-de-tango-argentin';
+        let parisP = {}, vincP = {}, coursDatesList = {};
+        if (saison) {
+          try {
+            const keys = ['tev_liens_assoconnect', 'tev_cours_dates', `tev_params_paris_${saison}`, `tev_params_vincennes_${saison}`];
+            const pr = await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=in.(${keys.map(k => '"'+k+'"').join(',')})&select=cle,valeur`, {
+              headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` }
+            });
+            if (pr.ok) {
+              for (const row of await pr.json()) {
+                try {
+                  const val = typeof row.valeur === 'string' ? JSON.parse(row.valeur) : row.valeur;
+                  if (row.cle === 'tev_liens_assoconnect') lienAC = ((val[saison]||{}).cours) || val.cours || lienAC;
+                  else if (row.cle === 'tev_cours_dates') coursDatesList = val || {};
+                  else if (row.cle === `tev_params_paris_${saison}`) parisP = val || {};
+                  else if (row.cle === `tev_params_vincennes_${saison}`) vincP = val || {};
+                } catch {}
+              }
+            }
+          } catch {}
+        }
+        const _getAdr = v => { const a = (v==='vincennes'?vincP:parisP).adresse||{}; return {nom:a.nom||'',rue:a.rue||'',note:a.note||'',transport:a.transport||a.metro||''}; };
+        const _getHor = (v,n) => { const h=(v==='vincennes'?vincP:parisP).horaires||{}; const nk=n==='intermediaire'?'intermediaire':'debutant'; const e=h[nk]||h['debutant']||{}; if(!e.debut) return ''; return (e.jour?e.jour+' · ':'')+e.debut+(e.fin?'–'+e.fin:''); };
+        const _getFirstD = v => { const today=new Date().toISOString().slice(0,10); const arr=Array.isArray(coursDatesList[v])?coursDatesList[v]:[]; return arr.filter(d=>String(d)>=today).sort()[0]||''; };
+        const _getLivU = (v,n) => { const p=v==='vincennes'?vincP:parisP; const l=p.livret||{}; return n==='intermediaire'?(l.url_int||''):(l.url_deb||''); };
+
+        const isVincennes = (ville||'').toLowerCase()==='vincennes';
+        const adr = _getAdr(ville);
+        const hor = _getHor(ville, niveau);
+        const firstDate = _getFirstD(ville);
+        const livretUrl = _getLivU(ville, niveau);
+        const rLabel = role==='guidee' ? 'Guid\xe9\xb7e' : 'Guideur\xb7se';
+        const rColor = role==='guidee' ? '#c2185b' : '#1565c0';
+
+        let coursBoxRows = `<div style="font-size:15px;font-weight:700;color:#111;margin-bottom:10px;">🎓 ${_esc(coursAff)}</div>`;
+        if (firstDate || hor || adr.nom || adr.rue) {
+          coursBoxRows += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+          if (firstDate) coursBoxRows += `<tr><td style="padding:4px 0;color:#666;width:42%;">📅 Prochain cours\xa0:</td><td style="padding:4px 0;color:#333;font-weight:600;">${fmtDate(firstDate)}</td></tr>`;
+          if (hor)       coursBoxRows += `<tr><td style="padding:4px 0;color:#666;">🕐 Horaire\xa0:</td><td style="padding:4px 0;color:#333;font-weight:600;">${_esc(hor)}</td></tr>`;
+          if (adr.nom||adr.rue) coursBoxRows += `<tr><td style="padding:4px 0;color:#666;">📍 Lieu\xa0:</td><td style="padding:4px 0;color:#333;font-weight:600;">${adr.nom?_esc(adr.nom):''}${adr.nom&&adr.rue?', ':''}${adr.rue?_esc(adr.rue):''}${adr.note?' — <em style="color:#666;">'+_esc(adr.note)+'</em>':''}</td></tr>`;
+          coursBoxRows += '</table>';
+        }
+        coursBoxRows += `<div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="background:${rColor};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${rLabel}</span><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Valid\xe9\xb7e</span></div>`;
+
+        const soranoBlock = isVincennes ? `<div style="background:#fff9e6;border:1px solid #f0c040;border-radius:8px;padding:16px 18px;margin:0 0 20px;"><p style="font-size:13px;font-weight:700;color:#795500;margin:0 0 8px;">🏛 Adh\xe9sion \xe0 l'Espace Sorano</p><p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Votre cours a lieu \xe0 l'Espace Sorano \xe0 Vincennes. Une adh\xe9sion \xe0 cet espace culturel est n\xe9cessaire pour participer. Nous vous contacterons prochainement avec les informations pour la r\xe9gler.</p></div>` : '';
+        const lienACBtn = `<p style="text-align:center;margin:0 0 12px;"><a href="${lienAC}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire sur AssoConnect →</a></p><p style="font-size:12px;color:#888;text-align:center;margin:0 0 22px;">Votre place sera r\xe9serv\xe9e une fois l'inscription en ligne et le premier paiement effectu\xe9s.</p>`;
+        const quellesPrecisions = '<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
+          + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#B8962E;font-weight:700;margin-bottom:14px;">Quelques pr\xe9cisions pour votre inscription</div>'
+          + '<div style="font-size:14px;color:#333;line-height:1.9;">'
+          + '<p style="margin:0 0 14px;background:#fff0f0;border:1px solid #ffcccc;border-radius:6px;padding:12px 14px;">⚠️ Si vous vous inscrivez en couple sur AssoConnect, <strong style="color:#c62828;">vous devez imp\xe9rativement renseigner une adresse email diff\xe9rente pour vous et pour votre partenaire</strong> dans le formulaire. Un seul email pour les deux ne fonctionnera pas.</p>'
+          + '<p style="margin:0 0 12px;">Une fois sur Assoconnect, pour remplir le formulaire, cliquez sur le bouton jaune <strong>&ldquo;J&rsquo;adh\xe8re&rdquo;</strong>.</p>'
+          + '<p style="margin:0 0 8px;font-weight:700;color:#555;">Moyens de paiement\xa0:</p>'
+          + '<ul style="margin:0 0 12px;padding-left:20px;line-height:2.0;">'
+          + '<li><strong>Carte bleue (1\xd7 ou 3\xd7)</strong> — utilise la certification 3D Secure\xa0: pr\xe9voyez une validation par SMS ou via votre appli bancaire.</li>'
+          + '<li><strong>Esp\xe8ces</strong> — inscrivez-vous quand m\xeame en ligne en pr\xe9cisant \xe0 la fin du processus que vous r\xe9glez en esp\xe8ces.</li>'
+          + '<li><strong>Ch\xe8que</strong> — nous pr\xe9f\xe9rons \xe9viter ce mode de paiement, mais si c&rsquo;est votre seule option, contactez-nous.</li>'
+          + '</ul>'
+          + '<p style="margin:0;font-size:13px;color:#888;">⚠️ AssoConnect propose un pourboire de fa\xe7on insistante — vous n&rsquo;\xeates pas du tout oblig\xe9\xb7e de le payer. Notez <strong>0\xa0€</strong> \xe0 la place de la somme propos\xe9e.</p>'
+          + '</div></div>';
+        const livretBtn = livretUrl ? `<p style="text-align:center;margin:0 0 22px;"><a href="${livretUrl}" style="display:inline-block;background:#fff;color:#1565c0;border:2px solid #1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">📖 T\xe9l\xe9charger le livret ${_esc(nivLabel(niveau))} ${_esc(villeLabel(ville))}</a></p>` : '';
+
         eleveHtml = wrap(`${headerEleve}
           <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-            <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au tango est validée — finalisez votre inscription</span></div>
+            <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au tango est valid\xe9e — finalisez votre inscription</span></div>
           <div style="padding:28px 24px;">
-            <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${recipientPrenom},</p>
-            <p style="font-size:15px;color:#333;margin:0 0 20px;">Suite à votre cours d'essai, nous sommes ravis de vous accueillir dans nos cours de tango !</p>
+            <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour <strong style="color:#B8962E;">${recipientPrenom}</strong>,</p>
+            <p style="font-size:15px;color:#333;margin:0 0 20px;">Suite \xe0 votre cours d&rsquo;essai, nous sommes ravis de vous accueillir dans nos cours de tango pour la saison ${_esc(saison)}\xa0!</p>
             <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
               <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">INSCRIPTION TANGO</div>
-              <div style="font-size:15px;font-weight:700;color:#111;">${_esc(coursAff)}</div>
-              <div style="margin-top:10px;"><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Validé·e</span></div>
+              ${coursBoxRows}
             </div>
             ${soranoBlock}
             ${lienACBtn}
-            ${quelquesPrecisions}
+            ${quellesPrecisions}
+            ${livretBtn}
             ${signEleve}
           </div>${footer}`,
           'Votre inscription au tango est validee - prochaine etape AssoConnect');
