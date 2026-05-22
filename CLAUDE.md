@@ -3147,7 +3147,22 @@ Les ~30 handlers dans `worker.js` ont tous reçu :
 ### Fichiers de preview mis à jour
 
 - `preview-emails-essai-v2.html` : E2, E5, E5b → `signWait`
-- `preview-emails-stages-v1.html` : S2 → `signWaitS2`, S-cancel → `signCancel`
+- `preview-emails-stages-v1.html` : S2 → `signWaitS2`, S-cancel → `signCancel` ("Nous espérons vous retrouver bientôt sur la piste.")
 - `preview-emails-yoga-v1.html` : Y-att → `signYogaWait`
 - `preview-emails-a-valider-v1.html` : T1-dem → `signWaitI`
+
+### Fix apostrophes dans les preheaders (session 2026-05-22 suite)
+
+Le script Python ayant utilisé des guillemets simples comme délimiteurs JS pour les preheaders contenant des apostrophes (ex : `d'essai`, `l'application`) avait introduit des SyntaxErrors silencieuses sur 6 lignes. Corrigé en remplaçant par des guillemets doubles `"..."` :
+
+| Ligne | Handler | Preheader corrigé |
+|-------|---------|-------------------|
+| 1285 | `handleCronEssaiYogaJ1` (Y-J1a) | `"Essai yoga termine - rejoindre les cours reguliers de yoga avec Florencia Garcia"` |
+| 4330 | `handleCronEssaiRappelJ7` (E4) | `"Rappel essai tango dans 7 jours - confirmez votre presence en un clic"` |
+| 4473 | `handleNotifyEssaiValide` (E15) | `"Essai tango confirme - nous vous attendons avec impatience sur la piste"` |
+| 4556 | `handleCronEssaiYogaRappelJ3` (Y3) | `"Rappel essai yoga dans 3 jours - confirmez votre presence en un clic"` |
+| 4619 | `handleNotifyEssaiYogaModifie` (Y-mod) | `"Essai yoga reprogramme - retrouvez les nouveaux details ci-dessous"` |
+| 4768 | `handleCronEspaceEleveActivation` (P1) | `"Votre espace eleve est pret - connectez-vous et installez l application"` |
+
+**Règle** : les preheaders JS doivent toujours être entre guillemets doubles `"..."` — jamais entre guillemets simples si le texte peut contenir des apostrophes françaises.
 
