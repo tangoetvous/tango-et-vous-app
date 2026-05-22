@@ -801,12 +801,14 @@ Lifecycle des statuts dans `inscriptions_cours` pour les nouvelles inscriptions 
 
 **Durée de validité**
 - **3 mois** à compter du **premier cours utilisé** (pas de la date d'achat)
-- **Bonus coupures** : pour chaque semaine sans cours (vacances, jours fériés) dans ces 3 mois → expiration repoussée d'1 semaine
-- **Bonus inter-saison** : si la carte court sur l'été (fin juin → début septembre), toutes les semaines estivales sans cours sont aussi comptées
-- Formule : `expiration = datePremierCours + 3 mois + (nb semaines sans cours × 7 jours)`
+- **Algorithme itératif A+B+C** (boucle `while (cur <= fin)`, `fin` s'étend dynamiquement) :
+  - A = fenêtre 3 mois depuis `datePremierCours`
+  - B = gaps (semaines sans cours) dans A → `fin` += 7j par gap
+  - C = gaps **nouveaux** dans A+B (ex : Toussaint qui tombe dans l'extension) → `fin` += 7j à nouveau
+- **Vacances, jours fériés, été** : tous couverts automatiquement — pas de liste hardcodée
 - Calcul : `calcExpiration(datePremierCours, ville)` dans `admin.html` et `_calcExpirationSb()` dans `tev-supabase.js`
-- **Source des dates** : `localStorage.tev_cours_dates.paris` / `.vincennes` (synchronisé depuis Supabase via Paramètres → Tango Paris/Vincennes → Dates). **Zéro hardcodé** — `SANS_COURS_*` supprimés.
-- **Détection automatique des semaines sans cours** : pour chaque semaine hebdomadaire entre `datePremierCours` et `+3 mois`, si la date est absente de `tev_cours_dates` → +7j. Seules les semaines dans la plage des dates saisies sont vérifiées (`firstStored ≤ iso ≤ lastStored`).
+- **Source des dates** : `localStorage.tev_cours_dates.paris` / `.vincennes` — synchronisé depuis Supabase via `chargerParamsRemote()` (admin) ou `tevRefreshCoursDates()` (espace élève). **Zéro hardcodé** — `SANS_COURS_*` supprimés.
+- **Saison courante ET saison suivante** doivent être saisies dans Paramètres pour que l'été soit compté précisément en semaines sans cours (juillet-août = après `lastStored` mais avant `nextSeasonStartISO = 1er sept`).
 - **Bug timezone corrigé** : `T00:00:00` → `T12:00:00` partout dans les deux fonctions (évite le glissement UTC/heure locale qui donnait -1 jour).
 - ⚠️ **Les dates doivent être saisies depuis le début de la saison** : si une carte a commencé avant la première date dans Paramètres, les semaines sans cours antérieures ne seront pas comptées.
 - ⚠️ **Ne jamais remettre de listes `SANS_COURS_*` hardcodées** : le système détecte les gaps automatiquement.
@@ -3250,4 +3252,73 @@ nextSeasonStartISO = yr + '-09-01';
 **Motif** : sans cette mention, l'élève pouvait croire que l'email était un accusé de réception d'un pointage qu'il avait lui-même fait (via l'espace élève), alors que CP-E est envoyé uniquement après un pointage admin.
 
 **Preview mis à jour** : `preview-emails-a-valider-v1.html` section CP-E — bandeau, corps, et date d'expiration exemple corrigés (août → octobre).
+
+## Session 2026-05-22 (suite 5) — tevRefreshCoursDates + règles calcExpiration complètes
+
+### ✅ Algorithme calcExpiration — description complète (A+B+C itératif)
+
+L'algorithme est **itératif** : la boucle `while (cur <= fin)` étend `fin` dynamiquement à chaque gap trouvé, ce qui couvre automatiquement les vacances dans l'extension estivale (step C).
+
+**Étapes conceptuelles :**
+1. **A** = 3 mois depuis `datePremierCours` → définit une première fenêtre
+2. **B** = semaines sans cours dans A → `fin` avancé de 7j par gap → nouvelle fenêtre A+B
+3. **C** = semaines sans cours **nouvelles** dans A+B (celles hors de A) → `fin` avancé à nouveau
+
+Exemple (premier cours 11 juin) :
+- A : 11 juin → 11 sept → 0 gap en été car juillet-août = après `lastStored` mais avant `nextSeasonStartISO` → `fin` = 11 sept
+- B : gaps en sept (Toussaint pas encore dans la fenêtre) → `fin` = ~13 nov
+- C : Toussaint 29 oct désormais dans la fenêtre → gap → `fin` = **20 nov** ✅ (pas 13 nov)
+
+**Sources de données (aucune valeur hardcodée) :**
+- `localStorage.tev_cours_dates.paris` / `.vincennes` — mis à jour depuis Supabase via `chargerParamsRemote()` (admin) ou `tevRefreshCoursDates()` (espace élève)
+- Contient toutes les dates de toutes les saisons saisies dans Paramètres → Tango Paris/Vincennes → Dates
+- Saison courante **ET** saison suivante doivent être saisies pour que l'été soit correctement compté
+
+**Borne haute de la boucle :**
+```javascript
+(iso <= lastStored || (nextSeasonStartISO && iso < nextSeasonStartISO))
+// lastStored = dernière date de cours saisie (ex : juin 2027)
+// nextSeasonStartISO = '2027-09-01' — calculé depuis lastStored
+// → juillet-août = après lastStored MAIS avant nextSeasonStartISO → comptés comme gaps ✅
+// → après le 1er sept = nouvelle saison → non comptés ✅
+```
+
+**⚠️ Règle absolue** : ne jamais remettre `iso <= lastStored` seul — toujours conserver la condition `nextSeasonStartISO`. Ne jamais remettre de listes `SANS_COURS_*` hardcodées.
+
+### ✅ tevRefreshCoursDates() — fix calcExpiration sur l'espace élève
+
+**Problème** : `_calcExpirationSb()` lit `localStorage.tev_cours_dates` qui est absent sur le téléphone de l'élève (jamais ouvert l'admin) → `coursArr` vide → expiration = 3 mois plat, sans bonus vacances ni été.
+
+**Fix** :
+- Nouvelle fonction `tevRefreshCoursDates()` dans `tev-supabase.js` : fetch Supabase `parametres` clé `tev_cours_dates` → écrit dans localStorage. Protégée par le flag `_coursDatesReady` (un seul fetch par session navigateur).
+- Appel **gardé** dans `tevPointerCours()` : avant `_calcExpirationSb()`, vérifie si `tev_cours_dates` contient des dates pour la ville de l'élève — si vide → `await tevRefreshCoursDates()`.
+- Appel **fire-and-forget** dans `loadEleveData()` (index.html) au login : pré-charge les dates en parallèle de `chargerMilongasEleve()`.
+
+```javascript
+// Dans tev-supabase.js (entre tevUnsubscribe et UTILITAIRES)
+let _coursDatesReady = false;
+async function tevRefreshCoursDates() {
+  if (_coursDatesReady) return;
+  _coursDatesReady = true;
+  try {
+    const { data } = await _tev.from('parametres').select('valeur').eq('cle','tev_cours_dates').single();
+    if (data?.valeur) {
+      const val = typeof data.valeur === 'string' ? JSON.parse(data.valeur) : data.valeur;
+      if (val && (val.paris || val.vincennes))
+        localStorage.setItem('tev_cours_dates', JSON.stringify(Object.assign({}, val, {modifie: new Date().toISOString().slice(0,10)})));
+    }
+  } catch(e) { _coursDatesReady = false; }
+}
+```
+
+### Règle — emails automatiques et date d'expiration
+
+Les handlers dans `worker.js` **ne recalculent pas** l'expiration. Ils utilisent soit :
+1. **POST body** (valeur calculée par `calcExpiration()` dans admin.html avant l'appel fetch) : C1, C-pay, CP-A, CP-E
+2. **`eleves.carte_expiration` en DB** (valeur stockée lors du dernier pointage/modification) : CX (cron carte expirée)
+
+→ Les emails sont corrects si et seulement si la valeur en DB a été calculée avec le bon algorithme.
+→ **Cartes existantes** dont l'expiration a été calculée avant les corrections : valeur fausse jusqu'à la prochaine sauvegarde manuelle depuis Cartes 10 → Détails. À corriger via ✏️ au cas par cas.
+→ **Nouvelles cartes** (premier cours pointé après le 2026-05-22) : toujours calculées correctement.
+
 
