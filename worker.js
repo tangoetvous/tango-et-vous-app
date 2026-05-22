@@ -5102,29 +5102,61 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
 
-  const adminEmail  = 'tangoetvous@gmail.com';
-  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
-  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
-  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
-  const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
-
   const { email, prenom, nom, tel, role, ville, niveau, saison, partenaire, emailPartenaire, livretUrl, assoConnectUrl = '#' } = body;
   if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+
+  // Fetch params from Supabase (horaires, adresse, prochain cours)
+  let horaires = {}, adresse = {}, nextDateLabel = '';
+  try {
+    const paramKey = `tev_params_${ville}_${saison}`;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.${encodeURIComponent(paramKey)}&select=valeur`, {
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }
+    });
+    const d = await r.json();
+    const val = (d[0] && d[0].valeur) || {};
+    horaires = val.horaires || {};
+    adresse = val.adresse || {};
+  } catch(e) {}
+  try {
+    const r2 = await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_cours_dates&select=valeur`, {
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }
+    });
+    const d2 = await r2.json();
+    const val2 = (d2[0] && d2[0].valeur) || {};
+    const today = new Date().toISOString().slice(0, 10);
+    const dates = ((val2[ville] || []).filter(d => d >= today));
+    if (dates.length) {
+      const nd = new Date(dates[0] + 'T12:00:00');
+      const JOURS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+      const MOIS  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+      nextDateLabel = `${JOURS[nd.getDay()]} ${nd.getDate()} ${MOIS[nd.getMonth()]} ${nd.getFullYear()}`;
+    }
+  } catch(e) {}
+
   const prenomAff   = _esc(prenom || '');
   const niveauLabel = niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
   const villeLabel  = ville === 'paris' ? 'Paris' : 'Vincennes';
   const coursLabel  = `${villeLabel} — ${niveauLabel}`;
   const roleColor   = role === 'guideur' ? '#1565c0' : '#c2185b';
   const roleLabel   = role === 'guideur' ? 'Guideur·se' : 'Guidé·e';
+  const horaire     = _esc(horaires[niveau] || '');
+  const nomLieu     = _esc(adresse.nom || '');
+  const rueLieu     = _esc(adresse.rue || '');
+  const transport   = _esc(adresse.transport || '');
+  const gps         = adresse.gps || '';
+  const lieuHref    = gps ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(gps)}` : '';
 
-  const coursBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
-    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">VOTRE COURS</div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <tr><td style="padding:5px 8px;color:#888;">Cours</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${coursLabel}</td></tr>
-      <tr><td style="padding:5px 8px;color:#888;">Saison</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(saison||'')}</td></tr>
-      <tr><td style="padding:5px 8px;color:#888;">Rôle</td><td style="padding:5px 8px;text-align:right;"><span style="background:${roleColor};color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">${roleLabel}</span></td></tr>
-      <tr><td style="padding:5px 8px;color:#888;">Statut</td><td style="padding:5px 8px;text-align:right;"><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">✓ Validé·e</span></td></tr>
-      ${partenaire ? `<tr><td style="padding:5px 8px;color:#888;">Partenaire</td><td style="padding:5px 8px;font-weight:700;color:#111;text-align:right;">${_esc(partenaire)}</td></tr>` : ''}
+  const lieuCell = nomLieu ? `${lieuHref ? `<a href="${_esc(lieuHref)}" style="color:#111;text-decoration:none;font-weight:700;">${nomLieu}</a>` : `<strong>${nomLieu}</strong>`}${(rueLieu || transport) ? `<br/><span style="font-size:13px;font-weight:400;color:#444;">${rueLieu}${rueLieu && transport ? ' · ' : ''}${transport}</span>` : ''}` : '';
+
+  const coursBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE INSCRIPTION CONFIRMÉE</div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr><td style="padding:7px 0;color:#555;width:35%;vertical-align:top;">🎓 Cours</td><td style="color:#111;font-weight:700;">${coursLabel}</td></tr>
+      ${nextDateLabel ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">📅 Prochain cours</td><td style="color:#111;font-weight:700;">${nextDateLabel}</td></tr>` : ''}
+      ${horaire ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">🕐 Heure</td><td style="color:#111;font-weight:700;">${horaire}</td></tr>` : ''}
+      ${lieuCell ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">📍 Lieu</td><td>${lieuCell}</td></tr>` : ''}
+      <tr><td style="padding:7px 0;color:#555;vertical-align:top;">🎯 Votre rôle</td><td><span style="display:inline-block;background:${roleColor};color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">${roleLabel}</span></td></tr>
+      ${partenaire ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">💃 Partenaire</td><td style="color:#111;font-weight:700;">${_esc(partenaire)}</td></tr>` : ''}
     </table>
   </div>`;
 
@@ -5133,31 +5165,46 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
     <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Les cours à Vincennes ont lieu à l'Espace Sorano. Une adhésion à l'Espace Sorano est demandée. Vous recevrez prochainement les informations pour la régler.</p>
   </div>` : '';
 
-  const quelquesPrec = `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-    <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 10px;">Quelques précisions</p>
-    <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 8px;">Pour finaliser votre inscription, rendez-vous sur AssoConnect pour régler la cotisation et le premier paiement.</p>
-    <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Modes de paiement acceptés : CB (1× ou 3×), espèces, chèque, virement.</p>
+  const quelquesPrec = `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#B8962E;font-weight:700;margin-bottom:14px;">Quelques précisions pour votre inscription</div>
+    <div style="font-size:14px;color:#333;line-height:1.9;">
+      <p style="margin:0 0 14px;background:#fff0f0;border:1px solid #ffcccc;border-radius:6px;padding:12px 14px;">⚠️ Si vous vous inscrivez en couple sur AssoConnect, <strong style="color:#c62828;">vous devez impérativement renseigner une adresse email différente pour vous et pour votre partenaire</strong> dans le formulaire. Un seul email pour les deux ne fonctionnera pas.</p>
+      <p style="margin:0 0 12px;">Une fois sur Assoconnect, pour remplir le formulaire, cliquez sur le bouton jaune <strong>"J'adhère"</strong>.</p>
+      <ul style="margin:0 0 12px;padding-left:20px;line-height:2.0;">
+        <li><strong>Carte bleue (1× ou 3×)</strong> — validation 3D Secure par SMS ou appli bancaire.</li>
+        <li><strong>Espèces</strong> — inscrivez-vous quand même en ligne en précisant que vous réglez en espèces.</li>
+        <li><strong>Chèque</strong> — possible si nécessaire, contactez-nous.</li>
+      </ul>
+      <p style="margin:0;font-size:13px;color:#888;">⚠️ Notez <strong>0 €</strong> quand AssoConnect vous propose un pourboire.</p>
+    </div>
   </div>`;
 
-  const livretBtn = livretUrl ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_esc(livretUrl)}" style="display:inline-block;background:#fff;color:#1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;border:2px solid #1565c0;">📖 Télécharger le livret ${niveauLabel} ${villeLabel}</a></div>` : '';
+  const livretBtn = livretUrl ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_esc(livretUrl)}" style="display:inline-block;background:#fff;color:#1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #1565c0;">📖 Télécharger le livret ${niveauLabel} ${villeLabel}</a></div>` : '';
+
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   const htmlEleve = wrap(`${headerEleve}
-    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre demande d'inscription est validée</span></div>
-    <div style="padding:28px 24px;">
-      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Nous avons le plaisir de vous informer que votre demande d'inscription est validée. Pour finaliser votre inscription, veuillez vous rendre sur AssoConnect.</p>
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bonne nouvelle — votre place est confirmée !</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 14px;">Votre demande d'inscription est confirmée ! Un·e partenaire guideur·se vient de rejoindre votre cours — votre place est désormais réservée.</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Pour finaliser votre inscription, il vous reste à procéder au paiement via AssoConnect ci-dessous.</p>
       ${coursBox}
       ${soranoBlock}
-      <div style="text-align:center;margin:0 0 22px;"><a href="${_esc(assoConnectUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Finaliser mon inscription sur AssoConnect →</a></div>
+      <div style="text-align:center;margin:0 0 10px;"><a href="${_esc(assoConnectUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">🔗 INSCRIPTION AUX COURS DE TANGO ${_esc(saison||'')}</a></div>
+      <p style="font-size:12px;color:#888;text-align:center;margin:0 0 24px;">Votre place sera définitivement réservée une fois l'inscription et le premier paiement effectués.</p>
       ${quelquesPrec}
       ${livretBtn}
       ${signEleve}
-    </div>${footer}`, 'Votre inscription tango est validee - finalisez votre dossier sur AssoConnect');
+    </div>${footer}`, "Bonne nouvelle - votre place aux cours de tango est confirmee, finalisez votre inscription");
   try {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `✓ Votre demande d'inscription au tango est validée — Tango & Vous`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' }, to: [{ email: String(email) }], subject: `✓ Bonne nouvelle — votre place aux cours de tango est confirmée`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-inscription-cours-validee] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
