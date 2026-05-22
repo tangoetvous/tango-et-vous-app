@@ -73,13 +73,25 @@
 <h2>I03 — Admin valide paiement → inscrit</h2>
 <div class="route">POST /api/notify/inscription-cours-payee (JWT admin)</div>
 <div class="block">
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, livretUrl?, role }</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre inscription au tango est confirmée — Tango &amp; Vous</code></div>
-  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription tango est confirmee - a bientot pour votre premier cours"</span></div>
-  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre inscription est confirmée, à bientôt !"</div>
-  <div class="field"><span class="label">Cours box :</span> Cours · Saison · Statut ✓ Inscrit·e</div>
-  <div class="field"><span class="label">Bouton :</span> Or "Accéder à mon espace élève →" → app.tangoetvous.fr</div>
-  <div class="field"><span class="label">Livret :</span> <span class="cond">si livretUrl</span></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, saison, coursInfos: [{ville, niveau, role}] }</span><br/>
+    <span style="font-size:12px;color:#888;">Backward compat : <code>ville, niveau, role</code> au niveau racine si mono-cours (coursInfos absent ou vide)</span></div>
+  <div class="field"><span class="label">Sujet (1 cours) :</span> <code>✓ Votre inscription au tango est confirmée — à bientôt !</code></div>
+  <div class="field"><span class="label">Sujet (2 cours) :</span> <code>✓ Vos inscriptions au tango sont confirmées — à bientôt !</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Inscription confirmee ${ville1 label} ${niveau1 label} [+ ${ville2} ${niveau2}] - nous vous attendons avec impatience"</span><br/>
+    <span class="src">Dynamique — liste les cours inscrits, ASCII sans accents · calculé dans le handler depuis <code>coursInfos</code></span></div>
+  <div class="field"><span class="label">Bandeau :</span> Vert ✓ — "Inscriptions confirmées" au pluriel si 2 cours</div>
+  <div class="field"><span class="label">Intro :</span> "Votre inscription au cours de <strong>${coursResume}</strong> est confirmée..."<br/>
+    <span class="src">coursResume = <code>coursInfos.map(ci =&gt; villeLabel + ' — ' + niveauLabel).join(' &amp; ')</code></span></div>
+  <div class="field"><span class="label">Cours boxes :</span> <span class="var">coursInfos.map()</span> → une <code>div.cours-box</code> par cours<br/>
+    Titre : <code>"VOTRE INSCRIPTION CONFIRMÉE"</code> (1 cours) ou <code>"COURS 1 — PARIS DÉBUTANTS"</code> (2 cours)<br/>
+    Par cours : Cours · Prochain cours · Heure · Lieu · Rôle (badge) · ✓ Inscrit·e<br/>
+    <span class="src">Horaires : <code>tev_params_${ville}_${saison}.horaires[niveau]</code> (Supabase → parametres)</span><br/>
+    <span class="src">Adresse : <code>tev_params_${ville}_${saison}.adresse</code> (Supabase → parametres)</span><br/>
+    <span class="src">Prochain cours : première date &gt;= aujourd'hui dans <code>tev_cours_dates.${ville}</code> (Supabase → parametres)</span></div>
+  <div class="field"><span class="label">PWA :</span> Bloc violet iPhone/Android → <code>app.tangoetvous.fr</code></div>
+  <div class="field"><span class="label">Livrets :</span> Un bouton par (ville, niveau) distinct dans <code>coursInfos</code><br/>
+    <span class="src">URL : <code>tev_params_${ville}_${saison}.livret.url_deb</code> ou <code>.url_int</code> selon niveau (Supabase → parametres)</span><br/>
+    <span class="cond">Bouton omis si URL vide</span></div>
   <div class="field"><span class="label">J+7 :</span> Déclenche le cron P1 (espace élève) 7 jours plus tard</div>
 </div>
 
