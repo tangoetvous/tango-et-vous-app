@@ -244,6 +244,7 @@ async function tevGetAdminData() {
     { data: absencesJour },
     { data: demandesDevisRaw },
     { data: devisListRaw },
+    { data: notificationsRaw },
   ] = await Promise.all([
     _tev.from('eleves').select('*').order('nom'),
     _tev.from('presences').select('*').order('date', { ascending: false }),
@@ -258,6 +259,7 @@ async function tevGetAdminData() {
     _tev.from('absences_jour').select('*'),
     _tev.from('demandes_devis').select('*').order('created_at', { ascending: false }),
     _tev.from('devis').select('*').order('created_at', { ascending: false }),
+    _tev.from('notifications').select('*').order('created_at', { ascending: false }).limit(100),
   ]);
 
   // Construire le format attendu par admin.html (cartes)
@@ -353,6 +355,7 @@ async function tevGetAdminData() {
     absencesJour:      absencesJour != null ? absencesJour.map(a => ({ date: a.date, email: a.email })) : null,
     demandesDevis:     demandesDevisRaw  || [],
     devisList:         devisListRaw      || [],
+    notifications:     (notificationsRaw || []).map(n => ({ ...n, date: n.created_at })),
     stats: {
       total:     (eleves || []).length,
       actifs:    (eleves || []).filter(e => e.statut_eleve === 'Actif').length,
