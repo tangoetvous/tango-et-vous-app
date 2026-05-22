@@ -12385,7 +12385,7 @@ window.soumettreInscriptionDirecte = function(force) {
       }));
     }).catch(function(){});
     // inscriptions_cours INSERT — navigate to list after both ops complete
-    TEV.client.from('inscriptions_cours').insert(insRows).then(function(r){
+    Promise.resolve(TEV.client.from('inscriptions_cours').insert(insRows)).then(function(r){
       if(r && r.error){
         afficherToast('⚠️ Erreur INSERT: '+(r.error.message||r.error.code||JSON.stringify(r.error)));
         console.error('ins_dir inscriptions_cours:', r.error);
@@ -12399,6 +12399,9 @@ window.soumettreInscriptionDirecte = function(force) {
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
         body: JSON.stringify({email:email, prenom:prenom, nom:nom, saison:sai, coursInfos:coursInfosDI}),
       })).catch(function(){});
+      _gotoTab();
+    }).catch(function(ex){
+      console.error('soumettreInscriptionDirecte insert:', ex);
       _gotoTab();
     });
   } else {
