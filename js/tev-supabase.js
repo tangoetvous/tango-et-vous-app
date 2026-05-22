@@ -640,13 +640,22 @@ function _calcExpirationSb(dateStr, ville) {
   const firstStored = coursArr[0] || '';
   const lastStored  = coursArr[coursArr.length - 1] || '';
 
+  // Date de début de la prochaine saison (1er septembre après lastStored).
+  let nextSeasonStartISO = '';
+  if (lastStored) {
+    const ls = new Date(lastStored + 'T12:00:00');
+    const yr = ls.getMonth() >= 8 ? ls.getFullYear() + 1 : ls.getFullYear();
+    nextSeasonStartISO = yr + '-09-01';
+  }
+
   // Algorithme itératif : chaque semaine sans cours repousse fin d'1 semaine.
-  // Gère vacances intra-saison ET coupure estivale sans double-comptage.
+  // Couvre les vacances intra-saison ET la coupure estivale (juillet-août).
   const cur = new Date(debut.getTime());
   cur.setDate(cur.getDate() + 7);
   while (cur <= fin) {
     const iso = cur.toISOString().slice(0, 10);
-    if (firstStored && iso >= firstStored && iso <= lastStored && !coursSet[iso]) {
+    if (firstStored && iso >= firstStored && !coursSet[iso] &&
+        (iso <= lastStored || (nextSeasonStartISO && iso < nextSeasonStartISO))) {
       fin.setDate(fin.getDate() + 7);
     }
     cur.setDate(cur.getDate() + 7);

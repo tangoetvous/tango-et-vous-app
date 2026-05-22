@@ -1796,9 +1796,10 @@ async function handleCronCartePonteeJ1(request, env) {
     const preheader = `Votre presence au cours a ete enregistree - retrouvez le recap de votre carte ci-dessous`;
     const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div><div style="max-width:600px;margin:0 auto;background:#fff;">
   ${headerEleve}
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Présence enregistrée pour votre carte</span></div>
+  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre présence a été enregistrée par votre professeur</span></div>
   <div style="padding:28px 24px;">
-    <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+    <p style="font-size:15px;color:#333;margin:0 0 10px;">Bonjour ${prenomAff},</p>
+    <p style="font-size:15px;color:#333;margin:0 0 20px;">Votre professeur a enregistré votre présence au cours du ${dateLabel}.</p>
     <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE CARTE DE 10 COURS</div>
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -1823,7 +1824,7 @@ async function handleCronCartePonteeJ1(request, env) {
         body: JSON.stringify({
           sender: { name: 'Tango & Vous', email: adminEmail },
           to: [{ email: String(emailAddr) }],
-          subject: `✓ Présence enregistrée le ${dateLabel} — Votre carte Tango & Vous`,
+          subject: `✓ Présence enregistrée le ${dateLabel} — Carte Tango & Vous`,
           htmlContent: html,
         }),
       });

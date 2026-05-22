@@ -3201,3 +3201,52 @@ Pour tout nouvel email élève dans un handler :
 4. **Jamais d'accents** dans les preheaders (ASCII uniquement — compatibilité maximale)
 5. **C6 exception** : ne pas ajouter de preheader à cet email
 
+## Session 2026-05-22 (suite 4) — Fix calcExpiration été + CP-E mention professeur
+
+### ✅ Fix `calcExpiration` et `_calcExpirationSb` — semaines été correctement comptées
+
+**Problème** : la condition `iso <= lastStored` empêchait de compter juillet-août comme semaines sans cours. `lastStored` = dernière date de cours de juin → toutes les semaines de juillet-août (après `lastStored`) étaient exclues du bonus → une carte démarrant en mai expirait vers mi-septembre au lieu de mi-octobre.
+
+**Root cause** : boucle hebdomadaire cherchait les gaps **uniquement** dans `[firstStored, lastStored]` — jamais au-delà. Or, juillet et août sont après `lastStored` (dernier cours de juin) mais avant le début de la prochaine saison (1er septembre).
+
+**Fix** : ajout de `nextSeasonStartISO` (1er septembre de l'année qui suit `lastStored`) comme borne haute. Nouvelle condition :
+```javascript
+(iso <= lastStored || (nextSeasonStartISO && iso < nextSeasonStartISO))
+```
+Cela couvre trois cas :
+- **Gaps intra-saison** (`iso <= lastStored`) : vacances scolaires, jours fériés — comptés comme avant
+- **Été** (`lastStored < iso < 1er sept`) : juillet-août — **désormais comptés** (bonus ~10 semaines)
+- **Saison suivante** (`iso >= 1er sept`) : **non comptés**, évite l'extension infinie
+
+**Calcul `nextSeasonStartISO`** :
+```javascript
+var ls = new Date(lastStored + 'T12:00:00');
+var yr = ls.getMonth() >= 8 ? ls.getFullYear() + 1 : ls.getFullYear();
+nextSeasonStartISO = yr + '-09-01';
+// Exemple : lastStored = 2026-06-25 → mois=5 (< 8) → yr=2026 → nextSeasonStartISO='2026-09-01'
+```
+
+**Résultat attendu** pour une carte démarrant le 22 mai :
+- 3 mois de base : 22 août
+- Gaps intra-saison (vacances de Pentecôte ~1 sem + autres) : +quelques semaines
+- Été juillet-août (~10 semaines sans cours) : +10 semaines
+- Expiration finale : ~22 octobre ✅ (au lieu de 18 septembre ❌)
+
+**Fix appliqué dans les deux fonctions** :
+- `calcExpiration(datePremierCours, ville)` dans `admin.html` (ligne ~613) — `var` syntax
+- `_calcExpirationSb(dateStr, ville)` dans `js/tev-supabase.js` (ligne ~626) — `const/let` syntax
+
+⚠️ **Règle à retenir** : ne jamais remettre `iso <= lastStored` seul comme borne haute. Toujours utiliser `nextSeasonStartISO` comme borne haute alternative.
+
+### ✅ CP-E email — mention explicite du professeur
+
+**Changement** : l'email "Cours pointé — Élève" (handler `handleCronCartePonteeJ1` dans worker.js) précise désormais que c'est le professeur qui a enregistré la présence :
+
+- **Sujet** : `✓ Présence enregistrée le ${dateLabel} — Carte Tango & Vous` (inchangé — le "Tango & Vous" suffit)
+- **Bandeau** : `✓ Présence enregistrée le ${dateLabel} — Carte Tango & Vous` → `✓ Votre présence a été enregistrée par votre professeur`
+- **Corps** : nouveau paragraphe `Votre professeur a enregistré votre présence au cours du ${dateLabel}.` avant le récap de carte
+
+**Motif** : sans cette mention, l'élève pouvait croire que l'email était un accusé de réception d'un pointage qu'il avait lui-même fait (via l'espace élève), alors que CP-E est envoyé uniquement après un pointage admin.
+
+**Preview mis à jour** : `preview-emails-a-valider-v1.html` section CP-E — bandeau, corps, et date d'expiration exemple corrigés (août → octobre).
+
