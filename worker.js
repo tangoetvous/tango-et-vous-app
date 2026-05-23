@@ -3426,7 +3426,7 @@ async function handleNotifyInscriptionEssai(request, env) {
   if (!env.BREVO_API_KEY) return corsResponse({ ok: true, sent: 0, skipped: true }, 200, {}, request);
 
   const { prenom, nom, email, tel, role, ville, niveau, dateIso, statut, enCouple,
-          partPrenom, partNom, partEmail, partRole, gratuit } = body;
+          partPrenom, partNom, partEmail, partRole, gratuit, inscId: inscIdFromBody } = body;
 
   const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
@@ -3489,8 +3489,8 @@ async function handleNotifyInscriptionEssai(request, env) {
     return '';
   }
 
-  let inscId = null;
-  if (email) {
+  let inscId = inscIdFromBody || null;
+  if (!inscId && email) {
     try {
       const ir = await fetch(
         `${SUPABASE_URL}/rest/v1/inscriptions_essai?email=eq.${encodeURIComponent(email)}&date_essai=eq.${dateIso}&type=eq.tango&select=id&order=id.desc&limit=1`,
