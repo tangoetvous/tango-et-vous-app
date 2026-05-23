@@ -3462,19 +3462,26 @@ async function handleNotifyInscriptionEssai(request, env) {
   const sai = mo >= 9 ? `${y}-${y+1}` : `${y-1}-${y}`;
 
   let villeParams = {};
+  let livrets = {};
   try {
-    const pr = await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_params_${ville}_${sai}&select=valeur`, {
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` }
-    });
+    const pr = await fetch(
+      `${SUPABASE_URL}/rest/v1/parametres?cle=in.("tev_params_${ville}_${sai}","tev_livrets")&select=cle,valeur`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+    );
     if (pr.ok) {
       const rows = await pr.json();
-      if (rows[0]?.valeur) villeParams = typeof rows[0].valeur === 'string' ? JSON.parse(rows[0].valeur) : rows[0].valeur;
+      for (const row of rows) {
+        const val = typeof row.valeur === 'string' ? JSON.parse(row.valeur) : row.valeur;
+        if (row.cle === `tev_params_${ville}_${sai}`) villeParams = val || {};
+        else if (row.cle === 'tev_livrets') livrets = val || {};
+      }
     }
   } catch {}
   const adresse = villeParams.adresse || {};
   const horaires = villeParams.horaires || {};
   const livret = villeParams.livret || {};
-  const livretUrl = niveau === 'intermediaire' ? (livret.url_int || '') : (livret.url_deb || '');
+  const niveauKey = niveau === 'intermediaire' ? 'int' : 'deb';
+  const livretUrl = livret[`url_${niveauKey}`] || livrets[`${ville}_${niveauKey}`] || '';
   const livretLabel = nivLabel(niveau) + ' ' + villeLabel(ville);
   const journeeAsso = villeParams.journee_asso || {};
   const jaDate = journeeAsso.date || '';
