@@ -4587,13 +4587,23 @@ async function handleNotifyEssaiValide(request, env) {
     ? `<span style="background:#c2185b;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">Guidée</span>`
     : `<span style="background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">Guideur·se</span>`;
 
-  // HMAC token for action links
+  // HMAC token for action links — id from body, fallback DB lookup by email+date
+  let _inscId = id || null;
+  if (!_inscId && email && dateEssai) {
+    try {
+      const lr = await fetch(
+        `${SUPABASE_URL}/rest/v1/inscriptions_essai?email=eq.${encodeURIComponent(email)}&date_essai=eq.${dateEssai}&type=eq.tango&select=id&order=id.desc&limit=1`,
+        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
+      );
+      if (lr.ok) { const rows = await lr.json(); if (rows[0]) _inscId = rows[0].id; }
+    } catch {}
+  }
   let confirmUrl = `mailto:${adminEmail}`;
   let annulerUrl = `mailto:${adminEmail}?subject=${encodeURIComponent('Annulation essai tango ' + prenom + ' ' + nom)}`;
-  if (id) {
-    const tk = (await _calHmac(`${id}:${(email||'').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
-    confirmUrl = `${APP_URL}/api/essai/confirmer?id=${id}&token=${tk}`;
-    annulerUrl = `${APP_URL}/api/essai/annuler?id=${id}&token=${tk}`;
+  if (_inscId) {
+    const tk = (await _calHmac(`${_inscId}:${(email||'').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
+    confirmUrl = `${APP_URL}/api/essai/confirmer?id=${_inscId}&token=${tk}`;
+    annulerUrl = `${APP_URL}/api/essai/annuler?id=${_inscId}&token=${tk}`;
   }
 
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
