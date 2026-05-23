@@ -3816,8 +3816,17 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   const htmlPage = (icon, titre, couleur, msg) => `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titre}</title></head><body style="margin:0;padding:40px 20px;background:#f5f5f5;font-family:Arial,sans-serif;text-align:center;"><div style="max-width:500px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 2px 10px rgba(0,0,0,.1)"><div style="font-size:48px;margin-bottom:16px;">${icon}</div><h2 style="color:${couleur};margin:0 0 12px;">${titre}</h2><p style="color:#555;margin:0 0 20px;">${msg}</p><p style="margin-top:24px;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;font-weight:700;text-decoration:none;">www.tangoetvous.com</a></p></div></body></html>`;
 
   if (!result.ok) {
-    if (result.error === 'introuvable') return new Response('Inscription introuvable', { status: 404, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
     if (result.error === 'token') return new Response('Lien invalide ou expiré', { status: 403, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+    if (result.error === 'introuvable') {
+      // La fiche a déjà été supprimée (double-clic, ou admin a supprimé manuellement).
+      // Confirmer : 404. Annuler : page "Déjà annulé". Reporter : redirige quand même vers le formulaire.
+      if (action === 'reporter') return Response.redirect('https://app.tangoetvous.fr/cours-essai.html', 302);
+      if (action === 'annuler') {
+        return new Response(htmlPage('ℹ️', 'Déjà annulé', '#e65100', `Cette inscription était déjà annulée.`),
+          { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+      }
+      return new Response('Inscription introuvable', { status: 404, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+    }
     return new Response('Erreur : ' + (result.error || 'inconnue'), { status: 400, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
   }
 
