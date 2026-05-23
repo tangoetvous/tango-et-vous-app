@@ -3792,12 +3792,16 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   // RLS sur inscriptions_essai bloque le SELECT/UPDATE pour anon.
   // → appel d'une fonction SECURITY DEFINER qui bypass la RLS de manière contrôlée
   //   (vérifie le HMAC server-side avant d'agir).
+  const rpcBody = JSON.stringify({ p_id: parseInt(id, 10), p_token: token, p_action: action, p_secret: SUPABASE_ANON });
   const rpcR = await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirmer_annuler_essai`, {
     method: 'POST',
     headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_id: parseInt(id, 10), p_token: token, p_action: action, p_secret: SUPABASE_ANON })
+    body: rpcBody
   });
-  if (!rpcR.ok) return new Response('Erreur serveur', { status: 500, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  if (!rpcR.ok) {
+    const errBody = await rpcR.text();
+    return new Response(`<pre style="padding:20px;font:14px monospace;white-space:pre-wrap;">Erreur serveur RPC ${rpcR.status}\n\nbody envoyé: ${rpcBody}\n\nréponse: ${errBody}</pre>`, { status: 500, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  }
   const result = await rpcR.json();
 
   const htmlPage = (icon, titre, couleur, msg) => `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titre}</title></head><body style="margin:0;padding:40px 20px;background:#f5f5f5;font-family:Arial,sans-serif;text-align:center;"><div style="max-width:500px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 2px 10px rgba(0,0,0,.1)"><div style="font-size:48px;margin-bottom:16px;">${icon}</div><h2 style="color:${couleur};margin:0 0 12px;">${titre}</h2><p style="color:#555;margin:0 0 20px;">${msg}</p><p style="margin-top:24px;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;font-weight:700;text-decoration:none;">www.tangoetvous.com</a></p></div></body></html>`;
