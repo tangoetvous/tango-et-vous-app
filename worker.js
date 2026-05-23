@@ -3789,58 +3789,47 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   const token = url.searchParams.get('token');
   if (!id || !token) return new Response('Lien invalide', { status: 400, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 
-  // RLS sur inscriptions_essai : SELECT USING (is_admin() OR email = auth.email())
-  // → la clé anon sans JWT retourne 0 lignes → utiliser la service key pour bypasser
-  const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  const _hasSvc = !!env.SUPABASE_SERVICE_KEY;
-  const queryUrl = `${SUPABASE_URL}/rest/v1/inscriptions_essai?id=eq.${encodeURIComponent(id)}&select=id,prenom,nom,email,statut,date_essai,ville,niveau`;
-  const ir = await fetch(queryUrl, { headers: { 'apikey': _svcKey, 'Authorization': `Bearer ${_svcKey}` } });
-  if (!ir.ok) {
-    const errBody = await ir.text();
-    return new Response(`<pre style="padding:20px;font:14px monospace;">Erreur serveur ${ir.status}\nhasServiceKey: ${_hasSvc}\n${errBody}</pre>`, { status: 500, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
-  }
-  const rows = await ir.json();
-  if (!rows.length) {
-    return new Response(`<pre style="padding:20px;font:14px monospace;">Inscription introuvable\n\nid from URL: "${id}"\nencoded: "${encodeURIComponent(id)}"\nhasServiceKey: ${_hasSvc}\nquery URL: ${queryUrl}\nresponse status: ${ir.status}\nrows: ${JSON.stringify(rows)}</pre>`, { status: 404, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
-  }
-  const ins = rows[0];
+  // RLS sur inscriptions_essai bloque le SELECT/UPDATE pour anon.
+  // → appel d'une fonction SECURITY DEFINER qui bypass la RLS de manière contrôlée
+  //   (vérifie le HMAC server-side avant d'agir).
+  const rpcR = await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirmer_annuler_essai`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_id: parseInt(id, 10), p_token: token, p_action: action, p_secret: SUPABASE_ANON })
+  });
+  if (!rpcR.ok) return new Response('Erreur serveur', { status: 500, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  const result = await rpcR.json();
 
-  const expected = (await _calHmac(`${id}:${(ins.email || '').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
-  if (token !== expected) return new Response('Lien invalide ou expiré', { status: 403, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  const htmlPage = (icon, titre, couleur, msg) => `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titre}</title></head><body style="margin:0;padding:40px 20px;background:#f5f5f5;font-family:Arial,sans-serif;text-align:center;"><div style="max-width:500px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 2px 10px rgba(0,0,0,.1)"><div style="font-size:48px;margin-bottom:16px;">${icon}</div><h2 style="color:${couleur};margin:0 0 12px;">${titre}</h2><p style="color:#555;margin:0 0 20px;">${msg}</p><p style="margin-top:24px;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;font-weight:700;text-decoration:none;">www.tangoetvous.com</a></p></div></body></html>`;
+
+  if (!result.ok) {
+    if (result.error === 'introuvable') return new Response('Inscription introuvable', { status: 404, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+    if (result.error === 'token') return new Response('Lien invalide ou expiré', { status: 403, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+    return new Response('Erreur : ' + (result.error || 'inconnue'), { status: 400, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  }
 
   const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-  const d = new Date(ins.date_essai + 'T12:00:00');
+  const d = new Date(result.date_essai + 'T12:00:00');
   const coursDate = JOURS_L[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS_L[d.getMonth()];
-  const villeAff  = ins.ville === 'vincennes' ? 'Vincennes' : 'Paris';
-  const nivAff    = ins.niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
-  const htmlPage  = (icon, titre, couleur, msg) => `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titre}</title></head><body style="margin:0;padding:40px 20px;background:#f5f5f5;font-family:Arial,sans-serif;text-align:center;"><div style="max-width:500px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 2px 10px rgba(0,0,0,.1)"><div style="font-size:48px;margin-bottom:16px;">${icon}</div><h2 style="color:${couleur};margin:0 0 12px;">${titre}</h2><p style="color:#555;margin:0 0 20px;">${msg}</p><p style="margin-top:24px;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;font-weight:700;text-decoration:none;">www.tangoetvous.com</a></p></div></body></html>`;
+  const villeAff  = result.ville === 'vincennes' ? 'Vincennes' : 'Paris';
+  const nivAff    = result.niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
 
   if (action === 'confirmer') {
-    await fetch(`${SUPABASE_URL}/rest/v1/inscriptions_essai?id=eq.${id}`, {
-      method: 'PATCH',
-      headers: { 'apikey': _svcKey, 'Authorization': `Bearer ${_svcKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ presence_confirmee: true })
-    });
     return new Response(
       htmlPage('👍', 'Présence confirmée !', '#2e7d32', `Votre présence au cours d'essai tango du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}) est bien confirmée.`),
       { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } }
     );
   } else {
-    if (ins.statut === 'annulé') {
+    if (result.already) {
       return new Response(htmlPage('ℹ️', 'Déjà annulé', '#e65100', `Cette inscription était déjà annulée.`),
         { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
     }
-    await fetch(`${SUPABASE_URL}/rest/v1/inscriptions_essai?id=eq.${id}`, {
-      method: 'PATCH',
-      headers: { 'apikey': _svcKey, 'Authorization': `Bearer ${_svcKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ statut: 'annulé' })
-    });
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ type: 'essai_annule', message: `✕ Annulation essai — ${ins.prenom} ${ins.nom} · ${villeAff} ${nivAff} · ${coursDate}`, lu: false, lien_tab: 'essai' })
+        body: JSON.stringify({ type: 'essai_annule', message: `✕ Annulation essai — ${result.prenom} ${result.nom} · ${villeAff} ${nivAff} · ${coursDate}`, lu: false, lien_tab: 'essai' })
       });
     } catch {}
     return new Response(
