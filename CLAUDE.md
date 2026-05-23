@@ -3420,3 +3420,51 @@ Tous les emails vérifiés. **Un seul problème trouvé et corrigé** :
 
 Tous les autres emails utilisent la bonne variante de signature selon leur statut (confirmé / attente / annulé / yoga).
 
+## Session 2026-05-23 (suite) — Fix syntaxe worker.js (apostrophes françaises brisées)
+
+### Contexte — runs GitHub Actions #800–#805 en échec
+
+Les commits successifs sur `worker.js` (sujets emails, signI02, signWait/I01-att) ont déclenché un déploiement qui échouait systématiquement avec `npx wrangler@4 deploy` → erreur de syntaxe JS silencieuse.
+
+**Cause racine** : le commit `3dfac8c` avait introduit des guillemets typographiques (U+2018 `'` / U+2019 `'`) comme **délimiteurs** de chaînes JS dans plusieurs handlers. Le commit correctif `e5e723f` a fait un remplacement global de TOUS les U+2019 → U+0027 (`'`), ce qui a bien corrigé les délimiteurs, mais a aussi converti les **apostrophes françaises de contenu** (ex: `d'attente`, `s'agit`, `l'Espace`) qui se trouvaient **à l'intérieur de chaînes délimitées par des guillemets simples** — créant des fins de chaîne intempestives.
+
+### Exemples d'erreurs créées
+
+```javascript
+// Avant fix e5e723f (curly quote — invalide comme délimiteur) :
+'<p>Pourquoi une liste d'attente ?</p>'   // U+2018 comme délimiteur → SyntaxError
+
+// Après fix e5e723f (blanket replacement) :
+'<p>Pourquoi une liste d'attente ?</p>'   // d'attente → d' termine la chaîne → SyntaxError
+
+// Fix correct :
+'<p>Pourquoi une liste d\'attente ?</p>'  // apostrophe de contenu échappée
+```
+
+### Stratégie de fix appliquée
+
+1. **Partir de HEAD** (commit `e5e723f`) — contient toutes les modifications souhaitées (sujets, signatures, preheaders)
+2. **Identifier les 18 emplacements problématiques** par analyse binaire (`open(..., 'rb')`) des U+2019 restants
+3. **Correction chirurgicale** : pour chaque apostrophe de contenu dans une chaîne single-quoted, ajouter un backslash (`\'`)
+4. **Cas spécial ligne 3145** : `' Il s'agit du <strong>dernier prélèvement</strong>...'` → changer les délimiteurs outer en `"..."` (contenu HTML avec guillemets doubles déjà présents dans les attributs)
+5. **Vérification** : `npx acorn --ecma2022 --module worker.js` → PASS
+6. **Commit** : `aac8ce5` — deploy run #806 → ✅
+
+### Règles permanentes — worker.js et apostrophes françaises
+
+- **Ne jamais faire de remplacement global U+2019 → U+0027** dans `worker.js`. Ce remplacement casse toutes les apostrophes françaises qui se trouvent à l'intérieur de chaînes single-quoted.
+- **Vérification autoritaire** : `npx acorn --ecma2022 --module worker.js` (plus strict que `node --check`)
+- **Pattern correct** pour les chaînes contenant des apostrophes françaises :
+  - Option A : guillemets doubles outer → `"Il s'agit du..."` (préféré si le contenu n'a pas de `"`)
+  - Option B : apostrophe de contenu échappée → `'Il s\'agit du...'`
+  - Option C : template literal → `` `Il s'agit du...` `` (jamais de problème)
+- **Les preheaders** dans `wrap(inner, "preheader")` et les sujets Brevo doivent toujours utiliser des guillemets doubles `"..."` si le texte peut contenir des apostrophes
+
+### Changements préservés dans le commit final `aac8ce5`
+
+Tous les changements des commits précédents sont présents :
+- `signI02` (I02 — "Nous vous attendons avec impatience !") — différent de signEleve pour éviter Gmail "..."
+- `signWait` pour I01-att (guidées en liste d'attente)
+- 33 preheaders cachés (`display:none;max-height:0;overflow:hidden`) pour anti-clipping Gmail
+- Sujets emails harmonisés avec les previews (C1, C2, C-pay, C-report, CP1, CX, D2, SR1, SR2, T1, etc.)
+
