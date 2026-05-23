@@ -3426,7 +3426,8 @@ async function handleNotifyInscriptionEssai(request, env) {
   if (!env.BREVO_API_KEY) return corsResponse({ ok: true, sent: 0, skipped: true }, 200, {}, request);
 
   const { prenom, nom, email, tel, role, ville, niveau, dateIso, statut, enCouple,
-          partPrenom, partNom, partEmail, partRole, gratuit, inscId: inscIdFromBody } = body;
+          partPrenom, partNom, partEmail, partRole, gratuit, inscId: inscIdFromBody,
+          niveauEleve } = body;
 
   const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
@@ -3601,6 +3602,7 @@ async function handleNotifyInscriptionEssai(request, env) {
       <div style="font-size:13px;color:#333;">${_esc(coursDateAff)}${horaire ? ' &nbsp;·&nbsp; ' + _esc(horaire) : ''}</div>
       ${lieuNom ? `<div style="font-size:12px;color:#666;margin-top:2px;">${_esc(lieuNom)}${lieuRue ? ' — ' + _esc(lieuRue) : ''}</div>` : ''}
       ${(enCouple && partPrenom) ? `<div style="font-size:13px;color:#555;margin-top:6px;">Partenaire : ${_esc(partPrenom || '')} ${_esc(partNom || '')}${partEmail ? ' &lt;' + _esc(partEmail) + '&gt;' : ''} (${roleLabel(partRole || '')})</div>` : ''}
+      ${niveauEleve ? `<div style="font-size:12px;color:#666;margin-top:6px;">🎓 Expérience tango : <strong>${_esc(niveauEleve)}</strong></div>` : ''}
     </div>
   </div>`;
 
@@ -3788,7 +3790,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   if (!id || !token) return new Response('Lien invalide', { status: 400, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 
   const ir = await fetch(
-    `${SUPABASE_URL}/rest/v1/inscriptions_essai?id=eq.${encodeURIComponent(id)}&type=eq.tango&select=id,prenom,nom,email,statut,date_essai,ville,niveau`,
+    `${SUPABASE_URL}/rest/v1/inscriptions_essai?id=eq.${encodeURIComponent(id)}&select=id,prenom,nom,email,statut,date_essai,ville,niveau`,
     { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
   );
   if (!ir.ok) return new Response('Erreur serveur', { status: 500 });
