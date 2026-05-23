@@ -167,6 +167,11 @@ export default {
         return handleEssaiConfirmerAnnuler(request, url, 'annuler', env);
       }
 
+      // GET ou PATCH /api/essai/reporter — élève annule son essai + redirection vers le formulaire
+      if (pathname === '/api/essai/reporter' && (method === 'GET' || method === 'PATCH')) {
+        return handleEssaiConfirmerAnnuler(request, url, 'reporter', env);
+      }
+
       // GET /api/essai-yoga/confirmer — élève confirme sa présence essai yoga via lien email
       if (pathname === '/api/essai-yoga/confirmer' && (method === 'GET' || method === 'PATCH')) {
         return handleEssaiYogaConfirmer(request, url, env);
@@ -3517,12 +3522,14 @@ async function handleNotifyInscriptionEssai(request, env) {
   }
 
   const APP_URL = 'https://app.tangoetvous.fr';
-  let confirmUrl = `mailto:${adminEmail}`;
-  let annulerUrl = `mailto:${adminEmail}?subject=${encodeURIComponent('Annulation essai tango ' + prenom + ' ' + nom)}`;
+  let confirmUrl  = `mailto:${adminEmail}`;
+  let annulerUrl  = `mailto:${adminEmail}?subject=${encodeURIComponent('Annulation essai tango ' + prenom + ' ' + nom)}`;
+  let reporterUrl = `${APP_URL}/cours-essai.html`;
   if (inscId) {
     const tk = (await _calHmac(`${inscId}:${(email || '').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
-    confirmUrl = `${APP_URL}/api/essai/confirmer?id=${inscId}&token=${tk}`;
-    annulerUrl = `${APP_URL}/api/essai/annuler?id=${inscId}&token=${tk}`;
+    confirmUrl  = `${APP_URL}/api/essai/confirmer?id=${inscId}&token=${tk}`;
+    annulerUrl  = `${APP_URL}/api/essai/annuler?id=${inscId}&token=${tk}`;
+    reporterUrl = `${APP_URL}/api/essai/reporter?id=${inscId}&token=${tk}`;
   }
 
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
@@ -3662,7 +3669,7 @@ async function handleNotifyInscriptionEssai(request, env) {
             <p style="font-size:12px;color:#888;margin:0 0 12px;">Empêchement de dernière minute ?</p>
             <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
               <a href="${annulerUrl}" style="display:inline-block;background:#fff;color:#c62828;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #c62828;">✕ Annuler</a>
-              <a href="#URL_FORMULAIRE_A_RENSEIGNER" style="display:inline-block;background:#fff;color:#555;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter à une autre date</a>
+              <a href="${reporterUrl}" style="display:inline-block;background:#fff;color:#555;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter à une autre date</a>
             </div>
           </div>
           ${livretUrl ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_esc(livretUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">📖 Télécharger le livret ${_esc(livretLabel)}</a></div>` : ''}
@@ -3693,7 +3700,7 @@ async function handleNotifyInscriptionEssai(request, env) {
             <p style="font-size:13px;color:#666;margin:0 0 14px;">Vous recevrez un rappel 7 jours avant le cours.</p>
             <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
               <a href="${annulerUrl}" style="display:inline-block;background:#fff;color:#c62828;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #c62828;">✕ Annuler mon cours d'essai</a>
-              <a href="#URL_FORMULAIRE_A_RENSEIGNER" style="display:inline-block;background:#fff;color:#555;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter à une autre date</a>
+              <a href="${reporterUrl}" style="display:inline-block;background:#fff;color:#555;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter à une autre date</a>
             </div>
           </div>
           ${signEleve}
@@ -3726,7 +3733,7 @@ async function handleNotifyInscriptionEssai(request, env) {
             <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Pour vous accueillir ensemble dans les meilleures conditions, vous êtes tous les deux placés en liste d'attente. Nous vous confirmons vos places dès qu'elles se libèrent — ou si vous n'avez pas de nouvelles de notre part dans les jours qui viennent, n'hésitez pas à reporter votre cours d'essai à une autre date ou à vous inscrire pour un cours à <strong>Vincennes</strong>.</p>
           </div>
           <div style="text-align:center;margin:0 0 22px;">
-            <a href="#URL_FORMULAIRE_A_RENSEIGNER" style="display:inline-block;background:#fff;color:#555;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter mon cours d'essai à une autre date</a>
+            <a href="${reporterUrl}" style="display:inline-block;background:#fff;color:#555;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter mon cours d'essai à une autre date</a>
           </div>
           <div style="text-align:center;margin:0 0 22px;">
             <a href="mailto:${adminEmail}" style="display:inline-block;background:#fff;color:#B8962E;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #D4AF37;">Nous contacter</a>
@@ -3764,7 +3771,7 @@ async function handleNotifyInscriptionEssai(request, env) {
             <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Le nombre de guideur·se·s pour ce cours est atteint pour le moment. Vous êtes placé·e en liste d'attente — nous vous confirmons une place dès qu'elle se libère. Si vous n'avez pas de nouvelles de notre part dans les jours qui viennent, n'hésitez pas à reporter votre cours d'essai à une autre date ou à vous inscrire pour un cours à <strong>Vincennes</strong>.</p>
           </div>
           <div style="text-align:center;margin:0 0 22px;">
-            <a href="#URL_FORMULAIRE_A_RENSEIGNER" style="display:inline-block;background:#fff;color:#555;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter mon cours d'essai à une autre date</a>
+            <a href="${reporterUrl}" style="display:inline-block;background:#fff;color:#555;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter mon cours d'essai à une autre date</a>
           </div>
           <div style="text-align:center;margin:0 0 22px;">
             <a href="mailto:${adminEmail}" style="display:inline-block;background:#fff;color:#B8962E;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #D4AF37;">Nous contacter</a>
@@ -3788,10 +3795,14 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   const token = url.searchParams.get('token');
   if (!id || !token) return new Response('Lien invalide', { status: 400, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 
+  // Pour 'reporter' : on annule en DB puis on redirige vers le formulaire
+  // → côté RPC c'est la même action que 'annuler', seule la sortie HTTP diffère.
+  const dbAction = action === 'reporter' ? 'annuler' : action;
+
   // RLS sur inscriptions_essai bloque le SELECT/UPDATE pour anon.
   // → appel d'une fonction SECURITY DEFINER qui bypass la RLS de manière contrôlée
   //   (vérifie le HMAC server-side avant d'agir).
-  const rpcBody = JSON.stringify({ p_id: parseInt(id, 10), p_token: token, p_action: action, p_secret: SUPABASE_ANON });
+  const rpcBody = JSON.stringify({ p_id: parseInt(id, 10), p_token: token, p_action: dbAction, p_secret: SUPABASE_ANON });
   const rpcR = await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirmer_annuler_essai`, {
     method: 'POST',
     headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json' },
@@ -3822,23 +3833,39 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
       htmlPage('👍', 'Présence confirmée !', '#2e7d32', `Votre présence au cours d'essai tango du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}) est bien confirmée.`),
       { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } }
     );
-  } else {
-    if (result.already) {
-      return new Response(htmlPage('ℹ️', 'Déjà annulé', '#e65100', `Cette inscription était déjà annulée.`),
-        { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
-    }
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ type: 'essai_annule', message: `✕ Annulation essai — ${result.prenom} ${result.nom} · ${villeAff} ${nivAff} · ${coursDate}`, lu: false, lien_tab: 'essai' })
-      });
-    } catch {}
-    return new Response(
-      htmlPage('✕', 'Inscription annulée', '#c62828', `Votre cours d'essai tango du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}) a bien été annulé. Si vous souhaitez vous inscrire à une autre date, revenez sur le formulaire.`),
-      { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } }
-    );
   }
+
+  // action === 'annuler' ou 'reporter' : on a effectué un UPDATE statut='annulé'
+  if (action === 'reporter') {
+    // Notif admin (sauf si déjà annulé) puis redirection vers le formulaire
+    if (!result.already) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ type: 'essai_annule', message: `↩ Report essai — ${result.prenom} ${result.nom} · ${villeAff} ${nivAff} · ${coursDate}`, lu: false, lien_tab: 'essai' })
+        });
+      } catch {}
+    }
+    return Response.redirect('https://app.tangoetvous.fr/cours-essai.html', 302);
+  }
+
+  // action === 'annuler' : page d'annulation
+  if (result.already) {
+    return new Response(htmlPage('ℹ️', 'Déjà annulé', '#e65100', `Cette inscription était déjà annulée.`),
+      { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  }
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ type: 'essai_annule', message: `✕ Annulation essai — ${result.prenom} ${result.nom} · ${villeAff} ${nivAff} · ${coursDate}`, lu: false, lien_tab: 'essai' })
+    });
+  } catch {}
+  return new Response(
+    htmlPage('✕', 'Inscription annulée', '#c62828', `Votre cours d'essai tango du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}) a bien été annulé. Si vous souhaitez vous inscrire à une autre date, revenez sur le formulaire.`),
+    { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } }
+  );
 }
 
 // ================================================================
@@ -4442,8 +4469,9 @@ async function handleCronEssaiRappelJ7(request, env) {
     const adresse = params.adresse || {};
     const horaires = params.horaires || {};
     const tk = await _calHmac(`${e.id}:${(e.email||'').toLowerCase()}`, SUPABASE_ANON).then(h => h.slice(0, 32)).catch(() => 'j7');
-    const confirmUrl = `https://app.tangoetvous.fr/api/essai/confirmer?id=${e.id}&token=${tk}`;
-    const annulUrl   = `https://app.tangoetvous.fr/api/essai/annuler?id=${e.id}&token=${tk}`;
+    const confirmUrl  = `https://app.tangoetvous.fr/api/essai/confirmer?id=${e.id}&token=${tk}`;
+    const annulUrl    = `https://app.tangoetvous.fr/api/essai/annuler?id=${e.id}&token=${tk}`;
+    const reporterUrl = `https://app.tangoetvous.fr/api/essai/reporter?id=${e.id}&token=${tk}`;
 
     // Horaire (essayer niveau d'abord, fallback sur ville)
     const horVille = (horaires[e.ville === 'vincennes' ? 'vincennes' : 'paris'] || {});
@@ -4518,7 +4546,7 @@ async function handleCronEssaiRappelJ7(request, env) {
           <p style="font-size:12px;color:#888;margin:0 0 12px;">Empêchement de dernière minute ?</p>
           <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
             <a href="${annulUrl}" style="display:inline-block;background:#fff;color:#c62828;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #c62828;">✕ Annuler mon cours d'essai</a>
-            <a href="https://app.tangoetvous.fr/cours-essai.html" style="display:inline-block;background:#fff;color:#555;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter à une autre date</a>
+            <a href="${reporterUrl}" style="display:inline-block;background:#fff;color:#555;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter à une autre date</a>
           </div>
         </div>
         ${livretBtn}
@@ -4603,12 +4631,14 @@ async function handleNotifyEssaiValide(request, env) {
     ? `<span style="background:#c2185b;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">Guidée</span>`
     : `<span style="background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">Guideur·se</span>`;
 
-  let confirmUrl = `mailto:${adminEmail}`;
-  let annulerUrl = `mailto:${adminEmail}?subject=${encodeURIComponent('Annulation essai tango ' + prenom + ' ' + nom)}`;
+  let confirmUrl  = `mailto:${adminEmail}`;
+  let annulerUrl  = `mailto:${adminEmail}?subject=${encodeURIComponent('Annulation essai tango ' + prenom + ' ' + nom)}`;
+  let reporterUrl = `${APP_URL}/cours-essai.html`;
   if (id) {
     const tk = (await _calHmac(`${id}:${(email||'').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
-    confirmUrl = `${APP_URL}/api/essai/confirmer?id=${id}&token=${tk}`;
-    annulerUrl = `${APP_URL}/api/essai/annuler?id=${id}&token=${tk}`;
+    confirmUrl  = `${APP_URL}/api/essai/confirmer?id=${id}&token=${tk}`;
+    annulerUrl  = `${APP_URL}/api/essai/annuler?id=${id}&token=${tk}`;
+    reporterUrl = `${APP_URL}/api/essai/reporter?id=${id}&token=${tk}`;
   }
 
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
@@ -4651,7 +4681,7 @@ async function handleNotifyEssaiValide(request, env) {
          <p style="font-size:12px;color:#888;margin:0 0 12px;">Empêchement de dernière minute ?</p>
          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
            <a href="${annulerUrl}" style="display:inline-block;background:#fff;color:#c62828;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #c62828;">✕ Annuler mon cours d'essai</a>
-           <a href="${APP_URL}/cours-essai.html" style="display:inline-block;background:#fff;color:#555;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter à une autre date</a>
+           <a href="${reporterUrl}" style="display:inline-block;background:#fff;color:#555;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:2px solid #999;">↩ Reporter à une autre date</a>
          </div>
        </div>`
     : `<div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:8px;padding:14px 18px;margin:0 0 22px;"><p style="font-size:13px;color:#2e7d32;margin:0;">🗓 Vous recevrez un rappel 7 jours avant le cours avec toutes les informations pratiques.</p></div>`;
