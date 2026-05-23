@@ -3789,9 +3789,12 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   const token = url.searchParams.get('token');
   if (!id || !token) return new Response('Lien invalide', { status: 400, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 
+  // RLS sur inscriptions_essai : SELECT USING (is_admin() OR email = auth.email())
+  // → la clé anon sans JWT retourne 0 lignes → utiliser la service key pour bypasser
+  const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const ir = await fetch(
     `${SUPABASE_URL}/rest/v1/inscriptions_essai?id=eq.${encodeURIComponent(id)}&select=id,prenom,nom,email,statut,date_essai,ville,niveau`,
-    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+    { headers: { 'apikey': _svcKey, 'Authorization': `Bearer ${_svcKey}` } }
   );
   if (!ir.ok) return new Response('Erreur serveur', { status: 500 });
   const rows = await ir.json();
@@ -3812,7 +3815,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   if (action === 'confirmer') {
     await fetch(`${SUPABASE_URL}/rest/v1/inscriptions_essai?id=eq.${id}`, {
       method: 'PATCH',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': _svcKey, 'Authorization': `Bearer ${_svcKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ presence_confirmee: true })
     });
     return new Response(
@@ -3826,7 +3829,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
     }
     await fetch(`${SUPABASE_URL}/rest/v1/inscriptions_essai?id=eq.${id}`, {
       method: 'PATCH',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': _svcKey, 'Authorization': `Bearer ${_svcKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ statut: 'annulé' })
     });
     try {
