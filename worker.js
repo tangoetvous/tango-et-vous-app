@@ -3142,7 +3142,7 @@ async function handleCronRelanceCb3x(request, env) {
 
   function buildHtml(prenomAff, cours, dateEcheance, ordinal, isLast) {
     const prelLabel = isLast ? (ordinal + ' sur 3 — dernier') : (ordinal + ' sur 3');
-    const noteFinale = isLast ? ' Il s’agit du <strong>dernier pr\xe9l\xe8vement</strong> — votre inscription sera enti\xe8rement r\xe9gl\xe9e.' : '';
+    const noteFinale = isLast ? ' Il s'agit du <strong>dernier pr\xe9l\xe8vement</strong> — votre inscription sera enti\xe8rement r\xe9gl\xe9e.' : '';
     return wrap(`${headerEleve}
       <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
         <span style="font-size:14px;font-weight:700;color:#1565c0;">💳 Rappel — ${ordinal} échéance de paiement CB</span></div>
@@ -4030,17 +4030,17 @@ async function handleNotifyInscriptionCours(request, env) {
           + '<tr><td style="padding:7px 0;color:#555;vertical-align:top;">🎯 Votre r\xf4le</td><td><span style="display:inline-block;background:' + roleBadgeCol(tgt.rl) + ';color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">' + roleLabel(tgt.rl) + '</span></td></tr>'
           + '</table></div>'
           + '<div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
-          + '<p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">Pourquoi une liste d’attente\xa0?</p>'
+          + '<p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">Pourquoi une liste d'attente\xa0?</p>'
           + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Pour le confort de tous, nous faisons en sorte de commencer les cours avec la parit\xe9 guideur\xb7se\xb7s / guid\xe9\xb7e\xb7s. Vous vous inscrivez sans partenaire — nous ne pouvons donc pas encore confirmer votre place.</p>'
           + '</div>'
           + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 18px;font-weight:700;">En attendant, nous vous proposons 3\xa0options\xa0:</p>'
           + '<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
           + '<div style="font-size:14px;color:#333;line-height:2.0;">'
           + '<div style="margin-bottom:10px;">1️⃣ &nbsp;<strong>Trouvez un\xb7e partenaire</strong> pour vous inscrire ensemble — nous pourrons alors confirmer directement votre inscription.</div>'
-          + '<div style="margin-bottom:10px;">2️⃣ &nbsp;<strong>Restez en liste d’attente</strong> — d\xe8s qu’une personne de l’autre r\xf4le s’inscrit, nous vous contacterons.</div>'
-          + '<div>3️⃣ &nbsp;<strong>Commencez par un cours d’essai</strong> — pour d\xe9couvrir le tango le temps que votre place se lib\xe8re. <a href="#URL_FORMULAIRE_ESSAI_A_RENSEIGNER" style="color:#1565c0;font-weight:700;">→ Acc\xe9der au formulaire cours d’essai</a></div>'
+          + '<div style="margin-bottom:10px;">2️⃣ &nbsp;<strong>Restez en liste d'attente</strong> — d\xe8s qu'une personne de l'autre r\xf4le s'inscrit, nous vous contacterons.</div>'
+          + '<div>3️⃣ &nbsp;<strong>Commencez par un cours d'essai</strong> — pour d\xe9couvrir le tango le temps que votre place se lib\xe8re. <a href="#URL_FORMULAIRE_ESSAI_A_RENSEIGNER" style="color:#1565c0;font-weight:700;">→ Acc\xe9der au formulaire cours d'essai</a></div>'
           + '</div></div>'
-          + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Nous faisons de notre mieux pour r\xe9pondre \xe0 toutes les demandes. N’h\xe9sitez pas \xe0 nous \xe9crire pour tout renseignement.</p>'
+          + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Nous faisons de notre mieux pour r\xe9pondre \xe0 toutes les demandes. N'h\xe9sitez pas \xe0 nous \xe9crire pour tout renseignement.</p>'
           + '<div style="text-align:center;margin:0 0 22px;">'
           + '<a href="mailto:' + adminEmail + '" style="display:inline-block;background:#fff;color:#B8962E;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #D4AF37;">Nous contacter</a>'
           + '</div>'
@@ -4081,21 +4081,21 @@ async function handleNotifyInscriptionCours(request, env) {
           : '';
         const soranoNote = isVinc
           ? '<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 18px;margin:0 0 20px;">'
-            + '<p style="font-size:13px;color:#5d4037;font-weight:700;margin:0 0 6px;">🏛 Adh\xe9sion \xe0 l’Espace Sorano</p>'
-            + '<p style="font-size:13px;color:#444;line-height:1.7;margin:0;">Il est aussi n\xe9cessaire de souscrire une adh\xe9sion \xe0 l’Espace Sorano pour suivre les cours qui y ont lieu. Nous vous enverrons le lien pour r\xe9gler cette adh\xe9sion s\xe9par\xe9ment dans les prochains jours.</p>'
+            + '<p style="font-size:13px;color:#5d4037;font-weight:700;margin:0 0 6px;">🏛 Adh\xe9sion \xe0 l'Espace Sorano</p>'
+            + '<p style="font-size:13px;color:#444;line-height:1.7;margin:0;">Il est aussi n\xe9cessaire de souscrire une adh\xe9sion \xe0 l'Espace Sorano pour suivre les cours qui y ont lieu. Nous vous enverrons le lien pour r\xe9gler cette adh\xe9sion s\xe9par\xe9ment dans les prochains jours.</p>'
             + '</div>'
           : '';
         const acNote = isCouple
           ? 'Vos places seront r\xe9serv\xe9es une fois les inscriptions en ligne et les premiers paiements effectu\xe9s.'
-          : 'Votre place sera r\xe9serv\xe9e une fois l’inscription en ligne et le premier paiement effectu\xe9s.';
+          : 'Votre place sera r\xe9serv\xe9e une fois l'inscription en ligne et le premier paiement effectu\xe9s.';
         const livretBtn = livretUrl
           ? '<div style="text-align:center;margin:0 0 22px;"><a href="' + _esc(livretUrl) + '" style="display:inline-block;background:#fff;color:#1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #1565c0;">📖 T\xe9l\xe9charger le livret ' + nivLabel(c.niveau) + ' ' + villeLabel(c.ville) + '</a></div>'
           : '';
 
         eleveSubj = isCouple
-          ? 'Votre demande d’inscription au tango en duo est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect'
-          : (isVinc ? 'Votre demande d’inscription au tango \xe0 Vincennes est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect'
-                    : 'Votre demande d’inscription au tango est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect');
+          ? 'Votre demande d'inscription au tango en duo est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect'
+          : (isVinc ? 'Votre demande d'inscription au tango \xe0 Vincennes est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect'
+                    : 'Votre demande d'inscription au tango est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect');
 
         eleveHtml = wrap(headerEleve
           + '<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">'
@@ -4240,98 +4240,98 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
     'Tango & Vous — Admin');
 
   // ── Y1 / Y-att — email élève
-  const headerYoga = ‘<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>’;
-  const footerYoga = ‘<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>’;
+  const headerYoga = '<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>';
+  const footerYoga = '<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>';
 
   // Helper: yoga-box section row
   function ySection(label, content, last) {
-    return ‘<div style="padding:10px 0;’ + (last ? ‘’ : ‘border-bottom:1px solid rgba(46,125,50,0.2);’) + ‘">’
-      + ‘<div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">’ + label + ‘</div>’
-      + ‘<div style="font-size:14px;color:#333;line-height:1.9;">’ + content + ‘</div>’
-      + ‘</div>’;
+    return '<div style="padding:10px 0;' + (last ? '' : 'border-bottom:1px solid rgba(46,125,50,0.2);') + '">'
+      + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">' + label + '</div>'
+      + '<div style="font-size:14px;color:#333;line-height:1.9;">' + content + '</div>'
+      + '</div>';
   }
-  const lieuContent = (lieuNom ? _esc(lieuNom) : ‘voir paramètres’)
-    + (lieuRue ? ‘<br/><span style="font-size:12px;">’ + _esc(lieuRue) + ‘</span>’ : ‘’)
-    + (lieuTransp ? ‘ · <span style="font-size:12px;color:#666;">’ + _esc(lieuTransp) + ‘</span>’ : ‘’);
+  const lieuContent = (lieuNom ? _esc(lieuNom) : 'voir paramètres')
+    + (lieuRue ? '<br/><span style="font-size:12px;">' + _esc(lieuRue) + '</span>' : '')
+    + (lieuTransp ? ' · <span style="font-size:12px;color:#666;">' + _esc(lieuTransp) + '</span>' : '');
   const tarifContent = gratuit
-    ? ‘<strong style="color:#2e7d32;">Gratuit</strong> <span style="font-size:12px;color:#666;">(2 premiers cours de septembre)</span>’
-    : (tarifEssai ? ‘<strong style="color:#1b5e20;">’ + _esc(tarifEssai) + ‘</strong>’ : ‘’);
+    ? '<strong style="color:#2e7d32;">Gratuit</strong> <span style="font-size:12px;color:#666;">(2 premiers cours de septembre)</span>'
+    : (tarifEssai ? '<strong style="color:#1b5e20;">' + _esc(tarifEssai) + '</strong>' : '');
 
   // Yoga-box Y1 — Votre essai yoga (date in header, Cours/Horaire/Lieu/Tarif)
-  const yogaBoxY1 = ‘<div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">’
-    + ‘<div style="background:#2e7d32;padding:12px 18px;">’
-    + ‘<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre essai yoga</div>’
-    + ‘<div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ‘ + _esc(dateAff) + ‘</div>’
-    + ‘</div>’
-    + ‘<div style="padding:16px 18px;">’
-    + ySection(‘Cours’, ‘<strong style="color:#1b5e20;">’ + _esc(coursAff) + ‘</strong>’, false)
-    + (horaire ? ySection(‘Horaire’, _esc(horaire), false) : ‘’)
-    + ySection(‘Lieu’, lieuContent, !tarifContent)
-    + (tarifContent ? ySection(‘Tarif’, tarifContent, true) : ‘’)
-    + ‘</div></div>’;
+  const yogaBoxY1 = '<div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">'
+    + '<div style="background:#2e7d32;padding:12px 18px;">'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre essai yoga</div>'
+    + '<div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ' + _esc(dateAff) + '</div>'
+    + '</div>'
+    + '<div style="padding:16px 18px;">'
+    + ySection('Cours', '<strong style="color:#1b5e20;">' + _esc(coursAff) + '</strong>', false)
+    + (horaire ? ySection('Horaire', _esc(horaire), false) : '')
+    + ySection('Lieu', lieuContent, !tarifContent)
+    + (tarifContent ? ySection('Tarif', tarifContent, true) : '')
+    + '</div></div>';
 
-  // Yoga-box Y-att — Votre demande d’essai (date in header, Cours/Horaire/Lieu/Statut)
-  const yogaBoxAtt = ‘<div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">’
-    + ‘<div style="background:#2e7d32;padding:12px 18px;">’
-    + ‘<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre demande d\’essai</div>’
-    + ‘<div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ‘ + _esc(dateAff) + ‘</div>’
-    + ‘</div>’
-    + ‘<div style="padding:16px 18px;">’
-    + ySection(‘Cours’, ‘<strong style="color:#1b5e20;">’ + _esc(coursAff) + ‘</strong>’, false)
-    + (horaire ? ySection(‘Horaire’, _esc(horaire), false) : ‘’)
-    + ySection(‘Lieu’, lieuContent, false)
-    + ySection(‘Statut’, ‘<span style="display:inline-block;background:#e65100;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">⏳ Liste d\’attente</span>’, true)
-    + ‘</div></div>’;
+  // Yoga-box Y-att — Votre demande d'essai (date in header, Cours/Horaire/Lieu/Statut)
+  const yogaBoxAtt = '<div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">'
+    + '<div style="background:#2e7d32;padding:12px 18px;">'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre demande d\'essai</div>'
+    + '<div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ' + _esc(dateAff) + '</div>'
+    + '</div>'
+    + '<div style="padding:16px 18px;">'
+    + ySection('Cours', '<strong style="color:#1b5e20;">' + _esc(coursAff) + '</strong>', false)
+    + (horaire ? ySection('Horaire', _esc(horaire), false) : '')
+    + ySection('Lieu', lieuContent, false)
+    + ySection('Statut', '<span style="display:inline-block;background:#e65100;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">⏳ Liste d\'attente</span>', true)
+    + '</div></div>';
 
   let eleveHtml, eleveSubj;
   if (isWait) {
     // ── Y-att
-    eleveSubj = "Votre inscription est en liste d’attente — Cours de yoga avec Florencia Garcia";
+    eleveSubj = "Votre inscription est en liste d'attente — Cours de yoga avec Florencia Garcia";
     eleveHtml = wrap(headerYoga
-      + ‘<div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">’
-      + ‘<span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Ce cours est complet — vous êtes sur liste d\’attente</span></div>’
-      + ‘<div style="padding:30px 28px;">’
-      + ‘<p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">’ + _esc(prenom) + ‘</strong>,</p>’
-      + ‘<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Merci pour votre intérêt pour nos cours de yoga ! Votre inscription a bien été enregistrée, cependant le cours que vous avez choisi est actuellement complet pour cette saison.</p>’
+      + '<div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">'
+      + '<span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Ce cours est complet — vous êtes sur liste d\'attente</span></div>'
+      + '<div style="padding:30px 28px;">'
+      + '<p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">' + _esc(prenom) + '</strong>,</p>'
+      + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Merci pour votre intérêt pour nos cours de yoga ! Votre inscription a bien été enregistrée, cependant le cours que vous avez choisi est actuellement complet pour cette saison.</p>'
       + yogaBoxAtt
-      + ‘<div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">’
-      + ‘<p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">Nos cours sont limités à 14 participants</p>’
-      + ‘<p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Des places se libèrent parfois en cours d\’année. Nous vous contacterons dès qu\’une place se libère dans ce cours. N\’hésitez pas à nous contacter pour plus d\’informations.</p>’
-      + ‘</div>’
-      + ‘<div style="text-align:center;margin:0 0 24px;">’
-      + ‘<a href="mailto:’ + adminYogaEmail + ‘" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a>’
-      + ‘</div>’
-      + ‘<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous vous contacterons dès qu\’une place se libère.<br/>’
-      + ‘<strong style="color:#222;">Florencia Garcia</strong><br/>’
-      + ‘<span style="color:#444;">Association Le Regard Se Pose</span><br/>’
-      + ‘<a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>’
-      + ‘<span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>’
-      + ‘</div>’ + footerYoga,
-      "Votre demande essai yoga enregistree - vous serez contacte(e) des qu’une place se libere");
+      + '<div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
+      + '<p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">Nos cours sont limités à 14 participants</p>'
+      + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Des places se libèrent parfois en cours d\'année. Nous vous contacterons dès qu\'une place se libère dans ce cours. N\'hésitez pas à nous contacter pour plus d\'informations.</p>'
+      + '</div>'
+      + '<div style="text-align:center;margin:0 0 24px;">'
+      + '<a href="mailto:' + adminYogaEmail + '" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a>'
+      + '</div>'
+      + '<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous vous contacterons dès qu\'une place se libère.<br/>'
+      + '<strong style="color:#222;">Florencia Garcia</strong><br/>'
+      + '<span style="color:#444;">Association Le Regard Se Pose</span><br/>'
+      + '<a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>'
+      + '<span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>'
+      + '</div>' + footerYoga,
+      "Votre demande essai yoga enregistree - vous serez contacte(e) des qu'une place se libere");
   } else {
     // ── Y1
-    eleveSubj = ‘Votre essai yoga est confirmé — Cours de yoga avec Florencia Garcia’;
+    eleveSubj = 'Votre essai yoga est confirmé — Cours de yoga avec Florencia Garcia';
     eleveHtml = wrap(headerYoga
-      + ‘<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">’
-      + ‘<span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre essai yoga est confirmé !</span></div>’
-      + ‘<div style="padding:30px 28px;">’
-      + ‘<p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">’ + _esc(prenom) + ‘</strong>,</p>’
-      + ‘<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription à notre cours d\’essai yoga est bien enregistrée. Nous avons hâte de vous accueillir !</p>’
+      + '<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">'
+      + '<span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre essai yoga est confirmé !</span></div>'
+      + '<div style="padding:30px 28px;">'
+      + '<p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">' + _esc(prenom) + '</strong>,</p>'
+      + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription à notre cours d\'essai yoga est bien enregistrée. Nous avons hâte de vous accueillir !</p>'
       + yogaBoxY1
-      + ‘<div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">’
-      + ‘<p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">En cas d\’empêchement, merci de nous prévenir même au dernier moment afin que nous puissions proposer la place à quelqu\’un d\’autre. Merci pour votre compréhension !</p>’
-      + ‘</div>’
-      + ‘<div style="text-align:center;margin:0 0 24px;">’
-      + ‘<a href="mailto:’ + adminYogaEmail + ‘" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a>’
-      + ‘</div>’
-      + ‘<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>’
-      + ‘<strong style="color:#222;">Florencia Garcia</strong><br/>’
-      + ‘<span style="color:#444;">Association Le Regard Se Pose</span><br/>’
-      + ‘<a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>’
-      + ‘<span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span>’
-      + ‘</p>’
-      + ‘</div>’ + footerYoga,
-      ‘Votre cours essai yoga est confirme - retrouvez les details ci-dessous’);
+      + '<div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">'
+      + '<p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">En cas d\'empêchement, merci de nous prévenir même au dernier moment afin que nous puissions proposer la place à quelqu\'un d\'autre. Merci pour votre compréhension !</p>'
+      + '</div>'
+      + '<div style="text-align:center;margin:0 0 24px;">'
+      + '<a href="mailto:' + adminYogaEmail + '" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a>'
+      + '</div>'
+      + '<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>'
+      + '<strong style="color:#222;">Florencia Garcia</strong><br/>'
+      + '<span style="color:#444;">Association Le Regard Se Pose</span><br/>'
+      + '<a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>'
+      + '<span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span>'
+      + '</p>'
+      + '</div>' + footerYoga,
+      'Votre cours essai yoga est confirme - retrouvez les details ci-dessous');
   }
 
   await sendBrevo(email, eleveSubj, eleveHtml);
