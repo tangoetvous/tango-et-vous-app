@@ -3921,6 +3921,7 @@ async function handleNotifyInscriptionCours(request, env) {
   const headerEleve = '<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">\xc9cole de tango argentin</div></div>';
   const footer = '<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:' + adminEmail + '" style="color:#888;text-decoration:none;">' + adminEmail + '</a> &nbsp;\xb7&nbsp; 07 73 27 59 06</div>';
   const signEleve = '<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">\xc0 tr\xe8s bient\xf4t sur la piste\xa0!<br/><strong style="color:#222;">Florencia GARCIA &amp; J\xe9r\xe9my BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous \xb7 07 73 27 59 06</span></p>';
+  const signWait  = '<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous reviendrons vers vous tr\xe8s prochainement.<br/><strong style="color:#222;">Florencia GARCIA &amp; J\xe9r\xe9my BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous \xb7 07 73 27 59 06</span></p>';
 
   // ── I0 — email admin (dark green header)
   const isWaitGlobal = !!isWaitlist;
@@ -4043,7 +4044,7 @@ async function handleNotifyInscriptionCours(request, env) {
           + '<div style="text-align:center;margin:0 0 22px;">'
           + '<a href="mailto:' + adminEmail + '" style="display:inline-block;background:#fff;color:#B8962E;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #D4AF37;">Nous contacter</a>'
           + '</div>'
-          + signEleve + '</div>' + footer, "Votre demande inscription tango enregistree - en attente de validation admin");
+          + signWait + '</div>' + footer, "Votre demande inscription tango enregistree - en attente de validation admin");
       } else {
         // ── I01-val / I01-couple / I01-vinc
         const isMainPerson = tgt.to.toLowerCase() === (email || '').toLowerCase();
