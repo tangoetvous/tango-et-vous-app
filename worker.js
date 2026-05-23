@@ -167,6 +167,11 @@ export default {
         return handleEssaiConfirmerAnnuler(request, url, 'annuler', env);
       }
 
+      // GET /api/essai-yoga/confirmer — élève confirme sa présence essai yoga via lien email
+      if (pathname === '/api/essai-yoga/confirmer' && (method === 'GET' || method === 'PATCH')) {
+        return handleEssaiYogaConfirmer(request, url, env);
+      }
+
       // POST /api/notify/inscription-cours — formulaire inscription-cours.html (sans auth)
       if (pathname === '/api/notify/inscription-cours' && method === 'POST') {
         return handleNotifyInscriptionCours(request, env);
@@ -3817,6 +3822,43 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
       { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } }
     );
   }
+}
+
+// ================================================================
+// GET /api/essai-yoga/confirmer — élève confirme présence essai yoga via email
+// ================================================================
+async function handleEssaiYogaConfirmer(request, url, env) {
+  const id    = url.searchParams.get('id');
+  const token = url.searchParams.get('token');
+  if (!id || !token) return new Response('Lien invalide', { status: 400, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+
+  const ir = await fetch(
+    `${SUPABASE_URL}/rest/v1/inscriptions_essai_yoga?id=eq.${encodeURIComponent(id)}&select=id,prenom,nom,email,date_essai,cours`,
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+  );
+  if (!ir.ok) return new Response('Erreur serveur', { status: 500, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  const rows = await ir.json();
+  if (!rows.length) return new Response('Inscription introuvable', { status: 404, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  const ins = rows[0];
+
+  const expected = (await _calHmac(`${id}:${(ins.email || '').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
+  if (token !== expected) return new Response('Lien invalide ou expiré', { status: 403, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const d = new Date(ins.date_essai + 'T12:00:00');
+  const coursDate = JOURS_L[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS_L[d.getMonth()];
+  const coursAff  = ins.cours === 'yin' ? 'Yin Yoga' : ins.cours === 'hatha' ? 'Hatha Yoga' : 'Yoga';
+
+  await fetch(`${SUPABASE_URL}/rest/v1/inscriptions_essai_yoga?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ presence_confirmee: true })
+  });
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Présence confirmée</title></head><body style="margin:0;padding:40px 20px;background:#f5f5f5;font-family:Arial,sans-serif;text-align:center;"><div style="max-width:500px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 2px 10px rgba(0,0,0,.1)"><div style="font-size:48px;margin-bottom:16px;">👍</div><h2 style="color:#2e7d32;margin:0 0 12px;">Présence confirmée !</h2><p style="color:#555;margin:0 0 20px;">Votre présence au cours d'essai <strong>${coursAff}</strong> du <strong>${coursDate}</strong> est bien confirmée.</p><p style="color:#888;font-size:13px;">À très bientôt sur le tapis !</p><p style="margin-top:24px;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#2e7d32;font-weight:700;text-decoration:none;">Ma Page Yoga →</a></p></div></body></html>`;
+
+  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 }
 
 // ================================================================
