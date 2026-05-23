@@ -5516,8 +5516,8 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
     ? '✓ Inscriptions confirmées — bienvenue dans nos cours !'
     : '✓ Inscription confirmée — bienvenue dans nos cours !';
 
-  // Signature unique par email (inclut le cours) pour éviter le clipping Gmail
-  const signEleveI03 = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste — <strong>${coursResume}</strong>&nbsp;!<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  // Signature unique par destinataire — dernière ligne inclut le prénom pour casser le threading Gmail
+  const signEleveI03 = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste — <strong>${coursResume}</strong>&nbsp;!<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">${prenomAff}, on vous attend avec impatience&nbsp;!</span></p>`;
 
   const htmlEleve = wrap(`${headerEleve}
     <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">${bandeauConfirmation}</span></div>
@@ -5531,9 +5531,12 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
     </div>${footer}`, preheader);
 
   try {
+    // Sujet volontairement différent de I01/I02 ("Votre inscription au tango...")
+    // pour éviter que Gmail thread ces emails et affiche "..." dans I03
+    const prenomRaw = (prenom || '').trim();
     const subject = coursInfos.length > 1
-      ? `✓ Vos inscriptions au tango sont confirmées — à bientôt !`
-      : `✓ Votre inscription au tango est confirmée — à bientôt !`;
+      ? `Bienvenue ${prenomRaw} ! Vos cours de tango ${coursInfos.map(ci => ci.ville === 'paris' ? 'Paris' : 'Vincennes').join(' & ')} sont confirmés`
+      : `Bienvenue ${prenomRaw} ! Votre place en ${coursResume.replace(' &amp; ', ' & ')} est confirmée`;
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
