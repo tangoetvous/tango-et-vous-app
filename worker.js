@@ -5356,6 +5356,7 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
   const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
   const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const signI02     = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous vous attendons avec impatience !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   const htmlEleve = wrap(`${headerEleve}
@@ -5370,8 +5371,7 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
       <p style="font-size:12px;color:#888;text-align:center;margin:0 0 24px;">Votre place sera définitivement réservée une fois l'inscription et le premier paiement effectués.</p>
       ${quelquesPrec}
       ${livretBtn}
-      <div style="display:none;color:transparent;font-size:0;">${_esc((email||'').toLowerCase())}-i02</div>
-      ${signEleve}
+      ${signI02}
     </div>${footer}`, "Votre inscription tango est validee - finalisez votre dossier sur AssoConnect");
   try {
     await fetch('https://api.brevo.com/v3/smtp/email', {
