@@ -5394,7 +5394,7 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
 
-  const { email, prenom, nom, tel, saison } = body;
+  const { email, prenom, nom, saison } = body;
   if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
 
   // Support ancien format mono-cours + nouveau format multi-cours
@@ -5540,62 +5540,6 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
       body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-inscription-cours-payee] error', err); }
-
-  // ── I0 — email admin si demandé (inscription directe depuis admin.html)
-  if (body.notifyAdmin) {
-    const JOURS_A = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-    const MOIS_A  = ['janvier','f\xe9vrier','mars','avril','mai','juin','juillet','ao\xfbt','septembre','octobre','novembre','d\xe9cembre'];
-    const vL = v => v === 'vincennes' ? 'Vincennes' : 'Paris';
-    const nL = n => n === 'intermediaire' ? 'Interm\xe9diaire' : 'D\xe9butant';
-    const rL = r => r === 'guidee' ? 'Guid\xe9e' : 'Guideur\xb7se';
-    const rC = r => r === 'guidee' ? '#c2185b' : '#1565c0';
-    const telFmt = (tel || '').replace(/\s/g, '');
-    let adminBlocs = '';
-    for (const ci of coursInfos) {
-      const vp = villeParamsMap[ci.ville] || {};
-      const hor = (() => { const h = vp.horaires || {}; const e2 = h[ci.niveau] || {}; return _esc((e2.jour ? e2.jour + ' · ' : '') + (e2.debut || '') + (e2.fin ? '–' + e2.fin : '')); })();
-      const adr = vp.adresse || {};
-      adminBlocs += `<div style="border:2px solid #2e7d32;border-radius:8px;overflow:hidden;margin-bottom:20px;">`
-        + `<div style="background:#2e7d32;padding:10px 16px;">`
-        + `<div style="font-size:18px;font-weight:700;color:#fff;">${_esc((prenom + ' ' + nom).trim())}</div>`
-        + `<div style="font-size:12px;color:#c8e6c9;margin-top:2px;">${_esc(email || '')}${tel ? ' &nbsp;\xb7&nbsp; ' + _esc(tel) : ''}</div>`
-        + `<span style="display:inline-block;background:${rC(ci.role)};color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;margin-top:6px;">${rL(ci.role)}</span>`
-        + `</div>`
-        + `<div style="background:#f1f8e9;padding:14px 16px;">`
-        + `<div style="font-size:16px;font-weight:700;color:#111;margin-bottom:4px;">\xd0\x9f ${_esc(vL(ci.ville) + ' — ' + nL(ci.niveau))}</div>`
-        + `<div style="font-size:13px;color:#333;">Saison ${_esc(saison)}${hor ? ' &nbsp;\xb7&nbsp; ' + hor : ''}</div>`
-        + (adr.nom || adr.rue ? `<div style="font-size:12px;color:#666;margin-top:2px;">${_esc(adr.nom || '')}${adr.nom && adr.rue ? ' — ' : ''}${_esc(adr.rue || '')}</div>` : '')
-        + `</div>`
-        + `<div style="padding:10px 14px;background:#f5f5f5;">`
-        + `<span style="display:inline-block;background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Inscrit\xb7e (paiement valid\xe9)</span>`
-        + `<span style="font-size:12px;color:#555;margin-left:12px;">Email envoy\xe9 : <strong>I03</strong></span>`
-        + `</div></div>`;
-    }
-    const adminHtml = wrap(
-      `<div style="background:#0d2b0d;padding:16px 24px;text-align:center;border-bottom:4px solid #2e7d32;">`
-      + `<div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>`
-      + `<div style="font-size:9px;letter-spacing:3px;color:#81c784;text-transform:uppercase;margin-top:3px;">Inscription directe \xb7 Paiement valid\xe9</div>`
-      + `</div>`
-      + `<div style="padding:24px;">${adminBlocs}`
-      + `<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">`
-      + (telFmt ? `<a href="tel:${_esc(telFmt)}" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">\xd0\x9f\xd0\xbe Appeler</a>` : '')
-      + `<a href="https://mail.google.com/mail/?view=cm&amp;to=${encodeURIComponent(email || '')}" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email Gmail</a>`
-      + (telFmt ? `<a href="sms:${_esc(telFmt)}" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>` : '')
-      + `<a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l&apos;admin →</a>`
-      + `</div></div>`
-      + `<div style="background:#0d2b0d;padding:10px 24px;text-align:center;font-size:10px;color:#81c784;border-top:1px solid #1b5e20;">Tango &amp; Vous \xb7 ${adminEmail} \xb7 07 73 27 59 06</div>`
-    );
-    const c0 = coursInfos[0];
-    const adminSubject = `[Inscription directe] ${_esc((prenom + ' ' + nom).trim())} — ${vL(c0.ville)} ${nL(c0.niveau)} \xb7 ${rL(c0.role)} \xb7 inscrit\xb7e`;
-    try {
-      await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: adminEmail }], subject: adminSubject, htmlContent: adminHtml }),
-      });
-    } catch(err2) { console.error('[notify-inscription-cours-payee] admin error', err2); }
-  }
-
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
