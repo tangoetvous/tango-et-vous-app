@@ -1569,6 +1569,8 @@ function soumettreInscriptionEssai(email) {
   var err=gel('ei-err'),ok=gel('ei-ok');
   if(err)err.style.display='none'; if(ok)ok.style.display='none';
   if(!prenom||!nom||!emailV){if(err){err.textContent='Prénom, nom et email requis.';err.style.display='block';}return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailV)){if(err){err.textContent='Adresse email invalide.';err.style.display='block';}return;}
+  if(tel&&tel.replace(/\D/g,'').length<10){if(err){err.textContent='Numéro de téléphone invalide (10 chiffres minimum).';err.style.display='block';}return;}
   var ville=cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   var niveau=cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   var montant=formule==='carte10'?TARIFS.carte10:formule==='unitaire'?(ville==='vincennes'?TARIFS.unitaire_paris:TARIFS.unitaire_paris):(ville==='vincennes'?TARIFS.forfait_vincennes:TARIFS.forfait_paris);
@@ -7215,6 +7217,7 @@ function soumettreEleve() {
   var err   = gel('ne-err');
   nom = nom.trim(); email = email.trim().toLowerCase();
   if (!nom||!email) { err.textContent='Nom et email requis.'; err.style.display='block'; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent='Adresse email invalide.'; err.style.display='block'; return; }
   err.style.display='none';
   if (IS_DEMO) {
     adminData.cartes.unshift({id:'E'+Date.now(),nom:nom,email:email,niveau:niv,statutEleve:act?'Actif':'En attente',utilises:0,restants:0,statut:'',source:'manuel',ville:ville,datesCours:[],partenaire:''});
@@ -7831,7 +7834,8 @@ function soumettreYogaInscrManuel() {
   if (ok) ok.style.display='none';
   if (err) err.style.display='none';
   if (!prenom || !nom) { if(err){err.textContent='Prénom et nom requis.';err.style.display='block';} return; }
-  if (!email || email.indexOf('@')<0) { if(err){err.textContent='Email invalide.';err.style.display='block';} return; }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { if(err){err.textContent='Adresse email invalide.';err.style.display='block';} return; }
+  if (tel&&tel.replace(/\D/g,'').length<10) { if(err){err.textContent='Numéro de téléphone invalide (10 chiffres minimum).';err.style.display='block';} return; }
   if (!date) { if(err){err.textContent='Date requise.';err.style.display='block';} return; }
   var gratuit = estEssaiYogaGratuit(date);
   if (!adminData.essaiYoga) adminData.essaiYoga=[];
@@ -7927,6 +7931,7 @@ function inscrireCours() {
   if(ok)ok.style.display='none'; if(err)err.style.display='none';
   email=email.trim().toLowerCase();
   if(!email){if(err){err.textContent='Email requis.';err.style.display='block';}return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(err){err.textContent='Adresse email invalide.';err.style.display='block';}return;}
   var ville = cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   if(IS_DEMO){
     (adminData.inscriptionsCours=adminData.inscriptionsCours||[]).push({id:'IC'+Date.now(),nom:email,email:email,cours:cours,type:type,paiement:paie,montant:Number(montant),date:date,ville:ville});
@@ -9743,6 +9748,8 @@ function soumettreInscriptionStageAdmin() {
   var err=gel('si-err'), ok=gel('si-ok');
   if(err)err.style.display='none'; if(ok)ok.style.display='none';
   if(!prenom||!nom||!email){if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';}return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(err){err.textContent='Adresse email invalide.';err.style.display='block';}return;}
+  if(tel&&tel.replace(/\D/g,'').length<10){if(err){err.textContent='Numéro de téléphone invalide (10 chiffres minimum).';err.style.display='block';}return;}
   if(!slots.length){if(err){err.textContent='Sélectionnez au moins un créneau.';err.style.display='block';}return;}
   var montant=calcMontantStage(slots);
   var avecPartenaire=avecSit&&partNom&&partEmail;
@@ -11574,6 +11581,8 @@ window.soumettreInscriptionDirecteYoga = function(force) {
   var err = gel('diy-err'), ok = gel('diy-ok');
   if(err) err.style.display='none'; if(ok) ok.style.display='none';
   if (!prenom||!nom||!email) { if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';} return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { if(err){err.textContent='Adresse email invalide.';err.style.display='block';} return; }
+  if (tel&&tel.replace(/\D/g,'').length<10) { if(err){err.textContent='Numéro de téléphone invalide (10 chiffres minimum).';err.style.display='block';} return; }
   if (!force) {
     var _coursCheck = cours==='forfait' ? ['yin','hatha'] : [cours];
     var _overCap = false;
@@ -12087,6 +12096,8 @@ window.soumettreValiderPaiement = function(force) {
   var _vpF2=coursCoches.length>=2?((document.querySelector('input[name="vp-formule2"]:checked')||{}).value||'carte10forfait'):null;
   var forfait2Checked=_vpF2==='forfait2', carte10UniqueChecked=_vpF2==='carte10unique', vpShared=forfait2Checked||carte10UniqueChecked;
   if(!prenom||!nom||!email){if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';}return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(err){err.textContent='Adresse email invalide.';err.style.display='block';}return;}
+  if(tel&&tel.replace(/\D/g,'').length<10){if(err){err.textContent='Numéro de téléphone invalide (10 chiffres minimum).';err.style.display='block';}return;}
   if(!coursCoches.length){if(err){err.textContent='Choisissez au moins un cours.';err.style.display='block';}return;}
   if(coursCoches.length>2){if(err){err.textContent='Maximum 2 cours.';err.style.display='block';}return;}
   var COURS_VALS_REF=['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
@@ -12319,6 +12330,8 @@ window.soumettreInscriptionDirecte = function(force) {
   var carte10UniqueChecked = _diF2==='carte10unique';
   var diShared = forfait2Checked||carte10UniqueChecked;
   if (!prenom||!nom||!email) { if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';} return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { if(err){err.textContent='Adresse email invalide.';err.style.display='block';} return; }
+  if (tel&&tel.replace(/\D/g,'').length<10) { if(err){err.textContent='Numéro de téléphone invalide (10 chiffres minimum).';err.style.display='block';} return; }
   if (!coursCoches.length) { if(err){err.textContent='Choisissez au moins un cours.';err.style.display='block';} return; }
   if (coursCoches.length > 2) { if(err){err.textContent='Maximum 2 cours.';err.style.display='block';} return; }
   var COURS_VALS_REF = ['Paris — Jeudi — Débutant','Paris — Jeudi — Intermédiaire','Vincennes — Lundi — Débutant','Vincennes — Lundi — Intermédiaire'];
@@ -12424,7 +12437,7 @@ window.soumettreInscriptionDirecte = function(force) {
       Promise.resolve(fetch('/api/notify/inscription-cours-payee', {
         method: 'POST',
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
-        body: JSON.stringify({email:email, prenom:prenom, nom:nom, saison:sai, coursInfos:coursInfosDI}),
+        body: JSON.stringify({email:email, prenom:prenom, nom:nom, tel:tel, saison:sai, coursInfos:coursInfosDI, notifyAdmin:true}),
       })).catch(function(){});
       _gotoTab();
     });
@@ -12450,6 +12463,8 @@ function soumettreDemande() {
   var err=gel('fd-err'), ok=gel('fd-ok');
   if(err)err.style.display='none'; if(ok)ok.style.display='none';
   if(!prenom||!nom||!email){if(err){err.textContent='Prénom, nom et email sont requis.';err.style.display='block';}return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){if(err){err.textContent='Adresse email invalide.';err.style.display='block';}return;}
+  if(tel&&tel.replace(/\D/g,'').length<10){if(err){err.textContent='Numéro de téléphone invalide (10 chiffres minimum).';err.style.display='block';}return;}
   var ville  =cours.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   var niveau =cours.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   var avecPartenaire=partNom&&partEmail;

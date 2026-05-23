@@ -984,6 +984,11 @@ function validateInfos(){
   if(!prenom||!nom||!email||!tel){showErr('Merci de remplir tous les champs obligatoires.');return false;}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showErr('Adresse email invalide.');return false;}
   if(tel.replace(/\D/g,'').length<10){showErr('Numéro de téléphone invalide (10 chiffres minimum).');return false;}
+  // Champs partenaire optionnels — valider le format si renseigné
+  const pEmail = document.getElementById('p-eml') ? document.getElementById('p-eml').value.trim() : '';
+  const pTel   = document.getElementById('p-tel')  ? document.getElementById('p-tel').value.trim()  : '';
+  if(pEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pEmail)){showErr('Adresse email du partenaire invalide.');return false;}
+  if(pTel && pTel.replace(/\D/g,'').length<10){showErr('Numéro de téléphone du partenaire invalide (10 chiffres minimum).');return false;}
   return true;
 }
 
