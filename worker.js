@@ -157,13 +157,13 @@ export default {
         return handleNotifyInscriptionEssai(request, env);
       }
 
-      // PATCH /api/essai/confirmer — élève confirme sa présence via lien email
-      if (pathname === '/api/essai/confirmer' && method === 'PATCH') {
+      // GET ou PATCH /api/essai/confirmer — élève confirme sa présence via lien email
+      if (pathname === '/api/essai/confirmer' && (method === 'GET' || method === 'PATCH')) {
         return handleEssaiConfirmerAnnuler(request, url, 'confirmer', env);
       }
 
-      // PATCH /api/essai/annuler — élève annule son essai via lien email
-      if (pathname === '/api/essai/annuler' && method === 'PATCH') {
+      // GET ou PATCH /api/essai/annuler — élève annule son essai via lien email
+      if (pathname === '/api/essai/annuler' && (method === 'GET' || method === 'PATCH')) {
         return handleEssaiConfirmerAnnuler(request, url, 'annuler', env);
       }
 
@@ -3774,8 +3774,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   if (!rows.length) return new Response('Inscription introuvable', { status: 404 });
   const ins = rows[0];
 
-  const secret   = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  const expected = (await _calHmac(`${id}:${(ins.email || '').toLowerCase()}`, secret)).slice(0, 32);
+  const expected = (await _calHmac(`${id}:${(ins.email || '').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
   if (token !== expected) return new Response('Lien invalide ou expiré', { status: 403, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 
   const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
