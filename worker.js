@@ -3835,33 +3835,99 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
     );
   }
 
-  // action === 'annuler' ou 'reporter' : on a effectué un UPDATE statut='annulé'
-  if (action === 'reporter') {
-    // Notif admin (sauf si déjà annulé) puis redirection vers le formulaire
-    if (!result.already) {
+  // action === 'annuler' ou 'reporter' — UPDATE statut='annulé' déjà effectué
+  // → notifie l'admin (panel 🔔 + email + push) sauf si déjà annulé
+  const isReport = (action === 'reporter');
+  const icon     = isReport ? '↩' : '✕';
+  const libelle  = isReport ? 'Report essai' : 'Annulation essai';
+
+  if (!result.already) {
+    const adminEmail = 'tangoetvous@gmail.com';
+    const nameAff    = `${result.prenom || ''} ${result.nom || ''}`.trim();
+    const ligne      = `${icon} ${libelle} — ${nameAff} · ${villeAff} ${nivAff} · ${coursDate}`;
+
+    // 1. Notif in-app panel 🔔 admin (table notifications)
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ type: 'essai_annule', message: ligne, lu: false, lien_tab: 'essai' })
+      });
+    } catch {}
+
+    // 2. Email admin via Brevo (fire and forget — ne bloque pas la redirection)
+    if (env.BREVO_API_KEY) {
+      const tel       = result.tel ? `<a href="tel:${_esc(result.tel)}" style="color:#1565c0;text-decoration:none;">${_esc(result.tel)}</a>` : '—';
+      const emailLink = result.email ? `<a href="mailto:${_esc(result.email)}" style="color:#1565c0;text-decoration:none;">${_esc(result.email)}</a>` : '—';
+      const couleur   = isReport ? '#1565c0' : '#c62828';
+      const bandeau   = isReport
+        ? `↩ L'élève va réserver une nouvelle date`
+        : `✕ Place libérée — pensez à la liste d'attente`;
+      const intro     = isReport
+        ? `<strong>${_esc(nameAff)}</strong> a cliqué sur <strong>« Reporter à une autre date »</strong> depuis son email. Son inscription a été annulée automatiquement et il/elle va choisir une nouvelle date via le formulaire d'inscription.`
+        : `<strong>${_esc(nameAff)}</strong> a cliqué sur <strong>« Annuler »</strong> depuis son email. Son inscription a été annulée.`;
+      const htmlAdmin = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;background:#fff;">
+  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
+    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>
+    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">${libelle}</div>
+  </div>
+  <div style="background:${isReport ? '#e3f2fd' : '#ffebee'};padding:14px 24px;text-align:center;border-bottom:1px solid ${isReport ? '#bbdefb' : '#ffcdd2'};">
+    <span style="font-size:14px;font-weight:700;color:${couleur};">${bandeau}</span>
+  </div>
+  <div style="padding:24px;">
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 18px;">${intro}</p>
+    <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:18px;">
+      <div style="background:#D4AF37;padding:10px 16px;">
+        <div style="font-size:17px;font-weight:700;color:#111;">${_esc(nameAff)}</div>
+        <div style="font-size:12px;color:#333;margin-top:2px;">${emailLink} · ${tel}</div>
+      </div>
+      <div style="background:#fffdf8;padding:14px 16px;">
+        <div style="font-size:16px;font-weight:700;color:#111;">📍 ${villeAff} ${nivAff}</div>
+        <div style="font-size:13px;color:#333;margin-top:4px;">${coursDate}</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin:24px 0 8px;">
+      <a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#D4AF37;color:#111;padding:11px 22px;border-radius:6px;font-size:13px;font-weight:700;text-decoration:none;">Ouvrir l'admin — Essai Tango →</a>
+    </div>
+  </div>
+</div></body></html>`;
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
+        await fetch('https://api.brevo.com/v3/smtp/email', {
           method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ type: 'essai_annule', message: `↩ Report essai — ${result.prenom} ${result.nom} · ${villeAff} ${nivAff} · ${coursDate}`, lu: false, lien_tab: 'essai' })
+          headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: { name: 'Tango & Vous', email: adminEmail },
+            to: [{ email: adminEmail }],
+            subject: `${icon} [Essai tango] ${libelle} — ${nameAff} · ${coursDate}`,
+            htmlContent: htmlAdmin
+          })
         });
+      } catch (e) { console.error('[essai-action] Brevo error', e); }
+    }
+
+    // 3. Push OS admin via FCM (fire and forget)
+    if (env.FIREBASE_SERVICE_ACCOUNT) {
+      try {
+        const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+        getFcmTokensAdmin(_svcKey).then(function(tokens) {
+          if (tokens.length) sendFcmPush(env, tokens, {
+            title: 'Tango & Vous — Admin',
+            body: `${icon} ${libelle} — ${nameAff} · ${coursDate}`
+          }).catch(function(){});
+        }).catch(function(){});
       } catch {}
     }
-    return Response.redirect('https://app.tangoetvous.fr/cours-essai.html', 302);
   }
 
-  // action === 'annuler' : page d'annulation
+  // Réponse HTTP
+  if (isReport) {
+    return Response.redirect('https://app.tangoetvous.fr/cours-essai.html', 302);
+  }
   if (result.already) {
     return new Response(htmlPage('ℹ️', 'Déjà annulé', '#e65100', `Cette inscription était déjà annulée.`),
       { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
   }
-  try {
-    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ type: 'essai_annule', message: `✕ Annulation essai — ${result.prenom} ${result.nom} · ${villeAff} ${nivAff} · ${coursDate}`, lu: false, lien_tab: 'essai' })
-    });
-  } catch {}
   return new Response(
     htmlPage('✕', 'Inscription annulée', '#c62828', `Votre cours d'essai tango du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}) a bien été annulé. Si vous souhaitez vous inscrire à une autre date, revenez sur le formulaire.`),
     { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } }
