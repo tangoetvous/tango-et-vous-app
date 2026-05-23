@@ -72,7 +72,9 @@
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Rappel essai yoga dans 3 jours - confirmez votre presence en un clic"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Bleu 🗓 "Rappel — votre cours d'essai yoga a lieu dans 3 jours !"</div>
   <div class="field"><span class="label">Yoga-box :</span> Date · Cours · <span class="src">Horaire tev_params_yoga_${saison}.horaires.${cours}</span> · Lieu</div>
-  <div class="field"><span class="label">Bouton 👍 :</span> Vert · URL: <code>/api/essai-yoga/confirmer?id=&amp;token=y3</code> → <code>presence_confirmee=true</code></div>
+  <div class="field"><span class="label">Bouton 👍 :</span> Vert · URL: <code>/api/essai-yoga/confirmer?id=&amp;token=&lt;hmac32&gt;</code></div>
+  <div class="field"><span class="label">Token HMAC :</span> <code>HMAC-SHA256(${id}:${email.toLowerCase()}, SUPABASE_ANON).slice(0,32)</code></div>
+  <div class="field"><span class="label">Backend :</span> RPC Supabase <code>confirmer_essai_yoga(p_id, p_token, p_secret)</code> — SECURITY DEFINER, bypass RLS, vérifie HMAC server-side avant UPDATE <code>presence_confirmee=true</code></div>
   <div class="field"><span class="label">Encadré orange :</span> "En cas d'empêchement, merci de nous prévenir même au dernier moment"</div>
   <div class="field"><span class="label">Notif in-app :</span> <code>notifications_eleve</code> — "📅 Rappel : votre cours d'essai yoga a lieu dans 3 jours"</div>
 </div>

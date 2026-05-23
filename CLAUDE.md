@@ -3468,3 +3468,118 @@ Tous les changements des commits précédents sont présents :
 - 33 preheaders cachés (`display:none;max-height:0;overflow:hidden`) pour anti-clipping Gmail
 - Sujets emails harmonisés avec les previews (C1, C2, C-pay, C-report, CP1, CX, D2, SR1, SR2, T1, etc.)
 
+## Session 2026-05-23 (suite 2) — Boutons emails essai : RPC SECURITY DEFINER + Reporter + notifs admin
+
+### Contexte du bug initial
+
+Le bouton **👍 « Je confirme ma présence »** dans l'email E7 (essai tango rappel J-7) affichait `"Inscription introuvable"` et ne posait pas de pouce sur la fiche élève.
+
+**Cause racine** : RLS sur `inscriptions_essai` :
+- `SELECT USING (is_admin() OR email = auth.email())` → bloque SELECT pour clé anon
+- `UPDATE USING (is_admin())` → bloque UPDATE pour clé anon
+
+→ Le handler `handleEssaiConfirmerAnnuler` faisait un SELECT/UPDATE direct via REST avec la clé anon, qui retournait 0 lignes sans erreur explicite. La page d'erreur "Inscription introuvable" s'affichait.
+
+### Fix : pattern SECURITY DEFINER RPC
+
+**Règle universelle** : pour toute action déclenchée par un lien dans un email (boutons confirmer / annuler / reporter), passer par une **fonction SECURITY DEFINER** qui :
+1. Bypass la RLS (s'exécute en tant que propriétaire de la table)
+2. Vérifie le token HMAC server-side avant d'agir
+3. Retourne JSON `{ok, error?, data...}`
+
+**Pourquoi** : le PATCH/UPDATE direct via REST avec la clé anon **échoue silencieusement** (0 lignes affectées, pas d'erreur HTTP) si la RLS UPDATE exige `is_admin()`. Symptôme : le bouton "marche" en apparence mais rien ne change en DB.
+
+### SQL — 3 fonctions SECURITY DEFINER créées
+
+**1. `confirmer_annuler_essai(p_id, p_token, p_action, p_secret)`** — essai tango (E1/E6/E7/E15 + tous les T1/E-mod)
+
+Actions supportées : `'confirmer'` (`presence_confirmee=true`) ou `'annuler'` (`statut='annulé'`).
+
+**2. `confirmer_essai_yoga(p_id, p_token, p_secret)`** — essai yoga (Y3)
+
+Action : `presence_confirmee=true` sur `inscriptions_essai_yoga`.
+
+**3. `confirmer_stage(p_email, p_date, p_token, p_secret)`** — stages (S1b/S3b/S4)
+
+Action : `presence_confirmee=true` sur `inscriptions_stages` filtré par `(email, stage_date)`. Token = `HMAC(email + ':' + date).slice(0,32)` (pas d'id, plusieurs lignes possibles par couple email+date).
+
+**Définitions complètes** des 3 fonctions stockées dans les commits `8a544a2` et suivants — voir Supabase SQL Editor pour le contenu actuel.
+
+### Règles permanentes — pgcrypto + SECURITY DEFINER
+
+- `pgcrypto.hmac()` est dans le schéma `extensions`, pas `public` → utiliser `SET search_path = public, extensions` + appel qualifié `extensions.hmac(...)` + cast `'sha256'::text` (sinon `unknown` type → erreur 404)
+- `LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions` — combinaison obligatoire
+- `GRANT EXECUTE TO anon, authenticated` — sinon la RPC retourne 404 pour les requêtes sans JWT
+- Le pattern complet est documenté en commentaire dans les 3 handlers (`handleEssaiConfirmerAnnuler`, `handleEssaiYogaConfirmer`, `handleStagesConfirmer`)
+- **Ne jamais** réintroduire de SELECT/PATCH direct via REST anon sur une table avec RLS restrictive — toujours passer par une RPC SECURITY DEFINER
+
+### Bouton « Reporter à une autre date » — nouvelle sémantique
+
+**Décision métier (2026-05-23)** : « Reporter » = annule l'inscription actuelle + redirige vers le formulaire pour choisir une nouvelle date.
+
+**Nouvelle route worker** : `GET /api/essai/reporter?id=<id>&token=<hmac>`
+- Réutilise la RPC `confirmer_annuler_essai` avec `p_action='annuler'` (même token HMAC que `/api/essai/annuler`)
+- Notifie l'admin (panel 🔔 + email + push) avec le libellé `↩ Report essai` (au lieu de `✕ Annulation essai`)
+- Retourne `Response.redirect('https://app.tangoetvous.fr/cours-essai.html', 302)`
+
+**Boutons mis à jour** dans tous les emails essai tango (E1, E6, E2, E5, E4, E15) :
+- Avant : `href="#URL_FORMULAIRE_A_RENSEIGNER"` (placeholder) ou `href=".../cours-essai.html"` (simple redirect, sans annuler en DB)
+- Après : `href="${reporterUrl}"` où `reporterUrl = APP_URL + '/api/essai/reporter?id=' + inscId + '&token=' + tk` quand l'id est disponible, sinon fallback simple sur `/cours-essai.html`
+
+**Exception E-J1b** (élève absent J+1) : garde le simple redirect — le cours est déjà passé, rien à annuler.
+
+### Notifications admin pour Annuler / Reporter (essai tango)
+
+Quand un élève clique sur **✕ Annuler** ou **↩ Reporter** depuis son email, l'admin reçoit désormais 3 notifications :
+
+| Canal | Annuler (✕) | Reporter (↩) |
+|---|---|---|
+| 🔔 Panel in-app admin (`notifications` table) | `✕ Annulation essai — Nom · Cours · Date` | `↩ Report essai — Nom · Cours · Date` |
+| 📧 Email Brevo → `tangoetvous@gmail.com` | bandeau rouge `✕ Place libérée — pensez à la liste d'attente` | bandeau bleu `↩ L'élève va réserver une nouvelle date` |
+| 📱 Push OS admin (si `FIREBASE_SERVICE_ACCOUNT` configuré) | `✕ Annulation essai — Nom · Date` | `↩ Report essai — Nom · Date` |
+
+**Confirmer 👍** : aucune notification (seulement le badge 👍 sur la fiche). Logique : info à faible valeur, ne pas spammer.
+
+**Dédoublement** : si `result.already=true` (déjà annulé), aucune notif n'est envoyée → évite le spam en cas de double-clic.
+
+**Implémentation** : email + push inline dans `handleEssaiConfirmerAnnuler` (worker.js) — utilise le helper global `getFcmTokensAdmin(svcKey)` et `sendFcmPush(env, tokens, notif)`. Tous les appels sont fire-and-forget (`.catch(function(){})`).
+
+### Badge 👍 dans l'admin Essai Tango — Pointage + Par date
+
+L'ancienne pastille `✓Conf.` (ligne 7421 admin.html, sous-onglet Pointage) remplacée par un emoji 👍 simple avec `title="A confirmé sa présence par email"`. Ajout du même badge dans `_mkEssaiDateCard` (sous-onglet Par date) — auparavant absent.
+
+```javascript
++(e.presenceConfirmee===true?' <span title="A confirmé sa présence par email">👍</span>':'')
+```
+
+Les badges Stages (lignes 9218, 9271, 9372 — vues Tous / Slot / Pointage) utilisaient déjà 👍 depuis la session 2026-05-21.
+
+### Test post-déploiement
+
+**Boutons sur emails existants vs nouveaux** :
+
+| Bouton | Email envoyé AVANT commits 2026-05-23 (suite 2) | Email envoyé APRÈS |
+|---|---|---|
+| 👍 Confirmer | ✅ marche (URL `/api/essai/confirmer` inchangée — le fix est côté serveur via la RPC) | ✅ marche |
+| ✕ Annuler | ✅ marche (idem — URL inchangée) | ✅ marche |
+| ↩ Reporter | ❌ ancien lien = placeholder ou simple redirect (pas d'annulation DB) | ✅ marche (annule + redirect) |
+
+Pour tester « Reporter » : envoyer un nouvel email essai (workflow_dispatch sur le cron J-7 ou nouvelle inscription test).
+
+### Fichier worker.js — emplacements modifiés
+
+- Routing : `/api/essai/reporter` ajouté entre `/api/essai/annuler` et `/api/essai-yoga/confirmer`
+- `handleEssaiConfirmerAnnuler` : ajout du mapping `dbAction = action === 'reporter' ? 'annuler' : action`, branche `if (isReport)` qui redirige + bloc email/push admin inline
+- `handleEssaiYogaConfirmer` : réécrit pour appeler RPC `confirmer_essai_yoga`
+- `handleStagesConfirmer` : réécrit pour appeler RPC `confirmer_stage`
+- `handleNotifyInscriptionEssai` + `handleCronEssaiRappelJ7` + `handleNotifyEssaiValide` : ajout d'une variable `reporterUrl` à côté de `confirmUrl`/`annulerUrl`, remplacement des 6 URLs Reporter
+
+### SQL à exécuter dans Supabase — récap
+
+Les 3 fonctions sont déjà exécutées par l'utilisateur (sessions 2026-05-22 et 2026-05-23). Pour rappel, les définitions sont :
+- `confirmer_annuler_essai(BIGINT, TEXT, TEXT, TEXT)` — exécutée le 2026-05-22
+- `confirmer_essai_yoga(BIGINT, TEXT, TEXT)` — exécutée le 2026-05-23
+- `confirmer_stage(TEXT, DATE, TEXT, TEXT)` — exécutée le 2026-05-23
+
+**Ne jamais modifier** la signature ou la logique de ces fonctions sans mettre à jour les handlers worker correspondants — la signature est versionnée par PostgreSQL et le client doit matcher.
+

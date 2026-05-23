@@ -82,8 +82,8 @@
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Rappel essai tango dans 7 jours - confirmez votre presence en un clic"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Bleu 🗓 "Rappel — votre cours d'essai a lieu dans 7 jours !"</div>
   <div class="field"><span class="label">Cours box :</span> Date · Cours · <span class="src">horaires depuis tev_params_${ville}_${saison}</span> · Lieu</div>
-  <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence" → <code>/api/essai/confirmer?id=&amp;token=j7</code></div>
-  <div class="field"><span class="label">Boutons :</span> ✕ Annuler → <code>/api/essai/annuler</code> · ↩ Reporter → cours-essai.html</div>
+  <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence" → <code>/api/essai/confirmer?id=&amp;token=&lt;hmac32&gt;</code></div>
+  <div class="field"><span class="label">Boutons :</span> ✕ Annuler → <code>/api/essai/annuler?id=&amp;token=</code> · ↩ Reporter → <code>/api/essai/reporter?id=&amp;token=</code></div>
   <div class="field"><span class="label">Checklist :</span> <span class="cond">débutant uniquement</span></div>
 </div>
 
@@ -141,8 +141,40 @@
   <div class="field"><span class="label">Sujet :</span> <code>💙 On vous attend bientôt — Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"On vous attend bientot - revenez pour un prochain cours essai tango"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange 💙 "Vous nous avez manqué"</div>
-  <div class="field"><span class="label">Bouton :</span> ↩ Choisir une nouvelle date → cours-essai.html</div>
+  <div class="field"><span class="label">Bouton :</span> ↩ Choisir une nouvelle date → cours-essai.html (simple redirect — cours déjà passé, rien à annuler)</div>
   <div class="field"><span class="label">Note :</span> "Pas de pénalité · vos cours gratuits de septembre restent valables"</div>
+</div>
+
+<h2>Actions élève via email — confirmer / annuler / reporter (RPC SECURITY DEFINER)</h2>
+<div class="block">
+  <div class="field"><span class="label">Routes worker :</span></div>
+  <div class="field">&nbsp;&nbsp;• <code>GET /api/essai/confirmer?id=&amp;token=</code> → <span class="var">handleEssaiConfirmerAnnuler(action='confirmer')</span></div>
+  <div class="field">&nbsp;&nbsp;• <code>GET /api/essai/annuler?id=&amp;token=</code> → <span class="var">handleEssaiConfirmerAnnuler(action='annuler')</span></div>
+  <div class="field">&nbsp;&nbsp;• <code>GET /api/essai/reporter?id=&amp;token=</code> → <span class="var">handleEssaiConfirmerAnnuler(action='reporter')</span></div>
+  <div class="field"><span class="label">Token HMAC :</span> <code>HMAC-SHA256(${id}:${email.toLowerCase()}, SUPABASE_ANON).slice(0,32)</code></div>
+  <div class="field"><span class="label">Backend :</span> RPC Supabase <code>confirmer_annuler_essai(p_id, p_token, p_action, p_secret)</code> — SECURITY DEFINER, bypass RLS, vérifie HMAC server-side avant UPDATE</div>
+  <div class="field"><span class="label">Action confirmer :</span> UPDATE <code>presence_confirmee=true</code> → page verte 👍 "Présence confirmée !"</div>
+  <div class="field"><span class="label">Action annuler :</span> UPDATE <code>statut='annulé'</code> → page rouge ✕ "Inscription annulée" + notif admin</div>
+  <div class="field"><span class="label">Action reporter :</span> <span class="cond">même DB action que annuler</span> → notif admin "↩ Report essai" → <code>Response.redirect 302</code> vers <code>/cours-essai.html</code></div>
+  <div class="field"><span class="label">Idempotent :</span> si <code>result.already=true</code> (déjà annulé) → page "Déjà annulé" ou redirect sans notif (évite doublons sur double-clic)</div>
+  <div class="field"><span class="label">Pourquoi RPC :</span> <span class="cond">RLS sur inscriptions_essai bloque SELECT/UPDATE pour clé anon</span> → PATCH direct échoue silencieusement (0 lignes affectées sans erreur HTTP) → "Inscription introuvable" affiché en boucle. SECURITY DEFINER + HMAC server-side = bypass contrôlé.</div>
+</div>
+
+<h2>Notifications admin — Annuler / Reporter (essai tango)</h2>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Élève clique ✕ Annuler ou ↩ Reporter depuis son email</span></div>
+  <div class="field"><span class="label">Implémentation :</span> Inline dans <code>handleEssaiConfirmerAnnuler</code> (worker.js) — fire and forget, ne bloque pas la réponse HTTP à l'élève</div>
+  <div class="field"><span class="label">Canal 1 — Panel 🔔 admin :</span> INSERT <code>notifications</code> type='essai_annule', message <code>"✕ Annulation essai — Nom · Cours · Date"</code> ou <code>"↩ Report essai — ..."</code>, <code>lien_tab='essai'</code></div>
+  <div class="field"><span class="label">Canal 2 — Email Brevo :</span> envoyé à <code>tangoetvous@gmail.com</code></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">Sujet annul :</span> <code>✕ [Essai tango] Annulation essai — Nom · Date</code></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">Sujet reporter :</span> <code>↩ [Essai tango] Report essai — Nom · Date</code></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">Bandeau annul (rouge) :</span> "✕ Place libérée — pensez à la liste d'attente"</div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">Bandeau reporter (bleu) :</span> "↩ L'élève va réserver une nouvelle date"</div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">Encadré or :</span> Nom · email (mailto) · tel (tel:) · Cours (Paris/Vincennes Déb/Inter) · Date</div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">Bouton :</span> "Ouvrir l'admin — Essai Tango →"</div>
+  <div class="field"><span class="label">Canal 3 — Push OS admin :</span> <code>sendFcmPush(env, getFcmTokensAdmin(svcKey), {title:'Tango & Vous — Admin', body:'✕ Annulation essai — Nom · Date'})</code> — uniquement si <code>FIREBASE_SERVICE_ACCOUNT</code> configuré</div>
+  <div class="field"><span class="label">Confirmer 👍 :</span> <span class="cond">aucune notif admin</span> — seulement le badge 👍 sur la fiche élève dans admin (sous-onglets Pointage + Par date)</div>
+  <div class="field"><span class="label">Dédoublonnage :</span> si <code>result.already=true</code> → aucune notif envoyée (évite spam admin sur double-clic)</div>
 </div>
 </body>
 </html>

@@ -60,7 +60,7 @@
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">type_confirmation='confirme' ET daysUntil ≤ 3</span></div>
   <div class="field"><span class="label">Différence S1/S1b :</span> S1b contient le bouton 👍 · pas de mention rappel futur</div>
-  <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence" → app.tangoetvous.fr/stages-pwa.html</div>
+  <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence" → <code>/api/stages/confirmer?email=&amp;date=&amp;token=&lt;hmac32&gt;</code></div>
 </div>
 
 <h2>S2 — Guidée seule en attente</h2>
@@ -99,8 +99,17 @@
   <div class="field"><span class="label">Sujet :</span> <code>🗓 Rappel stage du ${dateLabel} — Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Rappel - votre stage a lieu dans 3 jours - confirmez votre presence"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Bleu 🗓 "Rappel — votre stage a lieu dans 3 jours !"</div>
-  <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence"</div>
+  <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence" → <code>/api/stages/confirmer?email=&amp;date=&amp;token=&lt;hmac32&gt;</code></div>
   <div class="field"><span class="label">Encadré orange :</span> "Merci de confirmer votre présence. Si vous devez annuler merci de nous prévenir, même au dernier moment."</div>
+</div>
+
+<h2>Action élève via email — confirmer présence stage (RPC SECURITY DEFINER)</h2>
+<div class="block">
+  <div class="field"><span class="label">Route worker :</span> <code>GET /api/stages/confirmer?email=&amp;date=&amp;token=</code> → <span class="var">handleStagesConfirmer</span></div>
+  <div class="field"><span class="label">Token HMAC :</span> <code>HMAC-SHA256(${email}:${date}, SUPABASE_ANON).slice(0,32)</code> (pas d'id — plusieurs lignes possibles par couple email+date)</div>
+  <div class="field"><span class="label">Backend :</span> RPC Supabase <code>confirmer_stage(p_email, p_date, p_token, p_secret)</code> — SECURITY DEFINER, bypass RLS, vérifie HMAC server-side, UPDATE <code>presence_confirmee=true</code> sur toutes les lignes <code>inscriptions_stages WHERE email=p_email AND stage_date=p_date</code></div>
+  <div class="field"><span class="label">Réponse :</span> page verte 👍 "Présence confirmée !" si <code>result.updated &gt; 0</code>, sinon "Déjà enregistré"</div>
+  <div class="field"><span class="label">Pourquoi RPC :</span> <span class="cond">RLS UPDATE sur inscriptions_stages exige is_admin()</span> → PATCH direct via clé anon échoue silencieusement (0 lignes). SECURITY DEFINER + HMAC = bypass contrôlé.</div>
 </div>
 
 <h2>S-cancel — Admin annule une inscription stage</h2>
