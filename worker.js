@@ -964,7 +964,7 @@ async function handleNotifyEssaiAction(request, env) {
         coursBoxRows += `<div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="background:${rColor};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${rLabel}</span><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Valid\xe9\xb7e</span></div>`;
 
         const soranoBlock = isVincennes ? `<div style="background:#fff9e6;border:1px solid #f0c040;border-radius:8px;padding:16px 18px;margin:0 0 20px;"><p style="font-size:13px;font-weight:700;color:#795500;margin:0 0 8px;">🏛 Adh\xe9sion \xe0 l'Espace Sorano</p><p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Votre cours a lieu \xe0 l'Espace Sorano \xe0 Vincennes. Une adh\xe9sion \xe0 cet espace culturel est n\xe9cessaire pour participer. Nous vous contacterons prochainement avec les informations pour la r\xe9gler.</p></div>` : '';
-        const lienACBtn = `<p style="text-align:center;margin:0 0 12px;"><a href="${lienAC}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire sur AssoConnect →</a></p><p style="font-size:12px;color:#888;text-align:center;margin:0 0 22px;">Votre place sera r\xe9serv\xe9e une fois l'inscription en ligne et le premier paiement effectu\xe9s.</p>`;
+        const lienACBtn = `<p style="text-align:center;margin:0 0 12px;"><a href="${lienAC}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire sur AssoConnect →</a></p><p style="font-size:12px;color:#888;text-align:center;margin:0 0 22px;">Votre place sera r\xe9serv\xe9e une fois l\'inscription en ligne et le premier paiement effectu\xe9s.</p>`;
         const quellesPrecisions = '<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
           + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#B8962E;font-weight:700;margin-bottom:14px;">Quelques pr\xe9cisions pour votre inscription</div>'
           + '<div style="font-size:14px;color:#333;line-height:1.9;">'
@@ -3142,7 +3142,7 @@ async function handleCronRelanceCb3x(request, env) {
 
   function buildHtml(prenomAff, cours, dateEcheance, ordinal, isLast) {
     const prelLabel = isLast ? (ordinal + ' sur 3 — dernier') : (ordinal + ' sur 3');
-    const noteFinale = isLast ? ' Il s'agit du <strong>dernier pr\xe9l\xe8vement</strong> — votre inscription sera enti\xe8rement r\xe9gl\xe9e.' : '';
+    const noteFinale = isLast ? " Il s'agit du <strong>dernier pr\xe9l\xe8vement</strong> — votre inscription sera enti\xe8rement r\xe9gl\xe9e." : '';
     return wrap(`${headerEleve}
       <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
         <span style="font-size:14px;font-weight:700;color:#1565c0;">💳 Rappel — ${ordinal} échéance de paiement CB</span></div>
@@ -4030,17 +4030,17 @@ async function handleNotifyInscriptionCours(request, env) {
           + '<tr><td style="padding:7px 0;color:#555;vertical-align:top;">🎯 Votre r\xf4le</td><td><span style="display:inline-block;background:' + roleBadgeCol(tgt.rl) + ';color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">' + roleLabel(tgt.rl) + '</span></td></tr>'
           + '</table></div>'
           + '<div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
-          + '<p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">Pourquoi une liste d'attente\xa0?</p>'
+          + '<p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">Pourquoi une liste d\'attente\xa0?</p>'
           + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Pour le confort de tous, nous faisons en sorte de commencer les cours avec la parit\xe9 guideur\xb7se\xb7s / guid\xe9\xb7e\xb7s. Vous vous inscrivez sans partenaire — nous ne pouvons donc pas encore confirmer votre place.</p>'
           + '</div>'
           + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 18px;font-weight:700;">En attendant, nous vous proposons 3\xa0options\xa0:</p>'
           + '<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
           + '<div style="font-size:14px;color:#333;line-height:2.0;">'
           + '<div style="margin-bottom:10px;">1️⃣ &nbsp;<strong>Trouvez un\xb7e partenaire</strong> pour vous inscrire ensemble — nous pourrons alors confirmer directement votre inscription.</div>'
-          + '<div style="margin-bottom:10px;">2️⃣ &nbsp;<strong>Restez en liste d'attente</strong> — d\xe8s qu'une personne de l'autre r\xf4le s'inscrit, nous vous contacterons.</div>'
-          + '<div>3️⃣ &nbsp;<strong>Commencez par un cours d'essai</strong> — pour d\xe9couvrir le tango le temps que votre place se lib\xe8re. <a href="#URL_FORMULAIRE_ESSAI_A_RENSEIGNER" style="color:#1565c0;font-weight:700;">→ Acc\xe9der au formulaire cours d'essai</a></div>'
+          + '<div style="margin-bottom:10px;">2️⃣ &nbsp;<strong>Restez en liste d\'attente</strong> — d\xe8s qu\'une personne de l\'autre r\xf4le s\'inscrit, nous vous contacterons.</div>'
+          + '<div>3️⃣ &nbsp;<strong>Commencez par un cours d\'essai</strong> — pour d\xe9couvrir le tango le temps que votre place se lib\xe8re. <a href="#URL_FORMULAIRE_ESSAI_A_RENSEIGNER" style="color:#1565c0;font-weight:700;">→ Acc\xe9der au formulaire cours d\'essai</a></div>'
           + '</div></div>'
-          + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Nous faisons de notre mieux pour r\xe9pondre \xe0 toutes les demandes. N'h\xe9sitez pas \xe0 nous \xe9crire pour tout renseignement.</p>'
+          + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Nous faisons de notre mieux pour r\xe9pondre \xe0 toutes les demandes. N\'h\xe9sitez pas \xe0 nous \xe9crire pour tout renseignement.</p>'
           + '<div style="text-align:center;margin:0 0 22px;">'
           + '<a href="mailto:' + adminEmail + '" style="display:inline-block;background:#fff;color:#B8962E;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #D4AF37;">Nous contacter</a>'
           + '</div>'
@@ -4081,21 +4081,21 @@ async function handleNotifyInscriptionCours(request, env) {
           : '';
         const soranoNote = isVinc
           ? '<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 18px;margin:0 0 20px;">'
-            + '<p style="font-size:13px;color:#5d4037;font-weight:700;margin:0 0 6px;">🏛 Adh\xe9sion \xe0 l'Espace Sorano</p>'
-            + '<p style="font-size:13px;color:#444;line-height:1.7;margin:0;">Il est aussi n\xe9cessaire de souscrire une adh\xe9sion \xe0 l'Espace Sorano pour suivre les cours qui y ont lieu. Nous vous enverrons le lien pour r\xe9gler cette adh\xe9sion s\xe9par\xe9ment dans les prochains jours.</p>'
+            + '<p style="font-size:13px;color:#5d4037;font-weight:700;margin:0 0 6px;">🏛 Adh\xe9sion \xe0 l\'Espace Sorano</p>'
+            + '<p style="font-size:13px;color:#444;line-height:1.7;margin:0;">Il est aussi n\xe9cessaire de souscrire une adh\xe9sion \xe0 l\'Espace Sorano pour suivre les cours qui y ont lieu. Nous vous enverrons le lien pour r\xe9gler cette adh\xe9sion s\xe9par\xe9ment dans les prochains jours.</p>'
             + '</div>'
           : '';
         const acNote = isCouple
           ? 'Vos places seront r\xe9serv\xe9es une fois les inscriptions en ligne et les premiers paiements effectu\xe9s.'
-          : 'Votre place sera r\xe9serv\xe9e une fois l'inscription en ligne et le premier paiement effectu\xe9s.';
+          : 'Votre place sera r\xe9serv\xe9e une fois l\'inscription en ligne et le premier paiement effectu\xe9s.';
         const livretBtn = livretUrl
           ? '<div style="text-align:center;margin:0 0 22px;"><a href="' + _esc(livretUrl) + '" style="display:inline-block;background:#fff;color:#1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #1565c0;">📖 T\xe9l\xe9charger le livret ' + nivLabel(c.niveau) + ' ' + villeLabel(c.ville) + '</a></div>'
           : '';
 
         eleveSubj = isCouple
-          ? 'Votre demande d'inscription au tango en duo est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect'
-          : (isVinc ? 'Votre demande d'inscription au tango \xe0 Vincennes est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect'
-                    : 'Votre demande d'inscription au tango est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect');
+          ? 'Votre demande d\'inscription au tango en duo est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect'
+          : (isVinc ? 'Votre demande d\'inscription au tango \xe0 Vincennes est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect'
+                    : 'Votre demande d\'inscription au tango est valid\xe9e — proc\xe9dez \xe0 votre inscription sur AssoConnect');
 
         eleveHtml = wrap(headerEleve
           + '<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">'
@@ -5369,7 +5369,7 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
       ${coursBox}
       ${soranoBlock}
       <div style="text-align:center;margin:0 0 10px;"><a href="${_esc(assoConnectUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">🔗 INSCRIPTION AUX COURS DE TANGO ${_esc(saison||'')}</a></div>
-      <p style="font-size:12px;color:#888;text-align:center;margin:0 0 24px;">Votre place sera définitivement réservée une fois l'inscription et le premier paiement effectués.</p>
+      <p style="font-size:12px;color:#888;text-align:center;margin:0 0 24px;">Votre place sera définitivement réservée une fois l\'inscription et le premier paiement effectués.</p>
       ${quelquesPrec}
       ${livretBtn}
       ${signI02}
