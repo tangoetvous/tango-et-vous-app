@@ -3799,8 +3799,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
     body: rpcBody
   });
   if (!rpcR.ok) {
-    const errBody = await rpcR.text();
-    return new Response(`<pre style="padding:20px;font:14px monospace;white-space:pre-wrap;">Erreur serveur RPC ${rpcR.status}\n\nbody envoyé: ${rpcBody}\n\nréponse: ${errBody}</pre>`, { status: 500, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+    return new Response('Erreur serveur', { status: 500, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
   }
   const result = await rpcR.json();
 
