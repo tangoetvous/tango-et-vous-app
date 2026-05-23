@@ -769,9 +769,10 @@
 <div class="section" id="essai-annule-admin">
   <div class="section-title">✕ Essai tango — Annulation par l'élève (admin)</div>
   <div class="section-desc">
-    Déclencheur : élève clique sur <strong>✕ Annuler</strong> dans son email essai tango (E1, E6, E7, E15) → route <code>GET /api/essai/annuler?id=&amp;token=</code> → RPC SECURITY DEFINER <code>confirmer_annuler_essai(p_action='annuler')</code> → UPDATE <code>statut='annulé'</code>.<br>
+    Déclencheur : élève clique sur <strong>✕ Annuler</strong> dans son email essai tango (E1, E6, E7, E15) → route <code>GET /api/essai/annuler?id=&amp;token=</code> → RPC SECURITY DEFINER <code>confirmer_annuler_essai(p_action='annuler')</code> → <code>DELETE FROM inscriptions_essai WHERE id=p_id</code>.<br>
+    <strong>La fiche disparaît immédiatement de Essai Tango</strong> (même comportement que le bouton ✕ admin).<br>
     3 canaux de notification admin envoyés en parallèle (fire and forget).<br>
-    <strong>Idempotent</strong> : si <code>result.already=true</code> (déjà annulé) → aucune notif envoyée → évite spam sur double-clic.
+    <strong>Idempotent (2ᵉ clic)</strong> : la fiche a déjà été supprimée → SELECT NOT FOUND → page "ℹ️ Déjà annulé", aucune notif → évite spam admin.
   </div>
 
   <div class="email-subj">Objet : ✕ [Essai tango] Annulation essai — Sophie MARTIN · Jeudi 28 mai</div>
@@ -826,9 +827,9 @@
 <div class="section" id="essai-reporte-admin">
   <div class="section-title">↩ Essai tango — Report par l'élève (admin)</div>
   <div class="section-desc">
-    Déclencheur : élève clique sur <strong>↩ Reporter à une autre date</strong> dans son email essai tango → route <code>GET /api/essai/reporter?id=&amp;token=</code> → RPC SECURITY DEFINER <code>confirmer_annuler_essai(p_action='annuler')</code> → UPDATE <code>statut='annulé'</code> + <code>Response.redirect 302</code> vers <code>cours-essai.html</code>.<br>
-    L'élève est redirigé automatiquement vers le formulaire d'inscription pour choisir une nouvelle date.<br>
-    3 canaux de notification admin envoyés en parallèle (fire and forget). <strong>Idempotent</strong> : aucun doublon sur double-clic.
+    Déclencheur : élève clique sur <strong>↩ Reporter à une autre date</strong> dans son email essai tango → route <code>GET /api/essai/reporter?id=&amp;token=</code> → RPC SECURITY DEFINER <code>confirmer_annuler_essai(p_action='annuler')</code> → <code>DELETE FROM inscriptions_essai WHERE id=p_id</code> + <code>Response.redirect 302</code> vers <code>cours-essai.html</code>.<br>
+    <strong>La fiche disparaît immédiatement de Essai Tango</strong> et l'élève est redirigé automatiquement vers le formulaire d'inscription pour choisir une nouvelle date.<br>
+    3 canaux de notification admin envoyés en parallèle (fire and forget). <strong>Idempotent (2ᵉ clic)</strong> : redirige quand même vers le formulaire, aucune notif → UX préservée.
   </div>
 
   <div class="email-subj">Objet : ↩ [Essai tango] Report essai — Sophie MARTIN · Jeudi 28 mai</div>

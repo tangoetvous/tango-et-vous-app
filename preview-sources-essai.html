@@ -152,11 +152,12 @@
   <div class="field">&nbsp;&nbsp;• <code>GET /api/essai/annuler?id=&amp;token=</code> → <span class="var">handleEssaiConfirmerAnnuler(action='annuler')</span></div>
   <div class="field">&nbsp;&nbsp;• <code>GET /api/essai/reporter?id=&amp;token=</code> → <span class="var">handleEssaiConfirmerAnnuler(action='reporter')</span></div>
   <div class="field"><span class="label">Token HMAC :</span> <code>HMAC-SHA256(${id}:${email.toLowerCase()}, SUPABASE_ANON).slice(0,32)</code></div>
-  <div class="field"><span class="label">Backend :</span> RPC Supabase <code>confirmer_annuler_essai(p_id, p_token, p_action, p_secret)</code> — SECURITY DEFINER, bypass RLS, vérifie HMAC server-side avant UPDATE</div>
+  <div class="field"><span class="label">Backend :</span> RPC Supabase <code>confirmer_annuler_essai(p_id, p_token, p_action, p_secret)</code> — SECURITY DEFINER, bypass RLS, vérifie HMAC server-side avant DELETE/UPDATE</div>
   <div class="field"><span class="label">Action confirmer :</span> UPDATE <code>presence_confirmee=true</code> → page verte 👍 "Présence confirmée !"</div>
-  <div class="field"><span class="label">Action annuler :</span> UPDATE <code>statut='annulé'</code> → page rouge ✕ "Inscription annulée" + notif admin</div>
-  <div class="field"><span class="label">Action reporter :</span> <span class="cond">même DB action que annuler</span> → notif admin "↩ Report essai" → <code>Response.redirect 302</code> vers <code>/cours-essai.html</code></div>
-  <div class="field"><span class="label">Idempotent :</span> si <code>result.already=true</code> (déjà annulé) → page "Déjà annulé" ou redirect sans notif (évite doublons sur double-clic)</div>
+  <div class="field"><span class="label">Action annuler :</span> <code>DELETE FROM inscriptions_essai WHERE id=p_id</code> (cohérent avec le bouton ✕ admin) → page rouge ✕ "Inscription annulée" + notif admin → la fiche disparaît immédiatement de Essai Tango</div>
+  <div class="field"><span class="label">Action reporter :</span> <span class="cond">même DELETE que annuler</span> → notif admin "↩ Report essai" → <code>Response.redirect 302</code> vers <code>/cours-essai.html</code></div>
+  <div class="field"><span class="label">Idempotent (2ᵉ clic) :</span> SELECT NOT FOUND → <code>{ok:false, error:'introuvable'}</code> → annuler affiche "Déjà annulé", reporter redirige quand même vers le formulaire (UX), confirmer renvoie 404 (cas pathologique)</div>
+  <div class="field"><span class="label">⚠️ Pourquoi DELETE et pas UPDATE statut='annulé' :</span> <code>inscriptions_essai</code> n'a pas de statut 'annulé' dans le workflow métier (valeurs utilisées : 'confirme', 'attente', 'demande'). L'admin (bouton ✕) fait un DELETE direct → cohérence + la fiche disparaît vraiment du tableau Essai Tango.</div>
   <div class="field"><span class="label">Pourquoi RPC :</span> <span class="cond">RLS sur inscriptions_essai bloque SELECT/UPDATE pour clé anon</span> → PATCH direct échoue silencieusement (0 lignes affectées sans erreur HTTP) → "Inscription introuvable" affiché en boucle. SECURITY DEFINER + HMAC server-side = bypass contrôlé.</div>
 </div>
 

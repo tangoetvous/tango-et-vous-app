@@ -964,7 +964,7 @@ if(partEntry){ partEntry.date=newDate; ... }
 
 #### Actions élève via email (liens Worker API)
 - **👍 Je confirme ma présence** → `PATCH /api/essai/confirmer?id=...&token=...` → `presence_confirmee=true`
-- **✕ Annuler** → `PATCH /api/essai/annuler?id=...&token=...` → `statut='annulé'` → fiche grisée admin (opacity:0.55, non comptée dans quotas) → notification admin N3 (rouge)
+- **✕ Annuler** → `GET /api/essai/annuler?id=...&token=...` → RPC SECURITY DEFINER `confirmer_annuler_essai(p_action='annuler')` → `DELETE FROM inscriptions_essai WHERE id=p_id` (cohérent avec le bouton ✕ admin) → **la fiche disparaît immédiatement de Essai Tango** + notification admin (panel 🔔 + email + push)
 - **↩ Reporter** → redirige vers le formulaire cours d'essai (`#URL_FORMULAIRE_ESSAI_A_RENSEIGNER` — à mettre à jour)
 
 **Pas de push OS élève pour les emails essai tango** (E1, E2, E4, E5, E5b, E6, E7, E15, E15b, E-mod, E-J1a, E-J1b) — les personnes en cours d'essai ne sont pas encore élèves et n'ont pas la PWA installée.
@@ -2708,7 +2708,7 @@ CSS partagé : `display:inline-block;color:#fff;font-size:12px;font-weight:700;p
 | **E15** | Admin valide une personne en attente → `confirme` | Élève | `confirme` | Même structure que E1/E6 selon délai restant |
 
 **Actions élève via email :**
-- Clic "✕ Annuler" → Worker API → `UPDATE inscriptions_essai SET statut='annulé'` → fiche grisée dans admin Pointage (opacity 0.55, boutons désactivés, 📞+🗑 actifs, non comptée dans quotas) → notification admin N3 (rouge)
+- Clic "✕ Annuler" → Worker API → RPC SECURITY DEFINER `confirmer_annuler_essai` → `DELETE FROM inscriptions_essai` (même DELETE que le bouton ✕ admin) → **la fiche disparaît immédiatement de Essai Tango** → notif admin (panel 🔔 rouge + email + push). ⚠️ Pas de `statut='annulé'` : ce statut n'existe pas dans le workflow métier (valeurs valides : 'confirme', 'attente', 'demande').
 - Clic "👍 Je confirme ma présence" (E7) → Worker API → `UPDATE inscriptions_essai SET presence_confirmee=true` → badge 👍 sur fiche admin → notification admin
 - Clic "↩ Reporter" → redirige vers le formulaire cours d'essai (`URL_FORMULAIRE_A_RENSEIGNER` — à mettre à jour quand l'utilisateur fournit l'URL)
 
@@ -3493,7 +3493,9 @@ Le bouton **👍 « Je confirme ma présence »** dans l'email E7 (essai tango r
 
 **1. `confirmer_annuler_essai(p_id, p_token, p_action, p_secret)`** — essai tango (E1/E6/E7/E15 + tous les T1/E-mod)
 
-Actions supportées : `'confirmer'` (`presence_confirmee=true`) ou `'annuler'` (`statut='annulé'`).
+Actions supportées : `'confirmer'` (`UPDATE presence_confirmee=true`) ou `'annuler'` (`DELETE FROM inscriptions_essai WHERE id=p_id`).
+
+⚠️ **DELETE et non UPDATE statut='annulé'** (correction 2026-05-23, session suite 3) : `inscriptions_essai` n'a pas de statut 'annulé' dans le workflow métier — les valeurs utilisées sont uniquement `'confirme'`, `'attente'`, `'demande'`. L'admin (bouton ✕) fait un DELETE direct via `supprimerEssaiInscr` (admin.html:9432). L'annulation depuis l'email doit faire pareil pour cohérence et pour que la fiche disparaisse vraiment du tableau Essai Tango. Avant le fix, la fiche restait visible car l'admin n'a aucun filtre sur `statut='annulé'`.
 
 **2. `confirmer_essai_yoga(p_id, p_token, p_secret)`** — essai yoga (Y3)
 
@@ -3582,4 +3584,73 @@ Les 3 fonctions sont déjà exécutées par l'utilisateur (sessions 2026-05-22 e
 - `confirmer_stage(TEXT, DATE, TEXT, TEXT)` — exécutée le 2026-05-23
 
 **Ne jamais modifier** la signature ou la logique de ces fonctions sans mettre à jour les handlers worker correspondants — la signature est versionnée par PostgreSQL et le client doit matcher.
+
+## Session 2026-05-23 (suite 3) — Annul essai par l'élève : DELETE au lieu d'UPDATE statut
+
+### Bug constaté
+
+Après un clic sur "✕ Annuler" depuis l'email d'un élève test :
+- ✅ Page "Inscription annulée" affichée
+- ✅ Email admin reçu
+- ✅ Notif panel 🔔 admin
+- ❌ **La fiche restait visible dans Essai Tango** — l'objectif principal n'était pas atteint
+
+### Cause racine
+
+La RPC `confirmer_annuler_essai` faisait `UPDATE inscriptions_essai SET statut='annulé'` mais :
+1. **Le statut `'annulé'` n'existe pas dans le workflow métier de `inscriptions_essai`** — les valeurs utilisées sont uniquement `'confirme'`, `'attente'`, `'demande'`
+2. **L'admin (admin.html) n'a aucun filtre** sur `statut='annulé'` — toutes les fiches sont affichées quel que soit leur statut
+3. **Le bouton ✕ admin** (`supprimerEssaiInscr`, admin.html:9432) fait un **DELETE direct**, pas un UPDATE statut
+
+→ L'UPDATE statut='annulé' ne supprimait rien visuellement et créait des fiches "fantômes" avec un statut non géré.
+
+### Fix : DELETE au lieu d'UPDATE statut
+
+**SQL mis à jour** (exécuté le 2026-05-23) :
+
+```sql
+CREATE OR REPLACE FUNCTION confirmer_annuler_essai(p_id BIGINT, p_token TEXT, p_action TEXT, p_secret TEXT)
+RETURNS JSON LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
+DECLARE
+  v_row inscriptions_essai;
+  v_expected TEXT;
+BEGIN
+  SELECT * INTO v_row FROM inscriptions_essai WHERE id = p_id;
+  IF NOT FOUND THEN RETURN json_build_object('ok', false, 'error', 'introuvable'); END IF;
+  v_expected := substring(encode(extensions.hmac(p_id::text || ':' || lower(v_row.email), p_secret, 'sha256'::text), 'hex'), 1, 32);
+  IF p_token != v_expected THEN RETURN json_build_object('ok', false, 'error', 'token'); END IF;
+  IF p_action = 'confirmer' THEN
+    UPDATE inscriptions_essai SET presence_confirmee = true WHERE id = p_id;
+  ELSIF p_action = 'annuler' THEN
+    DELETE FROM inscriptions_essai WHERE id = p_id;  -- ← change : DELETE plutôt qu'UPDATE statut
+  ELSE
+    RETURN json_build_object('ok', false, 'error', 'action_invalide');
+  END IF;
+  RETURN json_build_object('ok', true, 'already', false,
+    'prenom', v_row.prenom, 'nom', v_row.nom, 'email', v_row.email, 'tel', v_row.tel,
+    'date_essai', v_row.date_essai, 'ville', v_row.ville, 'niveau', v_row.niveau);
+END;
+$$;
+
+-- Nettoyage : supprimer les fiches déjà marquées 'annulé' par l'ancienne version
+DELETE FROM inscriptions_essai WHERE statut = 'annulé';
+```
+
+Apport en plus : ajout de `tel` dans le JSON retourné → l'email admin peut afficher le téléphone cliquable au lieu de `—`.
+
+### Worker — gestion du 2ᵉ clic
+
+Avec DELETE, un 2ᵉ clic sur le même lien retourne `error: 'introuvable'` (SELECT NOT FOUND). Le worker est adapté :
+- **Confirmer + introuvable** → 404 (cas pathologique, ne devrait pas arriver)
+- **Annuler + introuvable** → page `ℹ️ Déjà annulé` (au lieu de 404)
+- **Reporter + introuvable** → redirige quand même vers `cours-essai.html` (UX préservée)
+
+Aucune notification admin envoyée dans ces 3 cas — la première action a déjà notifié.
+
+### Règles permanentes — `inscriptions_essai` et statuts
+
+- **Statuts valides** : `'confirme'`, `'attente'`, `'demande'` — pas d'autres valeurs métier
+- **Pas de soft-delete** : la suppression d'une fiche essai est toujours un `DELETE` direct (admin ✕ ou annulation élève email)
+- **Pas de `statut='annulé'` ni `'supprimé'`** — ne jamais réintroduire ces valeurs dans `inscriptions_essai`
+- ⚠️ Différent de `inscriptions_cours` (tango régulier) qui utilise `statut='supprimé'` pour conservation historique. Les deux tables ont des règles de cycle de vie distinctes.
 
