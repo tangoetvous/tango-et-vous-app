@@ -3792,13 +3792,17 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   // RLS sur inscriptions_essai : SELECT USING (is_admin() OR email = auth.email())
   // → la clé anon sans JWT retourne 0 lignes → utiliser la service key pour bypasser
   const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  const ir = await fetch(
-    `${SUPABASE_URL}/rest/v1/inscriptions_essai?id=eq.${encodeURIComponent(id)}&select=id,prenom,nom,email,statut,date_essai,ville,niveau`,
-    { headers: { 'apikey': _svcKey, 'Authorization': `Bearer ${_svcKey}` } }
-  );
-  if (!ir.ok) return new Response('Erreur serveur', { status: 500 });
+  const _hasSvc = !!env.SUPABASE_SERVICE_KEY;
+  const queryUrl = `${SUPABASE_URL}/rest/v1/inscriptions_essai?id=eq.${encodeURIComponent(id)}&select=id,prenom,nom,email,statut,date_essai,ville,niveau`;
+  const ir = await fetch(queryUrl, { headers: { 'apikey': _svcKey, 'Authorization': `Bearer ${_svcKey}` } });
+  if (!ir.ok) {
+    const errBody = await ir.text();
+    return new Response(`<pre style="padding:20px;font:14px monospace;">Erreur serveur ${ir.status}\nhasServiceKey: ${_hasSvc}\n${errBody}</pre>`, { status: 500, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  }
   const rows = await ir.json();
-  if (!rows.length) return new Response('Inscription introuvable', { status: 404 });
+  if (!rows.length) {
+    return new Response(`<pre style="padding:20px;font:14px monospace;">Inscription introuvable\n\nid from URL: "${id}"\nencoded: "${encodeURIComponent(id)}"\nhasServiceKey: ${_hasSvc}\nquery URL: ${queryUrl}\nresponse status: ${ir.status}\nrows: ${JSON.stringify(rows)}</pre>`, { status: 404, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  }
   const ins = rows[0];
 
   const expected = (await _calHmac(`${id}:${(ins.email || '').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
