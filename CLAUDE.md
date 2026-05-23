@@ -964,7 +964,7 @@ if(partEntry){ partEntry.date=newDate; ... }
 
 #### Actions élève via email (liens Worker API)
 - **👍 Je confirme ma présence** → `PATCH /api/essai/confirmer?id=...&token=...` → `presence_confirmee=true`
-- **✕ Annuler** → `GET /api/essai/annuler?id=...&token=...` → RPC SECURITY DEFINER `confirmer_annuler_essai(p_action='annuler')` → `DELETE FROM inscriptions_essai WHERE id=p_id` (cohérent avec le bouton ✕ admin) → **la fiche disparaît immédiatement de Essai Tango** + notification admin (panel 🔔 + email + push)
+- **✕ Annuler** → `GET /api/essai/annuler?id=...&token=...` → RPC SECURITY DEFINER `confirmer_annuler_essai(p_action='annuler')` → `UPDATE statut='supprimé'` (+ `statut_avant_suppression`) → **la fiche apparaît grisée en bas du cours dans Pointage/Par date + dans le nouvel onglet 🗑 Supprimés** + notification admin (panel 🔔 + email + push). Cf. session 2026-05-23 (suite 4).
 - **↩ Reporter** → redirige vers le formulaire cours d'essai (`#URL_FORMULAIRE_ESSAI_A_RENSEIGNER` — à mettre à jour)
 
 **Pas de push OS élève pour les emails essai tango** (E1, E2, E4, E5, E5b, E6, E7, E15, E15b, E-mod, E-J1a, E-J1b) — les personnes en cours d'essai ne sont pas encore élèves et n'ont pas la PWA installée.
@@ -2708,7 +2708,7 @@ CSS partagé : `display:inline-block;color:#fff;font-size:12px;font-weight:700;p
 | **E15** | Admin valide une personne en attente → `confirme` | Élève | `confirme` | Même structure que E1/E6 selon délai restant |
 
 **Actions élève via email :**
-- Clic "✕ Annuler" → Worker API → RPC SECURITY DEFINER `confirmer_annuler_essai` → `DELETE FROM inscriptions_essai` (même DELETE que le bouton ✕ admin) → **la fiche disparaît immédiatement de Essai Tango** → notif admin (panel 🔔 rouge + email + push). ⚠️ Pas de `statut='annulé'` : ce statut n'existe pas dans le workflow métier (valeurs valides : 'confirme', 'attente', 'demande').
+- Clic "✕ Annuler" → Worker API → RPC SECURITY DEFINER `confirmer_annuler_essai` → soft-delete `statut='supprimé'` (avec `statut_avant_suppression` pour permettre Rétablir) → **la fiche apparaît grisée en bas du cours + dans l'onglet 🗑 Supprimés** → notif admin (panel 🔔 rouge + email + push). Cf. session 2026-05-23 (suite 4) pour le détail du modèle soft-delete.
 - Clic "👍 Je confirme ma présence" (E7) → Worker API → `UPDATE inscriptions_essai SET presence_confirmee=true` → badge 👍 sur fiche admin → notification admin
 - Clic "↩ Reporter" → redirige vers le formulaire cours d'essai (`URL_FORMULAIRE_A_RENSEIGNER` — à mettre à jour quand l'utilisateur fournit l'URL)
 
@@ -3493,9 +3493,12 @@ Le bouton **👍 « Je confirme ma présence »** dans l'email E7 (essai tango r
 
 **1. `confirmer_annuler_essai(p_id, p_token, p_action, p_secret)`** — essai tango (E1/E6/E7/E15 + tous les T1/E-mod)
 
-Actions supportées : `'confirmer'` (`UPDATE presence_confirmee=true`) ou `'annuler'` (`DELETE FROM inscriptions_essai WHERE id=p_id`).
+Actions supportées : `'confirmer'` (`UPDATE presence_confirmee=true`) ou `'annuler'` (soft-delete `UPDATE statut='supprimé' + statut_avant_suppression`).
 
-⚠️ **DELETE et non UPDATE statut='annulé'** (correction 2026-05-23, session suite 3) : `inscriptions_essai` n'a pas de statut 'annulé' dans le workflow métier — les valeurs utilisées sont uniquement `'confirme'`, `'attente'`, `'demande'`. L'admin (bouton ✕) fait un DELETE direct via `supprimerEssaiInscr` (admin.html:9432). L'annulation depuis l'email doit faire pareil pour cohérence et pour que la fiche disparaisse vraiment du tableau Essai Tango. Avant le fix, la fiche restait visible car l'admin n'a aucun filtre sur `statut='annulé'`.
+⚠️ **Historique : UPDATE→DELETE→soft-delete UPDATE statut='supprimé'** :
+- 2026-05-22 : version initiale faisait `UPDATE statut='annulé'` — la fiche restait visible (admin n'avait aucun filtre sur 'annulé')
+- 2026-05-23 (suite 3) : passage à `DELETE` direct — la fiche disparaissait mais aucune traçabilité, pas de restauration possible
+- 2026-05-23 (suite 4) : passage au **soft-delete** `UPDATE statut='supprimé'` + colonne `statut_avant_suppression` → la fiche apparaît grisée en bas du cours + dans un onglet dédié 🗑 Supprimés avec boutons Rétablir / Définitif. Voir session 2026-05-23 (suite 4).
 
 **2. `confirmer_essai_yoga(p_id, p_token, p_secret)`** — essai yoga (Y3)
 
@@ -3647,10 +3650,96 @@ Avec DELETE, un 2ᵉ clic sur le même lien retourne `error: 'introuvable'` (SEL
 
 Aucune notification admin envoyée dans ces 3 cas — la première action a déjà notifié.
 
-### Règles permanentes — `inscriptions_essai` et statuts
+### Règles permanentes — `inscriptions_essai` et statuts (annulé par session suite 4)
 
-- **Statuts valides** : `'confirme'`, `'attente'`, `'demande'` — pas d'autres valeurs métier
-- **Pas de soft-delete** : la suppression d'une fiche essai est toujours un `DELETE` direct (admin ✕ ou annulation élève email)
-- **Pas de `statut='annulé'` ni `'supprimé'`** — ne jamais réintroduire ces valeurs dans `inscriptions_essai`
-- ⚠️ Différent de `inscriptions_cours` (tango régulier) qui utilise `statut='supprimé'` pour conservation historique. Les deux tables ont des règles de cycle de vie distinctes.
+~~Pas de soft-delete~~ → **modèle révisé en session suite 4 : soft-delete adopté**. Voir la section ci-dessous.
+
+## Session 2026-05-23 (suite 4) — Essai Tango : soft-delete + onglet 🗑 Supprimés
+
+### Décision métier
+
+Demande utilisateur : les fiches d'élèves supprimées/annulées (admin ✕ ou élève clic email) doivent rester visibles, regroupées dans un onglet dédié, avec possibilité de **rétablir** (au cas où) ou de **supprimer définitivement** (DELETE réel).
+
+→ Passage de DELETE direct à **soft-delete via `statut='supprimé'`**.
+
+### Schéma SQL — nouvelle colonne
+
+```sql
+ALTER TABLE inscriptions_essai
+  ADD COLUMN IF NOT EXISTS statut_avant_suppression TEXT DEFAULT NULL;
+```
+
+Conserve l'ancien statut (`'confirme'` / `'attente'` / `'demande'`) au moment de la suppression, pour permettre la restauration au bon état.
+
+### RPC `confirmer_annuler_essai` — version finale (UPDATE statut='supprimé')
+
+Logique :
+1. SELECT row → si NOT FOUND → `error: 'introuvable'`
+2. Vérification HMAC token
+3. Si `action='confirmer'` → UPDATE `presence_confirmee=true`
+4. Si `action='annuler'` :
+   - Si déjà `statut='supprimé'` → idempotent, retour `already: true` (pas de UPDATE)
+   - Sinon UPDATE `statut='supprimé', statut_avant_suppression=v_row.statut`
+
+Le worker handler reste inchangé — la branche `if (!result.already)` continue à filtrer les notifications admin sur le 2ᵉ clic.
+
+### admin.html — affichage des supprimés
+
+**Pointage (`filtreEssai='pointage'`)** : split `grp.ins` en 3 listes :
+- `supprimesGrp` = `statut='supprimé'`
+- `visibles` = autres
+- `conf` et `attenteGrp` calculés depuis `visibles`
+
+Les supprimés s'affichent en bas du cours, dans un bloc encadré rouge `🗑 Supprimés (N)` puis chaque fiche avec `opacity:0.55`, nom barré, pill rouge `SUPPRIMÉ`.
+
+**Par date (`filtreEssai='dates'`)** : même logique, supprimés en bas de chaque cours.
+
+**Liste d'attente** : pas de changement — filtre `statut='attente'` exclut naturellement les supprimés.
+
+**Nouveau sous-onglet `🗑 Supprimés (N)`** :
+- Compteur dynamique dans le titre (filtre `statut='supprimé'` + saison active)
+- Groupé par `date|niveau|ville` (DESC date)
+- Bandeau d'aide : "Une fiche supprimée n'est plus comptée dans les quotas. Rétablir remet le statut initial ; Définitif efface la fiche de la DB (irréversible)."
+- Pill grise affiche le `statut_avant_suppression` (ex: "confirme", "attente")
+- Bouton 🔄 **Rétablir** : `retablirEssai(id)` → UPDATE `statut = statut_avant_suppression || 'confirme'` + delete column
+- Bouton 🗑 **Définitif** : `supprDefEssai(id, nom)` → modal de confirmation → DELETE réel
+
+### Fonctions admin.html
+
+**`supprimerEssaiInscr(email, date, id)`** (réécrite — clic ✕ admin) :
+- État local : marque `e.statut='supprimé', e.statut_avant_suppression=oldStatut`
+- DB : SELECT id+statut d'abord, puis UPDATE en batch (préserve `statut_avant_suppression` même si plusieurs rows match)
+- Plus de DELETE — UPDATE soft uniquement
+
+**`retablirEssai(id)`** (nouvelle) :
+- État local : `e.statut = e.statut_avant_suppression || 'confirme'`, `delete e.statut_avant_suppression`
+- DB : UPDATE `statut + statut_avant_suppression=NULL`
+- Toast `✓ Fiche rétablie`
+
+**`supprDefEssai(id, nom)`** (nouvelle) :
+- Modal de confirmation `Supprimer définitivement la fiche de NOM ? Cette action est irréversible.`
+- DELETE réel en DB
+- Toast `🗑 Fiche supprimée définitivement`
+
+### Handlers click ajoutés
+
+```javascript
+case 'retablir-essai':    retablirEssai(btn.dataset.id); break;
+case 'suppr-def-essai':   supprDefEssai(btn.dataset.id, btn.dataset.nom||''); break;
+```
+
+### Quotas et impact
+
+- Les supprimés ne sont **plus comptés** dans les compteurs des cours d'essai (filtrés par `statut !== 'supprimé'` dans Pointage + Par date)
+- RPC SQL `compter_inscrits_essai` continue de filtrer sur `statut='confirme'` → supprimés exclus naturellement
+- L'admin peut Rétablir une fiche supprimée par erreur sans avoir besoin de la réinscrire manuellement
+
+### Règles permanentes — `inscriptions_essai` (révisées)
+
+- **Statuts utilisés** : `'confirme'`, `'attente'`, `'demande'`, `'supprimé'` (soft-delete)
+- **Pas de `'annulé'`** — ne jamais utiliser ce statut, il n'a aucun handler associé
+- **Soft-delete via `statut='supprimé'`** + `statut_avant_suppression` pour la restauration
+- **DELETE réel** uniquement via le bouton 🗑 Définitif de l'onglet Supprimés (irréversible, après confirmation modale)
+- **Admin ✕ et email Annuler** font tous deux le soft-delete (cohérence)
+- **Pas de filtre RLS supplémentaire** : `tev-supabase.js` charge toutes les fiches (y compris supprimés) — c'est l'admin.html qui filtre/groupe selon les vues
 
