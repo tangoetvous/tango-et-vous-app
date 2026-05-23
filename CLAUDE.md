@@ -3349,4 +3349,74 @@ Les handlers dans `worker.js` **ne recalculent pas** l'expiration. Ils utilisent
 
 **Si le problème réapparaît :** vérifier que le body contient bien `coursInfos: [{ville, niveau, role}]` avec **un objet par cours**. Le handler `handleNotifyInscriptionCoursPaye` dans `worker.js` accepte les deux formats (backward compat racine → mono-cours), mais pour 2 cours, `coursInfos[]` est obligatoire.
 
+## Session 2026-05-23 — Audit sujets emails + signatures liste d'attente
+
+### ✅ Harmonisation sujets emails — handlers calés sur les previews
+
+**Règle établie** : les fichiers `preview-emails-*.html` sont la référence immuable. Seuls les handlers dans `worker.js` sont modifiés pour correspondre aux previews. Les previews ne sont jamais modifiés pour coller aux handlers.
+
+**Sujets corrigés dans `worker.js`** (session 2026-05-22 nuit / 2026-05-23 matin) :
+
+| Handler | Email | Sujet avant | Sujet corrigé |
+|---------|-------|-------------|---------------|
+| `handleNotifyCartePointage` | CP-A (admin) | sujet générique | `🃏 [Carte 10] ${nom} a pointé — ${nb} cours ce jour · ${10/10?'CARTE TERMINÉE ':''}${utilises}/10 total · ${source}` |
+| `handleNotifyEssaiAction` | T1 admin | sujet générique | `[Inscription tango] ${nom} — ${cours} — ⏳ att. validation` ou `✓ att. paiement` |
+| `handleNotifyEssaiAction` | T1-dem élève | sujet générique | `Votre demande d'inscription au tango est enregistrée — Tango & Vous` |
+| `handleNotifyEssaiAction` | T1-val élève | sujet générique | `✓ Votre inscription au tango est validée — procédez à votre inscription sur AssoConnect` |
+| `handleDemandeDevis` | D0a/b admin | sujet générique | `[Devis] ${nom} (${type_evenement}) — ${date_evenement} — ${nb} invités` (event) ou `[Devis] ${nom} (${type_demande}) — ${nb} cours — Niveau ${niveau}` (privé) |
+| `handleDemandeDevis` | D2 élève | sujet générique | `Votre demande de devis a bien été reçue — Tango & Vous` |
+| `handleNotifySorano` | SR2 | sujet générique | `✓ Votre adhésion Sorano est enregistrée — Tango & Vous` |
+| `handleNotifySorano` | SR1 | sujet générique | `Rappel — Adhésion Espace Sorano · Tango & Vous` |
+| `handleCronCarteExpiree` | CX | sujet générique | `⏰ Votre carte de 10 cours a expiré — ${restants} cours non utilisés · Tango & Vous` |
+| `handleNotifyCarteBienvenue` | C1 | sujet générique | `Bienvenue dans votre cours de tango — Tango & Vous` |
+| `handleNotifyCarteRenouvellement` | C2 (élève) | sujet générique | `Nouvelle carte ouverte — pensez à finaliser votre paiement` |
+| `handleNotifyCarteRenouvellement` | C2b (admin) | sujet générique | `Votre carte de 10 cours a été renouvelée — paiement à finaliser` |
+| `handleNotifyCartePaiement` | C-pay | sujet générique | `Votre paiement a bien été enregistré — Tango & Vous` |
+| `handleNotifyCarteReport` | C-report | sujet générique | `Votre carte a été reportée pour la saison ${saisonSuivante} — Tango & Vous` |
+| `handleNotifyCoursParticulier` | CP0 admin | sujet générique | `[Cours particulier] ${nom}${urgence haute ? ' — urgence haute' : ''} — ${profShort} demandé` |
+| `handleNotifyCoursParticulier` | CP1 élève | sujet générique | `Votre demande de cours particulier a bien été reçue — Tango & Vous` |
+
+### ✅ Variables de signature — inventaire complet
+
+Chaque variable de signature est définie localement dans le handler qui l'utilise. Variantes utilisées dans `worker.js` :
+
+| Variable | Première ligne | Utilisée dans |
+|----------|---------------|---------------|
+| `signEleve` | "À très bientôt sur la piste !" | Emails élèves confirmés (défaut) |
+| `signWait` | "Nous reviendrons vers vous très prochainement." | E2, E5, E5b (essai attente), **I01-att** (inscription attente) |
+| `signWaitI` | "Nous vous contacterons dès que votre inscription est validée." | T1-dem (transfert essai → inscription, attente) |
+| `signWaitS2` | "Nous vous contacterons dès que votre place est confirmée." | S2 (stage attente) |
+| `signCancel` | "Nous espérons vous retrouver bientôt sur la piste." | S-cancel (stage annulé) |
+| `signYoga` | "À très bientôt sur le tapis !" + branding Florencia Garcia | Y1, Y3, YI1, Y-mod, Y-J1a, Y-J1b |
+| Y-att inline | "Nous vous contacterons dès qu'une place se libère." + branding yoga | Y-att (yoga cours complet) |
+| `signI02` | "Nous vous attendons avec impatience !" | I02 (guidée validée → att. paiement) |
+| `signEleveI03` | "À très bientôt sur la piste — **[cours]** !" | I03 (paiement validé, avec mention du cours) |
+| `signE4` | "À [jourCours.toLowerCase()] prochain !" | E4 (rappel J-7 essai tango) |
+| `sign7` | "À [dayName] !" | E7/E6 (confirmation essai ≤7j) |
+| C6 inline | "À très bientôt sur la piste !" + "Florencia & Jérémy" (informel) | C6 (relance 2 absences, ton "tu") |
+
+**Règle** : les emails de liste d'attente ne disent **jamais** "À très bientôt sur la piste !" — la personne n'est pas encore confirmée. Toujours choisir une variante `signWait*`.
+
+**Règle** : les emails yoga n'utilisent jamais `signEleve` — toujours `signYoga` ou la variante inline yoga. Branding séparé (Florencia Garcia / Le Regard Se Pose).
+
+### ✅ Fix I02 — Gmail "..." clipping (session 2026-05-23 matin)
+
+**Problème** : l'email I02 (guidée validée → liste d'attente paiement) se terminait avec `signEleve`, identique à I01-val et I03 → Gmail détectait le doublon de fin et tronquait avec "...".
+
+**Fix** :
+- Nouvelle variable `signI02` = "Nous vous attendons avec impatience !" (première ligne différente)
+- Remplace `${signEleve}` par `${signI02}` dans le template I02 de `handleNotifyInscriptionCoursValidee`
+- Suppression du div token invisible `<div style="display:none;color:transparent;">` précédemment tenté par erreur
+
+**Règle permanente** : ne jamais utiliser de div token invisible pour différencier des emails. Toujours utiliser :
+1. Preheader unique via `wrap(inner, "Texte ASCII unique")`
+2. Variante de signature différente si la fin est identique à d'autres emails du même expéditeur
+
+### ✅ Audit complet signatures — résultat
+
+Tous les emails vérifiés. **Un seul problème trouvé et corrigé** :
+
+- **I01-att** (`handleNotifyInscriptionCours`, ligne ~4046) : utilisait `signEleve` → corrigé en `signWait`
+
+Tous les autres emails utilisent la bonne variante de signature selon leur statut (confirmé / attente / annulé / yoga).
 
