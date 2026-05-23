@@ -5534,9 +5534,13 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
     // Sujet volontairement différent de I01/I02 ("Votre inscription au tango...")
     // pour éviter que Gmail thread ces emails et affiche "..." dans I03
     const prenomRaw = (prenom || '').trim();
-    const subject = coursInfos.length > 1
-      ? `Bienvenue ${prenomRaw} ! Vos cours de tango ${coursInfos.map(ci => ci.ville === 'paris' ? 'Paris' : 'Vincennes').join(' & ')} sont confirmés`
-      : `Bienvenue ${prenomRaw} ! Votre place en ${coursResume.replace(' &amp; ', ' & ')} est confirmée`;
+    const subject = (() => {
+      if (coursInfos.length > 1) return `Bienvenue ${prenomRaw} ! Vos places aux Cours de Tango sont confirmées`;
+      const ci0 = coursInfos[0];
+      const niv = ci0.niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
+      const vil = ci0.ville === 'vincennes' ? 'Vincennes' : 'Paris';
+      return `Bienvenue ${prenomRaw} ! Votre place au Cours de Tango ${niv} à ${vil} est confirmée`;
+    })();
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
