@@ -5370,6 +5370,7 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
       <p style="font-size:12px;color:#888;text-align:center;margin:0 0 24px;">Votre place sera définitivement réservée une fois l'inscription et le premier paiement effectués.</p>
       ${quelquesPrec}
       ${livretBtn}
+      <div style="display:none;color:transparent;font-size:0;">${_esc((email||'').toLowerCase())}-i02</div>
       ${signEleve}
     </div>${footer}`, "Votre inscription tango est validee - finalisez votre dossier sur AssoConnect");
   try {
