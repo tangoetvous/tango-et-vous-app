@@ -5533,6 +5533,12 @@ function handleAction(action, btn) {
     case 'suppr-essai-inscr':
       (function(em,dt,rid){ ouvrirModalConfirm('Supprimer cet essai ?', function(){ supprimerEssaiInscr(em,dt,rid); }); })(btn.dataset.email, btn.dataset.date, btn.dataset.id||'');
       break;
+    case 'retablir-essai':
+      retablirEssai(btn.dataset.id);
+      break;
+    case 'suppr-def-essai':
+      supprDefEssai(btn.dataset.id, btn.dataset.nom||'');
+      break;
     case 'editer-essai':
       ouvrirEditEssai(btn.dataset.id);
       break;
@@ -7249,6 +7255,8 @@ function renderEssai() {
     +'<button class="sub-tab'+(filtreEssai==='attente'?' active':'')+'" data-filt-essai="attente">Liste d&#39;attente</button>'
     +'<button class="sub-tab'+(filtreEssai==='pointage'?' active':'')+'" data-filt-essai="pointage">Pointage</button>'
     +'<button class="sub-tab'+(filtreEssai==='inscrire'?' active':'')+'" data-filt-essai="inscrire">&#43; Inscrire</button>'
+    +'<button class="sub-tab'+(filtreEssai==='supprimes'?' active':'')+'" data-filt-essai="supprimes">🗑 Supprimés'
+      +(function(){ var n=(adminData.essai||[]).filter(function(e){return e.statut==='supprimé'&&dateAppartientSaison(e.date,sai);}).length; return n?' ('+n+')':''; })()+'</button>'
     +'</div>'
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" data-action="rafraichir-essais">&#8635; Rafraîchir</button>':'')
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerEssaiTango()">🖨️ Imprimer</button>':'')
@@ -7375,8 +7383,10 @@ function renderEssai() {
     var firstFutureOpenPt = false;
     Object.keys(grpPt).sort().forEach(function(key){
       var grp=grpPt[key];
-      var conf=grp.ins.filter(function(e){return !estVraimentAttente(e,grp.ins);});
-      var attenteGrp=grp.ins.filter(function(e){return estVraimentAttente(e,grp.ins);});
+      var supprimesGrp=grp.ins.filter(function(e){return e.statut==='supprimé';});
+      var visibles=grp.ins.filter(function(e){return e.statut!=='supprimé';});
+      var conf=visibles.filter(function(e){return !estVraimentAttente(e,visibles);});
+      var attenteGrp=visibles.filter(function(e){return estVraimentAttente(e,visibles);});
       var isVincPt=(COURS_VINCENNES||[]).indexOf(grp.date)>=0;
       var villePt=isVincPt?'vincennes':'paris';
       var absJour=adminData.absencesJour||[];
@@ -7388,7 +7398,7 @@ function renderEssai() {
         return c.statut==='inscrit'&&c.ville===villePt&&c.niveau===grp.niveau
           &&absJour.some(function(a){return a.date===grp.date&&a.email===c.email;});
       });
-      if(!conf.length&&!attenteGrp.length&&!elevesPresents.length&&!elevesAbsents.length) return;
+      if(!conf.length&&!attenteGrp.length&&!elevesPresents.length&&!elevesAbsents.length&&!supprimesGrp.length) return;
       var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
       var presEssai=conf.filter(function(e){return e.present===true;}).length;
       var absEssai=conf.filter(function(e){return e.present===false;}).length;
@@ -7483,6 +7493,21 @@ function renderEssai() {
           +'<a href="javascript:void(0)" class="btn btn-ghost" style="padding:3px 8px;font-size:11px;text-decoration:none;" data-date="'+grp.date+'" data-email="'+c.email+'" onclick="marquerAbsenceJour(this.dataset.date,this.dataset.email,this)">↩ Rétablir</a>'
           +'</div></div>';
       });
+      // ── Fiches supprimées (en bas, grisées) ──
+      if (supprimesGrp.length) {
+        body += '<div style="margin:10px 0 4px;padding:5px 10px;background:rgba(198,40,40,0.08);border-left:3px solid #c62828;border-radius:4px;font-size:11px;font-weight:600;color:#c62828;">🗑 Supprimés ('+supprimesGrp.length+')</div>';
+        supprimesGrp.forEach(function(e) {
+          var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
+          body += '<div class="point-row" style="opacity:0.55;"><div style="flex:1;min-width:0;">'
+            +'<div class="point-nom" style="text-decoration:line-through;color:var(--dim);">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+'</div>'
+            +'<div class="point-sub">'+(e.ville||'')+(e.partenaire?' · ♥ '+e.partenaire:'')+'</div>'
+            +'</div>'
+            +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
+            +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;opacity:0.7;">'+e.role+'</span>'
+            +'<span class="pill" style="font-size:8px;background:#c62828;color:#fff;padding:1px 6px;">SUPPRIMÉ</span>'
+            +'</div></div>';
+        });
+      }
       body += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
         +(toutPointe?'<button class="btn btn-ok" data-action="env-j1" data-date="'+grp.date+'">✉️ Emails J+1</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tous les essais d&#39;abord.</span>')
         +'<span id="j1s-'+grp.date+'" style="font-size:11px;margin-left:8px;"></span>'
@@ -7500,6 +7525,58 @@ function renderEssai() {
     if(!pastBodyPt && !futureBodyPt) return h+'<div class="empty-state">Aucun cours d&#39;essai confirmé.</div>';
     if (pastBodyPt) h += renderAcc('acc-pt-passes', 'Cours passés', pastBodyPt, false);
     h += futureBodyPt;
+    return h;
+  }
+
+  // ── Vue "Supprimés" : fiches statut='supprimé', avec Rétablir / Supprimer définitivement ──
+  if (filtreEssai==='supprimes') {
+    var supprimesAll = (adminData.essai||[]).filter(function(e){
+      return e.statut==='supprimé' && dateAppartientSaison(e.date,sai);
+    });
+    if (!supprimesAll.length) return h+'<div class="empty-state">Aucune fiche supprimée pour la saison '+sai+'.</div>';
+    // Trier : date DESC (les plus récentes d'abord), puis nom
+    supprimesAll.sort(function(a,b){
+      if (a.date !== b.date) return b.date.localeCompare(a.date);
+      return ((a.nom||'')+(a.prenom||'')).localeCompare((b.nom||'')+(b.prenom||''),'fr');
+    });
+    // Grouper par date+niveau+ville
+    var grpSup={};
+    supprimesAll.forEach(function(e){
+      var isVinc=(COURS_VINCENNES||[]).indexOf(e.date)>=0;
+      var villeS=isVinc?'vincennes':'paris';
+      var k=e.date+'|'+(e.niveau||'debutant')+'|'+villeS;
+      if(!grpSup[k])grpSup[k]={date:e.date,niveau:e.niveau||'debutant',ville:villeS,ins:[]};
+      grpSup[k].ins.push(e);
+    });
+    var bodySupAll='';
+    Object.keys(grpSup).sort(function(a,b){return b.localeCompare(a);}).forEach(function(key){
+      var g=grpSup[key];
+      var nivLbl=g.niveau==='debutant'?'Débutant':'Intermédiaire';
+      var villeLbl=g.ville==='vincennes'?'Vincennes':'Paris';
+      var ccS=couleurCours(g.ville,g.niveau);
+      var bodyG='';
+      g.ins.forEach(function(e){
+        var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
+        var statutAvant = e.statut_avant_suppression || 'confirme';
+        bodyG += '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'">'
+          +'<div style="flex:1;min-width:0;">'
+          +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+'</div>'
+          +'<div class="point-sub">'+(e.email||'')+(e.tel?' · '+e.tel:'')+(e.partenaire?' · ♥ '+e.partenaire:'')+'</div>'
+          +'</div>'
+          +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
+          +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
+          +'<span class="pill" style="font-size:8px;background:#555;color:#fff;padding:1px 6px;" title="Statut au moment de la suppression">'+statutAvant+'</span>'
+          +'<button class="btn btn-ok" style="padding:3px 9px;font-size:10px;" data-action="retablir-essai" data-id="'+(e.id||'')+'" title="Rétablir cette fiche">🔄 Rétablir</button>'
+          +'<button class="btn btn-err" style="padding:3px 9px;font-size:10px;" data-action="suppr-def-essai" data-id="'+(e.id||'')+'" data-nom="'+_esc((e.prenom||'')+' '+(e.nom||''))+'" title="Supprimer définitivement (DELETE en DB)">🗑 Définitif</button>'
+          +'</div></div>';
+      });
+      var hdrS = '<span style="color:'+ccS+';">'+fmtDate(g.date)+' — '+nivLbl+'</span>'
+        +' <span style="font-weight:400;color:var(--dim);font-size:11px;">'+villeLbl+'</span>'
+        +' <span style="font-weight:400;color:var(--dim);">('+g.ins.length+' supprimé'+(g.ins.length>1?'s':'')+')</span>';
+      bodySupAll += renderAcc('acc-sup-'+key.replace(/\|/g,'-'), hdrS, bodyG, false);
+    });
+    h += '<div style="font-size:12px;color:var(--dim);padding:8px 12px;background:rgba(198,40,40,0.06);border-left:3px solid #c62828;border-radius:4px;margin-bottom:10px;">🗑 <strong>'+supprimesAll.length+' fiche'+(supprimesAll.length>1?'s':'')+' supprimée'+(supprimesAll.length>1?'s':'')+'</strong> — pour la saison '+sai+'. Une fiche supprimée n\'est plus comptée dans les quotas. <strong>Rétablir</strong> remet le statut initial ; <strong>Définitif</strong> efface la fiche de la DB (irréversible).</div>';
+    h += bodySupAll;
     return h;
   }
 
@@ -7533,8 +7610,10 @@ function renderEssai() {
     niveaux.forEach(function(niv){
       var key=date+'|'+niv;
       var grp=grpDN[key]||{date:date,niveau:niv,ins:[]};
-      var ins=grp.ins;
-      if(!ins.length) return;
+      var insAll=grp.ins;
+      if(!insAll.length) return;
+      var supprimesEd=insAll.filter(function(e){return e.statut==='supprimé';});
+      var ins=insAll.filter(function(e){return e.statut!=='supprimé';});
       var guiConf=ins.filter(function(e){return (e.role==='guideur'||e.role==='double')&&e.statut==='confirme';});
       var gde=ins.filter(function(e){return e.role==='guidee';}).length;
       var attVrai=ins.filter(function(e){return estVraimentAttente(e,ins);}).length;
@@ -7561,7 +7640,7 @@ function renderEssai() {
         +' <span style="font-weight:400;color:var(--dim);font-size:11px;">'+lieuLbl+'</span>'
         +capaciteHtml;
       var body='';
-      if(!ins.length){
+      if(!ins.length && !supprimesEd.length){
         body='<div style="font-size:11px;color:var(--dim);padding:6px 0 10px;">Aucune inscription</div>';
       } else {
         var _mkEssaiDateCard = function(e) {
@@ -7593,6 +7672,24 @@ function renderEssai() {
             body+=_mkEssaiDateCard(g.person);
           }
         });
+        // ── Supprimés en bas, grisés ──
+        if (supprimesEd.length) {
+          body += '<div style="margin:10px 0 4px;padding:5px 10px;background:rgba(198,40,40,0.08);border-left:3px solid #c62828;border-radius:4px;font-size:11px;font-weight:600;color:#c62828;">🗑 Supprimés ('+supprimesEd.length+')</div>';
+          supprimesEd.forEach(function(e) {
+            var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
+            body += '<div class="point-row" style="opacity:0.55;">'
+              +'<div style="flex:1;min-width:0;">'
+              +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;text-decoration:line-through;color:var(--dim);">'
+              +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')
+              +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;opacity:0.7;">'+e.role+'</span>'
+              +'</div>'
+              +(e.partenaire?'<div class="point-sub" style="color:var(--dim);">♥ '+e.partenaire+'</div>':'')
+              +'</div>'
+              +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">'
+              +'<span class="pill" style="font-size:8px;background:#c62828;color:#fff;padding:1px 6px;">SUPPRIMÉ</span>'
+              +'</div></div>';
+          });
+        }
       }
       var isPastDN = date < todayStr;
       var accIdDN = 'acc-ed-'+key.replace('|','-');
@@ -9422,25 +9519,91 @@ function supprimerCoursInscr(id) {
 }
 function supprimerEssaiInscr(email, date, id) {
   if (!adminData.essai) return;
+  // Soft-delete : on marque statut='supprimé' (la fiche apparaît dans l'onglet Supprimés)
+  // statut_avant_suppression conserve l'ancien statut pour permettre Rétablir
+  function _markSupprime(e) {
+    if (e.statut !== 'supprimé') {
+      e.statut_avant_suppression = e.statut;
+      e.statut = 'supprimé';
+    }
+  }
   if (id) {
-    adminData.essai = adminData.essai.filter(function(e){ return String(e.id)!==String(id); });
+    adminData.essai.forEach(function(e){ if (String(e.id)===String(id)) _markSupprime(e); });
   } else {
-    adminData.essai = adminData.essai.filter(function(e){ return !(e.email===email && e.date===date); });
+    adminData.essai.forEach(function(e){ if (e.email===email && e.date===date) _markSupprime(e); });
   }
   if (!IS_DEMO) {
-    var q = id
-      ? TEV.client.from('inscriptions_essai').delete().eq('id', id)
-      : TEV.client.from('inscriptions_essai').delete().eq('email', email).eq('date_essai', date);
-    q.then(function(res){
-        if (res && res.error) {
-          console.error('Erreur suppression essai:', res.error);
-          afficherToast('Erreur : ' + (res.error.message || res.error.code || 'suppression échouée'));
-          chargerDonnees();
-        }
-      })
-      .catch(function(e){ console.error('Erreur suppression essai (réseau):', e); chargerDonnees(); });
+    // On lit d'abord l'ancien statut puis on UPDATE — séquentiel pour conserver statut_avant_suppression
+    var rowFinder = id
+      ? TEV.client.from('inscriptions_essai').select('id,statut').eq('id', id)
+      : TEV.client.from('inscriptions_essai').select('id,statut').eq('email', email).eq('date_essai', date);
+    Promise.resolve(rowFinder).then(function(res){
+      var rows = (res && res.data) || [];
+      var ops = rows.filter(function(r){ return r.statut !== 'supprimé'; }).map(function(r){
+        return TEV.client.from('inscriptions_essai')
+          .update({ statut: 'supprimé', statut_avant_suppression: r.statut })
+          .eq('id', r.id);
+      });
+      if (!ops.length) return;
+      Promise.all(ops.map(function(op){ return Promise.resolve(op); }))
+        .then(function(results){
+          var anyErr = results.some(function(rr){ return rr && rr.error; });
+          if (anyErr) {
+            console.error('Erreur suppression essai:', results);
+            afficherToast('Erreur : suppression échouée');
+            chargerDonnees();
+          }
+        })
+        .catch(function(e){ console.error('Erreur suppression essai (réseau):', e); chargerDonnees(); });
+    }).catch(function(e){ console.error('Erreur lecture essai avant suppression:', e); chargerDonnees(); });
   }
   renderTab();
+}
+// Rétablir une fiche supprimée → statut = statut_avant_suppression (ou 'confirme' par défaut)
+function retablirEssai(id) {
+  if (!adminData.essai) return;
+  var entry = adminData.essai.find(function(e){ return String(e.id)===String(id); });
+  if (!entry) return;
+  var statutNouveau = entry.statut_avant_suppression || 'confirme';
+  entry.statut = statutNouveau;
+  delete entry.statut_avant_suppression;
+  if (!IS_DEMO) {
+    Promise.resolve(
+      TEV.client.from('inscriptions_essai')
+        .update({ statut: statutNouveau, statut_avant_suppression: null })
+        .eq('id', id)
+    ).then(function(res){
+      if (res && res.error) {
+        console.error('Erreur rétablissement essai:', res.error);
+        afficherToast('Erreur : rétablissement échoué');
+        chargerDonnees();
+      } else {
+        afficherToast('✓ Fiche rétablie');
+      }
+    }).catch(function(e){ console.error('Erreur rétablissement (réseau):', e); chargerDonnees(); });
+  }
+  renderTab();
+}
+// Supprimer définitivement (DELETE réel en DB)
+function supprDefEssai(id, nom) {
+  ouvrirModalConfirm('Supprimer définitivement la fiche de ' + (nom||'') + ' ?\n\nCette action est irréversible.', function(){
+    if (!adminData.essai) return;
+    adminData.essai = adminData.essai.filter(function(e){ return String(e.id)!==String(id); });
+    if (!IS_DEMO) {
+      Promise.resolve(
+        TEV.client.from('inscriptions_essai').delete().eq('id', id)
+      ).then(function(res){
+        if (res && res.error) {
+          console.error('Erreur suppression définitive:', res.error);
+          afficherToast('Erreur : suppression définitive échouée');
+          chargerDonnees();
+        } else {
+          afficherToast('🗑 Fiche supprimée définitivement');
+        }
+      }).catch(function(e){ console.error('Erreur suppression def (réseau):', e); chargerDonnees(); });
+    }
+    renderTab();
+  });
 }
 function supprimerYogaEssaiInscr(email, date) {
   if (!adminData.essaiYoga) return;
