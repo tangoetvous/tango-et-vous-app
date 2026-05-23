@@ -3489,21 +3489,31 @@ async function handleNotifyInscriptionEssai(request, env) {
     return '';
   }
 
-  const secret = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   let inscId = null;
-  try {
-    const ir = await fetch(
-      `${SUPABASE_URL}/rest/v1/inscriptions_essai?prenom=eq.${encodeURIComponent(prenom)}&nom=eq.${encodeURIComponent(nom)}&date_essai=eq.${dateIso}&type=eq.tango&select=id&order=id.desc&limit=1`,
-      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
-    );
-    if (ir.ok) { const rows = await ir.json(); if (rows[0]) inscId = rows[0].id; }
-  } catch {}
+  if (email) {
+    try {
+      const ir = await fetch(
+        `${SUPABASE_URL}/rest/v1/inscriptions_essai?email=eq.${encodeURIComponent(email)}&date_essai=eq.${dateIso}&type=eq.tango&select=id&order=id.desc&limit=1`,
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+      );
+      if (ir.ok) { const rows = await ir.json(); if (rows[0]) inscId = rows[0].id; }
+    } catch {}
+  }
+  if (!inscId) {
+    try {
+      const ir = await fetch(
+        `${SUPABASE_URL}/rest/v1/inscriptions_essai?prenom=eq.${encodeURIComponent(prenom)}&nom=eq.${encodeURIComponent(nom)}&date_essai=eq.${dateIso}&type=eq.tango&select=id&order=id.desc&limit=1`,
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+      );
+      if (ir.ok) { const rows = await ir.json(); if (rows[0]) inscId = rows[0].id; }
+    } catch {}
+  }
 
   const APP_URL = 'https://app.tangoetvous.fr';
   let confirmUrl = `mailto:${adminEmail}`;
   let annulerUrl = `mailto:${adminEmail}?subject=${encodeURIComponent('Annulation essai tango ' + prenom + ' ' + nom)}`;
   if (inscId) {
-    const tk = (await _calHmac(`${inscId}:${(email || '').toLowerCase()}`, secret)).slice(0, 32);
+    const tk = (await _calHmac(`${inscId}:${(email || '').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
     confirmUrl = `${APP_URL}/api/essai/confirmer?id=${inscId}&token=${tk}`;
     annulerUrl = `${APP_URL}/api/essai/annuler?id=${inscId}&token=${tk}`;
   }
@@ -4587,23 +4597,12 @@ async function handleNotifyEssaiValide(request, env) {
     ? `<span style="background:#c2185b;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">Guidée</span>`
     : `<span style="background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:10px;">Guideur·se</span>`;
 
-  // HMAC token for action links — id from body, fallback DB lookup by email+date
-  let _inscId = id || null;
-  if (!_inscId && email && dateEssai) {
-    try {
-      const lr = await fetch(
-        `${SUPABASE_URL}/rest/v1/inscriptions_essai?email=eq.${encodeURIComponent(email)}&date_essai=eq.${dateEssai}&type=eq.tango&select=id&order=id.desc&limit=1`,
-        { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
-      );
-      if (lr.ok) { const rows = await lr.json(); if (rows[0]) _inscId = rows[0].id; }
-    } catch {}
-  }
   let confirmUrl = `mailto:${adminEmail}`;
   let annulerUrl = `mailto:${adminEmail}?subject=${encodeURIComponent('Annulation essai tango ' + prenom + ' ' + nom)}`;
-  if (_inscId) {
-    const tk = (await _calHmac(`${_inscId}:${(email||'').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
-    confirmUrl = `${APP_URL}/api/essai/confirmer?id=${_inscId}&token=${tk}`;
-    annulerUrl = `${APP_URL}/api/essai/annuler?id=${_inscId}&token=${tk}`;
+  if (id) {
+    const tk = (await _calHmac(`${id}:${(email||'').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
+    confirmUrl = `${APP_URL}/api/essai/confirmer?id=${id}&token=${tk}`;
+    annulerUrl = `${APP_URL}/api/essai/annuler?id=${id}&token=${tk}`;
   }
 
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
