@@ -6659,6 +6659,7 @@ async function handleNotifyInscriptionStage(request, env) {
       const daysUntil = Math.round((new Date(dateStr+'T12:00:00') - new Date(today+'T12:00:00')) / 86400000);
       const proche = daysUntil <= 3;
       const dateLabel = fmtDate(dateStr);
+      const dateLabelCourtEleve = fmtDateCourt(dateStr);
       const slots = dateObj.slots || [];
       const hdeb = (slots[0] || {}).horaire_debut || '';
       const hfin = (slots[slots.length-1] || {}).horaire_fin || '';
@@ -6702,24 +6703,16 @@ async function handleNotifyInscriptionStage(request, env) {
           </div>${footer}`, 'Votre demande de stage est enregistree - confirmation en fonction de la parite guideurs/guidees');
         await sendMail(String(rec.to), `Stage Tango & Vous — Demande reçue · ${dateLabel}`, htmlEleve);
       }
+
+      // Push élève par date
+      if (env.FIREBASE_SERVICE_ACCOUNT) {
+        const pushBodyDate = `🎭 ${isConfirme ? 'Inscription confirmée' : 'Demande de stage'} · ${dateLabelCourtEleve}`;
+        try {
+          const tokensEleve = await getFcmTokensForEmail(String(rec.to), _svcKey);
+          if (tokensEleve.length) await sendFcmPush(env, tokensEleve, { title: 'Tango & Vous', body: pushBodyDate });
+        } catch(e) { console.error('[inscription-stage] push eleve error', e); }
+      }
     }
-  }
-
-  // ── Pushs FCM élèves (1 par personne, résumé toutes dates) ───────
-  const pushBody = `🎭 ${isConfirme ? 'Inscription confirmée' : 'Demande de stage'} — ${dateLabels}`;
-
-  if (env.FIREBASE_SERVICE_ACCOUNT) {
-    try {
-      const tokensEleve = await getFcmTokensForEmail(String(email), _svcKey);
-      if (tokensEleve.length) await sendFcmPush(env, tokensEleve, { title: 'Tango & Vous', body: pushBody });
-    } catch(e) { console.error('[inscription-stage] push eleve error', e); }
-  }
-
-  if (env.FIREBASE_SERVICE_ACCOUNT && hasPartEmail) {
-    try {
-      const tokensPart = await getFcmTokensForEmail(String(partEmail), _svcKey);
-      if (tokensPart.length) await sendFcmPush(env, tokensPart, { title: 'Tango & Vous', body: pushBody });
-    } catch(e) { console.error('[inscription-stage] push partenaire error', e); }
   }
 
   return corsResponse({ ok: true }, 200, {}, request);
