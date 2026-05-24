@@ -6570,9 +6570,21 @@ async function handleNotifyInscriptionStage(request, env) {
     } catch(err) { console.error('[notify-stage] sendMail error', err); }
   }
 
-  // S0 — admin email
-  const firstDate = inscriptionsParDate[0] || {};
-  const allSlots  = (firstDate.slots||[]).map(sl => `${sl.horaire_debut||''}–${sl.horaire_fin||''} : ${sl.theme||sl.type||''}`).join('<br/>');
+  // S0 — admin email (même niveau de détail que l'email élève)
+  const totalGlobal = inscriptionsParDate.reduce((sum, d) => sum + (d.tarif || 0), 0);
+  const avecPart    = !!(partPrenom || partNom) && !emailPartage;
+  const stageBoxAdmin = buildStageBox(inscriptionsParDate, null, null, null, inscriptionsParDate.length > 1 ? 'Journée de stages' : 'Stage');
+  const partSection = avecPart
+    ? `<div style="background:#f3e8ff;border:1px solid #ce93d8;border-radius:8px;padding:14px 16px;margin:0 0 20px;">
+        <div style="font-size:13px;font-weight:700;color:#6a1b9a;margin-bottom:6px;">👫 Inscrit avec partenaire</div>
+        <div style="font-size:13px;color:#333;">${_esc(((partPrenom||'')+' '+(partNom||'')).trim())}${partEmail ? ' &nbsp;·&nbsp; <a href="mailto:'+_esc(partEmail)+'" style="color:#6a1b9a;">'+_esc(partEmail)+'</a>' : ' &nbsp;·&nbsp; email non renseigné'}</div>
+      </div>`
+    : (emailPartage
+        ? `<div style="background:#f3e8ff;border:1px solid #ce93d8;border-radius:8px;padding:14px 16px;margin:0 0 20px;">
+            <div style="font-size:13px;font-weight:700;color:#6a1b9a;margin-bottom:6px;">👫 Inscription en couple — email partagé</div>
+            <div style="font-size:13px;color:#333;">${_esc(((partPrenom||'')+' '+(partNom||'')).trim())}</div>
+          </div>`
+        : '');
   const htmlAdmin = wrap(`${headerAdmin}
     <div style="padding:20px 24px;">
       <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
@@ -6583,15 +6595,16 @@ async function handleNotifyInscriptionStage(request, env) {
           </div>
           <span style="display:inline-block;background:${isConfirme?'#2e7d32':'#e65100'};color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">${isConfirme?'✓ Confirmé·e':'⏳ Attente'}</span>
         </div>
-        <div style="background:#fffdf8;padding:14px 16px;">
-          <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:6px;">🎭 Stage · ${dateLabels}</div>
-          <div style="font-size:13px;color:#333;margin-bottom:4px;">Rôle : ${_esc(role||'')}</div>
-          <div style="font-size:13px;color:#333;">${allSlots}</div>
+        <div style="background:#fffdf8;padding:12px 16px;">
+          <div style="font-size:13px;color:#555;">Rôle : <strong>${_esc(role||'')}</strong>${totalGlobal ? `&nbsp;&nbsp;·&nbsp;&nbsp;<span style="color:#8B6914;font-weight:700;">Total : ${totalGlobal}€</span>` : ''}</div>
         </div>
       </div>
+      ${stageBoxAdmin}
+      ${partSection}
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <a href="tel:${_esc(tel||'')}" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
         <a href="mailto:${_esc(email||'')}" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
+        <a href="sms:${_esc(tel||'')}" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
         <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
       </div>
     </div>${footer}`);
