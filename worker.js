@@ -3386,17 +3386,14 @@ async function getFcmTokensForEmail(email, svcKey) {
 // Retourne les tokens des comptes is_admin() (vérifié via le rôle dans la table eleves)
 async function getFcmTokensAdmin(svcKey) {
   try {
-    // Récupérer les emails admin depuis la table eleves
-    const rEleves = await fetch(
-      `${SUPABASE_URL}/rest/v1/eleves?role=eq.admin&select=email`,
-      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
-    );
-    if (!rEleves.ok) return [];
-    const admins = await rEleves.json();
-    if (!admins.length) return [];
-
-    const emails = admins.map(a => a.email).filter(Boolean);
-    const inFilter = emails.map(e => `"${e}"`).join(',');
+    // Emails admin = même liste que is_admin() — jamais depuis eleves.role
+    const adminEmails = [
+      'tangoetvous@gmail.com',
+      'jeremybraitbart@gmail.com',
+      'garciabraitbart@gmail.com',
+      'jeremy@tangoetvous.com'
+    ];
+    const inFilter = adminEmails.map(e => `"${e}"`).join(',');
     const rTokens = await fetch(
       `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${inFilter})&select=token`,
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
