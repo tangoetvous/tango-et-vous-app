@@ -5101,7 +5101,7 @@ function switchTab(tab) {
   if (tab === 'notifications') {
     var notifs = adminData.notifications || [];
     notifs.forEach(function(n){ n.lu = true; });
-    if (!IS_DEMO && notifs.length) Promise.resolve(TEV.from('notifications').update({lu:true}).eq('lu',false)).catch(function(){});
+    if (!IS_DEMO && notifs.length) Promise.resolve(TEV.client.from('notifications').update({lu:true}).eq('lu',false)).catch(function(){});
     var dot = gel('notif-dot'); if (dot) dot.style.display = 'none';
   }
   document.querySelectorAll('.tab-btn').forEach(function(b) {
@@ -5991,7 +5991,7 @@ function handleAction(action, btn) {
       break;
     case 'tout-marquer-lu':
       (adminData.notifications||[]).forEach(function(n){ n.lu=true; });
-      if (!IS_DEMO) Promise.resolve(TEV.from('notifications').update({lu:true}).eq('lu',false)).catch(function(){});
+      if (!IS_DEMO) Promise.resolve(TEV.client.from('notifications').update({lu:true}).eq('lu',false)).catch(function(){});
       updateNotifBadge();
       renderTab();
       break;
