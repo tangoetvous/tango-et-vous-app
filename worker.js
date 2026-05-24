@@ -6653,7 +6653,7 @@ async function handleNotifyInscriptionStage(request, env) {
       <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Votre demande d'inscription est bien reçue</span></div>
       <div style="padding:30px 28px;">
         <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
-        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons bien enregistré votre demande pour le stage de tango. Voici votre récapitulatif.</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons bien enregistré votre demande pour le stage de tango. <strong>Vous êtes pour l'instant en liste d'attente.</strong> Voici le récapitulatif de votre demande.</p>
         ${stageBoxHtml}
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
           <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">🔄 En attente de confirmation</p>
