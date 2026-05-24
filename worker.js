@@ -413,7 +413,7 @@ export default {
 
       // POST /api/debug/push-test — envoie un push de test au compte connecté (JWT admin requis)
       if (pathname === '/api/debug/push-test' && method === 'POST') {
-        return handleDebugPushTest(request, env);
+        return await handleDebugPushTest(request, env);
       }
 
       try {
@@ -3328,59 +3328,80 @@ async function _getFcmAccessToken(serviceAccountJson) {
 // POST /api/debug/push-test — diagnostic push (JWT admin requis)
 // ================================================================
 async function handleDebugPushTest(request, env) {
-  const authHeader = request.headers.get('Authorization') || '';
-  const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!jwt) return jsonError(401, 'JWT requis');
-
-  let email;
   try {
-    const p = JSON.parse(atob(jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
-    email = p.email;
-  } catch { return jsonError(400, 'JWT invalide'); }
+    const authHeader = request.headers.get('Authorization') || '';
+    const jwtTok = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!jwtTok) return jsonError(401, 'JWT requis');
 
-  const adminEmails = ['tangoetvous@gmail.com','jeremybraitbart@gmail.com','garciabraitbart@gmail.com','jeremy@tangoetvous.com'];
-  if (!adminEmails.includes(email)) return jsonError(403, 'Admin requis');
+    let email;
+    try {
+      const p = JSON.parse(atob(jwtTok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+      email = p.email;
+    } catch { return jsonError(400, 'JWT invalide'); }
 
-  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    const adminEmails = ['tangoetvous@gmail.com','jeremybraitbart@gmail.com','garciabraitbart@gmail.com','jeremy@tangoetvous.com'];
+    if (!adminEmails.includes(email)) return jsonError(403, 'Admin requis');
 
-  // Fetch all tokens for this admin
-  const rTokens = await fetch(
-    `${SUPABASE_URL}/rest/v1/fcm_tokens?email=eq.${encodeURIComponent(email)}&select=token,platform,created_at`,
-    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
-  );
-  const rows = rTokens.ok ? await rTokens.json() : [];
+    const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
 
-  const diag = {
-    email,
-    vapid_configured: !!env.VAPID_PRIVATE_KEY,
-    firebase_configured: !!env.FIREBASE_SERVICE_ACCOUNT,
-    tokens_found: rows.length,
-    tokens: [],
-  };
-
-  for (const row of rows) {
-    const tok = row.token || '';
-    const isWebPush = tok.startsWith('{');
-    const entry = { platform: row.platform, created_at: row.created_at, type: isWebPush ? 'webpush' : 'fcm', token_prefix: tok.slice(0, 60) };
-
-    if (isWebPush) {
-      if (!env.VAPID_PRIVATE_KEY) {
-        entry.result = { skipped: true, reason: 'VAPID_PRIVATE_KEY absent' };
-      } else {
-        let sub;
-        try { sub = JSON.parse(tok); } catch { entry.result = { ok: false, error: 'JSON parse error' }; diag.tokens.push(entry); continue; }
-        entry.endpoint = sub.endpoint;
-        const r = await sendWebPush(env, tok, { title: 'Tango & Vous — Test', body: '🔔 Push de diagnostic — si vous voyez ceci, le push fonctionne !' }, { tab: 'notifications' });
-        entry.result = r;
-        // Also capture raw Apple response status if possible
-      }
+    // Fetch all tokens for this admin — only columns that exist (no 'platform')
+    const rTokens = await fetch(
+      `${SUPABASE_URL}/rest/v1/fcm_tokens?email=eq.${encodeURIComponent(email)}&select=token,created_at`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    let rows = [];
+    if (rTokens.ok) {
+      try { rows = await rTokens.json(); } catch(e) { rows = []; }
     } else {
-      entry.result = { skipped: true, reason: 'legacy FCM token — non testé par ce diagnostic' };
+      const errText = await rTokens.text().catch(() => '');
+      console.log('[push-diag] fcm_tokens fetch failed:', rTokens.status, errText.slice(0, 100));
     }
-    diag.tokens.push(entry);
-  }
 
-  return corsResponse(diag, 200, {}, request);
+    const diag = {
+      email,
+      vapid_configured: !!env.VAPID_PRIVATE_KEY,
+      firebase_configured: !!env.FIREBASE_SERVICE_ACCOUNT,
+      tokens_found: rows.length,
+      tokens: [],
+    };
+
+    for (const row of rows) {
+      const tok = row.token || '';
+      const isWebPush = tok.startsWith('{');
+      const entry = {
+        created_at: row.created_at,
+        type: isWebPush ? 'webpush' : 'fcm',
+        token_prefix: tok.slice(0, 80),
+      };
+
+      if (isWebPush) {
+        if (!env.VAPID_PRIVATE_KEY) {
+          entry.result = { skipped: true, reason: 'VAPID_PRIVATE_KEY absent' };
+        } else {
+          let sub;
+          try { sub = JSON.parse(tok); } catch(e) { entry.result = { ok: false, error: 'JSON parse: ' + e.message }; diag.tokens.push(entry); continue; }
+          entry.endpoint = (sub.endpoint || '').slice(0, 60) + '...';
+          try {
+            const r = await sendWebPush(env, tok, { title: 'Tango & Vous — Test', body: '🔔 Push de diagnostic — si vous voyez ceci, le push fonctionne !' }, { tab: 'notifications' });
+            entry.result = r;
+          } catch(e) {
+            entry.result = { ok: false, error: 'sendWebPush threw: ' + e.message };
+          }
+        }
+      } else {
+        entry.result = { skipped: true, reason: 'legacy FCM token — non testé par ce diagnostic' };
+      }
+      diag.tokens.push(entry);
+    }
+
+    return corsResponse(diag, 200, {}, request);
+  } catch(e) {
+    console.error('[push-diag] unhandled error:', e.message, e.stack);
+    return new Response(JSON.stringify({ ok: false, error: e.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    });
+  }
 }
 
 // ── Native Web Push Encryption (RFC 8291 + RFC 8188 + RFC 8292) ──
@@ -3487,10 +3508,16 @@ async function sendWebPush(env, subscriptionJson, notif, data = {}) {
   const jwtP = b64url({ aud: origin, exp: now + 43200, sub: VAPID_CONTACT });
   const sigInput = new TextEncoder().encode(`${jwtH}.${jwtP}`);
 
-  const vapidPriv = await crypto.subtle.importKey(
-    'pkcs8', b64urlDec(env.VAPID_PRIVATE_KEY),
-    { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']
-  );
+  let vapidPriv;
+  try {
+    vapidPriv = await crypto.subtle.importKey(
+      'pkcs8', b64urlDec(env.VAPID_PRIVATE_KEY),
+      { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']
+    );
+  } catch(e) {
+    console.error('[WebPush] VAPID key import failed:', e.message);
+    return { ok: false, error: 'vapid_key: ' + e.message };
+  }
   const sigRaw = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, vapidPriv, sigInput));
   const sigB64 = btoa(String.fromCharCode(...sigRaw)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
   const jwt = `${jwtH}.${jwtP}.${sigB64}`;
