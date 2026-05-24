@@ -1422,17 +1422,22 @@ GRANT USAGE, SELECT ON SEQUENCE notifications_eleve_id_seq TO anon, authenticate
 ```
 
 ### Fonction `compter_inscrits_essai` (quota cours d'essai)
-**À créer/remplacer dans Supabase.** Compte guideurs+guidées confirmés = inscriptions essai + élèves réguliers du cours.
+**Mise à jour 2026-05-24.** Compte guideurs+guidées confirmés = inscriptions essai + élèves réguliers du cours, avec deux corrections :
+- Élèves réguliers absents ce jour (`absences_jour`) **soustraits** du total
+- Lignes `isRenewal` (renouvellements carte10) **exclues** pour éviter le double-comptage
+- Saison calculée depuis la date → fonctionne pour la saison courante ET la saison prochaine
+
+⚠️ **Quirk SQL Editor** : éviter `alias.colonne` dans le WHERE externe — le SQL Editor transforme `aj.id` en `<aj.id>`. Utiliser `NOT IN (SELECT ...)` à la place de `LEFT JOIN ... IS NULL`.
 
 ```sql
-CREATE OR REPLACE FUNCTION compter_inscrits_essai(
+CREATE OR REPLACE FUNCTION public.compter_inscrits_essai(
   p_date_essai date,
   p_ville text,
   p_niveau text
 ) RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+SET search_path = public AS $$
 DECLARE
   v_saison text;
   v_gui_essai integer := 0;
@@ -1440,14 +1445,12 @@ DECLARE
   v_gui_cours integer := 0;
   v_gde_cours integer := 0;
 BEGIN
-  -- Calcul de la saison depuis la date (sept = début de saison)
   v_saison := CASE
     WHEN EXTRACT(MONTH FROM p_date_essai) >= 9
     THEN EXTRACT(YEAR FROM p_date_essai)::text || '-' || (EXTRACT(YEAR FROM p_date_essai) + 1)::text
     ELSE (EXTRACT(YEAR FROM p_date_essai) - 1)::text || '-' || EXTRACT(YEAR FROM p_date_essai)::text
   END;
 
-  -- Inscriptions essai confirmées pour cette date+ville+niveau
   SELECT
     COUNT(*) FILTER (WHERE role IN ('guideur', 'double') AND statut = 'confirme'),
     COUNT(*) FILTER (WHERE role = 'guidee' AND statut = 'confirme')
@@ -1458,7 +1461,6 @@ BEGIN
     AND niveau = p_niveau
     AND type = 'tango';
 
-  -- Élèves réguliers inscrits à ce cours (même saison)
   SELECT
     COUNT(*) FILTER (WHERE role = 'guideur'),
     COUNT(*) FILTER (WHERE role = 'guidee')
@@ -1467,7 +1469,11 @@ BEGIN
   WHERE ville = p_ville
     AND niveau = p_niveau
     AND statut = 'inscrit'
-    AND saison = v_saison;
+    AND saison = v_saison
+    AND (donnees IS NULL OR donnees->>'isRenewal' IS DISTINCT FROM 'true')
+    AND email NOT IN (
+      SELECT email FROM absences_jour WHERE date = p_date_essai
+    );
 
   RETURN json_build_object(
     'gui', v_gui_essai + v_gui_cours,
@@ -1476,7 +1482,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION compter_inscrits_essai(date, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.compter_inscrits_essai(date, text, text) TO anon, authenticated;
 ```
 
 ### Index unique inscriptions_stages (anti-doublon)
