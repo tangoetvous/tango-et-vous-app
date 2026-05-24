@@ -3475,7 +3475,7 @@ async function _webPushEncrypt(subscription, payload) {
 async function sendWebPush(env, subscriptionJson, notif, data = {}) {
   if (!env.VAPID_PRIVATE_KEY) { console.log('[WebPush] VAPID_PRIVATE_KEY absent — skip'); return { skipped: true }; }
 
-  const VAPID_PUB = 'BD_EhhtlJWoR-xAtfgRXFkLj3HZKT3TGE4FPgKwQe5isymrm7MvcRGywNy7TFMFlygQw0R1u_fT499jQd8EY2i4';
+  const VAPID_PUB = 'BDHGZkHsqA39hwEftF9jPloQjGWT_HwoWFmOhfWsLVG8RUuhoWc3bPmq9PWUO_751WQLBgR_GX12ONQn85u-NuM';
   const VAPID_CONTACT = 'mailto:tangoetvous@gmail.com';
 
   function b64url(obj) {
