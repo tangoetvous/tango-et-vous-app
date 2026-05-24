@@ -838,10 +838,104 @@ Le renouvellement est **toujours une action manuelle**. Il n'existe que deux voi
 1. **Admin** : clic sur "Renouveler" dans Cartes 10 → Détails
 2. **Élève** : clic sur "Renouveler sans payer pour l'instant" dans son espace, quand sa carte est à 10/10
 
+**Limite journalière de pointage — dynamique (implémentée le 2026-05-24)**
+
+La limite varie selon le nombre de cours actifs de l'élève :
+- **1 cours inscrit** → max **1 pointage par jour**
+- **2 cours inscrits** → max **2 pointages par jour** (comportement historique)
+
+**4 endroits où une carte de 10 cours peut être pointée :**
+
+| Source | Implémentation |
+|--------|---------------|
+| Admin **Détails** (`pointer-cours`) | Modal `ouvrirModalPointer()` : bouton "2 cours" masqué si `_maxParJour(email) <= 1`. `pointerCoursAction()` bornée par `_mpj`. |
+| Admin **Pointage** (`pointer-cours-1`) | Guard `dejaPointe >= _maxParJour(c.email)` avant d'appeler `pointerCoursAction()`. |
+| Espace élève (`confirmerPointerSelf()`) | Guard `already >= _mpjSelf` avec `_mpjSelf = eleveData.nbCoursInscrits \|\| 1`. Bouton "2 cours" masqué dans `ouvrirModalPointerSelf()` si `maxParJour - todayCount <= 1`. `TEV.pointerCours()` reçoit `maxParJour: eleveData.nbCoursInscrits \|\| 1`. |
+| **QR code** (`pointer_cours_qr` SQL) | Passe toujours `p_nb: 1`. La fonction SQL doit compter les inscriptions_cours actives et limiter à `v_nb_inscriptions` scans par jour. **SQL à exécuter** : voir ci-dessous. |
+
+**`_maxParJour(email)` (admin.html)** : filtre `adminData.coursTango` par `email + statut='inscrit' + saison=saisonActive() + !_isRenewalRow` → retourne 1 si < 2 cours actifs, 2 sinon.
+
+**`eleveData.nbCoursInscrits` (index.html)** : calculé dans le callback `inscriptions_cours` au login : count des lignes `statut='inscrit' + !isRenewal`. Fallback = 1.
+
+**`tevPointerCours({ ..., maxParJour })` (tev-supabase.js)** : paramètre optionnel, défaut = 2 (backward compat). Borne `mpj = Math.min(2, maxParJour)`.
+
+**SQL à exécuter dans Supabase — mise à jour `pointer_cours_qr`** :
+```sql
+CREATE OR REPLACE FUNCTION public.pointer_cours_qr(
+  p_email text, p_date date, p_nb integer
+) RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public AS $$
+DECLARE
+  v_saison text;
+  v_eleve_id bigint;
+  v_utilises integer;
+  v_restants integer;
+  v_statut text;
+  v_nb_today integer;
+  v_nb_inscriptions integer;
+  v_max_jour integer;
+  v_a_ajouter integer;
+BEGIN
+  -- Saison depuis la date
+  v_saison := CASE
+    WHEN EXTRACT(MONTH FROM p_date) >= 9
+    THEN EXTRACT(YEAR FROM p_date)::text || '-' || (EXTRACT(YEAR FROM p_date) + 1)::text
+    ELSE (EXTRACT(YEAR FROM p_date) - 1)::text || '-' || EXTRACT(YEAR FROM p_date)::text
+  END;
+
+  -- Récupérer l'élève
+  SELECT id, carte_utilises, carte_restants, carte_statut
+    INTO v_eleve_id, v_utilises, v_restants, v_statut
+    FROM eleves WHERE email = p_email LIMIT 1;
+  IF NOT FOUND THEN RETURN json_build_object('ok', false, 'error', 'eleve_introuvable'); END IF;
+  IF v_statut IS NULL OR v_statut = 'supprimé' THEN
+    RETURN json_build_object('ok', false, 'error', 'carte_inactive');
+  END IF;
+
+  -- Compter les inscriptions_cours actives (pour déterminer le max par jour)
+  SELECT COUNT(*) INTO v_nb_inscriptions
+    FROM inscriptions_cours
+    WHERE email = p_email AND statut = 'inscrit' AND saison = v_saison
+      AND (donnees IS NULL OR donnees->>'isRenewal' IS DISTINCT FROM 'true');
+  v_max_jour := GREATEST(1, LEAST(2, v_nb_inscriptions));
+
+  -- Compter les pointages du jour
+  SELECT COUNT(*) INTO v_nb_today FROM presences WHERE eleve_id = v_eleve_id AND date = p_date;
+  IF v_nb_today >= v_max_jour THEN
+    RETURN json_build_object('ok', true, 'skipped', true);
+  END IF;
+
+  v_a_ajouter := LEAST(p_nb, v_max_jour - v_nb_today);
+  IF v_a_ajouter <= 0 THEN RETURN json_build_object('ok', true, 'skipped', true); END IF;
+
+  -- Insérer les présences
+  FOR i IN 1..v_a_ajouter LOOP
+    INSERT INTO presences (eleve_id, eleve_nom, date, niveau, note)
+      SELECT v_eleve_id, nom || ' ' || prenom, p_date, niveau, 'QR code'
+      FROM eleves WHERE id = v_eleve_id;
+  END LOOP;
+
+  -- Mettre à jour la carte
+  v_utilises := COALESCE(v_utilises, 0) + v_a_ajouter;
+  v_restants := GREATEST(0, COALESCE(v_restants, 10) - v_a_ajouter);
+  UPDATE eleves SET carte_utilises = v_utilises, carte_restants = v_restants WHERE id = v_eleve_id;
+
+  RETURN json_build_object(
+    'ok', true, 'skipped', false,
+    'added', v_a_ajouter, 'utilises', v_utilises, 'restants', v_restants
+  );
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.pointer_cours_qr(text, date, integer) TO anon, authenticated;
+```
+⚠️ Ce SQL ne réintroduit **aucune logique de renouvellement** (conformément à la règle permanente). Le renouvellement reste une action manuelle admin.
+
 **QR code — pointage uniquement**
 - Scanné **1 fois** sur une date → 1 cours ajouté
-- Scanné **2 fois** sur une date → 2 cours ajoutés
-- Si déjà 2 cours pointés ce jour-là → scan ignoré (`skipped: true`)
+- Scanné **2 fois** sur une date → 2 cours ajoutés (seulement si élève inscrit à 2 cours)
+- Si déjà `v_max_jour` cours pointés ce jour-là → scan ignoré (`skipped: true`)
 - Fonction SQL `pointer_cours_qr` (RPC Supabase, SECURITY DEFINER, accessible à `anon`) — **ne jamais y réintroduire de logique de renouvellement**
 
 **Règle à 9 cours pris (espace élève `index.html`)**

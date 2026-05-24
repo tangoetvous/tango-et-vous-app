@@ -345,6 +345,12 @@
             eleveData.soranoPayé = res.data.some(function(i){
               return (i.ville||'').toLowerCase() === 'vincennes' && i.paiement_sorano === true;
             });
+            // Nombre de cours actifs (max pointages par jour : 1 si 1 cours, 2 si 2 cours)
+            eleveData.nbCoursInscrits = res.data.filter(function(i) {
+              if (i.statut !== 'inscrit') return false;
+              try { var d = i.donnees && (typeof i.donnees === 'string' ? JSON.parse(i.donnees) : i.donnees); if (d && d.isRenewal) return false; } catch(e){}
+              return true;
+            }).length || 1;
             if (eleveData.carte) {
               // Si au moins une inscription carte10 existe → carte10, sinon forfait
               eleveData.carte.type = hasCarte10 ? 'carte10' : 'forfait';
@@ -362,6 +368,7 @@
           _initAdminSync();
           if (currentTab === 'sorano') renderSorano();
         }).catch(function(){
+          if (!eleveData.nbCoursInscrits) eleveData.nbCoursInscrits = 1;
           if (eleveData && eleveData.carte && !eleveData.carte.type) {
             var c = eleveData.carte;
             var actif = Number(c.coursUtilises) > 0 || c.statut === 'Active' || c.statut === 'Nouvelle carte';
@@ -3439,7 +3446,8 @@
     const todayStr = new Date().toISOString().slice(0,10);
     const remaining  = eleveData && eleveData.carte ? (Number(eleveData.carte.coursRestants) || 0) : 10;
     const todayCount = eleveData && eleveData.presences ? eleveData.presences.filter(p => p.date === todayStr).length : 0;
-    const maxCanAdd  = Math.min(remaining, Math.max(0, 2 - todayCount));
+    const maxParJour = (eleveData && eleveData.nbCoursInscrits) || 1;
+    const maxCanAdd  = Math.min(remaining, Math.max(0, maxParJour - todayCount));
     // Bloquer si la carte est épuisée (0 cours restants) — l'élève doit d'abord renouveler
     if (remaining === 0) {
       const msgEl = document.getElementById('self-pointer-msg');
@@ -3477,11 +3485,12 @@
     try {
       if (IS_DEMO) {
         const already = (eleveData.presences||[]).filter(p => p.date===date).length;
-        if (already >= 2) {
-          msgEl.textContent='2 pointages maximum par jour.'; msgEl.style.display='block';
-          btn.disabled=false; btn.textContent='✓ Valider'; return;
+        const _mpjSelf = (eleveData && eleveData.nbCoursInscrits) || 1;
+        if (already >= _mpjSelf) {
+          msgEl.textContent = _mpjSelf === 1 ? '1 pointage maximum par jour pour votre inscription.' : '2 pointages maximum par jour.';
+          msgEl.style.display='block'; btn.disabled=false; btn.textContent='✓ Valider'; return;
         }
-        const toAdd = Math.max(0, Math.min(2 - already, nb));
+        const toAdd = Math.max(0, Math.min(_mpjSelf - already, nb));
         if (toAdd === 0) {
           msgEl.textContent='Déjà pointé pour ce jour.'; msgEl.style.display='block';
           btn.disabled=false; btn.textContent='✓ Valider'; return;
@@ -3530,6 +3539,7 @@
         eleveId: eleveData.eleve.id,
         date, niveau: eleveData.eleve.niveau,
         note: 'Pointage élève (auto)', nbCours: nb,
+        maxParJour: (eleveData && eleveData.nbCoursInscrits) || 1,
       });
       if (data.skipped) {
         msgEl.textContent='Déjà pointé pour ce jour — aucun doublon créé.'; msgEl.style.display='block';

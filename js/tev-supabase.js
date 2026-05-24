@@ -119,8 +119,9 @@ async function tevGetEleve(email) {
 // ================================================================
 // POINTAGE — ajouterPresence (remplace pointageManuel)
 // ================================================================
-async function tevPointerCours({ eleveId, date, niveau, note, nbCours }) {
-  const n = Math.min(2, Math.max(1, parseInt(nbCours) || 1));
+async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJour }) {
+  const mpj = (maxParJour && maxParJour >= 1) ? Math.min(2, maxParJour) : 2;
+  const n = Math.min(mpj, Math.max(1, parseInt(nbCours) || 1));
 
   // Compter les pointages du jour
   const { count: dejaPointe } = await _tev
@@ -129,7 +130,7 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours }) {
     .eq('eleve_id', eleveId)
     .eq('date', date);
 
-  const aAjouter = Math.min(n, 2 - (dejaPointe || 0));
+  const aAjouter = Math.min(n, mpj - (dejaPointe || 0));
   if (aAjouter <= 0) {
     return { ok: true, skipped: true, message: `Déjà ${dejaPointe} cours pointé(s) le ${date}` };
   }

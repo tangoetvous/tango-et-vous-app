@@ -204,7 +204,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
       <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--s3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">
         <input type="radio" name="pointer-nb" value="1" checked/> 1 cours
       </label>
-      <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--s3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">
+      <label id="modal-pointer-nb2-wrap" style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 12px;background:var(--s3);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;">
         <input type="radio" name="pointer-nb" value="2"/> 2 cours
       </label>
     </div>
@@ -1853,11 +1853,27 @@ function confirmerModalDate() {
   if (date && cb) cb(date);
 }
 var _pointerModalCb = null;
-function ouvrirModalPointer(nom, callback) {
+// Retourne le nombre max de pointages par jour pour un email donné :
+// 1 si l'élève n'est inscrit qu'à 1 cours actif, 2 s'il est inscrit à 2 cours.
+function _maxParJour(email) {
+  if (!email) return 2;
+  var sai = saisonActive();
+  var nb = (adminData.coursTango || []).filter(function(e) {
+    if ((e.email || '').toLowerCase() !== (email || '').toLowerCase()) return false;
+    if (e.statut !== 'inscrit') return false;
+    if (e.saison !== sai) return false;
+    if (e._isRenewalRow) return false;
+    return true;
+  }).length;
+  return nb >= 2 ? 2 : 1;
+}
+function ouvrirModalPointer(nom, callback, email) {
   gel('modal-pointer-date').value = today();
   gel('modal-pointer-nom').textContent = nom || '';
   var r1 = document.querySelector('input[name="pointer-nb"][value="1"]');
   if (r1) r1.checked = true;
+  var wrap2 = gel('modal-pointer-nb2-wrap');
+  if (wrap2) wrap2.style.display = _maxParJour(email) <= 1 ? 'none' : '';
   gel('modal-pointer').classList.add('vis');
   _pointerModalCb = callback;
 }
@@ -2018,7 +2034,7 @@ function confirmerModalQRPointer() {
   var id = _qrCarteId;
   var c = id ? (adminData.cartes||[]).find(function(x){return x.id===id;}) : null;
   fermerModalQR();
-  if(id) ouvrirModalPointer(c?c.nom:'', function(date,nb){ pointerCoursAction(id,date,nb,null); });
+  if(id) ouvrirModalPointer(c?c.nom:'', function(date,nb){ pointerCoursAction(id,date,nb,null); }, c?c.email:'');
 }
 function afficherToast(msg) {
   var t=document.createElement('div');
@@ -5497,7 +5513,7 @@ function handleAction(action, btn) {
       valDemande(id, btn);
       break;
     case 'pointer-cours':
-      (function(){ var c=adminData.cartes.find(function(x){return x.id===id;}); ouvrirModalPointer(c?c.nom:'',function(date,nb){ pointerCoursAction(id,date,nb,btn); }); })();
+      (function(){ var c=adminData.cartes.find(function(x){return x.id===id;}); ouvrirModalPointer(c?c.nom:'',function(date,nb){ pointerCoursAction(id,date,nb,btn); },c?c.email:''); })();
       break;
     case 'pointer-cours-1':
       (function(){
@@ -5506,7 +5522,7 @@ function handleAction(action, btn) {
         var todayDate=today();
         if(!adminData._dailyCounts)adminData._dailyCounts={};
         var dejaPointe=adminData._dailyCounts[(c.email||'').toLowerCase()+'|'+todayDate]||0;
-        if(dejaPointe>=2){afficherToast('2 pointages maximum par jour');return;}
+        if(dejaPointe>=_maxParJour(c.email)){afficherToast('Pointage maximum par jour atteint');return;}
         pointerCoursAction(id,todayDate,dejaPointe+1,btn);
       })();
       break;
@@ -8749,16 +8765,18 @@ function renderCartesDetails(d) {
   return h;
 }
 function pointerCoursAction(id, date, nbCours, btn) {
-  nbCours = Math.min(2, Math.max(1, parseInt(nbCours)||1));
+  var _cmp0=adminData.cartes.find(function(x){return x.id===id;});
+  var _mpj=_cmp0?_maxParJour(_cmp0.email):2;
+  nbCours = Math.min(_mpj, Math.max(1, parseInt(nbCours)||1));
   if(IS_DEMO){
-    var c=adminData.cartes.find(function(x){return x.id===id;});
+    var c=_cmp0;
     if(c){
       if(!c.datesCours)c.datesCours=[];
       if(!adminData._dailyCounts)adminData._dailyCounts={};
       var _dkp=(c.email||'').toLowerCase()+'|'+date;
       var dejaPointe=adminData._dailyCounts[_dkp]||0;
-      if(dejaPointe>=2){afficherToast('2 pointages maximum par jour');renderTab();return;}
-      var aAjouter=Math.max(0,Math.min(2-dejaPointe, nbCours));
+      if(dejaPointe>=_mpj){afficherToast('Pointage maximum par jour atteint');renderTab();return;}
+      var aAjouter=Math.max(0,Math.min(_mpj-dejaPointe, nbCours));
       if(aAjouter===0){afficherToast('Déjà pointé ce jour');renderTab();return;}
       var estPremierCours=!c.datePremierCours;
       var utilisesAvant=c.utilises||0;
@@ -8786,8 +8804,8 @@ function pointerCoursAction(id, date, nbCours, btn) {
     renderTab(); return;
   }
   if(btn)btn.disabled=true;
-  var c=adminData.cartes.find(function(x){return x.id===id;});
-  TEV.pointerCours({eleveId:id,date:date,niveau:c?c.niveau:'',note:'Pointage admin',nbCours:nbCours})
+  var c=_cmp0;
+  TEV.pointerCours({eleveId:id,date:date,niveau:c?c.niveau:'',note:'Pointage admin',nbCours:nbCours,maxParJour:_mpj})
     .then(function(r){
       if(r&&r.skipped){afficherToast('Déjà pointé ce jour');}
       else if(c){
