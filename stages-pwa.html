@@ -1265,7 +1265,20 @@ async function soumettre(){
         partEmail: data.partenaireEmail || '',
         partPrenom: data.partenairePrenom || '',
         partNom: data.partenaireNom || '',
-        emailPartage: !!(data.partenaireEmail && data.partenaireEmail === data.email)
+        partRole: data.rolePartenaire || '',
+        partTel: data.partenaireTel || '',
+        emailPartage: !!(data.partenaireEmail && data.partenaireEmail === data.email),
+        partInscriptionsParDate: avecPart ? (datesOK || []).map(function(di) {
+          return {
+            date: di.date,
+            slots: (di.stagesPartDetail && di.stagesPartDetail.length ? di.stagesPartDetail : di.stagesDetail || []).map(function(s) {
+              var parts = (s.horaire || '').split('–');
+              return { horaire_debut: parts[0] || '', horaire_fin: parts[1] || '', theme: s.theme || s.type || '' };
+            }),
+            tarif: di.prixPartenaire || di.prixInscrit || 0,
+            adresse: {}
+          };
+        }) : []
       };
       fetch('https://app.tangoetvous.fr/api/notify/inscription-stage', {
         method: 'POST',

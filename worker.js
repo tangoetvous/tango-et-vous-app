@@ -6507,14 +6507,21 @@ async function handleNotifyInscriptionStage(request, env) {
   const signWaitS2  = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous vous contacterons dès que votre place est confirmée.<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
-  const { email, prenom, nom, tel, role, statut, saison, inscriptionsParDate = [], partEmail, partPrenom, partNom, emailPartage } = body;
-  const prenomAff = _esc(prenom || '');
-  const nomAff    = _esc((prenom||'')+' '+(nom||'')).trim();
+  const { email, prenom, nom, tel, role, statut, saison, inscriptionsParDate = [],
+          partEmail, partPrenom, partNom, partRole, partTel, partInscriptionsParDate, emailPartage } = body;
+  const prenomAff  = _esc(prenom || '');
+  const nomAff     = _esc(((prenom||'')+' '+(nom||'')).trim());
   const isConfirme = (statut === 'confirme');
   const isPartage  = !!emailPartage;
+  const hasPartner = !!(partPrenom || partNom);
+  // Email partenaire distinct si renseigné et différent du principal
+  const hasPartEmail = hasPartner && !!(partEmail) && (partEmail||'').toLowerCase() !== (email||'').toLowerCase() && !isPartage;
+  // Stages du partenaire (peuvent différer des stages du principal)
+  const partDates  = (partInscriptionsParDate && partInscriptionsParDate.length) ? partInscriptionsParDate
+                   : (hasPartner ? inscriptionsParDate : []);
 
-  // Build stage-box HTML for a given list of dates + slots
-  function buildStageBox(dates, prenomLabel, nomLabel, roleLabel, boxTitle) {
+  // Build stage-box HTML for a list of dates + slots
+  function buildStageBox(dates, boxTitle) {
     let html = '';
     for (const d of dates) {
       const dateLabel = fmtDate(d.date);
@@ -6525,12 +6532,6 @@ async function handleNotifyInscriptionStage(request, env) {
       for (const sl of slots) {
         slotsHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')}</span> — ${_esc(sl.theme||sl.type||'')}</div>`;
       }
-      const roleSpan = roleLabel ? `&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">${_esc(roleLabel)}</span>` : '';
-      const personSection = `<div style="padding:10px 0 12px;">
-        ${prenomLabel ? `<div style="font-size:14px;font-weight:700;color:#333;margin-bottom:8px;">${_esc(prenomLabel)} ${_esc(nomLabel||'')}${roleSpan}</div>` : ''}
-        ${slotsHtml}
-        ${total ? `<div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">${total}€</div>` : ''}
-      </div>`;
       const lieuSection = (adresse.nom || adresse.rue) ? `<div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
         <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
         <div style="font-size:13px;color:#333;line-height:1.8;">${adresse.nom ? `<strong>${_esc(adresse.nom)}</strong><br/>` : ''}${adresse.rue ? `${_esc(adresse.rue)}<br/>` : ''}${adresse.transport ? `<span style="font-size:12px;color:#777;">${_esc(adresse.transport)}</span>` : ''}</div>
@@ -6540,7 +6541,7 @@ async function handleNotifyInscriptionStage(request, env) {
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">${boxTitle||'Votre stage'}</div>
           <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ${dateLabel}</div>
         </div>
-        <div style="padding:4px 18px 0;">${personSection}${lieuSection}</div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;">${slotsHtml}${total ? `<div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">${total}€</div>` : ''}</div>${lieuSection}</div>
         ${total ? `<div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : ${total}€</div>` : ''}
         <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
       </div>`;
@@ -6548,14 +6549,21 @@ async function handleNotifyInscriptionStage(request, env) {
     return html;
   }
 
+  // Helper : section avec titre de personne (pour emails couple)
+  function personSectionHeader(prenomL, nomL, roleL, bgColor) {
+    const roleSpan = roleL ? `&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">${_esc(roleL)}</span>` : '';
+    return `<div style="background:${bgColor||'#f5f0e8'};border-left:4px solid #B8962E;padding:10px 16px;margin:0 0 14px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:700;color:#333;">${_esc(prenomL||'')} ${_esc(nomL||'')}${roleSpan}</div>
+    </div>`;
+  }
+
   // Notif panel admin
-  const dateLabels = inscriptionsParDate.map(d => fmtDateCourt(d.date)).join(' · ');
+  const dateLabels  = inscriptionsParDate.map(d => fmtDateCourt(d.date)).join(' · ');
   const statutLabel = isConfirme ? '✓ Confirmé·e' : '⏳ Att. validation — parité';
-  const notifBg     = isConfirme ? '#0f1f0f' : '#1f1800';
-  const notifBorder = isConfirme ? '#4caf50' : '#e8c84a';
-  const notifMsg    = `🎭 ${isConfirme ? 'Inscription' : 'Demande'} stage — ${nomAff} · ${dateLabels} · ${statutLabel}`;
+  const notifMsg    = `🎭 ${isConfirme ? 'Inscription' : 'Demande'} stage — ${nomAff}${hasPartner ? ' & ' + _esc(((partPrenom||'')+' '+(partNom||'')).trim()) : ''} · ${dateLabels} · ${statutLabel}`;
   try {
-    await _insertNotification('stage_inscription', notifMsg, 'stages');
+    const resN = await _insertNotification('stage_inscription', notifMsg, 'stages');
+    if (!resN.ok) console.error('[notify-stage] notif HTTP', resN.status);
   } catch(err) { console.error('[notify-stage] notif error', err); }
 
   if (!env.BREVO_API_KEY) return corsResponse({ ok: true, notified: true }, 200, {}, request);
@@ -6570,107 +6578,150 @@ async function handleNotifyInscriptionStage(request, env) {
     } catch(err) { console.error('[notify-stage] sendMail error', err); }
   }
 
-  // S0 — admin email (même niveau de détail que l'email élève)
-  const totalGlobal = inscriptionsParDate.reduce((sum, d) => sum + (d.tarif || 0), 0);
-  const avecPart    = !!(partPrenom || partNom) && !emailPartage;
-  const stageBoxAdmin = buildStageBox(inscriptionsParDate, null, null, null, inscriptionsParDate.length > 1 ? 'Journée de stages' : 'Stage');
-  const partSection = avecPart
-    ? `<div style="background:#f3e8ff;border:1px solid #ce93d8;border-radius:8px;padding:14px 16px;margin:0 0 20px;">
-        <div style="font-size:13px;font-weight:700;color:#6a1b9a;margin-bottom:6px;">👫 Inscrit avec partenaire</div>
-        <div style="font-size:13px;color:#333;">${_esc(((partPrenom||'')+' '+(partNom||'')).trim())}${partEmail ? ' &nbsp;·&nbsp; <a href="mailto:'+_esc(partEmail)+'" style="color:#6a1b9a;">'+_esc(partEmail)+'</a>' : ' &nbsp;·&nbsp; email non renseigné'}</div>
-      </div>`
-    : (emailPartage
-        ? `<div style="background:#f3e8ff;border:1px solid #ce93d8;border-radius:8px;padding:14px 16px;margin:0 0 20px;">
-            <div style="font-size:13px;font-weight:700;color:#6a1b9a;margin-bottom:6px;">👫 Inscription en couple — email partagé</div>
-            <div style="font-size:13px;color:#333;">${_esc(((partPrenom||'')+' '+(partNom||'')).trim())}</div>
-          </div>`
-        : '');
+  // ── S0 : email admin ─────────────────────────────────────────────
+  const totalInscrit = inscriptionsParDate.reduce((s, d) => s + (d.tarif||0), 0);
+  const totalPart    = partDates.reduce((s, d) => s + (d.tarif||0), 0);
+  const totalGlobal  = totalInscrit + (hasPartner ? totalPart : 0);
+
+  // Section stages inscrit principal
+  const s0BoxInscrit = `
+    ${personSectionHeader(prenom, nom, role, '#f5f0e8')}
+    ${buildStageBox(inscriptionsParDate, inscriptionsParDate.length > 1 ? 'Journée de stages' : 'Stage')}`;
+
+  // Section stages partenaire (si couple)
+  const s0BoxPart = hasPartner ? `
+    <div style="margin-top:10px;"></div>
+    ${personSectionHeader(partPrenom, partNom, partRole||role, '#f3e8ff')}
+    ${buildStageBox(partDates, partDates.length > 1 ? 'Journée de stages' : 'Stage')}` : '';
+
+  const partContactAdmin = hasPartner
+    ? `<div style="font-size:12px;color:#555;margin-top:4px;">Partenaire : ${_esc(((partPrenom||'')+' '+(partNom||'')).trim())}${partEmail ? ' · <a href="mailto:'+_esc(partEmail)+'" style="color:#6a1b9a;">'+_esc(partEmail)+'</a>' : ' · email non renseigné'}${partTel ? ' · '+_esc(partTel) : ''}</div>` : '';
+
   const htmlAdmin = wrap(`${headerAdmin}
     <div style="padding:20px 24px;">
       <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
         <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
           <div style="flex:1;">
-            <div style="font-size:18px;font-weight:700;color:#111;">${nomAff}</div>
-            <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email||'')} · ${_esc(tel||'')}</div>
+            <div style="font-size:18px;font-weight:700;color:#111;">${nomAff}${hasPartner ? ' &amp; ' + _esc(((partPrenom||'')+' '+(partNom||'')).trim()) : ''}</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email||'')} · ${_esc(tel||'')}${totalGlobal ? ' · <strong>Total : '+totalGlobal+'€</strong>' : ''}</div>
+            ${partContactAdmin}
           </div>
           <span style="display:inline-block;background:${isConfirme?'#2e7d32':'#e65100'};color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">${isConfirme?'✓ Confirmé·e':'⏳ Attente'}</span>
         </div>
-        <div style="background:#fffdf8;padding:12px 16px;">
-          <div style="font-size:13px;color:#555;">Rôle : <strong>${_esc(role||'')}</strong>${totalGlobal ? `&nbsp;&nbsp;·&nbsp;&nbsp;<span style="color:#8B6914;font-weight:700;">Total : ${totalGlobal}€</span>` : ''}</div>
-        </div>
       </div>
-      ${stageBoxAdmin}
-      ${partSection}
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      ${s0BoxInscrit}
+      ${s0BoxPart}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
         <a href="tel:${_esc(tel||'')}" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
         <a href="mailto:${_esc(email||'')}" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
         <a href="sms:${_esc(tel||'')}" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
         <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
       </div>
     </div>${footer}`);
-  const dateS0Short = inscriptionsParDate[0] ? fmtDateS0(inscriptionsParDate[0].date) : dateLabels;
+  const dateS0Short  = inscriptionsParDate[0] ? fmtDateS0(inscriptionsParDate[0].date) : dateLabels;
   const s0StatutLabel = isConfirme ? '✓ confirmé' : '⏳ liste d\'attente';
-  await sendMail(adminEmail, `[Stage tango] ${nomAff} — ${dateS0Short} — ${_esc(role||'')} — ${s0StatutLabel}`, htmlAdmin);
+  await sendMail(adminEmail, `[Stage tango] ${nomAff}${hasPartner ? ' & '+_esc(((partPrenom||'')+' '+(partNom||'')).trim()) : ''} — ${dateS0Short} — ${s0StatutLabel}`, htmlAdmin);
 
-  // S1/S1b ou S2 — email élève
-  const today    = new Date().toISOString().slice(0,10);
+  // ── S1/S1b ou S2 : emails élèves ─────────────────────────────────
+  const today     = new Date().toISOString().slice(0,10);
   const daysUntil = inscriptionsParDate.length > 0
     ? Math.round((new Date(inscriptionsParDate[0].date+'T12:00:00') - new Date(today+'T12:00:00')) / 86400000)
     : 99;
-  const proche   = daysUntil <= 3;
+  const proche    = daysUntil <= 3;
+  const firstDate = inscriptionsParDate[0] || {};
+  const firstSlots = firstDate.slots || [];
+  const hdeb0 = firstSlots[0]?.horaire_debut || '';
+  const hfin0 = (firstSlots[firstSlots.length-1]||{}).horaire_fin || '';
+  const horaireLabel0 = (hdeb0 && hfin0) ? `${hdeb0}–${hfin0}` : '';
+  const firstDateLabel = fmtDate(firstDate.date || today);
+  const subjDate = `${firstDateLabel}${horaireLabel0 ? ' · '+horaireLabel0 : ''}`;
 
-  if (isConfirme) {
-    const bandeau = `<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span></div>`;
-    const rappelNote = proche ? '' : `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;"><p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p></div>`;
-    const _s1bFirstDate = inscriptionsParDate[0]?.date || '';
-    const _s1bToken = _s1bFirstDate ? (await _calHmac(String(email) + ':' + _s1bFirstDate, SUPABASE_ANON)).slice(0, 32) : '';
-    const _s1bConfirmUrl = _s1bFirstDate ? `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(email))}&date=${_s1bFirstDate}&token=${_s1bToken}` : '#';
-    const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_s1bConfirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
-    const stageBoxHtml = buildStageBox(inscriptionsParDate, null, null, null);
-    const firstDate2 = inscriptionsParDate[0] || {};
-    const firstSlots2 = firstDate2.slots || [];
-    const hdeb2 = firstSlots2[0]?.horaire_debut || '';
-    const hfin2 = (firstSlots2[firstSlots2.length-1]||{}).horaire_fin || '';
-    const horaireLabel2 = (hdeb2 && hfin2) ? `${hdeb2}–${hfin2}` : '';
-    const firstDateLabel2 = fmtDate(firstDate2.date || today);
-    const subjDate2 = `${firstDateLabel2}${horaireLabel2 ? ' · ' + horaireLabel2 : ''}`;
-    const htmlEleve = wrap(`${headerEleve}${bandeau}
-      <div style="padding:30px 28px;">
-        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
-        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">${proche ? 'Votre inscription au stage de tango est confirmée. Nous vous attendons dans moins de 3 jours — à très bientôt !' : 'Votre inscription au stage de tango est confirmée. Nous avons hâte de vous retrouver sur la piste ! Voici le récapitulatif de votre journée.'}</p>
-        ${stageBoxHtml}
-        ${confirmBtn}
-        ${rappelNote}
-        ${signEleve}
-      </div>${footer}`, proche ? 'Votre stage a lieu dans 3 jours - confirmez votre presence ci-dessous' : 'Votre inscription au stage est confirmee - retrouvez les details ci-dessous');
-    await sendMail(String(email), `Stage Tango & Vous — ${subjDate2}`, htmlEleve);
-  } else {
-    // S2 — attente guidée
-    const firstDate2 = inscriptionsParDate[0] || {};
-    const firstDateLabel2 = fmtDate(firstDate2.date || today);
-    const stageBoxHtml = buildStageBox(inscriptionsParDate, null, null, null, 'Votre demande de stage');
-    const htmlEleve = wrap(`${headerEleve}
-      <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Votre demande d'inscription est bien reçue</span></div>
-      <div style="padding:30px 28px;">
-        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
-        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons bien enregistré votre demande pour le stage de tango. <strong>Vous êtes pour l'instant en liste d'attente.</strong> Voici le récapitulatif de votre demande.</p>
-        ${stageBoxHtml}
-        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
-          <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">🔄 En attente de confirmation</p>
-          <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous veillons à avoir autant de guideurs·ses que de guidé·e·s dans chaque stage. Votre inscription sera confirmée selon l'équilibre des inscrits. Nous vous recontacterons rapidement !<br/><br/>Si vous souhaitez nous contacter : <a href="mailto:${adminEmail}" style="color:#e65100;">${adminEmail}</a> · 07 73 27 59 06</p>
-        </div>
-        ${signWaitS2}
-      </div>${footer}`, 'Votre demande de stage est enregistree - confirmation en fonction de la parite guideurs/guidees');
-    await sendMail(String(email), `Stage Tango & Vous — Demande reçue · ${firstDateLabel2}`, htmlEleve);
+  // Génère le bloc stages pour un email élève (ses stages + stages partenaire si couple)
+  function buildEleveStagesBlock(myDates, myPrenom, myNom, myRole, theirDates, theirPrenom, theirNom, theirRole) {
+    const hasPartnerSection = !!(theirDates && theirDates.length && (theirPrenom || theirNom));
+    if (!hasPartnerSection) return buildStageBox(myDates, myDates.length > 1 ? 'Journée de stages' : 'Votre stage');
+    const myLabel = `<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #e8d5a0;">Vos stages — ${_esc(myPrenom||'')} ${_esc(myNom||'')}</div>`;
+    const partLabel = `<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#6a1b9a;font-weight:700;margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid #e8d5a0;">Stages de votre partenaire — ${_esc(theirPrenom||'')} ${_esc(theirNom||'')}</div>`;
+    return myLabel + buildStageBox(myDates, myDates.length > 1 ? 'Journée de stages' : 'Stage') + partLabel + buildStageBox(theirDates, theirDates.length > 1 ? 'Journée de stages' : 'Stage');
   }
 
-  // Push FCM admin
+  // Destinataires : inscrit principal + partenaire (si email distinct)
+  // emailPartage : un seul email commun — on n'envoie qu'une fois avec les deux sections
+  const recipients = [
+    { to: email, pren: prenom, nom: nom, role: role, myDates: inscriptionsParDate, theirDates: hasPartner ? partDates : [], theirPren: partPrenom, theirNom: partNom, theirRole: partRole||role },
+  ];
+  if (hasPartEmail) {
+    recipients.push({
+      to: partEmail, pren: partPrenom||'', nom: partNom||'', role: partRole||role,
+      myDates: partDates, theirDates: inscriptionsParDate, theirPren: prenom, theirNom: nom, theirRole: role,
+    });
+  }
+
+  for (const rec of recipients) {
+    const recPrenomAff = _esc(rec.pren || '');
+    const stagesBlock = buildEleveStagesBlock(rec.myDates, rec.pren, rec.nom, rec.role, rec.theirDates, rec.theirPren, rec.theirNom, rec.theirRole);
+
+    if (isConfirme) {
+      const bandeau = `<div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span></div>`;
+      const rappelNote = proche ? '' : `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;"><p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p></div>`;
+      const _tkDate = inscriptionsParDate[0]?.date || '';
+      const _tk = _tkDate ? (await _calHmac(String(rec.to) + ':' + _tkDate, SUPABASE_ANON)).slice(0, 32) : '';
+      const _confirmUrl = _tkDate ? `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(rec.to))}&date=${_tkDate}&token=${_tk}` : '#';
+      const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_confirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
+      const intro = proche ? 'Votre inscription au stage de tango est confirmée. Nous vous attendons dans moins de 3 jours — à très bientôt !' : 'Votre inscription au stage de tango est confirmée. Nous avons hâte de vous retrouver sur la piste ! Voici le récapitulatif.';
+      const htmlEleve = wrap(`${headerEleve}${bandeau}
+        <div style="padding:30px 28px;">
+          <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${recPrenomAff}</strong>,</p>
+          <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">${intro}</p>
+          ${stagesBlock}
+          ${confirmBtn}
+          ${rappelNote}
+          ${signEleve}
+        </div>${footer}`, proche ? 'Votre stage a lieu dans 3 jours - confirmez votre presence ci-dessous' : 'Votre inscription au stage est confirmee - retrouvez les details ci-dessous');
+      await sendMail(String(rec.to), `Stage Tango & Vous — ${subjDate}`, htmlEleve);
+    } else {
+      const htmlEleve = wrap(`${headerEleve}
+        <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Votre demande d'inscription est bien reçue</span></div>
+        <div style="padding:30px 28px;">
+          <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${recPrenomAff}</strong>,</p>
+          <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons bien enregistré votre demande pour le stage de tango. <strong>Vous êtes pour l'instant en liste d'attente.</strong> Voici le récapitulatif de votre demande.</p>
+          ${stagesBlock}
+          <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
+            <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">🔄 En attente de confirmation</p>
+            <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous veillons à avoir autant de guideurs·ses que de guidé·e·s dans chaque stage. Votre inscription sera confirmée selon l'équilibre des inscrits. Nous vous recontacterons rapidement !<br/><br/>Si vous souhaitez nous contacter : <a href="mailto:${adminEmail}" style="color:#e65100;">${adminEmail}</a> · 07 73 27 59 06</p>
+          </div>
+          ${signWaitS2}
+        </div>${footer}`, 'Votre demande de stage est enregistree - confirmation en fonction de la parite guideurs/guidees');
+      await sendMail(String(rec.to), `Stage Tango & Vous — Demande reçue · ${firstDateLabel}`, htmlEleve);
+    }
+  }
+
+  // ── Pushs FCM ─────────────────────────────────────────────────────
+  const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const pushBody = `🎭 ${isConfirme ? 'Inscription confirmée' : 'Demande de stage'} — ${dateLabels}`;
+
+  // Push admin
   if (env.FIREBASE_SERVICE_ACCOUNT) {
-    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
     try {
       const tokens = await getFcmTokensAdmin(_svcKey);
-      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `🎭 Inscription stage — ${nomAff} · ${inscriptionsParDate[0] ? fmtDateCourt(inscriptionsParDate[0].date) : ''}` });
-    } catch(e) { console.error('[inscription-stage] push error', e); }
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `🎭 Inscription stage — ${nomAff}${hasPartner ? ' & '+_esc(((partPrenom||'')+' '+(partNom||'')).trim()) : ''} · ${dateLabels}` });
+    } catch(e) { console.error('[inscription-stage] push admin error', e); }
+  }
+
+  // Push élève principal
+  if (env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      const tokens = await getFcmTokensForEmail(String(email), _svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: pushBody });
+    } catch(e) { console.error('[inscription-stage] push eleve error', e); }
+  }
+
+  // Push partenaire (si email distinct)
+  if (env.FIREBASE_SERVICE_ACCOUNT && hasPartEmail) {
+    try {
+      const tokens = await getFcmTokensForEmail(String(partEmail), _svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: pushBody });
+    } catch(e) { console.error('[inscription-stage] push partenaire error', e); }
   }
 
   return corsResponse({ ok: true }, 200, {}, request);
