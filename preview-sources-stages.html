@@ -28,10 +28,30 @@
 <div class="block">
   <div class="field"><span class="label">Destinataire :</span> <span class="var">tangoetvous@gmail.com</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>🎭 Inscription stage — ${nom} · ${dateLabels}</code></div>
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, tel, role, statut, saison, inscriptionsParDate[], partEmail?, partPrenom?, partNom? }</span></div>
-  <div class="field"><span class="label">inscriptionsParDate :</span> <code>[{ date:YYYY-MM-DD, slots:[{type, theme, horaire_debut, horaire_fin}], tarif }]</code></div>
-  <div class="field"><span class="label">Encadré or :</span> Nom/email/tel · Rôle · Dates · Slots+thèmes · Badge statut</div>
-  <div class="field"><span class="label">Boutons :</span> 📞 tel: · ✉️ mailto: · Ouvrir l'admin → Stages</div>
+  <div class="field"><span class="label">Body complet :</span> <span class="var">{ email, prenom, nom, tel, role, statut, saison, inscriptionsParDate[], partEmail?, partPrenom?, partNom?, partRole?, partTel?, partInscriptionsParDate?, emailPartage? }</span></div>
+  <div class="field"><span class="label">inscriptionsParDate :</span> <code>[{ date:YYYY-MM-DD, slots:[{type, theme, horaire_debut, horaire_fin}], tarif, adresse? }]</code></div>
+  <div class="field"><span class="label">partInscriptionsParDate :</span> <span class="src">stages-pwa.html → <code>di.stagesPartDetail</code></span> — stages choisis par le partenaire par date (peut différer de ceux de l'inscripteur). Tableau de même structure que <code>inscriptionsParDate</code>.</div>
+  <div class="field"><span class="label">emailPartage :</span> <span class="cond">true si partEmail === email</span> → un seul email envoyé avec les deux sections</div>
+  <div class="field"><span class="label">Encadré or (solo) :</span> Nom/email/tel · Rôle · Dates · Slots+thèmes · Badge statut</div>
+  <div class="field"><span class="label">Encadré or (couple) :</span> Section inscripteur (or) + section partenaire (rose/violet) — chacun avec ses propres slots + tarif</div>
+  <div class="field"><span class="label">Boutons :</span> 📞 tel: (les deux si couple) · ✉️ mailto: · Ouvrir l'admin → Stages</div>
+</div>
+
+<h2>S1/S1b/S2 — Mécanique couple (emails distincts vs partagés)</h2>
+<div class="block">
+  <div class="field"><span class="label">hasPartEmail :</span> <span class="cond">hasPartner && partEmail non vide && partEmail !== email && !emailPartage</span> → envoie un email séparé au partenaire</div>
+  <div class="field"><span class="label">Boucle recipients :</span> Tableau de 1 ou 2 entrées selon <code>hasPartEmail</code>. Chaque entrée = <code>{ to, pren, nom, role, myDates, theirDates, theirPren, theirNom, theirRole }</code></div>
+  <div class="field"><span class="label">buildEleveStagesBlock() :</span> Helper worker — si partenaire a des stages (<code>theirDates.length &gt; 0</code>) → deux sections labellisées (fond beige pour "Vos stages", fond violet pour "Stages de votre partenaire"). Sinon → stage-box simple.</div>
+  <div class="field"><span class="label">Email partagé :</span> <span class="cond">si emailPartage=true</span> → 1 seul email, sections Thomas + Marie côte à côte (même comportement que S1d)</div>
+  <div class="field"><span class="label">Partenaire sans email :</span> <span class="cond">si partEmail vide</span> → seul l'inscripteur reçoit l'email, avec les deux sections (ses stages + stages partenaire)</div>
+</div>
+
+<h2>Push OS — élèves (S1/S1b)</h2>
+<div class="block">
+  <div class="field"><span class="label">Push admin :</span> <span class="src">getFcmTokensAdmin(svcKey)</span> + <span class="src">sendFcmPush(env, tokens, notif)</span> — <code>await</code> + try/catch</div>
+  <div class="field"><span class="label">Push élève principal :</span> <span class="src">getFcmTokensForEmail(email, svcKey)</span> — envoyé si <code>FIREBASE_SERVICE_ACCOUNT</code> présent</div>
+  <div class="field"><span class="label">Push partenaire :</span> <span class="src">getFcmTokensForEmail(partEmail, svcKey)</span> — envoyé si <code>hasPartEmail</code> ET <code>FIREBASE_SERVICE_ACCOUNT</code> présent</div>
+  <div class="field"><span class="label">Corps push :</span> <code>🎭 ${isConfirme ? 'Inscription confirmée' : 'Demande de stage'} — ${dateLabels}</code></div>
 </div>
 
 <h2>S1 — Confirmation élève (&gt;3 jours)</h2>

@@ -4240,3 +4240,74 @@ Quand un élève clique **"Je pense venir"** sur une milonga (accueil, onglet Mi
 - **`index.html` — `window._milJeViens`** : après le RSVP Supabase, appelle `fetch('/api/notify/milonga-rsvp', { method:'POST', body:JSON.stringify({email, prenom, nom, milongaNom, milongaDate}) })` (fire-and-forget côté client — OK car c'est le navigateur de l'élève, pas Cloudflare Workers).
 - **`worker.js` — `handleNotifyMilongaRsvp`** : `POST /api/notify/milonga-rsvp` (sans auth) → `_insertNotification('milonga_rsvp', msg, 'milonga')` + `getFcmTokensAdmin` + `sendFcmPush`. Tous les appels sont `await` + `try/catch`.
 - **Point d'entrée unique** : `_milJeViens` est la seule fonction déclenchée par les trois surfaces (accueil, milonga, agenda) — un seul endroit à modifier.
+
+## Session 2026-05-24 (suite 7) — Stages couple : emails + push par personne
+
+### ✅ Séparateur visuel dans le formulaire stages-pwa.html
+
+`<hr style="border:none;border-top:1px solid #2a2000;margin:28px 0 0;">` ajouté avant `#recaps-container`. `.recaps-container { margin-top: 0; }` (était 28px, évite le double espacement).
+
+### ✅ Email S2 — intro avec statut en gras
+
+Intro S2 (guidée seule en attente de validation parité) : `"Nous avons bien enregistré votre demande pour le stage de tango. <strong>Vous êtes pour l'instant en liste d'attente.</strong> Voici le récapitulatif de votre demande."` — l'élève comprend immédiatement son statut sans lire tout l'email.
+
+### ✅ Emails stages couple — récap de chaque personne
+
+**Comportement** : chaque membre d'un couple reçoit ses propres stages + les stages de son partenaire dans une section labelisée séparée. Les dates et les créneaux choisis peuvent différer entre les deux personnes.
+
+**Nouveaux helpers dans `worker.js`** :
+
+```javascript
+// En-tête de section colorée (fond beige → inscripteur, fond violet → partenaire)
+function personSectionHeader(prenomL, nomL, roleL, bgColor) { ... }
+
+// Génère une stage-box simple (solo) ou deux sections labellisées (couple)
+function buildEleveStagesBlock(myDates, myPrenom, myNom, myRole,
+                               theirDates, theirPrenom, theirNom, theirRole) {
+  // Si theirDates non vide → deux sections :
+  // "Vos stages — Marie BERNARD" (couleur beige #8B6914)
+  // "Stages de votre partenaire — Thomas DUPONT" (couleur violet #6a1b9a)
+}
+```
+
+**Boucle `recipients` dans `handleNotifyInscriptionStage`** :
+```javascript
+const recipients = [
+  { to: email, pren: prenom, myDates: inscriptionsParDate, theirDates: partDates, ... },
+];
+if (hasPartEmail) recipients.push({
+  to: partEmail, myDates: partDates, theirDates: inscriptionsParDate, ...
+});
+for (const rec of recipients) { /* envoi S1/S1b/S2 */ }
+```
+
+**Règles** :
+- `hasPartEmail = hasPartner && partEmail && partEmail !== email && !emailPartage` → 2 emails
+- `emailPartage = partEmail === email` → 1 seul email (S1d), les deux sections dans le même
+- Partenaire sans email → 1 seul email à l'inscripteur avec les deux sections (myDates + partDates)
+
+**Nouveaux champs body depuis `stages-pwa.html`** :
+```javascript
+partRole: data.rolePartenaire || '',
+partTel: data.partenaireTel || '',
+emailPartage: !!(data.partenaireEmail && data.partenaireEmail === data.email),
+partInscriptionsParDate: avecPart ? datesOK.map(di => ({
+  date: di.date,
+  slots: (di.stagesPartDetail || di.stagesDetail || []).map(s => ({
+    horaire_debut: s.horaire.split('–')[0] || '',
+    horaire_fin: s.horaire.split('–')[1] || '',
+    theme: s.theme || s.type || '',
+  })),
+  tarif: di.prixPartenaire || di.prixInscrit || 0,
+  adresse: {},
+})) : []
+```
+
+**Push** : envoyé à l'élève principal + au partenaire (si `hasPartEmail`) + à l'admin. Tous `await` + `try/catch`.
+
+**Email admin S0 couple** : deux encadrés — inscripteur (fond or) + partenaire (fond rose/violet), chacun avec ses propres slots et tarif. `buildStageBox()` appelé deux fois.
+
+### Previews mis à jour
+
+- `preview-emails-stages-v1.html` : S1c montre maintenant les deux sections (stages de Marie + stages de Thomas). S2 intro avec statut en gras.
+- `preview-sources-stages.html` : Body S0 étendu avec `partRole`, `partTel`, `partInscriptionsParDate`, `emailPartage`. Nouvelles sections "S1/S1b/S2 — Mécanique couple" et "Push OS — élèves".
