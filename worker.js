@@ -6741,7 +6741,7 @@ async function handleCronRappelStageJ3(request, env) {
     fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_dates_stages_${_s4Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
   ]);
   const _s4GlobalAdr = _s4ParRes.ok ? (((await _s4ParRes.json())[0]||{}).valeur?.adresse||{}) : {};
-  const _s4DatesArr  = _s4DtRes.ok  ? (((await _s4DtRes.json())[0]||{}).valeur||[])            : [];
+  const _s4DatesArr  = _s4DtRes.ok  ? (((await _s4DtRes.json())[0]||{}).valeur?.stages||[])    : [];
   const _s4StEntry   = _s4DatesArr.find(function(s){ return s.date===targetDate; }) || {};
   const _s4Adr       = (_s4StEntry.adresse && (_s4StEntry.adresse.nom||_s4StEntry.adresse.rue)) ? _s4StEntry.adresse : _s4GlobalAdr;
   const _s4LieuSection = (_s4Adr.nom||_s4Adr.rue) ? `<div style="border-top:1px solid #e8d5a0;padding:12px 18px 8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;">${_s4Adr.nom?`<strong>${_esc(_s4Adr.nom)}</strong><br/>`:''}${_s4Adr.rue?`${_esc(_s4Adr.rue)}<br/>`:''}${_s4Adr.transport?`<span style="font-size:12px;color:#666;">${_esc(_s4Adr.transport)}</span>`:''}</div></div>` : '';
@@ -6839,7 +6839,7 @@ async function handleNotifyStageValide(request, env) {
       fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_dates_stages_${_s3Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
     ]);
     _s3GlobalAdr = _s3ParRes.ok ? (((await _s3ParRes.json())[0]||{}).valeur?.adresse||{}) : {};
-    _s3DatesArr  = _s3DtRes.ok  ? (((await _s3DtRes.json())[0]||{}).valeur||[])            : [];
+    _s3DatesArr  = _s3DtRes.ok  ? (((await _s3DtRes.json())[0]||{}).valeur?.stages||[])    : [];
   }
   function _s3GetAdr(date) {
     const st = _s3DatesArr.find(function(s){ return s.date===date; }) || {};
