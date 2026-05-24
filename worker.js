@@ -6222,12 +6222,15 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
     });
   } catch(err) { console.error('[notify-inscription-cours-payee] error', err); }
 
-  // ── I0 — email admin + panel 🔔 + push (VP et DI)
+  // ── helpers labels (utilisés par email admin + panel 🔔 + push)
+  const vl03 = v => v === 'vincennes' ? 'Vincennes' : 'Paris';
+  const nl03 = n => n === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
+  const ci0n = coursInfos[0];
+
+  // ── I0 — email admin (VP et DI)
   if (env.BREVO_API_KEY) {
     const telBody03 = (body.tel || '').trim();
     const telFmt03 = telBody03.replace(/\s/g, '');
-    const vl03 = v => v === 'vincennes' ? 'Vincennes' : 'Paris';
-    const nl03 = n => n === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
     const rl03 = r => r === 'guidee' ? 'Guidée' : 'Guideur·se';
     const rc03 = r => r === 'guidee' ? '#c2185b' : '#1565c0';
 
@@ -6270,10 +6273,9 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
       + 'Tango &amp; Vous · tangoetvous@gmail.com · 07 73 27 59 06'
       + '</div></div></body></html>';
 
-    const ci0i03 = coursInfos[0];
     const subjAdmin03 = '[Inscription tango] ' + _esc(((prenom||'') + ' ' + (nom||'')).trim())
-      + ' — ' + vl03(ci0i03.ville) + ' ' + nl03(ci0i03.niveau)
-      + ' · ' + rl03(ci0i03.role) + ' · ✓ Inscrit·e';
+      + ' — ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau)
+      + ' · ' + rl03(ci0n.role) + ' · ✓ Inscrit·e';
     try {
       await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
@@ -6284,7 +6286,6 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
 
   }
 
-  const ci0n = ci0i03;
   _insertNotification('cours_inscription',
     '🎓 Inscription validée — ' + (prenom||'') + ' ' + (nom||'') + ' · ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau) + ' · ✓ Inscrit·e · → Élèves Tango',
     'eleves-tango').catch(function(){});
