@@ -789,7 +789,6 @@ async function handleNotifyYogaDate(request, env) {
     ${footerYoga}
   </div></body></html>`;
 
-  const yogaSender = 'regardsepose@gmail.com';
   let sent = 0;
   await Promise.all(emails.map(async (email) => {
     try {
@@ -797,7 +796,8 @@ async function handleNotifyYogaDate(request, env) {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Florencia Garcia — Yoga', email: 'regardsepose@gmail.com' },
+          sender: { name: 'Florencia Garcia — Yoga', email: 'tangoetvous@gmail.com' },
+          replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' },
           to: [{ email: String(email) }],
           subject,
           htmlContent: html,
@@ -1314,7 +1314,7 @@ async function handleCronEssaiYogaJ1(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: 'regardsepose@gmail.com' }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: 'tangoetvous@gmail.com' }, replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
       });
       if (r.ok) sent++;
       else console.error('[cron essai-yoga-j1] Brevo error', toEmail, await r.text());
@@ -4742,7 +4742,7 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
     return c === 'yin' ? 'Yin Yoga' : c === 'hatha' ? 'Hatha Yoga' : 'Yin & Hatha Yoga (Forfait)';
   }
   const adminYogaEmail = 'regardsepose@gmail.com';
-  const senderEmail    = 'regardsepose@gmail.com';
+  const senderEmail    = 'tangoetvous@gmail.com';  // tangoetvous vérifié Brevo ; replyTo → regardsepose
   let sent = 0;
 
   async function sendBrevo(to, subj, html, senderName) {
@@ -4750,7 +4750,7 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: senderName || 'Florencia Garcia — Yoga', email: senderEmail }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: senderName || 'Florencia Garcia — Yoga', email: senderEmail }, replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
       });
       if (r.ok) sent++; else console.error('[inscription-essai-yoga] Brevo error', to, await r.text());
     } catch(e) { console.error('[inscription-essai-yoga] fetch error', e); }
