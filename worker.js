@@ -3411,8 +3411,9 @@ async function _webPushEncrypt(subscription, payload) {
   const sub = typeof subscription === 'string' ? JSON.parse(subscription) : subscription;
 
   function b64urlDec(s) {
-    const pad = '='.repeat((4 - s.length % 4) % 4);
-    const b64 = (s + pad).replace(/-/g, '+').replace(/_/g, '/');
+    const clean = (s || '').replace(/\s+/g, '');  // strip trailing newlines/whitespace from Cloudflare secrets
+    const pad = '='.repeat((4 - clean.length % 4) % 4);
+    const b64 = (clean + pad).replace(/-/g, '+').replace(/_/g, '/');
     return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   }
 
@@ -3483,8 +3484,9 @@ async function sendWebPush(env, subscriptionJson, notif, data = {}) {
     return btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
   }
   function b64urlDec(s) {
-    const pad = '='.repeat((4 - s.length % 4) % 4);
-    return Uint8Array.from(atob((s + pad).replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+    const clean = (s || '').replace(/\s+/g, '');  // strip whitespace/newlines from Cloudflare secrets
+    const pad = '='.repeat((4 - clean.length % 4) % 4);
+    return Uint8Array.from(atob((clean + pad).replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
   }
 
   const sub = typeof subscriptionJson === 'string' ? JSON.parse(subscriptionJson) : subscriptionJson;
