@@ -5013,16 +5013,19 @@ async function activerNotifications() {
 
 async function _registerFcmToken() {
   try {
-    if (!TEV_VAPID_KEY) { console.warn('[push] TEV_VAPID_KEY non configurée — token FCM non obtenu'); return; }
-    if (!window.firebase || !window.firebase.messaging) { console.warn('[push] Firebase Messaging SDK non disponible'); return; }
+    if (!TEV_VAPID_KEY) { afficherToast('❌ Push: VAPID key absente'); return; }
+    if (!window.firebase || !window.firebase.messaging) { afficherToast('❌ Push: Firebase SDK absent'); return; }
     var reg = await navigator.serviceWorker.ready;
     var messaging = window.firebase.messaging();
-    var token = await messaging.getToken({ vapidKey: TEV_VAPID_KEY, serviceWorkerRegistration: reg });
-    if (!token) { console.warn('[push] Aucun token FCM obtenu'); return; }
+    var token;
+    try {
+      token = await messaging.getToken({ vapidKey: TEV_VAPID_KEY, serviceWorkerRegistration: reg });
+    } catch(e2) { afficherToast('❌ Push: getToken échoué — ' + (e2.message||'').slice(0,60)); return; }
+    if (!token) { afficherToast('❌ Push: token vide (vérifier VAPID key)'); return; }
     var cached = localStorage.getItem('tev_fcm_token');
-    if (cached === token) return; // déjà enregistré
+    if (cached === token) { afficherToast('ℹ️ Push: token déjà enregistré'); return; }
     var jwt = _getJwt();
-    if (!jwt) return;
+    if (!jwt) { afficherToast('❌ Push: JWT absent — reconnecte-toi'); return; }
     var r = await fetch('/api/register-token', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' },
@@ -5030,10 +5033,12 @@ async function _registerFcmToken() {
     });
     if (r.ok) {
       localStorage.setItem('tev_fcm_token', token);
-      afficherToast('🔔 Token push enregistré');
-      console.log('[push] Token FCM enregistré:', token.slice(-8));
+      afficherToast('🔔 Token push enregistré ✅');
+    } else {
+      var errTxt = await r.text().catch(function(){ return ''; });
+      afficherToast('❌ Push: API ' + r.status + ' — ' + errTxt.slice(0, 80));
     }
-  } catch(e) { console.warn('[push] Erreur _registerFcmToken:', e.message); }
+  } catch(e) { afficherToast('❌ Push erreur: ' + (e.message||'').slice(0,80)); }
 }
 async function testerNotifications() {
   if (!('Notification' in window)) { afficherToast('❌ Notifications non supportées'); return; }
