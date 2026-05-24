@@ -1639,16 +1639,7 @@ async function handleNotifyCartePointage(request, env) {
 
   // Notification panel admin (table notifications)
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal',
-      },
-      body: JSON.stringify({ type: 'carte_pointage', message: notifMsg, lu: false, lien_tab: 'cartes' }),
-    });
+    await _insertNotification('carte_pointage', notifMsg, 'cartes');
   } catch(e) { console.error('[notify carte-pointage] notifications error', e); }
 
   if (!env.BREVO_API_KEY) {
@@ -2304,6 +2295,15 @@ function corsResponse(data, status, extraHeaders, request) {
   });
 }
 
+// Helper : insert une notification admin via RPC SECURITY DEFINER (bypass RLS, pas besoin du service key)
+function _insertNotification(type, message, lien_tab) {
+  return fetch(`${SUPABASE_URL}/rest/v1/rpc/inserer_notification`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_type: type, p_message: message, p_lu: false, p_lien_tab: lien_tab || '' }),
+  });
+}
+
 function jsonError(status, message) {
   return new Response(JSON.stringify({ error: message }), {
     status,
@@ -2802,12 +2802,7 @@ async function handleNotifyCarteEpuisee(request, env) {
 
   // Notif panel admin
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
-        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ type: 'carte_epuisee', message: notifMsgAdmin, lu: false, lien_tab: 'cartes' }),
-    });
+    await _insertNotification('carte_epuisee', notifMsgAdmin, 'cartes');
   } catch(e) { console.error('[carte-epuisee] notifications error', e); }
 
   if (!env.BREVO_API_KEY) {
@@ -2937,12 +2932,7 @@ async function handleCronCarteExpiree(request, env) {
 
     // Notif panel admin
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
-          'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ type: 'carte_expiree', message: `⏰ Carte expirée — ${nomAff || e.email} · ${restants} cours perdus`, lu: false, lien_tab: 'cartes' }),
-      });
+      await _insertNotification('carte_expiree', `⏰ Carte expirée — ${nomAff || e.email} · ${restants} cours perdus`, 'cartes');
     } catch(err) { console.error('[cron carte-expiree] admin notif error', err); }
 
     if (!env.BREVO_API_KEY) continue;
@@ -3050,12 +3040,8 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
   );
 
   // Notif panel admin
-  const adminInsert = fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-    method: 'POST',
-    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
-      'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ type: 'discussion_nouvelle', message: notifMsgAdmin, lu: false, lien_tab: 'discussions' }),
-  }).catch(e => console.error('[discussion-nouvelle] notifications error', e));
+  const adminInsert = _insertNotification('discussion_nouvelle', notifMsgAdmin, 'discussions')
+    .catch(e => console.error('[discussion-nouvelle] notifications error', e));
 
   await Promise.all([...inserts, adminInsert]);
 
@@ -3092,12 +3078,8 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
     }).catch(e => console.error('[discussion-message] notif_eleve error', e))
   );
 
-  const adminInsert = fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-    method: 'POST',
-    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
-      'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ type: 'discussion_message', message: notifMsgAdmin, lu: false, lien_tab: 'discussions' }),
-  }).catch(e => console.error('[discussion-message] notifications error', e));
+  const adminInsert = _insertNotification('discussion_message', notifMsgAdmin, 'discussions')
+    .catch(e => console.error('[discussion-message] notifications error', e));
 
   await Promise.all([...inserts, adminInsert]);
 
@@ -3864,11 +3846,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
 
     // 1. Notif in-app panel 🔔 admin (table notifications)
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ type: 'essai_annule', message: ligne, lu: false, lien_tab: 'essai' })
-      });
+      await _insertNotification('essai_annule', ligne, 'essai');
     } catch {}
 
     // 2. Email admin via Brevo (fire and forget — ne bloque pas la redirection)
@@ -5275,11 +5253,7 @@ async function handleNotifyCarteRenouvellement(request, env) {
     });
   } catch(err) { console.error('[notify-carte-renouvellement] notif-eleve error', err); }
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ type: 'carte_renouvelee', message: `↻ Carte renouvelée ${isAdmin ? 'par l\'admin ' : ''}sans payer — ${_esc((prenom||''))} · ⚠️ Paiement en attente`, lu: false, lien_tab: 'cartes' }),
-    });
+    await _insertNotification('carte_renouvelee', `↻ Carte renouvelée ${isAdmin ? "par l'admin " : ''}sans payer — ${_esc((prenom||''))} · ⚠️ Paiement en attente`, 'cartes');
   } catch(err) { console.error('[notify-carte-renouvellement] notif-admin error', err); }
 
   try {
@@ -5925,11 +5899,7 @@ async function handleNotifyInscriptionStage(request, env) {
   const notifBorder = isConfirme ? '#4caf50' : '#e8c84a';
   const notifMsg    = `🎭 ${isConfirme ? 'Inscription' : 'Demande'} stage — ${nomAff} · ${dateLabels} · ${statutLabel}`;
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ type: 'stage_inscription', message: notifMsg, lu: false, lien_tab: 'stages' }),
-    });
+    await _insertNotification('stage_inscription', notifMsg, 'stages');
   } catch(err) { console.error('[notify-stage] notif error', err); }
 
   if (!env.BREVO_API_KEY) return corsResponse({ ok: true, notified: true }, 200, {}, request);
@@ -6261,11 +6231,7 @@ async function handleNotifyCoursParticulier(request, env) {
   // Notif panel admin
   const urgBadge = urgence === 'haute' ? ' · Urgence haute' : '';
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ type: 'cours_particulier', message: `🎯 Cours particulier — ${nomAff}${urgBadge} · ⏳ À traiter`, lu: false, lien_tab: 'cours-particuliers' }),
-    });
+    await _insertNotification('cours_particulier', `🎯 Cours particulier — ${nomAff}${urgBadge} · ⏳ À traiter`, 'cours-particuliers');
   } catch(err) { console.error('[notify-cp] notif error', err); }
 
   if (!env.BREVO_API_KEY) return corsResponse({ ok: true, notified: true }, 200, {}, request);
@@ -6764,19 +6730,11 @@ async function handleCronRelanceAbsences(request, env) {
 
       // Notification panel admin 🔔
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
-          method: 'POST',
-          headers: {
-            'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
-            'Content-Type': 'application/json', 'Prefer': 'return=minimal',
-          },
-          body: JSON.stringify({
-            type: 'relance_absences',
-            message: '💙 2 absences consécutives — ' + (nomAff || eleve.email) + ' · ' + (ville === 'paris' ? 'Paris' : 'Vincennes') + ' · Email C6 envoyé · → Cartes 10 → Détails',
-            lu: false,
-            lien_tab: 'cartes',
-          }),
-        });
+        await _insertNotification(
+          'relance_absences',
+          '💙 2 absences consécutives — ' + (nomAff || eleve.email) + ' · ' + (ville === 'paris' ? 'Paris' : 'Vincennes') + ' · Email C6 envoyé · → Cartes 10 → Détails',
+          'cartes'
+        );
       } catch(e) { console.error('[relance-absences] admin notif error', e); }
 
       // Mettre à jour derniere_relance_abs pour éviter un double envoi la semaine prochaine
