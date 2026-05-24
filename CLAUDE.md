@@ -3911,3 +3911,62 @@ Tables confirmées présentes dans Supabase (ordre alphabétique) :
 2. **`_insertNotification(type, message, lien_tab)`** : seul point d'entrée autorisé pour les inserts admin dans `notifications` depuis worker.js. Jamais de REST direct avec SUPABASE_ANON.
 3. **Détection "confirmer après annulation"** : la RPC `confirmer_annuler_essai` retourne `{supprime: true}` → le worker affiche une page informative orange au lieu de la page verte de confirmation.
 
+## Session 2026-05-24 (suite 2) — Push notifications + sonnette 🔔 + câblage emails
+
+### ✅ Push notifications élève (Web Push / VAPID) — opérationnel sur iPhone
+
+Les push OS élève fonctionnent end-to-end sur iPhone PWA (confirmation utilisateur : status 201, notification reçue sur le téléphone).
+
+**Architecture** : `sendWebPush()` dans `worker.js` gère P-256 ECDH key agreement + AES-GCM encryption — compatible Apple Push Service (APS) pour les iPhones et FCM/Web Push pour Android. Les tokens sont stockés dans la table `fcm_tokens` avec l'endpoint de chaque appareil.
+
+**`sendFcmPush(env, tokens, notif)`** dans `worker.js` appelle `sendWebPush()` pour les tokens Apple Push Service (endpoint contient `apple.com`) et FCM pour les autres. Les deux chemins sont couverts.
+
+**FIREBASE_SERVICE_ACCOUNT** : secret configuré dans Cloudflare Workers (Settings → Variables → Secret) le 2026-05-24. Requis pour les push FCM Android. Sans ce secret, les push Web Push (iPhone) fonctionnent quand même via `sendWebPush()`.
+
+### ✅ Sonnette 🔔 admin — root cause et fix
+
+**Symptôme** : le bouton 🔔 dans l'en-tête admin ne répondait pas au clic, alors que ⚙️ (Paramètres) fonctionnait correctement sur la même ligne.
+
+**Root cause** : deux occurrences de `TEV.from('notifications')` dans `admin.html` — méthode inexistante sur l'objet TEV. Seul `TEV.client.from(...)` est valide. L'appel `TEV.from()` lançait une TypeError **synchrone** qui interrompait `switchTab()` avant que `renderTab()` soit appelé.
+
+**Pourquoi ça ne plantait pas avant le 2026-05-24** : la table `notifications` n'existait pas encore → `adminData.notifications` était vide → condition `notifs.length` était `false` → la ligne problématique n'était jamais exécutée. Dès que la table a été créée (session 2026-05-24), des notifications ont été insérées → `notifs.length > 0` → TypeError au premier clic.
+
+**Fix** (commit `749f6fe`) : deux remplacements dans `admin.html` :
+- `switchTab()` ligne 5104 : `TEV.from('notifications')` → `TEV.client.from('notifications')`
+- Handler `'tout-marquer-lu'` ligne 5994 : idem
+
+**Règle** : `TEV.from(...)` n'existe pas. Toujours `TEV.client.from(...)`.
+
+### Modifications inutiles pendant le debugging (à réverter si besoin)
+
+Pendant l'investigation, deux changements avaient été appliqués à titre hypothétique et se sont révélés non nécessaires :
+
+1. **`pointer-events:none` sur l'overlay** (`admin.html`) : le commit `cc1c25f` avait ajouté `pointer-events:none` sur `#overlay` et `pointer-events:auto` sur les éléments du header, au cas où l'overlay bloquerait les clics iOS. Dispruvé car ⚙️ Paramètres fonctionnait → l'overlay ne bloquait pas le header. Le changement CSS est inoffensif mais était inutile. **Pas réverté** — laisser en place car `pointer-events:none` sur l'overlay est une bonne pratique générale (évite les interférences futures).
+
+2. **Aucun autre changement inutile** — les tests avec `notification` table vide avaient déjà orienté vers le bon diagnostic.
+
+### ✅ Câblage emails et notifications (commit `3d102fe`)
+
+**Email I0 (admin) — couple** : quand `isCouple`, les deux partenaires apparaissent désormais dans le bloc vert (bannière violette COUPLE au-dessus, ligne principale verte pour la personne, ligne vert foncé pour le partenaire avec ses données et son badge de rôle). L'ancienne petite ligne texte "Partenaire : ..." est supprimée.
+
+**Email I01-att — liste d'attente** : le paragraphe de remerciements se termine maintenant par **"Vous êtes pour l'instant en liste d'attente."** en gras, pour que l'élève comprenne immédiatement son statut sans lire tout l'email.
+
+**Email I01-val — acNote** : "Votre place sera réservée une fois l'inscription en ligne et le premier paiement effectués." passe de `font-size:12px;color:#888` à `font-size:14px;color:#555` — plus lisible.
+
+**Notification panel 🔔 admin + push pour les nouvelles inscriptions tango** : `handleNotifyInscriptionCours` appelle maintenant `_insertNotification()` et `getFcmTokensAdmin()` après l'envoi de l'email admin. L'admin reçoit désormais une notification dans le panel ET un push OS dès que quelqu'un soumet le formulaire d'inscription aux cours.
+
+**C-pay : email élève + notif in-app** : `confirmerCartePaiement()` dans `admin.html` appelle `/api/notify/carte-paiement` (JWT admin) après les updates DB. L'élève reçoit l'email C-pay et une notification in-app dès que l'admin valide son paiement.
+
+**Cours particuliers : emails CP0+CP1 + notif panel 🔔** : `cours-particuliers.html` appelle `/api/notify/cours-particulier` juste après `TEV.reservationCP()`. L'admin reçoit l'email CP0 et la notification panel 🔔 ; l'élève reçoit l'email CP1 de confirmation.
+
+### Règles permanentes — TEV.from() vs TEV.client.from()
+
+`TEV.from(...)` **n'existe pas** sur l'objet TEV exporté depuis `tev-supabase.js`. La méthode correcte est toujours `TEV.client.from(...)`.
+
+Un appel à `TEV.from(...)` :
+- Lance une TypeError **synchrone** (pas une rejection de Promise)
+- Interrompt immédiatement la fonction appelante, quel que soit le `try/catch` ou `.catch()` qui l'entoure
+- Peut provoquer des symptômes trompeurs (bouton "inactif", action silencieusement ignorée) uniquement si la condition qui garde le code problématique était `false` auparavant
+
+**Diagnostic** : si un bouton semble inactif sans erreur console visible, chercher les `TEV.from(` dans le code voisin avant de chercher des causes CSS/DOM.
+
