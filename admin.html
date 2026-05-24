@@ -4795,10 +4795,12 @@ async function chargerDonnees() {
         if (!stagesReels[dateKey]) stagesReels[dateKey] = {label: fmtDate(dateKey), inscrits:[]};
         stagesReels[dateKey].inscrits.push({
           _dbId: ins.id,
+          _isNewFormat: true,
           prenom: ins.prenom || '', nom: ins.nom || '', email: ins.email || '',
           tel: ins.telephone || '', role: _normRole(ins.role || ''),
           slots: ins.stage_nom ? ins.stage_nom.split('|').map(function(s){var m=(s.trim()).match(/(technique|stage\d+)$/);return m?m[1]:s.trim();}).filter(Boolean) : [],
-          present: null, montant: ins.total_inscrit || 0,
+          present: ins.presence_declaree != null ? ins.presence_declaree : null,
+          montant: ins.total_inscrit || 0,
           attente: ins.type_confirmation === 'attente',
           presenceConfirmee: ins.presence_confirmee === true,
           partenaire: ins.partenaire || '', emailPartenaire: ins.partenaire_email || ''
@@ -10112,8 +10114,32 @@ function valAttStage(date, nom, btn) {
    .catch(function(){if(st)st.attente=true;btn.disabled=false;btn.textContent='✓ Confirmer';renderTab();});
 }
 function pointerStage(date, idx, present) {
-  var i=adminData.stages&&adminData.stages[date]&&adminData.stages[date].inscrits&&adminData.stages[date].inscrits[idx];
-  if(i)i.present=present; renderTab();
+  var i = adminData.stages && adminData.stages[date] && adminData.stages[date].inscrits && adminData.stages[date].inscrits[idx];
+  if (!i) return;
+  i.present = present;
+  // Feedback DOM immédiat (avant renderTab)
+  var tc = document.getElementById('tab-content');
+  if (tc) {
+    var presBtn = tc.querySelector('[data-action="pointer-stage-pres"][data-date="'+date+'"][data-idx="'+idx+'"]');
+    var absBtn  = tc.querySelector('[data-action="pointer-stage-abs"][data-date="'+date+'"][data-idx="'+idx+'"]');
+    if (present === true) {
+      if (presBtn) { presBtn.classList.add('on'); presBtn.classList.remove('off'); }
+      if (absBtn)  { absBtn.classList.remove('on'); absBtn.classList.add('off'); }
+    } else {
+      if (presBtn) { presBtn.classList.remove('on'); presBtn.classList.add('off'); }
+      if (absBtn)  { absBtn.classList.add('on'); absBtn.classList.remove('off'); }
+    }
+  }
+  // Persistance DB (nouveau format uniquement)
+  if (!IS_DEMO && i._isNewFormat && i._dbId) {
+    Promise.resolve(TEV.client.from('inscriptions_stages')
+      .update({ presence_declaree: present })
+      .eq('id', i._dbId)
+    ).then(function(res) {
+      if (res && res.error) afficherToast('⚠️ Erreur sauvegarde présence : ' + (res.error.message || res.error.code || ''));
+    }).catch(function() {});
+  }
+  renderTab();
 }
 
 // ================================================================
