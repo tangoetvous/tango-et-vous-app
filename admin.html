@@ -7731,21 +7731,21 @@ function valGuideeEssai(email, date, btn, id) {
   }
 
   if (IS_DEMO) {
-    if(entry){ entry.statut='confirme'; entry.presenceConfirmee=true; }
-    if(partEntry){ partEntry.statut='confirme'; partEntry.presenceConfirmee=true; }
+    if(entry){ entry.statut='confirme'; }
+    if(partEntry){ partEntry.statut='confirme'; }
     renderTab(); return;
   }
 
   var ops = [];
   var q = id
-    ? TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('id',id)
-    : TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('email',email).eq('date_essai',date);
+    ? TEV.client.from('inscriptions_essai').update({statut:'confirme'}).eq('id',id)
+    : TEV.client.from('inscriptions_essai').update({statut:'confirme'}).eq('email',email).eq('date_essai',date);
   ops.push(Promise.resolve(q));
 
   if (partEntry) {
     var qPart = partEntry.id
-      ? TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('id',String(partEntry.id))
-      : TEV.client.from('inscriptions_essai').update({statut:'confirme',presence_confirmee:true}).eq('email',partEntry.email).eq('date_essai',date);
+      ? TEV.client.from('inscriptions_essai').update({statut:'confirme'}).eq('id',String(partEntry.id))
+      : TEV.client.from('inscriptions_essai').update({statut:'confirme'}).eq('email',partEntry.email).eq('date_essai',date);
     ops.push(Promise.resolve(qPart));
   }
 

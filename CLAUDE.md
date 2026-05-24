@@ -1,5 +1,21 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Supabase SQL Editor — quirk notation pointée PL/pgSQL
+
+Le SQL Editor Supabase transforme automatiquement toute notation `v_record.champ` en `<v_record.champ>` (crochets angle) dans les fonctions PL/pgSQL, ce qui génère une `SyntaxError 42601`.
+
+**Règle permanente** : ne jamais utiliser une variable de type record dans un `UPDATE ... WHERE id = v_record.id` ou une assignation `v_var := v_record.champ`. Toujours extraire les valeurs via `SELECT col1, col2 INTO v_scalar1, v_scalar2 FROM ...` avec des variables scalaires séparées dans le `DECLARE`.
+
+```sql
+-- ❌ Interdit (SQL Editor transforme en <v_partner.id>)
+UPDATE t SET col = v_partner.statut WHERE id = v_partner.id;
+
+-- ✅ Correct
+DECLARE v_partner_id BIGINT; v_partner_statut TEXT;
+SELECT id, statut INTO v_partner_id, v_partner_statut FROM t WHERE ...;
+UPDATE t SET col = v_partner_statut WHERE id = v_partner_id;
+```
+
 ## Audit sécurité — 2026-05-06
 
 ### Corrigés
