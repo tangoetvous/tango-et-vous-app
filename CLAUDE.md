@@ -4313,5 +4313,187 @@ partInscriptionsParDate: avecPart ? datesOK.map(di => ({
 
 ### Previews mis à jour
 
-- `preview-emails-stages-v1.html` : S1c montre maintenant les deux sections (stages de Marie + stages de Thomas). S2 intro avec statut en gras.
+- `preview-emails-stages-v1.html` : S1c montre maintenant les deux sections (stages de Marie + Thomas). S2 intro avec statut en gras.
 - `preview-sources-stages.html` : Body S0 étendu avec `partRole`, `partTel`, `partInscriptionsParDate`, `emailPartage`. Nouvelles sections "S1/S1b/S2 — Mécanique couple" et "Push OS — élèves".
+
+## Session 2026-05-24 (suite 8) — Yoga emails Brevo + stages : 1 email/date, adresses, S3, S-edit, pointage DB
+
+### ✅ Fix yoga — `tangoetvous@gmail.com` comme expéditeur Brevo (commit `1018a18`)
+
+**Problème** : tous les emails yoga (Y0, Y1, Y-att, Y3, Y-J1a, Y-J1b) n'arrivaient pas — ni chez l'admin yoga, ni chez les élèves. Aucune erreur visible car `sendBrevoNotification` ne loggait pas les réponses HTTP non-2xx, et les push admin arrivaient quand même (FCM indépendant de Brevo).
+
+**Cause racine** : `regardsepose@gmail.com` n'est **pas** un expéditeur vérifié dans Brevo. Brevo refuse silencieusement tout email dont le `sender.email` n'est pas vérifié. Seul `tangoetvous@gmail.com` est vérifié.
+
+**Fix** dans les 3 handlers concernés (`handleNotifyYogaDate`, `handleCronEssaiYogaJ1`, `handleNotifyInscriptionEssaiYoga`) :
+```javascript
+// Avant (bloqué par Brevo)
+sender: { name: 'Florencia Garcia', email: 'regardsepose@gmail.com' }
+
+// Après (expéditeur vérifié + réponse au bon email)
+sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' },
+replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }
+```
+
+**Règle permanente** : seul `tangoetvous@gmail.com` est expéditeur vérifié Brevo. Pour tous les emails yoga qui doivent paraître venir de Florencia, utiliser ce pattern sender/replyTo. Ne jamais utiliser `regardsepose@gmail.com` comme `sender.email`.
+
+### ✅ Stages emails — 1 email par date par destinataire (commit `d1c6582`)
+
+**Comportement précédent** : `handleNotifyInscriptionStage` envoyait un seul email résumant toutes les dates inscrites pour la journée. Problème : si l'élève s'inscrit à plusieurs dates séparées (ex : 11 avril ET 17 mai), il recevait un seul email confus.
+
+**Nouveau comportement** :
+- **Admin** : reçoit 1 email S0 + 1 push par journée de stages
+- **Élève** (inscripteur + partenaire si emails distincts) : reçoit 1 email S1/S1b ou S2 par journée
+- **Couple email partagé** : 1 seul email par date avec les slots des deux personnes
+- **Token HMAC** de confirmation : calculé par date (pas seulement sur la première date)
+
+**Boucle sur les dates** dans `handleNotifyInscriptionStage` :
+```javascript
+for (const dateEntry of inscriptionsParDate) {
+  // … build stage-box pour cette date …
+  // S0 admin + S1/S2 élève + push admin par date
+}
+```
+
+### ✅ Stages push — 1 push par date par destinataire (commit `67fdad6`)
+
+Chaque participant (inscripteur + partenaire si emails distincts) reçoit 1 push FCM par journée de stages inscrite, cohérent avec les emails (1 par date). Avant : 1 seul push résumant toutes les dates.
+
+### ✅ Logs erreurs HTTP Brevo dans `sendMail` (commit `95bd50d`)
+
+`sendMail` ignorait silencieusement les réponses HTTP non-2xx de Brevo. Ajout d'un log :
+```javascript
+if (!res.ok) {
+  const body = await res.text().catch(() => '');
+  console.error('[sendMail] Brevo HTTP', res.status, body);
+}
+```
+Permet de diagnostiquer les refus Brevo (expéditeur non vérifié, clé API invalide, quota dépassé) dans Cloudflare Workers Dashboard → Logs.
+
+**Règle** : tout appel à Brevo doit logguer les erreurs HTTP. Ne jamais laisser `sendMail` ou `sendBrevoNotification` échouer silencieusement.
+
+### ✅ Adresse dans les emails S0/S1/S2/S-cancel depuis Supabase (commits `9990dc6`, `da80ae9`)
+
+**Problème** : `stages-pwa.html` envoyait `adresse: {}` hardcodé dans le body des notifications → les emails ne contenaient aucun lieu.
+
+**Fix en deux temps** :
+
+**1. `stages-pwa.html`** : remplace `adresse: {}` par `adresse: di.adresse || {}` dans les objets de date pour les inscrits et partenaires (commit `9990dc6`).
+
+**2. `worker.js` — `_sbGetAdr(sai, dateStr)`** (commit `da80ae9`) : fallback Supabase si `body.adresse` est vide :
+```javascript
+async function _sbGetAdr(sai, dateStr) {
+  // 1. Fetch tev_params_stages_<sai>.adresse (adresse globale stages)
+  // 2. Cherche un override dans tev_dates_stages_<sai> pour la date exacte
+  // 3. Retourne l'adresse spécifique si trouvée, sinon l'adresse globale
+}
+```
+
+**`_scGetAdr(sai, dateStr)`** : variante pour `handleNotifyStageAnnule` (admin.html `_notifyStageCancel` n'inclut jamais l'adresse dans le body).
+
+**Règle** : `tev_params_stages_<sai>` contient l'adresse globale des stages. `tev_dates_stages_<sai>` est un array `[{date, adresse?, horaires?, tarifs?, slots:[]}]` — l'override par date est à `.valeur.stages[i]` (pas `.valeur` directement — voir fix `6525647`).
+
+### ✅ Fix chemin `tev_dates_stages_<sai>` — `.valeur.stages` (commit `6525647`)
+
+**Erreur** : les handlers S3 et S4 lisaient `params.valeur` directement sur la clé `tev_dates_stages_<sai>`, mais la structure Supabase est `{ saison, stages:[...], modifie }` → le tableau des dates est à `params.valeur.stages`.
+
+**Fix** : `const datesStages = (raw.valeur && raw.valeur.stages) ? raw.valeur.stages : [];` (appliqué dans `handleNotifyStageValide`, `handleCronRappelStageJ3`, et `_sbGetAdr`).
+
+**Règle** : pour la clé `tev_dates_stages_<sai>`, toujours lire `.valeur.stages` (tableau), pas `.valeur` directement.
+
+### ✅ Adresse dans emails S3 et S4 (commit `b6d8de2`)
+
+S3 (`handleNotifyStageValide`) et S4 (`handleCronRappelStageJ3`) n'affichaient aucune section Lieu dans le stage-box, contrairement aux previews et à S1/S2. Fix : même fetch Supabase (`tev_params_stages_<sai>` + `tev_dates_stages_<sai>`) que pour les autres handlers.
+
+### ✅ Fix S3 — 3 bugs + push/notif élève (commit `9aa677f`)
+
+**3 bugs dans `valAttStage` (admin.html)** qui empêchaient l'email S3 d'être envoyé ou d'être correct :
+
+**Bug 1 — JWT manquant** : `fetch('/api/notify/stage-valide', { method:'POST', ... })` sans header `Authorization: Bearer <jwt>`. La route exige un JWT → 401 silencieusement avalé par `.catch(function(){})`.
+
+**Fix** : ajout de `'Authorization': 'Bearer ' + _getJwt()` dans les headers.
+
+**Bug 2 — `daysUntil` hardcodé à 99** : la variante S3b (≤3 jours avec bouton 👍) n'était jamais déclenchée car `daysUntil=99 > 3` toujours.
+
+**Fix** :
+```javascript
+var _d = new Date(date + 'T12:00:00');
+var _t = new Date(); _t.setHours(12,0,0,0);
+var daysUntil = Math.round((_d - _t) / (1000*60*60*24));
+```
+
+**Bug 3 — slots envoyés en IDs bruts** (`'stage1'`, `'technique'`) au lieu d'objets `{horaire_debut, horaire_fin, theme}`. Le handler `handleNotifyStageValide` attendait des objets structurés pour construire le stage-box.
+
+**Fix** : mapping via `_loadParam('stages', saisonActive())` + `DEFAULTS_HORAIRES.stages` :
+```javascript
+var stageParams = _loadParam('stages', saisonActive());
+var horType = stageParams && stageParams.horaires ? stageParams.horaires : DEFAULTS_HORAIRES.stages;
+var mappedSlots = ins.slots.map(function(slotId) {
+  var h = horType[slotId] || {};
+  return { type: slotId, horaire_debut: h.debut || '', horaire_fin: h.fin || '', theme: '' };
+});
+```
+
+**Ajout push + `notifications_eleve`** dans `handleNotifyStageValide` (worker.js) :
+- INSERT dans `notifications_eleve` avec `type:'stage_valide'` (badge 🔔 espace élève)
+- Push OS élève via `getFcmTokensForEmail` + `sendFcmPush` — tous `await` + `try/catch`
+
+### ✅ S-edit — email + push + panel 🔔 quand admin modifie les slots (commit `d1d190d`)
+
+**Nouvelle route** : `POST /api/notify/stage-modifie` (JWT admin requis)
+
+**`sauverSlotsStage` (admin.html)** :
+1. Capture `oldSlots` avant la mise à jour DB
+2. Après UPDATE Supabase réussi, map les anciens et nouveaux slots en objets `{horaire_debut, horaire_fin, theme}`
+3. Fire-and-forget côté client : `fetch('/api/notify/stage-modifie', { headers:{Authorization:'Bearer '+_getJwt()}, body:{email, prenom, nom, date, slotsAvant, slotsApres} })` (fire-and-forget OK côté navigateur admin — pas Cloudflare Workers)
+
+**`handleNotifyStageModifie` (worker.js)** :
+- Email bleu 📋 "Modification de votre inscription au stage" à l'élève : stage-box avec slots anciens barrés en rouge + nouveaux en vert
+- Email admin : encadré or avec avant/après
+- INSERT `notifications_eleve` (badge 🔔 espace élève)
+- `_insertNotification` (panel 🔔 admin)
+- Push OS élève via `getFcmTokensForEmail` + `sendFcmPush`
+- Tous `await` + `try/catch`
+
+### ✅ Pointage stages — persistance en DB (commit `dfadc55`)
+
+**Problème** : les clics ✓/✗ dans Stages → Pointage ne persistaient qu'en mémoire. Au rechargement, l'état des présences était perdu.
+
+**SQL exécuté dans Supabase** :
+```sql
+ALTER TABLE inscriptions_stages
+  ADD COLUMN IF NOT EXISTS presence_declaree BOOLEAN DEFAULT NULL;
+```
+
+**Nouveaux formats d'entrée** :
+- **Nouveau format** (`stage_date` défini) : une ligne `inscriptions_stages` par personne par date — `_isNewFormat: true` + `_dbId: ins.id` → persistance fiable par ID
+- **Ancien format legacy** : une ligne avec toutes les dates dans `donnees.inscriptionsParDate` — pas de persistance DB (un même `_dbId` couvre plusieurs dates et plusieurs personnes)
+
+**`chargerDonnees` (admin.html)** : pour les entrées nouveau format, mappe `ins.presence_declaree → present` et pose `_isNewFormat: true` :
+```javascript
+stagesReels[dateKey].inscrits.push({
+  _dbId: ins.id,
+  _isNewFormat: true,
+  // …
+  present: ins.presence_declaree != null ? ins.presence_declaree : null,
+  // …
+});
+```
+
+**`pointerStage` (admin.html)** — réécriture complète :
+1. Met à jour `i.present` en mémoire
+2. Manipulation DOM directe des classes `.btn-pres.on`/`.btn-pres.off`/`.btn-abs.on`/`.btn-abs.off` avant `renderTab()` (évite le flash)
+3. Si `i._isNewFormat && i._dbId` → UPDATE Supabase `presence_declaree` par `id` :
+```javascript
+if (!IS_DEMO && i._isNewFormat && i._dbId) {
+  Promise.resolve(TEV.client.from('inscriptions_stages')
+    .update({ presence_declaree: present })
+    .eq('id', i._dbId)
+  ).then(function(res) {
+    if (res && res.error) afficherToast('⚠️ Erreur sauvegarde présence : ' + (res.error.message || ''));
+  }).catch(function() {});
+}
+```
+
+**Règle** : le pointage stages NE déclenche PAS d'email ni de push (ni vers l'admin, ni vers l'élève). C'est intentionnel — seule la présence est enregistrée en DB pour les stats.
+
+**Pattern pointage** identique à essai tango/yoga : `presence_declaree` (admin ✓/✗) est distinct de `presence_confirmee` (élève clique 👍 dans l'email). Un cron pourrait utiliser `presence_declaree` pour envoyer des relances J+1 (pas encore implémenté pour les stages).
