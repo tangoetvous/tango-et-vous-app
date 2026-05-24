@@ -4179,3 +4179,52 @@ Formulaire admin "Valider le paiement et inscrire" → email I03 élève reçu, 
 | 6930 | `handleNotifyCoursParticulier` | push admin |
 
 ⚠️ Ne jamais réintroduire le pattern `.then(...).catch(function(){})` fire-and-forget dans un handler worker juste avant un `return`. Toujours `await` + `try/catch` + `console.error`.
+
+## Session 2026-05-24 (suite 5) — handleDemandeDevis : fire-and-forget + panel 🔔 manquants
+
+### Symptôme
+Soumission du formulaire `demande-devis.html` → ni l'admin ni le demandeur ne reçoivent quoi que ce soit (ni email D0a/b, ni email D2, ni panel 🔔, ni push).
+
+### Causes (mêmes patterns que session suite 4)
+
+1. **Fire-and-forget** : `sendBrevoNotification(env.BREVO_API_KEY, body).catch(() => {})` — non awaitée → Cloudflare annule la Promise quand `corsResponse` est renvoyé.
+
+2. **Panel 🔔 et push absents** : `handleDemandeDevis` n'appelait pas `_insertNotification` ni `getFcmTokensAdmin` / `sendFcmPush`. Le demandeur soumettait, l'admin ne voyait rien.
+
+### Fix appliqué (commit `e31c519`)
+
+```javascript
+// ── Emails D0a/D0b (admin) + D2 (demandeur)
+if (env.BREVO_API_KEY) {
+  try { await sendBrevoNotification(env.BREVO_API_KEY, body); }
+  catch(e) { console.error('[demandeDevis] sendBrevoNotification error', e); }
+}
+
+// ── Panel 🔔 admin
+const notifMsgD = `💼 Demande devis — ${nomAffD} · ${typeAff}${dateAff}${invitesAff} · ⏳ À traiter · → Devis → Demandes`;
+try {
+  const resN = await _insertNotification('demande_devis', notifMsgD, 'devis');
+  if (!resN.ok) console.error('[demandeDevis] insertNotification HTTP', resN.status, ...);
+} catch(e) { console.error('[demandeDevis] insertNotification error', e); }
+
+// ── Push OS admin
+try {
+  const tokens = await getFcmTokensAdmin(_svcKeyD);
+  if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `💼 Demande devis — ...` });
+} catch(e) { console.error('[demandeDevis] push error', e); }
+
+return corsResponse({ ok: true }, 200, {}, request);
+```
+
+### Rappel — checklist pour tout nouveau handler `POST` dans worker.js
+
+Avant de terminer l'implémentation d'un handler, vérifier que ces 4 points sont couverts :
+
+| # | Quoi | Pattern |
+|---|------|---------|
+| 1 | Insert Supabase principal | `await sbFetch(...)` + `if (!res.ok) return jsonError(...)` |
+| 2 | Email(s) Brevo | `if (env.BREVO_API_KEY) { try { await sendBrevo(...); } catch(e) { console.error(...); } }` |
+| 3 | Panel 🔔 admin | `try { const r = await _insertNotification(type, msg, tab); if (!r.ok) console.error(...); } catch(e) { ... }` |
+| 4 | Push OS admin | `try { const t = await getFcmTokensAdmin(...); if (t.length) await sendFcmPush(env, t, notif); } catch(e) { ... }` |
+
+Tout `return corsResponse(...)` final doit être précédé des 4 blocs ci-dessus (adaptés selon le handler). **Aucun de ces blocs ne doit être fire-and-forget.**
