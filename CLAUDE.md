@@ -726,9 +726,12 @@ La saison du formulaire (`MODE`) détermine automatiquement quelle grille utilis
 
 ### `stages-pwa.html` — Inscription aux stages
 
+**Quota de capacité : aucun** — les stages n'ont pas de limite de places dans le code. Il n'existe pas de `CAP_STAGES` ni de vérification du nombre d'inscrits avant l'inscription. Si un stage est "complet", l'admin gère manuellement (refus ou liste d'attente hors appli). Ne pas ajouter de quota sans discussion explicite.
+
 **Statut à l'inscription (table `inscriptions_stages`, champ `type_confirmation`) :**
 - **Guidée seule** (role=`'Guidé(e)'` et situation≠`'avec-partenaire'`) → `type_confirmation='attente'`
 - **Tous les autres** (guideur, couple, double rôle) → `type_confirmation='confirme'`
+- La mise en attente est uniquement liée à la **parité guideurs/guidées**, pas à une capacité maximale.
 
 **Valeurs de `role` stockées :** `'Guideur(se)'` ou `'Guidé(e)'` (format avec parenthèses, différent des autres formulaires)
 
@@ -1084,6 +1087,7 @@ if(partEntry){ partEntry.date=newDate; ... }
 **Fichier de référence** : `preview-emails-stages-v1.html`
 
 #### Règles fondamentales
+- **Pas de quota de places pour les stages** — `type_confirmation='attente'` uniquement pour la parité guidées, jamais pour une capacité maximale.
 - **Un email par ligne DB** = un email par date de stage par personne. Inscription à 3 dates → 3 emails S1 distincts.
 - **Pas de double rôle** dans le formulaire stages (abandonné).
 - **Rôles stockés** : `'Guideur(se)'` ou `'Guidé(e)'` (format avec parenthèses).
