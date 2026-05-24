@@ -5101,7 +5101,7 @@ function switchTab(tab) {
   if (tab === 'notifications') {
     var notifs = adminData.notifications || [];
     notifs.forEach(function(n){ n.lu = true; });
-    if (!IS_DEMO && notifs.length) TEV.from('notifications').update({lu:true}).eq('lu',false).catch(function(){});
+    if (!IS_DEMO && notifs.length) Promise.resolve(TEV.from('notifications').update({lu:true}).eq('lu',false)).catch(function(){});
     var dot = gel('notif-dot'); if (dot) dot.style.display = 'none';
   }
   document.querySelectorAll('.tab-btn').forEach(function(b) {
@@ -5139,6 +5139,7 @@ function _renderTabSiPasFormulaire() {
   if (currentTab === 'essai' && filtreEssai === 'pointage') return; // pointage actif — ne pas interrompre le scroll
   if (currentTab === 'yoga' && sousOngletYoga === 'essai') return; // accordéons yoga essai — ne pas perturber la navigation
   if (currentTab === 'publications' && gel('pub-ed') && gel('pub-ed').innerHTML.trim()) return; // formulaire pub ouvert — ne pas écraser
+  if (currentTab === 'notifications') return; // ne pas interrompre la lecture des notifs
   if (_editCarteId !== null) return; // modal ✏️ Modifier carte ouverte
   // Ne pas re-rendre si l'utilisateur est en train de saisir dans un champ
   var ae = document.activeElement;
@@ -5990,7 +5991,7 @@ function handleAction(action, btn) {
       break;
     case 'tout-marquer-lu':
       (adminData.notifications||[]).forEach(function(n){ n.lu=true; });
-      if (!IS_DEMO) TEV.from('notifications').update({lu:true}).eq('lu',false).catch(function(){});
+      if (!IS_DEMO) Promise.resolve(TEV.from('notifications').update({lu:true}).eq('lu',false)).catch(function(){});
       updateNotifBadge();
       renderTab();
       break;
