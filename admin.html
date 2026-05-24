@@ -7297,7 +7297,8 @@ function renderEssai() {
     var isVinc=(COURS_VINCENNES||[]).indexOf(date)>=0;
     var ville=isVinc?'vincennes':'paris';
     return (adminData.coursTango||[]).filter(function(c){
-      return c.statut==='inscrit'&&c.ville===ville&&c.niveau===(niveau||'debutant')&&c.role===role;
+      return c.statut==='inscrit'&&c.ville===ville&&c.niveau===(niveau||'debutant')&&c.role===role
+        &&(c.saison||saisonCourante())===sai;
     }).length;
   }
   // Helper : true si la personne attend validation admin (statut 'attente')
@@ -7393,10 +7394,12 @@ function renderEssai() {
       var absJour=adminData.absencesJour||[];
       var elevesPresents=(adminData.coursTango||[]).filter(function(c){
         return c.statut==='inscrit'&&c.ville===villePt&&c.niveau===grp.niveau
+          &&(c.saison||saisonCourante())===sai
           &&!absJour.some(function(a){return a.date===grp.date&&a.email===c.email;});
       });
       var elevesAbsents=(adminData.coursTango||[]).filter(function(c){
         return c.statut==='inscrit'&&c.ville===villePt&&c.niveau===grp.niveau
+          &&(c.saison||saisonCourante())===sai
           &&absJour.some(function(a){return a.date===grp.date&&a.email===c.email;});
       });
       if(!conf.length&&!attenteGrp.length&&!elevesPresents.length&&!elevesAbsents.length&&!supprimesGrp.length) return;
