@@ -494,9 +494,34 @@ async function handleDemandeDevis(request, env) {
     return jsonError(500, 'Une erreur est survenue');
   }
 
+  // ── Emails D0a/D0b (admin) + D2 (demandeur)
   if (env.BREVO_API_KEY) {
-    sendBrevoNotification(env.BREVO_API_KEY, body).catch(() => {});
+    try {
+      await sendBrevoNotification(env.BREVO_API_KEY, body);
+    } catch(e) { console.error('[demandeDevis] sendBrevoNotification error', e); }
   }
+
+  // ── Panel 🔔 admin
+  const isEvent = body.mode === 'event';
+  const nomAffD = `${(body.prenom || '')} ${(body.nom || '')}`.trim();
+  const typeAff = isEvent ? _esc(body.type_evenement || 'Événement') : _esc(body.type_demande || 'Cours privé');
+  const dateAff = isEvent && body.date_evenement ? ` · ${_esc(body.date_evenement)}` : '';
+  const invitesAff = isEvent && body.nombre_invites ? ` · ${body.nombre_invites} invités` : '';
+  const notifMsgD = `💼 Demande devis — ${nomAffD} · ${typeAff}${dateAff}${invitesAff} · ⏳ À traiter · → Devis → Demandes`;
+  try {
+    const resN = await _insertNotification('demande_devis', notifMsgD, 'devis');
+    if (!resN.ok) console.error('[demandeDevis] insertNotification HTTP', resN.status, await resN.text().catch(() => ''));
+  } catch(e) { console.error('[demandeDevis] insertNotification error', e); }
+
+  // ── Push OS admin
+  const _svcKeyD = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  try {
+    const tokens = await getFcmTokensAdmin(_svcKeyD);
+    if (tokens.length) await sendFcmPush(env, tokens, {
+      title: 'Tango & Vous — Admin',
+      body: `💼 Demande devis — ${nomAffD} · ${typeAff}${dateAff}`,
+    });
+  } catch(e) { console.error('[demandeDevis] push error', e); }
 
   return corsResponse({ ok: true }, 200, {}, request);
 }
