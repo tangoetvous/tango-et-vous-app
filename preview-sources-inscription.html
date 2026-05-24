@@ -27,9 +27,14 @@
   <div class="field"><span class="label">Destinataire :</span> <span class="var">tangoetvous@gmail.com</span></div>
   <div class="field"><span class="label">Header admin :</span> Fond #111 · bordure or · "Nouvelle inscription [tango/preinscription]"</div>
   <div class="field"><span class="label">Sujet :</span> <code>🎓 Inscription tango — ${nom} · ${cours}</code></div>
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, tel, role, ville, niveau, saison, statut, partenaire?, emailPartenaire?, type }</span></div>
-  <div class="field"><span class="label">Encadré or :</span> Nom/email/tel · Rôle (badge couleur) · Cours · Statut</div>
-  <div class="field"><span class="label">2 cours :</span> <span class="cond">si 2 cours → 2 encadrés or distincts</span></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, tel, role, ville, niveau, saison, statut, partenaire?, emailPartenaire?, pPrenom?, pNom?, pRole?, venue?, type }</span></div>
+  <div class="field"><span class="label">Encadré or (solo) :</span> Nom/email/tel · Rôle (badge couleur) · Cours · Statut</div>
+  <div class="field"><span class="label">Encadré or (couple) :</span> <span class="cond">isCoupleAdmin = c.venue === 'avec-part' &amp;&amp; !!c.pPrenom</span><br/>
+    → Bandeau violet <code>#6a1b9a</code> "👫 COUPLE" (pill blanche)<br/>
+    → Ligne principale fond vert <code>#2e7d32</code> : Prénom NOM · email · tel · badge Rôle personne (bleu guideur·se / rose guidée)<br/>
+    → Ligne partenaire fond vert foncé <code>#1b5e20</code> : Prénom NOM partenaire · badge Rôle inverse<br/>
+    <span class="note">pRoleAdmin = c.pRole || (c.role==='guidee' ? 'guideur' : 'guidee')</span></div>
+  <div class="field"><span class="label">2 cours :</span> <span class="cond">si 2 cours → 2 encadrés or distincts (avec variante couple si applicable)</span></div>
   <div class="field"><span class="label">Boutons :</span> 📞 tel: · ✉️ mailto: · 💬 sms: · Ouvrir l'admin → Inscriptions Tango</div>
 </div>
 
@@ -54,6 +59,7 @@
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre demande inscription tango enregistree - en attente de validation admin"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Votre demande d'inscription est enregistrée — liste d'attente"</div>
   <div class="field"><span class="label">Encadré :</span> Explication parité · 3 options (attente / autre créneau / cours d'essai)</div>
+  <div class="field"><span class="label">Paragraphe intro :</span> Se termine par <strong>"Vous êtes pour l'instant en liste d'attente."</strong> en gras — ajouté pour que l'élève comprenne immédiatement son statut</div>
   <div class="field"><span class="label">Signature :</span> <span class="var">signWait</span> — "Nous reviendrons vers vous très prochainement." <span class="cond">(≠ signEleve — destinataire pas encore confirmé, évite le clipping Gmail)</span></div>
 </div>
 
@@ -68,6 +74,7 @@
   <div class="field"><span class="label">Bouton AssoConnect :</span> Or → <span class="var">body.assoConnectUrl</span></div>
   <div class="field"><span class="label">Sorano :</span> <span class="cond">si ville='vincennes'</span> → encadré jaune</div>
   <div class="field"><span class="label">Quelques précisions :</span> Modes paiement</div>
+  <div class="field"><span class="label">acNote :</span> "Votre place sera réservée une fois l'inscription en ligne et le premier paiement effectués." — <code>font-size:14px;color:#555;</code> <span class="note">(était 12px/#888 — rendu plus lisible)</span></div>
   <div class="field"><span class="label">Livret :</span> <span class="cond">si livretUrl</span></div>
   <div class="field"><span class="label">Signature :</span> <span class="var">signI02</span> — "Nous vous attendons avec impatience !" <span class="cond">(≠ signEleve — évite le clipping Gmail avec les emails I01-val qui ont le même contenu final)</span></div>
 </div>

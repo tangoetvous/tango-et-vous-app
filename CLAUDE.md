@@ -3970,3 +3970,43 @@ Un appel à `TEV.from(...)` :
 
 **Diagnostic** : si un bouton semble inactif sans erreur console visible, chercher les `TEV.from(` dans le code voisin avant de chercher des causes CSS/DOM.
 
+## Session 2026-05-24 (suite 3) — Mise à jour previews + preview-sources
+
+### Contexte
+
+Règle appliquée : toute modification d'email dans `worker.js` doit être reportée dans les fichiers `preview-emails-*.html` (référence visuelle) ET dans les fichiers `preview-sources-*.html` (documentation des sources de données).
+
+### Modifications apportées aux previews (session 2026-05-24 suite 2 → suite 3)
+
+#### `preview-emails-inscription-v1.html`
+- **I0-couple** : nouvelle variante de l'email admin I0 quand `isCoupleAdmin = c.venue === 'avec-part' && !!c.pPrenom`. Affiche : bandeau violet `#6a1b9a` "👫 COUPLE" → ligne principale fond vert `#2e7d32` (personne) → ligne partenaire fond vert foncé `#1b5e20`. Navigation ajoutée : "I0 Admin solo" + "I0 Admin couple".
+- **I01-att** : paragraphe d'intro se termine maintenant par `<strong>Vous êtes pour l'instant en liste d'attente.</strong>` — ajouté pour que l'élève comprenne immédiatement son statut sans lire tout l'email.
+- **acNote (6 occurrences)** : "Votre place sera réservée..." passe de `font-size:12px;color:#888;` à `font-size:14px;color:#555;` sur tous les emails du fichier (replace_all=true).
+
+#### `preview-emails-yoga-v1.html`
+- **Notifications admin** : label mis à jour pour refléter que `handleNotifyInscriptionEssaiYoga` appelle directement `_insertNotification()` + `getFcmTokensAdmin()` + `sendFcmPush()` — plus de mention "BroadcastChannel uniquement" obsolète.
+- **Push OS admin** : label changé de "à implémenter" → "✅ opérationnel — Envoyé directement par `handleNotifyInscriptionEssaiYoga`".
+
+#### `preview-emails-cartes-v1.html`
+- **Push OS** (section introduction) : "à implémenter via FCM + Edge Function" → "✅ Opérationnel — Web Push/VAPID via `sendWebPush()` (iPhone PWA) + FCM Android · `FIREBASE_SERVICE_ACCOUNT` configuré dans Cloudflare Workers le 2026-05-24".
+- **D-msg** : label mis à jour pour refléter le câblage push via `getFcmTokensForEmail()` dans `handleNotifyDiscussionMessage`.
+
+### Modifications apportées aux preview-sources
+
+#### `preview-sources-inscription.html`
+- **I0** : section étendue — description de la variante couple (`isCoupleAdmin`, `pRoleAdmin`, fond `#6a1b9a` / `#2e7d32` / `#1b5e20`). Champs body ajoutés : `pPrenom?, pNom?, pRole?, venue?`.
+- **I01-att** : ligne ajoutée — "Paragraphe intro se termine par '**Vous êtes pour l'instant en liste d'attente.**' en gras".
+- **I02** : ligne ajoutée — "acNote : `font-size:14px;color:#555;` (était 12px/#888 — rendu plus lisible)".
+
+#### `preview-sources-yoga.html`
+- **Y0** : deux nouvelles lignes documentant les canaux ajoutés dans `handleNotifyInscriptionEssaiYoga` :
+  - Notif panel 🔔 via `_insertNotification('essai_yoga', msg, 'yoga')` (RPC SECURITY DEFINER)
+  - Push OS admin via `getFcmTokensAdmin()` + `sendFcmPush()` — messages pour "confirmé" et "liste d'attente"
+
+#### `preview-sources-cartes.html`
+- **D-msg** : nouvelle section ajoutée (avant la section "Structure carte-box") documentant :
+  - Routes `POST /api/notify/discussion-nouvelle` et `POST /api/notify/discussion-message` (JWT admin)
+  - Push OS élève via `getFcmTokensForEmail(email, svcKey)` + `sendFcmPush()`
+  - Corps push : `💬 Nouvelle discussion : ${titre}` ou `💬 ${auteur} : ${extrait || titreLabel}`
+  - Pas d'email Brevo pour D-msg — push + notif in-app uniquement
+

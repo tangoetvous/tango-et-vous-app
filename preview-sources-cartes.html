@@ -138,6 +138,22 @@
   <div class="field"><span class="label">Note :</span> Magic link — pas de mot de passe</div>
 </div>
 
+<h2>D-msg — Push discussion (nouvelle discussion ou nouveau message)</h2>
+<div class="route">POST /api/notify/discussion-nouvelle (JWT admin) · POST /api/notify/discussion-message (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheurs :</span></div>
+  <ul style="margin:4px 0 8px 20px;font-size:12px;">
+    <li><span class="cond">handleNotifyDiscussionNouvelle</span> — Admin crée un fil de discussion vers un élève</li>
+    <li><span class="cond">handleNotifyDiscussionMessage</span> — Admin envoie un message dans un fil existant</li>
+  </ul>
+  <div class="field"><span class="label">Email élève :</span> Pas d'email — <span class="note">push OS uniquement + notification in-app (<code>notifications_eleve</code>)</span></div>
+  <div class="field"><span class="label">Push OS élève :</span> Via <code>getFcmTokensForEmail(email, env.SUPABASE_SERVICE_KEY)</code> + <code>sendFcmPush(env, tokens, notif)</code> — fire-and-forget</div>
+  <div class="field"><span class="label">Push nouvelle disc. :</span> <code>{ title:'Tango & Vous', body:'💬 Nouvelle discussion : ${titre}' }</code></div>
+  <div class="field"><span class="label">Push nouveau msg :</span> <code>{ title:'Tango & Vous', body:'💬 ${auteur} : ${extrait || titreLabel}' }</code></div>
+  <div class="field"><span class="label">Notif in-app :</span> <code>notifications_eleve</code> INSERT via REST anon — message identique au corps du push</div>
+  <div class="field"><span class="note">⚠️ Pas d'email Brevo pour D-msg — le push et la notif in-app suffisent. Les destinataires sont des élèves existants avec la PWA installée.</span></div>
+</div>
+
 <h2>Structure carte-box (récapitulatif)</h2>
 <div class="block">
   <div class="field"><span class="label">Fond :</span> <code>#e8f4fd</code> · border <code>#1565c0</code> · border-radius 10px</div>
