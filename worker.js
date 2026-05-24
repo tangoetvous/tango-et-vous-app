@@ -411,6 +411,11 @@ export default {
         return handleStagesConfirmer(request, url, env);
       }
 
+      // POST /api/debug/push-test — envoie un push de test au compte connecté (JWT admin requis)
+      if (pathname === '/api/debug/push-test' && method === 'POST') {
+        return handleDebugPushTest(request, env);
+      }
+
       try {
         return await env.ASSETS.fetch(request);
       } catch (assetErr) {
@@ -3319,6 +3324,65 @@ async function _getFcmAccessToken(serviceAccountJson) {
   return { accessToken: tokenData.access_token, projectId: sa.project_id };
 }
 
+// ================================================================
+// POST /api/debug/push-test — diagnostic push (JWT admin requis)
+// ================================================================
+async function handleDebugPushTest(request, env) {
+  const authHeader = request.headers.get('Authorization') || '';
+  const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!jwt) return jsonError(401, 'JWT requis');
+
+  let email;
+  try {
+    const p = JSON.parse(atob(jwt.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    email = p.email;
+  } catch { return jsonError(400, 'JWT invalide'); }
+
+  const adminEmails = ['tangoetvous@gmail.com','jeremybraitbart@gmail.com','garciabraitbart@gmail.com','jeremy@tangoetvous.com'];
+  if (!adminEmails.includes(email)) return jsonError(403, 'Admin requis');
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  // Fetch all tokens for this admin
+  const rTokens = await fetch(
+    `${SUPABASE_URL}/rest/v1/fcm_tokens?email=eq.${encodeURIComponent(email)}&select=token,platform,created_at`,
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+  );
+  const rows = rTokens.ok ? await rTokens.json() : [];
+
+  const diag = {
+    email,
+    vapid_configured: !!env.VAPID_PRIVATE_KEY,
+    firebase_configured: !!env.FIREBASE_SERVICE_ACCOUNT,
+    tokens_found: rows.length,
+    tokens: [],
+  };
+
+  for (const row of rows) {
+    const tok = row.token || '';
+    const isWebPush = tok.startsWith('{');
+    const entry = { platform: row.platform, created_at: row.created_at, type: isWebPush ? 'webpush' : 'fcm', token_prefix: tok.slice(0, 60) };
+
+    if (isWebPush) {
+      if (!env.VAPID_PRIVATE_KEY) {
+        entry.result = { skipped: true, reason: 'VAPID_PRIVATE_KEY absent' };
+      } else {
+        let sub;
+        try { sub = JSON.parse(tok); } catch { entry.result = { ok: false, error: 'JSON parse error' }; diag.tokens.push(entry); continue; }
+        entry.endpoint = sub.endpoint;
+        const r = await sendWebPush(env, tok, { title: 'Tango & Vous — Test', body: '🔔 Push de diagnostic — si vous voyez ceci, le push fonctionne !' }, { tab: 'notifications' });
+        entry.result = r;
+        // Also capture raw Apple response status if possible
+      }
+    } else {
+      entry.result = { skipped: true, reason: 'legacy FCM token — non testé par ce diagnostic' };
+    }
+    diag.tokens.push(entry);
+  }
+
+  return corsResponse(diag, 200, {}, request);
+}
+
 // ── Native Web Push Encryption (RFC 8291 + RFC 8188 + RFC 8292) ──
 // subscription : PushSubscription JSON ({ endpoint, keys: { p256dh, auth } })
 // payload      : string — JSON notification payload
@@ -3443,6 +3507,10 @@ async function sendWebPush(env, subscriptionJson, notif, data = {}) {
     body: encResult.body,
   });
 
+  // Log response for debugging
+  const responseBody = (r.status !== 201) ? await r.text().catch(() => '') : '';
+  if (responseBody) console.log(`[WebPush] ${r.status} from ${sub.endpoint.split('/').slice(0,3).join('/')}: ${responseBody.slice(0,200)}`);
+
   // Clean up expired subscriptions
   if (r.status === 410 || r.status === 404) {
     const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
@@ -3450,10 +3518,11 @@ async function sendWebPush(env, subscriptionJson, notif, data = {}) {
     fetch(`${SUPABASE_URL}/rest/v1/fcm_tokens?token=eq.${encodeURIComponent(tokenStr)}`, {
       method: 'DELETE', headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` }
     }).catch(() => {});
-    return { ok: false, expired: true };
+    return { ok: false, expired: true, status: r.status, responseBody: responseBody.slice(0, 200) };
   }
 
-  return { ok: r.ok || r.status === 201, status: r.status };
+  const success = r.status === 201 || r.status === 200;
+  return { ok: success, status: r.status, responseBody: success ? undefined : responseBody.slice(0, 200) };
 }
 
 // ── Envoyer une notification push (FCM v1 ou native Web Push) ─────

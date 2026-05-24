@@ -447,7 +447,8 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
         <select id="nav-archives" style="background:var(--s3);color:var(--dim);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:600;padding:6px 8px;cursor:pointer;"><option value="">🗄 Archives</option></select>
         <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:6px;overflow:hidden;flex-shrink:0;">
           <button id="btn-activer-notif" onclick="activerNotifications()" style="background:var(--s3);color:var(--dim);border:none;border-right:1px solid var(--border);font-size:11px;font-weight:600;padding:6px 9px;cursor:pointer;white-space:nowrap;">🔔 Activer</button>
-          <button onclick="testerNotifications()" style="background:var(--s3);color:var(--dim);border:none;font-size:11px;font-weight:600;padding:6px 9px;cursor:pointer;white-space:nowrap;">⚡ Tester</button>
+          <button onclick="testerNotifications()" style="background:var(--s3);color:var(--dim);border:none;border-right:1px solid var(--border);font-size:11px;font-weight:600;padding:6px 9px;cursor:pointer;white-space:nowrap;">⚡ Tester</button>
+          <button onclick="diagnosticPush()" style="background:var(--s3);color:var(--dim);border:none;font-size:11px;font-weight:600;padding:6px 9px;cursor:pointer;white-space:nowrap;">🔍 Diag</button>
         </div>
       </div>
       <div class="admin-nav-row">
@@ -5067,6 +5068,26 @@ async function testerNotifications() {
     });
     afficherToast('⚡ Notification de test envoyée');
   } catch(e) { afficherToast('❌ Erreur : ' + e.message); }
+}
+async function diagnosticPush() {
+  var jwt = _getJwt();
+  if (!jwt) { afficherToast('❌ JWT absent — reconnecte-toi'); return; }
+  afficherToast('🔍 Diagnostic push en cours…');
+  try {
+    var r = await fetch('/api/debug/push-test', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' }
+    });
+    var data = await r.json();
+    console.log('[push-diag]', JSON.stringify(data, null, 2));
+    var summary = 'Tokens trouvés : ' + data.tokens_found + '\n';
+    (data.tokens || []).forEach(function(t, i) {
+      summary += '\n[' + (i+1) + '] type=' + t.type + ' platform=' + t.platform + '\n';
+      if (t.endpoint) summary += '    endpoint=' + (t.endpoint||'').slice(0, 50) + '…\n';
+      summary += '    result=' + JSON.stringify(t.result);
+    });
+    alert('[Push Diagnostic]\n' + summary);
+  } catch(e) { afficherToast('❌ Erreur diagnostic : ' + e.message); }
 }
 function updateNotifBadge() {
   var dot = gel('notif-dot'); if (!dot) return;
