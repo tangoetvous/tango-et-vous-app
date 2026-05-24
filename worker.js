@@ -3914,6 +3914,95 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
         }).catch(function(){});
       } catch {}
     }
+
+    // 4. Emails élève(s) — la personne qui a cliqué + le partenaire si couple
+    if (env.BREVO_API_KEY) {
+      // Fetch villeParams pour construire le coursBox
+      let _vp = {};
+      try {
+        const _essaiD  = new Date(result.date_essai + 'T12:00:00');
+        const _essaiM  = _essaiD.getMonth() + 1;
+        const _essaiY  = _essaiD.getFullYear();
+        const _sai2    = _essaiM >= 9 ? `${_essaiY}-${_essaiY+1}` : `${_essaiY-1}-${_essaiY}`;
+        const _pk2     = `tev_params_${result.ville}_${_sai2}`;
+        const _pr2     = await fetch(`${SUPABASE_URL}/rest/v1/parametres?select=valeur&cle=eq.${encodeURIComponent(_pk2)}`,
+          { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } });
+        if (_pr2.ok) {
+          const _r2 = await _pr2.json();
+          const _v2 = _r2[0]?.valeur;
+          _vp = (typeof _v2 === 'string' ? JSON.parse(_v2) : _v2) || {};
+        }
+      } catch {}
+
+      const _hor    = (_vp.horaires || {})[result.niveau] || '';
+      const _adr    = _vp.adresse || {};
+      const _lieu   = _adr.nom
+        ? `${_esc(_adr.nom)}${_adr.rue ? '<br/><span style="font-size:13px;font-weight:400;color:#444;">'+_esc(_adr.rue)+'</span>' : ''}${(_adr.transport||_adr.metro) ? '<br/><span style="font-size:12px;color:#666;">'+_esc(_adr.transport||_adr.metro)+'</span>' : ''}`
+        : '';
+      const _cbox   = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">Votre cours d'essai</div><table style="width:100%;border-collapse:collapse;font-size:14px;"><tr><td style="padding:7px 0;color:#555;width:35%;">📅 Date</td><td style="color:#111;font-weight:700;">${coursDate}</td></tr>${_hor ? `<tr><td style="padding:7px 0;color:#555;">🕐 Heure</td><td style="color:#111;font-weight:700;">${_esc(_hor)}</td></tr>` : ''}${_lieu ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">📍 Lieu</td><td style="color:#111;font-weight:700;">${_lieu}</td></tr>` : ''}<tr><td style="padding:7px 0;color:#555;">🎓 Cours</td><td style="color:#111;font-weight:700;">${villeAff} — ${nivAff}</td></tr></table></div>`;
+      const _hdr    = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+      const _ftr    = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+      const _sign   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À bientôt peut-être sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+      const _wrap3  = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">'+pre+'&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+      const _bbAnn  = isReport ? '#e3f2fd' : '#ffebee';
+      const _bbBord = isReport ? '#bbdefb' : '#ffcdd2';
+      const _bbCol  = isReport ? '#1565c0' : '#c62828';
+
+      function _buildEssaiAnnulEmail(toPrenom, bodyHtml, bandeauText) {
+        return _wrap3(
+          `${_hdr}<div style="background:${_bbAnn};padding:14px 24px;text-align:center;border-bottom:1px solid ${_bbBord};"><span style="font-size:14px;font-weight:700;color:${_bbCol};">${bandeauText}</span></div><div style="padding:30px 28px;"><p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${_esc(toPrenom||'')}</strong>,</p>${bodyHtml}${_sign}</div>${_ftr}`,
+          isReport ? "Votre cours d'essai tango a ete reporte - choisissez une nouvelle date" : "Votre cours d'essai tango a ete annule - Tango et Vous"
+        );
+      }
+
+      // Mention partenaire dans l'email de la personne qui a cliqué
+      const _partNomComplet = `${result.partner_prenom||''} ${result.partner_nom||''}`.trim();
+      const _partMentionSelf = result.partner_found && _partNomComplet
+        ? `<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;padding:10px 14px;background:#f9f6ee;border-left:3px solid #D4AF37;border-radius:4px;">L'inscription de votre partenaire <strong>${_esc(_partNomComplet)}</strong> a également été annulée.${isReport ? ' Vous pouvez vous réinscrire ensemble en choisissant une nouvelle date.' : ''}</p>`
+        : '';
+
+      const _btnRetour = `<div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr/cours-essai.html" style="display:inline-block;${isReport ? 'background:#2e7d32;color:#fff;' : 'background:#fff;color:#c62828;border:2px solid #c62828;'}padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">↩ Choisir ${isReport ? 'une nouvelle date →' : 'une autre date →'}</a></div>`;
+
+      const _bodyClicker = `<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 18px;">Votre inscription au cours d'essai tango du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}) a bien été annulée.${isReport ? " Vous allez être redirigé·e vers le formulaire pour choisir une nouvelle date." : ''}</p>${_partMentionSelf}${_cbox}${_btnRetour}`;
+      const _bandeauClicker = isReport ? '↩ Vous allez choisir une nouvelle date' : '✕ Votre cours d\'essai a bien été annulé';
+      const _htmlClicker = _buildEssaiAnnulEmail(result.prenom, _bodyClicker, _bandeauClicker);
+
+      // Email à la personne qui a cliqué
+      fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
+          to: [{ email: result.email, name: `${result.prenom||''} ${result.nom||''}`.trim() }],
+          subject: isReport ? "↩ Votre cours d'essai tango reporté — Tango & Vous" : "✕ Votre cours d'essai tango annulé — Tango & Vous",
+          htmlContent: _htmlClicker,
+        })
+      }).catch(function(){});
+
+      // Email au partenaire (si trouvé et email différent)
+      if (result.partner_found && result.partner_email) {
+        const _sameEmail = (result.partner_email||'').toLowerCase() === (result.email||'').toLowerCase();
+        if (!_sameEmail) {
+          const _clickerNom = `${result.prenom||''} ${result.nom||''}`.trim();
+          const _partMentionPart = `<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 18px;">Votre partenaire <strong>${_esc(_clickerNom)}</strong> ${isReport ? 'a décidé de reporter votre cours d\'essai tango' : 'a annulé votre cours d\'essai tango'} du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}). <strong>Votre inscription a donc également été annulée.</strong></p>`;
+          const _bodyPart = `${_partMentionPart}${_cbox}${_btnRetour}`;
+          const _bandeauPart = isReport ? '↩ Votre cours d\'essai a été reporté par votre partenaire' : '✕ Votre cours d\'essai a été annulé par votre partenaire';
+          const _htmlPart = _buildEssaiAnnulEmail(result.partner_prenom, _bodyPart, _bandeauPart);
+
+          fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
+              to: [{ email: result.partner_email, name: _partNomComplet }],
+              subject: isReport ? "↩ Votre cours d'essai tango reporté — Tango & Vous" : "✕ Votre cours d'essai tango annulé — Tango & Vous",
+              htmlContent: _htmlPart,
+            })
+          }).catch(function(){});
+        }
+      }
+    }
   }
 
   // Réponse HTTP
@@ -3924,8 +4013,11 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
     return new Response(htmlPage('ℹ️', 'Déjà annulé', '#e65100', `Cette inscription était déjà annulée.`),
       { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
   }
+  const _partPageMsg = (result.partner_found && !result.already)
+    ? ` L'inscription de votre partenaire <strong>${_esc(`${result.partner_prenom||''} ${result.partner_nom||''}`.trim())}</strong> a également été annulée.`
+    : '';
   return new Response(
-    htmlPage('✕', 'Inscription annulée', '#c62828', `Votre cours d'essai tango du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}) a bien été annulé. Si vous souhaitez vous inscrire à une autre date, revenez sur le formulaire.`),
+    htmlPage('✕', 'Inscription annulée', '#c62828', `Votre cours d'essai tango du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}) a bien été annulé.${_partPageMsg} Si vous souhaitez vous inscrire à une autre date, revenez sur le formulaire.`),
     { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } }
   );
 }
