@@ -2915,6 +2915,8 @@ Tous les appels `sendFcmPush` sont fire-and-forget, conditionnés sur `env.FIREB
 
 Firebase Console → Project Settings → Service accounts → **"Générer une nouvelle clé privée"** → télécharge un JSON → copier le contenu → Cloudflare Dashboard → Workers → tango-et-vous → Settings → Variables → **type : Secret** (pas Texte) → coller le JSON complet. Sans ça, tous les `sendFcmPush` retournent `{skipped:true}` silencieusement.
 
+**✅ Configuré le 2026-05-24** — `FIREBASE_SERVICE_ACCOUNT` est bien présent comme secret dans Cloudflare Workers.
+
 ### ✅ Tables Supabase créées (SQL exécuté par l'utilisateur)
 
 ```sql
