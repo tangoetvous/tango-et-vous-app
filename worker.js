@@ -1643,7 +1643,7 @@ async function handleNotifyCartePointage(request, env) {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_ANON,
-        'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal',
       },
@@ -2804,7 +2804,7 @@ async function handleNotifyCarteEpuisee(request, env) {
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
       method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
         'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ type: 'carte_epuisee', message: notifMsgAdmin, lu: false, lien_tab: 'cartes' }),
     });
@@ -2939,7 +2939,7 @@ async function handleCronCarteExpiree(request, env) {
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
         method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
           'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({ type: 'carte_expiree', message: `⏰ Carte expirée — ${nomAff || e.email} · ${restants} cours perdus`, lu: false, lien_tab: 'cartes' }),
       });
@@ -3052,7 +3052,7 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
   // Notif panel admin
   const adminInsert = fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
     method: 'POST',
-    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
       'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
     body: JSON.stringify({ type: 'discussion_nouvelle', message: notifMsgAdmin, lu: false, lien_tab: 'discussions' }),
   }).catch(e => console.error('[discussion-nouvelle] notifications error', e));
@@ -3094,7 +3094,7 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
 
   const adminInsert = fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
     method: 'POST',
-    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
       'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
     body: JSON.stringify({ type: 'discussion_message', message: notifMsgAdmin, lu: false, lien_tab: 'discussions' }),
   }).catch(e => console.error('[discussion-message] notifications error', e));
@@ -3859,7 +3859,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
         method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
         body: JSON.stringify({ type: 'essai_annule', message: ligne, lu: false, lien_tab: 'essai' })
       });
     } catch {}
@@ -5270,7 +5270,7 @@ async function handleNotifyCarteRenouvellement(request, env) {
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
       method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ type: 'carte_renouvelee', message: `↻ Carte renouvelée ${isAdmin ? 'par l\'admin ' : ''}sans payer — ${_esc((prenom||''))} · ⚠️ Paiement en attente`, lu: false, lien_tab: 'cartes' }),
     });
   } catch(err) { console.error('[notify-carte-renouvellement] notif-admin error', err); }
@@ -5920,7 +5920,7 @@ async function handleNotifyInscriptionStage(request, env) {
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
       method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ type: 'stage_inscription', message: notifMsg, lu: false, lien_tab: 'stages' }),
     });
   } catch(err) { console.error('[notify-stage] notif error', err); }
@@ -6256,7 +6256,7 @@ async function handleNotifyCoursParticulier(request, env) {
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
       method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ type: 'cours_particulier', message: `🎯 Cours particulier — ${nomAff}${urgBadge} · ⏳ À traiter`, lu: false, lien_tab: 'cours-particuliers' }),
     });
   } catch(err) { console.error('[notify-cp] notif error', err); }
@@ -6760,7 +6760,7 @@ async function handleCronRelanceAbsences(request, env) {
         await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
           method: 'POST',
           headers: {
-            'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+            'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`,
             'Content-Type': 'application/json', 'Prefer': 'return=minimal',
           },
           body: JSON.stringify({

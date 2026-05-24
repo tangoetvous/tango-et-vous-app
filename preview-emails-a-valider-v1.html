@@ -86,6 +86,11 @@
   <a href="#dates-stages">🎭 Dates Stages</a>
   <a href="#dates-dolce-vita">🎶 Dates Dolce Vita</a>
   <a href="#dates-colectivo">🎶 Dates Colectivo</a>
+  <a href="#essai-annule-admin">✕ Annul essai→admin</a>
+  <a href="#essai-reporte-admin">↩ Report essai→admin</a>
+  <a href="#essai-annule-eleve">✕ Annul essai→élève</a>
+  <a href="#essai-reporte-eleve">↩ Report essai→élève</a>
+  <a href="#essai-admin-supprime-eleve">🗑 Suppression admin→élève</a>
   <a href="#notifs">🔔 Notifs in-app</a>
 </nav>
 
@@ -877,6 +882,156 @@
 
   <div class="section-desc" style="margin-top:20px;">
     <strong>👍 Confirmer présence</strong> : aucune notif admin (ni email, ni push, ni panel 🔔). Seul indicateur = le badge 👍 sur la fiche élève dans admin → Essai Tango (sous-onglets Pointage et Par date). Logique : info à faible valeur, on évite le spam.
+  </div>
+</div>
+
+<hr>
+
+<!-- ================================================================ -->
+<!-- E-CANCEL-ELEVE — Annulation par l'élève → email à l'élève        -->
+<!-- ================================================================ -->
+<div class="section" id="essai-annule-eleve">
+  <div class="section-title">✕ Essai tango — Annulation par l'élève (email élève)</div>
+  <div class="section-desc">
+    Déclencheur : même action que <code>essai-annule-admin</code> — élève clique <strong>✕ Annuler</strong> depuis son email (E1, E4, E6, E-mod) → route <code>GET /api/essai/annuler?id=&amp;token=</code> → RPC <code>confirmer_annuler_essai(p_action='annuler')</code> → soft-delete → <strong>email élève envoyé en parallèle des notifs admin</strong> (fire and forget, dans <code>handleEssaiConfirmerAnnuler</code>).<br>
+    Helper : <code>_essaiAnnulEmailEleve(result, isReport=false, ...)</code> dans <code>worker.js</code>. Horaires fetchés dynamiquement depuis <code>tev_params_&lt;ville&gt;_&lt;sai&gt;.horaires[niveau]</code>.
+  </div>
+
+  <div class="email-subj">Objet : ✕ Votre inscription au cours d'essai tango du [date] est annulée — Tango &amp; Vous</div>
+  <div class="email-pre">📧 Gmail preview : <span>"Votre inscription au cours d'essai tango a ete annulee"</span></div>
+  <div class="email-label"><span class="badge badge-eleve">Élève</span> Bandeau rouge · boîte cours annulé · bouton bleu contour</div>
+  <div class="email-wrap">
+    <div style="background:#fff;">
+      <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+        <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+        <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
+      </div>
+      <div style="background:#ffebee;padding:14px 24px;text-align:center;border-bottom:1px solid #ffcdd2;">
+        <span style="font-size:14px;font-weight:700;color:#c62828;">✕ Votre inscription au cours d'essai est annulée</span>
+      </div>
+      <div style="padding:24px;">
+        <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 18px;">Bonjour Sophie,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Suite à votre demande, votre inscription au cours d'essai tango du <strong>jeudi 29 mai</strong> (Paris — Débutant) a bien été annulée.</p>
+        <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">COURS D'ESSAI ANNULÉ</div>
+          <table style="width:100%;border-collapse:collapse;">
+            <tr><td style="padding:4px 0;font-size:13px;color:#555;width:90px;">📅 Date</td><td style="padding:4px 0;font-size:14px;color:#111;font-weight:600;">Jeudi 29 mai 2026</td></tr>
+            <tr><td style="padding:4px 0;font-size:13px;color:#555;">🕐 Heure</td><td style="padding:4px 0;font-size:14px;color:#111;font-weight:600;">20h30 – 22h00</td></tr>
+            <tr><td style="padding:4px 0;font-size:13px;color:#555;">🎓 Cours</td><td style="padding:4px 0;font-size:14px;color:#111;font-weight:600;">Paris — Débutant</td></tr>
+            <tr><td colspan="2" style="padding:8px 0 0;"><span style="display:inline-block;background:#c62828;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">✕ Annulé</span></td></tr>
+          </table>
+        </div>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Si vous souhaitez participer à un cours d'essai, vous pouvez vous inscrire à une autre date.</p>
+        <div style="text-align:center;margin:24px 0 8px;">
+          <a href="#" style="display:inline-block;background:#fff;color:#1565c0;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #1565c0;">↩ Choisir une autre date →</a>
+        </div>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À bientôt peut-être sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div>
+      <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+        <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+        <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ================================================================ -->
+<!-- E-REPORT-ELEVE — Report par l'élève → email à l'élève            -->
+<!-- ================================================================ -->
+<div class="section" id="essai-reporte-eleve">
+  <div class="section-title">↩ Essai tango — Report par l'élève (email élève)</div>
+  <div class="section-desc">
+    Déclencheur : même action que <code>essai-reporte-admin</code> — élève clique <strong>↩ Reporter à une autre date</strong> depuis son email → route <code>GET /api/essai/reporter?id=&amp;token=</code> → RPC <code>confirmer_annuler_essai(p_action='annuler')</code> → soft-delete + redirect → <strong>email élève envoyé en parallèle</strong> (fire and forget, dans <code>handleEssaiConfirmerAnnuler</code>).<br>
+    Helper : <code>_essaiAnnulEmailEleve(result, isReport=true, ...)</code>. Bandeau bleu (≠ rouge pour Annuler), bouton vert, mention de la redirection en cours.
+  </div>
+
+  <div class="email-subj">Objet : ↩ Votre cours d'essai tango du [date] a été annulé — choisissez une nouvelle date</div>
+  <div class="email-pre">📧 Gmail preview : <span>"Votre cours d'essai tango a ete annule - choisissez une nouvelle date"</span></div>
+  <div class="email-label"><span class="badge badge-eleve">Élève</span> Bandeau bleu · boîte cours annulé · bouton vert</div>
+  <div class="email-wrap">
+    <div style="background:#fff;">
+      <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+        <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+        <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
+      </div>
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
+        <span style="font-size:14px;font-weight:700;color:#1565c0;">↩ Votre cours du jeudi 29 mai a été annulé — choisissez une nouvelle date</span>
+      </div>
+      <div style="padding:24px;">
+        <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 18px;">Bonjour Sophie,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Suite à votre demande de report, votre inscription au cours d'essai tango du <strong>jeudi 29 mai</strong> (Paris — Débutant) a bien été annulée. Vous avez été redirigé vers le formulaire pour choisir une autre date.</p>
+        <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">COURS D'ESSAI ANNULÉ</div>
+          <table style="width:100%;border-collapse:collapse;">
+            <tr><td style="padding:4px 0;font-size:13px;color:#555;width:90px;">📅 Date</td><td style="padding:4px 0;font-size:14px;color:#111;font-weight:600;">Jeudi 29 mai 2026</td></tr>
+            <tr><td style="padding:4px 0;font-size:13px;color:#555;">🕐 Heure</td><td style="padding:4px 0;font-size:14px;color:#111;font-weight:600;">20h30 – 22h00</td></tr>
+            <tr><td style="padding:4px 0;font-size:13px;color:#555;">🎓 Cours</td><td style="padding:4px 0;font-size:14px;color:#111;font-weight:600;">Paris — Débutant</td></tr>
+            <tr><td colspan="2" style="padding:8px 0 0;"><span style="display:inline-block;background:#c62828;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">✕ Annulé</span></td></tr>
+          </table>
+        </div>
+        <div style="text-align:center;margin:24px 0 8px;">
+          <a href="#" style="display:inline-block;background:#2e7d32;color:#fff;padding:13px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">↩ Choisir une nouvelle date →</a>
+        </div>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À bientôt peut-être sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div>
+      <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+        <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+        <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ================================================================ -->
+<!-- E-ADMIN-CANCEL-ELEVE — Admin supprime fiche → email à l'élève    -->
+<!-- ================================================================ -->
+<div class="section" id="essai-admin-supprime-eleve">
+  <div class="section-title">🗑 Essai tango — Suppression par l'admin (email élève)</div>
+  <div class="section-desc">
+    Déclencheur : admin clique sur <strong>✕</strong> (bouton supprimer) sur une fiche dans Essai Tango → <code>supprimerEssaiInscr(email, date, id)</code> → soft-delete en DB → appel fire-and-forget <code>POST /api/notify/essai-annule-admin</code> avec <code>{email, prenom, nom, date_essai, ville, niveau}</code>.<br>
+    Handler : <code>handleNotifyEssaiAnnuleAdmin(request, env)</code> dans <code>worker.js</code>. Sans auth (anon). Horaires fetchés dynamiquement depuis Supabase <code>tev_params_&lt;ville&gt;_&lt;sai&gt;</code>.<br>
+    Contrairement aux emails élève-déclenchés, l'élève reçoit un bandeau orange neutre (pas rouge) — l'annulation n'est pas de son fait. Bouton doré pour relancer une inscription.
+  </div>
+
+  <div class="email-subj">Objet : 📋 Votre cours d'essai tango du [date] a été annulé — Tango &amp; Vous</div>
+  <div class="email-pre">📧 Gmail preview : <span>"Votre inscription au cours d'essai tango a ete annulee"</span></div>
+  <div class="email-label"><span class="badge badge-eleve">Élève</span> Bandeau orange neutre · boîte cours annulé · bouton doré</div>
+  <div class="email-wrap">
+    <div style="background:#fff;">
+      <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
+        <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
+        <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
+      </div>
+      <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+        <span style="font-size:14px;font-weight:700;color:#e65100;">📋 Votre inscription au cours d'essai a été annulée</span>
+      </div>
+      <div style="padding:24px;">
+        <p style="font-size:15px;color:#333;line-height:1.7;margin:0 0 18px;">Bonjour Sophie,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Nous vous informons que votre inscription au cours d'essai tango du <strong>jeudi 29 mai</strong> (Paris — Débutant) a été annulée.</p>
+        <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">COURS D'ESSAI ANNULÉ</div>
+          <table style="width:100%;border-collapse:collapse;">
+            <tr><td style="padding:4px 0;font-size:13px;color:#555;width:90px;">📅 Date</td><td style="padding:4px 0;font-size:14px;color:#111;font-weight:600;">Jeudi 29 mai 2026</td></tr>
+            <tr><td style="padding:4px 0;font-size:13px;color:#555;">🕐 Heure</td><td style="padding:4px 0;font-size:14px;color:#111;font-weight:600;">20h30 – 22h00</td></tr>
+            <tr><td style="padding:4px 0;font-size:13px;color:#555;">🎓 Cours</td><td style="padding:4px 0;font-size:14px;color:#111;font-weight:600;">Paris — Débutant</td></tr>
+            <tr><td colspan="2" style="padding:8px 0 0;"><span style="display:inline-block;background:#c62828;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">✕ Annulé</span></td></tr>
+          </table>
+        </div>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Si vous souhaitez participer à un cours d'essai, vous pouvez vous inscrire à une autre date.</p>
+        <div style="text-align:center;margin:24px 0 8px;">
+          <a href="#" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">↩ Choisir une autre date →</a>
+        </div>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À bientôt peut-être sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div>
+      <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
+        <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
+        <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+      </div>
+    </div>
   </div>
 </div>
 

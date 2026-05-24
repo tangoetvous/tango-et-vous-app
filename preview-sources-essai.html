@@ -167,7 +167,7 @@
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Élève clique ✕ Annuler ou ↩ Reporter depuis son email</span></div>
   <div class="field"><span class="label">Implémentation :</span> Inline dans <code>handleEssaiConfirmerAnnuler</code> (worker.js) — fire and forget, ne bloque pas la réponse HTTP à l'élève</div>
-  <div class="field"><span class="label">Canal 1 — Panel 🔔 admin :</span> INSERT <code>notifications</code> type='essai_annule', message <code>"✕ Annulation essai — Nom · Cours · Date"</code> ou <code>"↩ Report essai — ..."</code>, <code>lien_tab='essai'</code></div>
+  <div class="field"><span class="label">Canal 1 — Panel 🔔 admin :</span> INSERT <code>notifications</code> avec <span class="src">env.SUPABASE_SERVICE_KEY || SUPABASE_ANON</span> — type='essai_annule', message <code>"✕ Annulation essai — Nom · Cours · Date"</code> ou <code>"↩ Report essai — ..."</code>, <code>lien_tab='essai'</code></div>
   <div class="field"><span class="label">Canal 2 — Email Brevo :</span> envoyé à <code>tangoetvous@gmail.com</code></div>
   <div class="field">&nbsp;&nbsp;• <span class="label">Sujet annul :</span> <code>✕ [Essai tango] Annulation essai — Nom · Date</code></div>
   <div class="field">&nbsp;&nbsp;• <span class="label">Sujet reporter :</span> <code>↩ [Essai tango] Report essai — Nom · Date</code></div>
@@ -178,6 +178,66 @@
   <div class="field"><span class="label">Canal 3 — Push OS admin :</span> <code>sendFcmPush(env, getFcmTokensAdmin(svcKey), {title:'Tango & Vous — Admin', body:'✕ Annulation essai — Nom · Date'})</code> — uniquement si <code>FIREBASE_SERVICE_ACCOUNT</code> configuré</div>
   <div class="field"><span class="label">Confirmer 👍 :</span> <span class="cond">aucune notif admin</span> — seulement le badge 👍 sur la fiche élève dans admin (sous-onglets Pointage + Par date)</div>
   <div class="field"><span class="label">Dédoublonnage :</span> si <code>result.already=true</code> → aucune notif envoyée (évite spam admin sur double-clic)</div>
+</div>
+
+<hr class="sep">
+
+<h2>E-cancel-eleve — Élève annule depuis son email (élève reçoit confirmation)</h2>
+<div class="route">Déclenché depuis handleEssaiConfirmerAnnuler (action='annuler') — fire and forget après notifs admin</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Élève clique ✕ Annuler dans E1/E4/E6/E-mod → route GET /api/essai/annuler → soft-delete → _essaiAnnulEmailEleve(result, isReport=false, ...)</span></div>
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">result.email</span> (récupéré par la RPC depuis la DB avant le soft-delete)</div>
+  <div class="field"><span class="label">Sujet :</span> <code>✕ Votre cours d'essai du ${dateLabel} a été annulé — Tango & Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription au cours essai tango du [date] a bien ete annulee"</span></div>
+  <div class="field"><span class="label">Bandeau :</span> Rouge `#ffebee` / `#c62828` · "✕ Votre cours d'essai a bien été annulé"</div>
+  <div class="field"><span class="label">Intro :</span> "Suite à votre demande, votre inscription au cours d'essai ci-dessous a bien été annulée."</div>
+  <div class="field"><span class="label">Cours box :</span> fond bleu `#e8f4fd`, bordure `#1565c0` · 📅 Date · 🕐 Heure (depuis <span class="src">tev_params_${ville}_${sai}.horaires[niveau]</span>) · 📍 Lieu (depuis <span class="src">tev_params_${ville}_${sai}.adresse</span>) · 🎓 Cours · 🎯 Rôle</div>
+  <div class="field"><span class="label">Bouton :</span> Bleu contour `#1565c0` · "↩ Choisir une autre date →" → <span class="src">cours-essai.html</span> (simple URL, pas de route worker car rien à annuler supplémentaire)</div>
+  <div class="field"><span class="label">Signature :</span> <span class="var">signCancel</span> = "À bientôt peut-être sur la piste !" (différent de signEleve pour éviter Gmail "...")</div>
+  <div class="field"><span class="label">Sources variables :</span></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">result.prenom/nom :</span> <span class="src">DB inscriptions_essai via RPC confirmer_annuler_essai</span></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">result.date_essai :</span> <span class="src">DB inscriptions_essai.date_essai</span> (ISO YYYY-MM-DD)</div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">result.ville / result.niveau :</span> <span class="src">DB inscriptions_essai.ville / .niveau</span></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">Horaires :</span> <span class="src">Supabase parametres.tev_params_${ville}_${sai}.horaires[niveau]</span> (fetch dans _essaiAnnulEmailEleve)</div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">Adresse :</span> <span class="src">Supabase parametres.tev_params_${ville}_${sai}.adresse</span></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">Saison :</span> calculée depuis result.date_essai (mois ≥ 9 → même année, sinon année-1)</div>
+</div>
+
+<h2>E-report-eleve — Élève reporte depuis son email (élève reçoit confirmation)</h2>
+<div class="route">Déclenché depuis handleEssaiConfirmerAnnuler (action='reporter') — fire and forget après notifs admin</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Élève clique ↩ Reporter dans E1/E4/E6/E-mod → route GET /api/essai/reporter → soft-delete + redirect → _essaiAnnulEmailEleve(result, isReport=true, ...)</span></div>
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">result.email</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>↩ Votre cours d'essai du ${dateLabel} a été annulé — vous allez choisir une nouvelle date</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre cours essai tango a ete annule - choisissez une nouvelle date sur le formulaire"</span></div>
+  <div class="field"><span class="label">Bandeau :</span> Bleu `#e3f2fd` / `#1565c0` · "↩ Vous allez choisir une nouvelle date"</div>
+  <div class="field"><span class="label">Intro :</span> "Suite à votre demande, votre inscription au cours d'essai ci-dessous a bien été annulée. Vous allez être redirigé·e vers le formulaire pour choisir une nouvelle date."</div>
+  <div class="field"><span class="label">Cours box :</span> Identique à E-cancel-eleve (même variables)</div>
+  <div class="field"><span class="label">Bouton :</span> Vert `#2e7d32` · "↩ Choisir une nouvelle date →" → <span class="src">cours-essai.html</span></div>
+  <div class="field"><span class="label">Signature :</span> <span class="var">signCancel</span> = "À bientôt peut-être sur la piste !"</div>
+  <div class="field"><span class="label">Sources variables :</span> Identiques à E-cancel-eleve</div>
+</div>
+
+<h2>E-admin-cancel-eleve — Admin supprime une fiche (élève reçoit notification)</h2>
+<div class="route">POST /api/notify/essai-annule-admin (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin clique ✕ sur fiche Essai Tango → supprimerEssaiInscr() → soft-delete DB → fetch POST /api/notify/essai-annule-admin (fire and forget)</span></div>
+  <div class="field"><span class="label">Body envoyé :</span> <span class="var">{ email, prenom, nom, date_essai, ville, niveau }</span> (capturé avant soft-delete depuis adminData.essai)</div>
+  <div class="field"><span class="label">Destinataire :</span> <span class="var">body.email</span></div>
+  <div class="field"><span class="label">Sujet :</span> <code>Votre cours d'essai du ${dateLabel} — modification de votre inscription — Tango & Vous</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription au cours essai tango a ete modifiee par notre equipe"</span></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange/jaune `#fff8e1` / `#e65100` · "📋 Votre inscription a été modifiée"</div>
+  <div class="field"><span class="label">Intro :</span> "Nous vous informons que votre inscription au cours d'essai ci-dessous a été modifiée par notre équipe. Si vous avez des questions, n'hésitez pas à nous contacter."</div>
+  <div class="field"><span class="label">Cours box :</span> Identique aux emails E-cancel/E-report (même variables, même fetch Supabase dans le handler)</div>
+  <div class="field"><span class="label">Bouton :</span> Or `#D4AF37` · "↩ Choisir une autre date →" → <span class="src">cours-essai.html</span></div>
+  <div class="field"><span class="label">Bouton contact :</span> Contour gris · "Nous contacter →" → <code>mailto:tangoetvous@gmail.com</code></div>
+  <div class="field"><span class="label">Signature :</span> <span class="var">signCancel</span> = "À bientôt peut-être sur la piste !"</div>
+  <div class="field"><span class="label">Sources variables :</span></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">body.prenom/nom/email :</span> <span class="src">adminData.essai (capturé dans supprimerEssaiInscr avant soft-delete)</span></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">body.date_essai :</span> <span class="src">adminData.essai.date (ISO YYYY-MM-DD)</span></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">body.ville / body.niveau :</span> <span class="src">adminData.essai.ville / .niveau</span></div>
+  <div class="field">&nbsp;&nbsp;• <span class="label">Horaires + Adresse :</span> <span class="src">Supabase parametres.tev_params_${ville}_${sai}.horaires[niveau] / .adresse</span> (fetch dans handleNotifyEssaiAnnuleAdmin)</div>
+  <div class="field"><span class="label">⚠️ Route sans auth :</span> <span class="cond">Pas de JWT requis — la sécurité est dans l'origine (appelée uniquement par admin.html, le body ne déclenche aucune écriture DB côté worker, seulement un email Brevo)</span></div>
 </div>
 </body>
 </html>

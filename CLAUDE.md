@@ -3743,3 +3743,49 @@ case 'suppr-def-essai':   supprDefEssai(btn.dataset.id, btn.dataset.nom||''); br
 - **Admin ✕ et email Annuler** font tous deux le soft-delete (cohérence)
 - **Pas de filtre RLS supplémentaire** : `tev-supabase.js` charge toutes les fiches (y compris supprimés) — c'est l'admin.html qui filtre/groupe selon les vues
 
+## Session 2026-05-24 — Emails élève annul/report + fix panel 🔔 admin
+
+### ✅ Emails élève lors d'une annulation ou d'un report
+
+Trois nouveaux emails côté élève, documentés dans `preview-emails-a-valider-v1.html` (sections `essai-annule-eleve`, `essai-reporte-eleve`, `essai-admin-supprime-eleve`) et dans `preview-sources-essai.html`.
+
+| Code | Déclencheur | Bandeau | Bouton |
+|------|-------------|---------|--------|
+| **E-cancel-eleve** | Élève clique ✕ Annuler dans son email → `handleEssaiConfirmerAnnuler(action='annuler')` → helper `_essaiAnnulEmailEleve(result, isReport=false, ...)` (fire and forget) | Rouge `#ffebee`/`#c62828` "✕ Votre cours d'essai a bien été annulé" | Bleu contour "↩ Choisir une autre date →" → cours-essai.html |
+| **E-report-eleve** | Élève clique ↩ Reporter dans son email → `handleEssaiConfirmerAnnuler(action='reporter')` → même helper `isReport=true` | Bleu `#e3f2fd`/`#1565c0` "↩ Vous allez choisir une nouvelle date" | Vert `#2e7d32` "↩ Choisir une nouvelle date →" |
+| **E-admin-cancel-eleve** | Admin clique ✕ sur fiche → `supprimerEssaiInscr()` → soft-delete → `POST /api/notify/essai-annule-admin` (fire and forget, sans auth) → `handleNotifyEssaiAnnuleAdmin()` | Orange/jaune `#fff8e1`/`#e65100` "📋 Votre inscription a été modifiée" | Or `#D4AF37` "↩ Choisir une autre date →" |
+
+**Signature** : `signCancel = "À bientôt peut-être sur la piste !"` — différente de `signEleve` pour éviter Gmail "..." clipping.
+
+**Cours box** : même structure que E1/E6/E15. Horaires depuis `tev_params_${ville}_${sai}.horaires[niveau]` (fetch Supabase dans le helper/handler). Adresse depuis `tev_params_${ville}_${sai}.adresse`.
+
+**Règle** : capturer `{email, prenom, nom, date_essai, ville, niveau}` depuis `adminData.essai` AVANT le soft-delete dans `supprimerEssaiInscr`, car après la mise à jour locale de `e.statut`, les données de contexte sont toujours présentes mais la logique est plus claire si capturées avant.
+
+### ✅ Fix critique — panel 🔔 admin silencieusement muet (toutes les notifications)
+
+**Symptôme** : l'admin ne recevait aucune notification dans le panel 🔔 lors des actions élève (annulation/report essai, pointage carte, inscription stage, renouvellement carte, etc.).
+
+**Cause racine** : la table `notifications` a une RLS nécessitant `is_admin()` pour les INSERTs. Tous les handlers dans `worker.js` utilisaient `SUPABASE_ANON` comme Bearer token → RLS rejetait silencieusement (0 lignes affectées, pas d'erreur HTTP, `catch {}` ne voyait rien).
+
+**Tables concernées** :
+- `notifications` — RLS restrictive (`is_admin()`) → insert doit utiliser la **service key**
+- `notifications_eleve` — RLS "always true" → anon key suffit (ne pas changer)
+
+**Fix appliqué** : 10 inserts dans `notifications` (worker.js) passés de `Bearer ${SUPABASE_ANON}` à `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}` :
+- `carte_pointage` (handler carte-pointage)
+- `carte_epuisee` (handler carte-epuisee)
+- `carte_expiree` (cron carte-expiree)
+- `discussion_nouvelle` (handler discussion-nouvelle)
+- `discussion_message` (handler discussion-message)
+- `essai_annule` (handler essai confirmer/annuler)
+- `carte_renouvelee` (handler carte-renouvellement)
+- `stage_inscription` (handler inscription-stage)
+- `cours_particulier` (handler cours-particulier)
+- `relance_absences` (cron relance-absences)
+
+**`env.SUPABASE_SERVICE_KEY`** est configuré dans Cloudflare Workers (confirmé — utilisé depuis la session 2026-05-13 pour `update-auth-email`). Le fallback `|| SUPABASE_ANON` est conservé pour la compatibilité locale mais ne devrait jamais être utilisé en production.
+
+**Règle permanente** : tout nouvel INSERT dans la table `notifications` doit utiliser `Authorization: Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`. Les inserts dans `notifications_eleve` peuvent conserver `SUPABASE_ANON` (RLS always true).
+
+**Vérification syntaxique** : `npx acorn --ecma2022 --module worker.js` → OK après le fix.
+

@@ -9519,6 +9519,14 @@ function supprimerCoursInscr(id) {
 }
 function supprimerEssaiInscr(email, date, id) {
   if (!adminData.essai) return;
+  // Capturer les données de la fiche AVANT soft-delete pour la notification élève
+  var _entryRef = id
+    ? adminData.essai.find(function(e){ return String(e.id)===String(id); })
+    : adminData.essai.find(function(e){ return e.email===email && e.date===date; });
+  var _notifData = _entryRef ? {
+    email: _entryRef.email, prenom: _entryRef.prenom, nom: _entryRef.nom,
+    date_essai: _entryRef.date, ville: _entryRef.ville, niveau: _entryRef.niveau
+  } : null;
   // Soft-delete : on marque statut='supprimé' (la fiche apparaît dans l'onglet Supprimés)
   // statut_avant_suppression conserve l'ancien statut pour permettre Rétablir
   function _markSupprime(e) {
@@ -9552,6 +9560,13 @@ function supprimerEssaiInscr(email, date, id) {
             console.error('Erreur suppression essai:', results);
             afficherToast('Erreur : suppression échouée');
             chargerDonnees();
+          } else if (_notifData && _notifData.email) {
+            // Email de notification à l'élève — fire and forget
+            fetch('/api/notify/essai-annule-admin', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(_notifData)
+            }).catch(function(){});
           }
         })
         .catch(function(e){ console.error('Erreur suppression essai (réseau):', e); chargerDonnees(); });
