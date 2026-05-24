@@ -6734,6 +6734,18 @@ async function handleCronRappelStageJ3(request, env) {
   const d3 = new Date(); d3.setDate(d3.getDate()+3);
   const targetDate = d3.toISOString().slice(0,10);
 
+  // Fetch stage address from Supabase params (global + per-date override)
+  const _s4Sai = (function(iso){ const yr=parseInt(iso.slice(0,4)),mo=parseInt(iso.slice(5,7)); return mo>=9?(yr+'-'+(yr+1)):((yr-1)+'-'+yr); })(targetDate);
+  const [_s4ParRes, _s4DtRes] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_params_stages_${_s4Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+    fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_dates_stages_${_s4Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+  ]);
+  const _s4GlobalAdr = _s4ParRes.ok ? (((await _s4ParRes.json())[0]||{}).valeur?.adresse||{}) : {};
+  const _s4DatesArr  = _s4DtRes.ok  ? (((await _s4DtRes.json())[0]||{}).valeur||[])            : [];
+  const _s4StEntry   = _s4DatesArr.find(function(s){ return s.date===targetDate; }) || {};
+  const _s4Adr       = (_s4StEntry.adresse && (_s4StEntry.adresse.nom||_s4StEntry.adresse.rue)) ? _s4StEntry.adresse : _s4GlobalAdr;
+  const _s4LieuSection = (_s4Adr.nom||_s4Adr.rue) ? `<div style="border-top:1px solid #e8d5a0;padding:12px 18px 8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;">${_s4Adr.nom?`<strong>${_esc(_s4Adr.nom)}</strong><br/>`:''}${_s4Adr.rue?`${_esc(_s4Adr.rue)}<br/>`:''}${_s4Adr.transport?`<span style="font-size:12px;color:#666;">${_esc(_s4Adr.transport)}</span>`:''}</div></div>` : '';
+
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=eq.${targetDate}&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees`,
     { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
@@ -6764,6 +6776,7 @@ async function handleCronRappelStageJ3(request, env) {
         <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ${dateLabel}</div>
       </div>
       <div style="padding:12px 18px;">${slotsHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}</div>
+      ${_s4LieuSection}
     </div>`;
     const _s4Token = (await _calHmac(String(e.email) + ':' + targetDate, SUPABASE_ANON)).slice(0, 32);
     const _s4ConfirmUrl = `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(e.email))}&date=${targetDate}&token=${_s4Token}`;
@@ -6815,6 +6828,24 @@ async function handleNotifyStageValide(request, env) {
 
   const { email, prenom, nom, role, inscriptionsParDate = [], daysUntil = 99 } = body;
   if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+
+  // Fetch stage address from Supabase params (global + per-date override)
+  const _s3FirstDate = (inscriptionsParDate[0]||{}).date || '';
+  const _s3Sai = _s3FirstDate ? (function(iso){ const yr=parseInt(iso.slice(0,4)),mo=parseInt(iso.slice(5,7)); return mo>=9?(yr+'-'+(yr+1)):((yr-1)+'-'+yr); })(_s3FirstDate) : '';
+  let _s3GlobalAdr = {}, _s3DatesArr = [];
+  if (_s3Sai) {
+    const [_s3ParRes, _s3DtRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_params_stages_${_s3Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+      fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_dates_stages_${_s3Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+    ]);
+    _s3GlobalAdr = _s3ParRes.ok ? (((await _s3ParRes.json())[0]||{}).valeur?.adresse||{}) : {};
+    _s3DatesArr  = _s3DtRes.ok  ? (((await _s3DtRes.json())[0]||{}).valeur||[])            : [];
+  }
+  function _s3GetAdr(date) {
+    const st = _s3DatesArr.find(function(s){ return s.date===date; }) || {};
+    return (st.adresse && (st.adresse.nom||st.adresse.rue)) ? st.adresse : _s3GlobalAdr;
+  }
+
   const prenomAff  = _esc(prenom || '');
   const proche     = daysUntil <= 3;
   let slotsHtml = '';
@@ -6824,6 +6855,8 @@ async function handleNotifyStageValide(request, env) {
     for (const sl of (d.slots||[])) {
       slHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')}</span> — ${_esc(sl.theme||sl.type||'')}</div>`;
     }
+    const _s3Adr = _s3GetAdr(d.date);
+    const _s3Lieu = (_s3Adr.nom||_s3Adr.rue) ? `<div style="border-top:1px solid #e8d5a0;padding:12px 18px 8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;">${_s3Adr.nom?`<strong>${_esc(_s3Adr.nom)}</strong><br/>`:''}${_s3Adr.rue?`${_esc(_s3Adr.rue)}<br/>`:''}${_s3Adr.transport?`<span style="font-size:12px;color:#666;">${_esc(_s3Adr.transport)}</span>`:''}</div></div>` : '';
     slotsHtml += `<div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 18px;">
       <div style="background:#B8962E;padding:12px 18px;">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
@@ -6832,6 +6865,7 @@ async function handleNotifyStageValide(request, env) {
       <div style="padding:12px 18px;">${slHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}${d.tarif ? `<div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">${d.tarif}€</div>` : ''}</div>
       ${d.tarif ? `<div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : ${d.tarif}€</div>` : ''}
       <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      ${_s3Lieu}
     </div>`;
   }
   const _s3bFirstDate = inscriptionsParDate[0]?.date || '';
