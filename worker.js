@@ -3838,6 +3838,13 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   const nivAff    = result.niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
 
   if (action === 'confirmer') {
+    if (result.supprime) {
+      return new Response(
+        htmlPage('ℹ️', 'Cours d\'essai annulé', '#e65100',
+          `Votre inscription au cours d'essai tango du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}) avait été annulée. Votre présence n'a pas pu être enregistrée.<br><br><a href="https://app.tangoetvous.fr/cours-essai.html" style="color:#D4AF37;font-weight:700;text-decoration:none;">↩ Choisir une nouvelle date →</a>`),
+        { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } }
+      );
+    }
     return new Response(
       htmlPage('👍', 'Présence confirmée !', '#2e7d32', `Votre présence au cours d'essai tango du <strong>${coursDate}</strong> (${villeAff} — ${nivAff}) est bien confirmée.`),
       { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } }
