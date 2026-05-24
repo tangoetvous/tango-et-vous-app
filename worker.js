@@ -172,6 +172,11 @@ export default {
         return handleEssaiConfirmerAnnuler(request, url, 'reporter', env);
       }
 
+      // POST /api/notify/essai-annule-admin — admin supprime une fiche essai → email élève E-admin-cancel (sans auth)
+      if (pathname === '/api/notify/essai-annule-admin' && method === 'POST') {
+        return handleNotifyEssaiAnnuleAdmin(request, env);
+      }
+
       // GET /api/essai-yoga/confirmer — élève confirme sa présence essai yoga via lien email
       if (pathname === '/api/essai-yoga/confirmer' && (method === 'GET' || method === 'PATCH')) {
         return handleEssaiYogaConfirmer(request, url, env);
@@ -4626,6 +4631,110 @@ async function handleCronEssaiRappelJ7(request, env) {
 }
 
 // ================================================================
+// ================================================================
+// POST /api/notify/essai-annule-admin — E-admin-cancel-eleve
+// Admin supprime une fiche essai → email élève "votre inscription a été modifiée"
+// Body: { email, prenom, nom, date_essai, ville, niveau }
+// Sans auth — appelé fire-and-forget depuis supprimerEssaiInscr() (admin.html)
+// ================================================================
+async function handleNotifyEssaiAnnuleAdmin(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const { email, prenom, nom, date_essai, ville, niveau } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const adminEmail   = 'tangoetvous@gmail.com';
+  const APP_URL      = 'https://app.tangoetvous.fr';
+  const sbHeaders    = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
+
+  // Saison depuis la date
+  const essaiDateObj = new Date((date_essai||'') + 'T12:00:00');
+  const essaiM = essaiDateObj.getMonth() + 1;
+  const essaiY = essaiDateObj.getFullYear();
+  const sai    = essaiM >= 9 ? `${essaiY}-${essaiY+1}` : `${essaiY-1}-${essaiY}`;
+
+  // Fetch params (horaires + adresse) depuis Supabase
+  let villeParams = {};
+  try {
+    const paramKey = `tev_params_${ville}_${sai}`;
+    const pr = await fetch(`${SUPABASE_URL}/rest/v1/parametres?select=valeur&cle=eq.${encodeURIComponent(paramKey)}`, { headers: sbHeaders });
+    if (pr.ok) {
+      const rows = await pr.json();
+      const val = rows[0]?.valeur;
+      villeParams = (typeof val === 'string' ? JSON.parse(val) : val) || {};
+    }
+  } catch {}
+
+  const horaires  = villeParams.horaires || {};
+  const horaire   = _esc(horaires[niveau] || '');
+  const adresse   = villeParams.adresse  || {};
+  const adrNom    = _esc(adresse.nom       || '');
+  const adrRue    = _esc(adresse.rue       || '');
+  const adrTransp = _esc(adresse.transport || '');
+
+  const niveauLabel = niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
+  const villeLabel  = ville === 'paris' ? 'Paris' : 'Vincennes';
+  const dateLabel   = fmtDate(date_essai);
+
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signCancel  = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À bientôt peut-être sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  const lieuCell = adrNom
+    ? `${adrNom}${adrRue ? '<br/><span style="font-size:13px;font-weight:400;color:#444;">'+adrRue+'</span>' : ''}${adrTransp ? '<br/><span style="font-size:12px;color:#666;">'+adrTransp+'</span>' : ''}`
+    : '';
+
+  const coursBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">Votre cours d'essai</div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr><td style="padding:7px 0;color:#555;width:35%;">📅 Date</td><td style="color:#111;font-weight:700;">${dateLabel}</td></tr>
+      ${horaire ? `<tr><td style="padding:7px 0;color:#555;">🕐 Heure</td><td style="color:#111;font-weight:700;">${horaire}</td></tr>` : ''}
+      ${lieuCell ? `<tr><td style="padding:7px 0;color:#555;vertical-align:top;">📍 Lieu</td><td style="color:#111;font-weight:700;">${lieuCell}</td></tr>` : ''}
+      <tr><td style="padding:7px 0;color:#555;">🎓 Cours</td><td style="color:#111;font-weight:700;">${villeLabel} — ${niveauLabel}</td></tr>
+    </table>
+  </div>`;
+
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">📋 Votre inscription a été modifiée</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${_esc(prenom||'')}</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Votre inscription au cours d'essai tango du <strong>${dateLabel}</strong> (${villeLabel} — ${niveauLabel}) a été annulée par notre équipe.<br/>Nous espérons vous retrouver bientôt ! Vous pouvez choisir une nouvelle date ci-dessous.</p>
+      ${coursBox}
+      <div style="text-align:center;margin:0 0 22px;">
+        <a href="${APP_URL}/cours-essai.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">↩ Choisir une autre date</a>
+      </div>
+      <p style="font-size:13px;color:#666;text-align:center;margin:0 0 22px;">Si vous avez des questions, n'hésitez pas à nous contacter à <a href="mailto:tangoetvous@gmail.com" style="color:#B8962E;">tangoetvous@gmail.com</a> ou au <strong>07 73 27 59 06</strong>.</p>
+      ${signCancel}
+    </div>${footer}`, "Votre inscription au cours d'essai tango a ete annulee par notre equipe");
+
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sender: { name: 'Tango & Vous', email: adminEmail },
+        to: [{ email: String(email) }],
+        subject: `📋 Votre cours d'essai du ${dateLabel} — inscription modifiée · Tango & Vous`,
+        htmlContent: htmlEleve,
+      }),
+    });
+  } catch(err) { console.error('[notify-essai-annule-admin] email error', err); }
+
+  // Notification panel 🔔 admin
+  const nomAff = `${_esc(prenom||'')} ${_esc(nom||'')}`.trim();
+  await _insertNotification('essai_annule_admin',
+    `✕ Annulation admin — ${nomAff} · ${villeLabel} ${niveauLabel} · ${dateLabel}`,
+    'essai').catch(function(){});
+
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
 // POST /api/notify/essai-valide — E15/E15b
 // Admin valide essai en attente → confirme
 // Body: { email, prenom, nom, ville, niveau, dateEssai, role,
