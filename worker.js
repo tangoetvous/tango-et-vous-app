@@ -3624,6 +3624,24 @@ async function handleNotifyInscriptionEssai(request, env) {
   const adminHtml = wrap(`${adminHeader}<div style="padding:24px;">${adminEncadre}${adminStatusRow}${adminTable}${adminBtns}</div>${adminFooter}`);
   await sendBrevo(adminEmail, e0Subj, adminHtml);
 
+  // ─── Notification panel 🔔 admin + push OS ───
+  try {
+    const nomAff = `${prenom || ''} ${nom || ''}`.trim();
+    const sitAff = (enCouple && partPrenom) ? 'En couple' : 'Seul·e';
+    const statutAff = isConfirme ? '✓ Confirmé·e' : '⏳ En attente';
+    const notifMsg = `🎯 Essai tango — ${nomAff} · ${coursVilleAff} · ${fmtDateCourt(dateIso)} · ${sitAff} · ${statutAff}`;
+    await _insertNotification('essai_inscription', notifMsg, 'essai');
+    if (env.FIREBASE_SERVICE_ACCOUNT) {
+      const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+      getFcmTokensAdmin(_svcKey).then(function(tokens) {
+        if (tokens.length) sendFcmPush(env, tokens, {
+          title: 'Tango & Vous — Admin',
+          body: `🎯 Essai tango — ${nomAff} · ${fmtDateCourt(dateIso)} · ${statutAff}`
+        }).catch(function(){});
+      }).catch(function(){});
+    }
+  } catch {}
+
   // ─── Emails élèves ───
   const targets = [{ to: email, pren: prenom, r: role, duoAvec: (enCouple && partPrenom) ? (partPrenom || '') : null }];
   if (enCouple && partEmail && partEmail.toLowerCase() !== (email || '').toLowerCase()) {
