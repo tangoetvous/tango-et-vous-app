@@ -157,7 +157,7 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - **`demandes_devis`** : demandes reçues via formulaire public `demande-devis.html` — voir section Devis ci-dessous
 - **`devis`** : devis officiels créés par l'admin — voir section Devis ci-dessous
 - **`compteurs_devis`** : numérotation annuelle des devis (accès via fonction SECURITY DEFINER uniquement)
-- **`notifications`** : historique des notifications admin — colonnes : id, created_at, type, message, lu (bool), lien_tab. Alimentée par le worker (routes `carte-pointage`, `notify/yoga-date`, etc.) et par `traiterMsgInscription` dans admin.html. Lue par le panel 🔔 dans l'admin.
+- **`notifications`** : historique des notifications admin — colonnes : id, created_at, type, message, lu (bool), lien_tab. **Créée le 2026-05-24** (existait dans le code avant d'exister en DB — tous les inserts worker échouaient silencieusement avec 404). RLS : policy `notifications_admin` FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin()) — GRANT SELECT/INSERT/UPDATE/DELETE TO authenticated. ⚠️ La RLS bloque les inserts avec la clé anon → le worker utilise la fonction SECURITY DEFINER `inserer_notification()` (accessible à anon) via le helper `_insertNotification()` (worker.js). Ne jamais insérer directement via REST avec SUPABASE_ANON. Lue par le panel 🔔 dans l'admin.
 - **`absences_jour`** : absences déclarées sur les cours réguliers — colonnes : id, created_at, date (date), email (text), UNIQUE(date, email). GRANT SELECT/INSERT/UPDATE/DELETE accordé à anon + authenticated. Alimentée par l'admin (bouton Absent dans Pointage) ET par l'espace élève (bouton sur carte Prochain Cours).
 
 ## Architecture JS clé
@@ -3765,27 +3765,125 @@ Trois nouveaux emails côté élève, documentés dans `preview-emails-a-valider
 
 **Symptôme** : l'admin ne recevait aucune notification dans le panel 🔔 lors des actions élève (annulation/report essai, pointage carte, inscription stage, renouvellement carte, etc.).
 
-**Cause racine** : la table `notifications` a une RLS nécessitant `is_admin()` pour les INSERTs. Tous les handlers dans `worker.js` utilisaient `SUPABASE_ANON` comme Bearer token → RLS rejetait silencieusement (0 lignes affectées, pas d'erreur HTTP, `catch {}` ne voyait rien).
+**Cause racine réelle** : la table `notifications` **n'existait tout simplement pas** dans Supabase. Elle était documentée dans CLAUDE.md et référencée dans le code comme si elle existait, mais n'avait jamais été créée. Tous les inserts worker retournaient 404 attrapé par `.catch(function(){})` → silence total. Découvert via screenshot du Table Editor Supabase (2026-05-24).
 
-**Tables concernées** :
-- `notifications` — RLS restrictive (`is_admin()`) → insert doit utiliser la **service key**
-- `notifications_eleve` — RLS "always true" → anon key suffit (ne pas changer)
+**Fix en deux parties** :
 
-**Fix appliqué** : 10 inserts dans `notifications` (worker.js) passés de `Bearer ${SUPABASE_ANON}` à `Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}` :
-- `carte_pointage` (handler carte-pointage)
-- `carte_epuisee` (handler carte-epuisee)
-- `carte_expiree` (cron carte-expiree)
-- `discussion_nouvelle` (handler discussion-nouvelle)
-- `discussion_message` (handler discussion-message)
-- `essai_annule` (handler essai confirmer/annuler)
-- `carte_renouvelee` (handler carte-renouvellement)
-- `stage_inscription` (handler inscription-stage)
-- `cours_particulier` (handler cours-particulier)
-- `relance_absences` (cron relance-absences)
+**Partie 1 — SQL exécuté dans Supabase** :
+```sql
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGSERIAL PRIMARY KEY, created_at TIMESTAMPTZ DEFAULT NOW(),
+  type TEXT NOT NULL DEFAULT 'info', message TEXT NOT NULL DEFAULT '',
+  lu BOOLEAN NOT NULL DEFAULT false, lien_tab TEXT NOT NULL DEFAULT ''
+);
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "notifications_admin" ON notifications
+  FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());
+GRANT SELECT, INSERT, UPDATE, DELETE ON notifications TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE notifications_id_seq TO authenticated;
 
-**`env.SUPABASE_SERVICE_KEY`** est configuré dans Cloudflare Workers (confirmé — utilisé depuis la session 2026-05-13 pour `update-auth-email`). Le fallback `|| SUPABASE_ANON` est conservé pour la compatibilité locale mais ne devrait jamais être utilisé en production.
+-- Fonction SECURITY DEFINER — le worker appelle celle-ci (pas de service key requis)
+CREATE OR REPLACE FUNCTION inserer_notification(
+  p_type TEXT, p_message TEXT DEFAULT '', p_lu BOOLEAN DEFAULT false, p_lien_tab TEXT DEFAULT '')
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO notifications (type, message, lu, lien_tab) VALUES (p_type, p_message, p_lu, p_lien_tab);
+END;
+$$;
+GRANT EXECUTE ON FUNCTION inserer_notification(TEXT, TEXT, BOOLEAN, TEXT) TO anon, authenticated;
+```
 
-**Règle permanente** : tout nouvel INSERT dans la table `notifications` doit utiliser `Authorization: Bearer ${env.SUPABASE_SERVICE_KEY || SUPABASE_ANON}`. Les inserts dans `notifications_eleve` peuvent conserver `SUPABASE_ANON` (RLS always true).
+**Partie 2 — worker.js** : ajout du helper `_insertNotification()` + remplacement des 10 inserts directs :
+
+```javascript
+// Helper global — bypass RLS via SECURITY DEFINER, pas besoin du service key
+function _insertNotification(type, message, lien_tab) {
+  return fetch(`${SUPABASE_URL}/rest/v1/rpc/inserer_notification`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_type: type, p_message: message, p_lu: false, p_lien_tab: lien_tab || '' }),
+  });
+}
+```
+
+Les 10 inserts directs dans `notifications` remplacés par `await _insertNotification(type, msg, tab)` :
+`carte_pointage`, `carte_epuisee`, `carte_expiree`, `discussion_nouvelle`, `discussion_message`, `essai_annule`, `carte_renouvelee`, `stage_inscription`, `cours_particulier`, `relance_absences`.
+
+**Règle permanente** : tout nouvel INSERT dans la table `notifications` doit passer par `_insertNotification()`. Ne jamais faire de POST REST direct vers `/rest/v1/notifications` avec la clé anon — la RLS le bloquera silencieusement. Les inserts dans `notifications_eleve` (RLS always true) peuvent conserver `SUPABASE_ANON` directement.
 
 **Vérification syntaxique** : `npx acorn --ecma2022 --module worker.js` → OK après le fix.
+
+## Session 2026-05-24 (suite) — Confirmer-après-annulation + liste tables confirmée
+
+### ✅ Fix UX "Confirmer après annulation" — page informative au lieu de "Présence confirmée !"
+
+**Problème** : un élève ayant cliqué "✕ Annuler" ou "↩ Reporter" (soft-delete de son inscription), qui cliquait ensuite sur "👍 Je confirme ma présence" dans le même email, voyait la page verte "Présence confirmée !" — trompeur car son inscription était annulée.
+
+**Cause** : la RPC `confirmer_annuler_essai` faisait un `UPDATE presence_confirmee=true` même si `statut='supprimé'`, et retournait `{ok:true}` sans signaler que la ligne était supprimée.
+
+**Fix RPC** (SQL exécuté dans Supabase) :
+```sql
+-- Dans la branche action='confirmer' de confirmer_annuler_essai() :
+IF v_row.statut = 'supprimé' THEN
+  RETURN json_build_object('ok', true, 'supprime', true,
+    'prenom', v_row.prenom, 'nom', v_row.nom, 'email', v_row.email,
+    'date_essai', v_row.date_essai, 'ville', v_row.ville, 'niveau', v_row.niveau);
+END IF;
+-- ... puis UPDATE presence_confirmee=true uniquement si statut != 'supprimé'
+```
+
+**Fix worker.js** (`handleEssaiConfirmerAnnuler`, branche `action='confirmer'`) :
+```javascript
+if (result.supprime) {
+  return new Response(
+    htmlPage('ℹ️', 'Cours d\'essai annulé', '#e65100',
+      `Votre inscription au cours d'essai tango du <strong>${coursDate}</strong>
+       (${villeAff} — ${nivAff}) avait été annulée. Votre présence n'a pas pu être enregistrée.
+       <br><br><a href="https://app.tangoetvous.fr/cours-essai.html"
+       style="color:#D4AF37;font-weight:700;text-decoration:none;">↩ Choisir une nouvelle date →</a>`),
+    { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } }
+  );
+}
+// ... puis afficher "Présence confirmée !" normalement
+```
+
+**Résultat** : clic "Confirmer" après annulation → page orange ℹ️ "Votre inscription avait été annulée" + lien pour choisir une nouvelle date.
+
+### Liste complète tables Supabase — confirmée 2026-05-24 (screenshots Table Editor)
+
+Tables confirmées présentes dans Supabase (ordre alphabétique) :
+
+| Table | Description |
+|-------|-------------|
+| `absences_jour` | Absences déclarées cours réguliers |
+| `agenda_modifs` | Modifications d'agenda (annulations, reports) |
+| `cheques_depot` | Chèques associés aux remises banque |
+| `compteurs_devis` | Numérotation annuelle devis (accès RPC uniquement) |
+| `cours_particuliers` | Demandes de cours particuliers |
+| `cours_yoga` | Inscriptions yoga régulier |
+| `demandes_devis` | Demandes reçues via formulaire public |
+| `devis` | Devis officiels créés par l'admin |
+| `discussion_messages` | Messages des discussions élèves-admin |
+| `discussions` | Fils de discussion élèves-admin |
+| `eleves` | Profils élèves |
+| `fcm_tokens` | Tokens Firebase Cloud Messaging |
+| `inscriptions_cours` | Inscriptions tango régulier |
+| `inscriptions_essai` | Cours d'essai tango |
+| `inscriptions_essai_yoga` | Cours d'essai yoga |
+| `inscriptions_stages` | Inscriptions aux stages |
+| `milonga_presences` | RSVPs milonga (espace élève) |
+| `notifications` | Notifications admin (panel 🔔) — **créée 2026-05-24** |
+| `notifications_eleve` | Notifications in-app élève (icône 🔔) |
+| `parametres` | Clés/valeurs de configuration (tarifs, dates, GPS…) |
+| `presences` | Pointage présences cartes 10 |
+| `publications` | Articles/annonces (espace élève + admin) |
+| `remises_banque` | Remises en banque (Trésorerie) |
+
+**⚠️ Tables `discussion_messages` et `discussions`** : présentes en DB, mais non documentées dans les sections précédentes de ce CLAUDE.md. À documenter lors d'une prochaine session si leur structure change.
+
+### Règles permanentes issues de cette session
+
+1. **Avant tout code qui insère dans `notifications`** : vérifier que la table existe dans le Table Editor Supabase. Documenter dans CLAUDE.md dès la création.
+2. **`_insertNotification(type, message, lien_tab)`** : seul point d'entrée autorisé pour les inserts admin dans `notifications` depuis worker.js. Jamais de REST direct avec SUPABASE_ANON.
+3. **Détection "confirmer après annulation"** : la RPC `confirmer_annuler_essai` retourne `{supprime: true}` → le worker affiche une page informative orange au lieu de la page verte de confirmation.
 
