@@ -4445,13 +4445,24 @@ async function handleNotifyInscriptionCours(request, env) {
   for (const c of courses) {
     const adr = getAdresse(c.ville);
     const hor = getHoraire(c.ville, c.niveau);
-    const emailCode = isWaitGlobal ? 'I01-att' : (c.venue === 'avec-part' && c.pPrenom ? 'I01-couple' : (c.ville === 'vincennes' ? 'I01-vinc' : 'I01-val'));
+    const isCoupleAdmin = c.venue === 'avec-part' && !!c.pPrenom;
+    const pRoleAdmin = c.pRole || (c.role === 'guidee' ? 'guideur' : 'guidee');
+    const emailCode = isWaitGlobal ? 'I01-att' : (isCoupleAdmin ? 'I01-couple' : (c.ville === 'vincennes' ? 'I01-vinc' : 'I01-val'));
     adminBlocs += '<div style="border:2px solid #2e7d32;border-radius:8px;overflow:hidden;margin-bottom:20px;">'
+      + (isCoupleAdmin ? '<div style="background:#6a1b9a;padding:6px 16px;text-align:center;"><span style="display:inline-block;background:#fff;color:#6a1b9a;font-size:12px;font-weight:700;padding:3px 14px;border-radius:20px;letter-spacing:1px;">👫 COUPLE</span></div>' : '')
       + '<div style="background:#2e7d32;padding:10px 16px;display:flex;align-items:center;gap:12px;">'
       + '<div style="flex:1;"><div style="font-size:18px;font-weight:700;color:#fff;">' + _esc((prenom + ' ' + nom).trim()) + '</div>'
       + '<div style="font-size:12px;color:#c8e6c9;margin-top:2px;">' + _esc(email || '') + (tel ? ' &nbsp;\xb7&nbsp; ' + _esc(tel) : '') + '</div></div>'
       + '<span style="display:inline-block;background:' + roleBadgeCol(c.role) + ';color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">' + roleLabel(c.role) + '</span>'
       + '</div>'
+      + (isCoupleAdmin
+        ? '<div style="background:#1b5e20;padding:10px 16px;display:flex;align-items:center;gap:12px;border-top:1px solid rgba(255,255,255,0.2);">'
+          + '<div style="flex:1;"><div style="font-size:16px;font-weight:700;color:#fff;">' + _esc((c.pPrenom + ' ' + (c.pNom || '')).trim()) + '</div>'
+          + (c.pEmail ? '<div style="font-size:12px;color:#c8e6c9;margin-top:2px;">' + _esc(c.pEmail) + (c.pTel ? ' &nbsp;\xb7&nbsp; ' + _esc(c.pTel) : '') + '</div>' : '')
+          + '</div>'
+          + '<span style="display:inline-block;background:' + roleBadgeCol(pRoleAdmin) + ';color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">' + roleLabel(pRoleAdmin) + '</span>'
+          + '</div>'
+        : '')
       + '<div style="background:#f1f8e9;padding:14px 16px;">'
       + '<div style="font-size:16px;font-weight:700;color:#111;margin-bottom:4px;">📍 ' + _esc(villeLabel(c.ville) + ' — ' + nivLabel(c.niveau)) + '</div>'
       + '<div style="font-size:13px;color:#333;">Saison ' + _esc(saison) + (hor ? ' &nbsp;\xb7&nbsp; ' + _esc(hor) : '') + '</div>'
@@ -4460,8 +4471,7 @@ async function handleNotifyInscriptionCours(request, env) {
       + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:10px 14px;background:#f5f5f5;border-radius:6px;">'
       + statutBadge
       + '<span style="font-size:12px;color:#555;">Email envoy\xe9 : <strong>' + emailCode + '</strong></span>'
-      + '</div>'
-      + (c.venue === 'avec-part' && c.pPrenom ? '<div style="font-size:13px;color:#555;margin-bottom:10px;">Partenaire : ' + _esc((c.pPrenom + ' ' + c.pNom).trim()) + (c.pEmail ? ' &lt;' + _esc(c.pEmail) + '&gt;' : '') + (c.pTel ? ' \xb7 ' + _esc(c.pTel) : '') + '</div>' : '');
+      + '</div>';
   }
   const telFmt = (tel || '').replace(/\s/g, '');
   const adminHtml = wrap(
@@ -4484,6 +4494,19 @@ async function handleNotifyInscriptionCours(request, env) {
   await sendBrevo(adminEmail,
     '[Inscription tango] ' + _esc((prenom + ' ' + nom).trim()) + ' — ' + villeLabel(c0.ville) + ' ' + nivLabel(c0.niveau) + ' \xb7 ' + roleLabel(c0.role) + ' \xb7 ' + (isWaitGlobal ? 'att. validation' : 'att. paiement'),
     adminHtml);
+
+  // ── Panel 🔔 admin + push
+  const _notifMsg = isWaitGlobal
+    ? `🎓 Demande inscription tango — ${prenom} ${nom} · ${villeLabel(c0.ville)} ${nivLabel(c0.niveau)} · ⏳ Att. validation · → Inscriptions Tango`
+    : `🎓 Nouvelle inscription tango — ${prenom} ${nom} · ${villeLabel(c0.ville)} ${nivLabel(c0.niveau)} · ✓ Att. paiement · → Inscriptions Tango`;
+  _insertNotification('cours_inscription', _notifMsg, 'cours-tango').catch(function(){});
+  const _svcKeyInscr = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  getFcmTokensAdmin(_svcKeyInscr).then(function(tokens) {
+    if (tokens.length) sendFcmPush(env, tokens, {
+      title: 'Tango & Vous — Admin',
+      body: `🎓 ${isWaitGlobal ? 'Demande' : 'Inscription'} tango — ${prenom} ${nom} · ${villeLabel(c0.ville)} ${nivLabel(c0.niveau)}`
+    }).catch(function(){});
+  }).catch(function(){});
 
   // ── "Quelques précisions" box (shared)
   const quellesPrecisions = '<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
@@ -4533,7 +4556,7 @@ async function handleNotifyInscriptionCours(request, env) {
           + '<span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Demande enregistr\xe9e — liste d&rsquo;attente</span></div>'
           + '<div style="padding:30px 28px;">'
           + '<p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">' + _esc(tgt.pren) + '</strong>,</p>'
-          + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Vous avez fait une demande d&rsquo;inscription \xe0 nos cours de tango pour la saison ' + _esc(saison2) + ' et nous vous en remercions.</p>'
+          + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Vous avez fait une demande d&rsquo;inscription \xe0 nos cours de tango pour la saison ' + _esc(saison2) + ' et nous vous en remercions. <strong>Vous \xeates pour l&rsquo;instant en liste d&rsquo;attente.</strong></p>'
           + '<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">'
           + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Votre demande d&rsquo;inscription</div>'
           + '<table style="width:100%;border-collapse:collapse;font-size:14px;">'
@@ -4623,7 +4646,7 @@ async function handleNotifyInscriptionCours(request, env) {
           + '<div style="text-align:center;margin:0 0 10px;">'
           + '<a href="' + _esc(lienAC) + '" style="display:inline-block;background:#D4AF37;color:#111;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">'
           + '🔗 INSCRIPTION AUX COURS DE TANGO ' + _esc(saison2) + '</a></div>'
-          + '<p style="font-size:12px;color:#888;text-align:center;margin:0 0 24px;">' + acNote + '</p>'
+          + '<p style="font-size:14px;color:#555;text-align:center;margin:0 0 24px;">' + acNote + '</p>'
           + quellesPrecisions
           + livretBtn
           + signEleve + '</div>' + footer, 'Votre inscription tango est validee - finalisez votre dossier sur AssoConnect');

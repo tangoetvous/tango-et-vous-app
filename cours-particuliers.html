@@ -788,6 +788,12 @@ async function soumettre() {
 
   try {
     await TEV.reservationCP(payload);
+    // Email CP0 (admin) + CP1 (élève) + notif panel 🔔
+    fetch('https://app.tangoetvous.fr/api/notify/cours-particulier', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(function(){});
     // Notifier admin — BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
     const msg = { type:'coursParticulierInscription', data: payload };
     try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}

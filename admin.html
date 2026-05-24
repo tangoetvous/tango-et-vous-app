@@ -1943,6 +1943,20 @@ function confirmerCartePaiement() {
       var nd = Object.assign({}, renewRow.donnees, {renewalPaye:true, datePremierPaiement:datePai});
       Promise.resolve(TEV.client.from('inscriptions_cours').update({montant:montant, paiement:modePai, donnees:nd}).eq('id', renewRow.id)).catch(function(){});
     }
+    // Email C-pay + notif élève
+    var _carteNomParts = (carte.nom || '').trim().split(' ');
+    var _cartePrenom = _carteNomParts[0] || '';
+    var _carteNom = _carteNomParts.slice(1).join(' ') || '';
+    fetch('/api/notify/carte-paiement', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt()},
+      body: JSON.stringify({
+        email: carte.email, prenom: _cartePrenom, nom: _carteNom,
+        montant: montant, modePaiement: modePai, datePaiement: datePai,
+        utilises: carte.utilises || 0, restants: carte.restants || 0,
+        expiration: carte.expiration || ''
+      })
+    }).catch(function(){});
   }
 }
 
