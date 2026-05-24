@@ -295,6 +295,12 @@ export default {
         return handleNotifyStageAnnule(request, env);
       }
 
+      // POST /api/notify/stage-modifie — admin modifie les créneaux d'une inscription stage (JWT admin)
+      if (pathname === '/api/notify/stage-modifie' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyStageModifie(request, env);
+      }
+
       // POST /api/notify/cours-particulier — nouvelle demande de cours particulier (sans auth)
       if (pathname === '/api/notify/cours-particulier' && method === 'POST') {
         return handleNotifyCoursParticulier(request, env);
@@ -7019,6 +7025,142 @@ async function handleNotifyStageAnnule(request, env) {
       body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `Votre inscription au stage a été annulée — Tango & Vous`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-stage-annule] error', err); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/stage-modifie — S-edit : admin modifie les créneaux d'une inscription stage
+// Body: { email, prenom, nom, role, date, newSlots, oldSlots, newMontant }
+//   newSlots/oldSlots: [{ type, horaire_debut, horaire_fin, theme }]
+// ================================================================
+async function handleNotifyStageModifie(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
+
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const headerAdmin = `<div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Modification créneaux stage</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  const { email, prenom, nom, role, date, newSlots = [], oldSlots = [], newMontant } = body;
+  if (!email) return corsResponse({ ok: false }, 200, {}, request);
+
+  const prenomAff = _esc(prenom || '');
+  const nomAff    = _esc((prenom || '') + ' ' + (nom || '')).trim();
+  const dateLabel = date ? fmtDate(date) : '';
+
+  // Fetch stage address from Supabase params
+  const _smSai = date ? (function(iso) { const yr = parseInt(iso.slice(0,4)), mo = parseInt(iso.slice(5,7)); return mo >= 9 ? (yr + '-' + (yr+1)) : ((yr-1) + '-' + yr); })(date) : '';
+  let _smGlobalAdr = {}, _smDatesArr = [];
+  if (_smSai) {
+    try {
+      const [_smParRes, _smDtRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_params_stages_${_smSai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+        fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_dates_stages_${_smSai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+      ]);
+      _smGlobalAdr = _smParRes.ok ? (((await _smParRes.json())[0] || {}).valeur?.adresse || {}) : {};
+      _smDatesArr  = _smDtRes.ok  ? (((await _smDtRes.json())[0] || {}).valeur?.stages || [])  : [];
+    } catch(e) { console.error('[notify-stage-modifie] adr fetch', e); }
+  }
+  function _smGetAdr() {
+    const st = _smDatesArr.find(function(s) { return s.date === date; }) || {};
+    return (st.adresse && (st.adresse.nom || st.adresse.rue)) ? st.adresse : _smGlobalAdr;
+  }
+
+  // Build new slots HTML (blue box for student email)
+  const _smAdr = _smGetAdr();
+  const lieuHtml = (_smAdr.nom || _smAdr.rue) ? `<div style="border-top:1px solid #b3d9f5;padding-top:10px;margin-top:8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;">${_smAdr.nom ? `<strong>${_esc(_smAdr.nom)}</strong><br/>` : ''}${_smAdr.rue ? `${_esc(_smAdr.rue)}<br/>` : ''}${_smAdr.transport ? `<span style="font-size:12px;color:#666;">${_esc(_smAdr.transport)}</span>` : ''}</div></div>` : '';
+
+  let newSlotsHtml = newSlots.map(sl => `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#1565c0;">${_esc(sl.horaire_debut || '')}–${_esc(sl.horaire_fin || '')}</span> — ${_esc(sl.theme || sl.type || '')}</div>`).join('') || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>';
+  const newStageBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;overflow:hidden;margin:0 0 18px;">
+    <div style="background:#1565c0;padding:12px 18px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#bbdefb;font-weight:700;">Vos nouveaux créneaux</div>
+      <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ${dateLabel}</div>
+    </div>
+    <div style="padding:12px 18px;">${newSlotsHtml}${newMontant ? `<div style="font-size:15px;font-weight:700;color:#1565c0;border-top:1px solid #b3d9f5;padding-top:8px;margin-top:6px;">${newMontant}€ — règlement sur place</div>` : ''}${lieuHtml}</div>
+  </div>`;
+
+  // Build old→new comparison row for admin email
+  function _slotLine(sl, crossed) {
+    const txt = `${_esc(sl.horaire_debut || '')}–${_esc(sl.horaire_fin || '')} — ${_esc(sl.theme || sl.type || '')}`;
+    return crossed
+      ? `<div style="font-size:12px;color:#aaa;text-decoration:line-through;">${txt}</div>`
+      : `<div style="font-size:12px;color:#2e7d32;font-weight:700;">${txt}</div>`;
+  }
+  const oldSlotsAdminHtml = oldSlots.map(sl => _slotLine(sl, true)).join('') || '<div style="font-size:12px;color:#aaa;">—</div>';
+  const newSlotsAdminHtml = newSlots.map(sl => _slotLine(sl, false)).join('') || '<div style="font-size:12px;color:#2e7d32;">—</div>';
+
+  // ── Email élève (bandeau bleu 📋)
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Vos créneaux de stage ont été modifiés</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">${prenomAff}</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre professeur a modifié vos créneaux pour le stage du ${dateLabel}. Voici le récapitulatif mis à jour :</p>
+      ${newStageBox}
+      ${signEleve}
+    </div>${footer}`, "Vos creneaux de stage ont ete modifies par votre professeur");
+
+  // ── Email admin
+  const htmlAdmin = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;">${headerAdmin}
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;"><div style="font-size:17px;font-weight:700;color:#111;">${nomAff}</div><div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email)}</div></div>
+        <div style="background:#fffdf8;padding:14px 16px;">
+          <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:12px;">📅 Stage du ${dateLabel}</div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:6px;">Avant</div>${oldSlotsAdminHtml}</div>
+            <div style="flex:0;align-self:center;font-size:20px;color:#888;">→</div>
+            <div style="flex:1;min-width:140px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:6px;">Après</div>${newSlotsAdminHtml}</div>
+          </div>
+          ${newMontant ? `<div style="margin-top:10px;font-size:13px;color:#555;">Nouveau tarif : <strong>${newMontant}€</strong></div>` : ''}
+        </div>
+      </div>
+      <div style="text-align:center;"><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#D4AF37;color:#111;padding:10px 22px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;letter-spacing:1px;">Ouvrir l'admin →</a></div>
+    </div>${footer}</div></body></html>`;
+
+  if (env.BREVO_API_KEY) {
+    async function _smSend(to, subj, html) {
+      try {
+        await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
+        });
+      } catch(err) { console.error('[notify-stage-modifie] sendMail error', err); }
+    }
+    await _smSend(String(email), `📋 Modification de vos créneaux — Stage du ${dateLabel} — Tango & Vous`, htmlEleve);
+    await _smSend(adminEmail, `[Stage modifié] ${nomAff} — ${dateLabel}`, htmlAdmin);
+  }
+
+  // notifications_eleve
+  try {
+    const resN = await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email: String(email), type: 'stage_modifie', message: `📋 Vos créneaux au stage du ${dateLabel} ont été modifiés`, lu: false }),
+    });
+    if (!resN.ok) console.error('[notify-stage-modifie] notifications_eleve HTTP', resN.status, await resN.text().catch(() => ''));
+  } catch(e) { console.error('[notify-stage-modifie] notifications_eleve error', e); }
+
+  // Panel 🔔 admin
+  try {
+    const resP = await _insertNotification('stage_modifie', `📋 Créneaux modifiés — ${nomAff} · Stage du ${dateLabel} · → Stages`, 'stages');
+    if (!resP.ok) console.error('[notify-stage-modifie] insertNotification HTTP', resP.status, await resP.text().catch(() => ''));
+  } catch(e) { console.error('[notify-stage-modifie] insertNotification error', e); }
+
+  // Push OS élève
+  const _svkSm = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  try {
+    const tokens = await getFcmTokensForEmail(String(email), _svkSm);
+    if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `📋 Vos créneaux au stage du ${dateLabel} ont été modifiés` });
+  } catch(e) { console.error('[notify-stage-modifie] push error', e); }
+
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
