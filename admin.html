@@ -4989,7 +4989,7 @@ function syncStageInscritsToLocal() {
 function _updateActiverBtn() {
   var btn = gel('btn-activer-notif'); if (!btn) return;
   var p = ('Notification' in window) ? Notification.permission : 'unsupported';
-  if (p === 'granted')  { btn.textContent = '🔔 Activées'; btn.style.color = '#4ade80'; btn.disabled = true; }
+  if (p === 'granted')  { btn.textContent = '🔔 Activées'; btn.style.color = '#4ade80'; btn.disabled = false; }
   else if (p === 'denied') { btn.textContent = '🔕 Bloquées'; btn.style.color = '#ef4444'; btn.disabled = true; }
   else { btn.textContent = '🔔 Activer'; btn.style.color = 'var(--dim)'; btn.disabled = false; }
 }
@@ -14480,6 +14480,12 @@ async function sauverComptaEdit() {
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(function(){});
+  // Auto-register FCM token at startup if permission already granted but token not cached
+  if ('Notification' in window && Notification.permission === 'granted' && !localStorage.getItem('tev_fcm_token')) {
+    navigator.serviceWorker.ready.then(function() {
+      _registerFcmToken().catch(function(e){ console.warn('[push] auto-register failed:', e); });
+    });
+  }
 }
 </script>
 </body>
