@@ -1712,9 +1712,10 @@ async function handleNotifyCartePointage(request, env) {
   // Push FCM admin
   if (env.FIREBASE_SERVICE_ACCOUNT) {
     const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-    getFcmTokensAdmin(_svcKey).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `📍 Pointage carte — ${nomAff} · ${dateLabel}` }).catch(function(){});
-    }).catch(function(){});
+    try {
+      const tokens = await getFcmTokensAdmin(_svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `📍 Pointage carte — ${nomAff} · ${dateLabel}` });
+    } catch(e) { console.error('[carte-pointage admin] push error', e); }
   }
 
   return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
@@ -1779,9 +1780,10 @@ async function handleNotifyCartePonteeAdmin(request, env) {
   // Push FCM élève
   if (env.FIREBASE_SERVICE_ACCOUNT) {
     const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-    getFcmTokensForEmail(String(email), _svcKey).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `✓ Présence enregistrée le ${dateLabel} — votre carte Tango & Vous` }).catch(function(){});
-    }).catch(function(){});
+    try {
+      const tokens = await getFcmTokensForEmail(String(email), _svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `✓ Présence enregistrée le ${dateLabel} — votre carte Tango & Vous` });
+    } catch(e) { console.error('[carte-pointage eleve] push error', e); }
   }
 
   return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
@@ -2982,9 +2984,10 @@ async function handleCronCarteExpiree(request, env) {
     // Push FCM élève
     if (env.FIREBASE_SERVICE_ACCOUNT) {
       const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-      getFcmTokensForEmail(String(e.email), _svcKey).then(function(tokens) {
-        if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `⏰ Votre carte de 10 cours a expiré — ${e.restants || 0} cours non utilisés` }).catch(function(){});
-      }).catch(function(){});
+      try {
+        const tokens = await getFcmTokensForEmail(String(e.email), _svcKey);
+        if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `⏰ Votre carte de 10 cours a expiré — ${e.restants || 0} cours non utilisés` });
+      } catch(err) { console.error('[cron carte-expiree] push error', err); }
     }
   }
 
@@ -3055,16 +3058,17 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
 
   await Promise.all([...inserts, adminInsert]);
 
-  // Push OS élève pour chaque email (fire-and-forget)
+  // Push OS élève pour chaque email
   const _svcKeyDisc = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  emails.forEach(function(eleveEmail) {
-    getFcmTokensForEmail(String(eleveEmail), _svcKeyDisc).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, {
+  await Promise.all(emails.map(async function(eleveEmail) {
+    try {
+      const tokens = await getFcmTokensForEmail(String(eleveEmail), _svcKeyDisc);
+      if (tokens.length) await sendFcmPush(env, tokens, {
         title: 'Tango & Vous',
         body: notifMsgEleve
-      }).catch(function(){});
-    }).catch(function(){});
-  });
+      });
+    } catch(e) { console.error('[discussion-nouvelle] push error', eleveEmail, e); }
+  }));
 
   return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
 }
@@ -3104,16 +3108,17 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
 
   await Promise.all([...inserts, adminInsert]);
 
-  // Push OS élève pour chaque email (fire-and-forget)
+  // Push OS élève pour chaque email
   const _svcKeyDiscMsg = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  emails.forEach(function(eleveEmail) {
-    getFcmTokensForEmail(String(eleveEmail), _svcKeyDiscMsg).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, {
+  await Promise.all(emails.map(async function(eleveEmail) {
+    try {
+      const tokens = await getFcmTokensForEmail(String(eleveEmail), _svcKeyDiscMsg);
+      if (tokens.length) await sendFcmPush(env, tokens, {
         title: 'Tango & Vous',
         body: notifMsgEleve
-      }).catch(function(){});
-    }).catch(function(){});
-  });
+      });
+    } catch(e) { console.error('[discussion-message] push error', eleveEmail, e); }
+  }));
 
   return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
 }
@@ -3911,12 +3916,13 @@ async function handleNotifyInscriptionEssai(request, env) {
     await _insertNotification('essai_inscription', notifMsg, 'essai');
     if (env.FIREBASE_SERVICE_ACCOUNT) {
       const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-      getFcmTokensAdmin(_svcKey).then(function(tokens) {
-        if (tokens.length) sendFcmPush(env, tokens, {
+      try {
+        const tokens = await getFcmTokensAdmin(_svcKey);
+        if (tokens.length) await sendFcmPush(env, tokens, {
           title: 'Tango & Vous — Admin',
           body: `🎯 Essai tango — ${nomAff} · ${fmtDateCourt(dateIso)} · ${statutAff}`
-        }).catch(function(){});
-      }).catch(function(){});
+        });
+      } catch(e) { console.error('[essai-inscription] push error', e); }
     }
   } catch {}
 
@@ -4202,13 +4208,12 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
     if (env.FIREBASE_SERVICE_ACCOUNT) {
       try {
         const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-        getFcmTokensAdmin(_svcKey).then(function(tokens) {
-          if (tokens.length) sendFcmPush(env, tokens, {
-            title: 'Tango & Vous — Admin',
-            body: `${icon} ${libelle} — ${nameAff} · ${coursDate}`
-          }).catch(function(){});
-        }).catch(function(){});
-      } catch {}
+        const tokens = await getFcmTokensAdmin(_svcKey);
+        if (tokens.length) await sendFcmPush(env, tokens, {
+          title: 'Tango & Vous — Admin',
+          body: `${icon} ${libelle} — ${nameAff} · ${coursDate}`
+        });
+      } catch(e) { console.error('[essai-action] push error', e); }
     }
 
     // 4. Emails élève(s) — la personne qui a cliqué + le partenaire si couple
@@ -4521,14 +4526,18 @@ async function handleNotifyInscriptionCours(request, env) {
   const _notifMsg = isWaitGlobal
     ? `🎓 Demande inscription tango — ${prenom} ${nom} · ${villeLabel(c0.ville)} ${nivLabel(c0.niveau)} · ⏳ Att. validation · → Inscriptions Tango`
     : `🎓 Nouvelle inscription tango — ${prenom} ${nom} · ${villeLabel(c0.ville)} ${nivLabel(c0.niveau)} · ✓ Att. paiement · → Inscriptions Tango`;
-  _insertNotification('cours_inscription', _notifMsg, 'cours-tango').catch(function(){});
+  try {
+    const resN = await _insertNotification('cours_inscription', _notifMsg, 'cours-tango');
+    if (!resN.ok) console.error('[notify-inscription-cours] insert HTTP', resN.status, await resN.text().catch(()=>''));
+  } catch(e) { console.error('[notify-inscription-cours] insert error', e); }
   const _svcKeyInscr = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  getFcmTokensAdmin(_svcKeyInscr).then(function(tokens) {
-    if (tokens.length) sendFcmPush(env, tokens, {
+  try {
+    const tokens = await getFcmTokensAdmin(_svcKeyInscr);
+    if (tokens.length) await sendFcmPush(env, tokens, {
       title: 'Tango & Vous — Admin',
       body: `🎓 ${isWaitGlobal ? 'Demande' : 'Inscription'} tango — ${prenom} ${nom} · ${villeLabel(c0.ville)} ${nivLabel(c0.niveau)}`
-    }).catch(function(){});
-  }).catch(function(){});
+    });
+  } catch(e) { console.error('[notify-inscription-cours] push error', e); }
 
   // ── "Quelques précisions" box (shared)
   const quellesPrecisions = '<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
@@ -4800,16 +4809,20 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
   const _notifYogaMsg = isWait
     ? `🧘 Essai yoga — ${prenom} ${nom} · ${dateAff} · ${coursAff} · ⏳ Cours complet — Liste d'attente · → Yoga → Essai`
     : `🧘 Essai yoga — ${prenom} ${nom} · ${dateAff} · ${coursAff} · ✓ Confirmé·e automatiquement · → Yoga → Essai`;
-  _insertNotification('essai_yoga', _notifYogaMsg, 'yoga').catch(function(){});
+  try {
+    const resY = await _insertNotification('essai_yoga', _notifYogaMsg, 'yoga');
+    if (!resY.ok) console.error('[notify-essai-yoga] insert HTTP', resY.status, await resY.text().catch(()=>''));
+  } catch(e) { console.error('[notify-essai-yoga] insert error', e); }
   const _svcKeyYoga = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  getFcmTokensAdmin(_svcKeyYoga).then(function(tokens) {
-    if (tokens.length) sendFcmPush(env, tokens, {
+  try {
+    const tokens = await getFcmTokensAdmin(_svcKeyYoga);
+    if (tokens.length) await sendFcmPush(env, tokens, {
       title: 'Tango & Vous — Admin',
       body: (isWait
         ? `🟡 Essai yoga — ${prenom} ${nom} · ${dateAff} · ${coursAff} · ⏳ Cours complet`
         : `🧘 Essai yoga — ${prenom} ${nom} · ${dateAff} · ${coursAff} · ✓ auto`)
-    }).catch(function(){});
-  }).catch(function(){});
+    });
+  } catch(e) { console.error('[notify-essai-yoga] push error', e); }
 
   // ── Y1 / Y-att — email élève
   const headerYoga = '<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>';
@@ -5799,9 +5812,10 @@ async function handleNotifyCarteRenouvellement(request, env) {
   // Push FCM élève
   if (env.FIREBASE_SERVICE_ACCOUNT) {
     const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-    getFcmTokensForEmail(String(email), _svcKey).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: '⚠️ Nouvelle carte créée — pensez à finaliser votre paiement' }).catch(function(){});
-    }).catch(function(){});
+    try {
+      const tokens = await getFcmTokensForEmail(String(email), _svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: '⚠️ Nouvelle carte créée — pensez à finaliser votre paiement' });
+    } catch(e) { console.error('[carte-renouvellement] push error', e); }
   }
 
   return corsResponse({ ok: true }, 200, {}, request);
@@ -5870,9 +5884,10 @@ async function handleNotifyCartePaiement(request, env) {
   // Push FCM élève
   if (env.FIREBASE_SERVICE_ACCOUNT) {
     const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-    getFcmTokensForEmail(String(email), _svcKey).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: '✓ Paiement enregistré · Votre carte est active' }).catch(function(){});
-    }).catch(function(){});
+    try {
+      const tokens = await getFcmTokensForEmail(String(email), _svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: '✓ Paiement enregistré · Votre carte est active' });
+    } catch(e) { console.error('[carte-paiement] push error', e); }
   }
 
   return corsResponse({ ok: true }, 200, {}, request);
@@ -5931,9 +5946,10 @@ async function handleNotifyCarteReport(request, env) {
   // Push FCM élève
   if (env.FIREBASE_SERVICE_ACCOUNT) {
     const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-    getFcmTokensForEmail(String(email), _svcKey).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `↩ Votre carte reportée · ${restants} cours préservés pour ${saisonSuivante}` }).catch(function(){});
-    }).catch(function(){});
+    try {
+      const tokens = await getFcmTokensForEmail(String(email), _svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `↩ Votre carte reportée · ${restants} cours préservés pour ${saisonSuivante}` });
+    } catch(e) { console.error('[carte-report] push error', e); }
   }
 
   return corsResponse({ ok: true }, 200, {}, request);
@@ -6608,9 +6624,10 @@ async function handleNotifyInscriptionStage(request, env) {
   // Push FCM admin
   if (env.FIREBASE_SERVICE_ACCOUNT) {
     const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-    getFcmTokensAdmin(_svcKey).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `🎭 Inscription stage — ${nomAff} · ${inscriptionsParDate[0] ? fmtDateCourt(inscriptionsParDate[0].date) : ''}` }).catch(function(){});
-    }).catch(function(){});
+    try {
+      const tokens = await getFcmTokensAdmin(_svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `🎭 Inscription stage — ${nomAff} · ${inscriptionsParDate[0] ? fmtDateCourt(inscriptionsParDate[0].date) : ''}` });
+    } catch(e) { console.error('[inscription-stage] push error', e); }
   }
 
   return corsResponse({ ok: true }, 200, {}, request);
@@ -6927,9 +6944,10 @@ async function handleNotifyCoursParticulier(request, env) {
   // Push FCM admin
   if (env.FIREBASE_SERVICE_ACCOUNT) {
     const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-    getFcmTokensAdmin(_svcKey).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `🎯 Cours particulier — ${nomAff}${urgBadge}` }).catch(function(){});
-    }).catch(function(){});
+    try {
+      const tokens = await getFcmTokensAdmin(_svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `🎯 Cours particulier — ${nomAff}${urgBadge}` });
+    } catch(e) { console.error('[cours-particulier] push error', e); }
   }
 
   return corsResponse({ ok: true }, 200, {}, request);

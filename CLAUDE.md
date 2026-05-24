@@ -4104,3 +4104,78 @@ Règle appliquée : toute modification d'email dans `worker.js` doit être repor
   - Corps push : `💬 Nouvelle discussion : ${titre}` ou `💬 ${auteur} : ${extrait || titreLabel}`
   - Pas d'email Brevo pour D-msg — push + notif in-app uniquement
 
+
+## Session 2026-05-24 (suite 4) — Cloudflare Workers : fire-and-forget = mort silencieuse
+
+### Symptôme
+
+Formulaire admin "Valider le paiement et inscrire" → email I03 élève reçu, mais **rien** côté admin (pas d'email I0, pas de panel 🔔, pas de push).
+
+### Cause racine (trois bugs empilés)
+
+1. **Early-return inconditionnel** : `if (!email || !env.BREVO_API_KEY) return` à l'entrée du handler bloquait l'ensemble du traitement (incluant panel 🔔 et push) quand `BREVO_API_KEY` n'était pas dans l'env. Or panel et push n'ont rien à voir avec Brevo.
+
+2. **Variables block-scoped utilisées hors du `if`** : `vl03`, `nl03`, `ci0i03` étaient déclarés `const` à l'intérieur de `if (env.BREVO_API_KEY) { ... }`. Une fois `_insertNotification` et `sendFcmPush` déplacés en dehors du `if`, leur référence à ces variables → ReferenceError synchrone → handler crashe **avant** d'appeler le RPC.
+
+3. **Fire-and-forget + `return` immédiat** : `_insertNotification(...).catch(function(){})` suivi de `getFcmTokensAdmin().then(...).catch(...)` puis `return corsResponse(...)`. En Cloudflare Workers, **dès que la réponse HTTP est renvoyée, le runtime peut terminer les Promise en cours d'exécution** (les fetch sortants sont annulés). Sans `await` ni `ctx.waitUntil()`, ces opérations peuvent ne jamais arriver à Supabase / FCM. C'est probabiliste : ça « marche par chance » quand il y a beaucoup d'autres `await` après, qui donnent le temps aux fetch fire-and-forget de se terminer.
+
+### Règles permanentes — Cloudflare Workers + Promises
+
+1. **Toujours `await` `_insertNotification`** avant tout `return`. Jamais `_insertNotification(...).catch(function(){})`. Le pattern fire-and-forget marche peut-être 9 fois sur 10, mais la 10ᵉ fois on perd silencieusement la notif.
+   ```javascript
+   // ❌ Risqué — fetch peut être annulé après return
+   _insertNotification('cours_inscription', msg, 'cours-tango').catch(function(){});
+   return corsResponse({ ok: true }, 200, {}, request);
+
+   // ✅ Sûr
+   try {
+     const res = await _insertNotification('cours_inscription', msg, 'cours-tango');
+     if (!res.ok) console.error('[handler] insert HTTP', res.status, await res.text().catch(()=>'')); 
+   } catch(e) { console.error('[handler] insert error', e); }
+   return corsResponse({ ok: true }, 200, {}, request);
+   ```
+
+2. **Toujours `await` `getFcmTokensXxx()` + `sendFcmPush()`** avant `return`. Le pattern `.then(function(tokens) { ... .catch(...) }).catch(...)` est encore plus à risque car deux fetch successifs doivent se terminer.
+   ```javascript
+   // ❌ Risqué
+   getFcmTokensAdmin(_svcKey).then(function(tokens) {
+     if (tokens.length) sendFcmPush(env, tokens, notif).catch(function(){});
+   }).catch(function(){});
+   return corsResponse({ ok: true }, 200, {}, request);
+
+   // ✅ Sûr
+   try {
+     const tokens = await getFcmTokensAdmin(_svcKey);
+     if (tokens.length) await sendFcmPush(env, tokens, notif);
+   } catch(e) { console.error('[handler] push error', e); }
+   return corsResponse({ ok: true }, 200, {}, request);
+   ```
+
+3. **Jamais `.catch(function(){})` silencieux**. Toujours `console.error('[handler] kind', e)`. Cloudflare Workers logs (Dashboard → Workers → Logs) sont la seule fenêtre de diagnostic en production.
+
+4. **Vérifier `res.ok`** sur le retour de `_insertNotification` (qui est un fetch Response). Un statut 401/403/404 ne lève pas d'exception — seul `res.ok` le détecte.
+
+5. **Early-return : ne gater que sur ce qui est strictement nécessaire**. `if (!email)` oui ; `if (!email || !env.BREVO_API_KEY)` non — le panel 🔔 et push n'utilisent pas Brevo.
+
+6. **Si des helpers sont utilisés hors d'un `if`, les définir hors du `if`**. `const` est block-scoped. Si `vl03`, `nl03`, `ci0n` sont référencés dans `_insertNotification` ou `sendFcmPush` (qui sont désormais hors du `if`), ils doivent être déclarés AVANT le `if`.
+
+### Endroits corrigés dans worker.js (session 2026-05-24 suite 4)
+
+12 emplacements convertis du pattern fire-and-forget vers await + log :
+
+| Ligne | Handler | Action |
+|-------|---------|--------|
+| 1715 | `handleCartePointage` (admin) | push admin |
+| 1782 | `handleCartePointage` (élève) | push élève |
+| 2985 | `handleCronCarteExpiree` | push élève (boucle) |
+| 3061 | `handleNotifyDiscussionNouvelle` | push élève |
+| 3110 | `handleNotifyDiscussionMessage` | push élève |
+| 4524 | `handleNotifyInscriptionCours` (public form) | `_insertNotification` + push admin |
+| 4803 | `handleNotifyInscriptionEssaiYoga` | `_insertNotification` + push admin |
+| 5802 | `handleNotifyCarteRenouvellement` | push élève |
+| 5873 | `handleNotifyCartePaiement` | push élève |
+| 5934 | `handleNotifyCarteReport` | push élève |
+| 6611 | `handleNotifyInscriptionStage` | push admin |
+| 6930 | `handleNotifyCoursParticulier` | push admin |
+
+⚠️ Ne jamais réintroduire le pattern `.then(...).catch(function(){})` fire-and-forget dans un handler worker juste avant un `return`. Toujours `await` + `try/catch` + `console.error`.
