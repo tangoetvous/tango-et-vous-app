@@ -6527,7 +6527,7 @@ async function handleNotifyInscriptionStage(request, env) {
       const dateLabel = fmtDate(d.date);
       const slots = d.slots || [];
       const total = d.tarif || 0;
-      const adresse = d.adresse || {};
+      const adresse = _sbGetAdr(d.date, d.adresse);
       let slotsHtml = '';
       for (const sl of slots) {
         slotsHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')}</span> — ${_esc(sl.theme||sl.type||'')}</div>`;
@@ -6584,6 +6584,30 @@ async function handleNotifyInscriptionStage(request, env) {
 
   // _svcKey déclaré ici — utilisé dans les boucles S0 et pushs
   const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  // Fetch adresse depuis Supabase en fallback pour les dates sans adresse dans le body
+  let _sbGlobalAdr = {}, _sbDatesArr = [];
+  const _sbAllDates = [...inscriptionsParDate, ...(hasPartner ? partDates : [])];
+  const _sbNeedFetch = _sbAllDates.some(function(d) { return !(d.adresse && (d.adresse.nom || d.adresse.rue)); });
+  if (_sbNeedFetch && _sbAllDates.length) {
+    const _sbFd = (_sbAllDates[0] || {}).date || '';
+    const _sbSai = _sbFd ? (function(iso) { const yr = parseInt(iso.slice(0,4)), mo = parseInt(iso.slice(5,7)); return mo >= 9 ? (yr + '-' + (yr+1)) : ((yr-1) + '-' + yr); })(_sbFd) : '';
+    if (_sbSai) {
+      try {
+        const [_sbPr, _sbDr] = await Promise.all([
+          fetch(SUPABASE_URL + '/rest/v1/parametres?cle=eq.tev_params_stages_' + _sbSai + '&select=valeur', { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }),
+          fetch(SUPABASE_URL + '/rest/v1/parametres?cle=eq.tev_dates_stages_' + _sbSai + '&select=valeur', { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }),
+        ]);
+        _sbGlobalAdr = _sbPr.ok ? (((await _sbPr.json())[0] || {}).valeur?.adresse || {}) : {};
+        _sbDatesArr  = _sbDr.ok  ? (((await _sbDr.json())[0] || {}).valeur?.stages || [])  : [];
+      } catch(e) { console.error('[notify-stage] adr fetch', e); }
+    }
+  }
+  function _sbGetAdr(date, bodyAdr) {
+    if (bodyAdr && (bodyAdr.nom || bodyAdr.rue)) return bodyAdr;
+    const stEntry = _sbDatesArr.find(function(s) { return s.date === date; }) || {};
+    return (stEntry.adresse && (stEntry.adresse.nom || stEntry.adresse.rue)) ? stEntry.adresse : _sbGlobalAdr;
+  }
 
   const partContactAdmin = hasPartner
     ? `<div style="font-size:12px;color:#555;margin-top:4px;">Partenaire : ${_esc(((partPrenom||'')+' '+(partNom||'')).trim())}${partEmail ? ' · <a href="mailto:'+_esc(partEmail)+'" style="color:#6a1b9a;">'+_esc(partEmail)+'</a>' : ' · email non renseigné'}${partTel ? ' · '+_esc(partTel) : ''}</div>` : '';
@@ -6923,11 +6947,32 @@ async function handleNotifyStageAnnule(request, env) {
   const { email, prenom, inscriptionsParDate = [] } = body;
   if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
   const prenomAff = _esc(prenom || '');
+
+  // Fetch adresse depuis Supabase (admin.html n'envoie pas l'adresse dans le body)
+  const _scFirstDate = (inscriptionsParDate[0] || {}).date || '';
+  const _scSai = _scFirstDate ? (function(iso) { const yr = parseInt(iso.slice(0,4)), mo = parseInt(iso.slice(5,7)); return mo >= 9 ? (yr + '-' + (yr+1)) : ((yr-1) + '-' + yr); })(_scFirstDate) : '';
+  let _scGlobalAdr = {}, _scDatesArr = [];
+  if (_scSai) {
+    try {
+      const [_scParRes, _scDtRes] = await Promise.all([
+        fetch(SUPABASE_URL + '/rest/v1/parametres?cle=eq.tev_params_stages_' + _scSai + '&select=valeur', { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }),
+        fetch(SUPABASE_URL + '/rest/v1/parametres?cle=eq.tev_dates_stages_' + _scSai + '&select=valeur', { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } }),
+      ]);
+      _scGlobalAdr = _scParRes.ok ? (((await _scParRes.json())[0] || {}).valeur?.adresse || {}) : {};
+      _scDatesArr  = _scDtRes.ok  ? (((await _scDtRes.json())[0] || {}).valeur?.stages || [])  : [];
+    } catch(e) { console.error('[notify-stage-annule] adr fetch', e); }
+  }
+  function _scGetAdr(date, bodyAdr) {
+    if (bodyAdr && (bodyAdr.nom || bodyAdr.rue)) return bodyAdr;
+    const st = _scDatesArr.find(function(s) { return s.date === date; }) || {};
+    return (st.adresse && (st.adresse.nom || st.adresse.rue)) ? st.adresse : _scGlobalAdr;
+  }
+
   let slotsHtml = '';
   for (const d of inscriptionsParDate) {
     const dateLabel = fmtDate(d.date);
     let slHtml = (d.slots||[]).map(sl => `<div style="font-size:13px;color:#aaa;margin:0 0 3px;"><span style="text-decoration:line-through;font-weight:400;">${_esc(sl.horaire_debut||'')}–${_esc(sl.horaire_fin||'')} — ${_esc(sl.theme||sl.type||'')}</span></div>`).join('');
-    const adresse = d.adresse || {};
+    const adresse = _scGetAdr(d.date, d.adresse);
     const lieuHtml = (adresse.nom || adresse.rue) ? `<div style="border-top:1px solid #ef9a9a;padding-top:10px;margin-top:8px;"><div style="font-size:13px;font-weight:700;color:#c62828;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#aaa;line-height:1.8;">${adresse.nom?`<strong>${_esc(adresse.nom)}</strong><br/>`:''}${adresse.rue?`${_esc(adresse.rue)}<br/>`:''}${adresse.transport?`<span style="font-size:12px;">${_esc(adresse.transport)}</span>`:''}</div></div>` : '';
     slotsHtml += `<div style="background:#fff8e8;border:2px solid #c62828;border-radius:10px;overflow:hidden;margin:0 0 22px;">
       <div style="background:#c62828;padding:12px 18px;">
