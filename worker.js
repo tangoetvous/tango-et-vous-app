@@ -6286,16 +6286,19 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
 
   }
 
-  _insertNotification('cours_inscription',
-    '🎓 Inscription validée — ' + (prenom||'') + ' ' + (nom||'') + ' · ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau) + ' · ✓ Inscrit·e · → Élèves Tango',
-    'eleves-tango').catch(function(){});
+  const notifMsg03 = '🎓 Inscription validée — ' + (prenom||'') + ' ' + (nom||'') + ' · ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau) + ' · ✓ Inscrit·e · → Élèves Tango';
+  try {
+    const resN = await _insertNotification('cours_inscription', notifMsg03, 'eleves-tango');
+    if (!resN.ok) console.error('[notify-cours-payee] insertNotification HTTP', resN.status, await resN.text().catch(()=>''));
+  } catch(e) { console.error('[notify-cours-payee] insertNotification error', e); }
   const _svcKeyI03 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  getFcmTokensAdmin(_svcKeyI03).then(function(tokens) {
-    if (tokens.length) sendFcmPush(env, tokens, {
+  try {
+    const tokens = await getFcmTokensAdmin(_svcKeyI03);
+    if (tokens.length) await sendFcmPush(env, tokens, {
       title: 'Tango & Vous — Admin',
       body: '🎓 Inscription validée — ' + (prenom||'') + ' ' + (nom||'') + ' · ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau)
-    }).catch(function(){});
-  }).catch(function(){});
+    });
+  } catch(e) { console.error('[notify-cours-payee] push error', e); }
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
