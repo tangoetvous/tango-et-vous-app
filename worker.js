@@ -6570,11 +6570,15 @@ async function handleNotifyInscriptionStage(request, env) {
 
   async function sendMail(to, subj, html) {
     try {
-      await fetch('https://api.brevo.com/v3/smtp/email', {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
       });
+      if (!res.ok) {
+        const txt = await res.text().catch(function() { return ''; });
+        console.error('[notify-stage] sendMail HTTP', res.status, 'to:', to, 'subj:', subj, txt);
+      }
     } catch(err) { console.error('[notify-stage] sendMail error', err); }
   }
 
