@@ -6221,6 +6221,79 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
       body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-inscription-cours-payee] error', err); }
+
+  // ── I0 — email admin + panel 🔔 + push (VP et DI)
+  if (env.BREVO_API_KEY) {
+    const telBody03 = (body.tel || '').trim();
+    const telFmt03 = telBody03.replace(/\s/g, '');
+    const vl03 = v => v === 'vincennes' ? 'Vincennes' : 'Paris';
+    const nl03 = n => n === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
+    const rl03 = r => r === 'guidee' ? 'Guidée' : 'Guideur·se';
+    const rc03 = r => r === 'guidee' ? '#c2185b' : '#1565c0';
+
+    let adminBlocs03 = '';
+    for (const ci of coursInfos) {
+      const vp03 = villeParamsMap[ci.ville] || {};
+      const hor03 = (vp03.horaires || {})[ci.niveau] || '';
+      const adr03 = vp03.adresse || {};
+      adminBlocs03 += '<div style="border:2px solid #2e7d32;border-radius:8px;overflow:hidden;margin-bottom:20px;">'
+        + '<div style="background:#2e7d32;padding:10px 16px;display:flex;align-items:center;gap:12px;">'
+        + '<div style="flex:1;"><div style="font-size:18px;font-weight:700;color:#fff;">' + _esc(((prenom||'') + ' ' + (nom||'')).trim()) + '</div>'
+        + '<div style="font-size:12px;color:#c8e6c9;margin-top:2px;">' + _esc(email||'') + (telBody03 ? ' &nbsp;·&nbsp; ' + _esc(telBody03) : '') + '</div></div>'
+        + '<span style="display:inline-block;background:' + rc03(ci.role) + ';color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">' + rl03(ci.role) + '</span>'
+        + '</div>'
+        + '<div style="background:#f1f8e9;padding:14px 16px;">'
+        + '<div style="font-size:16px;font-weight:700;color:#111;margin-bottom:4px;">📍 ' + _esc(vl03(ci.ville) + ' — ' + nl03(ci.niveau)) + '</div>'
+        + '<div style="font-size:13px;color:#333;">Saison ' + _esc(saison||'') + (hor03 ? ' &nbsp;·&nbsp; ' + _esc(hor03) : '') + '</div>'
+        + ((adr03.nom||adr03.rue) ? '<div style="font-size:12px;color:#666;margin-top:2px;">' + (adr03.nom?_esc(adr03.nom):'') + (adr03.nom&&adr03.rue?' — ':'') + (adr03.rue?_esc(adr03.rue):'') + '</div>' : '')
+        + '</div></div>'
+        + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:10px 14px;background:#f5f5f5;border-radius:6px;">'
+        + '<span style="display:inline-block;background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Inscrit·e</span>'
+        + '<span style="font-size:12px;color:#555;">Email envoyé : <strong>I03</strong></span>'
+        + '</div>';
+    }
+
+    const adminHtml03 = '<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">'
+      + '<div style="max-width:600px;margin:0 auto;background:#fff;">'
+      + '<div style="background:#0d2b0d;padding:16px 24px;text-align:center;border-bottom:4px solid #2e7d32;">'
+      + '<div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>'
+      + '<div style="font-size:9px;letter-spacing:3px;color:#81c784;text-transform:uppercase;margin-top:3px;">Inscription validée · Paiement enregistré</div>'
+      + '</div>'
+      + '<div style="padding:24px;">' + adminBlocs03
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">'
+      + (telFmt03 ? '<a href="tel:' + _esc(telFmt03) + '" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>' : '')
+      + '<a href="https://mail.google.com/mail/?view=cm&amp;to=' + encodeURIComponent(email||'') + '" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email Gmail</a>'
+      + (telFmt03 ? '<a href="sms:' + _esc(telFmt03) + '" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>' : '')
+      + '<a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l\'admin →</a>'
+      + '</div></div>'
+      + '<div style="background:#0d2b0d;padding:10px 24px;text-align:center;font-size:10px;color:#81c784;border-top:1px solid #1b5e20;">'
+      + 'Tango &amp; Vous · tangoetvous@gmail.com · 07 73 27 59 06'
+      + '</div></div></body></html>';
+
+    const ci0i03 = coursInfos[0];
+    const subjAdmin03 = '[Inscription tango] ' + _esc(((prenom||'') + ' ' + (nom||'')).trim())
+      + ' — ' + vl03(ci0i03.ville) + ' ' + nl03(ci0i03.niveau)
+      + ' · ' + rl03(ci0i03.role) + ' · ✓ Inscrit·e';
+    try {
+      await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: adminEmail }], subject: subjAdmin03, htmlContent: adminHtml03 }),
+      });
+    } catch(e) { console.error('[notify-cours-payee] admin email error', e); }
+
+    const ci0n = ci0i03;
+    _insertNotification('cours_inscription',
+      '🎓 Inscription validée — ' + (prenom||'') + ' ' + (nom||'') + ' · ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau) + ' · ✓ Inscrit·e · → Élèves Tango',
+      'eleves-tango').catch(function(){});
+    const _svcKeyI03 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    getFcmTokensAdmin(_svcKeyI03).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, {
+        title: 'Tango & Vous — Admin',
+        body: '🎓 Inscription validée — ' + (prenom||'') + ' ' + (nom||'') + ' · ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau)
+      }).catch(function(){});
+    }).catch(function(){});
+  }
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
