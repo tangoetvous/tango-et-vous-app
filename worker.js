@@ -3055,6 +3055,17 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
 
   await Promise.all([...inserts, adminInsert]);
 
+  // Push OS élève pour chaque email (fire-and-forget)
+  const _svcKeyDisc = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  emails.forEach(function(eleveEmail) {
+    getFcmTokensForEmail(String(eleveEmail), _svcKeyDisc).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, {
+        title: 'Tango & Vous',
+        body: notifMsgEleve
+      }).catch(function(){});
+    }).catch(function(){});
+  });
+
   return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
 }
 
@@ -3092,6 +3103,17 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
     .catch(e => console.error('[discussion-message] notifications error', e));
 
   await Promise.all([...inserts, adminInsert]);
+
+  // Push OS élève pour chaque email (fire-and-forget)
+  const _svcKeyDiscMsg = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  emails.forEach(function(eleveEmail) {
+    getFcmTokensForEmail(String(eleveEmail), _svcKeyDiscMsg).then(function(tokens) {
+      if (tokens.length) sendFcmPush(env, tokens, {
+        title: 'Tango & Vous',
+        body: notifMsgEleve
+      }).catch(function(){});
+    }).catch(function(){});
+  });
 
   return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
 }
@@ -4773,6 +4795,21 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
     '🧘 Essai yoga — ' + _esc((prenom + ' ' + nom).trim()) + ' \xb7 ' + coursAff + ' \xb7 ' + dateAff,
     adminHtml,
     'Tango & Vous — Admin');
+
+  // ── Notif panel 🔔 admin + push OS admin
+  const _notifYogaMsg = isWait
+    ? `🧘 Essai yoga — ${prenom} ${nom} · ${dateAff} · ${coursAff} · ⏳ Cours complet — Liste d'attente · → Yoga → Essai`
+    : `🧘 Essai yoga — ${prenom} ${nom} · ${dateAff} · ${coursAff} · ✓ Confirmé·e automatiquement · → Yoga → Essai`;
+  _insertNotification('essai_yoga', _notifYogaMsg, 'yoga').catch(function(){});
+  const _svcKeyYoga = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  getFcmTokensAdmin(_svcKeyYoga).then(function(tokens) {
+    if (tokens.length) sendFcmPush(env, tokens, {
+      title: 'Tango & Vous — Admin',
+      body: (isWait
+        ? `🟡 Essai yoga — ${prenom} ${nom} · ${dateAff} · ${coursAff} · ⏳ Cours complet`
+        : `🧘 Essai yoga — ${prenom} ${nom} · ${dateAff} · ${coursAff} · ✓ auto`)
+    }).catch(function(){});
+  }).catch(function(){});
 
   // ── Y1 / Y-att — email élève
   const headerYoga = '<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>';
