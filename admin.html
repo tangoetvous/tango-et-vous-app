@@ -5015,11 +5015,19 @@ async function _registerFcmToken() {
       return Uint8Array.from(atob(b64), function(c) { return c.charCodeAt(0); });
     }
 
+    // ⚠️ Migration depuis Firebase: l'ancienne subscription est enregistrée avec
+    // la clé Firebase, pas la nôtre → forcer unsubscribe + resubscribe une fois.
     var sub;
     try {
       sub = await reg.pushManager.getSubscription();
+      var migrated = localStorage.getItem('tev_push_vapid_v2');
+      if (sub && !migrated) {
+        try { await sub.unsubscribe(); } catch(eUn) {}
+        sub = null;
+      }
       if (!sub) {
         sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _vapidBytes(TEV_VAPID_KEY) });
+        localStorage.setItem('tev_push_vapid_v2', '1');
       }
     } catch(e2) { afficherToast('❌ Push: abonnement échoué — ' + (e2.message||'').slice(0,60)); return; }
 
@@ -5037,7 +5045,9 @@ async function _registerFcmToken() {
     });
     if (r.ok) {
       localStorage.setItem('tev_fcm_token', token);
-      afficherToast('🔔 Notifications push activées ✅');
+      var endpoint = sub.endpoint || '';
+      var endpointShort = endpoint.split('/').slice(0, 3).join('/');
+      afficherToast('🔔 Push activé ✅ — ' + endpointShort);
     } else {
       var errTxt = await r.text().catch(function(){ return ''; });
       afficherToast('❌ Push: API ' + r.status + ' — ' + errTxt.slice(0, 80));

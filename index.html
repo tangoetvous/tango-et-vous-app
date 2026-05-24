@@ -1111,8 +1111,17 @@
         return Uint8Array.from(atob(b64), function(c) { return c.charCodeAt(0); });
       }
 
+      // ⚠️ Migration depuis Firebase: forcer unsubscribe + resubscribe une fois
       var sub = await reg.pushManager.getSubscription();
-      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _vapidBytes(TEV_VAPID_KEY) });
+      var migrated = localStorage.getItem('tev_push_vapid_v2');
+      if (sub && !migrated) {
+        try { await sub.unsubscribe(); } catch(eUn) {}
+        sub = null;
+      }
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _vapidBytes(TEV_VAPID_KEY) });
+        localStorage.setItem('tev_push_vapid_v2', '1');
+      }
       if (!sub) return;
 
       var token = JSON.stringify(sub.toJSON());
