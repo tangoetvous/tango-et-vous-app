@@ -3319,53 +3319,211 @@ async function _getFcmAccessToken(serviceAccountJson) {
   return { accessToken: tokenData.access_token, projectId: sa.project_id };
 }
 
-// ── Envoyer une notification push via FCM v1 ─────────────────────
-// tokens  : string[] — tokens FCM
-// notif   : { title, body, link? }
-// data    : { key: string } — payload additionnel (toutes valeurs en string)
-async function sendFcmPush(env, tokens, notif, data = {}) {
-  if (!env.FIREBASE_SERVICE_ACCOUNT) { console.log('[FCM] FIREBASE_SERVICE_ACCOUNT absent — skip push'); return { skipped: true }; }
-  if (!tokens || !tokens.length) return { skipped: true, reason: 'no_tokens' };
+// ── Native Web Push Encryption (RFC 8291 + RFC 8188 + RFC 8292) ──
+// subscription : PushSubscription JSON ({ endpoint, keys: { p256dh, auth } })
+// payload      : string — JSON notification payload
+async function _webPushEncrypt(subscription, payload) {
+  const sub = typeof subscription === 'string' ? JSON.parse(subscription) : subscription;
 
-  let accessToken, projectId;
-  try {
-    ({ accessToken, projectId } = await _getFcmAccessToken(env.FIREBASE_SERVICE_ACCOUNT));
-  } catch (e) {
-    console.error('[FCM] Erreur access token:', e.message);
-    return { ok: false, error: e.message };
+  function b64urlDec(s) {
+    const pad = '='.repeat((4 - s.length % 4) % 4);
+    const b64 = (s + pad).replace(/-/g, '+').replace(/_/g, '/');
+    return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   }
+
+  const uaPublicRaw = b64urlDec(sub.keys.p256dh);  // subscriber public key (65 bytes uncompressed)
+  const authSecret  = b64urlDec(sub.keys.auth);      // auth secret (16 bytes)
+
+  async function hkdf(ikm, salt, info, len) {
+    const k = await crypto.subtle.importKey('raw', ikm, { name: 'HKDF' }, false, ['deriveBits']);
+    return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, k, len * 8));
+  }
+
+  // 1. Generate ephemeral ECDH key pair (P-256)
+  const ephemeral = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const asPublicRaw = new Uint8Array(await crypto.subtle.exportKey('raw', ephemeral.publicKey)); // 65 bytes
+
+  // 2. Compute ECDH shared secret
+  const uaKey = await crypto.subtle.importKey('raw', uaPublicRaw, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const sharedSecret = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, ephemeral.privateKey, 256));
+
+  // 3. PRK via HKDF-SHA256 (RFC 8291 §3.3)
+  // info = "WebPush: info\x00" || uaPublic (65) || asPublic (65)
+  const infoPrefix = 'WebPush: info\x00';
+  const prkInfo = new Uint8Array(infoPrefix.length + 65 + 65);
+  for (let i = 0; i < infoPrefix.length; i++) prkInfo[i] = infoPrefix.charCodeAt(i);
+  prkInfo.set(uaPublicRaw, infoPrefix.length);
+  prkInfo.set(asPublicRaw, infoPrefix.length + 65);
+  const prk = await hkdf(sharedSecret, authSecret, prkInfo, 32);
+
+  // 4. Random salt (16 bytes) for record layer
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+
+  // 5. CEK (16 bytes) and nonce (12 bytes)
+  const cek   = await hkdf(prk, salt, new TextEncoder().encode('Content-Encoding: aes128gcm\x00'), 16);
+  const nonce = await hkdf(prk, salt, new TextEncoder().encode('Content-Encoding: nonce\x00'), 12);
+
+  // 6. Encrypt — pad with 0x02 (last-record delimiter, RFC 8188)
+  const payloadBytes = new TextEncoder().encode(payload);
+  const padded = new Uint8Array(payloadBytes.length + 1);
+  padded.set(payloadBytes);
+  padded[payloadBytes.length] = 0x02;
+
+  const cekKey = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce, tagLength: 128 }, cekKey, padded));
+
+  // 7. Build RFC 8188 header: salt(16) + rs(4 BE, =4096) + idlen(1, =65) + asPublic(65)
+  const header = new Uint8Array(86);
+  header.set(salt, 0);
+  new DataView(header.buffer, 16, 4).setUint32(0, 4096, false); // rs, big-endian
+  header[20] = 65; // keyid length
+  header.set(asPublicRaw, 21);
+
+  const body = new Uint8Array(header.length + ciphertext.length);
+  body.set(header, 0);
+  body.set(ciphertext, header.length);
+
+  return { endpoint: sub.endpoint, body };
+}
+
+// ── Send a single Web Push message (VAPID auth) ───────────────────
+async function sendWebPush(env, subscriptionJson, notif, data = {}) {
+  if (!env.VAPID_PRIVATE_KEY) { console.log('[WebPush] VAPID_PRIVATE_KEY absent — skip'); return { skipped: true }; }
+
+  const VAPID_PUB = 'BD_EhhtlJWoR-xAtfgRXFkLj3HZKT3TGE4FPgKwQe5isymrm7MvcRGywNy7TFMFlygQw0R1u_fT499jQd8EY2i4';
+  const VAPID_CONTACT = 'mailto:tangoetvous@gmail.com';
+
+  function b64url(obj) {
+    const s = JSON.stringify(obj);
+    return btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  }
+  function b64urlDec(s) {
+    const pad = '='.repeat((4 - s.length % 4) % 4);
+    return Uint8Array.from(atob((s + pad).replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+  }
+
+  const sub = typeof subscriptionJson === 'string' ? JSON.parse(subscriptionJson) : subscriptionJson;
+  if (!sub || !sub.endpoint) return { ok: false, error: 'no_endpoint' };
+
+  // Build notification JSON payload
+  const payload = JSON.stringify({
+    notification: { title: notif.title || 'Tango & Vous', body: notif.body || '' },
+    data: { tab: data.tab || 'notifications', ...data }
+  });
+
+  // Encrypt
+  let encResult;
+  try { encResult = await _webPushEncrypt(sub, payload); }
+  catch(e) { console.error('[WebPush] Encrypt error:', e.message); return { ok: false, error: 'encrypt: ' + e.message }; }
+
+  // VAPID JWT
+  const origin = new URL(sub.endpoint).origin;
+  const now = Math.floor(Date.now() / 1000);
+  const jwtH = b64url({ typ: 'JWT', alg: 'ES256' });
+  const jwtP = b64url({ aud: origin, exp: now + 43200, sub: VAPID_CONTACT });
+  const sigInput = new TextEncoder().encode(`${jwtH}.${jwtP}`);
+
+  const vapidPriv = await crypto.subtle.importKey(
+    'pkcs8', b64urlDec(env.VAPID_PRIVATE_KEY),
+    { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']
+  );
+  const sigRaw = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, vapidPriv, sigInput));
+  const sigB64 = btoa(String.fromCharCode(...sigRaw)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  const jwt = `${jwtH}.${jwtP}.${sigB64}`;
+
+  // Send
+  const r = await fetch(sub.endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `vapid t=${jwt},k=${VAPID_PUB}`,
+      'Content-Type': 'application/octet-stream',
+      'Content-Encoding': 'aes128gcm',
+      'TTL': '86400',
+    },
+    body: encResult.body,
+  });
+
+  // Clean up expired subscriptions
+  if (r.status === 410 || r.status === 404) {
+    const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    const tokenStr = typeof subscriptionJson === 'string' ? subscriptionJson : JSON.stringify(subscriptionJson);
+    fetch(`${SUPABASE_URL}/rest/v1/fcm_tokens?token=eq.${encodeURIComponent(tokenStr)}`, {
+      method: 'DELETE', headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` }
+    }).catch(() => {});
+    return { ok: false, expired: true };
+  }
+
+  return { ok: r.ok || r.status === 201, status: r.status };
+}
+
+// ── Envoyer une notification push (FCM v1 ou native Web Push) ─────
+// Détecte automatiquement le type de token :
+//   - JSON string (commence par '{') → Web Push Protocol (iOS/Safari PWA)
+//   - Autre string → FCM v1 (Android/Chrome)
+// tokens  : string[] — tokens FCM ou subscription JSON Web Push
+// notif   : { title, body, link? }
+// data    : { key: string } — payload additionnel
+async function sendFcmPush(env, tokens, notif, data = {}) {
+  if (!tokens || !tokens.length) return { skipped: true, reason: 'no_tokens' };
 
   const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const results = [];
-  for (const token of tokens) {
-    const message = {
-      message: {
-        token,
-        notification: { title: notif.title || 'Tango & Vous', body: notif.body || '' },
-        data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
-        webpush: {
-          notification: { icon: '/icon-192.png', badge: '/icon-192.png' },
-          fcm_options:  { link: notif.link || 'https://app.tangoetvous.fr/' },
-        },
-      },
-    };
 
-    const r = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
-      method:  'POST',
-      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify(message),
-    });
-    const result = await r.json();
-    results.push({ token: token.slice(-8), ok: r.ok });
+  // Separate Web Push subscriptions from legacy FCM tokens
+  const webPushSubs = tokens.filter(t => t && t.startsWith('{'));
+  const fcmTokens   = tokens.filter(t => t && !t.startsWith('{'));
 
-    // Nettoyer les tokens invalides automatiquement
-    if (!r.ok && (result.error?.status === 'NOT_FOUND' || result.error?.status === 'UNREGISTERED')) {
-      fetch(`${SUPABASE_URL}/rest/v1/fcm_tokens?token=eq.${encodeURIComponent(token)}`, {
-        method:  'DELETE',
-        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` },
-      }).catch(() => {});
+  // Send via native Web Push
+  for (const sub of webPushSubs) {
+    const r = await sendWebPush(env, sub, notif, data).catch(e => ({ ok: false, error: e.message }));
+    results.push({ type: 'webpush', ...r });
+  }
+
+  // Send via FCM v1 (legacy, Android/Chrome)
+  if (fcmTokens.length > 0) {
+    if (!env.FIREBASE_SERVICE_ACCOUNT) {
+      console.log('[FCM] FIREBASE_SERVICE_ACCOUNT absent — skip FCM tokens');
+      results.push({ type: 'fcm', skipped: true });
+    } else {
+      let accessToken, projectId;
+      try {
+        ({ accessToken, projectId } = await _getFcmAccessToken(env.FIREBASE_SERVICE_ACCOUNT));
+      } catch(e) {
+        console.error('[FCM] Erreur access token:', e.message);
+        results.push({ type: 'fcm', ok: false, error: e.message });
+        return { ok: false, results };
+      }
+
+      for (const token of fcmTokens) {
+        const message = {
+          message: {
+            token,
+            notification: { title: notif.title || 'Tango & Vous', body: notif.body || '' },
+            data: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])),
+            webpush: {
+              notification: { icon: '/icon-192.png', badge: '/icon-192.png' },
+              fcm_options:  { link: notif.link || 'https://app.tangoetvous.fr/' },
+            },
+          },
+        };
+        const r = await fetch(`https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(message),
+        });
+        const result = await r.json();
+        results.push({ type: 'fcm', token: token.slice(-8), ok: r.ok });
+
+        // Clean up invalid tokens
+        if (!r.ok && (result.error?.status === 'NOT_FOUND' || result.error?.status === 'UNREGISTERED')) {
+          fetch(`${SUPABASE_URL}/rest/v1/fcm_tokens?token=eq.${encodeURIComponent(token)}`, {
+            method: 'DELETE', headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` }
+          }).catch(() => {});
+        }
+      }
     }
   }
+
   return { ok: true, results };
 }
 

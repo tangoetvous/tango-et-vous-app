@@ -13,21 +13,7 @@
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
 <script src="js/tev-supabase.js?v=5"></script>
-<!-- Firebase Messaging (push notifications) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
-<script>
-  try {
-    firebase.initializeApp({
-      apiKey: "AIzaSyD-STk_VpUIe6mjOh7kX9bsaOE8OvPNEcs",
-      authDomain: "tango-et-vous.firebaseapp.com",
-      projectId: "tango-et-vous",
-      storageBucket: "tango-et-vous.firebasestorage.app",
-      messagingSenderId: "778867090916",
-      appId: "1:778867090916:web:697fab0815e79f336493f1"
-    });
-  } catch(e) { /* already initialized */ }
-</script>
+<!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
   // ================================================================
   // DEMO MODE — true uniquement quand l'utilisateur clique sur "Démo"
@@ -1091,10 +1077,8 @@
     setTimeout(() => { const t = $('disc-form-titre'); if (t) t.focus(); }, 100);
   }
 
-  // ── Notifications push — enregistrement token FCM ────────────
-  // Clé publique VAPID — récupérable depuis Firebase Console → Project Settings
-  // → Cloud Messaging → Web Push certificates → Generate key pair
-  const TEV_VAPID_KEY = 'BFgW-RNnrJ9T6gTEINBe3nHsP0SFw2xDRiqLzsny7Nim5LitdqCHJA0R5T1Igv_PueqMlltChKR1yodfQbtyEZ4';
+  // ── Notifications push — native Web Push Protocol (iOS PWA compatible) ──
+  const TEV_VAPID_KEY = 'BD_EhhtlJWoR-xAtfgRXFkLj3HZKT3TGE4FPgKwQe5isymrm7MvcRGywNy7TFMFlygQw0R1u_fT499jQd8EY2i4';
 
   function _pushPermission() {
     return ('Notification' in window) ? Notification.permission : 'unsupported';
@@ -1104,7 +1088,7 @@
     var btn = $('eleve-btn-activer-notif');
     if (!btn) return;
     var p = _pushPermission();
-    if (p === 'granted')  { btn.textContent = '🔔 Activées'; btn.style.color = '#4ade80'; btn.disabled = true; }
+    if (p === 'granted')  { btn.textContent = '🔔 Activées'; btn.style.color = '#4ade80'; btn.disabled = false; }
     else if (p === 'denied') { btn.textContent = '🔕 Bloquées (réglages nav.)'; btn.style.color = '#ef4444'; btn.disabled = true; }
     else if (p === 'unsupported') { btn.textContent = '🔕 Non supporté'; btn.style.color = '#888'; btn.disabled = true; }
     else { btn.textContent = '🔔 Activer les notifications'; btn.style.color = ''; btn.disabled = false; }
@@ -1112,21 +1096,39 @@
 
   async function _registerFcmToken() {
     try {
-      if (!TEV_VAPID_KEY) return;
-      if (!window.firebase || !window.firebase.messaging) return;
+      if (!TEV_VAPID_KEY || !('PushManager' in window)) return;
       if (Notification.permission !== 'granted') return;
+
+      // Migrate: clear old FCM token format (not a Web Push JSON)
+      var cached = localStorage.getItem('tev_fcm_token');
+      if (cached && !cached.startsWith('{')) { localStorage.removeItem('tev_fcm_token'); cached = null; }
+
       const reg = await navigator.serviceWorker.ready;
-      const messaging = window.firebase.messaging();
-      const token = await messaging.getToken({ vapidKey: TEV_VAPID_KEY, serviceWorkerRegistration: reg });
-      if (!token) return;
-      if (localStorage.getItem('tev_fcm_token') === token) return; // déjà enregistré
-      const session = TEV.client.auth.session ? TEV.client.auth.session() : null;
-      const jwt = session ? session.access_token : null;
+
+      function _vapidBytes(b64url) {
+        var pad = '='.repeat((4 - b64url.length % 4) % 4);
+        var b64 = (b64url + pad).replace(/-/g, '+').replace(/_/g, '/');
+        return Uint8Array.from(atob(b64), function(c) { return c.charCodeAt(0); });
+      }
+
+      var sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _vapidBytes(TEV_VAPID_KEY) });
+      if (!sub) return;
+
+      var token = JSON.stringify(sub.toJSON());
+      if (cached === token) return; // déjà enregistré avec le même endpoint
+
+      // Get JWT from Supabase session
+      var session = null;
+      try { session = TEV.client.auth.session ? TEV.client.auth.session() : null; } catch(e) {}
+      var jwt = session ? session.access_token : null;
       if (!jwt) return;
+
+      var platform = /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'ios' : 'web';
       const r = await fetch('/api/register-token', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, platform: 'web', userAgent: navigator.userAgent.slice(0, 300) })
+        body: JSON.stringify({ token, platform, userAgent: navigator.userAgent.slice(0, 300) })
       });
       if (r.ok) localStorage.setItem('tev_fcm_token', token);
     } catch(e) { /* push non prioritaire, échec silencieux */ }

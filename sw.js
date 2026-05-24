@@ -1,39 +1,31 @@
-// sw.js — Service Worker Tango & Vous PWA
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
-
-const CACHE = 'tv-cartes-v5';
+// sw.js — Service Worker Tango & Vous PWA (native Web Push, no Firebase)
+const CACHE = 'tv-cartes-v6';
 const PRECACHE = ['/', '/index.html'];
 
-// ── Firebase Messaging (notifications push discussions) ──────────
-firebase.initializeApp({
-  apiKey: "AIzaSyD-STk_VpUIe6mjOh7kX9bsaOE8OvPNEcs",
-  authDomain: "tango-et-vous.firebaseapp.com",
-  projectId: "tango-et-vous",
-  storageBucket: "tango-et-vous.firebasestorage.app",
-  messagingSenderId: "778867090916",
-  appId: "1:778867090916:web:697fab0815e79f336493f1"
-});
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage(payload => {
-  const n = payload.notification || {};
-  self.registration.showNotification(n.title || 'Tango & Vous', {
-    body: n.body || '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    tag: 'tev-discussion',
-    data: payload.data || {}
-  });
+// ── Push notifications (native Web Push Protocol) ────────────────
+self.addEventListener('push', function(event) {
+  var payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch(e) {}
+  var n = payload.notification || {};
+  event.waitUntil(
+    self.registration.showNotification(n.title || 'Tango & Vous', {
+      body: n.body || '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'tev-notification',
+      data: payload.data || {}
+    })
+  );
 });
 
-self.addEventListener('notificationclick', e => {
+self.addEventListener('notificationclick', function(e) {
   e.notification.close();
-  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(wins => {
-    for (const w of wins) {
-      if (w.url.includes('index.html') || w.url.endsWith('/')) {
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(wins) {
+    for (var w of wins) {
+      if (w.url.includes('index.html') || w.url.endsWith('/') || w.url.includes('admin')) {
         w.focus();
-        w.postMessage({ type: 'openTab', tab: 'discussions' });
+        var tab = (e.notification.data && e.notification.data.tab) || 'notifications';
+        w.postMessage({ type: 'openTab', tab: tab });
         return;
       }
     }
@@ -42,24 +34,24 @@ self.addEventListener('notificationclick', e => {
 });
 
 // ── Cache & fetch ────────────────────────────────────────────────
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)));
+self.addEventListener('install', function(e) {
+  e.waitUntil(caches.open(CACHE).then(function(c) { return c.addAll(PRECACHE); }));
   self.skipWaiting();
 });
 
-self.addEventListener('activate', e => {
+self.addEventListener('activate', function(e) {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
+    caches.keys().then(function(keys) {
+      return Promise.all(keys.filter(function(k) { return k !== CACHE; }).map(function(k) { return caches.delete(k); }));
+    })
   );
   self.clients.claim();
 });
 
-self.addEventListener('fetch', e => {
+self.addEventListener('fetch', function(e) {
   // Ne pas intercepter les ressources externes (Supabase, CDN, Firebase, Google)
   if (!e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request).then(r => r || new Response('', { status: 503 })))
+    fetch(e.request).catch(function() { return caches.match(e.request).then(function(r) { return r || new Response('', { status: 503 }); }); })
   );
 });
