@@ -10038,16 +10038,36 @@ function valAttStage(date, nom, btn) {
   q.then(function(){
     // S3 — admin valide inscription stage attente → confirme
     if (st && st.email) {
+      var _saiS3 = (function(iso){ var yr=parseInt(iso.slice(0,4)),mo=parseInt(iso.slice(5,7)); return mo>=9?(yr+'-'+(yr+1)):((yr-1)+'-'+yr); })(date);
+      var _horS3 = _loadParam('stages', _saiS3, 'horaires');
+      var _defS3 = DEFAULTS_HORAIRES.stages || {};
+      function _hvS3(k){ return (_horS3[k]||_defS3[k]||''); }
+      var _slotDebFinS3 = {
+        technique: {deb:_hvS3('tech_deb'), fin:_hvS3('tech_fin')},
+        stage1: {deb:_hvS3('s1_deb'), fin:_hvS3('s1_fin')},
+        stage2: {deb:_hvS3('s2_deb'), fin:_hvS3('s2_fin')},
+        stage3: {deb:_hvS3('s3_deb'), fin:_hvS3('s3_fin')},
+        stage4: {deb:_hvS3('s4_deb'), fin:_hvS3('s4_fin')},
+      };
+      var _stS3 = (STAGES||[]).find(function(s){ return s.date===date; }) || {};
+      var _themesS3 = _stS3.themes || [];
+      var _mappedSlotsS3 = (st.slots||[]).map(function(slotId) {
+        var hh = _slotDebFinS3[slotId] || {deb:'', fin:''};
+        var theme = slotId === 'technique' ? 'Technique Leader & Follower' : (_themesS3[parseInt(slotId.replace('stage',''))-1]||'');
+        return { type: slotId, horaire_debut: hh.deb, horaire_fin: hh.fin, theme: theme };
+      });
+      var _daysUntilS3 = Math.round((new Date(date+'T12:00:00') - new Date()) / (1000*60*60*24));
       Promise.resolve(fetch('/api/notify/stage-valide', {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: {'Content-Type':'application/json', 'Authorization':'Bearer '+_getJwt()},
         body: JSON.stringify({
           email: st.email,
           prenom: st.prenom||'',
           nom: st.nom||'',
           role: st.role||st.type||'',
           statut: 'confirme',
-          inscriptionsParDate: [{ date: date, slots: (st.slots||[]).map(function(s){return {horaire:s,theme:''};}), tarif: st.montant||0 }],
+          daysUntil: _daysUntilS3,
+          inscriptionsParDate: [{ date: date, slots: _mappedSlotsS3, tarif: st.montant||0 }],
         }),
       })).catch(function(){});
     }

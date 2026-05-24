@@ -6922,6 +6922,25 @@ async function handleNotifyStageValide(request, env) {
       body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: s3Subj, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-stage-valide] error', err); }
+
+  // notifications_eleve — badge 🔔 espace élève
+  const _notifMsgS3 = `🎭 Bonne nouvelle — votre place au stage du ${firstDateLabel} est confirmée !`;
+  try {
+    const resN = await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email: String(email), type: 'stage_valide', message: _notifMsgS3, lu: false }),
+    });
+    if (!resN.ok) console.error('[notify-stage-valide] notifications_eleve HTTP', resN.status, await resN.text().catch(() => ''));
+  } catch(e) { console.error('[notify-stage-valide] notifications_eleve error', e); }
+
+  // Push OS élève
+  const _svkS3 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  try {
+    const tokens = await getFcmTokensForEmail(String(email), _svkS3);
+    if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `🎭 Bonne nouvelle — votre stage du ${firstDateLabel} est confirmé !` });
+  } catch(e) { console.error('[notify-stage-valide] push error', e); }
+
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
