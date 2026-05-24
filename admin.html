@@ -7934,10 +7934,19 @@ function envJ1(date, btn) {
   var el  = gel('j1s-'+date);
   if (el) { el.style.color='var(--gold)'; el.textContent='⏳'; }
   if (IS_DEMO) { setTimeout(function(){ if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+pres.length+'+'+abs.length+' (démo)';}btn.disabled=false;},800); return; }
-  // TODO: implémenter via Brevo + Edge Function
-  if(el){el.style.color='var(--dim)';el.textContent='⚠️ N/A';}
-  afficherToast('⚠️ Emails J+1 non encore configurés (Brevo à implémenter)');
-  btn.disabled=false;
+  fetch('/api/admin/j1-manual', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+    body: JSON.stringify({ type: 'tango', date: date })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+(d.sent||0)+' envoyé'+(d.sent!==1?'s':'');}
+    afficherToast('✓ Emails J+1 envoyés : '+(d.sent||0)+' email'+(d.sent!==1?'s':'')+' ('+pres.length+' présent'+(pres.length!==1?'s':'')+', '+abs.length+' absent'+(abs.length!==1?'s':'')+')');
+    btn.disabled=false;
+  }).catch(function(){
+    if(el){el.style.color='var(--err-text)';el.textContent='⚠️ Erreur';}
+    afficherToast('⚠️ Erreur lors de l\'envoi des emails J+1');
+    btn.disabled=false;
+  });
 }
 
 // ================================================================
@@ -7992,10 +8001,19 @@ function envYogaJ1(date, btn) {
   if (IS_DEMO) {
     setTimeout(function(){ if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+pres.length+'+'+abs.length+' (démo)';}btn.disabled=false;},800); return;
   }
-  // TODO: implémenter via Brevo + Edge Function
-  if(el){el.style.color='var(--dim)';el.textContent='⚠️ N/A';}
-  afficherToast('⚠️ Emails J+1 yoga non encore configurés (Brevo à implémenter)');
-  btn.disabled=false;
+  fetch('/api/admin/j1-manual', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+    body: JSON.stringify({ type: 'yoga', date: date })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(el){el.style.color='var(--ok-text)';el.textContent='✓ '+(d.sent||0)+' envoyé'+(d.sent!==1?'s':'');}
+    afficherToast('✓ Emails J+1 yoga envoyés : '+(d.sent||0)+' email'+(d.sent!==1?'s':'')+' ('+pres.length+' présent'+(pres.length!==1?'s':'')+', '+abs.length+' absent'+(abs.length!==1?'s':'')+')');
+    btn.disabled=false;
+  }).catch(function(){
+    if(el){el.style.color='var(--err-text)';el.textContent='⚠️ Erreur';}
+    afficherToast('⚠️ Erreur lors de l\'envoi des emails J+1 yoga');
+    btn.disabled=false;
+  });
 }
 
 function soumettreYogaInscrManuel() {

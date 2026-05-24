@@ -152,6 +152,31 @@ export default {
         return handleCronEssaiYogaJ1(request, env);
       }
 
+      // POST /api/admin/j1-manual — déclencheur manuel admin (JWT) des emails J+1 essai tango ou yoga
+      // Body: { type: 'tango'|'yoga', date: 'YYYY-MM-DD' }
+      if (pathname === '/api/admin/j1-manual' && method === 'POST') {
+        const jwt = (request.headers.get('Authorization') || '').replace('Bearer ', '');
+        if (!jwt) return jsonError(401, 'JWT requis');
+        const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_admin`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        let isAdmin = false;
+        try { isAdmin = await checkRes.json(); } catch(e) {}
+        if (!isAdmin) return jsonError(403, 'Accès refusé — non administrateur');
+        let body = {};
+        try { body = await request.json(); } catch {}
+        const type = body.type || 'yoga';
+        // Reconstruire une Request avec le body (les handlers lisent request.json())
+        const fwdReq = new Request(request.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: body.date }),
+        });
+        return type === 'tango' ? handleCronEssaiJ1(fwdReq, env) : handleCronEssaiYogaJ1(fwdReq, env);
+      }
+
       // POST /api/notify/inscription-essai — formulaire cours-essai.html (sans auth)
       if (pathname === '/api/notify/inscription-essai' && method === 'POST') {
         return handleNotifyInscriptionEssai(request, env);
