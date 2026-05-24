@@ -1240,6 +1240,38 @@ async function soumettre(){
       localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
     } catch(e){}
     try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
+    // Notifier admin + élève via worker (email S0/S1/S2, panel 🔔, push)
+    try {
+      var _stageBody = {
+        email: data.email,
+        prenom: data.prenom,
+        nom: data.nom,
+        tel: data.telephone,
+        role: data.role,
+        statut: data.typeConfirmation,
+        saison: saisonCourante(),
+        inscriptionsParDate: (datesOK || []).map(function(di) {
+          return {
+            date: di.date,
+            slots: (di.stagesDetail || []).map(function(s) {
+              var parts = (s.horaire || '').split('–');
+              return { horaire_debut: parts[0] || '', horaire_fin: parts[1] || '', theme: s.theme || s.type || '' };
+            }),
+            tarif: di.prixInscrit || 0,
+            adresse: {}
+          };
+        }),
+        partEmail: data.partenaireEmail || '',
+        partPrenom: data.partenairePrenom || '',
+        partNom: data.partenaireNom || '',
+        emailPartage: !!(data.partenaireEmail && data.partenaireEmail === data.email)
+      };
+      fetch('/api/notify/inscription-stage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(_stageBody)
+      }).catch(function(){});
+    } catch(_e) {}
   } catch(err){
     btn.disabled=false; btn.textContent="Je m'inscris";
     document.getElementById('err-global-2').textContent='Erreur : '+(err&&err.message||'inconnue')+' — Veuillez réessayer ou nous contacter.';
