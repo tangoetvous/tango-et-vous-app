@@ -300,6 +300,11 @@ export default {
         return handleNotifyCoursParticulier(request, env);
       }
 
+      // POST /api/notify/milonga-rsvp — élève clique "Je pense venir" (sans auth)
+      if (pathname === '/api/notify/milonga-rsvp' && method === 'POST') {
+        return handleNotifyMilongaRsvp(request, env);
+      }
+
       // POST /api/notify/carte-bienvenue — premier pointage carte10 (sans auth)
       if (pathname === '/api/notify/carte-bienvenue' && method === 'POST') {
         return handleNotifyCarteBienvenue(request, env);
@@ -6974,6 +6979,45 @@ async function handleNotifyCoursParticulier(request, env) {
       if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `🎯 Cours particulier — ${nomAff}${urgBadge}` });
     } catch(e) { console.error('[cours-particulier] push error', e); }
   }
+
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/milonga-rsvp — élève clique "Je pense venir" (sans auth)
+// ================================================================
+async function handleNotifyMilongaRsvp(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const { email, prenom, nom, milongaNom, milongaDate } = body;
+  const nomAff = (`${prenom || ''} ${nom || ''}`).trim() || email || '(inconnu)';
+  const milNomAff = milongaNom || 'Milonga';
+
+  const MOIS_C = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  let dateAff = milongaDate || '';
+  if (milongaDate) {
+    const d = new Date(milongaDate + 'T12:00:00');
+    if (!isNaN(d)) dateAff = d.getDate() + ' ' + MOIS_C[d.getMonth()];
+  }
+
+  const notifMsg = `🎶 RSVP milonga — ${nomAff} · ${milNomAff} · ${dateAff} · Je pense venir`;
+
+  // ── Panel 🔔 admin
+  try {
+    const resN = await _insertNotification('milonga_rsvp', notifMsg, 'milonga');
+    if (!resN.ok) console.error('[milonga-rsvp] insertNotification HTTP', resN.status, await resN.text().catch(() => ''));
+  } catch(e) { console.error('[milonga-rsvp] insertNotification error', e); }
+
+  // ── Push OS admin
+  const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  try {
+    const tokens = await getFcmTokensAdmin(_svcKey);
+    if (tokens.length) await sendFcmPush(env, tokens, {
+      title: 'Tango & Vous — Admin',
+      body: `🎶 ${nomAff} · ${milNomAff} · ${dateAff}`,
+    });
+  } catch(e) { console.error('[milonga-rsvp] push error', e); }
 
   return corsResponse({ ok: true }, 200, {}, request);
 }

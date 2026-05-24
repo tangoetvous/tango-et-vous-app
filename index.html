@@ -2777,6 +2777,13 @@
     _updateAccMilBtn(date, milId, milNom, true);
     _renderAccMilList();
     if (currentTab === 'milonga') renderMilonga();
+    // Push admin
+    var _elv = eleveData.eleve || {};
+    fetch("/api/notify/milonga-rsvp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: _elv.email || "", prenom: _elv.prenom || "", nom: _elv.nom || "", milongaNom: milNom || "", milongaDate: date })
+    }).catch(function(){});
   };
   window._milAnnuler = function(date, milId, milNom) {
     _toggleMilPresence(date, milId, milNom, eleveData.eleve || {}, false);
