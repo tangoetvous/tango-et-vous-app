@@ -4228,3 +4228,15 @@ Avant de terminer l'implémentation d'un handler, vérifier que ces 4 points son
 | 4 | Push OS admin | `try { const t = await getFcmTokensAdmin(...); if (t.length) await sendFcmPush(env, t, notif); } catch(e) { ... }` |
 
 Tout `return corsResponse(...)` final doit être précédé des 4 blocs ci-dessus (adaptés selon le handler). **Aucun de ces blocs ne doit être fire-and-forget.**
+
+## Session 2026-05-24 (suite 6) — Push admin "Je pense venir" milonga
+
+### Fonctionnalité
+Quand un élève clique **"Je pense venir"** sur une milonga (accueil, onglet Milonga, onglet Agenda, modal publication), l'admin reçoit :
+- **Push OS** : `🎶 Prénom NOM · Nom milonga · JJ mois`
+- **Panel 🔔** : `🎶 RSVP milonga — Prénom NOM · Nom milonga · JJ mois · Je pense venir · → Milonga`
+
+### Architecture
+- **`index.html` — `window._milJeViens`** : après le RSVP Supabase, appelle `fetch('/api/notify/milonga-rsvp', { method:'POST', body:JSON.stringify({email, prenom, nom, milongaNom, milongaDate}) })` (fire-and-forget côté client — OK car c'est le navigateur de l'élève, pas Cloudflare Workers).
+- **`worker.js` — `handleNotifyMilongaRsvp`** : `POST /api/notify/milonga-rsvp` (sans auth) → `_insertNotification('milonga_rsvp', msg, 'milonga')` + `getFcmTokensAdmin` + `sendFcmPush`. Tous les appels sont `await` + `try/catch`.
+- **Point d'entrée unique** : `_milJeViens` est la seule fonction déclenchée par les trois surfaces (accueil, milonga, agenda) — un seul endroit à modifier.
