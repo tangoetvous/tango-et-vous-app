@@ -6069,7 +6069,7 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
 
   const { email, prenom, nom, saison } = body;
-  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
+  if (!email) return corsResponse({ ok: false }, 200, {}, request);
 
   // Support ancien format mono-cours + nouveau format multi-cours
   const coursInfos = body.coursInfos && body.coursInfos.length
@@ -6282,18 +6282,19 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
       });
     } catch(e) { console.error('[notify-cours-payee] admin email error', e); }
 
-    const ci0n = ci0i03;
-    _insertNotification('cours_inscription',
-      '🎓 Inscription validée — ' + (prenom||'') + ' ' + (nom||'') + ' · ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau) + ' · ✓ Inscrit·e · → Élèves Tango',
-      'eleves-tango').catch(function(){});
-    const _svcKeyI03 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-    getFcmTokensAdmin(_svcKeyI03).then(function(tokens) {
-      if (tokens.length) sendFcmPush(env, tokens, {
-        title: 'Tango & Vous — Admin',
-        body: '🎓 Inscription validée — ' + (prenom||'') + ' ' + (nom||'') + ' · ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau)
-      }).catch(function(){});
-    }).catch(function(){});
   }
+
+  const ci0n = ci0i03;
+  _insertNotification('cours_inscription',
+    '🎓 Inscription validée — ' + (prenom||'') + ' ' + (nom||'') + ' · ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau) + ' · ✓ Inscrit·e · → Élèves Tango',
+    'eleves-tango').catch(function(){});
+  const _svcKeyI03 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  getFcmTokensAdmin(_svcKeyI03).then(function(tokens) {
+    if (tokens.length) sendFcmPush(env, tokens, {
+      title: 'Tango & Vous — Admin',
+      body: '🎓 Inscription validée — ' + (prenom||'') + ' ' + (nom||'') + ' · ' + vl03(ci0n.ville) + ' ' + nl03(ci0n.niveau)
+    }).catch(function(){});
+  }).catch(function(){});
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
