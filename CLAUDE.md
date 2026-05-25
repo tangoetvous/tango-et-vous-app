@@ -1,5 +1,73 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Horaires yoga dans les emails — chaînes plates, pas d'objets imbriqués
+
+### Symptôme
+Les emails yoga (Y-J1a, Y-J1b, Y0, Y1, Y-att, Y3, Y-mod, YI1) affichaient le lieu et la date, mais **pas l'horaire du cours**. Section "Horaire" absente du yoga-box ou vide.
+
+### Cause racine
+Dans `admin.html`, `sauverHorairesType` sauvegarde les horaires yoga comme des **chaînes plates** dans Supabase :
+```javascript
+data.yin       = '10h30';     // chaîne — heure de début
+data.yin_fin   = '11h30';     // chaîne — heure de fin
+data.hatha     = '11h45';
+data.hatha_fin = '12h30';
+_saveParam('yoga', sai, 'horaires', data);
+// → tev_params_yoga_<sai>.horaires = { yin:'10h30', yin_fin:'11h30', hatha:'11h45', hatha_fin:'12h30' }
+```
+
+Mais plusieurs handlers dans `worker.js` lisaient cette donnée comme un **objet imbriqué** :
+```javascript
+// ❌ Lecture incorrecte (interprète une string comme un objet)
+const d = yogaHoraires.yin || {};
+return d.debut && d.fin ? `${d.debut}–${d.fin}` : '';  // toujours '' (d.debut/d.fin undefined sur une string)
+```
+
+Résultat : `horHtml = ''` → la section "Horaire" du yoga-box n'apparaissait pas dans l'email.
+
+### Règle permanente — lire les horaires yoga comme chaînes plates
+
+```javascript
+// ✅ Pattern correct dans worker.js
+const yogaHoraires = yogaParams.horaires || {};
+// Pour un cours unique (yin OU hatha) :
+const key   = cours === 'hatha' ? 'hatha' : 'yin';
+const debut = typeof yogaHoraires[key] === 'string' ? yogaHoraires[key] : '';
+const fin   = yogaHoraires[key + '_fin'] || '';
+const horaire = debut && fin ? `${debut}–${fin}` : debut || '';
+
+// Pour le forfait (yin + hatha sur deux lignes) :
+const parts = [];
+if (yogaHoraires.yin)   parts.push(`Yin Yoga : ${yogaHoraires.yin}–${yogaHoraires.yin_fin||''}`);
+if (yogaHoraires.hatha) parts.push(`Hatha Yoga : ${yogaHoraires.hatha}–${yogaHoraires.hatha_fin||''}`);
+const horHtml = parts.join('<br/>');
+```
+
+### Référence — le handler ICS était déjà correct
+
+Les handlers `handlePublicICS` / `handleEleveICS` (worker.js lignes 2815-2827) lisaient déjà `hor.yin` et `hor.yin_fin` comme chaînes plates depuis le début — c'est le pattern à reproduire. Les bugs étaient dans les handlers emails uniquement.
+
+### Handlers corrigés (2026-05-24 et 2026-05-25)
+
+| Handler | Email | Statut |
+|---------|-------|--------|
+| `handleCronEssaiYogaJ1` | Y-J1a, Y-J1b | ✅ 2026-05-24 |
+| `handleNotifyYogaDate` | Y0, YI0, YI1 (variante essai) | ✅ 2026-05-24 |
+| `handleNotifyInscriptionEssaiYoga` | Y0, Y1, Y-att | ✅ (était déjà correct) |
+| `handleNotifyYogaInscriptionValidee` | YI1 | ✅ 2026-05-25 |
+| `handleCronEssaiYogaRappelJ3` | Y3 | ✅ 2026-05-25 |
+| `handleNotifyEssaiYogaModifie` | Y-mod | ✅ 2026-05-25 |
+
+### Règle de validation — toute future modification de handler yoga
+
+Avant de modifier un handler qui lit `yogaHoraires` :
+1. Ne **jamais** écrire `yogaHoraires.yin.debut` ou `yogaHoraires.hatha.fin` — ces propriétés n'existent pas
+2. Toujours utiliser le pattern `typeof yogaHoraires[key] === 'string'` + `yogaHoraires[key + '_fin']`
+3. Tester en `workflow_dispatch` sur un cron yoga après chaque modif pour vérifier que l'horaire apparaît bien dans l'email
+4. Les fichiers preview (`preview-emails-yoga-v1.html`) montrent le rendu attendu — l'horaire doit toujours apparaître entre le cours et le lieu dans le yoga-box
+
+---
+
 ## Formulaires publics dans Wix iframe — règle `.insert().select('id')` interdite
 
 ### Symptôme

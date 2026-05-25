@@ -5450,7 +5450,10 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
     const params = paramsRaw[`tev_params_yoga_${saison}`] || {};
     const horaires = params.horaires || {};
     const adresse  = params.adresse || {};
-    const horLabel = horaires[e.cours] || horaires['yin'] || '';
+    const horKeyY3 = (e.cours === 'hatha') ? 'hatha' : 'yin';
+    const horDebutY3 = typeof horaires[horKeyY3] === 'string' ? horaires[horKeyY3] : '';
+    const horFinY3   = horaires[horKeyY3 + '_fin'] || '';
+    const horLabel = horDebutY3 && horFinY3 ? (horDebutY3 + '–' + horFinY3) : (horDebutY3 || '');
 
     // Tarif
     const isGratuitY3 = mI === 9;
@@ -5558,7 +5561,10 @@ async function handleNotifyEssaiYogaModifie(request, env) {
   } catch(err) { console.error('[notify-essai-yoga-modifie] params error', err); }
   const horairesMod = paramsMod.horaires || {};
   const adresseMod  = paramsMod.adresse  || {};
-  const horLabelMod = horairesMod[cours] || horairesMod['yin'] || '';
+  const horKeyMod = (cours === 'hatha') ? 'hatha' : 'yin';
+  const horDebutMod = typeof horairesMod[horKeyMod] === 'string' ? horairesMod[horKeyMod] : '';
+  const horFinMod   = horairesMod[horKeyMod + '_fin'] || '';
+  const horLabelMod = horDebutMod && horFinMod ? (horDebutMod + '–' + horFinMod) : (horDebutMod || '');
 
   // Cours section: old barré + new green
   const ancienLabelMod = ancienCours === 'yin' ? 'Yin yoga' : ancienCours === 'hatha' ? 'Hatha yoga' : (ancienCours === 'forfait' ? 'Yin + Hatha yoga' : coursLabel);
