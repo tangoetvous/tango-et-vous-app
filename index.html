@@ -6238,12 +6238,33 @@ if (new URLSearchParams(location.search).get('testpubs') === '1') {
       panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
     });
 
+    // ── Bouton mode démo ─────────────────────────────────────────
+    var demoZone = document.createElement('div');
+    demoZone.style.cssText = 'padding:8px 16px 12px;border-top:1px solid #333;flex-shrink:0;';
+    var demoBtn = document.createElement('button');
+    demoBtn.textContent = '🎭 Mode démo (Felipe, 4/10 cours)';
+    demoBtn.style.cssText = 'width:100%;padding:9px;background:#1e1a2e;border:1px solid #6a4aaa;color:#c8a0e8;font-weight:700;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;';
+    demoBtn.addEventListener('click', function(){
+      if (typeof window.demoLogin === 'function') {
+        window.demoLogin();
+        demoBtn.textContent = '✓ Démo activée !';
+        setTimeout(function(){ demoBtn.textContent = '🎭 Mode démo (Felipe, 4/10 cours)'; }, 2000);
+      }
+    });
+    demoZone.appendChild(demoBtn);
+    panel.appendChild(demoZone);
+
     document.body.appendChild(panel);
     document.body.appendChild(fab);
 
     panel.querySelector('#lab-close').addEventListener('click', function(){
       panel.style.display = 'none';
     });
+
+    // Auto-démo si ?testpubs=1 : afficher le dashboard élève directement
+    setTimeout(function(){
+      if (typeof window.demoLogin === 'function') window.demoLogin();
+    }, 700);
   });
 }
 
