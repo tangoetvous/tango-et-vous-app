@@ -5505,9 +5505,6 @@ function handleAction(action, btn) {
     case 'pointer-yoga-abs':
       pointerYoga(btn.dataset.date, btn.dataset.email, false, btn.dataset.id);
       break;
-    case 'env-yoga-j1':
-      envYogaJ1(btn.dataset.date, btn);
-      break;
     case 'inscrire-cours':
       inscrireCours();
       break;
@@ -7198,15 +7195,26 @@ function validerChangementCoursYoga(id) {
   var e=(adminData.coursYoga||[]).find(function(x){return String(x.id)===String(id);});
   if(!e) return;
   var sel=gel('ccy-cours'); if(!sel) return;
+  var coursBefore = e.cours;
   var paiement=(gel('ccy-paiement')||{}).value||'';
   var montant=parseInt((gel('ccy-montant')||{}).value||0)||0;
-  e.cours=sel.value; e.paiement=paiement; e.montant=montant;
+  var newCours=sel.value; e.cours=newCours; e.paiement=paiement; e.montant=montant;
   fermerContact();
   afficherToast('✓ '+e.prenom+' '+e.nom+' mis à jour');
   renderTab();
   if (!IS_DEMO) {
-    TEV.client.from('cours_yoga').update({cours: e.cours, paiement: paiement, montant: montant}).eq('id', id)
-    .then(function(){ chargerDonnees(); })
+    Promise.resolve(TEV.client.from('cours_yoga').update({cours: newCours, paiement: paiement, montant: montant}).eq('id', String(id)))
+    .then(function(res){
+      if (res && res.error) { afficherToast('⚠️ Erreur sauvegarde: ' + (res.error.message||res.error.code||'')); return; }
+      chargerDonnees();
+      fetch('/api/notify/yoga-eleve-modifie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+        body: JSON.stringify({ email: e.email, prenom: e.prenom, nom: e.nom,
+          coursBefore: coursBefore, cours: newCours, saison: e.saison || saisonActive(),
+          tel: e.tel || '', paiement: paiement, montant: montant })
+      }).catch(function(){});
+    })
     .catch(function(err){ afficherToast('⚠️ Erreur sauvegarde: ' + ((err&&err.message)||'')); });
   }
 }
@@ -11614,7 +11622,15 @@ function savePub(existingId) {
 function publierPub(id, btn) {
   btn.disabled=true;
   if(IS_DEMO){var p=adminData.publications&&adminData.publications.find(function(x){return x.id===id;});if(p){p.publiee=true;_broadcastAdminSync('newPublication',p);}renderTab();return;}
-  TEV.publierPublication(id).then(function(){chargerDonnees();}).catch(function(e){btn.disabled=false;});
+  TEV.publierPublication(id).then(function(){
+    chargerDonnees();
+    // Notif push élèves + admin
+    var p=(adminData.publications||[]).find(function(x){return String(x.id)===String(id);});
+    if(p){
+      var coursIds=p.cours||(p.donnees&&p.donnees.cours)||[];
+      fetch('/api/notify/publication-publiee',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},body:JSON.stringify({id:id,titre:p.titre||'',cours:coursIds,cat:p.cat||'actu'})}).catch(function(){});
+    }
+  }).catch(function(e){btn.disabled=false;});
 }
 function supprimerPub(id, btn) {
   btn.disabled=true;
@@ -11741,11 +11757,6 @@ function renderYogaEssai() {
         +' &nbsp;'+capBadgeYogaDate('hatha',date)
         +'</div>';
       hatha.forEach(function(e){ h += rowYoga(e); });
-      var toutPointe = rest === 0;
-      h += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
-        +(toutPointe?'<button class="btn btn-ok" data-action="env-yoga-j1" data-date="'+date+'">✉️ Emails J+1 Yoga</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tout le monde d\'abord.</span>')
-        +'<span id="yoga-j1s-'+date+'" style="font-size:11px;margin-left:8px;"></span>'
-        +'</div>';
     });
     h += '</div>';
   });
@@ -11971,6 +11982,12 @@ window.soumettreInscriptionDirecteYoga = function(force) {
     dbOp.then(function(res){
       if (res && res.error) { if(err){err.textContent='Erreur DB : '+(res.error.message||res.error.code||'');err.style.display='block';} return; }
       chargerDonnees();
+      fetch('/api/notify/yoga-inscription-validee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+        body: JSON.stringify({ email: email, prenom: prenom, nom: nom, tel: tel,
+          cours: cours, saison: sai, paiement: paie, montant: montant, isDirectAdmin: true })
+      }).catch(function(){});
     }).catch(function(){});
   }
   setTimeout(function(){ sousOngletYoga='eleves'; renderTab(); }, 1000);

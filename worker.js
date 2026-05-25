@@ -414,6 +414,18 @@ export default {
         return handleNotifyYogaInscriptionValidee(request, env);
       }
 
+      // POST /api/notify/yoga-eleve-modifie — admin modifie un élève yoga → email élève + admin (JWT admin)
+      if (pathname === '/api/notify/yoga-eleve-modifie' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyYogaEleveModifie(request, env);
+      }
+
+      // POST /api/notify/publication-publiee — push élèves + admin quand une publication est publiée (JWT admin)
+      if (pathname === '/api/notify/publication-publiee' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        return handleNotifyPublicationPubliee(request, env);
+      }
+
       // POST /api/cron/espace-eleve-activation — cron J+7 après I03 → email P1 (X-Cron-Secret)
       if (pathname === '/api/cron/espace-eleve-activation' && method === 'POST') {
         const cronSecret = request.headers.get('X-Cron-Secret');
@@ -1310,7 +1322,11 @@ async function handleCronEssaiYogaJ1(request, env) {
   const sai = mo >= 9 ? `${y}-${y+1}` : `${y-1}-${y}`;
   const yogaParams = params[`tev_params_yoga_${sai}`] || {};
   const hor = yogaParams.horaires || {};
-  const adresse = (yogaParams.adresse || {}).nom || 'Espace Sorano — Vincennes';
+  const yogaAdresse = yogaParams.adresse || {};
+  const lieuNomJ1 = yogaAdresse.nom || 'Espace Sorano — Vincennes';
+  const lieuRueJ1 = [yogaAdresse.rue, yogaAdresse.cp, yogaAdresse.ville].filter(Boolean).join(', ');
+  const lieuTranspJ1 = yogaAdresse.transport || yogaAdresse.metro || '';
+  const lieuGpsJ1 = yogaAdresse.gps || '';
   const lienAC = ((params['tev_liens_assoconnect'] || {})[sai] || {}).yoga || '';
 
   const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -1362,6 +1378,10 @@ async function handleCronEssaiYogaJ1(request, env) {
     (hor.yin && hor.hatha) ? `<strong style="color:#1b5e20;">Forfait yin + hatha</strong> — les deux cours` : '',
     (!hor.yin && !hor.hatha) ? 'Cours de yoga — voir les horaires en ligne' : '',
   ].filter(Boolean).join('<br/>');
+  const lieuBlockJ1 = lieuNomJ1 || lieuRueJ1 ? `<div style="padding:10px 0;border-top:1px solid #c8e6c9;margin-top:8px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:6px;">📍 Lieu</div>
+        <div style="font-size:14px;color:#333;line-height:1.7;">${lieuNomJ1 ? `<strong>${_esc(lieuNomJ1)}</strong>` : ''}${lieuRueJ1 ? `<br/><span style="font-size:12px;">${_esc(lieuRueJ1)}</span>` : ''}${lieuTranspJ1 ? ` · <span style="font-size:12px;color:#666;">${_esc(lieuTranspJ1)}</span>` : ''}${lieuGpsJ1 ? `<br/><a href="https://maps.google.com/?q=${encodeURIComponent(lieuGpsJ1)}" style="color:#2e7d32;font-size:12px;">🗺 Voir sur Google Maps</a>` : ''}</div>
+      </div>` : '';
   const rejoindreBox = `<div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">
     <div style="background:#2e7d32;padding:12px 18px;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Rejoindre les cours réguliers</div>
@@ -1372,6 +1392,7 @@ async function handleCronEssaiYogaJ1(request, env) {
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours disponibles</div>
         <div style="font-size:14px;color:#333;line-height:1.9;">${coursSchedule}</div>
       </div>
+      ${lieuBlockJ1}
     </div>
   </div>`;
   const tarifUn = tarYoga.yoga_forfait_1cours || 340;
@@ -1556,7 +1577,7 @@ async function sendBrevoNotification(apiKey, body) {
     </div>
     <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Pour toute question urgente, vous pouvez nous contacter directement :</p>
     <div style="text-align:center;margin:0 0 24px;">
-      <a href="tel:07 73 27 59 06" style="display:inline-block;margin:4px;background:#D4AF37;color:#111;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">📞 07 73 27 59 06</a>
+      <a href="tel:0773275906" style="display:inline-block;margin:4px;background:#D4AF37;color:#111;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">📞 07 73 27 59 06</a>
       <a href="mailto:tangoetvous@gmail.com" style="display:inline-block;margin:4px;background:#fff;border:2px solid #D4AF37;color:#111;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">✉️ tangoetvous@gmail.com</a>
     </div>
     <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À bientôt !<br/>
@@ -4898,7 +4919,8 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
   }
   const lieuContent = (lieuNom ? _esc(lieuNom) : 'voir paramètres')
     + (lieuRue ? '<br/><span style="font-size:12px;">' + _esc(lieuRue) + '</span>' : '')
-    + (lieuTransp ? ' · <span style="font-size:12px;color:#666;">' + _esc(lieuTransp) + '</span>' : '');
+    + (lieuTransp ? ' · <span style="font-size:12px;color:#666;">' + _esc(lieuTransp) + '</span>' : '')
+    + (yogaAdresse.gps ? '<br/><a href="https://maps.google.com/?q=' + encodeURIComponent(yogaAdresse.gps) + '" style="color:#2e7d32;font-size:12px;">🗺 Voir sur Google Maps</a>' : '');
   const tarifContent = gratuit
     ? '<strong style="color:#2e7d32;">Gratuit</strong> <span style="font-size:12px;color:#666;">(2 premiers cours de septembre)</span>'
     : (tarifEssai ? '<strong style="color:#1b5e20;">' + _esc(tarifEssai) + '</strong>' : '');
@@ -5592,54 +5614,99 @@ async function handleNotifyEssaiYogaModifie(request, env) {
 }
 
 // ================================================================
-// POST /api/notify/yoga-inscription-validee — YI1
-// Admin valide paiement yoga → inscrit
-// Body: { email, prenom, nom, cours, saison, horaires, adresse,
-//         paiement, montant, livretUrl? }
+// POST /api/notify/yoga-inscription-validee — YI1 + YI0 (admin)
+// Admin inscrit directement un élève yoga (inscription directe ou depuis essai)
+// Body: { email, prenom, nom, tel, cours, saison, paiement, montant, isDirectAdmin? }
 // ================================================================
 async function handleNotifyYogaInscriptionValidee(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
 
-  const adminYogaEmail = 'regardsepose@gmail.com';
-  const headerYoga     = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>`;
-  const footerYoga     = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
-  const signYoga       = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>`;
-  const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+  const { email, prenom, nom, tel, cours, saison, paiement, montant, isDirectAdmin } = body;
+  if (!email) return corsResponse({ ok: false }, 200, {}, request);
 
-  const { email, prenom, nom, cours, saison, horaires = {}, adresse = {}, paiement, montant, livretUrl } = body;
-  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
-  const prenomAff  = _esc(prenom || '');
+  const sai = saison || (() => {
+    const now = new Date(); const m = now.getMonth() + 1; const y = now.getFullYear();
+    return m >= 9 ? `${y}-${y+1}` : `${y-1}-${y}`;
+  })();
+
+  // Fetch yoga params from Supabase
+  let yogaParams = {};
+  try {
+    const pRes = await fetch(`${SUPABASE_URL}/rest/v1/parametres?select=valeur&cle=eq.tev_params_yoga_${sai}`, {
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }
+    });
+    if (pRes.ok) {
+      const pData = await pRes.json();
+      yogaParams = (pData[0] && pData[0].valeur) ? (typeof pData[0].valeur === 'string' ? JSON.parse(pData[0].valeur) : pData[0].valeur) : {};
+    }
+  } catch(e) { console.error('[yoga-insc-validee] fetch params', e); }
+
+  const yogaHoraires = yogaParams.horaires || {};
+  const yogaAdresse  = yogaParams.adresse  || {};
+  const livretData   = yogaParams.livret   || {};
+
   const coursLabel = cours === 'yin' ? 'Yin Yoga' : cours === 'hatha' ? 'Hatha Yoga' : 'Yin + Hatha Yoga';
   const isForfait  = cours === 'forfait';
+  const prenomAff  = _esc(prenom || '');
+  const nomAff     = _esc(nom || '');
 
-  // yoga-box sections helper
+  // Build horaire string
+  let horHtml = '';
+  if (isForfait) {
+    const parts = [];
+    if (yogaHoraires.yin) {
+      const d = yogaHoraires.yin; parts.push(_esc(`Yin Yoga : ${d.debut||''}–${d.fin||''}`));
+    }
+    if (yogaHoraires.hatha) {
+      const d = yogaHoraires.hatha; parts.push(_esc(`Hatha Yoga : ${d.debut||''}–${d.fin||''}`));
+    }
+    horHtml = parts.join('<br/>');
+  } else {
+    const d = yogaHoraires[cours] || {};
+    if (d.debut || d.fin) horHtml = _esc(`${d.debut||''}–${d.fin||''}`);
+  }
+
+  // Build lieu string
+  const lieuRue = [yogaAdresse.rue, yogaAdresse.cp, yogaAdresse.ville].filter(Boolean).join(', ');
+  const lieuTransp = yogaAdresse.transport || yogaAdresse.metro || '';
+  const lieuYI1 = [
+    yogaAdresse.nom ? `<strong>${_esc(yogaAdresse.nom)}</strong>` : '',
+    lieuRue ? `<span style="font-size:12px;">${_esc(lieuRue)}</span>` : '',
+    lieuTransp ? `<span style="font-size:12px;color:#666;">${_esc(lieuTransp)}</span>` : '',
+    yogaAdresse.gps ? `<a href="https://maps.google.com/?q=${encodeURIComponent(yogaAdresse.gps)}" style="color:#2e7d32;font-size:12px;">🗺 Voir sur Google Maps</a>` : '',
+  ].filter(Boolean).join('<br/>');
+
+  // Livret URL
+  const livretUrl = isForfait ? (livretData.url_hatha || livretData.url_yin || '') : (livretData['url_' + cours] || '');
+
+  // Paiement label
+  const PAI_LBL = { cb1x: 'CB 1×', cb3x: 'CB 3×', especes: 'Espèces', cheque: 'Chèque', virement1x: 'Virement 1×', virement3x: 'Virement 3×' };
+  const paiLabel = PAI_LBL[paiement] || paiement || '';
+
+  // Email templates
+  const headerYogaAdmin = `<div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription directe</div></div>`;
+  const headerYoga      = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>`;
+  const footerYoga      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
+  const signYoga        = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>`;
+  const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
   function ySecYI1(label, content, last) {
     return '<div style="padding:10px 0;' + (last ? '' : 'border-bottom:1px solid rgba(46,125,50,0.2);') + '">'
       + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">' + label + '</div>'
       + '<div style="font-size:14px;color:#333;line-height:1.9;">' + content + '</div>'
       + '</div>';
   }
-  let horYI1Html = '';
-  if (isForfait) {
-    const parts = [horaires.yin ? _esc(horaires.yin) : '', horaires.hatha ? _esc(horaires.hatha) : ''].filter(Boolean);
-    horYI1Html = parts.join('<br/>');
-  } else {
-    horYI1Html = _esc(horaires[cours] || '');
-  }
-  const lieuYI1 = [
-    adresse.nom ? `<strong>${_esc(adresse.nom)}</strong>` : '',
-    adresse.rue ? `<span style="font-size:12px;">${_esc(adresse.rue)}${adresse.cp ? ', ' + _esc(adresse.cp) : ''}${adresse.transport ? ' · ' + _esc(adresse.transport) : ''}</span>` : '',
-    adresse.gps ? `<a href="https://maps.google.com/?q=${encodeURIComponent(adresse.gps)}" style="color:#2e7d32;font-size:12px;">🗺 Voir sur Google Maps</a>` : '',
-  ].filter(Boolean).join('<br/>');
+
   const sectionsYI1 = [
     ySecYI1('Cours', `<strong>${_esc(coursLabel)}</strong>`, false),
-    horYI1Html ? ySecYI1('Horaire hebdomadaire', horYI1Html, !lieuYI1) : '',
+    horHtml ? ySecYI1('Horaire hebdomadaire', horHtml, !lieuYI1) : '',
     lieuYI1 ? ySecYI1('Lieu', lieuYI1, true) : '',
   ].filter(Boolean).join('');
+
   const yogaBox = `<div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">
     <div style="background:#2e7d32;padding:14px 18px;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre cours de yoga · Saison ${_esc(saison||'')}</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre cours de yoga · Saison ${_esc(sai)}</div>
       <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">🧘 ${_esc(coursLabel)}</div>
     </div>
     <div style="padding:16px 18px;">${sectionsYI1}</div>
@@ -5658,30 +5725,207 @@ async function handleNotifyYogaInscriptionValidee(request, env) {
       <li>Arrivez 5 minutes en avance pour l'installation</li>
     </ul>
   </div>`;
+
   const livretBtn = livretUrl ? `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
     <div style="font-size:12px;font-weight:700;color:#333;margin-bottom:8px;">📄 Livret d'information yoga</div>
     <p style="font-size:13px;color:#555;margin:0 0 12px;line-height:1.6;">Retrouvez dans ce livret toutes les informations pratiques sur votre cours.</p>
     <a href="${_esc(livretUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:10px 22px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Télécharger le livret →</a>
   </div>` : '';
 
-  const htmlEleve = wrap(`${headerYoga}
-    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue dans votre cours de yoga !</span></div>
-    <div style="padding:30px 28px;">
-      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">${prenomAff}</strong>,</p>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription est confirmée pour la saison ${_esc(saison||'')}. Nous sommes ravis de vous accueillir dans notre cours de yoga. Voici tout ce que vous devez savoir pour bien démarrer.</p>
-      ${yogaBox}
-      ${soranoBlock}
-      ${checklist}
-      ${livretBtn}
-      ${signYoga}
-    </div>${footerYoga}`, 'Bienvenue dans les cours de yoga reguliers - votre inscription est confirmee');
+  // ── Email YI1 élève
+  if (env.BREVO_API_KEY) {
+    const htmlEleve = wrap(`${headerYoga}
+      <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue dans votre cours de yoga !</span></div>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">${prenomAff}</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription est confirmée pour la saison ${_esc(sai)}. Nous sommes ravis de vous accueillir dans notre cours de yoga. Voici tout ce que vous devez savoir pour bien démarrer.</p>
+        ${yogaBox}
+        ${soranoBlock}
+        ${checklist}
+        ${livretBtn}
+        ${signYoga}
+      </div>${footerYoga}`, "Bienvenue dans les cours de yoga reguliers - votre inscription est confirmee pour la saison " + sai);
+    try {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }, to: [{ email: String(email) }], subject: "Bienvenue dans votre cours de yoga ! — Cours de yoga avec Florencia Garcia", htmlContent: htmlEleve }),
+      });
+      if (!res.ok) { const b = await res.text().catch(() => ''); console.error('[yoga-insc-validee] Brevo élève HTTP', res.status, b); }
+    } catch(err) { console.error('[yoga-insc-validee] Brevo élève error', err); }
+
+    // ── Email YI0 admin
+    const htmlAdmin = wrap(`${headerYogaAdmin}
+      <div style="padding:20px 24px;">
+        <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+          <div style="background:#D4AF37;padding:10px 16px;">
+            <div style="font-size:18px;font-weight:700;color:#111;">${prenomAff} ${nomAff}</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email)}${tel ? ' · ' + _esc(tel) : ''}</div>
+          </div>
+          <div style="background:#fffdf8;padding:14px 16px;">
+            <div style="font-size:15px;font-weight:700;color:#111;">🧘 ${_esc(coursLabel)}</div>
+            <div style="font-size:13px;color:#333;margin-top:4px;">Saison ${_esc(sai)}${paiLabel ? ' · ' + _esc(paiLabel) : ''}${montant ? ' · ' + montant + '€' : ''}</div>
+            <div style="font-size:12px;color:#666;margin-top:2px;">${horHtml ? horHtml.replace('<br/>', ' / ') : ''}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${tel ? `<a href="tel:${_esc(tel)}" style="display:inline-block;background:#2e7d32;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>` : ''}
+          <a href="mailto:${_esc(email)}" style="display:inline-block;background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a>
+          ${tel ? `<a href="sms:${_esc(tel)}" style="display:inline-block;background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>` : ''}
+        </div>
+        <p style="font-size:11px;color:#888;margin-top:16px;">Email YI0 — inscription directe admin · ${isDirectAdmin ? 'Formulaire admin' : 'Depuis essai yoga'}</p>
+      </div>`);
+    try {
+      const resA = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, to: [{ email: 'regardsepose@gmail.com' }], subject: `[Yoga] Inscription ${prenomAff} ${nomAff} — ${coursLabel} — ${sai}`, htmlContent: htmlAdmin }),
+      });
+      if (!resA.ok) { const b = await resA.text().catch(() => ''); console.error('[yoga-insc-validee] Brevo admin HTTP', resA.status, b); }
+    } catch(err) { console.error('[yoga-insc-validee] Brevo admin error', err); }
+  }
+
+  // ── Panel 🔔 admin
+  const notifMsg = `🧘 Inscription yoga — ${prenomAff} ${nomAff} · ${_esc(coursLabel)} · Saison ${_esc(sai)} · ✓ Inscrit·e · → Yoga → Élèves`;
   try {
-    await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminYogaEmail }, to: [{ email: String(email) }], subject: `Bienvenue dans votre cours de yoga ! — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
-    });
-  } catch(err) { console.error('[notify-yoga-inscription-validee] error', err); }
+    const resN = await _insertNotification('yoga_inscription', notifMsg, 'yoga');
+    if (!resN.ok) console.error('[yoga-insc-validee] insertNotification HTTP', resN.status, await resN.text().catch(() => ''));
+  } catch(e) { console.error('[yoga-insc-validee] insertNotification error', e); }
+
+  // ── Push OS admin
+  const _svcKeyYI = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  try {
+    const tokensA = await getFcmTokensAdmin(_svcKeyYI);
+    if (tokensA.length) await sendFcmPush(env, tokensA, { title: 'Cours de yoga — Admin', body: `🧘 Inscription yoga — ${prenom||''} ${nom||''} · ${coursLabel}` });
+  } catch(e) { console.error('[yoga-insc-validee] push admin error', e); }
+
+  // ── Push OS élève
+  try {
+    const tokensE = await getFcmTokensForEmail(email, _svcKeyYI);
+    if (tokensE.length) await sendFcmPush(env, tokensE, { title: 'Cours de yoga', body: `✓ Votre inscription en ${coursLabel} est confirmée pour ${sai}` });
+  } catch(e) { console.error('[yoga-insc-validee] push élève error', e); }
+
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/yoga-eleve-modifie — admin modifie un élève yoga
+// Body: { email, prenom, nom, coursBefore, cours, saison, tel, paiement, montant }
+// ================================================================
+async function handleNotifyYogaEleveModifie(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const { email, prenom, nom, coursBefore, cours, saison, paiement, montant } = body;
+  if (!email) return corsResponse({ ok: false }, 200, {}, request);
+
+  const sai = saison || (() => {
+    const now = new Date(); const m = now.getMonth() + 1; const y = now.getFullYear();
+    return m >= 9 ? `${y}-${y+1}` : `${y-1}-${y}`;
+  })();
+
+  const COURS_YOGA_LBL = { yin: 'Yin Yoga', hatha: 'Hatha Yoga', forfait: 'Yin + Hatha Yoga' };
+  const coursLabel    = COURS_YOGA_LBL[cours]      || cours      || '';
+  const coursAvant    = COURS_YOGA_LBL[coursBefore] || coursBefore || '';
+  const prenomAff     = _esc(prenom || '');
+  const nomAff        = _esc(nom || '');
+  const PAI_LBL = { cb1x: 'CB 1×', cb3x: 'CB 3×', especes: 'Espèces', cheque: 'Chèque', virement1x: 'Virement 1×', virement3x: 'Virement 3×' };
+  const paiLabel = PAI_LBL[paiement] || paiement || '';
+
+  const headerYoga = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>`;
+  const footerYoga = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>`;
+  const signYoga   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>`;
+  const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  // ── Email élève (bandeau bleu 📋 modification)
+  if (env.BREVO_API_KEY) {
+    const coursChangeHtml = coursBefore && coursBefore !== cours
+      ? `<div style="padding:12px 0;border-bottom:1px solid rgba(46,125,50,0.2);">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours</div>
+          <div style="font-size:14px;color:#333;">
+            <span style="text-decoration:line-through;color:#c62828;">${_esc(coursAvant)}</span>
+            &nbsp;→&nbsp;
+            <strong style="color:#2e7d32;">${_esc(coursLabel)}</strong>
+          </div>
+        </div>`
+      : `<div style="padding:12px 0;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours</div>
+          <div style="font-size:14px;color:#333;"><strong>${_esc(coursLabel)}</strong></div>
+        </div>`;
+
+    const paiHtml = paiLabel ? `<div style="padding:12px 0;border-top:1px solid rgba(46,125,50,0.2);">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Paiement</div>
+      <div style="font-size:14px;color:#333;">${_esc(paiLabel)}${montant ? ' · <strong>' + montant + '€</strong>' : ''}</div>
+    </div>` : '';
+
+    const yogaBoxMod = `<div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+      <div style="background:#2e7d32;padding:14px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre cours de yoga · Saison ${_esc(sai)}</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">🧘 ${_esc(coursLabel)}</div>
+      </div>
+      <div style="padding:16px 18px;">${coursChangeHtml}${paiHtml}</div>
+    </div>`;
+
+    const htmlEleve = wrap(`${headerYoga}
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre inscription a été mise à jour</span></div>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">${prenomAff}</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au cours de yoga a été modifiée. Voici le récapitulatif mis à jour.</p>
+        ${yogaBoxMod}
+        <p style="font-size:13px;color:#555;margin:0 0 24px;line-height:1.6;">Si vous avez la moindre question, n'hésitez pas à nous contacter.</p>
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="mailto:regardsepose@gmail.com" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;text-decoration:none;">Nous contacter →</a>
+        </div>
+        ${signYoga}
+      </div>${footerYoga}`, "Votre inscription au yoga a ete mise a jour - " + coursLabel + " saison " + sai);
+    try {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }, to: [{ email: String(email) }], subject: "Votre inscription au yoga a été modifiée — Cours de yoga avec Florencia Garcia", htmlContent: htmlEleve }),
+      });
+      if (!res.ok) { const b = await res.text().catch(() => ''); console.error('[yoga-eleve-modifie] Brevo élève HTTP', res.status, b); }
+    } catch(err) { console.error('[yoga-eleve-modifie] Brevo élève error', err); }
+
+    // ── Email admin
+    const htmlAdmin = wrap(`<div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Modification élève yoga</div></div>
+      <div style="padding:20px 24px;">
+        <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+          <div style="background:#D4AF37;padding:10px 16px;">
+            <div style="font-size:18px;font-weight:700;color:#111;">${prenomAff} ${nomAff}</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email)}</div>
+          </div>
+          <div style="background:#fffdf8;padding:14px 16px;">
+            ${coursBefore && coursBefore !== cours ? `<div style="font-size:13px;margin-bottom:6px;"><span style="text-decoration:line-through;color:#c62828;">${_esc(coursAvant)}</span> → <strong style="color:#2e7d32;">${_esc(coursLabel)}</strong></div>` : `<div style="font-size:15px;font-weight:700;color:#111;">🧘 ${_esc(coursLabel)}</div>`}
+            <div style="font-size:12px;color:#555;margin-top:4px;">Saison ${_esc(sai)}${paiLabel ? ' · ' + _esc(paiLabel) : ''}${montant ? ' · ' + montant + '€' : ''}</div>
+          </div>
+        </div>
+        <a href="mailto:${_esc(email)}" style="display:inline-block;background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a>
+      </div>`);
+    try {
+      const resA = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, to: [{ email: 'regardsepose@gmail.com' }], subject: `[Yoga] Modification — ${prenomAff} ${nomAff} · ${coursLabel}`, htmlContent: htmlAdmin }),
+      });
+      if (!resA.ok) { const b = await resA.text().catch(() => ''); console.error('[yoga-eleve-modifie] Brevo admin HTTP', resA.status, b); }
+    } catch(err) { console.error('[yoga-eleve-modifie] Brevo admin error', err); }
+  }
+
+  // ── Panel 🔔 admin
+  const notifMsg = `🧘 Modification yoga — ${prenomAff} ${nomAff}${coursBefore && coursBefore !== cours ? ' · ' + _esc(coursAvant) + ' → ' + _esc(coursLabel) : ' · ' + _esc(coursLabel)} · → Yoga → Élèves`;
+  try {
+    const resN = await _insertNotification('yoga_modification', notifMsg, 'yoga');
+    if (!resN.ok) console.error('[yoga-eleve-modifie] insertNotification HTTP', resN.status, await resN.text().catch(() => ''));
+  } catch(e) { console.error('[yoga-eleve-modifie] insertNotification error', e); }
+
+  // ── Push OS élève
+  const _svcKeyYM = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  try {
+    const tokensE = await getFcmTokensForEmail(email, _svcKeyYM);
+    if (tokensE.length) await sendFcmPush(env, tokensE, { title: 'Cours de yoga', body: `📋 Votre inscription au yoga a été modifiée — ${coursLabel}` });
+  } catch(e) { console.error('[yoga-eleve-modifie] push élève error', e); }
+
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
@@ -6671,9 +6915,9 @@ async function handleNotifyInscriptionStage(request, env) {
       ${s0BoxInscritDate}
       ${s0BoxPartDate}
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
-        <a href="tel:${_esc(tel||'')}" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        ${tel ? `<a href="tel:${_esc((tel||'').replace(/\s/g,''))}" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>` : ''}
         <a href="mailto:${_esc(email||'')}" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
-        <a href="sms:${_esc(tel||'')}" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        ${tel ? `<a href="sms:${_esc((tel||'').replace(/\s/g,''))}" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>` : ''}
         <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
       </div>
     </div>${footer}`);
@@ -7256,9 +7500,9 @@ async function handleNotifyCoursParticulier(request, env) {
         </div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <a href="tel:${_esc(tel||'')}" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        ${tel ? `<a href="tel:${_esc((tel||'').replace(/\s/g,''))}" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>` : ''}
         <a href="mailto:${_esc(email||'')}" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
-        <a href="sms:${_esc(tel||'')}" style="background:#388e3c;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        ${tel ? `<a href="sms:${_esc((tel||'').replace(/\s/g,''))}" style="background:#388e3c;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>` : ''}
         <a href="https://app.tangoetvous.fr/admin.html#cours-particuliers" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
       </div>
     </div>${footer}`);
@@ -7344,6 +7588,121 @@ async function handleNotifyMilongaRsvp(request, env) {
   } catch(e) { console.error('[milonga-rsvp] push error', e); }
 
   return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/publication-publiee — push élèves des groupes concernés + admin
+// JWT admin requis — appelé depuis publierPub() dans admin.html
+// ================================================================
+async function handleNotifyPublicationPubliee(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const { titre, cours, cat } = body;
+  if (!titre) return jsonError(400, 'titre manquant');
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const now = new Date();
+  const mo = now.getUTCMonth() + 1;
+  const yr = now.getUTCFullYear();
+  const sai = mo >= 9 ? `${yr}-${yr + 1}` : `${yr - 1}-${yr}`;
+
+  // Mapper les groupes de cours → requêtes Supabase
+  const coursArr = Array.isArray(cours) && cours.length ? cours : [];
+  const emailSet = new Set();
+
+  const groupQueries = [];
+  const tangoGroups = {
+    'paris-deb':      { ville: 'paris',     niveau: 'debutant' },
+    'paris-int':      { ville: 'paris',     niveau: 'intermediaire' },
+    'vincennes-deb':  { ville: 'vincennes', niveau: 'debutant' },
+    'vincennes-int':  { ville: 'vincennes', niveau: 'intermediaire' },
+  };
+  const yogaGroups = {
+    'yin-yoga':   ['yin', 'forfait'],
+    'hatha-yoga': ['hatha', 'forfait'],
+  };
+
+  // Fetch tango students
+  for (const grp of coursArr) {
+    if (tangoGroups[grp]) {
+      groupQueries.push((async () => {
+        const { ville, niveau } = tangoGroups[grp];
+        try {
+          const r = await fetch(
+            `${SUPABASE_URL}/rest/v1/inscriptions_cours?select=email&ville=eq.${ville}&niveau=eq.${niveau}&statut=eq.inscrit&saison=eq.${encodeURIComponent(sai)}`,
+            { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+          );
+          if (r.ok) {
+            const rows = await r.json();
+            if (Array.isArray(rows)) rows.forEach(row => row.email && emailSet.add(String(row.email)));
+          }
+        } catch(e) { console.error('[publication-publiee] fetch tango', grp, e); }
+      })());
+    }
+    if (yogaGroups[grp]) {
+      groupQueries.push((async () => {
+        const coursIn = yogaGroups[grp].map(c => `"${c}"`).join(',');
+        try {
+          const r = await fetch(
+            `${SUPABASE_URL}/rest/v1/cours_yoga?select=email&cours=in.(${coursIn})&statut=neq.supprim%C3%A9&saison=eq.${encodeURIComponent(sai)}`,
+            { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+          );
+          if (r.ok) {
+            const rows = await r.json();
+            if (Array.isArray(rows)) rows.forEach(row => row.email && emailSet.add(String(row.email)));
+          }
+        } catch(e) { console.error('[publication-publiee] fetch yoga', grp, e); }
+      })());
+    }
+  }
+
+  await Promise.all(groupQueries);
+
+  // Libellé du groupe pour le push
+  const grpLabels = {
+    'paris-deb': 'Paris Débutants', 'paris-int': 'Paris Intermédiaires',
+    'vincennes-deb': 'Vincennes Débutants', 'vincennes-int': 'Vincennes Intermédiaires',
+    'yin-yoga': 'Yin Yoga', 'hatha-yoga': 'Hatha Yoga',
+  };
+  const grpAff = coursArr.length
+    ? coursArr.map(g => grpLabels[g] || g).join(', ')
+    : 'tous les élèves';
+
+  const pushTitle = 'Tango & Vous';
+  const pushBody = `📰 ${titre}`;
+  const catLabel = cat === 'milonga' ? 'milonga' : cat === 'stage' ? 'stage' : 'publication';
+
+  // Push aux élèves concernés
+  const emails = [...emailSet];
+  let pushSent = 0;
+  for (const email of emails) {
+    try {
+      const tokens = await getFcmTokensForEmail(email, svcKey);
+      if (tokens.length) {
+        await sendFcmPush(env, tokens, { title: pushTitle, body: pushBody });
+        pushSent++;
+      }
+    } catch(e) { console.error('[publication-publiee] push eleve', email, e); }
+  }
+
+  // Push admin
+  try {
+    const tokensA = await getFcmTokensAdmin(svcKey);
+    if (tokensA.length) await sendFcmPush(env, tokensA, {
+      title: 'Tango & Vous — Admin',
+      body: `📰 Publication envoyée : ${titre} · ${grpAff} (${pushSent} élève${pushSent > 1 ? 's' : ''} notifié${pushSent > 1 ? 's' : ''})`,
+    });
+  } catch(e) { console.error('[publication-publiee] push admin', e); }
+
+  // Panel 🔔 admin
+  const notifMsg = `📰 Publication publiée — ${titre} · ${grpAff} · ${pushSent} push envoyé${pushSent > 1 ? 's' : ''} · → Publications`;
+  try {
+    const resN = await _insertNotification('publication', notifMsg, 'publications');
+    if (!resN.ok) console.error('[publication-publiee] insertNotification HTTP', resN.status, await resN.text().catch(() => ''));
+  } catch(e) { console.error('[publication-publiee] insertNotification error', e); }
+
+  return corsResponse({ ok: true, pushed: pushSent, emails: emails.length }, 200, {}, request);
 }
 
 // ================================================================
