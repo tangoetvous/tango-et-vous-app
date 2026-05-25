@@ -2967,9 +2967,9 @@
       try {
         const serverPubs = await TEV.getPublications();
         // tevGetPublications() aplatit déjà p.donnees → les champs sont au niveau racine
+        // Spreader p en entier pour conserver autoGenStage, autoGenMilonga, milongaId, stageDate…
         if (serverPubs.length) pubs = serverPubs.map(p => ({
-          id: p.id, titre: p.titre, contenu: p.contenu,
-          publiee: p.publiee,
+          ...p,
           dateProgrammee: p.dateProgrammee || p.created_at,
           datesProgrammees: p.datesProgrammees || [],
           cat: p.cat || '', extrait: p.extrait || '',
