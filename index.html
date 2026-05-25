@@ -268,11 +268,20 @@
     try {
       const data = await TEV.getEleve(email);
       if (data.error === 'not_found') {
-        $('notfound-icon').textContent = '🔍';
-        $('notfound-title').textContent = 'Compte introuvable';
-        $('notfound-desc').textContent = 'Aucun élève enregistré avec l\'adresse';
-        $('notfound-email').textContent = email || '';
-        showScreen('screen-notfound'); return;
+        // Bypass pour les emails admin — accès espace élève en mode test (publications, etc.)
+        const _adminEmails = ['tangoetvous@gmail.com','jeremybraitbart@gmail.com','garciabraitbart@gmail.com','jeremy@tangoetvous.com'];
+        if (_adminEmails.includes((email||'').toLowerCase())) {
+          data.eleve = { id: null, nom: 'Admin', prenom: '', niveau: '', ville: '', email: email, tel: '', statut: 'Actif', photo_url: null };
+          data.carte = { coursUtilises: 0, coursRestants: 0, dateAchat: null, dateExpiration: null, statut: null, paye: true, type: 'forfait' };
+          data.presences = [];
+          delete data.error;
+        } else {
+          $('notfound-icon').textContent = '🔍';
+          $('notfound-title').textContent = 'Compte introuvable';
+          $('notfound-desc').textContent = 'Aucun élève enregistré avec l\'adresse';
+          $('notfound-email').textContent = email || '';
+          showScreen('screen-notfound'); return;
+        }
       }
       if (data.error) {
         $('notfound-icon').textContent = '⏳';
