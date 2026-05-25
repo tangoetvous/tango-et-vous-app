@@ -1,5 +1,54 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Formulaires publics dans Wix iframe — règle `.insert().select('id')` interdite
+
+### Symptôme
+Le formulaire `cours-essai.html` (et tout formulaire public utilisant Supabase anon) **fonctionne depuis l'appli directement** mais renvoie une erreur `42501` (insufficient_privilege) quand il est soumis **depuis un iframe Wix** (`www.tangoetvous.com`).
+
+### Cause racine
+Quand supabase-js exécute `.insert(rows).select('id')`, il envoie l'en-tête HTTP `Prefer: return=representation` → PostgREST enveloppe l'INSERT dans une requête SELECT pour retourner les lignes insérées → **le SELECT déclenche les policies RLS SELECT** de la table → si la policy SELECT exige `is_admin() OR email = auth.email()`, elle retourne `false` pour les connexions anon → `42501`.
+
+**Pourquoi ça marche hors Wix** : dans l'appli ou dans l'admin, l'utilisateur est authentifié (JWT admin ou magic link élève) → `auth.email()` = l'email de la session → la policy est satisfaite.
+
+**Pourquoi ça échoue dans Wix** : Wix isole les iframes (storage partitioning Safari/Chrome) → supabase-js dans l'iframe n'a pas le JWT de session → connexion en tant qu'anon → `auth.email()` = null → policy SELECT échoue.
+
+### Règle permanente — jamais `.insert().select()` sur les formulaires publics anon
+
+```javascript
+// ❌ Interdit sur toute table avec SELECT RLS restrictive (is_admin() ou auth.email())
+const { data, error } = await TEV.client.from('inscriptions_essai')
+  .insert(rows).select('id');
+
+// ✅ Correct — INSERT sans RETURNING
+const { error } = await TEV.client.from('inscriptions_essai').insert(rows);
+if (error) throw error;
+// L'ID inséré est récupéré côté worker via service_role si nécessaire
+```
+
+### Si l'ID est nécessaire après l'INSERT (ex: pour l'email de confirmation)
+
+Dans le worker, utiliser `SUPABASE_SERVICE_KEY` (ou fallback sur `SUPABASE_ANON` pour les tables accessibles à anon) pour retrouver la ligne par filtre unique (`email + date + niveau`) plutôt que par `id` :
+
+```javascript
+// Dans le worker — récupère l'ID après l'INSERT anon (sans RETURNING)
+const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+const findRes = await fetch(`${SUPABASE_URL}/rest/v1/inscriptions_essai?email=eq.${encodeURIComponent(email)}&date_essai=eq.${dateEssai}&niveau=eq.${niveau}&select=id&order=created_at.desc&limit=1`, {
+  headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` }
+});
+const [found] = await findRes.json();
+const inscId = found ? found.id : null;
+```
+
+### Tables concernées
+Toutes les tables avec une policy SELECT `USING (is_admin() OR email = auth.email())` :
+- `inscriptions_essai` ✅ corrigé dans `cours-essai.html`
+- `inscriptions_cours`, `eleves`, `inscriptions_stages` — même règle à appliquer si INSERT+select est ajouté
+
+### Fix appliqué le 2026-05-25
+Dans `cours-essai.html` : `.insert(rowsToInsert).select('id')` → `.insert(rowsToInsert)` (sans `.select()`). L'`inscId` passé au worker est `null` ; le worker utilise un fallback par `email+date+niveau` pour retrouver l'ID si nécessaire pour les emails de confirmation.
+
+---
+
 ## Supabase SQL Editor — quirk notation pointée PL/pgSQL
 
 Le SQL Editor Supabase transforme automatiquement toute notation `v_record.champ` en `<v_record.champ>` (crochets angle) dans les fonctions PL/pgSQL, ce qui génère une `SyntaxError 42601`.

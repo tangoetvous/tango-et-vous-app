@@ -1342,11 +1342,13 @@ async function handleCronEssaiYogaJ1(request, env) {
   }
   function getHoraire(cours) {
     if (cours === 'yin' || cours === 'forfait') {
-      const h = hor.yin || {};
-      return h.debut && h.fin ? `${h.debut}–${h.fin}` : '';
+      const debut = typeof hor.yin === 'string' ? hor.yin : '';
+      const fin = hor.yin_fin || '';
+      return debut && fin ? `${debut}–${fin}` : debut || '';
     }
-    const h = hor.hatha || {};
-    return h.debut && h.fin ? `${h.debut}–${h.fin}` : '';
+    const debut = typeof hor.hatha === 'string' ? hor.hatha : '';
+    const fin = hor.hatha_fin || '';
+    return debut && fin ? `${debut}–${fin}` : debut || '';
   }
 
   const adminEmail = 'regardsepose@gmail.com';
@@ -1370,8 +1372,8 @@ async function handleCronEssaiYogaJ1(request, env) {
 
   // Yoga-box "Rejoindre les cours réguliers" (Y-J1a) — calculé une fois avant la boucle
   const tarYoga = (yogaParams.tarifs || {});
-  const horYin = hor.yin ? _esc((hor.yin.jour ? hor.yin.jour + ' · ' : '') + (hor.yin.debut ? hor.yin.debut + (hor.yin.fin ? '–' + hor.yin.fin : '') : '')) : '';
-  const horHatha = hor.hatha ? _esc((hor.hatha.jour ? hor.hatha.jour + ' · ' : '') + (hor.hatha.debut ? hor.hatha.debut + (hor.hatha.fin ? '–' + hor.hatha.fin : '') : '')) : '';
+  const horYin = hor.yin ? _esc(hor.yin + (hor.yin_fin ? '–' + hor.yin_fin : '')) : '';
+  const horHatha = hor.hatha ? _esc(hor.hatha + (hor.hatha_fin ? '–' + hor.hatha_fin : '')) : '';
   const coursSchedule = [
     hor.yin ? `<strong style="color:#1b5e20;">Yin yoga</strong>${horYin ? ' — ' + horYin : ''}` : '',
     hor.hatha ? `<strong style="color:#1b5e20;">Hatha yoga</strong>${horHatha ? ' — ' + horHatha : ''}` : '',
@@ -4828,8 +4830,10 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
   const yogaHoraires = yogaParams.horaires || {};
   const yogaTarifs   = yogaParams.tarifs   || {};
   function getYogaHoraire(c) {
-    const h = yogaHoraires[c === 'hatha' ? 'hatha' : 'yin'] || yogaHoraires.yin || {};
-    return h.debut && h.fin ? (h.debut + '–' + h.fin) : (h.debut || '');
+    const key = c === 'hatha' ? 'hatha' : 'yin';
+    const debut = typeof yogaHoraires[key] === 'string' ? yogaHoraires[key] : '';
+    const fin = yogaHoraires[key + '_fin'] || '';
+    return debut && fin ? (debut + '–' + fin) : debut || '';
   }
 
   const dateAff     = fmtDate(dateIso);
@@ -5653,20 +5657,21 @@ async function handleNotifyYogaInscriptionValidee(request, env) {
   const prenomAff  = _esc(prenom || '');
   const nomAff     = _esc(nom || '');
 
-  // Build horaire string
+  // Build horaire string (flat keys: hor.yin="10h30", hor.yin_fin="11h30")
   let horHtml = '';
   if (isForfait) {
     const parts = [];
     if (yogaHoraires.yin) {
-      const d = yogaHoraires.yin; parts.push(_esc(`Yin Yoga : ${d.debut||''}–${d.fin||''}`));
+      parts.push(_esc(`Yin Yoga : ${yogaHoraires.yin}–${yogaHoraires.yin_fin||''}`));
     }
     if (yogaHoraires.hatha) {
-      const d = yogaHoraires.hatha; parts.push(_esc(`Hatha Yoga : ${d.debut||''}–${d.fin||''}`));
+      parts.push(_esc(`Hatha Yoga : ${yogaHoraires.hatha}–${yogaHoraires.hatha_fin||''}`));
     }
     horHtml = parts.join('<br/>');
   } else {
-    const d = yogaHoraires[cours] || {};
-    if (d.debut || d.fin) horHtml = _esc(`${d.debut||''}–${d.fin||''}`);
+    const debut = typeof yogaHoraires[cours] === 'string' ? yogaHoraires[cours] : '';
+    const fin   = yogaHoraires[cours + '_fin'] || '';
+    if (debut || fin) horHtml = _esc(`${debut}–${fin}`);
   }
 
   // Build lieu string
