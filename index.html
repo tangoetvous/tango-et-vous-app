@@ -1856,7 +1856,7 @@
     const prochainCours = coursArr.find(d => d >= todayStr) || null;
     const _saiEndYear = parseInt((function(){ var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); })().split('-')[1]);
     const _saiEndLimit = _saiEndYear + '-09-01';
-    const prochainStage = STAGES_DATA.find(s => s.date >= todayStr) || null;
+    const prochainStage = STAGES_DATA.filter(s => s.date >= todayStr).sort((a,b) => a.date < b.date ? -1 : 1)[0] || null;
     // Prochaine milonga : objet avec nom + horaire si MILONGAS_OBJ dispo, sinon date brute
     const _nextMilEvt = MILONGAS_OBJ
       ? MILONGAS_OBJ.flatMap(m => (m.dates||[]).map(d => ({
