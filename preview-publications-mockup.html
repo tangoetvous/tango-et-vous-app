@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Mockup — Publications espace élève</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #1a1a1a;
+    color: #fff;
+  }
+  .demo-header {
+    text-align: center; padding: 30px 20px 10px;
+    border-bottom: 1px solid #333;
+  }
+  .demo-header h1 {
+    font-size: 14px; letter-spacing: 4px; margin: 0 0 8px;
+    color: #D4AF37; font-weight: 300;
+  }
+  .demo-header p { font-size: 12px; color: #888; margin: 0; max-width: 600px; margin: 0 auto; line-height: 1.6; }
+  .demo-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    max-width: 920px; margin: 30px auto; padding: 0 20px;
+  }
+  @media (max-width: 800px) {
+    .demo-grid { grid-template-columns: 1fr; }
+  }
+  .demo-col-title {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: #888; margin: 0 0 12px; text-align: center;
+  }
+  .phone-frame {
+    background: #fdf6ec; border-radius: 24px; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,.6);
+    max-width: 420px; margin: 0 auto;
+  }
+  .phone-content { padding: 0; }
+
+  /* ============================================
+     ACTUEL — rendu plain-text
+     ============================================ */
+  .old-image { width: 100%; height: 200px; object-fit: cover; display: block; }
+  .old-close {
+    position: absolute; top: 10px; right: 14px;
+    background: rgba(0,0,0,.45); border: none; color: #fff;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-size: 20px; display: flex; align-items: center; justify-content: center;
+  }
+  .old-inner { padding: 20px 18px 24px; position: relative; }
+  .old-cat {
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+    color: #b8860b; font-weight: 700; margin-bottom: 8px;
+  }
+  .old-titre { font-size: 20px; font-weight: 700; color: #1a1208; line-height: 1.35; margin-bottom: 6px; }
+  .old-date { font-size: 11px; color: #9a7f5a; margin-bottom: 16px; }
+  .old-body {
+    font-size: 17px; color: #000; line-height: 1.75;
+    white-space: pre-wrap; font-weight: 600;
+  }
+  .old-btn {
+    display: block; width: 100%; text-align: center;
+    background: #D4AF37; color: #1a1208; font-weight: 700; font-size: 15px;
+    padding: 13px 20px; border-radius: 8px; border: none;
+    margin-top: 20px;
+  }
+
+  /* ============================================
+     NOUVEAU — rendu structuré
+     ============================================ */
+  .new-hero { position: relative; }
+  .new-hero img { width: 100%; height: 220px; object-fit: cover; display: block; }
+  .new-hero-overlay {
+    position: absolute; inset: auto 0 0 0;
+    background: linear-gradient(to top, rgba(26,18,8,.92) 0%, rgba(26,18,8,.4) 60%, transparent 100%);
+    padding: 40px 20px 18px;
+  }
+  .new-cat-badge {
+    display: inline-block;
+    background: #D4AF37; color: #1a1208;
+    font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; font-weight: 700;
+    padding: 5px 12px; border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .new-cat-badge.milonga { background: #e87b2a; color: #1a0a02; }
+  .new-titre-hero { font-size: 22px; font-weight: 700; color: #fff; line-height: 1.25; margin: 0 0 4px; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
+  .new-date-hero { font-size: 12px; color: rgba(255,255,255,.85); font-weight: 600; letter-spacing: .5px; }
+
+  .new-inner { padding: 22px 20px 24px; }
+  .new-intro {
+    font-size: 15px; color: #2a1f10; line-height: 1.7;
+    margin: 0 0 22px; font-weight: 500;
+  }
+
+  .new-section { margin-bottom: 22px; }
+  .new-section-title {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: #8B6914; font-weight: 700;
+    padding-bottom: 8px; margin-bottom: 12px;
+    border-bottom: 1px solid #e8d9b8;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .new-section-title.milonga { color: #c4651e; border-bottom-color: #f0d4b8; }
+
+  /* Programme stages */
+  .new-slot {
+    display: flex; gap: 12px; align-items: stretch;
+    margin-bottom: 8px; padding: 0;
+    background: #fff; border-radius: 10px;
+    border: 1px solid #ead9b3; overflow: hidden;
+  }
+  .new-slot-time {
+    background: #D4AF37; color: #1a1208;
+    padding: 12px 14px; font-weight: 700; font-size: 13px;
+    display: flex; align-items: center; min-width: 92px;
+    text-align: center; justify-content: center;
+    letter-spacing: .5px;
+  }
+  .new-slot.technique .new-slot-time { background: #8B6914; color: #fff; }
+  .new-slot-theme {
+    padding: 12px 14px; font-size: 14px; color: #1a1208; font-weight: 600;
+    flex: 1; display: flex; align-items: center; line-height: 1.35;
+  }
+  .new-slot-label {
+    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #888; font-weight: 700;
+    margin-right: 8px;
+  }
+
+  /* Lieu */
+  .new-lieu {
+    background: #fff; border-radius: 10px; border: 1px solid #ead9b3;
+    padding: 14px 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .new-lieu-icon { font-size: 22px; line-height: 1; flex-shrink: 0; }
+  .new-lieu-body { flex: 1; }
+  .new-lieu-nom { font-size: 14px; font-weight: 700; color: #1a1208; margin-bottom: 2px; }
+  .new-lieu-rue { font-size: 13px; color: #4a3a20; line-height: 1.5; }
+  .new-lieu-transport { font-size: 12px; color: #8a7050; margin-top: 4px; line-height: 1.4; }
+
+  /* Tarifs */
+  .new-tarifs {
+    background: #fff8e7; border: 1px solid #D4AF37; border-radius: 10px;
+    padding: 6px 0;
+  }
+  .new-tarif-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; font-size: 14px;
+    border-bottom: 1px solid #f0e0b8;
+  }
+  .new-tarif-row:last-child { border-bottom: none; }
+  .new-tarif-lbl { color: #4a3a20; font-weight: 600; letter-spacing: .3px; }
+  .new-tarif-prix { color: #1a1208; font-weight: 700; font-size: 15px; }
+  .new-tarif-prix .euro { color: #B8962E; margin-left: 2px; }
+
+  /* Parité info */
+  .new-parite {
+    background: #f5ede0; border-left: 3px solid #D4AF37;
+    padding: 12px 14px; border-radius: 6px;
+    font-size: 13px; color: #4a3a20; line-height: 1.6;
+    margin-bottom: 22px; font-style: italic;
+  }
+
+  /* Démonstration milonga */
+  .new-demo {
+    background: #fff5eb; border: 1px solid #e87b2a;
+    border-radius: 10px; padding: 14px 16px;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .new-demo-icon { font-size: 24px; flex-shrink: 0; }
+  .new-demo-body { flex: 1; }
+  .new-demo-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #c4651e; font-weight: 700; margin-bottom: 2px; }
+  .new-demo-text { font-size: 14px; color: #1a0a02; font-weight: 600; }
+
+  /* Conseils milonga */
+  .new-conseils {
+    background: #f5f0e8; border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px; color: #4a3a20; line-height: 1.65;
+    margin-bottom: 0;
+  }
+  .new-conseils-label {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: #8a7050; font-weight: 700; margin-bottom: 8px;
+  }
+
+  /* Bouton */
+  .new-btn {
+    display: block; width: 100%; text-align: center;
+    background: #D4AF37; color: #1a1208; font-weight: 700; font-size: 15px;
+    padding: 14px 20px; border-radius: 10px; border: none;
+    letter-spacing: .5px; cursor: pointer;
+    margin-top: 6px;
+    box-shadow: 0 3px 12px rgba(212,175,55,.3);
+  }
+  .new-btn.milonga {
+    background: #e87b2a; color: #1a0a02;
+    box-shadow: 0 3px 12px rgba(232,123,42,.3);
+  }
+
+  /* Close button */
+  .new-close {
+    position: absolute; top: 12px; right: 16px; z-index: 2;
+    background: rgba(0,0,0,.55); border: none; color: #fff;
+    width: 36px; height: 36px; border-radius: 50%;
+    font-size: 20px; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-header">
+  <h1>MOCKUP — PUBLICATIONS</h1>
+  <p>Comparaison Actuel / Proposition pour les publications programmées (stages + milongas) dans l'espace élève. Le rendu sur ton téléphone sera le même que ces vignettes.</p>
+</div>
+
+<!-- ============================================
+     STAGE
+     ============================================ -->
+<div style="max-width: 920px; margin: 30px auto 0; padding: 0 20px;">
+  <h2 style="text-align:center;font-size:16px;color:#D4AF37;letter-spacing:2px;font-weight:300;margin-bottom:18px;">PUBLICATION DE STAGE</h2>
+</div>
+<div class="demo-grid">
+
+  <div>
+    <div class="demo-col-title">— ACTUEL —</div>
+    <div class="phone-frame">
+      <button class="old-close">×</button>
+      <img class="old-image" src="https://res.cloudinary.com/dnggqa2kw/image/upload/v1747000000/tango-stage-sample.jpg" onerror="this.src='https://images.unsplash.com/photo-1545959570-a94084071b5d?w=600&h=400&fit=crop';this.onerror=null;">
+      <div class="old-inner">
+        <div class="old-cat">STAGE</div>
+        <div class="old-titre">STAGE DU SAMEDI 11 AVRIL 14H-18H</div>
+        <div class="old-date">11 avril 2026</div>
+        <div class="old-body">Bonjour à tous,
+
+Notre Stage du mois de Avril aura lieu le SAMEDI 11 AVRIL de 14H à 18H
+
+14H-15H TECHNIQUE LEADER & FOLLOWER
+15H-16H30 BALANCEO
+16H30-18H ENROULES
+
+Vous pouvez vous inscrire seul.e ou avec un.e partenaire, nous nous chargeons de garantir la parité guideur.se.s/guidé.e.s.
+
+Le Lieu :
+MVAC 20
+18 rue Ramus 75020 Paris
+M° Gambetta (3)
+
+Tarifs :
+TECHNIQUE > 20€
+1 STAGE > 25€
+2 STAGES > 45€
+2 STAGES + TECHNIQUE > 60€
+3 STAGES > 65€</div>
+        <button class="old-btn">S'inscrire →</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="demo-col-title">— PROPOSITION —</div>
+    <div class="phone-frame" style="position:relative;">
+      <button class="new-close">×</button>
+      <div class="new-hero">
+        <img src="https://images.unsplash.com/photo-1545959570-a94084071b5d?w=600&h=400&fit=crop">
+        <div class="new-hero-overlay">
+          <span class="new-cat-badge">Stage</span>
+          <div class="new-titre-hero">Stage du Samedi 11 avril</div>
+          <div class="new-date-hero">14H — 18H · MVAC 20, Paris 20<sup>e</sup></div>
+        </div>
+      </div>
+      <div class="new-inner">
+        <p class="new-intro">Bonjour à tous, notre stage du mois d'avril aura lieu le <strong>samedi 11 avril de 14H à 18H</strong>.</p>
+
+        <div class="new-section">
+          <div class="new-section-title">Programme</div>
+          <div class="new-slot technique">
+            <div class="new-slot-time">14H — 15H</div>
+            <div class="new-slot-theme"><span class="new-slot-label">Tech.</span>Technique Leader &amp; Follower</div>
+          </div>
+          <div class="new-slot">
+            <div class="new-slot-time">15H — 16H30</div>
+            <div class="new-slot-theme">Balanceo</div>
+          </div>
+          <div class="new-slot">
+            <div class="new-slot-time">16H30 — 18H</div>
+            <div class="new-slot-theme">Enroulés</div>
+          </div>
+        </div>
+
+        <div class="new-parite">Vous pouvez vous inscrire seul·e ou avec un·e partenaire, nous nous chargeons de garantir la parité guideur·se·s / guidé·e·s.</div>
+
+        <div class="new-section">
+          <div class="new-section-title">📍 Lieu</div>
+          <div class="new-lieu">
+            <div class="new-lieu-icon">🏛</div>
+            <div class="new-lieu-body">
+              <div class="new-lieu-nom">MVAC 20</div>
+              <div class="new-lieu-rue">18 rue Ramus, 75020 Paris</div>
+              <div class="new-lieu-transport">M° Gambetta (ligne 3)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="new-section">
+          <div class="new-section-title">💶 Tarifs</div>
+          <div class="new-tarifs">
+            <div class="new-tarif-row">
+              <div class="new-tarif-lbl">Technique seule</div>
+              <div class="new-tarif-prix">20<span class="euro">€</span></div>
+            </div>
+            <div class="new-tarif-row">
+              <div class="new-tarif-lbl">1 stage</div>
+              <div class="new-tarif-prix">25<span class="euro">€</span></div>
+            </div>
+            <div class="new-tarif-row">
+              <div class="new-tarif-lbl">2 stages</div>
+              <div class="new-tarif-prix">45<span class="euro">€</span></div>
+            </div>
+            <div class="new-tarif-row">
+              <div class="new-tarif-lbl">2 stages + technique</div>
+              <div class="new-tarif-prix">60<span class="euro">€</span></div>
+            </div>
+            <div class="new-tarif-row">
+              <div class="new-tarif-lbl">3 stages</div>
+              <div class="new-tarif-prix">65<span class="euro">€</span></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="new-btn">S'inscrire au stage →</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================
+     MILONGA
+     ============================================ -->
+<div style="max-width: 920px; margin: 60px auto 0; padding: 0 20px;">
+  <h2 style="text-align:center;font-size:16px;color:#e87b2a;letter-spacing:2px;font-weight:300;margin-bottom:18px;">PUBLICATION DE MILONGA</h2>
+</div>
+<div class="demo-grid">
+
+  <div>
+    <div class="demo-col-title">— ACTUEL —</div>
+    <div class="phone-frame">
+      <button class="old-close">×</button>
+      <img class="old-image" src="https://images.unsplash.com/photo-1547347298-4074fc3086f0?w=600&h=400&fit=crop">
+      <div class="old-inner">
+        <div class="old-cat">MILONGA</div>
+        <div class="old-titre">Milonga La Dolce Vita - Dimanche 13 Septembre 17H30-23H30</div>
+        <div class="old-date">13 septembre 2026</div>
+        <div class="old-body">Bonjour à tous,
+
+La prochaine Milonga LA DOLCE VITA aura lieu le:
+Dimanche 13 septembre de 17h30 à 23h30
+
+Démonstration de Florencia Garcia &amp; Jérémy Braitbart
+
+Nous espérons vous croiser sur la piste !
+
+L'adresse :
+Centre Re-Corps - 8 rue de la Folie Méricourt, M° Saint-Ambroise (9)
+
+Tarif :
+10€ / 5€ adhérents
+
+Pour les personnes du niveau débutant ça peut être l'occasion de découvrir un bal de Tango. On vous conseille de venir à plusieurs, c'est moins intimidant au début, et de venir tôt pour profiter d'une piste où il y aura encore de la place !</div>
+        <button class="old-btn">Je pense venir →</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="demo-col-title">— PROPOSITION —</div>
+    <div class="phone-frame" style="position:relative;">
+      <button class="new-close">×</button>
+      <div class="new-hero">
+        <img src="https://images.unsplash.com/photo-1547347298-4074fc3086f0?w=600&h=400&fit=crop">
+        <div class="new-hero-overlay">
+          <span class="new-cat-badge milonga">Milonga</span>
+          <div class="new-titre-hero">Milonga La Dolce Vita</div>
+          <div class="new-date-hero">Dimanche 13 septembre · 17H30 — 23H30</div>
+        </div>
+      </div>
+      <div class="new-inner">
+        <p class="new-intro">Bonjour à tous, la prochaine Milonga <strong>La Dolce Vita</strong> aura lieu le <strong>dimanche 13 septembre de 17h30 à 23h30</strong>. Nous espérons vous croiser sur la piste !</p>
+
+        <div class="new-section">
+          <div class="new-demo">
+            <div class="new-demo-icon">✨</div>
+            <div class="new-demo-body">
+              <div class="new-demo-label">Démonstration</div>
+              <div class="new-demo-text">Florencia Garcia &amp; Jérémy Braitbart</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="new-section">
+          <div class="new-section-title milonga">📍 Adresse</div>
+          <div class="new-lieu">
+            <div class="new-lieu-icon">🏛</div>
+            <div class="new-lieu-body">
+              <div class="new-lieu-nom">Centre Re-Corps</div>
+              <div class="new-lieu-rue">8 rue de la Folie Méricourt</div>
+              <div class="new-lieu-transport">M° Saint-Ambroise (ligne 9)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="new-section">
+          <div class="new-section-title milonga">💶 Tarif</div>
+          <div class="new-tarifs" style="border-color:#e87b2a;background:#fff5eb;">
+            <div class="new-tarif-row" style="border:none;justify-content:center;padding:14px;">
+              <div style="font-size:15px;color:#1a0a02;font-weight:700;">10€ <span style="color:#8a7050;font-weight:500;">/ 5€ adhérents</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="new-conseils">
+          <div class="new-conseils-label">💡 Pour les débutants</div>
+          Ça peut être l'occasion de découvrir un bal de Tango. On vous conseille de venir à plusieurs, c'est moins intimidant au début, et de venir tôt pour profiter d'une piste où il y aura encore de la place ! Quand la piste se remplit ensuite vous pouvez en profiter pour observer comment fonctionne la milonga.
+        </div>
+
+        <button class="new-btn milonga" style="margin-top:18px;">Je pense venir →</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center;padding:40px 20px 60px;color:#666;font-size:12px;line-height:1.7;">
+  Le mockup utilise des images d'exemple Unsplash. Sur l'appli réelle, ce sont les images que tu uploades dans Paramètres → Stages / Milongas qui s'affichent.<br>
+  Toutes les données affichées (horaires, thèmes, adresse, tarifs, démonstration) viennent automatiquement de tes Paramètres comme aujourd'hui.
+</div>
+
+</body>
+</html>
