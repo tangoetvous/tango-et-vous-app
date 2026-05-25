@@ -3865,10 +3865,10 @@ async function handleNotifyInscriptionEssai(request, env) {
   const jaBox = showJA ? `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 18px;margin:0 0 20px;"><p style="font-size:13px;color:#5d4037;margin:0;">🏘 <strong>À noter :</strong> Tango &amp; Vous sera présent à la journée des associations de Vincennes le <strong>${_esc(fmtDate(jaDate))}</strong>. N'hésitez pas à venir nous rencontrer sur le stand de l'Espace Sorano !</p></div>` : '';
 
   function getHoraire() {
-    const h = horaires[niveau] || horaires.debutant || {};
-    if (h.jour && h.debut && h.fin) return `${h.jour} ${h.debut}–${h.fin}`;
-    if (h.debut && h.fin) return `${h.debut}–${h.fin}`;
-    return '';
+    const nk = niveau === 'intermediaire' ? 'int' : 'deb';
+    const debut = typeof horaires[nk] === 'string' ? horaires[nk] : '';
+    const fin   = horaires[nk + '_fin'] || '';
+    return debut && fin ? `${debut}–${fin}` : debut;
   }
 
   // Fallback service_role pour bypass RLS SELECT (anon ne peut pas lire ses propres lignes)
@@ -4531,11 +4531,11 @@ async function handleNotifyInscriptionCours(request, env) {
   }
   function getHoraire(ville, niveau) {
     const h = (ville === 'vincennes' ? vincParams : parisParams).horaires || {};
-    const nk = niveau === 'intermediaire' ? 'intermediaire' : 'debutant';
-    const entry = h[nk] || h['debutant'] || {};
-    const debut = entry.debut || '', fin = entry.fin || '', jour = entry.jour || '';
+    const nk = niveau === 'intermediaire' ? 'int' : 'deb';
+    const debut = typeof h[nk] === 'string' ? h[nk] : '';
+    const fin   = h[nk + '_fin'] || '';
     if (!debut) return '';
-    return (jour ? jour + ' \xb7 ' : '') + debut + (fin ? '–' + fin : '');
+    return debut + (fin ? '–' + fin : '');
   }
   function getFirstDate(ville) {
     const today = new Date().toISOString().slice(0, 10);
@@ -5097,12 +5097,11 @@ async function handleCronEssaiRappelJ7(request, env) {
     const annulUrl    = `https://app.tangoetvous.fr/api/essai/annuler?id=${e.id}&token=${tk}`;
     const reporterUrl = `https://app.tangoetvous.fr/api/essai/reporter?id=${e.id}&token=${tk}`;
 
-    // Horaire (essayer niveau d'abord, fallback sur ville)
-    const horVille = (horaires[e.ville === 'vincennes' ? 'vincennes' : 'paris'] || {});
-    const horNiveau = (horaires[e.niveau === 'debutant' ? 'debutant' : 'intermediaire'] || {});
-    const horDeb = horNiveau.debut || horVille.debut || '';
-    const horFin = horNiveau.fin   || horVille.fin   || '';
-    const horLabel = (horDeb && horFin) ? `${horDeb} – ${horFin}` : (horDeb || '');
+    // Horaire depuis les clés plates deb/deb_fin ou int/int_fin
+    const horNkE4 = e.niveau === 'intermediaire' ? 'int' : 'deb';
+    const horDeb = typeof horaires[horNkE4] === 'string' ? horaires[horNkE4] : '';
+    const horFin = horaires[horNkE4 + '_fin'] || '';
+    const horLabel = horDeb && horFin ? `${horDeb}–${horFin}` : (horDeb || '');
 
     // Adresse complète
     const lieuHtml = adresse.nom ? (() => {
@@ -5230,7 +5229,8 @@ async function handleNotifyEssaiAnnuleAdmin(request, env) {
   } catch {}
 
   const horaires  = villeParams.horaires || {};
-  const horaire   = _esc(horaires[niveau] || '');
+  const _horNkAnn = niveau === 'intermediaire' ? 'int' : 'deb';
+  const horaire   = _esc(typeof horaires[_horNkAnn] === 'string' ? (horaires[_horNkAnn] + (horaires[_horNkAnn + '_fin'] ? '–' + horaires[_horNkAnn + '_fin'] : '')) : '');
   const adresse   = villeParams.adresse  || {};
   const adrNom    = _esc(adresse.nom       || '');
   const adrRue    = _esc(adresse.rue       || '');
@@ -5338,7 +5338,8 @@ async function handleNotifyEssaiValide(request, env) {
   } catch {}
 
   const horaires  = villeParams.horaires || {};
-  const horaire   = _esc(horaires[niveau] || '');
+  const _horNkE15 = niveau === 'intermediaire' ? 'int' : 'deb';
+  const horaire   = _esc(typeof horaires[_horNkE15] === 'string' ? (horaires[_horNkE15] + (horaires[_horNkE15 + '_fin'] ? '–' + horaires[_horNkE15 + '_fin'] : '')) : '');
   const adresse   = villeParams.adresse  || {};
   const adrNom    = _esc(adresse.nom       || '');
   const adrRue    = _esc(adresse.rue       || '');
@@ -6387,7 +6388,8 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
   const coursLabel  = `${villeLabel} — ${niveauLabel}`;
   const roleColor   = role === 'guideur' ? '#1565c0' : '#c2185b';
   const roleLabel   = role === 'guideur' ? 'Guideur·se' : 'Guidé·e';
-  const horaire     = _esc(horaires[niveau] || '');
+  const _horNkI02  = niveau === 'intermediaire' ? 'int' : 'deb';
+  const horaire     = _esc(typeof horaires[_horNkI02] === 'string' ? (horaires[_horNkI02] + (horaires[_horNkI02 + '_fin'] ? '–' + horaires[_horNkI02 + '_fin'] : '')) : '');
   const nomLieu     = _esc(adresse.nom || '');
   const rueLieu     = _esc(adresse.rue || '');
   const transport   = _esc(adresse.transport || '');
@@ -6516,7 +6518,8 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
     const niveauLabel = niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
     const villeLabel  = ville === 'paris' ? 'Paris' : 'Vincennes';
     const horaires    = vp.horaires || {};
-    const horaire     = _esc(horaires[niveau] || '');
+    const _horNkI03  = niveau === 'intermediaire' ? 'int' : 'deb';
+    const horaire     = _esc(typeof horaires[_horNkI03] === 'string' ? (horaires[_horNkI03] + (horaires[_horNkI03 + '_fin'] ? '–' + horaires[_horNkI03 + '_fin'] : '')) : '');
     const adresse     = vp.adresse || {};
     const adrNom      = _esc(adresse.nom || '');
     const adrRue      = _esc(adresse.rue || '');

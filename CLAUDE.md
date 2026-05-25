@@ -1,5 +1,66 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Horaires tango dans les emails — clés plates, pas d'objets imbriqués
+
+### Symptôme
+Les emails tango (E1, E2, E5, E6, E4, E15, E-admin-cancel, I01, I02, I03) n'affichaient pas l'horaire du cours dans la cours-box, alors que l'horaire est visible dans les previews.
+
+### Cause racine
+Dans `admin.html`, `sauverHorairesType` sauvegarde les horaires tango comme des **chaînes plates** dans Supabase :
+```javascript
+data.deb     = '20h30';  // heure de début débutant
+data.deb_fin = '22h';    // heure de fin débutant
+data.int     = '21h';
+data.int_fin = '22h30';
+_saveParam('paris', sai, 'horaires', data);
+// → tev_params_paris_<sai>.horaires = { deb:'20h30', deb_fin:'22h', int:'21h', int_fin:'22h30' }
+// → même structure pour 'vincennes'
+```
+
+Mais plusieurs handlers dans `worker.js` lisaient ces données comme des **objets imbriqués** avec les clés `'debutant'`/`'intermediaire'` :
+```javascript
+// ❌ Lecture incorrecte
+const h = horaires[niveau] || horaires.debutant || {};  // niveau='debutant' → undefined
+const debut = h.debut || '';  // toujours ''
+```
+
+Résultat : `horaire = ''` → la ligne "🕐 Heure" n'apparaissait pas dans la cours-box.
+
+### Règle permanente — lire les horaires tango comme chaînes plates
+
+```javascript
+// ✅ Pattern correct dans worker.js
+const horaires = villeParams.horaires || {};
+const nk = niveau === 'intermediaire' ? 'int' : 'deb';
+const debut = typeof horaires[nk] === 'string' ? horaires[nk] : '';
+const fin   = horaires[nk + '_fin'] || '';
+const horaire = debut && fin ? `${debut}–${fin}` : debut;
+```
+
+### Référence — les handlers ICS étaient déjà corrects
+
+Les handlers `handlePublicICS` / `handleEleveICS` (worker.js) lisaient déjà `hor.deb`, `hor.deb_fin`, `hor.int`, `hor.int_fin` comme chaînes plates — c'est le pattern à reproduire dans les handlers emails.
+
+### Handlers corrigés (2026-05-25)
+
+| Handler | Email(s) |
+|---------|---------|
+| `handleNotifyInscriptionEssai` — `getHoraire()` | E0/E1/E2/E5/E6 |
+| `handleNotifyInscriptionCours` — `getHoraire(ville, niveau)` | I01 |
+| `handleCronEssaiRappelJ7` | E4 |
+| `handleNotifyEssaiAnnuleAdmin` | E-admin-cancel |
+| `handleNotifyEssaiValide` | E15 |
+| `handleNotifyInscriptionCoursValidee` | I02 |
+| `handleNotifyInscriptionCoursPaye` — dans `coursBoxes.map` | I03 |
+
+### Règle de validation — toute future modification de handler tango
+
+1. Ne **jamais** écrire `horaires['debutant']` ou `horaires['intermediaire']` — ces clés n'existent pas
+2. Toujours utiliser `const nk = niveau === 'intermediaire' ? 'int' : 'deb'` puis `horaires[nk]` et `horaires[nk + '_fin']`
+3. Pour la fonction `getHoraire(ville, niveau)` qui prend les params de ville en argument : `const h = villeParams.horaires || {}; const nk = niveau === 'intermediaire' ? 'int' : 'deb'; ...`
+
+---
+
 ## Livrets yoga dans les emails — bouton(s) selon le cours (yin/hatha/forfait)
 
 ### Symptôme
