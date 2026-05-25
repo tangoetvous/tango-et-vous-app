@@ -3073,6 +3073,186 @@
       </div>`).join('');
   }
 
+  // ── Parsing & rendu enrichi des publications auto-générées ───────────────────
+  function _parseStagePub(contenu) {
+    const result = { intro: '', slots: [], parite: '', lieu: null, tarifs: [] };
+    if (!contenu) return result;
+    // Tarifs section
+    const tarIdx = contenu.search(/\nTarifs\s*:\s*\n/);
+    let body = contenu;
+    if (tarIdx >= 0) {
+      body = contenu.slice(0, tarIdx);
+      const tarBlock = contenu.slice(tarIdx).replace(/^\nTarifs\s*:\s*\n/, '');
+      tarBlock.split('\n').forEach(line => {
+        const t = line.trim();
+        if (!t) return;
+        const m = t.match(/^(.+?)\s*>\s*(.+)$/);
+        if (m) result.tarifs.push({ lbl: m[1].trim(), prix: m[2].trim() });
+      });
+    }
+    // Lieu section
+    const lieuIdx = body.search(/\nLe Lieu\s*:\s*\n/);
+    let before = body;
+    if (lieuIdx >= 0) {
+      before = body.slice(0, lieuIdx);
+      const lieuBlock = body.slice(lieuIdx).replace(/^\nLe Lieu\s*:\s*\n/, '');
+      const lines = lieuBlock.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length) result.lieu = { nom: lines[0]||'', rue: lines[1]||'', transport: lines[2]||'' };
+    }
+    // Slots
+    const slotRegex = /^(\d+H\d*)-(\d+H\d*)\s+(.+)$/;
+    const lines = before.split('\n');
+    const introLines = [], pariteLines = [];
+    let phase = 0;
+    for (const line of lines) {
+      const t = line.trim();
+      const m = t.match(slotRegex);
+      if (m) { phase = 1; result.slots.push({ deb: m[1], fin: m[2], theme: m[3].trim() }); }
+      else {
+        if (phase === 1 && t) phase = 2;
+        if (phase === 2) { if (t) pariteLines.push(t); }
+        else if (phase === 0) { if (t) introLines.push(t); }
+      }
+    }
+    result.intro = introLines.join(' ').trim();
+    result.parite = pariteLines.join(' ').trim();
+    return result;
+  }
+
+  function _parseMilongaPub(contenu) {
+    const result = { intro: '', demo: '', adresse: null, tarif: '', conseils: '' };
+    if (!contenu) return result;
+    // Conseils (last paragraph)
+    const conseilsMatch = contenu.match(/Pour les personnes du niveau d[ée]butant[\s\S]+$/);
+    let body = contenu;
+    if (conseilsMatch) {
+      result.conseils = conseilsMatch[0].trim();
+      body = contenu.slice(0, conseilsMatch.index).trim();
+    }
+    // Tarif section
+    const tarMatch = body.match(/\nTarifs?\s*:\s*\n([\s\S]+?)$/);
+    if (tarMatch) { result.tarif = tarMatch[1].trim(); body = body.slice(0, tarMatch.index); }
+    // Adresse (curly or straight quote)
+    const adrMatch = body.match(/\nL['’]adresse\s*:\s*\n([\s\S]+?)$/);
+    if (adrMatch) {
+      const txt = adrMatch[1].trim();
+      const dashIdx = txt.indexOf(' - ');
+      if (dashIdx > 0) {
+        const nom = txt.slice(0, dashIdx).trim();
+        const rest = txt.slice(dashIdx + 3).trim();
+        const tIdx = rest.search(/,\s*M°|,\s*RER/);
+        let rue, transport;
+        if (tIdx >= 0) { rue = rest.slice(0, tIdx).trim(); transport = rest.slice(tIdx).replace(/^,\s*/, '').trim(); }
+        else { rue = rest; transport = ''; }
+        result.adresse = { nom, rue, transport };
+      } else {
+        result.adresse = { nom: txt, rue: '', transport: '' };
+      }
+      body = body.slice(0, adrMatch.index);
+    }
+    // Démonstration
+    const demoMatch = body.match(/\nDémonstration de ([^\n]+)\n/);
+    if (demoMatch) { result.demo = demoMatch[1].trim(); body = body.replace(demoMatch[0], '\n'); }
+    // Remove "Nous espérons..."
+    body = body.replace(/\nNous espérons vous croiser sur la piste !\s*\n?/, '\n').trim();
+    result.intro = body;
+    return result;
+  }
+
+  function _renderRichStage(p, parsed) {
+    const _esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    let titreFmt = (p.titre || '').replace(/\s+\d+H\d*-\d+H\d*$/i, '');
+    titreFmt = titreFmt.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    const horMatch = (p.titre||'').match(/(\d+H\d*)-(\d+H\d*)$/i);
+    const horaire = horMatch ? horMatch[1].toUpperCase() + ' — ' + horMatch[2].toUpperCase() : '';
+    const lieuShort = parsed.lieu && parsed.lieu.nom ? parsed.lieu.nom : '';
+    const sub = [horaire, lieuShort].filter(Boolean).join(' · ');
+    const hasImage = !!p.image;
+    let h = `<div class="pub-rich-hero${hasImage ? '' : ' no-image'}">`;
+    if (hasImage) h += `<img src="${_esc(p.image)}" alt="${_esc(p.titre||'')}">`;
+    h += `<div class="pub-rich-hero-overlay">`
+      + `<span class="pub-rich-badge">Stage</span>`
+      + `<div class="pub-rich-titre">${_esc(titreFmt)}</div>`
+      + (sub ? `<div class="pub-rich-date">${_esc(sub)}</div>` : '')
+      + `</div></div><div class="pub-rich-content">`;
+    if (parsed.intro) h += `<p class="pub-rich-intro">${_esc(parsed.intro)}</p>`;
+    if (parsed.slots.length) {
+      h += `<div class="pub-rich-section"><div class="pub-rich-section-title">Programme</div>`;
+      parsed.slots.forEach(s => {
+        h += `<div class="pub-rich-slot">`
+          + `<div class="pub-rich-slot-time">${_esc(s.deb)} — ${_esc(s.fin)}</div>`
+          + `<div class="pub-rich-slot-theme">${_esc(s.theme)}</div>`
+          + `</div>`;
+      });
+      h += `</div>`;
+    }
+    if (parsed.parite) h += `<div class="pub-rich-parite">${_esc(parsed.parite)}</div>`;
+    if (parsed.lieu && (parsed.lieu.nom || parsed.lieu.rue)) {
+      h += `<div class="pub-rich-section"><div class="pub-rich-section-title">📍 Lieu</div>`
+        + `<div class="pub-rich-lieu"><div class="pub-rich-lieu-icon">🏛</div><div class="pub-rich-lieu-body">`;
+      if (parsed.lieu.nom) h += `<div class="pub-rich-lieu-nom">${_esc(parsed.lieu.nom)}</div>`;
+      if (parsed.lieu.rue) h += `<div class="pub-rich-lieu-rue">${_esc(parsed.lieu.rue)}</div>`;
+      if (parsed.lieu.transport) h += `<div class="pub-rich-lieu-transport">${_esc(parsed.lieu.transport)}</div>`;
+      h += `</div></div></div>`;
+    }
+    if (parsed.tarifs.length) {
+      h += `<div class="pub-rich-section"><div class="pub-rich-section-title">💶 Tarifs</div><div class="pub-rich-tarifs">`;
+      parsed.tarifs.forEach(t => {
+        const prix = _esc(t.prix).replace(/€/g, '<span class="euro">€</span>');
+        h += `<div class="pub-rich-tarif-row"><div class="pub-rich-tarif-lbl">${_esc(t.lbl)}</div><div class="pub-rich-tarif-prix">${prix}</div></div>`;
+      });
+      h += `</div></div>`;
+    }
+    h += `</div>`;
+    return h;
+  }
+
+  function _renderRichMilonga(p, parsed) {
+    const _esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    let titreFmt = (p.titre || '').replace(/\s+-?\s*\d+H\d*[-—]\d+H\d*$/i, '').replace(/\s+-\s*[A-Za-zÀ-ÿ]+\s+\d+\s+[A-Za-zÀ-ÿ]+$/, '');
+    const sub = (p.extrait || '').trim();
+    const hasImage = !!p.image;
+    let h = `<div class="pub-rich-hero${hasImage ? '' : ' no-image'}">`;
+    if (hasImage) h += `<img src="${_esc(p.image)}" alt="${_esc(p.titre||'')}">`;
+    h += `<div class="pub-rich-hero-overlay">`
+      + `<span class="pub-rich-badge milonga">Milonga</span>`
+      + `<div class="pub-rich-titre">${_esc(titreFmt)}</div>`
+      + (sub ? `<div class="pub-rich-date">${_esc(sub)}</div>` : '')
+      + `</div></div><div class="pub-rich-content">`;
+    if (parsed.intro) h += `<p class="pub-rich-intro">${_esc(parsed.intro)}</p>`;
+    if (parsed.demo) {
+      h += `<div class="pub-rich-section"><div class="pub-rich-demo">`
+        + `<div class="pub-rich-demo-icon">✨</div>`
+        + `<div class="pub-rich-demo-body">`
+        + `<div class="pub-rich-demo-label">Démonstration</div>`
+        + `<div class="pub-rich-demo-text">${_esc(parsed.demo)}</div>`
+        + `</div></div></div>`;
+    }
+    if (parsed.adresse && (parsed.adresse.nom || parsed.adresse.rue)) {
+      h += `<div class="pub-rich-section"><div class="pub-rich-section-title milonga">📍 Adresse</div>`
+        + `<div class="pub-rich-lieu"><div class="pub-rich-lieu-icon">🏛</div><div class="pub-rich-lieu-body">`;
+      if (parsed.adresse.nom) h += `<div class="pub-rich-lieu-nom">${_esc(parsed.adresse.nom)}</div>`;
+      if (parsed.adresse.rue) h += `<div class="pub-rich-lieu-rue">${_esc(parsed.adresse.rue)}</div>`;
+      if (parsed.adresse.transport) h += `<div class="pub-rich-lieu-transport">${_esc(parsed.adresse.transport)}</div>`;
+      h += `</div></div></div>`;
+    }
+    if (parsed.tarif) {
+      h += `<div class="pub-rich-section"><div class="pub-rich-section-title milonga">💶 Tarif</div>`
+        + `<div class="pub-rich-tarifs milonga"><div class="pub-rich-tarif-row" style="border:none;justify-content:center;padding:14px;">`
+        + `<div style="font-size:15px;color:#1a0a02;font-weight:700;">${_esc(parsed.tarif)}</div>`
+        + `</div></div></div>`;
+    }
+    if (parsed.conseils) {
+      const c = parsed.conseils.replace(/^Pour les personnes du niveau d[ée]butant\s*/, '');
+      h += `<div class="pub-rich-section" style="margin-bottom:6px;"><div class="pub-rich-conseils">`
+        + `<div class="pub-rich-conseils-label">💡 Pour les débutants</div>`
+        + _esc(c)
+        + `</div></div>`;
+    }
+    h += `</div>`;
+    return h;
+  }
+
   window.openPub = function(id) {
     const p = (window._pubs || []).find(x => x.id === id);
     if (!p) return;
@@ -3081,7 +3261,24 @@
     $('pub-modal-date').textContent  = formatDate(p.dateProgrammee || p.date || '');
     const isStageEarly = p.cat === 'stage' || p.autoGenStage === true || (p.donnees && p.donnees.cat === 'stage');
     const isMilongaEarly = p.cat === 'milonga' || p.autoGenMilonga === true || (p.donnees && p.donnees.cat === 'milonga');
+    const autoGenStage = p.autoGenStage === true || (p.donnees && p.donnees.autoGenStage === true);
+    const autoGenMilonga = p.autoGenMilonga === true || (p.donnees && p.donnees.autoGenMilonga === true);
     const contenuFull = p.contenu || p.extrait || '';
+    // Try rich rendering for auto-generated stage/milonga publications
+    let usedRich = false;
+    const richContainer = $('pub-modal-rich');
+    if (richContainer) {
+      richContainer.innerHTML = '';
+      try {
+        if (autoGenStage && isStageEarly) {
+          const parsed = _parseStagePub(contenuFull);
+          if (parsed.slots.length > 0) { richContainer.innerHTML = _renderRichStage(p, parsed); usedRich = true; }
+        } else if (autoGenMilonga && isMilongaEarly) {
+          const parsed = _parseMilongaPub(contenuFull);
+          if (parsed.adresse || parsed.intro) { richContainer.innerHTML = _renderRichMilonga(p, parsed); usedRich = true; }
+        }
+      } catch(e) { usedRich = false; richContainer.innerHTML = ''; }
+    }
     const splitMrk = isStageEarly ? '\nTarifs :\n' : isMilongaEarly ? '\nTarif :\n' : null;
     let bodyPart1 = contenuFull, bodyPart2 = '';
     if (splitMrk) { const si = contenuFull.indexOf(splitMrk); if (si >= 0) { bodyPart1 = contenuFull.slice(0, si); bodyPart2 = contenuFull.slice(si + 1); } }
@@ -3090,6 +3287,7 @@
     if (tarifDiv) tarifDiv.textContent = bodyPart2;
     const media = $('pub-modal-media');
     const modal = $('pub-modal');
+    modal.classList.toggle('rich-mode', usedRich);
     if (media) {
       media.className = 'pub-modal-media';
       media.innerHTML = '';
@@ -4334,6 +4532,58 @@ a{color:var(--gold);text-decoration:none;}
 .pub-card{cursor:pointer;transition:border-color .2s;}
 .pub-card:hover{border-color:var(--gold);}
 
+/* publication modal — rich mode (auto-gen stages/milongas) */
+.pub-modal.rich-mode .pub-modal-inner{padding:0;}
+.pub-modal.rich-mode #pub-modal-cat,
+.pub-modal.rich-mode #pub-modal-titre,
+.pub-modal.rich-mode #pub-modal-date,
+.pub-modal.rich-mode #pub-modal-body,
+.pub-modal.rich-mode #pub-modal-tarif{display:none !important;}
+.pub-modal.rich-mode #pub-modal-media{display:none;}
+.pub-modal.rich-mode #pub-modal-rich{display:block;}
+.pub-modal.rich-mode #pub-modal-btn{padding:0 20px 24px;margin-top:6px;}
+.pub-modal.rich-mode .pub-modal-inscr-btn{font-size:15px;padding:14px 20px;letter-spacing:.5px;box-shadow:0 3px 12px rgba(212,175,55,.3);border-radius:10px;}
+.pub-modal.rich-mode .pub-modal-inscr-btn.milonga-btn{box-shadow:0 3px 12px rgba(232,123,42,.3);}
+#pub-modal-rich{display:none;}
+.pub-rich-hero{position:relative;}
+.pub-rich-hero img{width:100%;height:220px;object-fit:cover;display:block;}
+.pub-rich-hero-overlay{position:absolute;inset:auto 0 0 0;background:linear-gradient(to top,rgba(26,18,8,.92) 0%,rgba(26,18,8,.4) 60%,transparent 100%);padding:40px 20px 18px;}
+.pub-rich-hero.no-image .pub-rich-hero-overlay{position:static;background:linear-gradient(135deg,#1a1208 0%,#2a1f10 100%);padding:36px 20px 22px;}
+.pub-rich-badge{display:inline-block;background:#D4AF37;color:#1a1208;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;font-weight:700;padding:5px 12px;border-radius:20px;margin-bottom:10px;}
+.pub-rich-badge.milonga{background:#e87b2a;color:#1a0a02;}
+.pub-rich-titre{font-size:22px;font-weight:700;color:#fff;line-height:1.25;margin:0 0 4px;text-shadow:0 2px 6px rgba(0,0,0,.5);}
+.pub-rich-hero.no-image .pub-rich-titre{text-shadow:none;}
+.pub-rich-date{font-size:12px;color:rgba(255,255,255,.85);font-weight:600;letter-spacing:.5px;}
+.pub-rich-content{padding:22px 20px 24px;}
+.pub-rich-intro{font-size:15px;color:#2a1f10;line-height:1.7;margin:0 0 22px;font-weight:500;}
+.pub-rich-section{margin-bottom:22px;}
+.pub-rich-section-title{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#8B6914;font-weight:700;padding-bottom:8px;margin-bottom:12px;border-bottom:1px solid #e8d9b8;display:flex;align-items:center;gap:8px;}
+.pub-rich-section-title.milonga{color:#c4651e;border-bottom-color:#f0d4b8;}
+.pub-rich-slot{display:flex;gap:0;align-items:stretch;margin-bottom:8px;background:#fff;border-radius:10px;border:1px solid #ead9b3;overflow:hidden;}
+.pub-rich-slot-time{background:#D4AF37;color:#1a1208;padding:12px 14px;font-weight:700;font-size:13px;display:flex;align-items:center;min-width:92px;text-align:center;justify-content:center;letter-spacing:.5px;}
+.pub-rich-slot-theme{padding:12px 14px;font-size:14px;color:#1a1208;font-weight:600;flex:1;display:flex;align-items:center;line-height:1.35;}
+.pub-rich-parite{background:#f5ede0;border-left:3px solid #D4AF37;padding:12px 14px;border-radius:6px;font-size:13px;color:#4a3a20;line-height:1.6;margin-bottom:22px;font-style:italic;}
+.pub-rich-lieu{background:#fff;border-radius:10px;border:1px solid #ead9b3;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;}
+.pub-rich-lieu-icon{font-size:22px;line-height:1;flex-shrink:0;}
+.pub-rich-lieu-body{flex:1;}
+.pub-rich-lieu-nom{font-size:14px;font-weight:700;color:#1a1208;margin-bottom:2px;}
+.pub-rich-lieu-rue{font-size:13px;color:#4a3a20;line-height:1.5;}
+.pub-rich-lieu-transport{font-size:12px;color:#8a7050;margin-top:4px;line-height:1.4;}
+.pub-rich-tarifs{background:#fff8e7;border:1px solid #D4AF37;border-radius:10px;padding:6px 0;}
+.pub-rich-tarifs.milonga{background:#fff5eb;border-color:#e87b2a;}
+.pub-rich-tarif-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;font-size:14px;border-bottom:1px solid #f0e0b8;}
+.pub-rich-tarif-row:last-child{border-bottom:none;}
+.pub-rich-tarif-lbl{color:#4a3a20;font-weight:600;letter-spacing:.3px;}
+.pub-rich-tarif-prix{color:#1a1208;font-weight:700;font-size:15px;}
+.pub-rich-tarif-prix .euro{color:#B8962E;margin-left:2px;}
+.pub-rich-demo{background:#fff5eb;border:1px solid #e87b2a;border-radius:10px;padding:14px 16px;display:flex;gap:12px;align-items:center;}
+.pub-rich-demo-icon{font-size:24px;flex-shrink:0;}
+.pub-rich-demo-body{flex:1;}
+.pub-rich-demo-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#c4651e;font-weight:700;margin-bottom:2px;}
+.pub-rich-demo-text{font-size:14px;color:#1a0a02;font-weight:600;}
+.pub-rich-conseils{background:#f5f0e8;border-radius:10px;padding:14px 16px;font-size:13px;color:#4a3a20;line-height:1.65;}
+.pub-rich-conseils-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#8a7050;font-weight:700;margin-bottom:8px;}
+
 /* ================================================================
    ACCUEIL PANE
    ================================================================ */
@@ -5192,6 +5442,7 @@ a{color:var(--gold);text-decoration:none;}
     <div id="pub-modal-media"></div>
     <button class="pub-modal-close" id="pub-modal-close-btn">✕</button>
     <div class="pub-modal-inner">
+      <div id="pub-modal-rich"></div>
       <div class="pub-modal-cat" id="pub-modal-cat"></div>
       <div class="pub-modal-titre" id="pub-modal-titre"></div>
       <div class="pub-modal-date" id="pub-modal-date"></div>
