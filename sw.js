@@ -1,5 +1,5 @@
 // sw.js — Service Worker Tango & Vous PWA (native Web Push, no Firebase)
-const CACHE = 'tv-cartes-v12';
+const CACHE = 'tv-cartes-v13';
 const PRECACHE = ['/', '/index.html'];
 
 // ── Push notifications (native Web Push Protocol) ────────────────

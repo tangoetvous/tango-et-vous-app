@@ -6011,16 +6011,46 @@ if (new URLSearchParams(location.search).get('testpubs') === '1') {
 
     var THEMES = {
       dark: {
+        label:'🌙 Sombre', accent:'#222',
         '--bg':'#0a0a0a','--surface':'#111111','--surface2':'#181818','--surface3':'#1f1f1f',
         '--text':'#ffffff','--text-dim':'#888888','--text-faint':'#444444',
         '--gold':'#D4AF37','--gold-dim':'#8a6800','--gold-pale':'#2a1f00',
         '--border':'#2a2a2a','--success':'#2e7d32','--danger':'#c62828','--warning':'#ff8800',
       },
       light: {
+        label:'☀️ Clair', accent:'#f0ebe0',
         '--bg':'#f7f3eb','--surface':'#ffffff','--surface2':'#f0ebe0','--surface3':'#e8e3d8',
         '--text':'#1a1008','--text-dim':'#5a4a2a','--text-faint':'#9a8a6a',
         '--gold':'#b8860b','--gold-dim':'#d4af37','--gold-pale':'#f5e6a3',
         '--border':'#d5c9a8','--success':'#2e7d32','--danger':'#c62828','--warning':'#e65100',
+      },
+      navy: {
+        label:'🌊 Marine', accent:'#0a1628',
+        '--bg':'#050d1a','--surface':'#0d1b2e','--surface2':'#122035','--surface3':'#18293f',
+        '--text':'#e8f0fe','--text-dim':'#7a9bc5','--text-faint':'#3a5880',
+        '--gold':'#f0c060','--gold-dim':'#a07820','--gold-pale':'#0d1e3a',
+        '--border':'#1e3a5a','--success':'#26a69a','--danger':'#ef5350','--warning':'#ffa726',
+      },
+      sepia: {
+        label:'📜 Sépia', accent:'#3d2b1a',
+        '--bg':'#2a1f14','--surface':'#352618','--surface2':'#3e2d1e','--surface3':'#473524',
+        '--text':'#f0e0c0','--text-dim':'#b89060','--text-faint':'#7a5a35',
+        '--gold':'#d4a855','--gold-dim':'#8a6020','--gold-pale':'#3d2a10',
+        '--border':'#5a3d20','--success':'#5a8a40','--danger':'#c05050','--warning':'#d08030',
+      },
+      slate: {
+        label:'🪨 Ardoise', accent:'#1e2a2a',
+        '--bg':'#111a1a','--surface':'#192222','--surface2':'#1f2c2c','--surface3':'#253535',
+        '--text':'#ddeedd','--text-dim':'#7aaa8a','--text-faint':'#3a6050',
+        '--gold':'#a8c880','--gold-dim':'#507050','--gold-pale':'#1a2e20',
+        '--border':'#2a4040','--success':'#4caf50','--danger':'#e57373','--warning':'#ffb74d',
+      },
+      violet: {
+        label:'🔮 Minuit', accent:'#150d2a',
+        '--bg':'#0d0918','--surface':'#150d24','--surface2':'#1c1230','--surface3':'#22183a',
+        '--text':'#f0e8ff','--text-dim':'#9a80c8','--text-faint':'#4a3570',
+        '--gold':'#c8a0e8','--gold-dim':'#7050a0','--gold-pale':'#1a0e30',
+        '--border':'#2e1e50','--success':'#7e57c2','--danger':'#e91e63','--warning':'#ff9800',
       },
     };
 
@@ -6059,11 +6089,12 @@ if (new URLSearchParams(location.search).get('testpubs') === '1') {
 
     // Présets
     var presets = document.createElement('div');
-    presets.style.cssText = 'padding:10px 16px;border-bottom:1px solid #2a2a2a;display:flex;gap:8px;flex-shrink:0;';
-    ['dark','light'].forEach(function(t){
+    presets.style.cssText = 'padding:10px 16px;border-bottom:1px solid #2a2a2a;display:grid;grid-template-columns:1fr 1fr;gap:6px;flex-shrink:0;';
+    Object.keys(THEMES).forEach(function(t){
+      var th = THEMES[t];
       var btn = document.createElement('button');
-      btn.textContent = t === 'dark' ? '🌙 Sombre' : '☀️ Clair';
-      btn.style.cssText = 'flex:1;padding:7px;border:1px solid #444;background:#222;color:#ccc;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;';
+      btn.textContent = th.label;
+      btn.style.cssText = 'padding:7px 4px;border:1px solid #444;background:' + th.accent + ';color:#ccc;border-radius:8px;cursor:pointer;font-size:11px;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
       btn.addEventListener('click', function(){ _applyTheme(t); });
       presets.appendChild(btn);
     });
