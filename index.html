@@ -2005,8 +2005,15 @@
         const _daysLeft = Math.round((dsi - _today0) / 86400000);
         const _ctdwn = _daysLeft === 0 ? "Aujourd'hui\u00a0!" : _daysLeft === 1 ? 'Demain\u00a0!' : 'Dans\u00a0' + _daysLeft + '\u00a0j';
         const ateliers = s.ateliers || s.slots || [];
-        const _theme = ateliers.length ? ateliers.join(' \u00b7 ').toUpperCase() : '';
         const _sdRef = STAGES_DATA.find(x => x.date === _dateStr);
+        let _theme;
+        if (_sdRef && ateliers.length) {
+          const _slotToTheme = { technique: 'Technique', stage1: _sdRef.s1||'', stage2: _sdRef.s2||'', stage3: _sdRef.s3||'', stage4: _sdRef.s4||'' };
+          const _mappedThemes = ateliers.map(function(a){ return _slotToTheme[a] || a; }).filter(Boolean);
+          _theme = _mappedThemes.join(' \u00b7 ');
+        } else {
+          _theme = ateliers.length ? ateliers.join(' \u00b7 ').toUpperCase() : '';
+        }
         const _phSd = (_sdRef && _sdRef.horaires) || {};
         const _hpFr = _lp('stages').horaires || {};
         const _hvSd = k => _phSd[k] || _hpFr[k] || HST[k] || '';
@@ -2157,12 +2164,23 @@
     try {
       var sai = _sai();
       var needsRender = false;
-      // Sync dates stages
+      // Sync dates stages — saison courante + saison suivante
       var remote = await TEV.getParam('tev_dates_stages_' + sai);
       if (remote && remote.stages && remote.stages.length) {
         var remoteStr = JSON.stringify(remote);
         if (localStorage.getItem('tev_dates_stages_' + sai) !== remoteStr) {
           try { localStorage.setItem('tev_dates_stages_' + sai, remoteStr); } catch(e){}
+          STAGES_DATA = _loadStagesData();
+          needsRender = true;
+        }
+      }
+      var _saiParts = sai.split('-');
+      var saiNext = (parseInt(_saiParts[0])+1) + '-' + (parseInt(_saiParts[1])+1);
+      var remoteNext = await TEV.getParam('tev_dates_stages_' + saiNext);
+      if (remoteNext && remoteNext.stages && remoteNext.stages.length) {
+        var remoteNextStr = JSON.stringify(remoteNext);
+        if (localStorage.getItem('tev_dates_stages_' + saiNext) !== remoteNextStr) {
+          try { localStorage.setItem('tev_dates_stages_' + saiNext, remoteNextStr); } catch(e){}
           STAGES_DATA = _loadStagesData();
           needsRender = true;
         }
