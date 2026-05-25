@@ -5645,6 +5645,12 @@ function handleAction(action, btn) {
     case 'generer-pub-milongas':
       genererPublicationsMilongas();
       break;
+    case 'generer-brouillons-stages':
+      genererPublicationsBrouillonStages();
+      break;
+    case 'generer-brouillons-milongas':
+      genererPublicationsBrouillonMilongas();
+      break;
     case 'editer-pub':
       ouvrirPub((adminData.publications||[])[parseInt(btn.dataset.idx)]);
       break;
@@ -11406,6 +11412,101 @@ async function genererPublicationsStages() {
   renderTab();
 }
 
+async function genererPublicationsBrouillonStages() {
+  var sai = saisonActive();
+  var todayStr = today();
+  afficherToast('⏳ Chargement des stages ' + sai + '…');
+  var [stagesRes, paramsRes] = await Promise.all([
+    TEV.client.from('parametres').select('valeur').eq('cle', 'tev_dates_stages_' + sai).maybeSingle(),
+    TEV.client.from('parametres').select('valeur').eq('cle', 'tev_params_stages_' + sai).maybeSingle()
+  ]);
+  var stagesData = stagesRes && stagesRes.data && stagesRes.data.valeur && stagesRes.data.valeur.stages || [];
+  stagesData = stagesData.filter(function(st) { return st.date >= todayStr; });
+  if (!stagesData.length) {
+    afficherToast('⚠️ Aucun stage à venir pour ' + sai); return;
+  }
+  var paramsVal = paramsRes && paramsRes.data && paramsRes.data.valeur || {};
+  var defHor = Object.assign({}, DEFAULTS_HORAIRES.stages, paramsVal.horaires || {});
+  var defTar = Object.assign({}, TARIFS_DEFAUT, paramsVal.tarifs || {});
+  var defAdr = paramsVal.adresse || {};
+  var existKeys = new Set();
+  (adminData.publications || []).forEach(function(p) {
+    if (p.autoGenStage && p.stageDate && p.jAvant != null) existKeys.add(p.stageDate + '_' + p.jAvant);
+  });
+  var toInsert = [];
+  stagesData.forEach(function(st) {
+    st = _migrateStageItem(st);
+    var c = _genContenuStage(st, defHor, defTar, defAdr);
+    [20, 14, 7].forEach(function(jAvant) {
+      if (existKeys.has(st.date + '_' + jAvant)) return;
+      var pubD = new Date(st.date + 'T12:00:00');
+      pubD.setDate(pubD.getDate() - jAvant);
+      var pubISO = pubD.toISOString().slice(0, 10) + 'T11:00:00.000Z';
+      toInsert.push({
+        titre: c.titre, contenu: c.contenu, publiee: false,
+        donnees: {
+          cat: 'stage', extrait: c.extrait, image: c.image, video: '',
+          dateProgrammee: pubISO, datesProgrammees: [pubISO],
+          cours: ['paris-deb', 'paris-int', 'vincennes-deb', 'vincennes-int'],
+          autoGenStage: true, stageDate: st.date, jAvant: jAvant,
+          lienInscription: 'https://app.tangoetvous.fr/stages-pwa.html'
+        }
+      });
+    });
+  });
+  if (!toInsert.length) { afficherToast('✅ Brouillons stages ' + sai + ' déjà générés'); return; }
+  var res = await Promise.resolve(TEV.client.from('publications').insert(toInsert)).catch(function(e){ return {error:e}; });
+  if (res && res.error) { afficherToast('❌ Erreur : ' + (res.error.message || 'échec insert')); return; }
+  afficherToast('✅ ' + toInsert.length + ' brouillon' + (toInsert.length > 1 ? 's' : '') + ' stage' + (toInsert.length > 1 ? 's' : '') + ' créé' + (toInsert.length > 1 ? 's' : '') + ' (' + sai + ')');
+  await chargerDonnees(); renderTab();
+}
+
+async function genererPublicationsBrouillonMilongas() {
+  var sai = saisonActive();
+  var todayStr = today();
+  afficherToast('⏳ Chargement des milongas ' + sai + '…');
+  var milRes = await Promise.resolve(
+    TEV.client.from('parametres').select('valeur').eq('cle', 'tev_milongas_' + sai).maybeSingle()
+  ).catch(function(){ return null; });
+  var milongas = milRes && milRes.data && milRes.data.valeur && milRes.data.valeur.milongas || [];
+  if (!milongas.length) {
+    afficherToast('⚠️ Aucune milonga trouvée pour ' + sai + ' — configurez les milongas dans Paramètres'); return;
+  }
+  var existKeys = new Set();
+  (adminData.publications || []).forEach(function(p) {
+    if (p.autoGenMilonga && p.milongaId && p.milongaDate && p.jAvant != null)
+      existKeys.add(p.milongaId + '_' + p.milongaDate + '_' + p.jAvant);
+  });
+  var toInsert = [];
+  milongas.forEach(function(mil) {
+    (mil.dates||[]).forEach(function(dateObj) {
+      if (!dateAppartientSaison(dateObj.date, sai)) return;
+      if (dateObj.date < todayStr) return; // dates futures uniquement
+      var c = _genContenuMilonga(mil, dateObj);
+      [14, 3].forEach(function(jAvant) {
+        if (existKeys.has(mil.id + '_' + dateObj.date + '_' + jAvant)) return;
+        var pubD = new Date(dateObj.date + 'T12:00:00');
+        pubD.setDate(pubD.getDate() - jAvant);
+        var pubISO = pubD.toISOString().slice(0, 10) + 'T11:00:00.000Z';
+        toInsert.push({
+          titre: c.titre, contenu: c.contenu, publiee: false,
+          donnees: {
+            cat: 'milonga', extrait: c.extrait, image: c.image, video: '',
+            dateProgrammee: pubISO, datesProgrammees: [pubISO],
+            cours: ['paris-deb', 'paris-int', 'vincennes-deb', 'vincennes-int'],
+            autoGenMilonga: true, milongaId: mil.id, milongaDate: dateObj.date, jAvant: jAvant
+          }
+        });
+      });
+    });
+  });
+  if (!toInsert.length) { afficherToast('✅ Brouillons milongas ' + sai + ' déjà générés'); return; }
+  var res = await Promise.resolve(TEV.client.from('publications').insert(toInsert)).catch(function(e){ return {error:e}; });
+  if (res && res.error) { afficherToast('❌ Erreur : ' + (res.error.message || 'échec insert')); return; }
+  afficherToast('✅ ' + toInsert.length + ' brouillon' + (toInsert.length > 1 ? 's' : '') + ' milonga' + (toInsert.length > 1 ? 's' : '') + ' créé' + (toInsert.length > 1 ? 's' : '') + ' (' + sai + ')');
+  await chargerDonnees(); renderTab();
+}
+
 function renderPublications() {
   var sai = saisonActive();
   var saiNext = saisonSuivante();
@@ -11430,6 +11531,12 @@ function renderPublications() {
   var y2Gen = parseInt(sai.split('-')[1]);
   var showGenBtn = today() >= (y2Gen + '-05-15');
   var h='<button class="btn btn-gold" data-action="nouvelle-pub" style="width:100%;margin-bottom:8px;">✏️ Nouvelle publication</button>';
+  h += '<button class="btn btn-ghost" data-action="generer-brouillons-stages"'
+    +' style="width:100%;margin-bottom:6px;border:1px solid #888;color:#000;font-size:12px;">'
+    +'🗓 Générer brouillons stages ' + sai + ' (à venir)</button>';
+  h += '<button class="btn btn-ghost" data-action="generer-brouillons-milongas"'
+    +' style="width:100%;margin-bottom:10px;border:1px solid #888;color:#000;font-size:12px;">'
+    +'🎶 Générer brouillons milongas ' + sai + ' (à venir)</button>';
   if (showGenBtn) {
     h += '<button class="btn btn-ghost" data-action="generer-pub-stages"'
       +' style="width:100%;margin-bottom:6px;border:1px solid var(--gold);color:#000;">'

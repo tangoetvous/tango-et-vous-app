@@ -1336,22 +1336,21 @@
       {key:'vinc-deb',  label:'Vincennes \u2014 D\u00e9butant',                     icon:'💃', color:'#40d8c0'},
       {key:'vinc-int',  label:'Vincennes \u2014 Interm\u00e9diaire &amp; Avanc\u00e9', icon:'💃', color:'#40d8c0'}
     ];
-    // Filtrer selon le cours de l'élève connecté
-    const elv = (eleveData && eleveData.eleve) || {};
-    const vil = (elv.ville || '').toLowerCase();
-    const niv = (elv.niveau || '').toLowerCase();
-    let cours = allCours;
-    if (vil || niv) {
-      const isVinc = vil === 'vincennes';
-      const isDeb  = niv && !niv.includes('interm') && !niv.includes('avan');
-      const isInt  = niv.includes('interm') || niv.includes('avan');
-      cours = allCours.filter(c => {
-        const matchVille = !vil || (isVinc ? c.key.startsWith('vinc') : c.key.startsWith('paris'));
-        const matchNiv   = !niv || (isDeb ? c.key.endsWith('-deb') : isInt ? c.key.endsWith('-int') : true);
-        return matchVille && matchNiv;
-      });
-      if (!cours.length) cours = allCours; // fallback si détection échoue
-    }
+    // Filtrer selon les cours inscrits de l'élève (supporte plusieurs cours)
+    const _inscActives = ((eleveData && eleveData.inscriptionsTango) || []).filter(function(i) {
+      if (i.statut !== 'inscrit') return false;
+      try { var d = i.donnees && (typeof i.donnees === 'string' ? JSON.parse(i.donnees) : i.donnees); if (d && d.isRenewal) return false; } catch(e){}
+      return true;
+    });
+    const _enrolledWa = new Set();
+    _inscActives.forEach(function(i) {
+      var v = (i.ville||'').toLowerCase(), n = (i.niveau||'').toLowerCase();
+      if (v==='paris'     && n==='debutant')      _enrolledWa.add('paris-deb');
+      if (v==='paris'     && n==='intermediaire') _enrolledWa.add('paris-int');
+      if (v==='vincennes' && n==='debutant')      _enrolledWa.add('vinc-deb');
+      if (v==='vincennes' && n==='intermediaire') _enrolledWa.add('vinc-int');
+    });
+    let cours = _enrolledWa.size ? allCours.filter(c => _enrolledWa.has(c.key)) : allCours;
     const pane = $('whatsapp-pane');
     if (!pane) return;
     let h = '<div class="tab-section-title">💬 WhatsApp</div>';
@@ -3010,11 +3009,11 @@
       });
     }
 
-    // Filtrer par date de programmation (publiee n'est plus un critère — toujours true)
-    // ?testpubs=1 : affiche toutes les publications y compris futures (pour prévisualiser la saison suivante)
+    // Filtrer par date de programmation — les brouillons (publiee: false) sont masqués sauf ?testpubs=1
     const _testPubs = new URLSearchParams(location.search).get('testpubs') === '1';
     if (!_testPubs) {
       pubs = pubs.filter(p => {
+        if (p.publiee === false) return false; // brouillons masqués
         const dates = p.datesProgrammees && p.datesProgrammees.length ? p.datesProgrammees
           : (p.dateProgrammee ? [p.dateProgrammee] : []);
         if (!dates.length) return true; // pas de date → visible maintenant

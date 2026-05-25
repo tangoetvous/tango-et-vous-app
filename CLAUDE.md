@@ -4810,3 +4810,91 @@ const prochainStage = STAGES_DATA.filter(s => s.date >= todayStr).sort((a,b) => 
 ```
 
 **Règle permanente** : toute recherche de "prochain élément" dans `STAGES_DATA` (ou tout tableau multi-saisons) doit utiliser `filter + sort + [0]`, jamais `.find()` seul — l'ordre d'itération localStorage n'est pas garanti.
+
+## Session 2026-05-25 (suite) — WhatsApp multi-cours + brouillons publications saison courante
+
+### ✅ WhatsApp multi-cours dans l'espace élève (`index.html`)
+
+**Problème** : un élève inscrit à plusieurs cours (ex : Paris Débutants ET Vincennes Intermédiaires) ne voyait dans la rubrique WhatsApp que le lien du premier cours trouvé dans `eleves.ville/niveau`, jamais les deux.
+
+**Cause racine** : `renderWhatsapp()` utilisait `eleveData.eleve.ville` et `eleveData.eleve.niveau` — un seul cours par élève, même si `inscriptions_cours` contenait plusieurs lignes.
+
+**Fix** : utiliser `eleveData.inscriptionsTango` (tableau de toutes les inscriptions actives) pour construire le set des cours inscrits, puis filtrer `allCours` en conséquence :
+
+```javascript
+const _inscActives = ((eleveData && eleveData.inscriptionsTango) || []).filter(function(i) {
+  if (i.statut !== 'inscrit') return false;
+  try { var d = i.donnees && (typeof i.donnees === 'string' ? JSON.parse(i.donnees) : i.donnees);
+        if (d && d.isRenewal) return false; } catch(e){}
+  return true;
+});
+const _enrolledWa = new Set();
+_inscActives.forEach(function(i) {
+  var v = (i.ville||'').toLowerCase(), n = (i.niveau||'').toLowerCase();
+  if (v==='paris'     && n==='debutant')      _enrolledWa.add('paris-deb');
+  if (v==='paris'     && n==='intermediaire') _enrolledWa.add('paris-int');
+  if (v==='vincennes' && n==='debutant')      _enrolledWa.add('vinc-deb');
+  if (v==='vincennes' && n==='intermediaire') _enrolledWa.add('vinc-int');
+});
+let cours = _enrolledWa.size ? allCours.filter(c => _enrolledWa.has(c.key)) : allCours;
+```
+
+Si `eleveData.inscriptionsTango` est vide (pas encore chargé ou élève sans inscription active), fallback sur tous les cours disponibles (`allCours`).
+
+### ✅ Publications brouillons (`publiee: false`) masquées dans l'espace élève sauf `?testpubs=1`
+
+**Problème** : les publications avec `publiee: false` (brouillons) apparaissaient dans l'espace élève au même titre que les publications publiées.
+
+**Fix** dans `renderActu()` (`index.html`) — filtre ajouté dans le bloc `if (!_testPubs)` :
+```javascript
+const _testPubs = new URLSearchParams(location.search).get('testpubs') === '1';
+if (!_testPubs) {
+  pubs = pubs.filter(p => {
+    if (p.publiee === false) return false; // brouillons masqués
+    const dates = p.datesProgrammees && p.datesProgrammees.length ? p.datesProgrammees
+      : (p.dateProgrammee ? [p.dateProgrammee] : []);
+    if (!dates.length) return true;
+    return dates.some(d => new Date(d) <= now);
+  });
+}
+```
+
+Avec `?testpubs=1` dans l'URL : tous les brouillons sont visibles (test admin depuis l'espace élève).
+
+### ✅ Génération de brouillons de publications pour la saison courante (`admin.html`)
+
+**Contexte** : les fonctions `genererPublicationsStages()` et `genererPublicationsMilongas()` existantes génèrent des publications pour la **saison suivante** avec `publiee: true`. Deux nouvelles fonctions génèrent des brouillons pour la **saison courante** avec `publiee: false`, uniquement pour les dates futures.
+
+**Deux nouveaux boutons** dans `renderPublications()` (toujours visibles, pas de restriction mai-15) :
+- `🗓 Générer brouillons stages [sai] (à venir)` → `genererPublicationsBrouillonStages()`
+- `🎶 Générer brouillons milongas [sai] (à venir)` → `genererPublicationsBrouillonMilongas()`
+
+**`genererPublicationsBrouillonStages()`** :
+- Lit `tev_dates_stages_<sai>` depuis Supabase → filtre `st.date >= today()` (futures uniquement)
+- Lit `tev_params_stages_<sai>` pour horaires/tarifs/adresse par défaut
+- Génère 3 publications par date (J-20, J-14, J-7) avec `publiee: false`
+- Anti-doublon via `existKeys` Set sur `{stageDate}_{jAvant}` des publications existantes dans `adminData.publications`
+- Contenu généré via `_genContenuStage(st, defHor, defTar, defAdr)` (même pure function que pour saisonSuivante)
+- INSERT en batch dans `publications` + `chargerDonnees()` + `renderTab()`
+
+**`genererPublicationsBrouillonMilongas()`** :
+- Lit `tev_milongas_<sai>` depuis Supabase → filtre `dateObj.date >= today()` + `dateAppartientSaison(date, sai)`
+- Génère 2 publications par date milonga (J-14, J-3) avec `publiee: false`
+- Anti-doublon via `existKeys` Set sur `{milongaId}_{milongaDate}_{jAvant}`
+- Contenu généré via `_genContenuMilonga(mil, dateObj)` (même pure function)
+- INSERT en batch + `chargerDonnees()` + `renderTab()`
+
+**Différences vs fonctions saisonSuivante** :
+- `sai = saisonActive()` (pas `saisonSuivante()`)
+- `publiee: false` (brouillons — admin active manuellement)
+- Filtre `date >= today()` (pas de publications pour le passé)
+- Pas de restriction au 15 mai (boutons toujours visibles)
+
+**L'admin publie manuellement** : dans Publications → cliquer sur la publication → ✏️ → cocher "Publiée" → Enregistrer.
+
+### Règle permanente — publications brouillons
+
+- `publiee: false` = brouillon → invisible dans l'espace élève sauf avec `?testpubs=1`
+- `publiee: true` = publiée → soumise aux filtres `dateProgrammee` habituels
+- Les fonctions de sync automatique (`syncPublicationsStage`, `syncPublicationsMilongaDate`) mettent à jour le contenu (titre, contenu, extrait, image) des publications existantes quelle que soit leur valeur `publiee` — les brouillons sont mis à jour au même titre que les publiées
+- Ne jamais changer `publiee` dans les fonctions de sync automatique — uniquement dans l'éditeur admin ou via le bouton dédié
