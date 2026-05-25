@@ -978,10 +978,10 @@ async function soumettre(){
       err.textContent='⚠️ '+_duplE.map(function(r){return r.prenom+' '+r.nom;}).join(' et ')+' est déjà inscrit·e à ce cours d\'essai.';
       err.style.display='block';btn.disabled=false;btn.textContent='ENVOYER MON INSCRIPTION';return;
     }
-    const {data:insResult,error}=await TEV.client.from('inscriptions_essai').insert(rowsToInsert).select('id');
+    const {error}=await TEV.client.from('inscriptions_essai').insert(rowsToInsert);
     if(error) throw error;
-    const mainInscId = insResult && insResult.length > 0 ? insResult[0].id : null;
     // Emails automatiques via worker (fire and forget)
+    // L'inscId est retrouvé côté worker via email+date_essai (fallback service_role)
     fetch('https://app.tangoetvous.fr/api/notify/inscription-essai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -995,7 +995,6 @@ async function soumettre(){
         partEmail: (payload.partEmail||'').trim().toLowerCase(),
         partRole: payload.partRole||'',
         gratuit: !!(rowPrincipal.gratuit),
-        inscId: mainInscId,
         niveauEleve: payload.niveauEleve||''
       })
     }).catch(function(){});

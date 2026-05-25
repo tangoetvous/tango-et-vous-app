@@ -3850,12 +3850,14 @@ async function handleNotifyInscriptionEssai(request, env) {
     return '';
   }
 
+  // Fallback service_role pour bypass RLS SELECT (anon ne peut pas lire ses propres lignes)
+  const _svcKeyInscId = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   let inscId = inscIdFromBody || null;
   if (!inscId && email) {
     try {
       const ir = await fetch(
         `${SUPABASE_URL}/rest/v1/inscriptions_essai?email=eq.${encodeURIComponent(email)}&date_essai=eq.${dateIso}&type=eq.tango&select=id&order=id.desc&limit=1`,
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyInscId}` } }
       );
       if (ir.ok) { const rows = await ir.json(); if (rows[0]) inscId = rows[0].id; }
     } catch {}
@@ -3864,7 +3866,7 @@ async function handleNotifyInscriptionEssai(request, env) {
     try {
       const ir = await fetch(
         `${SUPABASE_URL}/rest/v1/inscriptions_essai?prenom=eq.${encodeURIComponent(prenom)}&nom=eq.${encodeURIComponent(nom)}&date_essai=eq.${dateIso}&type=eq.tango&select=id&order=id.desc&limit=1`,
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyInscId}` } }
       );
       if (ir.ok) { const rows = await ir.json(); if (rows[0]) inscId = rows[0].id; }
     } catch {}
