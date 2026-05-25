@@ -4709,7 +4709,7 @@ async function handleNotifyInscriptionCours(request, env) {
           + '<div style="font-size:14px;color:#333;line-height:2.0;">'
           + '<div style="margin-bottom:10px;">1️⃣ &nbsp;<strong>Trouvez un\xb7e partenaire</strong> pour vous inscrire ensemble — nous pourrons alors confirmer directement votre inscription.</div>'
           + '<div style="margin-bottom:10px;">2️⃣ &nbsp;<strong>Restez en liste d\'attente</strong> — d\xe8s qu\'une personne de l\'autre r\xf4le s\'inscrit, nous vous contacterons.</div>'
-          + '<div>3️⃣ &nbsp;<strong>Commencez par un cours d\'essai</strong> — pour d\xe9couvrir le tango le temps que votre place se lib\xe8re. <a href="#URL_FORMULAIRE_ESSAI_A_RENSEIGNER" style="color:#1565c0;font-weight:700;">→ Acc\xe9der au formulaire cours d\'essai</a></div>'
+          + '<div>3️⃣ &nbsp;<strong>Commencez par un cours d\'essai</strong> — pour d\xe9couvrir le tango le temps que votre place se lib\xe8re. <a href="https://app.tangoetvous.fr/cours-essai.html" style="color:#1565c0;font-weight:700;">→ Acc\xe9der au formulaire cours d\'essai</a></div>'
           + '</div></div>'
           + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Nous faisons de notre mieux pour r\xe9pondre \xe0 toutes les demandes. N\'h\xe9sitez pas \xe0 nous \xe9crire pour tout renseignement.</p>'
           + '<div style="text-align:center;margin:0 0 22px;">'
