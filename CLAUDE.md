@@ -4736,3 +4736,77 @@ if (!IS_DEMO && i._isNewFormat && i._dbId) {
 **Règle** : le pointage stages NE déclenche PAS d'email ni de push (ni vers l'admin, ni vers l'élève). C'est intentionnel — seule la présence est enregistrée en DB pour les stats.
 
 **Pattern pointage** identique à essai tango/yoga : `presence_declaree` (admin ✓/✗) est distinct de `presence_confirmee` (élève clique 👍 dans l'email). Un cron pourrait utiliser `presence_declaree` pour envoyer des relances J+1 (pas encore implémenté pour les stages).
+
+## Session 2026-05-25 — Script vidéo + bugs espace élève (stages)
+
+### ✅ Script vidéo `guide-eleves.html` — condensé à 2 minutes
+
+Le script vidéo de présentation de l'espace élève a été réduit de ~7 minutes (10 blocs verbeux avec didascalies) à **~2 minutes** (10 blocs de 10–20s chacun, sans didascalies).
+
+Durées par rubrique : Intro 15s · Connexion 15s · Accueil 20s · Forfait & Carte 20s · Publications 10s · Milonga 10s · Agenda 15s · Plan 10s · Discussions 10s · Conclusion 15s ≈ 2 min.
+
+**Règle** : ne jamais rallonger ces blocs au-delà de 20s par rubrique — la contrainte est une vidéo de présentation courte.
+
+---
+
+### ✅ Bug — thèmes des stages dans "Mes stages réservés" (`index.html`)
+
+**Symptôme** : la section "Mes stages réservés" de l'accueil affichait les IDs bruts des créneaux (`STAGE1 · TECHNIQUE`) au lieu des vrais intitulés (`Barridas · Technique`).
+
+**Cause** : `s.ateliers` contient les IDs slots (`['stage1', 'technique']`) issus de `stage_nom.split('|')`. Le code faisait directement `.join(' · ').toUpperCase()` sans mapping.
+
+**Fix** : utiliser `_sdRef` (déjà disponible sur la ligne suivante) pour mapper chaque ID vers son thème réel :
+```javascript
+const _sdRef = STAGES_DATA.find(x => x.date === _dateStr); // déplacé avant _theme
+let _theme;
+if (_sdRef && ateliers.length) {
+  const _slotToTheme = { technique: 'Technique', stage1: _sdRef.s1||'', stage2: _sdRef.s2||'', stage3: _sdRef.s3||'', stage4: _sdRef.s4||'' };
+  const _mappedThemes = ateliers.map(function(a){ return _slotToTheme[a] || a; }).filter(Boolean);
+  _theme = _mappedThemes.join(' · ');
+} else {
+  _theme = ateliers.length ? ateliers.join(' · ').toUpperCase() : '';
+}
+```
+
+Les thèmes (`_sdRef.s1/.s2/.s3/.s4`) viennent exclusivement de `STAGES_DATA`, lui-même chargé depuis `tev_dates_stages_<sai>` en Supabase (Paramètres → Stages → Thèmes). Zéro valeur hardcodée.
+
+**Important** : `_sdRef` est maintenant déclaré **avant** `_theme` (ordre inversé par rapport au code initial).
+
+---
+
+### ✅ Bug — Prochain stage : saison courante ignorée (`index.html`)
+
+**Symptôme** : "Prochain stage" affichait le premier stage de la saison prochaine (septembre) alors qu'un stage de la saison courante (30 mai) était plus proche.
+
+**Double cause** :
+
+**Cause 1 — sync uniquement sur la saison courante** : le bloc async en bas du IIFE stages ne fetchait que `tev_dates_stages_<sai>` (saison active). Les stages de la saison prochaine (`tev_dates_stages_<saiNext>`) n'arrivaient jamais dans localStorage sur le téléphone de l'élève.
+
+**Fix** : ajout d'un second fetch dans le même bloc async :
+```javascript
+var _saiParts = sai.split('-');
+var saiNext = (parseInt(_saiParts[0])+1) + '-' + (parseInt(_saiParts[1])+1);
+var remoteNext = await TEV.getParam('tev_dates_stages_' + saiNext);
+if (remoteNext && remoteNext.stages && remoteNext.stages.length) {
+  var remoteNextStr = JSON.stringify(remoteNext);
+  if (localStorage.getItem('tev_dates_stages_' + saiNext) !== remoteNextStr) {
+    try { localStorage.setItem('tev_dates_stages_' + saiNext, remoteNextStr); } catch(e){}
+    STAGES_DATA = _loadStagesData();
+    needsRender = true;
+  }
+}
+```
+`_loadStagesData()` lit déjà TOUS les `tev_dates_stages_*` de localStorage — il n'a pas besoin de modification.
+
+**Cause 2 — STAGES_DATA non trié** : `_loadStagesData()` concatène les saisons via une boucle `for (var i=0; i<localStorage.length; i++)`. L'ordre d'itération de localStorage est non défini par la spec — la saison prochaine pouvait apparaître avant la saison courante dans le tableau. `.find(s => s.date >= todayStr)` retournait alors septembre avant mai.
+
+**Fix** : remplacer `.find()` par `.filter().sort()[0]` :
+```javascript
+// Avant (non trié — bug)
+const prochainStage = STAGES_DATA.find(s => s.date >= todayStr) || null;
+
+// Après (trié chronologiquement)
+const prochainStage = STAGES_DATA.filter(s => s.date >= todayStr).sort((a,b) => a.date < b.date ? -1 : 1)[0] || null;
+```
+
+**Règle permanente** : toute recherche de "prochain élément" dans `STAGES_DATA` (ou tout tableau multi-saisons) doit utiliser `filter + sort + [0]`, jamais `.find()` seul — l'ordre d'itération localStorage n'est pas garanti.
