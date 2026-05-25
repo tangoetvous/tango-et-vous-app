@@ -1,5 +1,66 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Livrets yoga dans les emails — bouton(s) selon le cours (yin/hatha/forfait)
+
+### Symptôme
+Les emails yoga ne contenaient pas de bouton "Télécharger le livret" alors que les URLs des livrets yin et hatha sont saisies dans Paramètres → Yoga → Livret d'information (champs `url_yin` et `url_hatha`). Seul `YI1` avait un bouton, et il ne gérait que la cas mono-cours (pas le forfait avec 2 livrets distincts).
+
+### Source des URLs
+```
+tev_params_yoga_<sai>.livret = { url_yin: 'https://drive.google.com/...', url_hatha: 'https://drive.google.com/...' }
+```
+Saisi par l'admin dans Paramètres → Yoga → section "Livret d'information" (Yin et Hatha sont deux champs séparés).
+
+### Règle d'affichage — 1 ou 2 boutons selon le cours
+
+| `cours` (DB) | Boutons affichés |
+|--------------|------------------|
+| `'yin'` | 1 bouton : "📖 Télécharger le livret Yin Yoga" |
+| `'hatha'` | 1 bouton : "📖 Télécharger le livret Hatha Yoga" |
+| `'forfait'` | 2 boutons côte à côte : "📖 Livret Yin Yoga" + "📖 Livret Hatha Yoga" |
+
+Si l'URL correspondante est vide dans Paramètres → le bouton n'est pas affiché (pas de bouton avec URL manquante).
+
+### Pattern à utiliser dans tous les handlers yoga email
+
+```javascript
+const _yLiv = yogaParams.livret || {};
+const _ybtnSty = 'display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;';
+let _livBtns = '';
+if (cours === 'forfait') {
+  if (_yLiv.url_yin)   _livBtns += `<a href="${_esc(_yLiv.url_yin)}"   style="${_ybtnSty}">📖 Livret Yin Yoga</a>`;
+  if (_yLiv.url_hatha) _livBtns += `<a href="${_esc(_yLiv.url_hatha)}" style="${_ybtnSty}">📖 Livret Hatha Yoga</a>`;
+} else if (cours === 'yin' && _yLiv.url_yin) {
+  _livBtns = `<a href="${_esc(_yLiv.url_yin)}"   style="${_ybtnSty}">📖 Télécharger le livret Yin Yoga</a>`;
+} else if (cours === 'hatha' && _yLiv.url_hatha) {
+  _livBtns = `<a href="${_esc(_yLiv.url_hatha)}" style="${_ybtnSty}">📖 Télécharger le livret Hatha Yoga</a>`;
+}
+const livretYogaBlock = _livBtns ? `<div style="text-align:center;margin:0 0 22px;">${_livBtns}</div>` : '';
+```
+
+### Emails concernés
+
+**Avec bouton(s) livret** (tous sauf attente/complet) :
+- **Y1** — essai yoga confirmé (`handleNotifyInscriptionEssaiYoga`) — inséré après `yogaBoxY1`
+- **Y3** — rappel J-3 (`handleCronEssaiYogaRappelJ3`) — inséré après yogaBox, avant le bouton 👍
+- **Y-J1a** — lendemain présent (`handleCronEssaiYogaJ1`) — inséré après `rejoindreBox`
+- **Y-J1b** — lendemain absent (`handleCronEssaiYogaJ1`) — inséré après le bouton "Choisir une nouvelle date"
+- **Y-mod** — modification d'essai (`handleNotifyEssaiYogaModifie`) — inséré après yogaBox
+- **YI1** — inscription régulière validée (`handleNotifyYogaInscriptionValidee`) — déjà présent, harmonisé avec gestion forfait (2 boutons)
+
+**Sans bouton livret** (intentionnel) :
+- **Y-att** — liste d'attente (cours régulier complet) : pas pertinent tant que la place n'est pas confirmée
+- **Y-full** — date complète (14/14 sur cette date) : redirige vers une nouvelle date, le livret viendra dans Y1
+- Emails admin (Y0, YI0) : l'admin n'a pas besoin du livret
+
+### Style retenu
+Bouton vert outline (`color:#2e7d32; border:2px solid #2e7d32; background:#fff`) — cohérent avec la charte yoga (vert). Différent des boutons livret tango (or `#D4AF37`). Pour le forfait, les deux boutons sont centrés côte à côte, avec wrap automatique sur mobile.
+
+### Fix appliqué le 2026-05-25
+6 handlers modifiés dans `worker.js` pour ajouter le bouton livret avec le bon pattern. YI1 a été refactorisé pour gérer le forfait avec 2 boutons (au lieu d'un seul fallback `url_hatha || url_yin`).
+
+---
+
 ## Horaires yoga dans les emails — chaînes plates, pas d'objets imbriqués
 
 ### Symptôme

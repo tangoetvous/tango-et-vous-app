@@ -1411,9 +1411,26 @@ async function handleCronEssaiYogaJ1(request, env) {
     ? `<div style="text-align:center;margin:0 0 24px;"><a href="${_esc(lienAC)}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire au yoga →</a></div>`
     : `<div style="text-align:center;margin:0 0 24px;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire au yoga →</a></div>`;
 
+  // Livret(s) yoga (yin/hatha/forfait) — calculé par élève dans la boucle
+  const _yLivJ1 = yogaParams.livret || {};
+  const _ybtnStyJ1 = 'display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;';
+  function _buildLivretBlockJ1(cours) {
+    let btns = '';
+    if (cours === 'forfait') {
+      if (_yLivJ1.url_yin)   btns += `<a href="${_esc(_yLivJ1.url_yin)}" style="${_ybtnStyJ1}">📖 Livret Yin Yoga</a>`;
+      if (_yLivJ1.url_hatha) btns += `<a href="${_esc(_yLivJ1.url_hatha)}" style="${_ybtnStyJ1}">📖 Livret Hatha Yoga</a>`;
+    } else if (cours === 'yin' && _yLivJ1.url_yin) {
+      btns = `<a href="${_esc(_yLivJ1.url_yin)}" style="${_ybtnStyJ1}">📖 Télécharger le livret Yin Yoga</a>`;
+    } else if (cours === 'hatha' && _yLivJ1.url_hatha) {
+      btns = `<a href="${_esc(_yLivJ1.url_hatha)}" style="${_ybtnStyJ1}">📖 Télécharger le livret Hatha Yoga</a>`;
+    }
+    return btns ? `<div style="text-align:center;margin:0 0 22px;">${btns}</div>` : '';
+  }
+
   for (const ins of inscrits) {
     if (!ins.email) continue;
     const prenomAff = _esc(ins.prenom || '');
+    const livretBlockJ1 = _buildLivretBlockJ1(ins.cours);
 
     if (ins.presence_declaree === true) {
       // Y-J1a — élève présent
@@ -1424,6 +1441,7 @@ async function handleCronEssaiYogaJ1(request, env) {
           <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">${prenomAff}</strong>,</p>
           <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous espérons que cette première séance de yoga vous a plu ! Si vous souhaitez poursuivre, voici comment rejoindre nos cours réguliers.</p>
           ${rejoindreBox}
+          ${livretBlockJ1}
           ${tarifsBoxBlue}
           ${acBtnYoga}
           ${signYoga}
@@ -1441,6 +1459,7 @@ async function handleCronEssaiYogaJ1(request, env) {
           <div style="text-align:center;margin:0 0 22px;">
             <a href="https://app.tangoetvous.fr/essai-yoga.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">↩ Choisir une nouvelle date →</a>
           </div>
+          ${livretBlockJ1}
           <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
             <p style="font-size:13px;color:#666;margin:0;line-height:1.6;">Votre inscription est annulée automatiquement — pas de pénalité.<br/>Vous pouvez vous réinscrire à n'importe quelle date disponible.</p>
           </div>
@@ -4931,6 +4950,20 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
     ? '<strong style="color:#2e7d32;">Gratuit</strong> <span style="font-size:12px;color:#666;">(2 premiers cours de septembre)</span>'
     : (tarifEssai ? '<strong style="color:#1b5e20;">' + _esc(tarifEssai) + '</strong>' : '');
 
+  // Livret(s) yoga — bouton(s) selon le cours (yin/hatha/forfait → 1 ou 2 boutons)
+  const _yLivY1 = yogaParams.livret || {};
+  const _ybtnStyY1 = 'display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;';
+  let _livBtnsY1 = '';
+  if (cours === 'forfait') {
+    if (_yLivY1.url_yin)   _livBtnsY1 += '<a href="' + _esc(_yLivY1.url_yin)   + '" style="' + _ybtnStyY1 + '">📖 Livret Yin Yoga</a>';
+    if (_yLivY1.url_hatha) _livBtnsY1 += '<a href="' + _esc(_yLivY1.url_hatha) + '" style="' + _ybtnStyY1 + '">📖 Livret Hatha Yoga</a>';
+  } else if (cours === 'yin' && _yLivY1.url_yin) {
+    _livBtnsY1 = '<a href="' + _esc(_yLivY1.url_yin)   + '" style="' + _ybtnStyY1 + '">📖 Télécharger le livret Yin Yoga</a>';
+  } else if (cours === 'hatha' && _yLivY1.url_hatha) {
+    _livBtnsY1 = '<a href="' + _esc(_yLivY1.url_hatha) + '" style="' + _ybtnStyY1 + '">📖 Télécharger le livret Hatha Yoga</a>';
+  }
+  const livretYogaBlock = _livBtnsY1 ? '<div style="text-align:center;margin:0 0 22px;">' + _livBtnsY1 + '</div>' : '';
+
   // Yoga-box Y1 — Votre essai yoga (date in header, Cours/Horaire/Lieu/Tarif)
   const yogaBoxY1 = '<div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">'
     + '<div style="background:#2e7d32;padding:12px 18px;">'
@@ -4992,6 +5025,7 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
       + '<p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">' + _esc(prenom) + '</strong>,</p>'
       + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription à notre cours d\'essai yoga est bien enregistrée. Nous avons hâte de vous accueillir !</p>'
       + yogaBoxY1
+      + livretYogaBlock
       + '<div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">'
       + '<p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">En cas d\'empêchement, merci de nous prévenir même au dernier moment afin que nous puissions proposer la place à quelqu\'un d\'autre. Merci pour votre compréhension !</p>'
       + '</div>'
@@ -5488,6 +5522,19 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
       </div>
       <div style="padding:16px 18px;">${sectionsY3}</div>
     </div>`;
+    // Livret(s) yoga (yin/hatha/forfait → 1 ou 2 boutons)
+    const _yLivY3 = params.livret || {};
+    const _ybtnStyY3 = 'display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;';
+    let _livBtnsY3 = '';
+    if (e.cours === 'forfait') {
+      if (_yLivY3.url_yin)   _livBtnsY3 += `<a href="${_esc(_yLivY3.url_yin)}" style="${_ybtnStyY3}">📖 Livret Yin Yoga</a>`;
+      if (_yLivY3.url_hatha) _livBtnsY3 += `<a href="${_esc(_yLivY3.url_hatha)}" style="${_ybtnStyY3}">📖 Livret Hatha Yoga</a>`;
+    } else if (e.cours === 'yin' && _yLivY3.url_yin) {
+      _livBtnsY3 = `<a href="${_esc(_yLivY3.url_yin)}" style="${_ybtnStyY3}">📖 Télécharger le livret Yin Yoga</a>`;
+    } else if (e.cours === 'hatha' && _yLivY3.url_hatha) {
+      _livBtnsY3 = `<a href="${_esc(_yLivY3.url_hatha)}" style="${_ybtnStyY3}">📖 Télécharger le livret Hatha Yoga</a>`;
+    }
+    const livretBlockY3 = _livBtnsY3 ? `<div style="text-align:center;margin:0 0 22px;">${_livBtnsY3}</div>` : '';
     const APP_URL_Y3 = 'https://app.tangoetvous.fr';
     const tkY3 = (await _calHmac(`${e.id}:${(e.email||'').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
     const confirmUrl = `${APP_URL_Y3}/api/essai-yoga/confirmer?id=${e.id}&token=${tkY3}`;
@@ -5497,6 +5544,7 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
         <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">${prenomAff}</strong>,</p>
         <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Dans 3 jours, rendez-vous pour votre essai yoga ! Voici tous les détails pour préparer votre séance.</p>
         ${yogaBox}
+        ${livretBlockY3}
         <div style="text-align:center;margin:0 0 16px;"><a href="${confirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a></div>
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
           <p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">Merci de confirmer votre présence. En cas d'empêchement, prévenez-nous même au dernier moment afin que nous puissions proposer la place à quelqu'un d'autre. Merci pour votre compréhension !</p>
@@ -5605,12 +5653,26 @@ async function handleNotifyEssaiYogaModifie(request, env) {
     </div>
     <div style="padding:16px 18px;">${sectionsMod}</div>
   </div>`;
+  // Livret(s) yoga (yin/hatha/forfait → 1 ou 2 boutons)
+  const _yLivMod = paramsMod.livret || {};
+  const _ybtnStyMod = 'display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;';
+  let _livBtnsMod = '';
+  if (cours === 'forfait') {
+    if (_yLivMod.url_yin)   _livBtnsMod += `<a href="${_esc(_yLivMod.url_yin)}" style="${_ybtnStyMod}">📖 Livret Yin Yoga</a>`;
+    if (_yLivMod.url_hatha) _livBtnsMod += `<a href="${_esc(_yLivMod.url_hatha)}" style="${_ybtnStyMod}">📖 Livret Hatha Yoga</a>`;
+  } else if (cours === 'yin' && _yLivMod.url_yin) {
+    _livBtnsMod = `<a href="${_esc(_yLivMod.url_yin)}" style="${_ybtnStyMod}">📖 Télécharger le livret Yin Yoga</a>`;
+  } else if (cours === 'hatha' && _yLivMod.url_hatha) {
+    _livBtnsMod = `<a href="${_esc(_yLivMod.url_hatha)}" style="${_ybtnStyMod}">📖 Télécharger le livret Hatha Yoga</a>`;
+  }
+  const livretBlockMod = _livBtnsMod ? `<div style="text-align:center;margin:0 0 22px;">${_livBtnsMod}</div>` : '';
   const htmlEleve = wrap(`${headerYoga}
     <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre cours d'essai yoga a été modifié</span></div>
     <div style="padding:30px 28px;">
       <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">${prenomAff}</strong>,</p>
       <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre cours d'essai yoga a été déplacé. Voici votre nouveau créneau :</p>
       ${yogaBox}
+      ${livretBlockMod}
       <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">En cas de question, n'hésitez pas à nous contacter.</p>
       <div style="text-align:center;margin:0 0 24px;"><a href="mailto:${adminYogaEmail}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a></div>
       ${signYoga}
@@ -5690,8 +5752,17 @@ async function handleNotifyYogaInscriptionValidee(request, env) {
     yogaAdresse.gps ? `<a href="https://maps.google.com/?q=${encodeURIComponent(yogaAdresse.gps)}" style="color:#2e7d32;font-size:12px;">🗺 Voir sur Google Maps</a>` : '',
   ].filter(Boolean).join('<br/>');
 
-  // Livret URL
-  const livretUrl = isForfait ? (livretData.url_hatha || livretData.url_yin || '') : (livretData['url_' + cours] || '');
+  // Livret(s) — forfait : 2 boutons (yin + hatha), sinon 1 bouton selon le cours
+  const _ybtnStyYI1 = 'display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;';
+  let _livBtnsYI1 = '';
+  if (isForfait) {
+    if (livretData.url_yin)   _livBtnsYI1 += `<a href="${_esc(livretData.url_yin)}" style="${_ybtnStyYI1}">📖 Livret Yin Yoga</a>`;
+    if (livretData.url_hatha) _livBtnsYI1 += `<a href="${_esc(livretData.url_hatha)}" style="${_ybtnStyYI1}">📖 Livret Hatha Yoga</a>`;
+  } else if (cours === 'yin' && livretData.url_yin) {
+    _livBtnsYI1 = `<a href="${_esc(livretData.url_yin)}" style="${_ybtnStyYI1}">📖 Télécharger le livret Yin Yoga</a>`;
+  } else if (cours === 'hatha' && livretData.url_hatha) {
+    _livBtnsYI1 = `<a href="${_esc(livretData.url_hatha)}" style="${_ybtnStyYI1}">📖 Télécharger le livret Hatha Yoga</a>`;
+  }
 
   // Paiement label
   const PAI_LBL = { cb1x: 'CB 1×', cb3x: 'CB 3×', especes: 'Espèces', cheque: 'Chèque', virement1x: 'Virement 1×', virement3x: 'Virement 3×' };
@@ -5739,11 +5810,7 @@ async function handleNotifyYogaInscriptionValidee(request, env) {
     </ul>
   </div>`;
 
-  const livretBtn = livretUrl ? `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
-    <div style="font-size:12px;font-weight:700;color:#333;margin-bottom:8px;">📄 Livret d'information yoga</div>
-    <p style="font-size:13px;color:#555;margin:0 0 12px;line-height:1.6;">Retrouvez dans ce livret toutes les informations pratiques sur votre cours.</p>
-    <a href="${_esc(livretUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:10px 22px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Télécharger le livret →</a>
-  </div>` : '';
+  const livretBtn = _livBtnsYI1 ? `<div style="text-align:center;margin:0 0 22px;">${_livBtnsYI1}</div>` : '';
 
   // ── Email YI1 élève
   if (env.BREVO_API_KEY) {
