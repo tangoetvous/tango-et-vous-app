@@ -5976,99 +5976,168 @@ if('serviceWorker' in navigator){
 // ── LABO COULEURS (actif uniquement avec ?testpubs=1) ──────────────────────
 if (new URLSearchParams(location.search).get('testpubs') === '1') {
   document.addEventListener('DOMContentLoaded', function() {
-    const R = document.documentElement;
-    const _cv = function(v){ return getComputedStyle(R).getPropertyValue(v).trim(); };
+    var R = document.documentElement;
 
-    const VARS = [
-      { label:'Fond principal',    v:'--bg',          t:'color' },
-      { label:'Surface (cartes)',  v:'--surface',      t:'color' },
-      { label:'Surface 2',         v:'--surface2',     t:'color' },
-      { label:'Bordures',          v:'--border',       t:'color' },
-      { label:'Couleur or',        v:'--gold',         t:'color' },
-      { label:'Texte principal',   v:'--text',         t:'color' },
-      { label:'Texte secondaire',  v:'--text-dim',     t:'color' },
-      { label:'Texte faint',       v:'--text-faint',   t:'color' },
-      { label:'Succès (vert)',     v:'--success',      t:'color' },
-      { label:'Rayon coins',       v:'--radius',       t:'text',  placeholder:'14px' },
+    // Convertit n'importe quelle valeur CSS couleur en #rrggbb pour <input type=color>
+    function _hex(str) {
+      str = (str || '').trim();
+      if (/^#[0-9a-f]{6}$/i.test(str)) return str.toLowerCase();
+      if (/^#[0-9a-f]{3}$/i.test(str))
+        return '#' + str[1]+str[1] + str[2]+str[2] + str[3]+str[3];
+      var m = str.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+      if (m) return '#' + [m[1],m[2],m[3]].map(function(n){
+        return ('0' + parseInt(n).toString(16)).slice(-2);
+      }).join('');
+      return '#111111';
+    }
+    function _cv(v) { return getComputedStyle(R).getPropertyValue(v).trim(); }
+
+    var VARS = [
+      { g:'Fonds',    label:'Fond principal',   v:'--bg' },
+      { g:'Fonds',    label:'Surface (cartes)', v:'--surface' },
+      { g:'Fonds',    label:'Surface 2',        v:'--surface2' },
+      { g:'Fonds',    label:'Surface 3',        v:'--surface3' },
+      { g:'Textes',   label:'Texte principal',  v:'--text' },
+      { g:'Textes',   label:'Texte secondaire', v:'--text-dim' },
+      { g:'Textes',   label:'Texte discret',    v:'--text-faint' },
+      { g:'Accents',  label:'Or principal',     v:'--gold' },
+      { g:'Accents',  label:'Or foncé',         v:'--gold-dim' },
+      { g:'Accents',  label:'Or pâle (fond)',   v:'--gold-pale' },
+      { g:'Accents',  label:'Bordures',         v:'--border' },
+      { g:'Accents',  label:'Succès (vert)',    v:'--success' },
+      { g:'Accents',  label:'Danger (rouge)',   v:'--danger' },
+      { g:'Accents',  label:'Avertissement',    v:'--warning' },
     ];
 
-    // Panneau
+    var THEMES = {
+      dark: {
+        '--bg':'#0a0a0a','--surface':'#111111','--surface2':'#181818','--surface3':'#1f1f1f',
+        '--text':'#ffffff','--text-dim':'#888888','--text-faint':'#444444',
+        '--gold':'#D4AF37','--gold-dim':'#8a6800','--gold-pale':'#2a1f00',
+        '--border':'#2a2a2a','--success':'#2e7d32','--danger':'#c62828','--warning':'#ff8800',
+      },
+      light: {
+        '--bg':'#f7f3eb','--surface':'#ffffff','--surface2':'#f0ebe0','--surface3':'#e8e3d8',
+        '--text':'#1a1008','--text-dim':'#5a4a2a','--text-faint':'#9a8a6a',
+        '--gold':'#b8860b','--gold-dim':'#d4af37','--gold-pale':'#f5e6a3',
+        '--border':'#d5c9a8','--success':'#2e7d32','--danger':'#c62828','--warning':'#e65100',
+      },
+    };
+
+    function _applyTheme(t) {
+      var vals = THEMES[t];
+      VARS.forEach(function(item){
+        if (vals[item.v]) R.style.setProperty(item.v, vals[item.v]);
+      });
+      _syncInputs();
+    }
+    function _syncInputs() {
+      panel.querySelectorAll('input[data-v]').forEach(function(inp){
+        var fresh = _cv(inp.dataset.v);
+        inp.value = _hex(fresh);
+      });
+      var rInp = panel.querySelector('input[data-radius]');
+      if (rInp) rInp.value = _cv('--radius');
+    }
+
+    // ── Panneau ────────────────────────────────────────────────────
     var panel = document.createElement('div');
     panel.id = 'color-lab';
     panel.style.cssText = [
       'position:fixed;bottom:80px;right:16px;z-index:9999;',
       'background:#1a1a1a;border:1.5px solid #D4AF37;border-radius:14px;',
-      'width:280px;box-shadow:0 8px 32px rgba(0,0,0,.6);',
+      'width:290px;box-shadow:0 8px 32px rgba(0,0,0,.6);',
       'font-family:Montserrat,sans-serif;font-size:13px;color:#fff;',
-      'display:none;flex-direction:column;max-height:80vh;overflow:hidden;'
+      'display:none;flex-direction:column;max-height:85vh;overflow:hidden;'
     ].join('');
 
-    var header = document.createElement('div');
-    header.style.cssText = 'padding:12px 16px;border-bottom:1px solid #333;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
-    header.innerHTML = '<span style="font-weight:700;color:#D4AF37;letter-spacing:.5px;">🎨 Labo couleurs</span>'
+    // Header
+    var hdr = document.createElement('div');
+    hdr.style.cssText = 'padding:12px 16px;border-bottom:1px solid #333;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
+    hdr.innerHTML = '<span style="font-weight:700;color:#D4AF37;letter-spacing:.5px;">🎨 Labo couleurs</span>'
       + '<button id="lab-close" style="background:none;border:none;color:#888;font-size:18px;cursor:pointer;line-height:1;padding:0;">✕</button>';
 
+    // Présets
+    var presets = document.createElement('div');
+    presets.style.cssText = 'padding:10px 16px;border-bottom:1px solid #2a2a2a;display:flex;gap:8px;flex-shrink:0;';
+    ['dark','light'].forEach(function(t){
+      var btn = document.createElement('button');
+      btn.textContent = t === 'dark' ? '🌙 Sombre' : '☀️ Clair';
+      btn.style.cssText = 'flex:1;padding:7px;border:1px solid #444;background:#222;color:#ccc;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;';
+      btn.addEventListener('click', function(){ _applyTheme(t); });
+      presets.appendChild(btn);
+    });
+
+    // Body scrollable
     var body = document.createElement('div');
-    body.style.cssText = 'padding:14px 16px;overflow-y:auto;flex:1;';
+    body.style.cssText = 'padding:10px 16px 14px;overflow-y:auto;flex:1;';
 
+    var prevG = '';
     VARS.forEach(function(item){
-      var val = _cv(item.v);
+      if (item.g !== prevG) {
+        var gh = document.createElement('div');
+        gh.textContent = item.g;
+        gh.style.cssText = 'font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1.5px;margin:' + (prevG ? '14px' : '4px') + ' 0 6px;font-weight:700;';
+        body.appendChild(gh);
+        prevG = item.g;
+      }
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px;';
-
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:7px;';
       var lbl = document.createElement('label');
       lbl.textContent = item.label;
       lbl.style.cssText = 'flex:1;font-size:11px;color:#aaa;line-height:1.3;';
-
-      var inp;
-      if (item.t === 'color') {
-        inp = document.createElement('input');
-        inp.type = 'color';
-        inp.value = val.length === 7 ? val : '#111111';
-        inp.style.cssText = 'width:38px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0;background:none;';
-        inp.dataset.v = item.v;
-        inp.addEventListener('input', function(){ R.style.setProperty(this.dataset.v, this.value); });
-      } else {
-        inp = document.createElement('input');
-        inp.type = 'text';
-        inp.value = val || item.placeholder || '';
-        inp.style.cssText = 'width:70px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;padding:4px 8px;font-size:12px;';
-        inp.dataset.v = item.v;
-        inp.addEventListener('input', function(){ R.style.setProperty(this.dataset.v, this.value); });
-      }
-
+      var inp = document.createElement('input');
+      inp.type = 'color';
+      inp.value = _hex(_cv(item.v));
+      inp.style.cssText = 'width:38px;height:26px;border:none;border-radius:6px;cursor:pointer;padding:0;background:none;flex-shrink:0;';
+      inp.dataset.v = item.v;
+      inp.addEventListener('input', function(){ R.style.setProperty(this.dataset.v, this.value); });
       row.appendChild(lbl);
       row.appendChild(inp);
       body.appendChild(row);
     });
 
-    // Bouton reset
+    // Rayon (texte)
+    var rRow = document.createElement('div');
+    rRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin-top:14px;';
+    var rLbl = document.createElement('label');
+    rLbl.textContent = 'Rayon des coins';
+    rLbl.style.cssText = 'flex:1;font-size:11px;color:#aaa;';
+    var rInp = document.createElement('input');
+    rInp.type = 'text';
+    rInp.value = _cv('--radius');
+    rInp.placeholder = '14px';
+    rInp.setAttribute('data-radius','1');
+    rInp.style.cssText = 'width:60px;background:#111;border:1px solid #333;color:#fff;border-radius:6px;padding:4px 8px;font-size:12px;';
+    rInp.addEventListener('input', function(){ R.style.setProperty('--radius', this.value); });
+    rRow.appendChild(rLbl);
+    rRow.appendChild(rInp);
+    body.appendChild(rRow);
+
+    // Reset
     var resetBtn = document.createElement('button');
     resetBtn.textContent = '↺ Réinitialiser';
-    resetBtn.style.cssText = 'width:100%;margin-top:4px;padding:8px;background:#222;border:1px solid #444;color:#aaa;border-radius:8px;cursor:pointer;font-size:12px;';
+    resetBtn.style.cssText = 'width:100%;margin-top:12px;padding:8px;background:#222;border:1px solid #444;color:#aaa;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;';
     resetBtn.addEventListener('click', function(){
       VARS.forEach(function(item){ R.style.removeProperty(item.v); });
-      // Resynch les inputs
-      panel.querySelectorAll('input').forEach(function(inp){
-        var v = inp.dataset.v;
-        var fresh = _cv(v);
-        if (inp.type === 'color') inp.value = fresh.length === 7 ? fresh : '#111111';
-        else inp.value = fresh;
-      });
+      R.style.removeProperty('--radius');
+      _syncInputs();
+      rInp.value = _cv('--radius');
     });
     body.appendChild(resetBtn);
 
+    // Footer – copier
     var footer = document.createElement('div');
     footer.style.cssText = 'padding:10px 16px;border-top:1px solid #333;flex-shrink:0;';
     var copyBtn = document.createElement('button');
     copyBtn.textContent = '📋 Copier les valeurs';
-    copyBtn.style.cssText = 'width:100%;padding:10px;background:#D4AF37;border:none;color:#111;font-weight:700;border-radius:8px;cursor:pointer;font-size:13px;';
+    copyBtn.style.cssText = 'width:100%;padding:10px;background:#D4AF37;border:none;color:#111;font-weight:700;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;';
     copyBtn.addEventListener('click', function(){
       var lines = [':root {'];
       VARS.forEach(function(item){
-        var cur = getComputedStyle(R).getPropertyValue(item.v).trim();
-        lines.push('  ' + item.v + ': ' + cur + ';');
+        lines.push('  ' + item.v + ': ' + _cv(item.v) + ';');
       });
+      lines.push('  --radius: ' + _cv('--radius') + ';');
       lines.push('}');
       navigator.clipboard.writeText(lines.join('\n')).then(function(){
         copyBtn.textContent = '✓ Copié !';
@@ -6077,7 +6146,8 @@ if (new URLSearchParams(location.search).get('testpubs') === '1') {
     });
     footer.appendChild(copyBtn);
 
-    panel.appendChild(header);
+    panel.appendChild(hdr);
+    panel.appendChild(presets);
     panel.appendChild(body);
     panel.appendChild(footer);
 
@@ -6097,7 +6167,6 @@ if (new URLSearchParams(location.search).get('testpubs') === '1') {
       panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
     });
 
-    document.getElementById('lab-close') || document.body.appendChild(panel);
     document.body.appendChild(panel);
     document.body.appendChild(fab);
 
