@@ -479,6 +479,11 @@ export default {
         return await handleDebugPushTest(request, env);
       }
 
+      // GET /api/debug/fcm-count?email=xxx — compte les tokens FCM pour un email (admin requis)
+      if (pathname === '/api/debug/fcm-count' && method === 'GET') {
+        return await handleDebugFcmCount(request, env);
+      }
+
       try {
         return await env.ASSETS.fetch(request);
       } catch (assetErr) {
@@ -3163,8 +3168,9 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
   const { titre, discussionId, groupes, saison, adminNom } = body;
   if (!titre || !saison) return jsonError(400, 'Paramètres manquants');
 
+  const _svcKeyDisc = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const emails = Array.isArray(groupes) && groupes.length > 0
-    ? await _getEmailsByGroupes(groupes, saison, SUPABASE_ANON)
+    ? await _getEmailsByGroupes(groupes, saison, _svcKeyDisc)
     : [];
 
   const notifMsgEleve = `💬 Nouvelle discussion : ${titre}`;
@@ -3187,7 +3193,6 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
   await Promise.all([...inserts, adminInsert]);
 
   // Push OS élève pour chaque email
-  const _svcKeyDisc = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   await Promise.all(emails.map(async function(eleveEmail) {
     try {
       const tokens = await getFcmTokensForEmail(String(eleveEmail), _svcKeyDisc);
@@ -3212,8 +3217,9 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
   const { discussionId, contenu, groupes, saison, adminNom, titre } = body;
   if (!saison) return jsonError(400, 'Paramètres manquants');
 
+  const _svcKeyDiscMsg = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const emails = Array.isArray(groupes) && groupes.length > 0
-    ? await _getEmailsByGroupes(groupes, saison, SUPABASE_ANON)
+    ? await _getEmailsByGroupes(groupes, saison, _svcKeyDiscMsg)
     : [];
 
   const titreLabel  = titre || 'Discussion';
@@ -3237,7 +3243,6 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
   await Promise.all([...inserts, adminInsert]);
 
   // Push OS élève pour chaque email
-  const _svcKeyDiscMsg = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   await Promise.all(emails.map(async function(eleveEmail) {
     try {
       const tokens = await getFcmTokensForEmail(String(eleveEmail), _svcKeyDiscMsg);
@@ -3590,6 +3595,47 @@ async function _getFcmAccessToken(serviceAccountJson) {
 }
 
 // ================================================================
+// GET /api/debug/fcm-count?email=xxx — compte les tokens FCM (JWT admin requis)
+// ================================================================
+async function handleDebugFcmCount(request, env) {
+  const authH = request.headers.get('Authorization') || '';
+  const jwtTok = authH.startsWith('Bearer ') ? authH.slice(7) : '';
+  if (!jwtTok) return jsonError(401, 'JWT requis');
+  let callerEmail;
+  try {
+    const p = JSON.parse(atob(jwtTok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    callerEmail = p.email;
+  } catch { return jsonError(400, 'JWT invalide'); }
+  const adminEmails = ['tangoetvous@gmail.com','jeremybraitbart@gmail.com','garciabraitbart@gmail.com','jeremy@tangoetvous.com'];
+  if (!adminEmails.includes(callerEmail)) return jsonError(403, 'Admin requis');
+
+  const url = new URL(request.url);
+  const targetEmail = url.searchParams.get('email') || '';
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  if (targetEmail) {
+    // Compte les tokens pour l'email donné
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/fcm_tokens?email=ilike.${encodeURIComponent(targetEmail.toLowerCase())}&select=token,created_at`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (!r.ok) return jsonError(r.status, 'Supabase error ' + r.status);
+    const rows = await r.json();
+    return corsResponse({ email: targetEmail, tokens_count: rows.length, tokens: rows.map(x => ({ prefix: (x.token||'').slice(0,60), created_at: x.created_at })) }, 200, {}, request);
+  } else {
+    // Sans email : donne les stats globales (combien d'emails distincts ont des tokens)
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/fcm_tokens?select=email`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (!r.ok) return jsonError(r.status, 'Supabase error ' + r.status);
+    const rows = await r.json();
+    const emailCounts = {};
+    rows.forEach(x => { if (x.email) emailCounts[x.email] = (emailCounts[x.email] || 0) + 1; });
+    return corsResponse({ total_tokens: rows.length, distinct_emails: Object.keys(emailCounts).length, by_email: emailCounts }, 200, {}, request);
+  }
+}
+
 // POST /api/debug/push-test — diagnostic push (JWT admin requis)
 // ================================================================
 async function handleDebugPushTest(request, env) {
@@ -7996,9 +8042,11 @@ async function handleNotifyPublicationPubliee(request, env) {
   // Push aux élèves concernés
   const emails = [...emailSet];
   let pushSent = 0;
+  console.log('[publication-publiee] emails found:', emails.length, 'starting push loop');
   for (const email of emails) {
     try {
       const tokens = await getFcmTokensForEmail(email, svcKey);
+      console.log('[publication-publiee] tokens for', email, ':', tokens.length);
       if (tokens.length) {
         await sendFcmPush(env, tokens, { title: pushTitle, body: pushBody });
         pushSent++;
@@ -8007,7 +8055,7 @@ async function handleNotifyPublicationPubliee(request, env) {
   }
 
   // Pas de push ni panel 🔔 admin pour les publications (toast après publication suffit comme feedback)
-
+  console.log('[publication-publiee] done — emails:', emails.length, 'pushed:', pushSent);
   return corsResponse({ ok: true, pushed: pushSent, emails: emails.length }, 200, {}, request);
 }
 

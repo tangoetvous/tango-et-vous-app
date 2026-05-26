@@ -1,5 +1,59 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Publications et Discussions — pas d'emails, uniquement notifications in-app + push
+
+### Règle permanente — confirmée 2026-05-26
+
+**Il n'y a PAS d'emails liés aux publications ni aux discussions.**
+
+| Fonctionnalité | Email Brevo | Notif panel 🔔 élève (`notifications_eleve`) | Push OS élève |
+|----------------|-------------|----------------------------------------------|---------------|
+| Nouvelle publication publiée | ❌ Jamais | ✅ Oui | ✅ Oui |
+| Nouveau message dans une discussion | ❌ Jamais | ✅ Oui | ✅ Oui |
+| Nouvelle discussion créée | ❌ Jamais | ✅ Oui | ✅ Oui |
+
+**Règle** : ne jamais ajouter d'appel `sendBrevoNotification` / `sendMail` dans `handleNotifyPublicationPubliee`, `handleNotifyDiscussionNouvelle`, ou `handleNotifyDiscussionMessage`. Ces handlers n'envoient que des notifs in-app + push OS.
+
+### Architecture notifications publications/discussions (worker.js)
+
+- **`handleNotifyPublicationPubliee`** (POST `/api/notify/publication-publiee`, JWT admin) :
+  - Récupère les emails via `_getEmailsByGroupes(groupes, saison, svcKey)` — service key pour bypass RLS
+  - INSERT dans `notifications_eleve` pour chaque email (panel 🔔 élève)
+  - `getFcmTokensForEmail` + `sendFcmPush` pour chaque email (push OS)
+
+- **`handleNotifyDiscussionNouvelle`** (POST `/api/notify/discussion-nouvelle`, JWT admin) :
+  - `_getEmailsByGroupes` avec `env.SUPABASE_SERVICE_KEY || SUPABASE_ANON`
+  - INSERT `notifications_eleve` + `_insertNotification` panel admin
+  - `getFcmTokensForEmail` + `sendFcmPush`
+
+- **`handleNotifyDiscussionMessage`** (POST `/api/notify/discussion-message`, JWT admin) :
+  - Même architecture que `handleNotifyDiscussionNouvelle`
+
+### `_getEmailsByGroupes(groupes, saison, jwt)` — règle RLS
+
+**Clé de groupes** : les discussions et publications utilisent les groupes `'paris-debutants'`, `'paris-intermediaires'`, `'vincennes-debutants'`, `'vincennes-intermediaires'` (avec 's' final) — mappés vers `ville+niveau` dans `GROUP_MAP`.
+
+**Toujours passer `env.SUPABASE_SERVICE_KEY || SUPABASE_ANON`** comme troisième argument. Ne jamais passer `SUPABASE_ANON` directement — la RLS SELECT sur `inscriptions_cours` bloque anon et retourne 0 lignes sans erreur HTTP (HTTP 200, tableau vide silencieux).
+
+```javascript
+// ✅ Correct
+const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+const emails = await _getEmailsByGroupes(groupes, saison, svcKey);
+
+// ❌ Bug silencieux — retourne toujours [] car RLS bloque anon
+const emails = await _getEmailsByGroupes(groupes, saison, SUPABASE_ANON);
+```
+
+### Outil de debug FCM
+
+**`GET /api/debug/fcm-count?email=xxx`** (JWT admin requis) :
+- Sans `email` : stats globales (nb total tokens, nb emails distincts, count par email)
+- Avec `email=xxx@yyy.com` : tokens enregistrés pour cet email (count + préfixes)
+
+Complémentaire de `POST /api/debug/push-test` (envoie un push test à l'admin lui-même).
+
+---
+
 ## Horaires tango dans les emails — clés plates, pas d'objets imbriqués
 
 ### Symptôme
