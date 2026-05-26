@@ -612,15 +612,14 @@ function calcExpiration(datePremierCours, ville) {
   var firstStored = coursArr[0] || '';
   var lastStored  = coursArr[coursArr.length - 1] || '';
 
-  // Date de début de la prochaine saison (1er septembre après lastStored).
-  // Permet de compter juillet-août comme semaines sans cours même si elles sont
-  // après la dernière date stockée (qui s'arrête en juin).
-  var nextSeasonStartISO = '';
-  if (lastStored) {
-    var ls = new Date(lastStored + 'T12:00:00');
-    var yr = ls.getMonth() >= 8 ? ls.getFullYear() + 1 : ls.getFullYear();
-    nextSeasonStartISO = yr + '-09-01';
-  }
+  // Date de début de la prochaine saison calculée depuis la saison de datePremierCours.
+  // ⚠️ NE PAS utiliser lastStored : si la saison suivante est saisie dans Paramètres,
+  // lastStored tombe en juin N+1 → nextSeasonStartISO = sept N+1 → toutes les vacances
+  // de la saison N+1 seraient comptées comme gaps → expiration gonflée à l'infini.
+  var dpMois = debut.getMonth(); // 0-indexed : 0=Jan … 11=Déc
+  var dpAnnee = debut.getFullYear();
+  var saisonAnnee = dpMois >= 8 ? dpAnnee : dpAnnee - 1;
+  var nextSeasonStartISO = (saisonAnnee + 1) + '-09-01';
 
   // Algorithme itératif : chaque semaine sans cours repousse fin d'1 semaine.
   // Couvre les vacances intra-saison ET la coupure estivale (juillet-août).
@@ -8864,7 +8863,8 @@ function pointerCoursAction(id, date, nbCours, btn) {
         } else {
           syncData={email:c.email,utilises:Math.min(10,(c.utilises||0)+added),
             restants:Math.max(0,(c.restants||0)-added),
-            datePremierCours:c.datePremierCours||date,expiration:c.expiration};
+            datePremierCours:c.datePremierCours||date,
+            expiration:c.expiration||calcExpiration(c.datePremierCours||date,c.ville||'paris')};
         }
         _broadcastAdminSync('carteUpdate',syncData);
         // Email + notif in-app élève — fire and forget
@@ -8904,6 +8904,9 @@ function pointerCoursAction(id, date, nbCours, btn) {
                 niveau: c.niveau||'',
                 saison: saisonActive(),
                 datePremierCours: date,
+                expiration: calcExpiration(date, c.ville||'paris'),
+                utilises: syncData.utilises,
+                restants: syncData.restants,
               }),
             })).catch(function(){});
           }

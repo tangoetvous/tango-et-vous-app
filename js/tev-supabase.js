@@ -670,13 +670,13 @@ function _calcExpirationSb(dateStr, ville) {
   const firstStored = coursArr[0] || '';
   const lastStored  = coursArr[coursArr.length - 1] || '';
 
-  // Date de début de la prochaine saison (1er septembre après lastStored).
-  let nextSeasonStartISO = '';
-  if (lastStored) {
-    const ls = new Date(lastStored + 'T12:00:00');
-    const yr = ls.getMonth() >= 8 ? ls.getFullYear() + 1 : ls.getFullYear();
-    nextSeasonStartISO = yr + '-09-01';
-  }
+  // Date de début de la prochaine saison calculée depuis la saison de datePremierCours.
+  // ⚠️ NE PAS utiliser lastStored : si la saison suivante est saisie, lastStored tombe
+  // en juin N+1 → nextSeasonStartISO = sept N+1 → expiration gonflée à l'infini.
+  const dpMois   = debut.getMonth();
+  const dpAnnee  = debut.getFullYear();
+  const saisonAnnee = dpMois >= 8 ? dpAnnee : dpAnnee - 1;
+  const nextSeasonStartISO = (saisonAnnee + 1) + '-09-01';
 
   // Algorithme itératif : chaque semaine sans cours repousse fin d'1 semaine.
   // Couvre les vacances intra-saison ET la coupure estivale (juillet-août).

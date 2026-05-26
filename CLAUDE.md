@@ -1191,7 +1191,7 @@ Lifecycle des statuts dans `inscriptions_cours` pour les nouvelles inscriptions 
 - **Vacances, jours fériés, été** : tous couverts automatiquement — pas de liste hardcodée
 - Calcul : `calcExpiration(datePremierCours, ville)` dans `admin.html` et `_calcExpirationSb()` dans `tev-supabase.js`
 - **Source des dates** : `localStorage.tev_cours_dates.paris` / `.vincennes` — synchronisé depuis Supabase via `chargerParamsRemote()` (admin) ou `tevRefreshCoursDates()` (espace élève). **Zéro hardcodé** — `SANS_COURS_*` supprimés.
-- **Saison courante ET saison suivante** doivent être saisies dans Paramètres pour que l'été soit compté précisément en semaines sans cours (juillet-août = après `lastStored` mais avant `nextSeasonStartISO = 1er sept`).
+- **Saison courante ET saison suivante** peuvent être saisies dans Paramètres (les dates futures sont ignorées pour le calcul). ⚠️ `nextSeasonStartISO` est calculé depuis **la saison de `datePremierCours`**, PAS depuis `lastStored` — saisir la saison suivante ne perturbe pas le calcul depuis le correctif 2026-05-26.
 - **Bug timezone corrigé** : `T00:00:00` → `T12:00:00` partout dans les deux fonctions (évite le glissement UTC/heure locale qui donnait -1 jour).
 - ⚠️ **Les dates doivent être saisies depuis le début de la saison** : si une carte a commencé avant la première date dans Paramètres, les semaines sans cours antérieures ne seront pas comptées.
 - ⚠️ **Ne jamais remettre de listes `SANS_COURS_*` hardcodées** : le système détecte les gaps automatiquement.
@@ -3707,25 +3707,38 @@ Cela couvre trois cas :
 - **Été** (`lastStored < iso < 1er sept`) : juillet-août — **désormais comptés** (bonus ~10 semaines)
 - **Saison suivante** (`iso >= 1er sept`) : **non comptés**, évite l'extension infinie
 
-**Calcul `nextSeasonStartISO`** :
+**Calcul `nextSeasonStartISO`** (**⚠️ VERSION BUGGUÉE — supersédée le 2026-05-26**) :
 ```javascript
+// ❌ INCORRECT — basé sur lastStored. Si la saison suivante est saisie dans Paramètres,
+// lastStored saute à juin N+1 → nextSeasonStartISO = sept N+1 → toutes les vacances
+// de la saison N+1 sont comptées comme gaps → expiration gonflée (ex: déc 2027 au lieu de nov 2026).
 var ls = new Date(lastStored + 'T12:00:00');
 var yr = ls.getMonth() >= 8 ? ls.getFullYear() + 1 : ls.getFullYear();
 nextSeasonStartISO = yr + '-09-01';
-// Exemple : lastStored = 2026-06-25 → mois=5 (< 8) → yr=2026 → nextSeasonStartISO='2026-09-01'
+```
+
+**VERSION CORRECTE (depuis 2026-05-26)** — basée sur `datePremierCours` :
+```javascript
+// ✅ CORRECT — la borne haute est toujours le 1er sept de la saison de datePremierCours
+var dpMois = debut.getMonth();
+var dpAnnee = debut.getFullYear();
+var saisonAnnee = dpMois >= 8 ? dpAnnee : dpAnnee - 1;
+var nextSeasonStartISO = (saisonAnnee + 1) + '-09-01';
+// Exemple : premier cours 26 mai 2026 → mois=4 (< 8) → saisonAnnee=2025 → nextSeasonStartISO='2026-09-01'
+// Peu importe si lastStored = juin 2027 (saison suivante saisie) — nextSeasonStartISO reste 2026-09-01 ✅
 ```
 
 **Résultat attendu** pour une carte démarrant le 22 mai :
 - 3 mois de base : 22 août
 - Gaps intra-saison (vacances de Pentecôte ~1 sem + autres) : +quelques semaines
 - Été juillet-août (~10 semaines sans cours) : +10 semaines
-- Expiration finale : ~22 octobre ✅ (au lieu de 18 septembre ❌)
+- Expiration finale : ~2 novembre ✅ (au lieu de décembre 2027 ❌ si saison suivante saisie)
 
-**Fix appliqué dans les deux fonctions** :
+**Fix appliqué dans les deux fonctions** (version bugguée initiale, réparée le 2026-05-26) :
 - `calcExpiration(datePremierCours, ville)` dans `admin.html` (ligne ~613) — `var` syntax
 - `_calcExpirationSb(dateStr, ville)` dans `js/tev-supabase.js` (ligne ~626) — `const/let` syntax
 
-⚠️ **Règle à retenir** : ne jamais remettre `iso <= lastStored` seul comme borne haute. Toujours utiliser `nextSeasonStartISO` comme borne haute alternative.
+⚠️ **Règle à retenir** : ne jamais calculer `nextSeasonStartISO` depuis `lastStored`. Toujours le calculer depuis **la saison académique de `datePremierCours`**.
 
 ### ✅ CP-E email — mention explicite du professeur
 
@@ -3750,26 +3763,28 @@ L'algorithme est **itératif** : la boucle `while (cur <= fin)` étend `fin` dyn
 2. **B** = semaines sans cours dans A → `fin` avancé de 7j par gap → nouvelle fenêtre A+B
 3. **C** = semaines sans cours **nouvelles** dans A+B (celles hors de A) → `fin` avancé à nouveau
 
-Exemple (premier cours 11 juin) :
-- A : 11 juin → 11 sept → 0 gap en été car juillet-août = après `lastStored` mais avant `nextSeasonStartISO` → `fin` = 11 sept
-- B : gaps en sept (Toussaint pas encore dans la fenêtre) → `fin` = ~13 nov
-- C : Toussaint 29 oct désormais dans la fenêtre → gap → `fin` = **20 nov** ✅ (pas 13 nov)
+Exemple (premier cours 11 juin 2026) :
+- `nextSeasonStartISO = '2026-09-01'` (calculé depuis premier cours, PAS depuis lastStored)
+- A : 11 juin → 11 sept → juillet-août = après `lastStored` juin 2026 MAIS avant `nextSeasonStartISO` → comptés → `fin` avance à ~14 oct
+- B : gaps intra-saison après la rentrée (Toussaint pas encore dans la fenêtre) → `fin` = ~13 nov
+- C : Toussaint 29 oct désormais dans la fenêtre → gap → `fin` = **20 nov** ✅
 
 **Sources de données (aucune valeur hardcodée) :**
 - `localStorage.tev_cours_dates.paris` / `.vincennes` — mis à jour depuis Supabase via `chargerParamsRemote()` (admin) ou `tevRefreshCoursDates()` (espace élève)
 - Contient toutes les dates de toutes les saisons saisies dans Paramètres → Tango Paris/Vincennes → Dates
-- Saison courante **ET** saison suivante doivent être saisies pour que l'été soit correctement compté
+- La présence des dates de la saison suivante **ne perturbe pas** le calcul (nextSeasonStartISO est borné à la saison de datePremierCours)
 
-**Borne haute de la boucle :**
+**Borne haute de la boucle (version correcte depuis 2026-05-26) :**
 ```javascript
 (iso <= lastStored || (nextSeasonStartISO && iso < nextSeasonStartISO))
-// lastStored = dernière date de cours saisie (ex : juin 2027)
-// nextSeasonStartISO = '2027-09-01' — calculé depuis lastStored
-// → juillet-août = après lastStored MAIS avant nextSeasonStartISO → comptés comme gaps ✅
-// → après le 1er sept = nouvelle saison → non comptés ✅
+// lastStored = dernière date de cours saisie (peut être juin 2027 si saison suivante saisie)
+// nextSeasonStartISO = '2026-09-01' — calculé depuis datePremierCours (PAS depuis lastStored)
+// Exemple : premier cours 26/05/2026 → nextSeasonStartISO = '2026-09-01'
+// → juillet-août 2026 = après lastStored juin 2026 MAIS avant nextSeasonStartISO → comptés comme gaps ✅
+// → saison 2026-2027 (iso >= '2026-09-01') → non comptés même si lastStored = juin 2027 ✅
 ```
 
-**⚠️ Règle absolue** : ne jamais remettre `iso <= lastStored` seul — toujours conserver la condition `nextSeasonStartISO`. Ne jamais remettre de listes `SANS_COURS_*` hardcodées.
+**⚠️ Règle absolue** : ne jamais calculer `nextSeasonStartISO` depuis `lastStored` — depuis `datePremierCours` uniquement. Ne jamais remettre de listes `SANS_COURS_*` hardcodées.
 
 ### ✅ tevRefreshCoursDates() — fix calcExpiration sur l'espace élève
 
@@ -5023,3 +5038,62 @@ Avec `?testpubs=1` dans l'URL : tous les brouillons sont visibles (test admin de
 - `publiee: true` = publiée → soumise aux filtres `dateProgrammee` habituels
 - Les fonctions de sync automatique (`syncPublicationsStage`, `syncPublicationsMilongaDate`) mettent à jour le contenu (titre, contenu, extrait, image) des publications existantes quelle que soit leur valeur `publiee` — les brouillons sont mis à jour au même titre que les publiées
 - Ne jamais changer `publiee` dans les fonctions de sync automatique — uniquement dans l'éditeur admin ou via le bouton dédié
+
+## Session 2026-05-26 — Fix calcExpiration nextSeasonStartISO + email C1 expiration
+
+### ✅ Régression `calcExpiration` — `nextSeasonStartISO` basé sur `datePremierCours` (pas `lastStored`)
+
+**Symptôme** : après pointage d'une carte test le 26/05/2026, l'espace élève affichait "Expiration : **1 décembre 2027** — 555 jours restants" et l'email C1 affichait "Valide jusqu'au : **à calculer après le 1er cours**".
+
+**Pourquoi le bug a réapparu** : le fix du 2026-05-22 (suite 4) calculait `nextSeasonStartISO` depuis `lastStored` (dernière date dans `tev_cours_dates`). Cela fonctionnait tant que seule la saison 2025-2026 était saisie dans Paramètres (`lastStored ≈ juin 2026 → nextSeasonStartISO = '2026-09-01'`). Dès que l'admin a saisi les dates 2026-2027, `lastStored` a sauté à juin 2027 → `nextSeasonStartISO = '2027-09-01'` → TOUTES les semaines 2026-2027 (Toussaint, Noël, vacances scolaires) ont été comptées comme gaps pour une carte du 26 mai 2026 → 18+ mois d'extension → décembre 2027.
+
+**Fix** : `nextSeasonStartISO` calculé depuis **la saison académique de `datePremierCours`**, jamais depuis `lastStored` :
+
+```javascript
+// ✅ CORRECT (dans les deux fonctions admin.html + tev-supabase.js)
+var dpMois = debut.getMonth(); // 0-indexed
+var dpAnnee = debut.getFullYear();
+var saisonAnnee = dpMois >= 8 ? dpAnnee : dpAnnee - 1; // sept-déc → année courante ; jan-août → année-1
+var nextSeasonStartISO = (saisonAnnee + 1) + '-09-01';
+// Exemple : premier cours 26 mai 2026 → dpMois=4 → saisonAnnee=2025 → nextSeasonStartISO='2026-09-01'
+// Résultat : saison 2026-2027 non comptée même si lastStored = juin 2027 ✅
+```
+
+**Règle absolue définitive** :
+1. `nextSeasonStartISO` = toujours calculé depuis `datePremierCours` — **JAMAIS depuis `lastStored`**
+2. `lastStored` ne sert qu'à la borne intra-saison (`iso <= lastStored`) — pas à `nextSeasonStartISO`
+3. Saisir la saison suivante dans Paramètres ne doit jamais influencer l'expiration de la saison courante
+4. Les deux fonctions (`calcExpiration` dans `admin.html` et `_calcExpirationSb` dans `tev-supabase.js`) doivent utiliser exactement le même pattern
+
+**⚠️ TODO** : corriger la valeur DB de `jeremybraitbart+elevetest22coursc@gmail.com` dans `eleves.carte_expiration` (actuellement `2027-12-01` → doit être ~`2026-11-02`). Ouvrir Cartes 10 → Détails → ✏️ sur cette carte et sauvegarder pour recalculer, ou via SQL :
+```sql
+-- calcExpiration(2026-05-26, 'paris') ≈ 2026-11-02 (à vérifier dans l'UI admin)
+UPDATE eleves SET carte_expiration = NULL WHERE email = 'jeremybraitbart+elevetest22coursc@gmail.com';
+-- Puis repointer dans admin pour recalculer proprement
+```
+
+### ✅ Email C1 — expiration affichée correctement
+
+**Symptôme** : l'email C1 (premier pointage de saison) affichait "Valide jusqu'au : **à calculer après le 1er cours**" même si l'expiration venait d'être calculée.
+
+**Cause** : `pointerCoursAction` dans `admin.html` ne passait pas le champ `expiration` dans le body envoyé à `/api/notify/carte-bienvenue`. Le handler `handleNotifyCarteBienvenue` (worker.js) affiche "à calculer..." quand `expiration` est null.
+
+**Fix** : ajout de `expiration: calcExpiration(date, c.ville||'paris')` (et `utilises`, `restants`) dans le body de la requête fetch.
+
+```javascript
+// Dans pointerCoursAction(), corps de la requête carte-bienvenue :
+body: JSON.stringify({
+  email: c.email,
+  prenom: c.prenom||'',
+  nom: c.nom||'',
+  ville: c.ville||'paris',
+  niveau: c.niveau||'',
+  saison: saisonActive(),
+  datePremierCours: date,
+  expiration: calcExpiration(date, c.ville||'paris'),   // ← ajouté
+  utilises: syncData.utilises,                           // ← ajouté
+  restants: syncData.restants,                           // ← ajouté
+})
+```
+
+**Fix secondaire** : dans le bloc `syncData` pour les pointages normaux (non auto-renouvellement), `expiration` était `c.expiration` (null pour les nouvelles cartes). Remplacé par `c.expiration || calcExpiration(c.datePremierCours||date, c.ville||'paris')` pour toujours avoir une expiration calculée.
