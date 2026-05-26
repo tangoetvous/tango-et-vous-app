@@ -3181,8 +3181,7 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
 
   await Promise.all([...inserts, adminInsert]);
 
-  // Push OS élève pour chaque email
-  const _svcKeyDisc = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  // Push OS élève pour chaque email (réutilise _svcKeyDisc déclaré plus haut)
   await Promise.all(emails.map(async function(eleveEmail) {
     try {
       const tokens = await getFcmTokensForEmail(String(eleveEmail), _svcKeyDisc);
