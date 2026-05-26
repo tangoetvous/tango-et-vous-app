@@ -3196,26 +3196,20 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
     if (!ra.ok) console.error('[discussion-nouvelle] notifications HTTP', ra.status);
   } catch(e) { console.error('[discussion-nouvelle] notifications error', e); }
 
-  // Push OS élève — BATCH FETCH tokens (1 subrequest pour N élèves)
+  // Push OS élève — un getFcmTokensForEmail par email (ilike, insensible à la casse)
   let pushSent = 0;
   if (emails.length > 0) {
     try {
-      const emailsParam = emails.map(e => `"${String(e).toLowerCase()}"`).join(',');
-      const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${emailsParam})&select=token`,
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyDisc}` } }
+      const tokenArrays = await Promise.all(
+        emails.map(e => getFcmTokensForEmail(e, _svcKeyDisc))
       );
-      if (r.ok) {
-        const rows = await r.json();
-        const tokenList = rows.map(x => x.token).filter(Boolean);
-        if (tokenList.length > 0) {
-          await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
-          pushSent = tokenList.length;
-        }
-      } else {
-        console.error('[discussion-nouvelle] batch fetch tokens HTTP', r.status);
+      const tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
+      console.log('[discussion-nouvelle] tokens found:', tokenList.length, 'for', emails.length, 'emails');
+      if (tokenList.length > 0) {
+        await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
+        pushSent = tokenList.length;
       }
-    } catch(e) { console.error('[discussion-nouvelle] batch push error', e); }
+    } catch(e) { console.error('[discussion-nouvelle] push error', e); }
   }
 
   return corsResponse({ ok: true, notified: emails.length, pushed: pushSent }, 200, {}, request);
@@ -3263,26 +3257,20 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
     if (!ra.ok) console.error('[discussion-message] notifications HTTP', ra.status);
   } catch(e) { console.error('[discussion-message] notifications error', e); }
 
-  // Push OS élève — BATCH FETCH tokens (1 subrequest pour N élèves)
+  // Push OS élève — un getFcmTokensForEmail par email (ilike, insensible à la casse)
   let pushSent = 0;
   if (emails.length > 0) {
     try {
-      const emailsParam = emails.map(e => `"${String(e).toLowerCase()}"`).join(',');
-      const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${emailsParam})&select=token`,
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyDiscMsg}` } }
+      const tokenArrays = await Promise.all(
+        emails.map(e => getFcmTokensForEmail(e, _svcKeyDiscMsg))
       );
-      if (r.ok) {
-        const rows = await r.json();
-        const tokenList = rows.map(x => x.token).filter(Boolean);
-        if (tokenList.length > 0) {
-          await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
-          pushSent = tokenList.length;
-        }
-      } else {
-        console.error('[discussion-message] batch fetch tokens HTTP', r.status);
+      const tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
+      console.log('[discussion-message] tokens found:', tokenList.length, 'for', emails.length, 'emails');
+      if (tokenList.length > 0) {
+        await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
+        pushSent = tokenList.length;
       }
-    } catch(e) { console.error('[discussion-message] batch push error', e); }
+    } catch(e) { console.error('[discussion-message] push error', e); }
   }
 
   return corsResponse({ ok: true, notified: emails.length, pushed: pushSent }, 200, {}, request);
@@ -8078,35 +8066,23 @@ async function handleNotifyPublicationPubliee(request, env) {
   const pushBody = `📰 ${titre}`;
   const catLabel = cat === 'milonga' ? 'milonga' : cat === 'stage' ? 'stage' : 'publication';
 
-  // Push aux élèves concernés — BATCH FETCH des tokens (1 subrequest pour N élèves)
+  // Push aux élèves concernés — un getFcmTokensForEmail par email (ilike, insensible à la casse)
   const emails = [...emailSet];
   let pushSent = 0;
   console.log('[publication-publiee] emails found:', emails.length);
 
-  let allTokens = [];
   if (emails.length > 0) {
     try {
-      const emailsParam = emails.map(e => `"${String(e).toLowerCase()}"`).join(',');
-      const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${emailsParam})&select=email,token`,
-        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+      const tokenArrays = await Promise.all(
+        emails.map(e => getFcmTokensForEmail(e, svcKey))
       );
-      if (r.ok) {
-        allTokens = await r.json();
-        console.log('[publication-publiee] tokens fetched:', allTokens.length, 'for', emails.length, 'emails');
-      } else {
-        console.error('[publication-publiee] batch fetch tokens HTTP', r.status, await r.text().catch(()=>''));
+      const tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
+      console.log('[publication-publiee] tokens found:', tokenList.length, 'for', emails.length, 'emails');
+      if (tokenList.length > 0) {
+        await sendFcmPush(env, tokenList, { title: pushTitle, body: pushBody });
+        pushSent = tokenList.length;
       }
-    } catch(e) { console.error('[publication-publiee] batch fetch tokens', e); }
-  }
-
-  // Envoyer push par token (chaque push = 1 subrequest externe)
-  if (allTokens.length > 0) {
-    const tokenList = allTokens.map(x => x.token).filter(Boolean);
-    try {
-      await sendFcmPush(env, tokenList, { title: pushTitle, body: pushBody });
-      pushSent = tokenList.length;
-    } catch(e) { console.error('[publication-publiee] sendFcmPush batch', e); }
+    } catch(e) { console.error('[publication-publiee] push error', e); }
   }
 
   console.log('[publication-publiee] done — emails:', emails.length, 'pushed:', pushSent);
