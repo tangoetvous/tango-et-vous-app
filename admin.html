@@ -11752,7 +11752,11 @@ function savePub(existingId) {
     if(publieeChecked&&savedId&&(!existingId||wasBrouillon)){
       var p=(adminData.publications||[]).find(function(x){return String(x.id)===String(savedId);})||payload;
       var coursArr=p.cours||payload.cours||[];
-      fetch('/api/notify/publication-publiee',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},body:JSON.stringify({id:savedId,titre:payload.titre||'',cours:coursArr,cat:payload.cat||'actu'})}).catch(function(){});
+      fetch('/api/notify/publication-publiee',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},body:JSON.stringify({id:savedId,titre:payload.titre||'',cours:coursArr,cat:payload.cat||'actu'})}).then(function(r){return r.json();}).then(function(j){
+        if(j&&typeof j.pushed==='number'){
+          afficherToast('📰 Publication publiée — '+j.pushed+'/'+j.emails+' élève'+(j.emails>1?'s':'')+' recevront un push');
+        }
+      }).catch(function(){});
     }
   }).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
 }
@@ -11765,7 +11769,11 @@ function publierPub(id, btn) {
     var p=(adminData.publications||[]).find(function(x){return String(x.id)===String(id);});
     if(p){
       var coursIds=p.cours||(p.donnees&&p.donnees.cours)||[];
-      fetch('/api/notify/publication-publiee',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},body:JSON.stringify({id:id,titre:p.titre||'',cours:coursIds,cat:p.cat||'actu'})}).catch(function(){});
+      fetch('/api/notify/publication-publiee',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},body:JSON.stringify({id:id,titre:p.titre||'',cours:coursIds,cat:p.cat||'actu'})}).then(function(r){return r.json();}).then(function(j){
+        if(j&&typeof j.pushed==='number'){
+          afficherToast('📰 Publication publiée — '+j.pushed+'/'+j.emails+' élève'+(j.emails>1?'s':'')+' recevront un push');
+        }
+      }).catch(function(){});
     }
   }).catch(function(e){btn.disabled=false;});
 }
