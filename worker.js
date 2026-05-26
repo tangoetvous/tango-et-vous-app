@@ -782,6 +782,28 @@ async function handleUpdateAuthEmail(request, serviceKey) {
     return jsonError(500, 'Une erreur est survenue');
   }
 
+  // Mettre à jour l'email dans fcm_tokens pour que les push continuent sans action de l'élève
+  try {
+    const fcmRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/fcm_tokens?email=ilike.${encodeURIComponent(oldEmail)}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ email: newEmail }),
+      }
+    );
+    if (!fcmRes.ok) {
+      console.error('[update-auth-email] fcm_tokens PATCH HTTP', fcmRes.status, await fcmRes.text().catch(() => ''));
+    }
+  } catch (e) {
+    console.error('[update-auth-email] fcm_tokens PATCH error', e);
+  }
+
   return corsResponse({ ok: true, userId }, 200);
 }
 
