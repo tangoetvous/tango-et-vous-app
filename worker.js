@@ -3219,17 +3219,19 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
     if (!ra.ok) console.error('[discussion-nouvelle] notifications HTTP', ra.status);
   } catch(e) { console.error('[discussion-nouvelle] notifications error', e); }
 
-  // Push OS élève — TOUS les tokens FCM (pas seulement ceux en inscriptions_cours)
-  // Un élève peut avoir la PWA installée sans être dans inscriptions_cours (ex: carte seule)
+  // Push OS élève — filtré par groupe (respecte la sélection de l'admin)
   let pushSent = 0;
-  try {
-    const tokenList = [...new Set((await getAllFcmTokens(_svcKeyDisc)).filter(Boolean))];
-    console.log('[discussion-nouvelle] tokens found:', tokenList.length, '(all FCM tokens)');
-    if (tokenList.length > 0) {
-      await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
-      pushSent = tokenList.length;
-    }
-  } catch(e) { console.error('[discussion-nouvelle] push error', e); }
+  if (emails.length > 0) {
+    try {
+      const tokenArrays = await Promise.all(emails.map(e => getFcmTokensForEmail(e, _svcKeyDisc)));
+      const tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
+      console.log('[discussion-nouvelle] tokens found:', tokenList.length, 'for', emails.length, 'emails');
+      if (tokenList.length > 0) {
+        await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
+        pushSent = tokenList.length;
+      }
+    } catch(e) { console.error('[discussion-nouvelle] push error', e); }
+  }
 
   return corsResponse({ ok: true, notified: emails.length, pushed: pushSent }, 200, {}, request);
 }
@@ -3276,16 +3278,19 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
     if (!ra.ok) console.error('[discussion-message] notifications HTTP', ra.status);
   } catch(e) { console.error('[discussion-message] notifications error', e); }
 
-  // Push OS élève — TOUS les tokens FCM (pas seulement ceux en inscriptions_cours)
+  // Push OS élève — filtré par groupe (respecte la sélection de l'admin)
   let pushSent = 0;
-  try {
-    const tokenList = [...new Set((await getAllFcmTokens(_svcKeyDiscMsg)).filter(Boolean))];
-    console.log('[discussion-message] tokens found:', tokenList.length, '(all FCM tokens)');
-    if (tokenList.length > 0) {
-      await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
-      pushSent = tokenList.length;
-    }
-  } catch(e) { console.error('[discussion-message] push error', e); }
+  if (emails.length > 0) {
+    try {
+      const tokenArrays = await Promise.all(emails.map(e => getFcmTokensForEmail(e, _svcKeyDiscMsg)));
+      const tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
+      console.log('[discussion-message] tokens found:', tokenList.length, 'for', emails.length, 'emails');
+      if (tokenList.length > 0) {
+        await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
+        pushSent = tokenList.length;
+      }
+    } catch(e) { console.error('[discussion-message] push error', e); }
+  }
 
   return corsResponse({ ok: true, notified: emails.length, pushed: pushSent }, 200, {}, request);
 }
@@ -8080,15 +8085,25 @@ async function handleNotifyPublicationPubliee(request, env) {
   const pushBody = `📰 ${titre}`;
   const catLabel = cat === 'milonga' ? 'milonga' : cat === 'stage' ? 'stage' : 'publication';
 
-  // Push à TOUS les appareils avec un token FCM enregistré (pas seulement ceux en inscriptions_cours)
-  // Un élève peut avoir la PWA installée sans être dans inscriptions_cours (ex: compte carte seule)
   const emails = [...emailSet];
   let pushSent = 0;
   console.log('[publication-publiee] emails found (notif in-app):', emails.length);
 
+  // Push OS :
+  // - Sans filtre de groupe (coursArr vide = tous les élèves) → tous les tokens FCM enregistrés
+  // - Avec groupe spécifique → uniquement les tokens des emails de ce groupe
   try {
-    const tokenList = [...new Set((await getAllFcmTokens(svcKey)).filter(Boolean))];
-    console.log('[publication-publiee] tokens found:', tokenList.length, '(all FCM tokens)');
+    let tokenList;
+    if (coursArr.length === 0) {
+      // Publication pour tous → tous les appareils qui ont activé les notifs
+      tokenList = [...new Set((await getAllFcmTokens(svcKey)).filter(Boolean))];
+      console.log('[publication-publiee] tokens found:', tokenList.length, '(all FCM tokens — no group filter)');
+    } else {
+      // Publication ciblée → respecter le filtre de groupe
+      const tokenArrays = await Promise.all(emails.map(e => getFcmTokensForEmail(e, svcKey)));
+      tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
+      console.log('[publication-publiee] tokens found:', tokenList.length, 'for', emails.length, 'emails (group filter)');
+    }
     if (tokenList.length > 0) {
       await sendFcmPush(env, tokenList, { title: pushTitle, body: pushBody });
       pushSent = tokenList.length;
