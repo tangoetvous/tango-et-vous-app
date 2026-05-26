@@ -1177,8 +1177,18 @@
         headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, platform, userAgent: navigator.userAgent.slice(0, 300) })
       });
-      if (r.ok) localStorage.setItem('tev_fcm_token', token);
-    } catch(e) { /* push non prioritaire, échec silencieux */ }
+      if (r.ok) {
+        localStorage.setItem('tev_fcm_token', token);
+        return true;
+      } else {
+        const errText = await r.text().catch(() => '');
+        console.error('[registerFcmToken] HTTP', r.status, errText);
+        return false;
+      }
+    } catch(e) {
+      console.error('[registerFcmToken] error', e);
+      return false;
+    }
   }
 
   // Demander la permission push et enregistrer le token (appelé après login)
@@ -1204,9 +1214,15 @@
       _updatePushBtnEleve();
       if (perm === 'granted') {
         if (statusEl) statusEl.textContent = '⏳ Enregistrement en cours…';
-        await _registerFcmToken();
-        if (statusEl) statusEl.textContent = '✓ Notifications activées !';
-        setTimeout(function(){ if(statusEl) statusEl.textContent=''; }, 3000);
+        var ok = await _registerFcmToken();
+        if (statusEl) {
+          if (ok) {
+            statusEl.textContent = '✓ Token enregistré — vous recevrez les prochains push !';
+            setTimeout(function(){ if(statusEl) statusEl.textContent=''; }, 6000);
+          } else {
+            statusEl.textContent = '⚠️ Enregistrement échoué — réessayez ou vérifiez la console.';
+          }
+        }
       } else {
         if (statusEl) statusEl.textContent = '❌ Permission refusée — vérifie les réglages du navigateur.';
       }
