@@ -3128,10 +3128,11 @@ async function _getEmailsByGroupes(groupes, saison, jwt) {
     'vincennes-debutants':      { ville: 'vincennes', niveau: 'debutant' },
     'vincennes-intermediaires': { ville: 'vincennes', niveau: 'intermediaire' },
   };
+  console.log('[getEmailsByGroupes] start', { groupes, saison, jwtLen: jwt ? jwt.length : 0 });
   const emailsSet = new Set();
   for (const grp of groupes) {
     const mapping = GROUP_MAP[grp];
-    if (!mapping) continue;
+    if (!mapping) { console.log('[getEmailsByGroupes] skip groupe', grp); continue; }
     try {
       const r = await fetch(
         `${SUPABASE_URL}/rest/v1/inscriptions_cours?select=email&ville=eq.${mapping.ville}&niveau=eq.${mapping.niveau}&statut=eq.inscrit&saison=eq.${encodeURIComponent(saison)}`,
@@ -3139,10 +3140,15 @@ async function _getEmailsByGroupes(groupes, saison, jwt) {
       );
       if (r.ok) {
         const rows = await r.json();
+        console.log('[getEmailsByGroupes]', grp, 'rows.length', Array.isArray(rows) ? rows.length : 'NOT_ARRAY');
         rows.forEach(row => { if (row.email && row.email.trim()) emailsSet.add(row.email.trim().toLowerCase()); });
+      } else {
+        const bodyText = await r.text().catch(() => '');
+        console.error('[getEmailsByGroupes] HTTP', r.status, grp, 'body:', bodyText.slice(0, 200));
       }
     } catch(e) { console.error('[getEmailsByGroupes] error', grp, e); }
   }
+  console.log('[getEmailsByGroupes] end', { emailsCount: emailsSet.size });
   return Array.from(emailsSet);
 }
 
