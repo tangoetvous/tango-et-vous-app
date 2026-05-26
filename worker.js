@@ -3574,9 +3574,10 @@ async function handleRegisterToken(request, jwt, env) {
   );
   if (!r.ok) {
     const err = await r.text();
-    console.error('[register-token] Supabase error:', err);
+    console.error('[register-token] Supabase error for', email, ':', r.status, err);
     return jsonError(500, 'Erreur enregistrement token');
   }
+  console.log('[register-token] OK email:', email, 'platform:', platform, 'tokenPrefix:', String(token).slice(0, 50));
   return corsResponse({ ok: true });
 }
 
