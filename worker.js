@@ -8000,21 +8000,7 @@ async function handleNotifyPublicationPubliee(request, env) {
     } catch(e) { console.error('[publication-publiee] push eleve', email, e); }
   }
 
-  // Push admin
-  try {
-    const tokensA = await getFcmTokensAdmin(svcKey);
-    if (tokensA.length) await sendFcmPush(env, tokensA, {
-      title: 'Tango & Vous — Admin',
-      body: `📰 Publication envoyée : ${titre} · ${grpAff} (${pushSent} élève${pushSent > 1 ? 's' : ''} notifié${pushSent > 1 ? 's' : ''})`,
-    });
-  } catch(e) { console.error('[publication-publiee] push admin', e); }
-
-  // Panel 🔔 admin
-  const notifMsg = `📰 Publication publiée — ${titre} · ${grpAff} · ${pushSent} push envoyé${pushSent > 1 ? 's' : ''} · → Publications`;
-  try {
-    const resN = await _insertNotification('publication', notifMsg, 'publications');
-    if (!resN.ok) console.error('[publication-publiee] insertNotification HTTP', resN.status, await resN.text().catch(() => ''));
-  } catch(e) { console.error('[publication-publiee] insertNotification error', e); }
+  // Pas de push ni panel 🔔 admin pour les publications (toast après publication suffit comme feedback)
 
   return corsResponse({ ok: true, pushed: pushSent, emails: emails.length }, 200, {}, request);
 }
