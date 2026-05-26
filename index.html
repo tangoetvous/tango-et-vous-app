@@ -736,6 +736,7 @@
   let _discView        = 'list'; // 'list' | 'new' | 'chat'
   let _discCurrentId   = null;
   let _discCurrentTitle = '';
+  let _discCurrentGroupes = [];
   let _discMsgs        = [];
   let _discPollTO      = null;
   let _discListPollTO  = null;
@@ -842,6 +843,9 @@
         _discCurrentTitle = el.dataset.discTitle;
         _discView = 'chat';
         _discMsgs = [];
+        // Récupère les groupes de cette discussion pour les notifications de message
+        const disc = (discs || []).find(d => String(d.id) === String(el.dataset.discOpen));
+        _discCurrentGroupes = (disc && disc.groupes) ? disc.groupes : [];
         _renderDiscChatView(pane);
       });
     });
@@ -897,6 +901,21 @@
         auteurEmail: elv.email||'',
         auteurNom: nomComplet,
         contenu: msg,
+      }).then(function() {
+        const _sai2 = (function(){ const _n=new Date(),_y=_n.getFullYear(),_m=_n.getMonth()+1; return (_m>=9?_y:_y-1)+'-'+(_m>=9?_y+1:_y); })();
+        fetch('/api/notify/discussion-message-eleve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            discussionId: _discCurrentId,
+            groupes: _discCurrentGroupes,
+            titre: _discCurrentTitle,
+            saison: _sai2,
+            auteurEmail: elv.email || '',
+            auteurNom: nomComplet,
+            contenu: msg,
+          }),
+        }).catch(function(){});
       }).catch(() => {});
     }
     if (sendBtn) sendBtn.addEventListener('click', sendMsg);
@@ -1066,11 +1085,24 @@
           titre,
           eleveEmail: elv.email || '',
           eleveNom: nomComplet,
+          groupes: groupesSel,
         });
         if (d.ok) {
+          _discCurrentGroupes = groupesSel;
           _discDiscList = null;
           _discCurrentId = d.id; _discCurrentTitle = titre; _discView = 'chat'; _discMsgs = [];
           renderDiscussions();
+          // Notif push + panel 🔔 aux membres du groupe (excl. l'auteur)
+          const _sai = (function(){ const _n=new Date(),_y=_n.getFullYear(),_m=_n.getMonth()+1; return (_m>=9?_y:_y-1)+'-'+(_m>=9?_y+1:_y); })();
+          fetch('/api/notify/discussion-nouvelle-eleve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              titre, discussionId: d.id,
+              groupes: groupesSel, saison: _sai,
+              auteurEmail: elv.email || '', auteurNom: nomComplet,
+            }),
+          }).catch(function(){});
         } else {
           errEl.textContent = 'Erreur lors de la création.'; errEl.style.display = 'block';
           btn.disabled = false; btn.textContent = 'Ouvrir la discussion';

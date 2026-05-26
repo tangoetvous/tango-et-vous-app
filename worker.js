@@ -336,6 +336,16 @@ export default {
         return handleNotifyMilongaRsvp(request, env);
       }
 
+      // POST /api/notify/discussion-nouvelle-eleve — élève crée une discussion (sans auth admin)
+      if (pathname === '/api/notify/discussion-nouvelle-eleve' && method === 'POST') {
+        return handleNotifyDiscussionNouvelleEleve(request, env);
+      }
+
+      // POST /api/notify/discussion-message-eleve — message dans une discussion (sans auth admin)
+      if (pathname === '/api/notify/discussion-message-eleve' && method === 'POST') {
+        return handleNotifyDiscussionMessageEleve(request, env);
+      }
+
       // POST /api/notify/absence-cours — élève déclare son absence depuis l'espace élève (sans auth)
       if (pathname === '/api/notify/absence-cours' && method === 'POST') {
         return handleNotifyAbsenceCours(request, env);
@@ -3230,6 +3240,116 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
         body: notifMsgEleve
       });
     } catch(e) { console.error('[discussion-message] push error', eleveEmail, e); }
+  }));
+
+  return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/discussion-nouvelle-eleve
+// Élève crée une nouvelle discussion → notifs push + in-app aux membres du groupe
+// (excl. l'auteur), + panel 🔔 admin. Sans JWT admin requis.
+// ================================================================
+async function handleNotifyDiscussionNouvelleEleve(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const { titre, discussionId, groupes, saison, auteurEmail, auteurNom } = body;
+  if (!titre || !saison) return jsonError(400, 'Paramètres manquants');
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const allEmails = Array.isArray(groupes) && groupes.length > 0
+    ? await _getEmailsByGroupes(groupes, saison, svcKey)
+    : [];
+  // Exclure l'auteur de la liste des destinataires
+  const emails = allEmails.filter(e => e !== (auteurEmail || '').toLowerCase().trim());
+
+  const notifMsgEleve = `💬 Nouvelle discussion : ${titre}`;
+  const notifMsgAdmin = `💬 Discussion créée par ${auteurNom||auteurEmail||'un élève'} : "${titre}" · ${emails.length} élève${emails.length !== 1 ? 's' : ''} notifié${emails.length !== 1 ? 's' : ''}`;
+
+  // Notifs in-app élèves
+  const inserts = emails.map(email =>
+    fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email, type: 'discussion_nouvelle', message: notifMsgEleve, lu: false }),
+    }).catch(e => console.error('[discussion-nouvelle-eleve] notif_eleve error', e))
+  );
+
+  // Panel 🔔 admin
+  const adminInsert = _insertNotification('discussion_nouvelle', notifMsgAdmin, 'discussions')
+    .catch(e => console.error('[discussion-nouvelle-eleve] notifications error', e));
+
+  await Promise.all([...inserts, adminInsert]);
+
+  // Push OS admin
+  try {
+    const adminTokens = await getFcmTokensAdmin(svcKey);
+    if (adminTokens.length) await sendFcmPush(env, adminTokens, {
+      title: 'Tango & Vous — Admin',
+      body: `💬 Nouvelle discussion de ${auteurNom||auteurEmail||'un élève'} : ${titre}`,
+    });
+  } catch(e) { console.error('[discussion-nouvelle-eleve] push admin error', e); }
+
+  // Push OS élèves (exclut l'auteur)
+  await Promise.all(emails.map(async function(eleveEmail) {
+    try {
+      const tokens = await getFcmTokensForEmail(String(eleveEmail), svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, {
+        title: 'Tango & Vous',
+        body: notifMsgEleve,
+      });
+    } catch(e) { console.error('[discussion-nouvelle-eleve] push error', eleveEmail, e); }
+  }));
+
+  return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/discussion-message-eleve
+// Message dans une discussion par n'importe qui (élève OU admin depuis index.html)
+// → notifs push + in-app aux membres du groupe (excl. l'auteur).
+// Sans JWT admin requis.
+// ================================================================
+async function handleNotifyDiscussionMessageEleve(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const { discussionId, contenu, titre, groupes, saison, auteurEmail, auteurNom } = body;
+  if (!saison) return jsonError(400, 'Paramètres manquants');
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const allEmails = Array.isArray(groupes) && groupes.length > 0
+    ? await _getEmailsByGroupes(groupes, saison, svcKey)
+    : [];
+  // Exclure l'auteur de la liste des destinataires
+  const emails = allEmails.filter(e => e !== (auteurEmail || '').toLowerCase().trim());
+
+  const titreLabel   = titre || 'Discussion';
+  const extrait      = contenu ? (contenu.length > 60 ? contenu.slice(0, 60) + '…' : contenu) : '';
+  const auteur       = auteurNom || auteurEmail || '?';
+  const notifMsgEleve = `💬 ${auteur} : ${extrait || titreLabel}`;
+
+  // Notifs in-app élèves
+  const inserts = emails.map(email =>
+    fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email, type: 'discussion_message', message: notifMsgEleve, lu: false }),
+    }).catch(e => console.error('[discussion-message-eleve] notif_eleve error', e))
+  );
+
+  await Promise.all(inserts);
+
+  // Push OS élèves (exclut l'auteur)
+  await Promise.all(emails.map(async function(eleveEmail) {
+    try {
+      const tokens = await getFcmTokensForEmail(String(eleveEmail), svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, {
+        title: 'Tango & Vous',
+        body: notifMsgEleve,
+      });
+    } catch(e) { console.error('[discussion-message-eleve] push error', eleveEmail, e); }
   }));
 
   return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
