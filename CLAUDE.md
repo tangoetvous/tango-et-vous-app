@@ -123,6 +123,85 @@ const emails = await _getEmailsByGroupes(groupes, saison, SUPABASE_ANON);
 
 Complémentaire de `POST /api/debug/push-test` (envoie un push test à l'admin lui-même).
 
+### Push "broadcast" — architecture et cas limites (2026-05-26)
+
+#### Problème découvert : `_getEmailsByGroupes` ne voit pas les élèves sans inscription active
+
+`_getEmailsByGroupes(groupes, saison, jwt)` interroge **uniquement `inscriptions_cours WHERE statut=eq.inscrit`**. Un élève qui a :
+- Une fiche dans `eleves` ✅
+- Un token dans `fcm_tokens` ✅
+- Mais **aucune ligne dans `inscriptions_cours`** (ex : élève avec seulement une carte 10 sans inscription de cours régulier dans la saison) ❌
+
+…est **invisible** à cette fonction → ne reçoit aucun push pour les publications ni les discussions.
+
+**Symptôme** : push push "carte pointée" arrive bien (utilise `getFcmTokensForEmail(email)` directement), mais push "publication publiée" n'arrive jamais.
+
+#### Solution : approche hybride pour les publications
+
+**`handleNotifyPublicationPubliee`** (worker.js) :
+- **Sans filtre de groupe** (`coursArr.length === 0`, publication "Tous les élèves") → `getAllFcmTokens(svcKey)` : lit **TOUS** les tokens de `fcm_tokens` directement → touche tout appareil ayant activé les notifs, quelle que soit son inscription
+- **Avec filtre de groupe** (`coursArr.length > 0`, publication pour groupes spécifiques) → approach email-based via `getFcmTokensForEmail(email, svcKey)` pour chaque email issu de `_getEmailsByGroupes` → respecte le ciblage par groupe
+
+```javascript
+// Dans handleNotifyPublicationPubliee :
+if (coursArr.length === 0) {
+  tokenList = [...new Set((await getAllFcmTokens(svcKey)).filter(Boolean))];
+} else {
+  const tokenArrays = await Promise.all(emails.map(e => getFcmTokensForEmail(e, svcKey)));
+  tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
+}
+```
+
+#### Discussions : toujours email-based (groupes obligatoires)
+
+Les discussions sont **toujours** adressées à des groupes spécifiques. Les 4 handlers discussion utilisent tous l'approche email-based via `getFcmTokensForEmail()` :
+
+| Handler | Route | Approche push |
+|---------|-------|---------------|
+| `handleNotifyDiscussionNouvelle` | `POST /api/notify/discussion-nouvelle` | `getFcmTokensForEmail` par email (groupes) |
+| `handleNotifyDiscussionMessage` | `POST /api/notify/discussion-message` | `getFcmTokensForEmail` par email (groupes) |
+| `handleNotifyDiscussionNouvelleEleve` | `POST /api/notify/discussion-nouvelle-eleve` | `getFcmTokensForEmail` par email (groupes) |
+| `handleNotifyDiscussionMessageEleve` | `POST /api/notify/discussion-message-eleve` | `getFcmTokensForEmail` par email (groupes) |
+
+Un élève visible uniquement dans `eleves`+`fcm_tokens` (sans `inscriptions_cours`) ne reçoit **pas** les push de discussion — comportement correct (les discussions ne lui sont pas adressées).
+
+#### `getAllFcmTokens(svcKey)` — helper global (worker.js)
+
+```javascript
+async function getAllFcmTokens(svcKey) {
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/fcm_tokens?select=token`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (r.ok) {
+      const rows = await r.json();
+      return Array.isArray(rows) ? rows.map(row => row.token).filter(Boolean) : [];
+    }
+    console.error('[getAllFcmTokens] HTTP', r.status, await r.text().catch(() => ''));
+    return [];
+  } catch(e) {
+    console.error('[getAllFcmTokens] error', e);
+    return [];
+  }
+}
+```
+
+Utilisé **uniquement** pour les publications sans filtre de groupe. Ne jamais l'utiliser pour les discussions (briserait le ciblage par groupe).
+
+#### Tableau récapitulatif — stratégie push des 5 handlers broadcast
+
+| Handler | Condition | Stratégie push |
+|---------|-----------|----------------|
+| `handleNotifyPublicationPubliee` | `coursArr.length === 0` (tous) | `getAllFcmTokens()` — tous les appareils |
+| `handleNotifyPublicationPubliee` | `coursArr.length > 0` (groupes) | `getFcmTokensForEmail` par email |
+| `handleNotifyDiscussionNouvelle` | Toujours groupes | `getFcmTokensForEmail` par email |
+| `handleNotifyDiscussionMessage` | Toujours groupes | `getFcmTokensForEmail` par email |
+| `handleNotifyDiscussionNouvelleEleve` | Toujours groupes | `getFcmTokensForEmail` par email |
+| `handleNotifyDiscussionMessageEleve` | Toujours groupes | `getFcmTokensForEmail` par email |
+
+**Règle** : ne jamais utiliser `getAllFcmTokens()` dans les handlers discussion. Ne jamais utiliser `_getEmailsByGroupes` pour récupérer les tokens push des publications "tous les élèves".
+
 ---
 
 ## Horaires tango dans les emails — clés plates, pas d'objets imbriqués
