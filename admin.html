@@ -11551,7 +11551,10 @@ function renderPublications() {
     var dates=p.datesProgrammees&&p.datesProgrammees.length?p.datesProgrammees:(p.dateProgrammee?[p.dateProgrammee]:[]);
     var futur=dates.filter(function(d){return new Date(d)>new Date();});
     var passe=dates.filter(function(d){return new Date(d)<=new Date();});
-    var est=futur.length>0&&!passe.length?'pill-warn':'pill-ok', lbl=futur.length>0&&!passe.length?'Programmée':'Publiée';
+    var est, lbl;
+    if(p.publiee===false){est='pill-warn';lbl='Brouillon';}
+    else if(futur.length>0&&!passe.length){est='pill-warn';lbl='Programmée';}
+    else{est='pill-ok';lbl='Publiée';}
     var icon=CAT_ICON[p.cat]||'📄';
     var dateAff='';
     if(passe.length)dateAff+='<span style="color:var(--ok-text);">✓ '+passe.map(function(d){return fmtDate(d.slice(0,10));}).join(', ')+'</span> ';
@@ -11564,6 +11567,7 @@ function renderPublications() {
       +(p.extrait?'<div class="card-sub" style="margin-bottom:8px;">'+p.extrait+'</div>':'')
       +(p.cours&&p.cours.length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">'+(p.cours.map(function(id){var lbMap={'paris-deb':'Paris Déb.','paris-int':'Paris Int.','vincennes-deb':'Vinc. Déb.','vincennes-int':'Vinc. Int.','yin-yoga':'🌙 Yin','hatha-yoga':'☀️ Hatha'};var cMap={'paris-deb':'#60b0ff','paris-int':'#60b0ff','vincennes-deb':'#40d8c0','vincennes-int':'#40d8c0','yin-yoga':'#a78bfa','hatha-yoga':'#a78bfa'};return'<span style="font-size:9px;padding:2px 7px;border-radius:10px;background:var(--s3);color:'+(cMap[id]||'var(--dim)')+';">'+( lbMap[id]||id)+'</span>';}).join(''))+'</div>':'')
       +'<div class="btn-row">'
+      +(p.publiee===false?'<button class="btn btn-ok" data-action="publier-pub" data-id="'+p.id+'" style="font-size:12px;">✅ Publier</button>':'')
       +'<button class="btn btn-ghost" data-action="editer-pub" data-idx="'+i+'">✏️ Modifier</button>'
       +'<button class="btn btn-ghost" data-action="dupliquer-pub" data-idx="'+i+'">⧉ Dupliquer</button>'
       +'<button class="btn btn-err" data-action="supprimer-pub" data-id="'+p.id+'">🗑</button>'
@@ -11744,8 +11748,8 @@ function savePub(existingId) {
     gel('pub-ed').innerHTML='';
     renderTab(); // render immediately with optimistic data
     chargerDonnees(); // background refresh from DB
-    // Send push if draft is being published
-    if(wasBrouillon&&publieeChecked&&savedId){
+    // Send push if publishing (new pub, or draft→published transition)
+    if(publieeChecked&&savedId&&(!existingId||wasBrouillon)){
       var p=(adminData.publications||[]).find(function(x){return String(x.id)===String(savedId);})||payload;
       var coursArr=p.cours||payload.cours||[];
       fetch('/api/notify/publication-publiee',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},body:JSON.stringify({id:savedId,titre:payload.titre||'',cours:coursArr,cat:payload.cat||'actu'})}).catch(function(){});
