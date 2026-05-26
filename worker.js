@@ -3164,7 +3164,7 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
   if (!titre || !saison) return jsonError(400, 'Paramètres manquants');
 
   const emails = Array.isArray(groupes) && groupes.length > 0
-    ? await _getEmailsByGroupes(groupes, saison, jwt)
+    ? await _getEmailsByGroupes(groupes, saison, SUPABASE_ANON)
     : [];
 
   const notifMsgEleve = `💬 Nouvelle discussion : ${titre}`;
@@ -3213,7 +3213,7 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
   if (!saison) return jsonError(400, 'Paramètres manquants');
 
   const emails = Array.isArray(groupes) && groupes.length > 0
-    ? await _getEmailsByGroupes(groupes, saison, jwt)
+    ? await _getEmailsByGroupes(groupes, saison, SUPABASE_ANON)
     : [];
 
   const titreLabel  = titre || 'Discussion';
