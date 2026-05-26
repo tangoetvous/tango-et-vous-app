@@ -7922,6 +7922,25 @@ async function handleNotifyPublicationPubliee(request, env) {
 
   await Promise.all(groupQueries);
 
+  // Notifications in-app élèves (panel 🔔 espace élève)
+  const notifMsgEleve = `📰 ${titre}`;
+  if (emailSet.size > 0) {
+    await Promise.all([...emailSet].map(email =>
+      fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ email, type: 'publication', message: notifMsgEleve, lu: false }),
+      }).then(r => {
+        if (!r.ok) console.error('[publication-publiee] notif_eleve HTTP', r.status, email);
+      }).catch(e => console.error('[publication-publiee] notif_eleve', email, e))
+    ));
+  }
+
   // Libellé du groupe pour le push
   const grpLabels = {
     'paris-deb': 'Paris Débutants', 'paris-int': 'Paris Intermédiaires',
