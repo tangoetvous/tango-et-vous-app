@@ -3176,34 +3176,49 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
   const notifMsgEleve = `💬 Nouvelle discussion : ${titre}`;
   const notifMsgAdmin = `💬 Discussion créée : "${titre}" · ${emails.length} élève${emails.length !== 1 ? 's' : ''} notifié${emails.length !== 1 ? 's' : ''}`;
 
-  // Notifs in-app élèves (une par email, fire-and-forget)
-  const inserts = emails.map(email =>
-    fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
-        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ email, type: 'discussion_nouvelle', message: notifMsgEleve, lu: false }),
-    }).catch(e => console.error('[discussion-nouvelle] notif_eleve error', e))
-  );
+  // Notifs in-app élèves — BATCH INSERT (1 subrequest pour N élèves)
+  if (emails.length > 0) {
+    try {
+      const rows = emails.map(email => ({ email, type: 'discussion_nouvelle', message: notifMsgEleve, lu: false }));
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(rows),
+      });
+      if (!r.ok) console.error('[discussion-nouvelle] batch notif_eleve HTTP', r.status, await r.text().catch(()=>''));
+    } catch(e) { console.error('[discussion-nouvelle] batch notif_eleve', e); }
+  }
 
   // Notif panel admin
-  const adminInsert = _insertNotification('discussion_nouvelle', notifMsgAdmin, 'discussions')
-    .catch(e => console.error('[discussion-nouvelle] notifications error', e));
+  try {
+    const ra = await _insertNotification('discussion_nouvelle', notifMsgAdmin, 'discussions');
+    if (!ra.ok) console.error('[discussion-nouvelle] notifications HTTP', ra.status);
+  } catch(e) { console.error('[discussion-nouvelle] notifications error', e); }
 
-  await Promise.all([...inserts, adminInsert]);
-
-  // Push OS élève pour chaque email
-  await Promise.all(emails.map(async function(eleveEmail) {
+  // Push OS élève — BATCH FETCH tokens (1 subrequest pour N élèves)
+  let pushSent = 0;
+  if (emails.length > 0) {
     try {
-      const tokens = await getFcmTokensForEmail(String(eleveEmail), _svcKeyDisc);
-      if (tokens.length) await sendFcmPush(env, tokens, {
-        title: 'Tango & Vous',
-        body: notifMsgEleve
-      });
-    } catch(e) { console.error('[discussion-nouvelle] push error', eleveEmail, e); }
-  }));
+      const emailsParam = emails.map(e => `"${String(e).toLowerCase()}"`).join(',');
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${encodeURIComponent(emailsParam)})&select=token`,
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyDisc}` } }
+      );
+      if (r.ok) {
+        const rows = await r.json();
+        const tokenList = rows.map(x => x.token).filter(Boolean);
+        if (tokenList.length > 0) {
+          await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
+          pushSent = tokenList.length;
+        }
+      } else {
+        console.error('[discussion-nouvelle] batch fetch tokens HTTP', r.status);
+      }
+    } catch(e) { console.error('[discussion-nouvelle] batch push error', e); }
+  }
 
-  return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
+  return corsResponse({ ok: true, notified: emails.length, pushed: pushSent }, 200, {}, request);
 }
 
 // ================================================================
@@ -3228,32 +3243,49 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
   const notifMsgEleve = `💬 ${auteur} : ${extrait || titreLabel}`;
   const notifMsgAdmin = `💬 Message envoyé dans "${titreLabel}" · ${emails.length} élève${emails.length !== 1 ? 's' : ''} notifié${emails.length !== 1 ? 's' : ''}`;
 
-  const inserts = emails.map(email =>
-    fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
-        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ email, type: 'discussion_message', message: notifMsgEleve, lu: false }),
-    }).catch(e => console.error('[discussion-message] notif_eleve error', e))
-  );
-
-  const adminInsert = _insertNotification('discussion_message', notifMsgAdmin, 'discussions')
-    .catch(e => console.error('[discussion-message] notifications error', e));
-
-  await Promise.all([...inserts, adminInsert]);
-
-  // Push OS élève pour chaque email
-  await Promise.all(emails.map(async function(eleveEmail) {
+  // Notifs in-app élèves — BATCH INSERT (1 subrequest pour N élèves)
+  if (emails.length > 0) {
     try {
-      const tokens = await getFcmTokensForEmail(String(eleveEmail), _svcKeyDiscMsg);
-      if (tokens.length) await sendFcmPush(env, tokens, {
-        title: 'Tango & Vous',
-        body: notifMsgEleve
+      const rows = emails.map(email => ({ email, type: 'discussion_message', message: notifMsgEleve, lu: false }));
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(rows),
       });
-    } catch(e) { console.error('[discussion-message] push error', eleveEmail, e); }
-  }));
+      if (!r.ok) console.error('[discussion-message] batch notif_eleve HTTP', r.status, await r.text().catch(()=>''));
+    } catch(e) { console.error('[discussion-message] batch notif_eleve', e); }
+  }
 
-  return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
+  // Notif panel admin
+  try {
+    const ra = await _insertNotification('discussion_message', notifMsgAdmin, 'discussions');
+    if (!ra.ok) console.error('[discussion-message] notifications HTTP', ra.status);
+  } catch(e) { console.error('[discussion-message] notifications error', e); }
+
+  // Push OS élève — BATCH FETCH tokens (1 subrequest pour N élèves)
+  let pushSent = 0;
+  if (emails.length > 0) {
+    try {
+      const emailsParam = emails.map(e => `"${String(e).toLowerCase()}"`).join(',');
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${encodeURIComponent(emailsParam)})&select=token`,
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyDiscMsg}` } }
+      );
+      if (r.ok) {
+        const rows = await r.json();
+        const tokenList = rows.map(x => x.token).filter(Boolean);
+        if (tokenList.length > 0) {
+          await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
+          pushSent = tokenList.length;
+        }
+      } else {
+        console.error('[discussion-message] batch fetch tokens HTTP', r.status);
+      }
+    } catch(e) { console.error('[discussion-message] batch push error', e); }
+  }
+
+  return corsResponse({ ok: true, notified: emails.length, pushed: pushSent }, 200, {}, request);
 }
 
 // ================================================================
@@ -8006,11 +8038,12 @@ async function handleNotifyPublicationPubliee(request, env) {
 
   await Promise.all(groupQueries);
 
-  // Notifications in-app élèves (panel 🔔 espace élève)
+  // Notifications in-app élèves (panel 🔔 espace élève) — BATCH INSERT (1 subrequest pour N élèves)
   const notifMsgEleve = `📰 ${titre}`;
   if (emailSet.size > 0) {
-    await Promise.all([...emailSet].map(email =>
-      fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+    try {
+      const rows = [...emailSet].map(email => ({ email, type: 'publication', message: notifMsgEleve, lu: false }));
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_ANON,
@@ -8018,11 +8051,10 @@ async function handleNotifyPublicationPubliee(request, env) {
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal',
         },
-        body: JSON.stringify({ email, type: 'publication', message: notifMsgEleve, lu: false }),
-      }).then(r => {
-        if (!r.ok) console.error('[publication-publiee] notif_eleve HTTP', r.status, email);
-      }).catch(e => console.error('[publication-publiee] notif_eleve', email, e))
-    ));
+        body: JSON.stringify(rows),
+      });
+      if (!r.ok) console.error('[publication-publiee] batch notif_eleve HTTP', r.status, await r.text().catch(()=>''));
+    } catch(e) { console.error('[publication-publiee] batch notif_eleve', e); }
   }
 
   // Libellé du groupe pour le push
@@ -8039,22 +8071,37 @@ async function handleNotifyPublicationPubliee(request, env) {
   const pushBody = `📰 ${titre}`;
   const catLabel = cat === 'milonga' ? 'milonga' : cat === 'stage' ? 'stage' : 'publication';
 
-  // Push aux élèves concernés
+  // Push aux élèves concernés — BATCH FETCH des tokens (1 subrequest pour N élèves)
   const emails = [...emailSet];
   let pushSent = 0;
-  console.log('[publication-publiee] emails found:', emails.length, 'starting push loop');
-  for (const email of emails) {
+  console.log('[publication-publiee] emails found:', emails.length);
+
+  let allTokens = [];
+  if (emails.length > 0) {
     try {
-      const tokens = await getFcmTokensForEmail(email, svcKey);
-      console.log('[publication-publiee] tokens for', email, ':', tokens.length);
-      if (tokens.length) {
-        await sendFcmPush(env, tokens, { title: pushTitle, body: pushBody });
-        pushSent++;
+      const emailsParam = emails.map(e => `"${String(e).toLowerCase()}"`).join(',');
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${encodeURIComponent(emailsParam)})&select=email,token`,
+        { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+      );
+      if (r.ok) {
+        allTokens = await r.json();
+        console.log('[publication-publiee] tokens fetched:', allTokens.length, 'for', emails.length, 'emails');
+      } else {
+        console.error('[publication-publiee] batch fetch tokens HTTP', r.status, await r.text().catch(()=>''));
       }
-    } catch(e) { console.error('[publication-publiee] push eleve', email, e); }
+    } catch(e) { console.error('[publication-publiee] batch fetch tokens', e); }
   }
 
-  // Pas de push ni panel 🔔 admin pour les publications (toast après publication suffit comme feedback)
+  // Envoyer push par token (chaque push = 1 subrequest externe)
+  if (allTokens.length > 0) {
+    const tokenList = allTokens.map(x => x.token).filter(Boolean);
+    try {
+      await sendFcmPush(env, tokenList, { title: pushTitle, body: pushBody });
+      pushSent = tokenList.length;
+    } catch(e) { console.error('[publication-publiee] sendFcmPush batch', e); }
+  }
+
   console.log('[publication-publiee] done — emails:', emails.length, 'pushed:', pushSent);
   return corsResponse({ ok: true, pushed: pushSent, emails: emails.length }, 200, {}, request);
 }
