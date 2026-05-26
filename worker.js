@@ -7871,10 +7871,10 @@ async function handleNotifyPublicationPubliee(request, env) {
   const sai = mo >= 9 ? `${yr}-${yr + 1}` : `${yr - 1}-${yr}`;
 
   // Mapper les groupes de cours → requêtes Supabase
+  // Même logique que l'espace élève : cours vide = visible à tous → fetch tous les élèves actifs
   const coursArr = Array.isArray(cours) && cours.length ? cours : [];
   const emailSet = new Set();
 
-  const groupQueries = [];
   const tangoGroups = {
     'paris-deb':      { ville: 'paris',     niveau: 'debutant' },
     'paris-int':      { ville: 'paris',     niveau: 'intermediaire' },
@@ -7886,37 +7886,67 @@ async function handleNotifyPublicationPubliee(request, env) {
     'hatha-yoga': ['hatha', 'forfait'],
   };
 
-  // Fetch tango students
-  for (const grp of coursArr) {
-    if (tangoGroups[grp]) {
-      groupQueries.push((async () => {
-        const { ville, niveau } = tangoGroups[grp];
-        try {
-          const r = await fetch(
-            `${SUPABASE_URL}/rest/v1/inscriptions_cours?select=email&ville=eq.${ville}&niveau=eq.${niveau}&statut=eq.inscrit&saison=eq.${encodeURIComponent(sai)}`,
-            { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
-          );
-          if (r.ok) {
-            const rows = await r.json();
-            if (Array.isArray(rows)) rows.forEach(row => row.email && emailSet.add(String(row.email)));
-          }
-        } catch(e) { console.error('[publication-publiee] fetch tango', grp, e); }
-      })());
-    }
-    if (yogaGroups[grp]) {
-      groupQueries.push((async () => {
-        const coursIn = yogaGroups[grp].map(c => `"${c}"`).join(',');
-        try {
-          const r = await fetch(
-            `${SUPABASE_URL}/rest/v1/cours_yoga?select=email&cours=in.(${coursIn})&statut=neq.supprim%C3%A9&saison=eq.${encodeURIComponent(sai)}`,
-            { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
-          );
-          if (r.ok) {
-            const rows = await r.json();
-            if (Array.isArray(rows)) rows.forEach(row => row.email && emailSet.add(String(row.email)));
-          }
-        } catch(e) { console.error('[publication-publiee] fetch yoga', grp, e); }
-      })());
+  const groupQueries = [];
+
+  if (coursArr.length === 0) {
+    // Pas de groupes spécifiques → visible à tous → fetch tous les élèves actifs de la saison
+    groupQueries.push((async () => {
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/inscriptions_cours?select=email&statut=eq.inscrit&saison=eq.${encodeURIComponent(sai)}`,
+          { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+        );
+        if (r.ok) {
+          const rows = await r.json();
+          if (Array.isArray(rows)) rows.forEach(row => row.email && emailSet.add(String(row.email)));
+        } else { console.error('[publication-publiee] fetch all tango HTTP', r.status); }
+      } catch(e) { console.error('[publication-publiee] fetch all tango', e); }
+    })());
+    groupQueries.push((async () => {
+      try {
+        const r = await fetch(
+          `${SUPABASE_URL}/rest/v1/cours_yoga?select=email&statut=neq.supprim%C3%A9&saison=eq.${encodeURIComponent(sai)}`,
+          { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+        );
+        if (r.ok) {
+          const rows = await r.json();
+          if (Array.isArray(rows)) rows.forEach(row => row.email && emailSet.add(String(row.email)));
+        } else { console.error('[publication-publiee] fetch all yoga HTTP', r.status); }
+      } catch(e) { console.error('[publication-publiee] fetch all yoga', e); }
+    })());
+  } else {
+    // Groupes spécifiques → fetch uniquement les élèves des groupes sélectionnés
+    for (const grp of coursArr) {
+      if (tangoGroups[grp]) {
+        groupQueries.push((async () => {
+          const { ville, niveau } = tangoGroups[grp];
+          try {
+            const r = await fetch(
+              `${SUPABASE_URL}/rest/v1/inscriptions_cours?select=email&ville=eq.${ville}&niveau=eq.${niveau}&statut=eq.inscrit&saison=eq.${encodeURIComponent(sai)}`,
+              { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+            );
+            if (r.ok) {
+              const rows = await r.json();
+              if (Array.isArray(rows)) rows.forEach(row => row.email && emailSet.add(String(row.email)));
+            }
+          } catch(e) { console.error('[publication-publiee] fetch tango', grp, e); }
+        })());
+      }
+      if (yogaGroups[grp]) {
+        groupQueries.push((async () => {
+          const coursIn = yogaGroups[grp].map(c => `"${c}"`).join(',');
+          try {
+            const r = await fetch(
+              `${SUPABASE_URL}/rest/v1/cours_yoga?select=email&cours=in.(${coursIn})&statut=neq.supprim%C3%A9&saison=eq.${encodeURIComponent(sai)}`,
+              { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+            );
+            if (r.ok) {
+              const rows = await r.json();
+              if (Array.isArray(rows)) rows.forEach(row => row.email && emailSet.add(String(row.email)));
+            }
+          } catch(e) { console.error('[publication-publiee] fetch yoga', grp, e); }
+        })());
+      }
     }
   }
 
