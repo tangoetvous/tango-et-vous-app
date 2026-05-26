@@ -3157,8 +3157,9 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
   const { titre, discussionId, groupes, saison, adminNom } = body;
   if (!titre || !saison) return jsonError(400, 'Paramètres manquants');
 
+  const _svcKeyDisc = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const emails = Array.isArray(groupes) && groupes.length > 0
-    ? await _getEmailsByGroupes(groupes, saison, jwt)
+    ? await _getEmailsByGroupes(groupes, saison, _svcKeyDisc)
     : [];
 
   const notifMsgEleve = `💬 Nouvelle discussion : ${titre}`;
@@ -3206,8 +3207,9 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
   const { discussionId, contenu, groupes, saison, adminNom, titre } = body;
   if (!saison) return jsonError(400, 'Paramètres manquants');
 
+  const _svcKeyDiscMsg2 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const emails = Array.isArray(groupes) && groupes.length > 0
-    ? await _getEmailsByGroupes(groupes, saison, jwt)
+    ? await _getEmailsByGroupes(groupes, saison, _svcKeyDiscMsg2)
     : [];
 
   const titreLabel  = titre || 'Discussion';
@@ -3893,10 +3895,10 @@ async function getFcmTokensForEmail(email, svcKey) {
       `${SUPABASE_URL}/rest/v1/fcm_tokens?email=ilike.${encodeURIComponent(emailLow)}&select=token`,
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
     );
-    if (!r.ok) return [];
+    if (!r.ok) { console.error('[getFcmTokensForEmail] HTTP', r.status, emailLow); return []; }
     const rows = await r.json();
     return Array.isArray(rows) ? rows.map(x => x.token).filter(Boolean) : [];
-  } catch { return []; }
+  } catch(e) { console.error('[getFcmTokensForEmail] error', email, e); return []; }
 }
 
 // ── Récupérer tous les tokens admin ─────────────────────────────
