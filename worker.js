@@ -3122,6 +3122,29 @@ async function handleCronCarteExpiree(request, env) {
 }
 
 // ================================================================
+// Helper : récupère TOUS les tokens FCM enregistrés (toute la table fcm_tokens)
+// Utilisé pour les push publications/discussions : tout appareil qui a activé
+// les notifs doit recevoir le push, même si l'élève n'est pas dans inscriptions_cours
+// ================================================================
+async function getAllFcmTokens(svcKey) {
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/fcm_tokens?select=token`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (r.ok) {
+      const rows = await r.json();
+      return Array.isArray(rows) ? rows.map(row => row.token).filter(Boolean) : [];
+    }
+    console.error('[getAllFcmTokens] HTTP', r.status, await r.text().catch(() => ''));
+    return [];
+  } catch(e) {
+    console.error('[getAllFcmTokens] error', e);
+    return [];
+  }
+}
+
+// ================================================================
 // Helper : récupère les emails des élèves inscrits dans des groupes
 // groupes : ['paris-debutants', 'paris-intermediaires', ...]
 // saison  : '2025-2026'
@@ -3196,21 +3219,17 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
     if (!ra.ok) console.error('[discussion-nouvelle] notifications HTTP', ra.status);
   } catch(e) { console.error('[discussion-nouvelle] notifications error', e); }
 
-  // Push OS élève — un getFcmTokensForEmail par email (ilike, insensible à la casse)
+  // Push OS élève — TOUS les tokens FCM (pas seulement ceux en inscriptions_cours)
+  // Un élève peut avoir la PWA installée sans être dans inscriptions_cours (ex: carte seule)
   let pushSent = 0;
-  if (emails.length > 0) {
-    try {
-      const tokenArrays = await Promise.all(
-        emails.map(e => getFcmTokensForEmail(e, _svcKeyDisc))
-      );
-      const tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
-      console.log('[discussion-nouvelle] tokens found:', tokenList.length, 'for', emails.length, 'emails');
-      if (tokenList.length > 0) {
-        await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
-        pushSent = tokenList.length;
-      }
-    } catch(e) { console.error('[discussion-nouvelle] push error', e); }
-  }
+  try {
+    const tokenList = [...new Set((await getAllFcmTokens(_svcKeyDisc)).filter(Boolean))];
+    console.log('[discussion-nouvelle] tokens found:', tokenList.length, '(all FCM tokens)');
+    if (tokenList.length > 0) {
+      await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
+      pushSent = tokenList.length;
+    }
+  } catch(e) { console.error('[discussion-nouvelle] push error', e); }
 
   return corsResponse({ ok: true, notified: emails.length, pushed: pushSent }, 200, {}, request);
 }
@@ -3257,21 +3276,16 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
     if (!ra.ok) console.error('[discussion-message] notifications HTTP', ra.status);
   } catch(e) { console.error('[discussion-message] notifications error', e); }
 
-  // Push OS élève — un getFcmTokensForEmail par email (ilike, insensible à la casse)
+  // Push OS élève — TOUS les tokens FCM (pas seulement ceux en inscriptions_cours)
   let pushSent = 0;
-  if (emails.length > 0) {
-    try {
-      const tokenArrays = await Promise.all(
-        emails.map(e => getFcmTokensForEmail(e, _svcKeyDiscMsg))
-      );
-      const tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
-      console.log('[discussion-message] tokens found:', tokenList.length, 'for', emails.length, 'emails');
-      if (tokenList.length > 0) {
-        await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
-        pushSent = tokenList.length;
-      }
-    } catch(e) { console.error('[discussion-message] push error', e); }
-  }
+  try {
+    const tokenList = [...new Set((await getAllFcmTokens(_svcKeyDiscMsg)).filter(Boolean))];
+    console.log('[discussion-message] tokens found:', tokenList.length, '(all FCM tokens)');
+    if (tokenList.length > 0) {
+      await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
+      pushSent = tokenList.length;
+    }
+  } catch(e) { console.error('[discussion-message] push error', e); }
 
   return corsResponse({ ok: true, notified: emails.length, pushed: pushSent }, 200, {}, request);
 }
@@ -8066,24 +8080,20 @@ async function handleNotifyPublicationPubliee(request, env) {
   const pushBody = `📰 ${titre}`;
   const catLabel = cat === 'milonga' ? 'milonga' : cat === 'stage' ? 'stage' : 'publication';
 
-  // Push aux élèves concernés — un getFcmTokensForEmail par email (ilike, insensible à la casse)
+  // Push à TOUS les appareils avec un token FCM enregistré (pas seulement ceux en inscriptions_cours)
+  // Un élève peut avoir la PWA installée sans être dans inscriptions_cours (ex: compte carte seule)
   const emails = [...emailSet];
   let pushSent = 0;
-  console.log('[publication-publiee] emails found:', emails.length);
+  console.log('[publication-publiee] emails found (notif in-app):', emails.length);
 
-  if (emails.length > 0) {
-    try {
-      const tokenArrays = await Promise.all(
-        emails.map(e => getFcmTokensForEmail(e, svcKey))
-      );
-      const tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
-      console.log('[publication-publiee] tokens found:', tokenList.length, 'for', emails.length, 'emails');
-      if (tokenList.length > 0) {
-        await sendFcmPush(env, tokenList, { title: pushTitle, body: pushBody });
-        pushSent = tokenList.length;
-      }
-    } catch(e) { console.error('[publication-publiee] push error', e); }
-  }
+  try {
+    const tokenList = [...new Set((await getAllFcmTokens(svcKey)).filter(Boolean))];
+    console.log('[publication-publiee] tokens found:', tokenList.length, '(all FCM tokens)');
+    if (tokenList.length > 0) {
+      await sendFcmPush(env, tokenList, { title: pushTitle, body: pushBody });
+      pushSent = tokenList.length;
+    }
+  } catch(e) { console.error('[publication-publiee] push error', e); }
 
   console.log('[publication-publiee] done — emails:', emails.length, 'pushed:', pushSent);
   return corsResponse({ ok: true, pushed: pushSent, emails: emails.length }, 200, {}, request);
