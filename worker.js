@@ -3202,7 +3202,7 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
     try {
       const emailsParam = emails.map(e => `"${String(e).toLowerCase()}"`).join(',');
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${encodeURIComponent(emailsParam)})&select=token`,
+        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${emailsParam})&select=token`,
         { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyDisc}` } }
       );
       if (r.ok) {
@@ -3269,7 +3269,7 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
     try {
       const emailsParam = emails.map(e => `"${String(e).toLowerCase()}"`).join(',');
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${encodeURIComponent(emailsParam)})&select=token`,
+        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${emailsParam})&select=token`,
         { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyDiscMsg}` } }
       );
       if (r.ok) {
@@ -8082,7 +8082,7 @@ async function handleNotifyPublicationPubliee(request, env) {
     try {
       const emailsParam = emails.map(e => `"${String(e).toLowerCase()}"`).join(',');
       const r = await fetch(
-        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${encodeURIComponent(emailsParam)})&select=email,token`,
+        `${SUPABASE_URL}/rest/v1/fcm_tokens?email=in.(${emailsParam})&select=email,token`,
         { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
       );
       if (r.ok) {
