@@ -469,9 +469,9 @@ async function tevGetPublications() {
   return (data || []).map(p => Object.assign({}, p.donnees || {}, p));
 }
 
-async function tevSauvegarderPublication({ id, cat, titre, extrait, contenu, image, video, dateProgrammee, datesProgrammees, cours }) {
+async function tevSauvegarderPublication({ id, cat, titre, extrait, contenu, image, video, dateProgrammee, datesProgrammees, cours, publiee }) {
   const donnees = { cat: cat||'actu', extrait: extrait||'', image: image||'', video: video||'', dateProgrammee: dateProgrammee||'', datesProgrammees: datesProgrammees||[], cours: cours||[] };
-  const fields = { titre, contenu, publiee: true, donnees };
+  const fields = { titre, contenu, publiee: publiee !== false, donnees };
   if (id) {
     const { error } = await _tev.from('publications').update(fields).eq('id', id);
     if (error) throw new Error(error.message || error.code || JSON.stringify(error));

@@ -11657,6 +11657,7 @@ function ouvrirPub(pub) {
     +'<div style="font-size:11px;color:var(--dim);margin-top:4px;">Laisser vide = publier immédiatement</div>'
     +'</div>'
     +'<div class="box-err" id="ed-err"></div>'
+    +'<div class="field" style="margin-top:6px;"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="ed-publiee"'+(p.publiee!==false?' checked':'')+' style="width:auto;padding:0;margin:0;flex-shrink:0;cursor:pointer;accent-color:var(--gold);"/><span>Publier (décocher = garder en brouillon)</span></label></div>'
     +'<div class="btn-row"><button class="btn btn-gold" data-action="save-pub" data-id="'+(pub?pub.id||'':'')+'" style="flex:2;">💾 '+(pub?'Enregistrer':'Créer')+'</button><button class="btn btn-ghost" data-action="annuler-pub">Annuler</button></div>'
     +'</div>';
   var el = gel('pub-ed');
@@ -11709,11 +11710,17 @@ function savePub(existingId) {
   var inputs=document.querySelectorAll('.date-prog-input');
   var dates=[]; inputs.forEach(function(i){if(i.value)dates.push(i.value);});
   var err=gel('ed-err');
+  var publieeChecked=(gel('ed-publiee')||{}).checked!==false;
   if(!titre.trim()){if(err){err.textContent='Titre requis.';err.style.display='block';}return;}
   if(err)err.style.display='none';
   var coursIds=['paris-deb','paris-int','vincennes-deb','vincennes-int','yin-yoga','hatha-yoga'];
   var cours=coursIds.filter(function(id){var el=document.getElementById('ed-cours-'+id);return el&&el.checked;});
-  var payload={action:'sauvegarderPublication',id:existingId,cat:cat,titre:titre.trim(),extrait:extrait,contenu:contenu,image:image,video:video,dateProgrammee:dates[0]||new Date().toISOString(),datesProgrammees:dates,cours:cours};
+  // Detect draft→published transition for push notification
+  var wasBrouillon=existingId&&(function(){
+    var ex=(adminData.publications||[]).find(function(x){return String(x.id)===String(existingId);});
+    return ex&&ex.publiee===false;
+  })();
+  var payload={action:'sauvegarderPublication',id:existingId,cat:cat,titre:titre.trim(),extrait:extrait,contenu:contenu,image:image,video:video,dateProgrammee:dates[0]||new Date().toISOString(),datesProgrammees:dates,cours:cours,publiee:publieeChecked};
   if(IS_DEMO){
     if(!adminData.publications)adminData.publications=[];
     var newId = existingId || ('p'+Date.now());
@@ -11723,7 +11730,27 @@ function savePub(existingId) {
     _broadcastAdminSync('newPublication', newPub);
     gel('pub-ed').innerHTML=''; renderTab(); return;
   }
-  TEV.sauvegarderPublication(payload).then(function(){gel('pub-ed').innerHTML='';chargerDonnees();}).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
+  TEV.sauvegarderPublication(payload).then(function(res){
+    // Optimistic update so the card shows the new date immediately
+    var savedId=existingId||(res&&res.id);
+    if(savedId){
+      var pidx=(adminData.publications||[]).findIndex(function(p){return String(p.id)===String(savedId);});
+      if(pidx>=0){
+        adminData.publications[pidx]=Object.assign({},adminData.publications[pidx],payload,{
+          id:savedId,dateProgrammee:dates[0]||'',datesProgrammees:dates,publiee:publieeChecked
+        });
+      }
+    }
+    gel('pub-ed').innerHTML='';
+    renderTab(); // render immediately with optimistic data
+    chargerDonnees(); // background refresh from DB
+    // Send push if draft is being published
+    if(wasBrouillon&&publieeChecked&&savedId){
+      var p=(adminData.publications||[]).find(function(x){return String(x.id)===String(savedId);})||payload;
+      var coursArr=p.cours||payload.cours||[];
+      fetch('/api/notify/publication-publiee',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},body:JSON.stringify({id:savedId,titre:payload.titre||'',cours:coursArr,cat:payload.cat||'actu'})}).catch(function(){});
+    }
+  }).catch(function(e){if(err){err.textContent=e.message;err.style.display='block';}});
 }
 function publierPub(id, btn) {
   btn.disabled=true;
