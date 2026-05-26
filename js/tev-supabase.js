@@ -670,22 +670,16 @@ function _calcExpirationSb(dateStr, ville) {
   const firstStored = coursArr[0] || '';
   const lastStored  = coursArr[coursArr.length - 1] || '';
 
-  // Date de début de la prochaine saison calculée depuis la saison de datePremierCours.
-  // ⚠️ NE PAS utiliser lastStored : si la saison suivante est saisie, lastStored tombe
-  // en juin N+1 → nextSeasonStartISO = sept N+1 → expiration gonflée à l'infini.
-  const dpMois   = debut.getMonth();
-  const dpAnnee  = debut.getFullYear();
-  const saisonAnnee = dpMois >= 8 ? dpAnnee : dpAnnee - 1;
-  const nextSeasonStartISO = (saisonAnnee + 1) + '-09-01';
-
   // Algorithme itératif : chaque semaine sans cours repousse fin d'1 semaine.
-  // Couvre les vacances intra-saison ET la coupure estivale (juillet-août).
+  // Les deux saisons (courante + suivante) sont traitées comme un tout continu :
+  // tev_cours_dates contient les dates des deux saisons → lastStored atteint juin N+1.
+  // Juillet/août = absents de coursSet → gaps comptés. Semaines de cours = présents → non comptés.
+  // Vacances (Toussaint, Noël…) = absents de coursSet → gaps comptés. Aucune valeur hardcodée.
   const cur = new Date(debut.getTime());
   cur.setDate(cur.getDate() + 7);
   while (cur <= fin) {
     const iso = cur.toISOString().slice(0, 10);
-    if (firstStored && iso >= firstStored && !coursSet[iso] &&
-        (iso <= lastStored || (nextSeasonStartISO && iso < nextSeasonStartISO))) {
+    if (firstStored && iso >= firstStored && !coursSet[iso] && iso <= lastStored) {
       fin.setDate(fin.getDate() + 7);
     }
     cur.setDate(cur.getDate() + 7);
