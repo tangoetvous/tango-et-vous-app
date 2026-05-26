@@ -5795,6 +5795,14 @@ function handleAction(action, btn) {
             afficherToast('\uD83D\uDCAC Discussion ouverte\u00a0!');
             _discCurrentId=r.id; _discCurrentTitle=titre; _discCurrentStatut='ouvert'; _discMsgs=[];
             _discView='chat';
+            // Injecter imm\u00E9diatement dans adminData.discussions avec les vrais groupes
+            // pour que le premier message d\u00E9clenche bien la notification
+            if (!adminData.discussions) adminData.discussions = [];
+            adminData.discussions.unshift({
+              id: r.id, titre: titre, groupes: groupes,
+              createur_email: adminData._email||'', createur_nom: nom,
+              statut: 'ouvert', date: new Date().toISOString(), created_at: new Date().toISOString()
+            });
             // Notif in-app \u00E9l\u00E8ves des groupes + panel admin \u2014 fire and forget
             if (groupes.length > 0) {
               Promise.resolve(fetch('/api/notify/discussion-nouvelle', {
