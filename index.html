@@ -1116,7 +1116,7 @@
   }
 
   // ── Notifications push — native Web Push Protocol (iOS PWA compatible) ──
-  const TEV_VAPID_KEY = 'BD_EhhtlJWoR-xAtfgRXFkLj3HZKT3TGE4FPgKwQe5isymrm7MvcRGywNy7TFMFlygQw0R1u_fT499jQd8EY2i4';
+  const TEV_VAPID_KEY = 'BDHGZkHsqA39hwEftF9jPloQjGWT_HwoWFmOhfWsLVG8RUuhoWc3bPmq9PWUO_751WQLBgR_GX12ONQn85u-NuM';
 
   function _pushPermission() {
     return ('Notification' in window) ? Notification.permission : 'unsupported';
@@ -1149,16 +1149,16 @@
         return Uint8Array.from(atob(b64), function(c) { return c.charCodeAt(0); });
       }
 
-      // ⚠️ Migration depuis Firebase: forcer unsubscribe + resubscribe une fois
+      // ⚠️ Migration clé VAPID v3: forcer unsubscribe + resubscribe avec la bonne clé
       var sub = await reg.pushManager.getSubscription();
-      var migrated = localStorage.getItem('tev_push_vapid_v2');
+      var migrated = localStorage.getItem('tev_push_vapid_v3');
       if (sub && !migrated) {
         try { await sub.unsubscribe(); } catch(eUn) {}
         sub = null;
       }
       if (!sub) {
         sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _vapidBytes(TEV_VAPID_KEY) });
-        localStorage.setItem('tev_push_vapid_v2', '1');
+        localStorage.setItem('tev_push_vapid_v3', '1');
       }
       if (!sub) return;
 
