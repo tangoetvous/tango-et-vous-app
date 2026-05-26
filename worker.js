@@ -3511,7 +3511,7 @@ async function handleRegisterToken(request, jwt, env) {
   let email;
   try {
     const payload = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    email = payload.email;
+    email = (payload.email || '').toLowerCase().trim();
   } catch { return jsonError(400, 'JWT invalide'); }
   if (!email) return jsonError(400, 'Email introuvable dans le JWT');
 
@@ -3887,8 +3887,10 @@ async function sendFcmPush(env, tokens, notif, data = {}) {
 // ── Récupérer les tokens FCM d'un email ─────────────────────────
 async function getFcmTokensForEmail(email, svcKey) {
   try {
+    const emailLow = String(email || '').toLowerCase().trim();
+    if (!emailLow) return [];
     const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/fcm_tokens?email=eq.${encodeURIComponent(email)}&select=token`,
+      `${SUPABASE_URL}/rest/v1/fcm_tokens?email=ilike.${encodeURIComponent(emailLow)}&select=token`,
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
     );
     if (!r.ok) return [];
