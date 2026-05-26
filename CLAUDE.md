@@ -1,5 +1,76 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Push notifications — VAPID + déduplication tokens
+
+### Clés VAPID — configuration actuelle (2026-05-26)
+
+| Emplacement | Clé publique correcte |
+|-------------|----------------------|
+| `index.html` — `TEV_VAPID_KEY` | `BDHGZkHsqA39hwEftF9jPloQjGWT_HwoWFmOhfWsLVG8RUuhoWc3bPmq9PWUO_751WQLBgR_GX12ONQn85u-NuM` |
+| `worker.js` — `VAPID_PUB` dans `sendWebPush` | Idem |
+| `admin.html` — `TEV_VAPID_KEY` | Idem |
+| Cloudflare Workers secret | `VAPID_PRIVATE_KEY` (clé privée correspondante P-256) |
+
+**⚠️ Règle absolue** : les trois occurrences de la clé publique DOIVENT être identiques. Si on change la clé (nouvelle paire VAPID), il faut :
+1. Mettre à jour `TEV_VAPID_KEY` dans `index.html` ET `admin.html`
+2. Mettre à jour `VAPID_PUB` dans `sendWebPush` (`worker.js`)
+3. Mettre à jour `VAPID_PRIVATE_KEY` dans Cloudflare Workers secrets
+4. Incrémenter le flag de migration (`tev_push_vapid_v3` → `v4`, etc.) dans `_registerFcmToken` (`index.html`) pour forcer le re-abonnement de tous les appareils
+
+### Historique des migrations VAPID
+
+| Flag | Date | Raison |
+|------|------|--------|
+| `tev_push_vapid_v2` | avant 2026-05-26 | Première migration (clé incorrecte dans index.html) |
+| `tev_push_vapid_v3` | 2026-05-26, commit `7389e85` | **Fix** : `index.html` utilisait `BD_EhhtlJW...` au lieu de `BDHGZkHsq...` → pushes silencieusement rejetés 401 par Apple/Google car la clé de signature (serveur) ne correspondait pas à la clé enregistrée lors de l'abonnement (navigateur) |
+
+### Symptôme d'une mauvaise clé VAPID
+
+Push OS absent (aucune notification reçue sur le téléphone) même si :
+- `notifications_eleve` reçoit bien les notifs in-app (panel 🔔)
+- `fcm_tokens` contient un token pour l'email de l'élève
+- `sendWebPush` est appelé sans erreur côté serveur
+
+**Cause** : le push service (Apple APN / Google FCM) rejette silencieusement les requêtes dont la clé publique dans l'en-tête `Authorization: vapid k=<pubkey>` ne correspond pas à la clé enregistrée lors de la création de l'abonnement.
+
+**Fix** : l'élève doit ouvrir l'app (`index.html`) une fois — le code de migration détecte que le flag `tev_push_vapid_v3` est absent, force un `unsubscribe()` + `subscribe()` avec la bonne clé, et enregistre le nouveau token en DB.
+
+### Debug tokens FCM
+
+**Endpoint** : `GET /api/debug/fcm-count?email=xxx@yyy.com` (JWT admin requis)
+**Obtenir le JWT admin** : ouvrir la console dans `admin.html` et taper `_getJwt()`
+
+Réponse : `{ email, tokens_count, tokens: [{ prefix, created_at }] }`
+- `prefix` commence par `{"endpoint"` → abonnement Web Push (iOS/Safari)
+- `prefix` est une chaîne alphanumérique → token FCM Android/Chrome
+
+Si `tokens_count = 0` : l'élève n'a jamais activé les notifications (ou son token a été nettoyé après un 410).
+Si `tokens_count > 0` et push absent : le token date d'avant la migration v3 → demander à l'élève d'ouvrir l'app.
+
+### Déduplication tokens dans `sendFcmPush`
+
+**Ajout 2026-05-26** : `sendFcmPush` déduplique maintenant les tokens avant envoi :
+```javascript
+const uniqueTokens = [...new Set(tokens.filter(Boolean))];
+tokens = uniqueTokens;
+```
+
+**Pourquoi** : dans les envois batch multi-emails (publications, discussions), le même token pourrait apparaître si une personne est inscrite à 2 cours et que deux requêtes retournent le même token. La déduplication garantit qu'un appareil reçoit au maximum 1 push par événement.
+
+**Nota bene** : `_getEmailsByGroupes` déduplique déjà les EMAILS via `Set` → un élève inscrit à 2 cours = 1 email dans la liste → `getFcmTokensForEmail` appelé une seule fois → pas de doublon. La déduplication dans `sendFcmPush` est une couche de défense supplémentaire.
+
+### Nettoyage automatique des tokens expirés
+
+`sendWebPush` supprime automatiquement les tokens expirés (status 410/404 de Apple/Google) :
+```javascript
+if (r.status === 410 || r.status === 404) {
+  // DELETE FROM fcm_tokens WHERE token = ...
+}
+```
+`sendFcmPush` (FCM v1) supprime les tokens `NOT_FOUND` / `UNREGISTERED`. Aucun nettoyage manuel nécessaire.
+
+---
+
 ## Publications et Discussions — pas d'emails, uniquement notifications in-app + push
 
 ### Règle permanente — confirmée 2026-05-26

@@ -3908,6 +3908,12 @@ async function sendWebPush(env, subscriptionJson, notif, data = {}) {
 async function sendFcmPush(env, tokens, notif, data = {}) {
   if (!tokens || !tokens.length) return { skipped: true, reason: 'no_tokens' };
 
+  // Dédupliquer les tokens — évite les doubles pushes si le même token apparaît
+  // plusieurs fois (requêtes batch multi-emails, migration VAPID, etc.)
+  const uniqueTokens = [...new Set(tokens.filter(Boolean))];
+  if (!uniqueTokens.length) return { skipped: true, reason: 'no_tokens_after_dedup' };
+  tokens = uniqueTokens;
+
   const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const results = [];
 
