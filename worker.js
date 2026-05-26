@@ -1710,6 +1710,10 @@ async function handleNotifySorano(request, env) {
         ${signEleve}
       </div>${footer}`, 'Adhesion Sorano enregistree - merci pour votre regularisation');
     await sendBrevo(email, `✓ Votre adhésion Sorano est enregistrée — Tango & Vous`, html);
+    try {
+      const _sr2Tokens = await getFcmTokensForEmail(String(email), SUPABASE_ANON);
+      if (_sr2Tokens.length) await sendFcmPush(env, _sr2Tokens, { title: 'Tango & Vous', body: '✓ Votre adhésion Sorano est enregistrée' });
+    } catch(e) { console.error('[notify-sorano] push error', e); }
   } else {
     const html = wrap(`${headerEleve}
       <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
@@ -7191,6 +7195,10 @@ async function handleCronRappelStageJ3(request, env) {
       });
       if (r.ok) sent++;
     } catch(err) { console.error('[cron-rappel-stage-j3] error', err); }
+    try {
+      const _s4Tokens = await getFcmTokensForEmail(String(e.email), SUPABASE_ANON);
+      if (_s4Tokens.length) await sendFcmPush(env, _s4Tokens, { title: 'Tango & Vous', body: `📅 Votre stage a lieu dans 3 jours — ${dateLabel}` });
+    } catch(err) { console.error('[cron-rappel-stage-j3] push error', err); }
   }
   return corsResponse({ ok: true, sent, checked: inscrits.length, targetDate }, 200, {}, request);
 }
@@ -7382,6 +7390,10 @@ async function handleNotifyStageAnnule(request, env) {
       body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `Votre inscription au stage a été annulée — Tango & Vous`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-stage-annule] error', err); }
+  try {
+    const _scTokens = await getFcmTokensForEmail(String(email), SUPABASE_ANON);
+    if (_scTokens.length) await sendFcmPush(env, _scTokens, { title: 'Tango & Vous', body: `✕ Votre inscription au stage du ${firstDateLabel} a été annulée` });
+  } catch(err) { console.error('[notify-stage-annule] push error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
 }
 
@@ -7961,6 +7973,10 @@ async function handleCronFinSaisonC4(request, env) {
       });
       if (r.ok) sent++; else console.error('[cron fin-saison-c4] Brevo error', e.email, await r.text());
     } catch(err) { console.error('[cron fin-saison-c4] fetch error', err); }
+    try {
+      const _c4Tokens = await getFcmTokensForEmail(String(e.email), svcKey);
+      if (_c4Tokens.length) await sendFcmPush(env, _c4Tokens, { title: 'Tango & Vous', body: `📅 Il vous reste ${restants} cours — reportez votre carte avant le 31 août ${anneeFin}` });
+    } catch(err) { console.error('[cron fin-saison-c4] push error', err); }
   }
 
   return corsResponse({ ok: true, sent, checked: eleves.length, saison: sai, saiNext }, 200, {}, request);
@@ -8060,6 +8076,10 @@ async function handleCronFinSaisonC5(request, env) {
       });
       if (r.ok) sent++; else console.error('[cron fin-saison-c5] Brevo error', e.email, await r.text());
     } catch(err) { console.error('[cron fin-saison-c5] fetch error', err); }
+    try {
+      const _c5Tokens = await getFcmTokensForEmail(String(e.email), svcKey);
+      if (_c5Tokens.length) await sendFcmPush(env, _c5Tokens, { title: 'Tango & Vous', body: `⚠️ Dernier rappel — reportez vos ${restants} cours avant le 31 août ${anneeFin}` });
+    } catch(err) { console.error('[cron fin-saison-c5] push error', err); }
   }
 
   return corsResponse({ ok: true, sent, checked: eleves.length, saison: sai, saiNext }, 200, {}, request);
@@ -8247,6 +8267,12 @@ async function handleCronRelanceAbsences(request, env) {
           'cartes'
         );
       } catch(e) { console.error('[relance-absences] admin notif error', e); }
+
+      // Push OS élève
+      try {
+        const _c6Tokens = await getFcmTokensForEmail(String(eleve.email), svcKey);
+        if (_c6Tokens.length) await sendFcmPush(env, _c6Tokens, { title: 'Tango & Vous', body: '💙 On prend de tes nouvelles — tes cours sont préservés' });
+      } catch(e) { console.error('[relance-absences] push error', e); }
 
       // Mettre à jour derniere_relance_abs pour éviter un double envoi la semaine prochaine
       Promise.resolve(

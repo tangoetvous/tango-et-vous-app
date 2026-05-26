@@ -1133,9 +1133,9 @@
       var token = JSON.stringify(sub.toJSON());
       if (cached === token) return; // déjà enregistré avec le même endpoint
 
-      // Get JWT from Supabase session
+      // Get JWT from Supabase session (v2 API)
       var session = null;
-      try { session = TEV.client.auth.session ? TEV.client.auth.session() : null; } catch(e) {}
+      try { const { data: _sd } = await TEV.client.auth.getSession(); session = _sd ? _sd.session : null; } catch(e) {}
       var jwt = session ? session.access_token : null;
       if (!jwt) return;
 
