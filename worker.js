@@ -3157,9 +3157,8 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
   const { titre, discussionId, groupes, saison, adminNom } = body;
   if (!titre || !saison) return jsonError(400, 'Paramètres manquants');
 
-  const _svcKeyDisc = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const emails = Array.isArray(groupes) && groupes.length > 0
-    ? await _getEmailsByGroupes(groupes, saison, _svcKeyDisc)
+    ? await _getEmailsByGroupes(groupes, saison, jwt)
     : [];
 
   const notifMsgEleve = `💬 Nouvelle discussion : ${titre}`;
@@ -3181,7 +3180,8 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
 
   await Promise.all([...inserts, adminInsert]);
 
-  // Push OS élève pour chaque email (réutilise _svcKeyDisc déclaré plus haut)
+  // Push OS élève pour chaque email
+  const _svcKeyDisc = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   await Promise.all(emails.map(async function(eleveEmail) {
     try {
       const tokens = await getFcmTokensForEmail(String(eleveEmail), _svcKeyDisc);
@@ -3206,9 +3206,8 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
   const { discussionId, contenu, groupes, saison, adminNom, titre } = body;
   if (!saison) return jsonError(400, 'Paramètres manquants');
 
-  const _svcKeyDiscMsg2 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const emails = Array.isArray(groupes) && groupes.length > 0
-    ? await _getEmailsByGroupes(groupes, saison, _svcKeyDiscMsg2)
+    ? await _getEmailsByGroupes(groupes, saison, jwt)
     : [];
 
   const titreLabel  = titre || 'Discussion';
