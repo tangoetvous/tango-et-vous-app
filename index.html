@@ -2102,8 +2102,17 @@
     try { localStorage.setItem('tev_abs_'+email, JSON.stringify(eleveData.absencesJour)); } catch(e) {}
     renderAccueil();
     if(marking){
+      var _prenom = (eleveData&&eleveData.eleve&&eleveData.eleve.prenom)||'';
+      var _nom    = (eleveData&&eleveData.eleve&&eleveData.eleve.nom)||'';
+      var _ville  = (eleveData&&eleveData.eleve&&eleveData.eleve.ville)||'';
+      var _niveau = (eleveData&&eleveData.eleve&&eleveData.eleve.niveau)||'';
       TEV.client.from('absences_jour').insert({date:date,email:email})
-        .then(function(res){ if(res&&res.error) console.warn('absences_jour insert:',res.error.message); })
+        .then(function(res){
+          if(res&&res.error){ console.warn('absences_jour insert:',res.error.message); return; }
+          fetch('/api/notify/absence-cours',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({email:email,prenom:_prenom,nom:_nom,ville:_ville,niveau:_niveau,date:date})
+          }).catch(function(){});
+        })
         .catch(function(){});
     } else {
       TEV.client.from('absences_jour').delete().eq('date',date).eq('email',email).catch(function(){});

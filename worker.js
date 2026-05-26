@@ -336,6 +336,11 @@ export default {
         return handleNotifyMilongaRsvp(request, env);
       }
 
+      // POST /api/notify/absence-cours — élève déclare son absence depuis l'espace élève (sans auth)
+      if (pathname === '/api/notify/absence-cours' && method === 'POST') {
+        return handleNotifyAbsenceCours(request, env);
+      }
+
       // POST /api/notify/carte-bienvenue — premier pointage carte10 (sans auth)
       if (pathname === '/api/notify/carte-bienvenue' && method === 'POST') {
         return handleNotifyCarteBienvenue(request, env);
@@ -7669,6 +7674,49 @@ async function handleNotifyMilongaRsvp(request, env) {
       body: `🎶 ${nomAff} · ${milNomAff} · ${dateAff}`,
     });
   } catch(e) { console.error('[milonga-rsvp] push error', e); }
+
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/absence-cours — élève déclare son absence depuis l'espace élève
+// Sans auth — appelé depuis toggleAbsenceCours() dans index.html
+// ================================================================
+async function handleNotifyAbsenceCours(request, env) {
+  let body;
+  try { body = await request.json(); } catch(e) { return jsonError(400, 'JSON invalide'); }
+
+  const { email, prenom, nom, ville, niveau, date } = body;
+  const nomAff = (`${prenom || ''} ${nom || ''}`).trim() || email || '(inconnu)';
+
+  const VILLE_LBL = { paris: 'Paris', vincennes: 'Vincennes' };
+  const NIV_LBL   = { debutant: 'Débutants', intermediaire: 'Intermédiaires' };
+  const coursAff  = [VILLE_LBL[ville] || ville, NIV_LBL[niveau] || niveau].filter(Boolean).join(' — ');
+
+  const MOIS_C = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+  let dateAff = date || '';
+  if (date) {
+    const d = new Date(date + 'T12:00:00');
+    if (!isNaN(d)) dateAff = d.getDate() + ' ' + MOIS_C[d.getMonth()];
+  }
+
+  const notifMsg = `🚫 Absence — ${nomAff} · ${coursAff} · ${dateAff}`;
+
+  // ── Panel 🔔 admin
+  try {
+    const resN = await _insertNotification('absence_cours', notifMsg, 'essai');
+    if (!resN.ok) console.error('[absence-cours] insertNotification HTTP', resN.status, await resN.text().catch(() => ''));
+  } catch(e) { console.error('[absence-cours] insertNotification error', e); }
+
+  // ── Push OS admin
+  const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  try {
+    const tokens = await getFcmTokensAdmin(_svcKey);
+    if (tokens.length) await sendFcmPush(env, tokens, {
+      title: 'Tango & Vous — Admin',
+      body: `🚫 ${nomAff} · ${coursAff} · ${dateAff}`,
+    });
+  } catch(e) { console.error('[absence-cours] push error', e); }
 
   return corsResponse({ ok: true }, 200, {}, request);
 }
