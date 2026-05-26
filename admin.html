@@ -612,6 +612,26 @@ function calcExpiration(datePremierCours, ville) {
   var firstStored = coursArr[0] || '';
   var lastStored  = coursArr[coursArr.length - 1] || '';
 
+  // Normalisation : si datePremierCours n'est pas un jour de cours (ex: saisie manuelle un mardi
+  // alors que les cours sont le jeudi), le snapper au cours le plus proche dans coursArr (±3 jours).
+  // Sans ça, cur vérifie le mauvais jour de semaine et chaque semaine paraît sans cours.
+  if (coursArr.length > 0) {
+    var _closest = coursArr.reduce(function(best, d) {
+      if (!best) return d;
+      var da = Math.abs(new Date(d + 'T12:00:00') - debut);
+      var db = Math.abs(new Date(best + 'T12:00:00') - debut);
+      return da < db ? d : best;
+    }, null);
+    if (_closest) {
+      var _closestDt = new Date(_closest + 'T12:00:00');
+      if (Math.abs(_closestDt - debut) <= 3 * 24 * 60 * 60 * 1000) {
+        debut = _closestDt;
+        fin = new Date(debut.getTime());
+        fin.setMonth(fin.getMonth() + 3);
+      }
+    }
+  }
+
   // Algorithme itératif : chaque semaine sans cours repousse fin d'1 semaine.
   // Les deux saisons (courante + suivante) sont traitées comme un tout continu :
   // tev_cours_dates contient les dates des deux saisons → lastStored atteint juin N+1.
