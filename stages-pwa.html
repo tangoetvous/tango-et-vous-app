@@ -1164,39 +1164,7 @@ async function soumettre(){
     // Une ligne par date (permet confirmation date par date côté admin)
     var avecPart = data.situation === 'avec-partenaire' && !data.memePersonne && (data.partenairePrenom || data.partenaireNom);
 
-    // Vérification doublons : (prenom, nom, stage_date)
-    var datesAVerifier = data.inscriptionsParDate.map(function(di){ return di.date; });
-    var { data: existants } = await TEV.client
-      .from('inscriptions_stages')
-      .select('prenom,nom,stage_date')
-      .in('stage_date', datesAVerifier);
-    var existantsLower = (existants || []).map(function(r){
-      return { p:(r.prenom||'').toLowerCase().trim(), n:(r.nom||'').toLowerCase().trim(), d:r.stage_date };
-    });
-    var personnesAVerifier = [{ prenom: data.prenom, nom: data.nom }];
-    if (avecPart) personnesAVerifier.push({ prenom: data.partenairePrenom||'', nom: data.partenaireNom||'' });
-    // Filtrer les dates déjà inscrites (doublon) — les autres passent quand même
-    var datesOK = data.inscriptionsParDate.filter(function(di) {
-      return !personnesAVerifier.some(function(pers) {
-        var pL = pers.prenom.toLowerCase().trim(), nL = pers.nom.toLowerCase().trim();
-        return existantsLower.some(function(r){ return r.p===pL && r.n===nL && r.d===di.date; });
-      });
-    });
-    var datesDoublon = data.inscriptionsParDate.filter(function(di){
-      return datesOK.indexOf(di) < 0;
-    }).map(function(di){
-      return new Date(di.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long'});
-    });
-    if (datesOK.length === 0) {
-      btn.disabled=false; btn.textContent="Je m'inscris";
-      document.getElementById('err-global-2').textContent='⚠️ Vous êtes déjà inscrit·e à tous les stages sélectionnés.';
-      document.getElementById('err-global-2').classList.add('visible');
-      return;
-    }
-    if (datesDoublon.length > 0) {
-      document.getElementById('err-global-2').textContent='ℹ️ Déjà inscrit·e le '+datesDoublon.join(' et ')+' — ces dates ont été ignorées.';
-      document.getElementById('err-global-2').classList.add('visible');
-    }
+    var datesOK = data.inscriptionsParDate;
 
     var typeConfPrincipal = avecPart ? 'confirme' : data.typeConfirmation;
     var rowsToInsert = [];

@@ -466,13 +466,6 @@ async function soumettre() {
     return;
   }
 
-  // Anti-doublon
-  const {data:_exYoga}=await TEV.client.from('inscriptions_essai_yoga').select('prenom,nom').eq('date_essai',date).eq('cours',coursSelectionne);
-  const _exYL=(_exYoga||[]).map(function(r){return{p:(r.prenom||'').toLowerCase().trim(),n:(r.nom||'').toLowerCase().trim()};});
-  if(_exYL.some(function(x){return x.p===prenom.toLowerCase().trim()&&x.n===nom.toLowerCase().trim();})){
-    err.textContent='⚠️ '+prenom+' '+nom+' est déjà inscrit·e à ce cours d\'essai yoga.';
-    err.style.display='block';btn.disabled=false;btn.textContent='S\'inscrire au cours d\'essai';return;
-  }
   // Quota yoga : max 14 par cours (yin/hatha séparément, forfait compte dans les deux)
   const _dateD = new Date(date + 'T12:00:00');
   const _yr = _dateD.getFullYear(), _mo = _dateD.getMonth() + 1;
