@@ -207,6 +207,11 @@ export default {
         return handleEssaiYogaConfirmer(request, url, env);
       }
 
+      // POST /api/inscription-cours/liberer-demande — soft-delete d'une demande en attente pour permettre re-inscription (sans auth)
+      if (pathname === '/api/inscription-cours/liberer-demande' && method === 'POST') {
+        return handleLibererDemande(request, env);
+      }
+
       // POST /api/notify/inscription-cours — formulaire inscription-cours.html (sans auth)
       if (pathname === '/api/notify/inscription-cours' && method === 'POST') {
         return handleNotifyInscriptionCours(request, env);
@@ -4713,6 +4718,43 @@ async function handleEssaiYogaConfirmer(request, url, env) {
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Présence confirmée</title></head><body style="margin:0;padding:40px 20px;background:#f5f5f5;font-family:Arial,sans-serif;text-align:center;"><div style="max-width:500px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 2px 10px rgba(0,0,0,.1)"><div style="font-size:48px;margin-bottom:16px;">👍</div><h2 style="color:#2e7d32;margin:0 0 12px;">Présence confirmée !</h2><p style="color:#555;margin:0 0 20px;">Votre présence au cours d'essai <strong>${coursAff}</strong> du <strong>${coursDate}</strong> est bien confirmée.</p><p style="color:#888;font-size:13px;">À très bientôt sur le tapis !</p><p style="margin-top:24px;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#2e7d32;font-weight:700;text-decoration:none;">Ma Page Yoga →</a></p></div></body></html>`;
 
   return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+}
+
+// ================================================================
+// POST /api/inscription-cours/liberer-demande — sans auth
+// Soft-delete les lignes inscriptions_cours statut='demande' identifiées par ids[]
+// Permet à une guidée en attente de re-soumettre le formulaire (ex: avec un partenaire)
+// ================================================================
+async function handleLibererDemande(request, env) {
+  let ids;
+  try { ({ ids } = await request.json()); } catch(e) { ids = null; }
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return corsResponse({ ok: false, error: 'ids manquants' }, 400, {}, request);
+  }
+  const numIds = ids.map(Number).filter(n => !isNaN(n) && n > 0);
+  if (numIds.length === 0) {
+    return corsResponse({ ok: false, error: 'ids invalides' }, 400, {}, request);
+  }
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/inscriptions_cours?id=in.(${numIds.join(',')})&statut=eq.demande`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${svcKey}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ statut: 'supprimé', statut_avant_suppression: 'demande' }),
+    }
+  );
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    console.error('[libererDemande] PATCH error', res.status, body);
+    return corsResponse({ ok: false, error: 'DB error' }, 500, {}, request);
+  }
+  return corsResponse({ ok: true }, 200, {}, request);
 }
 
 // ================================================================
