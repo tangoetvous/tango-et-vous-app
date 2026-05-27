@@ -4225,20 +4225,46 @@ async function handleNotifyInscriptionEssai(request, env) {
   const encEmailCol  = isWaitlist ? '#ffe0cc' : '#333';
   const encInnerBg   = isWaitlist ? '#fff8f5' : '#fffdf8';
 
-  const adminEncadre = `<div style="border:2px solid ${encBorderCol};border-radius:8px;overflow:hidden;margin-bottom:20px;">
-    <div style="background:${encHeaderBg};padding:10px 16px;display:flex;align-items:center;gap:12px;">
-      <div style="flex:1;"><div style="font-size:18px;font-weight:700;color:${encNameCol};">${nameAff}</div>
-      <div style="font-size:12px;color:${encEmailCol};margin-top:2px;">${_esc(email || '')}${tel ? ' &nbsp;·&nbsp; ' + _esc(tel) : ''}</div></div>
-      <span style="background:${roleBadgeCol(role)};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${roleLabel(role)}</span>
-    </div>
-    <div style="background:${encInnerBg};padding:14px 16px;">
-      <div style="font-size:16px;font-weight:700;color:#111;margin-bottom:4px;">📍 ${_esc(coursVilleAff)}</div>
-      <div style="font-size:13px;color:#333;">${_esc(coursDateAff)}${horaire ? ' &nbsp;·&nbsp; ' + _esc(horaire) : ''}</div>
-      ${lieuNom ? `<div style="font-size:12px;color:#666;margin-top:2px;">${_esc(lieuNom)}${lieuRue ? ' — ' + _esc(lieuRue) : ''}</div>` : ''}
-      ${(enCouple && partPrenom) ? `<div style="font-size:13px;color:#555;margin-top:6px;">Partenaire : ${_esc(partPrenom || '')} ${_esc(partNom || '')}${partEmail ? ' &lt;' + _esc(partEmail) + '&gt;' : ''} (${roleLabel(partRole || '')})</div>` : ''}
-      ${niveauEleve ? `<div style="font-size:12px;color:#666;margin-top:6px;">🎓 Expérience tango : <strong>${_esc(niveauEleve)}</strong></div>` : ''}
-    </div>
+  const _coursInnerBlock = `<div style="background:${encInnerBg};padding:14px 16px;">
+    <div style="font-size:16px;font-weight:700;color:#111;margin-bottom:4px;">📍 ${_esc(coursVilleAff)}</div>
+    <div style="font-size:13px;color:#333;">${_esc(coursDateAff)}${horaire ? ' &nbsp;·&nbsp; ' + _esc(horaire) : ''}</div>
+    ${lieuNom ? `<div style="font-size:12px;color:#666;margin-top:2px;">${_esc(lieuNom)}${lieuRue ? ' — ' + _esc(lieuRue) : ''}</div>` : ''}
+    ${niveauEleve ? `<div style="font-size:12px;color:#666;margin-top:6px;">🎓 Expérience tango : <strong>${_esc(niveauEleve)}</strong></div>` : ''}
   </div>`;
+
+  let adminEncadre;
+  if (enCouple && partPrenom) {
+    const _partNameAff = _esc(`${partPrenom} ${partNom || ''}`.trim());
+    const _partEmailAff = _esc(partEmail || '');
+    const _partHdrBg = isWaitlist ? '#9a2a00' : '#b8960e';
+    adminEncadre = `<div style="border:2px solid ${encBorderCol};border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <div style="background:#6a1b9a;padding:7px 16px;text-align:center;">
+        <span style="color:#fff;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">👫 En couple</span>
+      </div>
+      <div style="background:${encHeaderBg};padding:10px 16px;display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;"><div style="font-size:16px;font-weight:700;color:${encNameCol};">${nameAff}</div>
+        <div style="font-size:12px;color:${encEmailCol};margin-top:2px;">${_esc(email || '')}${tel ? ' &nbsp;·&nbsp; ' + _esc(tel) : ''}</div></div>
+        <span style="background:${roleBadgeCol(role)};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${roleLabel(role)}</span>
+      </div>
+      <div style="height:1px;background:rgba(0,0,0,.15);"></div>
+      <div style="background:${_partHdrBg};padding:10px 16px;display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;"><div style="font-size:16px;font-weight:700;color:#fff;">${_partNameAff}</div>
+        ${_partEmailAff ? `<div style="font-size:12px;color:${isWaitlist ? '#ffccaa' : '#f5e4a0'};margin-top:2px;">${_partEmailAff}</div>` : ''}
+        </div>
+        <span style="background:${roleBadgeCol(partRole||'')};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${roleLabel(partRole||'')}</span>
+      </div>
+      ${_coursInnerBlock}
+    </div>`;
+  } else {
+    adminEncadre = `<div style="border:2px solid ${encBorderCol};border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <div style="background:${encHeaderBg};padding:10px 16px;display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;"><div style="font-size:18px;font-weight:700;color:${encNameCol};">${nameAff}</div>
+        <div style="font-size:12px;color:${encEmailCol};margin-top:2px;">${_esc(email || '')}${tel ? ' &nbsp;·&nbsp; ' + _esc(tel) : ''}</div></div>
+        <span style="background:${roleBadgeCol(role)};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${roleLabel(role)}</span>
+      </div>
+      ${_coursInnerBlock}
+    </div>`;
+  }
 
   const statusRowBg = isWaitlist ? '#fff3e0' : '#f5f5f5';
   const statusRowBorder = isWaitlist ? 'border:1px solid #ffe0b2;' : '';
