@@ -1,5 +1,30 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Politique anti-doublon formulaires publics — décision 2026-05-27
+
+### Règle permanente : AUCUN filtre anti-doublon sur les formulaires publics
+
+**Décision de l'admin** : toute personne peut soumettre plusieurs fois n'importe quel formulaire public sans blocage. L'admin gère manuellement les doublons éventuels.
+
+**Raison** : une personne seule (guideur ou guidée) peut d'abord s'inscrire seule puis soumettre à nouveau avec un partenaire pour le même cours. Bloquer cette deuxième soumission empêcherait une vraie inscription valide.
+
+**État au 2026-05-27** :
+
+| Formulaire | Côté client | Côté DB (index UNIQUE) |
+|------------|------------|------------------------|
+| `inscription-cours.html` | ✅ Aucun filtre | ✅ `idx_cours_no_double` supprimé |
+| `cours-essai.html` | ✅ Aucun filtre | ✅ `idx_essai_no_double` supprimé |
+| `essai-yoga.html` | ✅ Aucun filtre | ✅ `idx_essai_yoga_no_double` supprimé |
+| `stages-pwa.html` | ✅ Aucun filtre | ✅ `idx_stages_no_double` supprimé |
+| `demande-devis.html` | ✅ Aucun filtre (jamais eu) | — |
+| `cours-particuliers.html` | ✅ Aucun filtre (jamais eu) | — |
+
+**Ce qui reste intact** : la déduplication par `_normNom()` dans l'affichage des listes de l'admin (`_elevesResultatsHTML`, `nbInscritsCours`) — elle ne bloque rien, elle évite juste l'affichage en double dans les vues Élèves Tango. Ne jamais supprimer cette déduplication d'affichage.
+
+**Ne jamais réintroduire** de bloc anti-doublon dans les formulaires publics, ni de `CREATE UNIQUE INDEX` sur les tables `inscriptions_cours`, `inscriptions_essai`, `inscriptions_essai_yoga`, `inscriptions_stages`.
+
+---
+
 ## Push notifications — VAPID + déduplication tokens
 
 ### Clés VAPID — configuration actuelle (2026-05-26)
