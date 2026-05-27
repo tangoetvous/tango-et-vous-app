@@ -1029,39 +1029,6 @@ function soumettre() {
 }
 
 async function finalize() {
-  // Anti-doublon — vérifier avant de cacher le formulaire
-  if (window.TEV) {
-    const _chk = [{p:S.prenom,n:S.nom,ville:S.c1.ville,niveau:S.c1.niveau}];
-    if (S.venue==='avec-part'&&(S.pPrenom||S.pNom)) _chk.push({p:S.pPrenom||'',n:S.pNom||'',ville:S.c1.ville,niveau:S.c1.niveau});
-    if (S.nbCours===2&&S.c2.ville&&S.c2.niveau) {
-      _chk.push({p:S.prenom,n:S.nom,ville:S.c2.ville,niveau:S.c2.niveau});
-      if (S.venue2==='avec-part') { const _p2p=S.samePartner===true?S.pPrenom:S.p2Prenom; const _p2n=S.samePartner===true?S.pNom:S.p2Nom; if(_p2p||_p2n) _chk.push({p:_p2p||'',n:_p2n||'',ville:S.c2.ville,niveau:S.c2.niveau}); }
-    }
-    const _toLiberate = [];
-    for (const _c of _chk) {
-      if (!_c.p&&!_c.n) continue;
-      const {data:_ex}=await TEV.client.from('inscriptions_cours').select('id,prenom,nom,statut').eq('ville',_c.ville).eq('niveau',_c.niveau).eq('saison',S.saison).neq('statut','supprimé');
-      const _pNorm=(_c.p||'').toLowerCase().trim(), _nNorm=(_c.n||'').toLowerCase().trim();
-      const _matched=(_ex||[]).filter(function(r){return (r.prenom||'').toLowerCase().trim()===_pNorm&&(r.nom||'').toLowerCase().trim()===_nNorm;});
-      if (_matched.length===0) continue;
-      if (_matched.some(function(r){return r.statut==='inscrit';})){
-        showErr((_c.p+' '+_c.n).trim()+' est déjà inscrit·e au cours '+(_c.ville==='paris'?'Paris':'Vincennes')+' '+_c.niveau+' pour la saison '+S.saison+'. Contactez-nous si vous souhaitez modifier votre inscription.');
-        return;
-      }
-      _matched.filter(function(r){return r.statut==='demande'||r.statut==='attente_paiement';}).forEach(function(r){_toLiberate.push(r.id);});
-    }
-    if (_toLiberate.length>0) {
-      try {
-        const _libRes=await fetch('https://app.tangoetvous.fr/api/inscription-cours/liberer-demande',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:_toLiberate})});
-        if (!_libRes.ok) throw new Error('Worker error '+_libRes.status);
-      } catch(_libErr) {
-        console.error('[TEV] liberer-demande error:',_libErr);
-        showErr('Impossible de mettre à jour votre ancienne demande. Veuillez contacter tangoetvous@gmail.com.');
-        return;
-      }
-    }
-  }
-
   // Vérification quota par cours — vérifie le rôle principal ET le rôle du partenaire
   const _quotaFullArr = [false, false]; // [C1, C2]
   const _incl2 = S.nbCours === 2 && S.c2.ville && S.c2.niveau;
