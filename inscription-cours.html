@@ -1044,11 +1044,11 @@ async function finalize() {
       const _pNorm=(_c.p||'').toLowerCase().trim(), _nNorm=(_c.n||'').toLowerCase().trim();
       const _matched=(_ex||[]).filter(function(r){return (r.prenom||'').toLowerCase().trim()===_pNorm&&(r.nom||'').toLowerCase().trim()===_nNorm;});
       if (_matched.length===0) continue;
-      if (_matched.some(function(r){return r.statut==='attente_paiement'||r.statut==='inscrit';})){
+      if (_matched.some(function(r){return r.statut==='inscrit';})){
         showErr((_c.p+' '+_c.n).trim()+' est déjà inscrit·e au cours '+(_c.ville==='paris'?'Paris':'Vincennes')+' '+_c.niveau+' pour la saison '+S.saison+'. Contactez-nous si vous souhaitez modifier votre inscription.');
         return;
       }
-      _matched.filter(function(r){return r.statut==='demande';}).forEach(function(r){_toLiberate.push(r.id);});
+      _matched.filter(function(r){return r.statut==='demande'||r.statut==='attente_paiement';}).forEach(function(r){_toLiberate.push(r.id);});
     }
     if (_toLiberate.length>0) {
       try {
