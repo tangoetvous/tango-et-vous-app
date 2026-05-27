@@ -6716,6 +6716,7 @@ function _elevesResultatsHTML(inscrits) {
   var liste=inscrits.filter(function(e){return e.ville===ong.ville&&e.niveau===ong.niv;});
   // Dédupliquer par nom normalisé — dans un même cours, même nom = même personne
   // (gère le cas email vide sur l'entrée partenaire vs email réel sur l'entrée principale)
+  var _dupSet=_dupEmails(liste);
   var _seenKeys={};
   liste=liste.filter(function(e){
     var k=_normNom((e.prenom||'')+' '+(e.nom||''));
@@ -6740,7 +6741,7 @@ function _elevesResultatsHTML(inscrits) {
   r+='<div style="font-size:11px;color:var(--dim);padding:5px 12px 8px;font-style:italic;">'+nbTotal+' élève'+(nbTotal>1?'s':'')+' — '+nbCouples+' couple'+(nbCouples>1?'s':'')+', '+nbSolos+' solo'+(nbSolos>1?'s':'')+'</div>';
   if(couplesGrp.length){
     r+='<div class="section-hdr">Couples ('+couplesGrp.length+')</div>';
-    couplesGrp.forEach(function(g){ r+=_coupleWrap(ficheEleveInscrit(g.persons[0],'')+ficheEleveInscrit(g.persons[1],'')); });
+    couplesGrp.forEach(function(g){ r+=_coupleWrap(ficheEleveInscrit(g.persons[0],'',false,_dupSet.has(_dupKey(g.persons[0])))+ficheEleveInscrit(g.persons[1],'',false,_dupSet.has(_dupKey(g.persons[1])))); });
   }
   if(soloGrp.length){
     var soloGui=soloGrp.filter(function(g){return g.person.role==='guideur';}).map(function(g){return g.person;});
@@ -6748,8 +6749,8 @@ function _elevesResultatsHTML(inscrits) {
     r+='<div class="section-hdr">Solos ('+(soloGui.length+soloGde.length)+')</div>';
     var maxS=Math.max(soloGui.length,soloGde.length);
     for(var si=0;si<maxS;si++){
-      if(si<soloGui.length) r+=ficheEleveInscrit(soloGui[si],'');
-      if(si<soloGde.length) r+=ficheEleveInscrit(soloGde[si],'');
+      if(si<soloGui.length) r+=ficheEleveInscrit(soloGui[si],'',false,_dupSet.has(_dupKey(soloGui[si])));
+      if(si<soloGde.length) r+=ficheEleveInscrit(soloGde[si],'',false,_dupSet.has(_dupKey(soloGde[si])));
     }
   }
   return r;
@@ -6823,7 +6824,7 @@ function supprimerDefinitivementEleve(id) {
     .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
   }
 }
-function ficheEleveInscrit(e, borderStyle, grise) {
+function ficheEleveInscrit(e, borderStyle, grise, isDup) {
   var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
   var roleLbl=e.role==='guideur'?'Guideur':'Guidée';
   var typeLbl={forfait:'Forfait',carte10:'Carte 10',carte:'Carte 10',unitaire:'À l\'unité'}[e.type]||e.type||'';
@@ -6831,7 +6832,7 @@ function ficheEleveInscrit(e, borderStyle, grise) {
   var griseStyle=grise?'opacity:.38;filter:grayscale(1);':'';
   return '<div class="point-row" style="'+(borderStyle||'')+griseStyle+'flex-wrap:wrap;align-items:center;gap:5px;padding:8px 0;">'
     +'<div style="flex:1;min-width:160px;">'
-    +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+'</div>'
+    +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+(isDup?_DUP_BADGE:'')+'</div>'
     +(e.partenaire?'<div class="point-sub">♥ '+e.partenaire+'</div>':'')
     +'</div>'
     +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
@@ -7453,12 +7454,14 @@ function renderEssai() {
           ?' <span style="font-weight:400;color:var(--dim);font-size:11px;">👨 '+guiConf+' · 👩 '+gdeConf+' confirmés</span>'
           :' <span style="font-weight:400;color:'+(compAtt?'var(--warn-text)':'var(--dim)')+';font-size:11px;">👨 '+guiConf+'/22 · 👩 '+gdeConf+'/23'+(compAtt?' — complet':'')+' </span>')
         +'</div>';
+      var _dupSetAtt=_dupEmails(attenteGrp);
       function _attEssaiCard(e){
         var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
         return '<div class="point-row">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
           +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')
+          +(_dupSetAtt.has(_dupKey(e))?_DUP_BADGE:'')
           +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
           +'</div>'
           +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
@@ -7531,6 +7534,7 @@ function renderEssai() {
         +' — Essai: ✓'+presEssai+' ✗'+absEssai+' ?'+restEssai
         +' · Élèves: '+elevesPresents.length+(elevesAbsents.length?' ('+elevesAbsents.length+' absent'+(elevesAbsents.length>1?'s':'')+')':'')+'</div>';
       // ── Cours d'essai ──
+      var _dupSetConf=_dupEmails(conf);
       var _mkEssaiPtCard = function(e) {
         var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
         var ctEntry=(adminData.coursTango||[]).find(function(c){return c.email===e.email;});
@@ -7539,7 +7543,7 @@ function renderEssai() {
         if(ctStatut==='inscrit') pastille='<span class="pill pill-ok" style="font-size:8px;padding:1px 5px;">Inscrit</span>';
         else if(ctStatut==='valide'||ctStatut==='attente_paiement') pastille='<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">att. paiem.</span>';
         else if(ctStatut==='demande') pastille='<span style="display:inline-block;background:#FFD600;color:#003399;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;border:2px solid #003399;white-space:nowrap;">DEM</span>';
-        return '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+'</div>'
+        return '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+(_dupSetConf.has(_dupKey(e))?_DUP_BADGE:'')+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · <span style="color:#c0392b;">♥ '+e.partenaire+'</span>':'')+'</div></div>'
           +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
           +(e.presenceConfirmee===true?' <span title="A confirmé sa présence par email">👍</span>':'')
@@ -7566,7 +7570,7 @@ function renderEssai() {
           var _mkAttPtCard = function(e) {
             var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
             return '<div class="point-row" style="opacity:0.9;">'
-              +'<div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+'</div>'
+              +'<div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+(_dupSetAtt.has(_dupKey(e))?_DUP_BADGE:'')+'</div>'
               +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
               +'</div>'
               +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
@@ -7757,6 +7761,7 @@ function renderEssai() {
       if(!ins.length && !supprimesEd.length){
         body='<div style="font-size:11px;color:var(--dim);padding:6px 0 10px;">Aucune inscription</div>';
       } else {
+        var _dupSetDate=_dupEmails(ins);
         var _mkEssaiDateCard = function(e) {
           var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
           var vraiAtt=estVraimentAttente(e,ins);
@@ -7764,6 +7769,7 @@ function renderEssai() {
             +'<div style="flex:1;min-width:0;">'
             +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
             +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')
+            +(_dupSetDate.has(_dupKey(e))?_DUP_BADGE:'')
             +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
             +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
             +(e.presenceConfirmee===true?' <span title="A confirmé sa présence par email">👍</span>':'')
@@ -9339,6 +9345,19 @@ function validerReport(reportId, btn) {
 function _normNom(s) {
   return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 }
+function _dupEmails(list) {
+  var seen = {}, dups = new Set();
+  (list||[]).forEach(function(e) {
+    var k = ((e.email||'').toLowerCase().trim()) || _normNom((e.prenom||'')+' '+(e.nom||''));
+    if (!k) return;
+    if (seen[k]) dups.add(k); else seen[k] = true;
+  });
+  return dups;
+}
+function _dupKey(e) {
+  return ((e.email||'').toLowerCase().trim()) || _normNom((e.prenom||'')+' '+(e.nom||''));
+}
+var _DUP_BADGE = '<span style="background:#f97316;color:#fff;font-size:8px;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:2px;white-space:nowrap;">⚠️ doublon</span>';
 function _groupCouples(list) {
   var used = [], groups = [];
   for (var i = 0; i < list.length; i++) {
@@ -12375,9 +12394,10 @@ function renderCoursTango() {
     }
     h += '<div class="section-hdr">'+lbl+' ('+items.length+')'+badgeHtml+'</div>'
       +'<div style="padding:0 16px;">';
+    var _dupSetInscr=_dupEmails(items);
     _groupCouples(items).forEach(function(g){
-      if(g.type==='couple') h+=_coupleWrap(ficheEleve(g.persons[0])+ficheEleve(g.persons[1]));
-      else h+=ficheEleve(g.person);
+      if(g.type==='couple') h+=_coupleWrap(ficheEleve(g.persons[0],_dupSetInscr.has(_dupKey(g.persons[0])))+ficheEleve(g.persons[1],_dupSetInscr.has(_dupKey(g.persons[1]))));
+      else h+=ficheEleve(g.person,_dupSetInscr.has(_dupKey(g.person)));
     });
     h += '</div>';
     h += inscritsHtml;
@@ -12416,14 +12436,14 @@ function ficheSupprime(e) {
     +'</div></div>';
 }
 
-function ficheEleve(e) {
+function ficheEleve(e, isDup) {
   var isValide = e.statut==='valide'||e.statut==='attente_paiement'||e.statut==='inscrit';
   var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
   var roleLbl = e.role==='guideur'?'Guideur':'Guidée';
 
   var h = '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'" style="flex-wrap:wrap;align-items:flex-start;gap:6px;padding:9px 0;">'
     +'<div style="flex:1;min-width:160px;">'
-    +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+'</div>'
+    +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+(isDup?_DUP_BADGE:'')+'</div>'
     +(e.partenaire?'<div class="point-sub">♥ '+e.partenaire+'</div>':'')
     +'</div>'
     +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
