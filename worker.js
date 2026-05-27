@@ -4735,23 +4735,22 @@ async function handleLibererDemande(request, env) {
   if (numIds.length === 0) {
     return corsResponse({ ok: false, error: 'ids invalides' }, 400, {}, request);
   }
-  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  // Utilise une RPC SECURITY DEFINER pour bypasser RLS (UPDATE USING is_admin() bloque anon silencieusement)
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/inscriptions_cours?id=in.(${numIds.join(',')})&statut=eq.demande`,
+    `${SUPABASE_URL}/rest/v1/rpc/liberer_demandes_cours`,
     {
-      method: 'PATCH',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON,
-        'Authorization': `Bearer ${svcKey}`,
-        'Prefer': 'return=minimal',
+        'Authorization': `Bearer ${SUPABASE_ANON}`,
       },
-      body: JSON.stringify({ statut: 'supprimé', statut_avant_suppression: 'demande' }),
+      body: JSON.stringify({ p_ids: numIds }),
     }
   );
   if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    console.error('[libererDemande] PATCH error', res.status, body);
+    const errBody = await res.text().catch(() => '');
+    console.error('[libererDemande] RPC error', res.status, errBody);
     return corsResponse({ ok: false, error: 'DB error' }, 500, {}, request);
   }
   return corsResponse({ ok: true }, 200, {}, request);
