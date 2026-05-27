@@ -1,5 +1,17 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Bouton "Évaluer mon tarif" retiré temporairement — 2026-05-27
+
+Dans `inscription-cours.html`, le bouton `💶 Évaluer mon tarif` (qui appelait `goTarif()`) a été **retiré temporairement** à la demande de l'admin. Il pourra être remis plus tard.
+
+**Ce qui a changé** :
+- Le bouton `goTarif()` a disparu de l'étape `sInfos()` (step rôle / partenaire)
+- L'étape tarif (`sTarif()`) reste présente dans le code mais n'est plus accessible depuis ce bouton
+- `S.wantTarif` reste `false` → l'étape tarif n'est jamais ajoutée au nav
+- Pour remettre le bouton : réinsérer `<button class="btn-next" ... onclick="goTarif()">💶 Évaluer mon tarif</button>` avant le Turnstile dans la branche `role` de `sInfos()`
+
+---
+
 ## Politique anti-doublon formulaires publics — décision 2026-05-27
 
 ### Règle permanente : AUCUN filtre anti-doublon sur les formulaires publics
