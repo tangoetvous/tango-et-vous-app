@@ -5164,6 +5164,15 @@ function switchTab(tab) {
   }
   var _ov = gel('admin-nav-overlay');
   if (_ov) _ov.classList.remove('open');
+  if (tab === 'stages') {
+    var _todayStage = today();
+    var _stageDates = Object.keys(adminData.stages||{}).sort().filter(function(d){
+      return dateAppartientSaison(d, saisonActive());
+    });
+    var _nextStage = _stageDates.find(function(d){ return d >= _todayStage; }) || _stageDates[0] || '';
+    if (_nextStage) filtreStage = _nextStage;
+    filtreStageSlot = 'tous';
+  }
   renderTab();
 }
 function toggleAdminNav() {
