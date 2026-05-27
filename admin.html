@@ -5619,6 +5619,12 @@ function handleAction(action, btn) {
     case 'suppr-def-essai':
       supprDefEssai(btn.dataset.id, btn.dataset.nom||'');
       break;
+    case 'retablir-cours-inscr':
+      retablirCoursInscr(btn.dataset.id);
+      break;
+    case 'suppr-def-cours-inscr':
+      supprDefCoursInscr(btn.dataset.id, btn.dataset.nom||'');
+      break;
     case 'editer-essai':
       ouvrirEditEssai(btn.dataset.id);
       break;
@@ -9624,7 +9630,9 @@ function renderStages() {
 function supprimerCoursInscr(id) {
   if (!adminData.coursTango) return;
   var e = adminData.coursTango.find(function(x){ return String(x.id)===String(id); });
+  var statutOriginal = e ? (e.statut || 'demande') : 'demande';
   if (e) {
+    e.statut_avant_suppression = statutOriginal;
     e.statut = 'supprimé';
     e._suppriméDeInscriptions = true;
   }
@@ -9632,7 +9640,7 @@ function supprimerCoursInscr(id) {
   renderTab();
   if (!IS_DEMO) {
     var donneesMerge = Object.assign({}, (e && e.donnees)||{}, {supprimé_de: 'inscriptions_tango'});
-    Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé', donnees: donneesMerge}).eq('id',id))
+    Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé', statut_avant_suppression: statutOriginal, donnees: donneesMerge}).eq('id',id))
       .then(function(res){
         if (res && res.error) {
           _pendingSupprimes.delete(String(id));
@@ -9648,6 +9656,55 @@ function supprimerCoursInscr(id) {
         chargerDonnees();
       });
   }
+}
+function retablirCoursInscr(id) {
+  if (!adminData.coursTango) return;
+  var entry = adminData.coursTango.find(function(x){ return String(x.id)===String(id); });
+  if (!entry) return;
+  var statutNouveau = entry.statut_avant_suppression || 'demande';
+  entry.statut = statutNouveau;
+  delete entry.statut_avant_suppression;
+  entry._suppriméDeInscriptions = false;
+  _pendingSupprimes.delete(String(id));
+  if (!IS_DEMO) {
+    var donneesMerge = Object.assign({}, entry.donnees||{});
+    delete donneesMerge['supprimé_de'];
+    Promise.resolve(
+      TEV.client.from('inscriptions_cours')
+        .update({ statut: statutNouveau, statut_avant_suppression: null, donnees: donneesMerge })
+        .eq('id', id)
+    ).then(function(res){
+      if (res && res.error) {
+        console.error('Erreur rétablissement inscription:', res.error);
+        afficherToast('Erreur : rétablissement échoué');
+        chargerDonnees();
+      } else {
+        afficherToast('✓ Inscription rétablie (' + statutNouveau + ')');
+      }
+    }).catch(function(err){ console.error('Erreur rétablissement (réseau):', err); chargerDonnees(); });
+  }
+  renderTab();
+}
+function supprDefCoursInscr(id, nom) {
+  ouvrirModalConfirm('Supprimer définitivement la fiche de ' + (nom||'') + ' ?\n\nCette action est irréversible.', function(){
+    if (!adminData.coursTango) return;
+    adminData.coursTango = adminData.coursTango.filter(function(x){ return String(x.id)!==String(id); });
+    _pendingSupprimes.delete(String(id));
+    if (!IS_DEMO) {
+      Promise.resolve(
+        TEV.client.from('inscriptions_cours').delete().eq('id', id)
+      ).then(function(res){
+        if (res && res.error) {
+          console.error('Erreur suppression définitive:', res.error);
+          afficherToast('Erreur : suppression définitive échouée');
+          chargerDonnees();
+        } else {
+          afficherToast('🗑 Fiche supprimée définitivement');
+        }
+      }).catch(function(err){ console.error('Erreur suppression def (réseau):', err); chargerDonnees(); });
+    }
+    renderTab();
+  });
 }
 function supprimerEssaiInscr(email, date, id) {
   if (!adminData.essai) return;
@@ -12340,15 +12397,21 @@ function renderCoursTango() {
 function ficheSupprime(e) {
   var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
   var roleLbl = e.role==='guideur'?'Guideur·se':'Guidée';
-  return '<div class="point-row" style="flex-wrap:wrap;align-items:flex-start;gap:6px;padding:8px 0 8px 10px;border-left:3px solid var(--err);opacity:0.75;">'
+  var statutAvant = e.statut_avant_suppression || '';
+  var statutAvantLbl = statutAvant==='attente_paiement' ? 'att. paiement' : statutAvant==='demande' ? 'demande' : statutAvant;
+  var nomAff = escHtml((e.prenom||'')+' '+(e.nom||''));
+  return '<div class="point-row" style="flex-wrap:wrap;align-items:flex-start;gap:6px;padding:8px 0 8px 10px;border-left:3px solid var(--err);opacity:0.8;">'
     +'<div style="flex:1;min-width:160px;">'
-    +'<div class="point-nom" style="color:var(--err-text);">'+escHtml((e.prenom||'')+' '+(e.nom||''))+'</div>'
+    +'<div class="point-nom" style="color:var(--err-text);">'+nomAff+'</div>'
     +(e.partenaire?'<div class="point-sub">♥ '+escHtml(e.partenaire)+'</div>':'')
     +(e.email?'<div class="point-sub" style="font-size:11px;">'+escHtml(e.email)+'</div>':'')
     +'</div>'
     +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
     +'<span class="pill '+rcls+'" style="opacity:0.7;">'+roleLbl+'</span>'
     +'<span class="pill pill-err">✕ Supprimé·e</span>'
+    +(statutAvantLbl?'<span class="pill" style="background:#333;color:#aaa;font-size:9px;">'+escHtml(statutAvantLbl)+'</span>':'')
+    +'<button class="btn-point btn-ok" style="font-size:10px;padding:3px 8px;" data-action="retablir-cours-inscr" data-id="'+e.id+'" title="Rétablir l\'inscription">↩ Rétablir</button>'
+    +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-def-cours-inscr" data-id="'+e.id+'" data-nom="'+escHtml((e.prenom||'')+' '+(e.nom||''))+'" title="Supprimer définitivement">🗑 Définitif</button>'
     +(e.email?'<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;opacity:0.7;" title="Envoyer un email">✉️</a>':'')
     +'</div></div>';
 }
