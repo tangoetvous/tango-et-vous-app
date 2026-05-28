@@ -8398,6 +8398,7 @@ function passerEnForfait(email, nom) {
   if(carteEleve){
     carteEleve.restants=0; carteEleve.utilises=0;
     carteEleve.datePremierCours=''; carteEleve.expiration='';
+    carteEleve.statut='Active'; // 'Nouvelle carte' ferait rester visible dans _buildCartesData
   }
   afficherToast('🔄 '+nom+' converti·e en forfait');
   renderTab();
@@ -8412,7 +8413,7 @@ function passerEnForfait(email, nom) {
     ];
     // Réinitialiser les champs carte dans eleves (valeurs valides — colonnes NOT NULL)
     ops.push(Promise.resolve(TEV.client.from('eleves')
-      .update({carte_restants:0, carte_utilises:0,
+      .update({carte_statut:'Active', carte_restants:0, carte_utilises:0,
                carte_expiration:null, carte_date_achat:null, carte_paye:true})
       .eq('email', email)));
     Promise.all(ops).then(function(){ chargerDonnees(); }).catch(function(e){ afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
