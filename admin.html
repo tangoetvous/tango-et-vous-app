@@ -8406,23 +8406,33 @@ function passerEnForfait(email, nom) {
   afficherToast('🔄 '+nom+' converti·e en forfait');
   renderTab();
   if(!IS_DEMO){
+    // UPDATE calé sur ce qu'affiche _buildCartesData :
+    //  - Source 2 montre toute ligne dont type CONTIENT 'carte' (carte10, carte10forfait…) → ilike '%carte%'
+    //  - pas de filtre saison (le forEach local n'en a pas non plus ; une ligne saison=null doit aussi passer)
+    //  - .select('id') → renvoie les lignes réellement modifiées (diagnostic du nb de rows)
     var ops = [
       Promise.resolve(TEV.client.from('inscriptions_cours')
         .update({type:'forfait'})
         .eq('email', email)
-        .eq('saison', sai)
-        .eq('type', 'carte10')
-        .eq('statut', 'inscrit'))
+        .ilike('type', '%carte%')
+        .eq('statut', 'inscrit')
+        .select('id')),
+      // ⚠️ carte_utilises/restants/statut/paye sont NOT NULL → jamais de null (UPDATE rejeté silencieusement).
+      // On neutralise la carte : 0/0 + statut 'Active' → exclue du filtre activité de _buildCartesData.
+      Promise.resolve(TEV.client.from('eleves')
+        .update({carte_statut:'Active', carte_restants:0, carte_utilises:0,
+                 carte_expiration:null, carte_paye:true, carte_date_achat:null})
+        .eq('email', email)
+        .select('id'))
     ];
-    // ⚠️ carte_utilises/restants/statut/paye sont NOT NULL → jamais de null (UPDATE rejeté silencieusement).
-    // On neutralise la carte : 0/0 + statut 'Active' → exclue du filtre activité de _buildCartesData.
-    ops.push(Promise.resolve(TEV.client.from('eleves')
-      .update({carte_statut:'Active', carte_restants:0, carte_utilises:0,
-               carte_expiration:null, carte_paye:true, carte_date_achat:null})
-      .eq('email', email)));
     Promise.all(ops).then(function(results){
+      var icRes = results[0]||{}, elRes = results[1]||{};
       var errR = (results||[]).find(function(r){ return r && r.error; });
       if(errR){ afficherToast('⚠️ Erreur conversion : '+((errR.error&&errR.error.message)||'')); }
+      else {
+        var nIc = (icRes.data||[]).length, nEl = (elRes.data||[]).length;
+        afficherToast('🔄 '+nom+' → forfait ('+nIc+' inscription·s + '+nEl+' fiche·s maj)');
+      }
       delete _pendingForfait[email];
       chargerDonnees();
     }).catch(function(e){ delete _pendingForfait[email]; afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
