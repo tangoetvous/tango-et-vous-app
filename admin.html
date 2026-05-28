@@ -5581,6 +5581,13 @@ function handleAction(action, btn) {
     case 'reporter-carte':
       reporterCarteJs(id, btn);
       break;
+    case 'passer-forfait-carte':
+      (function(em,nom){
+        ouvrirModalConfirm('Convertir la carte 10 de '+nom+' en forfait annuel ?\n\nLa personne disparaîtra de la vue Cartes 10.', function(){
+          passerEnForfait(em, nom);
+        });
+      })(btn.dataset.email||'', btn.dataset.nom||'');
+      break;
     case 'suppr-carte':
       (function(em,nom){ ouvrirModalConfirm('Supprimer la carte 10 de '+nom+' ?', function(){ confirmerSupprimerCarte(em,nom); }); })(btn.dataset.email||'', btn.dataset.nom||'');
       break;
@@ -8376,6 +8383,42 @@ function supprimerDefinitivementCarte(email, nom) {
     .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
   }
 }
+function passerEnForfait(email, nom) {
+  var sai = saisonActive();
+  // Mise à jour locale : changer type='forfait' pour les inscriptions_cours non-isRenewal
+  (adminData.coursTango||[]).forEach(function(ct){
+    if(ct.email===email && ct.statut==='inscrit'){
+      var d = ct.donnees || {};
+      if(typeof d === 'string'){ try{ d=JSON.parse(d); }catch(e){ d={}; } }
+      if(!d.isRenewal) ct.type='forfait';
+    }
+  });
+  // Vider les champs carte sur l'objet eleves local
+  var carteEleve=(adminData.cartes||[]).find(function(c){ return c.email===email; });
+  if(carteEleve){
+    carteEleve.carte_statut=null; carteEleve.carte_restants=null;
+    carteEleve.carte_utilises=null; carteEleve.carte_expiration=null;
+    carteEleve.carte_paye=null; carteEleve.carte_date_achat=null;
+  }
+  afficherToast('🔄 '+nom+' converti·e en forfait');
+  renderTab();
+  if(!IS_DEMO){
+    var ops = [
+      Promise.resolve(TEV.client.from('inscriptions_cours')
+        .update({type:'forfait'})
+        .eq('email', email)
+        .eq('saison', sai)
+        .eq('type', 'carte10')
+        .eq('statut', 'inscrit'))
+    ];
+    // Effacer les champs carte dans eleves
+    ops.push(Promise.resolve(TEV.client.from('eleves')
+      .update({carte_statut:null, carte_restants:null, carte_utilises:null,
+               carte_expiration:null, carte_paye:null, carte_date_achat:null})
+      .eq('email', email)));
+    Promise.all(ops).then(function(){ chargerDonnees(); }).catch(function(e){ afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
+  }
+}
 function confirmerSupprimerCarte(email, nom) {
   var sai = saisonActive();
   (adminData.coursTango||[]).forEach(function(ct){
@@ -8840,6 +8883,7 @@ function renderCartesDetails(d) {
       +'<button class="btn btn-ok" style="padding:3px 8px;font-size:10px;" data-action="renouveler-carte" data-id="'+c.id+'" data-nom="'+c.nom+'">↻ Renouveler</button>'
       +(isReportPeriod&&!fini&&!c.isReport&&(c.restants||0)>0?'<button class="btn btn-gold" style="padding:3px 8px;font-size:10px;" data-action="reporter-carte" data-id="'+c.id+'">↩ Reporter</button>':'')
       +btnEmail(c.email,c.nom)
+      +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="passer-forfait-carte" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-nom="'+c.nom.replace(/"/g,'&quot;')+'">🔄 Forfait</button>'
       +'<button class="btn btn-err" style="padding:3px 8px;font-size:10px;" data-action="suppr-carte" data-email="'+(c.email||'').replace(/"/g,'&quot;')+'" data-nom="'+c.nom.replace(/"/g,'&quot;')+'">🗑 Supprimer</button>'
       +'</div></div>';
   }
@@ -9400,6 +9444,21 @@ function _groupCouples(list) {
         // Correspondance exacte, double-nom tronqué, ou accents ignorés
         if (qName === pPart || qName.startsWith(pPart + ' ') || pPart.startsWith(qName + ' ')) {
           partIdx = j; break;
+        }
+      }
+    }
+    // Recherche inverse : si p n'a pas de champ partenaire (ex: entrée eleves sans partenaire renseigné),
+    // chercher si une autre entrée q a p.nom comme partenaire
+    if (partIdx < 0) {
+      var pNorm = _normNom(p.nom);
+      for (var j = 0; j < list.length; j++) {
+        if (j === i || used.indexOf(j) >= 0) continue;
+        var q = list[j];
+        if (q.partenaire) {
+          var qPart = _normNom(q.partenaire);
+          if (pNorm === qPart || pNorm.startsWith(qPart + ' ') || qPart.startsWith(pNorm + ' ')) {
+            partIdx = j; break;
+          }
         }
       }
     }
