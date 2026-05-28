@@ -3,568 +3,272 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Planning — Tango & Vous</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <title>Agenda — Tango &amp; Vous</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
-      background: #fff;
-      color: #222;
-      font-size: 14px;
-      line-height: 1.5;
+    :root {
+      --bg: #0d0d0d; --border: #222; --text: #f0f0f0; --text-dim: #aaa;
+      --text-faint: #555; --gold: #D4AF37; --gold-pale: #1a1508;
     }
-
-    #agenda-wrap {
-      max-width: 740px;
-      margin: 0 auto;
-      padding: 28px 16px 48px;
-    }
-
-    /* ── Header ── */
-    .agd-brand {
-      text-align: center;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 5px;
-      color: #D4AF37;
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-    .agd-saison {
-      text-align: center;
-      font-size: 10px;
-      letter-spacing: 3px;
-      color: #aaa;
-      text-transform: uppercase;
-      margin-bottom: 32px;
-    }
-
-    /* ── Section ── */
-    .agd-section {
-      margin-bottom: 36px;
-    }
-    .agd-section-head {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 18px;
-    }
-    .agd-section-head::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: currentColor;
-      opacity: .18;
-    }
-    .agd-section-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-    .agd-section-label.tango  { color: #1a237e; }
-    .agd-section-label.yoga   { color: #2e7d32; }
-    .agd-section-label.stages { color: #6a1b9a; }
-    .agd-section-head.tango  { color: #1a237e; }
-    .agd-section-head.yoga   { color: #2e7d32; }
-    .agd-section-head.stages { color: #6a1b9a; }
-
-    /* ── Cards ── */
-    .agd-card {
-      border-radius: 12px;
-      border: 1px solid #e8e8e8;
-      padding: 20px 22px;
-      margin-bottom: 14px;
-      background: #fff;
-    }
-
-    /* Card header row */
-    .agd-card-top {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-    .agd-badge {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 4px 14px;
-      border-radius: 20px;
-    }
-    .agd-badge.gold   { background: #D4AF37; color: #111; }
-    .agd-badge.tango  { background: #1a237e; color: #fff; }
-    .agd-badge.yoga   { background: #2e7d32; color: #fff; }
-    .agd-badge.stages { background: #6a1b9a; color: #fff; }
-
-    .agd-jour {
-      font-size: 13px;
-      color: #666;
-      font-weight: 400;
-    }
-
-    /* Next date */
-    .agd-next {
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 14px;
-    }
-    .agd-next.tango  { color: #1a237e; }
-    .agd-next.yoga   { color: #2e7d32; }
-    .agd-next.stages { color: #6a1b9a; }
-
-    /* Niveaux grid */
-    .agd-niveaux {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-    }
-    .agd-niveau {
-      flex: 1;
-      min-width: 150px;
-      background: #f5f5f5;
-      border-radius: 8px;
-      padding: 12px 14px;
-    }
-    .agd-niveau-titre {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: #999;
-      margin-bottom: 4px;
-    }
-    .agd-niveau-horaire {
-      font-size: 19px;
-      font-weight: 700;
-      color: #111;
-      letter-spacing: -.5px;
-    }
-
-    /* Adresse */
-    .agd-adr {
-      border-top: 1px solid #f0f0f0;
-      padding-top: 14px;
-      margin-top: 4px;
-    }
-    .agd-adr-nom {
-      font-size: 13px;
-      font-weight: 700;
-      color: #333;
-      margin-bottom: 2px;
-    }
-    .agd-adr-rue {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 2px;
-    }
-    .agd-adr-transport {
-      font-size: 12px;
-      color: #888;
-      margin-bottom: 6px;
-    }
-    .agd-adr-link {
-      font-size: 12px;
-      color: #D4AF37;
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .agd-adr-link:hover { text-decoration: underline; }
-
-    /* Inscription button */
-    .agd-btn-wrap { margin-top: 16px; }
-    .agd-btn {
-      display: inline-block;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      text-decoration: none;
-      padding: 9px 22px;
-      border-radius: 6px;
-    }
-    .agd-btn.gold   { background: #D4AF37; color: #111; }
-    .agd-btn.green  { background: #2e7d32; color: #fff; }
-    .agd-btn.purple { background: #6a1b9a; color: #fff; }
-    .agd-btn.navy   { background: #1a237e; color: #fff; }
-
-    /* Stage card specifics */
-    .agd-stage-date {
-      font-size: 15px;
-      font-weight: 700;
-      color: #6a1b9a;
-      margin-bottom: 14px;
-    }
-    .agd-slots { margin-bottom: 4px; }
-    .agd-slot {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      padding: 7px 0;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .agd-slot:last-child { border-bottom: none; }
-    .agd-slot-horaire {
-      font-size: 13px;
-      font-weight: 700;
-      color: #111;
-      min-width: 90px;
-      flex-shrink: 0;
-    }
-    .agd-slot-theme {
-      font-size: 13px;
-      color: #444;
-    }
-    .agd-slot-type {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #aaa;
-    }
-
-    /* Loading / error states */
-    #agd-loading {
-      text-align: center;
-      padding: 48px 16px;
-      color: #bbb;
-      font-size: 13px;
-    }
-    #agd-main { display: none; }
-
-    /* No section */
-    .agd-empty {
-      text-align: center;
-      padding: 16px;
-      color: #bbb;
-      font-size: 13px;
-      font-style: italic;
-    }
-
-    @media (max-width: 480px) {
-      .agd-niveaux { flex-direction: column; }
-      .agd-niveau { min-width: unset; }
-      .agd-niveau-horaire { font-size: 17px; }
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; }
+    #loading { text-align: center; padding: 40px 20px; color: var(--text-faint); font-size: 14px; }
+    .agenda-filters { display: flex; gap: 8px; padding: 14px 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; border-bottom: 1px solid var(--border); }
+    .agenda-filters::-webkit-scrollbar { display: none; }
+    .agenda-filter-btn { background: #1a1a1a; border: 1px solid #333; color: var(--text-dim); padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+    .agenda-filter-btn.active { background: var(--gold-pale); border-color: var(--gold); color: var(--gold); }
+    .agenda-month-header { padding: 14px 20px 4px; font-size: 10px; letter-spacing: 3px; color: var(--text-faint); text-transform: uppercase; }
+    .event-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid #161616; }
+    .event-date-col { flex-shrink: 0; text-align: center; width: 38px; }
+    .event-day { font-family: Georgia, serif; font-size: 24px; font-weight: 300; color: #fff; line-height: 1; }
+    .event-month-lbl { font-size: 9px; letter-spacing: 1px; color: #fff; text-transform: uppercase; }
+    .event-type-bar { width: 3px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+    .event-info { flex: 1; min-width: 0; }
+    .event-type-lbl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; margin-bottom: 2px; }
+    .event-title { font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-sub { font-size: 13px; color: var(--gold); margin-top: 2px; font-weight: 500; }
+    .event-item.event-stage { cursor: pointer; align-items: flex-start; }
+    .event-item.event-stage:hover { background: rgba(212,175,55,.06); }
+    .event-type-bar-stretch { align-self: stretch; height: auto !important; }
+    .event-slot-row { font-size: 14px; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
+    .event-slot-hr { font-size: 13px; color: var(--gold); font-weight: 600; margin-right: 6px; }
+    .event-slot-lieu { font-size: 13px; color: #999; margin-top: 5px; }
+    .event-stage-inscr { display: inline-block; margin-top: 8px; padding: 4px 12px; border: 1px solid var(--gold); border-radius: 5px; font-size: 11px; letter-spacing: .8px; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+    .empty-msg { text-align: center; padding: 40px 20px; color: var(--text-faint); font-size: 14px; }
+    .error-msg { text-align: center; padding: 40px 20px; color: #e57373; font-size: 14px; }
   </style>
 </head>
 <body>
-<div id="agenda-wrap">
-  <div id="agd-loading">Chargement du planning…</div>
-  <div id="agd-main">
-    <p class="agd-brand">Tango &amp; Vous</p>
-    <p id="agd-saison" class="agd-saison"></p>
-
-    <div id="sec-tango"  class="agd-section" style="display:none;"></div>
-    <div id="sec-yoga"   class="agd-section" style="display:none;"></div>
-    <div id="sec-stages" class="agd-section" style="display:none;"></div>
-  </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<div id="app"><div id="loading">Chargement…</div></div>
 <script>
-(function() {
-  'use strict';
+'use strict';
+var SUPABASE_URL  = 'https://qhngqzvvllktuwspojxc.supabase.co';
+var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFobmdxenZ2bGxrdHV3c3BvanhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MjQ0NDYsImV4cCI6MjA5MjMwMDQ0Nn0.j-yMQryi3qoImIf6vyiqQ3SKzHeJoPsrJuP1YwaSyLs';
 
-  var SB_URL = 'https://qhngqzvvllktuwspojxc.supabase.co';
-  var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFobmdxenZ2bGxrdHV3c3BvanhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MjQ0NDYsImV4cCI6MjA5MjMwMDQ0Nn0.j-yMQryi3qoImIf6vyiqQ3SKzHeJoPsrJuP1YwaSyLs';
-  var sb = supabase.createClient(SB_URL, SB_KEY);
+var MOIS_COURT = ['Jan',' F\xe9v','Mars','Avr','Mai','Juin','Juil','Ao\xfbt','Sept','Oct','Nov','D\xe9c'];
+var MOIS_LONG  = ['janvier','f\xe9vrier','mars','avril','mai','juin','juillet','ao\xfbt','septembre','octobre','novembre','d\xe9cembre'];
+var COLOR_PARIS = '#60b0ff'; var COLOR_VINC = '#40d8c0'; var COLOR_STAGE = '#D4AF37'; var COLOR_YOGA = '#a78bfa';
 
-  var JOURS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
-  var JOURS_C = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-  var MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+var COURS_PARIS = [], COURS_VINCENNES = [], COURS_YOGA = [], STAGES_DATA = [];
+var HP_DEB = '', HP_INT = '', HV_DEB = '', HV_INT = '', HY_YIN = '', HY_HTH = '', HST = {};
+var LP_NOM = '', LP_RUE = '', LP_TPT = '', LV_NOM = '', LV_RUE = '', LV_TPT = '';
+var LY_NOM = '', LY_RUE = '', LY_TPT = '', LST_NOM = '', LST_RUE = '';
+var currentFilter = 'tous';
 
-  function saisonActive() {
-    var now = new Date(), yr = now.getFullYear(), mo = now.getMonth() + 1;
-    return mo >= 9 ? yr + '-' + (yr + 1) : (yr - 1) + '-' + yr;
-  }
+function _sai() {
+  var d = new Date(), m = d.getMonth() + 1, y = d.getFullYear();
+  return m >= 9 ? y + '-' + (y + 1) : (y - 1) + '-' + y;
+}
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function sendHeight() {
+  try { window.parent.postMessage({ type: 'tevHeight', height: document.body.scrollHeight }, '*'); } catch(e) {}
+}
+function getEventColor(s) {
+  return s === 'paris' ? COLOR_PARIS : s === 'vincennes' ? COLOR_VINC : s === 'stage' ? COLOR_STAGE : s === 'yoga' ? COLOR_YOGA : '#888';
+}
+function getEventLabel(s) {
+  return s === 'paris' ? 'Tango Paris' : s === 'vincennes' ? 'Tango Vincennes' : s === 'stage' ? 'Stage' : s === 'yoga' ? 'Yoga' : '';
+}
 
-  function saisonSuivante() {
-    var sai = saisonActive(), p = sai.split('-');
-    return (parseInt(p[0]) + 1) + '-' + (parseInt(p[1]) + 1);
-  }
+function buildAllEvents(filter) {
+  var today = todayStr();
+  var sai = _sai();
+  var maxStr = parseInt(sai.split('-')[1]) + '-08-31';
+  var events = [];
 
-  function todayISO() {
-    return new Date().toISOString().slice(0, 10);
-  }
+  var lieuP = LP_NOM + (LP_RUE ? ' — ' + LP_RUE : '') + (LP_TPT ? ' \xb7 ' + LP_TPT : '');
+  var lieuV = LV_NOM + (LV_RUE ? ' — ' + LV_RUE : '') + (LV_TPT ? ' \xb7 ' + LV_TPT : '');
+  var lieuY = LY_NOM + (LY_RUE ? ' — ' + LY_RUE : '') + (LY_TPT ? ' \xb7 ' + LY_TPT : '');
 
-  function parseVal(v) {
-    if (!v) return {};
-    if (typeof v === 'string') { try { return JSON.parse(v); } catch(e) { return {}; } }
-    return v;
-  }
-
-  function dt(iso) {
-    return new Date(iso + 'T12:00:00');
-  }
-
-  function fmtLong(iso) {
-    var d = dt(iso);
-    return JOURS_C[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear();
-  }
-
-  function esc(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function sendH() {
-    var h = document.getElementById('agenda-wrap') ? document.getElementById('agenda-wrap').scrollHeight : document.body.scrollHeight;
-    try { window.parent.postMessage({ type: 'tevHeight', height: h }, '*'); } catch(e) {}
-  }
-
-  // ── Adresse block ──────────────────────────────────────────────
-  function htmlAdr(adr) {
-    if (!adr || !adr.nom) return '';
-    var mapsUrl = adr.gps ? 'https://maps.google.com/?q=' + encodeURIComponent(adr.gps) : (adr.metrogps ? 'https://maps.google.com/?q=' + encodeURIComponent(adr.metrogps) : '');
-    return '<div class="agd-adr">' +
-      '<div class="agd-adr-nom">📍 ' + esc(adr.nom) + '</div>' +
-      (adr.rue ? '<div class="agd-adr-rue">' + esc(adr.rue) + '</div>' : '') +
-      (adr.transport ? '<div class="agd-adr-transport">🚇 ' + esc(adr.transport) + '</div>' : '') +
-      (mapsUrl ? '<a href="' + esc(mapsUrl) + '" target="_blank" rel="noopener" class="agd-adr-link">Voir sur Google Maps →</a>' : '') +
-      '</div>';
-  }
-
-  // ── Tango city card ────────────────────────────────────────────
-  function htmlTangoVille(pms, coursDates, villeKey, libelleVille, lienInscr) {
-    var hor = pms.horaires || {};
-    var adr = pms.adresse || {};
-    if (!hor.deb && !hor.int) return '';
-
-    var today = todayISO();
-    var cityDates = (coursDates[villeKey] || []).filter(function(d) { return d >= today; }).sort();
-    var nextDate = cityDates[0] || null;
-    var jourLabel = nextDate ? 'Le ' + JOURS[dt(nextDate).getDay()] : '';
-
-    var html = '<div class="agd-card">';
-
-    // Top row
-    html += '<div class="agd-card-top">';
-    html += '<span class="agd-badge gold">' + esc(libelleVille) + '</span>';
-    if (jourLabel) html += '<span class="agd-jour">' + esc(jourLabel) + '</span>';
-    html += '</div>';
-
-    // Next date
-    if (nextDate) {
-      html += '<div class="agd-next tango">Prochain cours : ' + fmtLong(nextDate) + '</div>';
-    }
-
-    // Niveaux
-    html += '<div class="agd-niveaux">';
-    if (hor.deb) {
-      var hDeb = hor.deb + (hor.deb_fin ? ' – ' + hor.deb_fin : '');
-      html += '<div class="agd-niveau"><div class="agd-niveau-titre">Débutants</div><div class="agd-niveau-horaire">' + esc(hDeb) + '</div></div>';
-    }
-    if (hor.int) {
-      var hInt = hor.int + (hor.int_fin ? ' – ' + hor.int_fin : '');
-      html += '<div class="agd-niveau"><div class="agd-niveau-titre">Intermédiaires</div><div class="agd-niveau-horaire">' + esc(hInt) + '</div></div>';
-    }
-    html += '</div>';
-
-    // Adresse
-    html += htmlAdr(adr);
-
-    // S'inscrire button
-    if (lienInscr) {
-      html += '<div class="agd-btn-wrap"><a href="' + esc(lienInscr) + '" target="_blank" rel="noopener" class="agd-btn navy">S\'inscrire →</a></div>';
-    }
-
-    html += '</div>';
-    return html;
-  }
-
-  // ── Yoga card ──────────────────────────────────────────────────
-  function htmlYoga(pms, coursDates, lienInscr) {
-    var hor = pms.horaires || {};
-    var adr = pms.adresse || {};
-    if (!hor.yin && !hor.hatha) return '';
-
-    var today = todayISO();
-    var yogaDates = (coursDates.yoga || []).filter(function(d) { return d >= today; }).sort();
-    var nextDate = yogaDates[0] || null;
-
-    var html = '<div class="agd-card">';
-
-    html += '<div class="agd-card-top">';
-    html += '<span class="agd-badge yoga">Yoga</span>';
-    html += '<span class="agd-jour">avec Florencia Garcia</span>';
-    html += '</div>';
-
-    if (nextDate) {
-      html += '<div class="agd-next yoga">Prochain cours : ' + fmtLong(nextDate) + '</div>';
-    }
-
-    html += '<div class="agd-niveaux">';
-    if (hor.yin) {
-      var hYin = hor.yin + (hor.yin_fin ? ' – ' + hor.yin_fin : '');
-      html += '<div class="agd-niveau"><div class="agd-niveau-titre">Yin Yoga</div><div class="agd-niveau-horaire">' + esc(hYin) + '</div></div>';
-    }
-    if (hor.hatha) {
-      var hHatha = hor.hatha + (hor.hatha_fin ? ' – ' + hor.hatha_fin : '');
-      html += '<div class="agd-niveau"><div class="agd-niveau-titre">Hatha Yoga</div><div class="agd-niveau-horaire">' + esc(hHatha) + '</div></div>';
-    }
-    html += '</div>';
-
-    html += htmlAdr(adr);
-
-    if (lienInscr) {
-      html += '<div class="agd-btn-wrap"><a href="' + esc(lienInscr) + '" target="_blank" rel="noopener" class="agd-btn green">S\'inscrire →</a></div>';
-    }
-
-    html += '</div>';
-    return html;
-  }
-
-  // ── One stage date card ────────────────────────────────────────
-  function htmlStageCard(stage, defAdr, lienInscr) {
-    var slots = stage.slots || [];
-    if (!slots.length) return '';
-
-    var adr = (stage.adresse && stage.adresse.nom) ? stage.adresse : defAdr;
-
-    var html = '<div class="agd-card">';
-    html += '<div class="agd-stage-date">🗓 ' + fmtLong(stage.date) + '</div>';
-
-    // Slots
-    html += '<div class="agd-slots">';
-    slots.forEach(function(s) {
-      var horaire = [s.horaire_debut, s.horaire_fin].filter(Boolean).join(' – ');
-      var theme = (s.theme || '').trim();
-      var typeLabel = s.type === 'technique' ? 'Technique' : '';
-
-      html += '<div class="agd-slot">';
-      if (horaire) html += '<span class="agd-slot-horaire">' + esc(horaire) + '</span>';
-      if (theme) {
-        html += '<span class="agd-slot-theme">' + esc(theme) + '</span>';
-      } else if (typeLabel) {
-        html += '<span class="agd-slot-type">' + esc(typeLabel) + '</span>';
-      }
-      html += '</div>';
+  if (filter === 'tous' || filter === 'paris') {
+    COURS_PARIS.filter(function(d) { return d >= today && d <= maxStr; }).forEach(function(d) {
+      if (HP_DEB) events.push({ date: d, subtype: 'paris', titre: 'Cours D\xe9butant — Paris', heure: HP_DEB, lieu: lieuP });
+      if (HP_INT) events.push({ date: d, subtype: 'paris', titre: 'Cours Interm\xe9diaire & Avanc\xe9 — Paris', heure: HP_INT, lieu: lieuP });
     });
-    html += '</div>';
-
-    html += htmlAdr(adr);
-
-    if (lienInscr) {
-      html += '<div class="agd-btn-wrap"><a href="' + esc(lienInscr) + '" target="_blank" rel="noopener" class="agd-btn purple">S\'inscrire →</a></div>';
-    }
-
-    html += '</div>';
-    return html;
   }
-
-  // ── Section wrapper ────────────────────────────────────────────
-  function htmlSection(icone, label, cssClass, content) {
-    return '<div class="agd-section-head ' + cssClass + '">' +
-      '<span class="agd-section-label ' + cssClass + '">' + icone + ' ' + esc(label) + '</span>' +
-      '</div>' + content;
+  if (filter === 'tous' || filter === 'vincennes') {
+    COURS_VINCENNES.filter(function(d) { return d >= today && d <= maxStr; }).forEach(function(d) {
+      if (HV_DEB) events.push({ date: d, subtype: 'vincennes', titre: 'Cours D\xe9butant — Vincennes', heure: HV_DEB, lieu: lieuV });
+      if (HV_INT) events.push({ date: d, subtype: 'vincennes', titre: 'Cours Interm\xe9diaire & Avanc\xe9 — Vincennes', heure: HV_INT, lieu: lieuV });
+    });
   }
-
-  // ── Main ───────────────────────────────────────────────────────
-  async function init() {
-    var sai = saisonActive();
-    var saiNext = saisonSuivante();
-    var today = todayISO();
-
-    document.getElementById('agd-saison').textContent = 'Saison ' + sai;
-
-    try {
-      var res = await sb.from('parametres').select('cle,valeur');
-      if (res.error) throw res.error;
-
-      var pmap = {};
-      (res.data || []).forEach(function(r) { pmap[r.cle] = parseVal(r.valeur); });
-
-      var parisPms    = pmap['tev_params_paris_'     + sai] || {};
-      var vincPms     = pmap['tev_params_vincennes_'  + sai] || {};
-      var yogaPms     = pmap['tev_params_yoga_'       + sai] || {};
-      var stagesPms   = pmap['tev_params_stages_'     + sai] || {};
-      var stagesDates = pmap['tev_dates_stages_'      + sai] || {};
-      var stagesNext  = pmap['tev_dates_stages_'      + saiNext] || {};
-      var coursDates  = pmap['tev_cours_dates']               || {};
-      var liensAc     = pmap['tev_liens_assoconnect']         || {};
-
-      var lienTango   = 'https://app.tangoetvous.fr/inscription-cours.html';
-      var lienYoga    = 'https://app.tangoetvous.fr/essai-yoga.html';
-      var lienStages  = 'https://app.tangoetvous.fr/stages-pwa.html';
-
-      // Prefer AssoConnect links from params if admin has set them
-      if (liensAc[sai] && liensAc[sai].cours) lienTango = liensAc[sai].cours;
-      if (liensAc[sai] && liensAc[sai].yoga)  lienYoga  = liensAc[sai].yoga;
-
-      // ── TANGO ────────────────────────────────────────────────
-      var tangoContent = '';
-      tangoContent += htmlTangoVille(parisPms, coursDates, 'paris',     'Paris',     lienTango);
-      tangoContent += htmlTangoVille(vincPms,  coursDates, 'vincennes', 'Vincennes', lienTango);
-
-      if (tangoContent) {
-        document.getElementById('sec-tango').innerHTML =
-          htmlSection('🎶', 'Cours de Tango Argentin', 'tango', tangoContent);
-        document.getElementById('sec-tango').style.display = '';
-      }
-
-      // ── YOGA ─────────────────────────────────────────────────
-      var yogaContent = htmlYoga(yogaPms, coursDates, lienYoga);
-      if (yogaContent) {
-        document.getElementById('sec-yoga').innerHTML =
-          htmlSection('🧘', 'Cours de Yoga', 'yoga', yogaContent);
-        document.getElementById('sec-yoga').style.display = '';
-      }
-
-      // ── STAGES ───────────────────────────────────────────────
-      // Combine current and next season, filter future, sort
-      var allStages = [].concat(
-        (stagesDates.stages || []),
-        (stagesNext.stages  || [])
-      ).filter(function(s) { return s.date >= today; })
-       .sort(function(a, b) { return a.date < b.date ? -1 : 1; });
-
-      var defAdr = stagesPms.adresse || {};
-
-      if (allStages.length) {
-        var stagesContent = '';
-        allStages.forEach(function(s) {
-          stagesContent += htmlStageCard(s, defAdr, lienStages);
+  if (filter === 'tous' || filter === 'yoga') {
+    COURS_YOGA.filter(function(d) { return d >= today && d <= maxStr; }).forEach(function(d) {
+      if (HY_YIN) events.push({ date: d, subtype: 'yoga', titre: '🌙 Yin Yoga', heure: HY_YIN, lieu: lieuY });
+      if (HY_HTH) events.push({ date: d, subtype: 'yoga', titre: '☀️ Hatha Yoga', heure: HY_HTH, lieu: lieuY });
+    });
+  }
+  if (filter === 'tous' || filter === 'stage') {
+    var TL = { technique: 'Technique', stage1: 'Stage 1', stage2: 'Stage 2', stage3: 'Stage 3', stage4: 'Stage 4' };
+    var TH = { technique: 'tech', stage1: 's1', stage2: 's2', stage3: 's3', stage4: 's4' };
+    STAGES_DATA.filter(function(s) { return s.date >= today && s.date <= maxStr; }).forEach(function(s) {
+      var hor = Object.assign({}, HST, s.horaires || {});
+      var slots = [];
+      if (s.slots && s.slots.length) {
+        s.slots.forEach(function(sl) {
+          var deb = sl.horaire_debut || hor[(TH[sl.type] || sl.type) + '_deb'] || '';
+          var fin = sl.horaire_fin  || hor[(TH[sl.type] || sl.type) + '_fin'] || '';
+          if (deb) { var lbl = TL[sl.type] || sl.type; slots.push({ heure: deb + (fin ? '–' + fin : ''), titre: sl.theme ? lbl + ' — ' + sl.theme : lbl }); }
         });
-        if (stagesContent) {
-          document.getElementById('sec-stages').innerHTML =
-            htmlSection('🎭', 'Prochains Stages', 'stages', stagesContent);
-          document.getElementById('sec-stages').style.display = '';
+      } else {
+        var n = s.nStages || 2;
+        if (s.technique !== false && hor.tech_deb) slots.push({ heure: hor.tech_deb + '–' + (hor.tech_fin || ''), titre: 'Technique' + (s.tech ? ' — ' + s.tech : '') });
+        var sn = [s.s1, s.s2, s.s3, s.s4], sd = ['s1_deb','s2_deb','s3_deb','s4_deb'], sf = ['s1_fin','s2_fin','s3_fin','s4_fin'];
+        for (var si = 0; si < n; si++) {
+          if (hor[sd[si]]) { var t = sn[si] || ''; slots.push({ heure: hor[sd[si]] + '–' + (hor[sf[si]] || ''), titre: 'Stage ' + (si + 1) + (t ? ' — ' + t : '') }); }
         }
       }
+      if (!slots.length) return;
+      slots.sort(function(a, b) { return (a.heure || '').localeCompare(b.heure || ''); });
+      var sNom = (s.adresse && s.adresse.nom) ? s.adresse.nom : LST_NOM;
+      var sRue = (s.adresse && s.adresse.rue) ? s.adresse.rue : LST_RUE;
+      var hMin = slots[0].heure.split('–')[0];
+      var hMax = slots[slots.length - 1].heure.split('–')[1] || '';
+      events.push({ date: s.date, subtype: 'stage', titre: s.nom || 'Stage de Tango',
+        heure: hMin + (hMax ? '–' + hMax : ''), lieu: sNom + (sRue ? ', ' + sRue : ''), slots: slots });
+    });
+  }
+  events.sort(function(a, b) {
+    var dc = a.date.localeCompare(b.date);
+    return dc !== 0 ? dc : (a.heure || '').localeCompare(b.heure || '');
+  });
+  return events;
+}
 
-    } catch(err) {
-      console.error('[agenda] erreur chargement', err);
+function renderAgendaList(filter) {
+  var events = buildAllEvents(filter);
+  var el = document.getElementById('agenda-list');
+  if (!el) return;
+  if (!events.length) { el.innerHTML = '<p class="empty-msg">Aucun \xe9v\xe9nement \xe0 venir.</p>'; sendHeight(); return; }
+  var html = '', lastMonth = '', lastDate = '';
+  events.forEach(function(e) {
+    var d = new Date(e.date + 'T00:00:00');
+    var mk = d.getMonth() + '-' + d.getFullYear();
+    if (mk !== lastMonth) {
+      var ml = MOIS_LONG[d.getMonth()];
+      html += '<div class="agenda-month-header">' + ml.charAt(0).toUpperCase() + ml.slice(1) + ' ' + d.getFullYear() + '</div>';
+      lastMonth = mk;
     }
+    var same = (e.date === lastDate); lastDate = e.date;
+    var color = getEventColor(e.subtype), lbl = getEventLabel(e.subtype), isStage = (e.subtype === 'stage');
+    var sub;
+    if (isStage && e.slots && e.slots.length) {
+      sub = e.slots.map(function(sl) {
+        return '<div class="event-slot-row"><span class="event-slot-hr">' + sl.heure + '</span>' + sl.titre + '</div>';
+      }).join('');
+      if (e.lieu) sub += '<div class="event-slot-lieu">' + e.lieu + '</div>';
+      sub += '<div class="event-stage-inscr">S\'inscrire →</div>';
+    } else {
+      sub = '<div class="event-sub">' + (e.heure || '') + (e.lieu ? ' \xb7 ' + e.lieu : '') + '</div>';
+    }
+    html += '<div class="event-item' + (isStage ? ' event-stage' : '') + '"' +
+      (isStage ? ' onclick="window.open(\'https://app.tangoetvous.fr/stages-pwa.html\',\'_blank\')"' : '') + '>' +
+      '<div class="event-date-col"' + (same ? ' style="visibility:hidden;"' : '') + '>' +
+        '<div class="event-day">' + d.getDate() + '</div>' +
+        '<div class="event-month-lbl">' + MOIS_COURT[d.getMonth()] + '</div>' +
+      '</div>' +
+      '<div class="event-type-bar' + (isStage ? ' event-type-bar-stretch' : '') + '" style="background:' + color + '"></div>' +
+      '<div class="event-info">' +
+        '<div class="event-type-lbl" style="color:' + color + '">' + lbl + '</div>' +
+        '<div class="event-title">' + e.titre + '</div>' +
+        sub +
+      '</div></div>';
+  });
+  el.innerHTML = html;
+  sendHeight();
+}
 
-    document.getElementById('agd-loading').style.display = 'none';
-    document.getElementById('agd-main').style.display    = '';
+function renderAgenda(filter) {
+  filter = filter || currentFilter; currentFilter = filter;
+  var F = [
+    { id: 'tous', label: 'Tous' },
+    { id: 'paris', label: 'Paris' },
+    { id: 'vincennes', label: 'Vincennes' },
+    { id: 'yoga', label: '🧘 Yoga' },
+    { id: 'stage', label: 'Stages' }
+  ];
+  document.getElementById('app').innerHTML =
+    '<div class="agenda-filters">' +
+    F.map(function(f) {
+      return '<button class="agenda-filter-btn' + (f.id === filter ? ' active' : '') + '" onclick="renderAgenda(\'' + f.id + '\')">' + f.label + '</button>';
+    }).join('') +
+    '</div><div id="agenda-list"></div>';
+  renderAgendaList(filter);
+}
 
-    sendH();
-    setTimeout(sendH, 300);
-    setTimeout(sendH, 1000);
-  }
+function parseVal(v) {
+  if (!v) return {};
+  if (typeof v === 'string') { try { return JSON.parse(v); } catch(e) { return {}; } }
+  return v;
+}
 
-  // Wix iframe height — polling + MutationObserver
-  var _lastH = 0;
-  setInterval(function() {
-    var h = document.body.scrollHeight;
-    if (h !== _lastH) { _lastH = h; sendH(); }
-  }, 600);
+function loadData() {
+  var sai = _sai(), parts = sai.split('-');
+  var saiNext = (parseInt(parts[0]) + 1) + '-' + (parseInt(parts[1]) + 1);
+  return fetch(SUPABASE_URL + '/rest/v1/parametres?select=cle,valeur', {
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
+  }).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(rows) {
+    var p = {};
+    (rows || []).forEach(function(row) { p[row.cle] = parseVal(row.valeur); });
 
-  if (window.MutationObserver) {
-    new MutationObserver(sendH).observe(document.body, { childList: true, subtree: true });
-  }
+    var cd = p['tev_cours_dates'] || {};
+    COURS_PARIS     = Array.isArray(cd.paris)     ? cd.paris     : [];
+    COURS_VINCENNES = Array.isArray(cd.vincennes) ? cd.vincennes : [];
+    COURS_YOGA      = Array.isArray(cd.yoga)      ? cd.yoga      : [];
 
-  window.addEventListener('load', init);
-})();
+    var pp = p['tev_params_paris_' + sai] || {}, ph = pp.horaires || {};
+    HP_DEB = (ph.deb && ph.deb_fin) ? ph.deb + '–' + ph.deb_fin : (ph.deb || '');
+    HP_INT = (ph.int && ph.int_fin) ? ph.int + '–' + ph.int_fin : (ph.int || '');
+    var pa = pp.adresse || {}; LP_NOM = pa.nom || ''; LP_RUE = pa.rue || ''; LP_TPT = pa.transport || '';
+
+    var vp = p['tev_params_vincennes_' + sai] || {}, vh = vp.horaires || {};
+    HV_DEB = (vh.deb && vh.deb_fin) ? vh.deb + '–' + vh.deb_fin : (vh.deb || '');
+    HV_INT = (vh.int && vh.int_fin) ? vh.int + '–' + vh.int_fin : (vh.int || '');
+    var va = vp.adresse || {}; LV_NOM = va.nom || ''; LV_RUE = va.rue || ''; LV_TPT = va.transport || '';
+
+    var yp = p['tev_params_yoga_' + sai] || {}, yh = yp.horaires || {};
+    HY_YIN = (typeof yh.yin === 'string' && yh.yin) ? yh.yin + (yh.yin_fin ? '–' + yh.yin_fin : '') : '';
+    HY_HTH = (typeof yh.hatha === 'string' && yh.hatha) ? yh.hatha + (yh.hatha_fin ? '–' + yh.hatha_fin : '') : '';
+    var ya = yp.adresse || {}; LY_NOM = ya.nom || ''; LY_RUE = ya.rue || ''; LY_TPT = ya.transport || '';
+
+    var sp = p['tev_params_stages_' + sai] || {};
+    HST = sp.horaires || {};
+    var sa = sp.adresse || {}; LST_NOM = sa.nom || ''; LST_RUE = sa.rue || '';
+
+    var dsCur  = p['tev_dates_stages_' + sai]     || {};
+    var dsNext = p['tev_dates_stages_' + saiNext] || {};
+    var allSt  = (Array.isArray(dsCur.stages)  ? dsCur.stages  : [])
+                 .concat(Array.isArray(dsNext.stages) ? dsNext.stages : []);
+    STAGES_DATA = allSt.filter(function(s) { return s && s.date; }).map(function(s) {
+      var th = Array.isArray(s.themes) ? s.themes : [];
+      return {
+        date: s.date, nom: s.nom || s.label || '',
+        technique: s.technique !== false, nStages: s.nStages || 2,
+        tech: '', s1: th[0] || '', s2: th[1] || '', s3: th[2] || '', s4: th[3] || '',
+        horaires: s.horaires || null, adresse: s.adresse || null,
+        slots: (Array.isArray(s.slots) && s.slots.length) ? s.slots : null
+      };
+    });
+    STAGES_DATA.sort(function(a, b) { return a.date.localeCompare(b.date); });
+  });
+}
+
+loadData()
+  .then(function() { renderAgenda('tous'); })
+  .catch(function(err) {
+    console.error('[agenda] loadData error', err);
+    document.getElementById('app').innerHTML = '<p class="error-msg">Impossible de charger les donn\xe9es. Veuillez r\xe9essayer.</p>';
+    sendHeight();
+  });
+
+if (window.ResizeObserver) {
+  new ResizeObserver(function() { sendHeight(); }).observe(document.body);
+}
 </script>
 </body>
 </html>
