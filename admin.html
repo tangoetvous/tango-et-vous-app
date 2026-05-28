@@ -1077,6 +1077,8 @@ var compTangoCours    = 'paris-deb';  // paris-deb | paris-int | vincennes-deb |
 var compYogaCours     = 'hatha';      // hatha | yin
 var comptaSort        = 'nom';        // 'nom' | 'paiement' | 'montant'
 var comptaSearch      = '';           // filtre par nom d'élève
+var _sortEssaiByExp   = false;        // tri liste d'attente essai par expérience
+var _sortInscByExp    = false;        // tri att. validation inscriptions par expérience
 var _comptaEditId     = null;
 var _comptaEditCtx    = '';
 var _mceEchStatus     = [null, null, null]; // null=auto, true=encaissé, false=non-encaissé
@@ -4992,6 +4994,16 @@ function saveCoursDatesLocal() {
 }
 
 function _labelNivEleve(val) {
+  // Normalize full text values (from cours-essai.html) to short IDs (from inscription-cours.html)
+  var aliases = {
+    '1er cours': 'premier',
+    'quelques cours': 'quelques',
+    '1 an – bases acquises': '1an',
+    '1 an': '1an',
+    '2 ans': '2ans',
+    'plus de 2 ans': 'plus'
+  };
+  var key = aliases[(val||'').toLowerCase().trim()] || val;
   var map = {
     premier:  {l:'1er cours',      bg:'#1b5e20', color:'#a5d6a7'},
     quelques: {l:'Quelques cours', bg:'#1a237e', color:'#90caf9'},
@@ -5000,8 +5012,15 @@ function _labelNivEleve(val) {
     plus:     {l:'2+ ans',         bg:'#b71c1c', color:'#ef9a9a'},
     milonga:  {l:'Milonga',        bg:'#880e4f', color:'#f48fb1'}
   };
-  var m = map[val]; if (!m) return '';
+  var m = map[key]; if (!m) return '';
   return '<span style="display:inline-block;font-size:8px;font-weight:700;padding:1px 6px;border-radius:20px;background:'+m.bg+';color:'+m.color+';white-space:nowrap;margin-left:3px;">'+m.l+'</span>';
+}
+
+function _expRank(val) {
+  var aliases = {'1er cours':'premier','quelques cours':'quelques','1 an – bases acquises':'1an','1 an':'1an','2 ans':'2ans','plus de 2 ans':'plus'};
+  var key = aliases[(val||'').toLowerCase().trim()] || val;
+  var ranks = {premier:1, quelques:2, '1an':3, '2ans':4, plus:5, milonga:6};
+  return ranks[key] || 0;
 }
 
 // Synchro inscriptions stages → localStorage pour index.html (par email)
@@ -7402,6 +7421,7 @@ function renderEssai() {
     +'</div>'
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" data-action="rafraichir-essais">&#8635; Rafraîchir</button>':'')
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerEssaiTango()">🖨️ Imprimer</button>':'')
+    +(filtreEssai==='attente'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;'+(_sortEssaiByExp?'color:var(--gold);border-color:var(--gold);':'')+'" onclick="_sortEssaiByExp=!_sortEssaiByExp;renderTab()">⬆ Expérience</button>':'')
     +'</div>';
   if(filtreEssai!=='inscrire') h+=_tevSearchBar();
   // Trier : date ASC, puis niveau (debutant avant intermediaire), puis rôle
@@ -7470,6 +7490,7 @@ function renderEssai() {
     Object.keys(grpAtt).sort().forEach(function(key){
       var grp=grpAtt[key];
       var attenteGrp=grp.ins.filter(function(e){return estVraimentAttente(e,grp.ins);});
+      if (_sortEssaiByExp) attenteGrp = attenteGrp.slice().sort(function(a,b){ return _expRank(b.niveau_eleve) - _expRank(a.niveau_eleve); });
       if(!attenteGrp.length) return;
       var nivLbl=grp.niveau==='debutant'?'Débutant':'Intermédiaire';
       var isVincAtt=(COURS_VINCENNES||[]).indexOf(grp.date)>=0;
@@ -12435,7 +12456,9 @@ function renderCoursTango() {
   if(!liste.length && !nbSup) return h+'<div class="empty-state">Aucun élève dans cette catégorie.</div>';
 
   if(liste.length) {
-    h+='<div style="display:flex;justify-content:flex-end;margin-bottom:4px;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerInscriptionsTango()">🖨️ Imprimer / PDF</button></div>';
+    h+='<div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:4px;">'
+      +(sousOngletCoursTango==='attente_validation'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;'+(_sortInscByExp?'color:var(--gold);border-color:var(--gold);':'')+'" onclick="_sortInscByExp=!_sortInscByExp;renderTab()">⬆ Expérience</button>':'')
+      +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerInscriptionsTango()">🖨️ Imprimer / PDF</button></div>';
     h+=_tevSearchBar();
   }
   liste = liste.slice().sort(function(a,b){
@@ -12457,6 +12480,8 @@ function renderCoursTango() {
 
   COURS_ORDRE.concat(Object.keys(grp).filter(function(k){return COURS_ORDRE.indexOf(k)<0;})).forEach(function(cKey){
     var items = grp[cKey];
+    if (sousOngletCoursTango === 'attente_validation' && _sortInscByExp)
+      items = items.slice().sort(function(a,b){ return _expRank(b.niveau_eleve) - _expRank(a.niveau_eleve); });
     if(!items || !items.length) return;
     var ville = (items[0] && items[0].ville) || cKey.split('—')[0] || '';
     var niveau = (items[0] && items[0].niveau) || cKey.split('—')[1] || '';
