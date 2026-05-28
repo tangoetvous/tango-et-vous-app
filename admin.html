@@ -8393,12 +8393,11 @@ function passerEnForfait(email, nom) {
       if(!d.isRenewal) ct.type='forfait';
     }
   });
-  // Vider les champs carte sur l'objet eleves local
+  // Vider les champs carte sur l'objet eleves local (noms courts : statut, restants, utilises…)
   var carteEleve=(adminData.cartes||[]).find(function(c){ return c.email===email; });
   if(carteEleve){
-    carteEleve.carte_statut=null; carteEleve.carte_restants=null;
-    carteEleve.carte_utilises=null; carteEleve.carte_expiration=null;
-    carteEleve.carte_paye=null; carteEleve.carte_date_achat=null;
+    carteEleve.restants=0; carteEleve.utilises=0;
+    carteEleve.datePremierCours=''; carteEleve.expiration='';
   }
   afficherToast('🔄 '+nom+' converti·e en forfait');
   renderTab();
@@ -8411,10 +8410,10 @@ function passerEnForfait(email, nom) {
         .eq('type', 'carte10')
         .eq('statut', 'inscrit'))
     ];
-    // Effacer les champs carte dans eleves
+    // Réinitialiser les champs carte dans eleves (valeurs valides — colonnes NOT NULL)
     ops.push(Promise.resolve(TEV.client.from('eleves')
-      .update({carte_statut:null, carte_restants:null, carte_utilises:null,
-               carte_expiration:null, carte_paye:null, carte_date_achat:null})
+      .update({carte_restants:0, carte_utilises:0,
+               carte_expiration:null, carte_date_achat:null, carte_paye:true})
       .eq('email', email)));
     Promise.all(ops).then(function(){ chargerDonnees(); }).catch(function(e){ afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
   }
