@@ -1,5 +1,53 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-05-28 — Y-mod yoga câblage + Push "pas de cours cette semaine"
+
+### ✅ Y-mod — câblage `validerEditEssaiYoga` → `/api/notify/essai-yoga-modifie`
+
+Le handler `handleNotifyEssaiYogaModifie` existait dans `worker.js` mais n'était **jamais appelé** — `validerEditEssaiYoga` dans `admin.html` sauvegardait en DB sans envoyer aucune notification.
+
+**Fix `admin.html`** : ajout d'un appel `fetch('/api/notify/essai-yoga-modifie', ...)` dans le `.then()` de `validerEditEssaiYoga`, après la mise à jour DB, avec les champs `email, prenom, nom, dateAvant, dateApres, coursAvant, coursApres`.
+
+**Fix `worker.js` — `handleNotifyEssaiYogaModifie`** : le sender Brevo utilisait `regardsepose@gmail.com` comme `sender.email` (expéditeur non vérifié dans Brevo → emails silencieusement rejetés). Corrigé avec le pattern standard yoga :
+```javascript
+sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' },
+replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }
+```
+
+**Règle permanente** : seul `tangoetvous@gmail.com` est un expéditeur vérifié dans Brevo. Pour tous les emails yoga qui doivent paraître venir de Florencia, toujours utiliser ce pattern `sender` + `replyTo`. Ne jamais utiliser `regardsepose@gmail.com` comme `sender.email`.
+
+---
+
+### ✅ Push élève "Pas de cours cette semaine" — nouvelle route cron + workflow
+
+Quand le prochain cours prévu est à plus de 7 jours après le dernier cours, tous les élèves inscrits (`statut='inscrit'`) de la ville concernée reçoivent :
+- **Push OS** via FCM : `📅 Pas de cours Paris/Vincennes cette semaine · Prochain cours le Jeudi X mois`
+- **Notification in-app** (`notifications_eleve`) : même message
+
+**Déclencheur** :
+- Vendredi 9h Paris → vérification pour Paris (lendemain = jeudi = jour de cours Paris)
+- Mardi 9h Paris → vérification pour Vincennes (lendemain = lundi = jour de cours Vincennes)
+
+**Logique du handler `handleCronPasDeCours` (worker.js)** :
+1. Calcule la date d'hier (heure Paris CEST/CET)
+2. Vérifie que hier figure dans `tev_cours_dates.paris` (ou `.vincennes`) — si non → skip `yesterday_not_a_cours_date`
+3. Trouve le prochain cours futur dans le tableau trié
+4. Calcule le gap en jours — si ≤ 7 → skip `next_cours_within_7_days`
+5. Charge tous les élèves `statut='inscrit'` de la ville/saison depuis `inscriptions_cours`
+6. Pour chaque email unique : INSERT `notifications_eleve` + `getFcmTokensForEmail` + `sendFcmPush`
+
+**Deux jobs séparés dans `pas-de-cours.yml`** :
+- `pas-de-cours-paris` : cron `0 7 * * 5` + `workflow_dispatch` (ville=paris)
+- `pas-de-cours-vincennes` : cron `0 7 * * 2` + `workflow_dispatch` (ville=vincennes)
+
+**Fichiers modifiés** :
+- `worker.js` — nouvelle route + `handleCronPasDeCours`
+- `.github/workflows/pas-de-cours.yml` — nouveau workflow
+
+**Test validé (run #1, 2026-05-28)** : skip correct `yesterday_not_a_cours_date` car hier (mardi 27/05) n'est pas un jour de cours Paris (=jeudi) — comportement attendu pour un test manuel un mercredi.
+
+---
+
 ## Session 2026-05-27/28 — E0 couple, inscription-cours, navigation stages admin
 
 ### ✅ Email E0 — variante couple (deux encadrés avec bannière violette)
