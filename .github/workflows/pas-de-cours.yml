@@ -1,0 +1,51 @@
+name: Push élèves — Pas de cours cette semaine (vendredi Paris / mardi Vincennes)
+
+on:
+  schedule:
+    # Vendredi 7h UTC = 9h Paris (CEST été) — lendemain cours Paris (jeudi)
+    - cron: '0 7 * * 5'
+    # Mardi 7h UTC = 9h Paris (CEST été) — lendemain cours Vincennes (lundi)
+    - cron: '0 7 * * 2'
+  workflow_dispatch:
+    inputs:
+      ville:
+        description: "Ville (paris ou vincennes)"
+        required: true
+        default: 'paris'
+
+jobs:
+  pas-de-cours-paris:
+    if: (github.event_name == 'workflow_dispatch' && github.event.inputs.ville == 'paris') || (github.event_name == 'schedule' && github.event.schedule == '0 7 * * 5')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Push Paris — pas de cours cette semaine
+        run: |
+          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X POST \
+            https://app.tangoetvous.fr/api/cron/pas-de-cours \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"ville":"paris"}')
+          cat /tmp/body.txt
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "Erreur — code HTTP $response"
+            exit 1
+          fi
+
+  pas-de-cours-vincennes:
+    if: (github.event_name == 'workflow_dispatch' && github.event.inputs.ville == 'vincennes') || (github.event_name == 'schedule' && github.event.schedule == '0 7 * * 2')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Push Vincennes — pas de cours cette semaine
+        run: |
+          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X POST \
+            https://app.tangoetvous.fr/api/cron/pas-de-cours \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"ville":"vincennes"}')
+          cat /tmp/body.txt
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "Erreur — code HTTP $response"
+            exit 1
+          fi

@@ -259,6 +259,13 @@ export default {
         return handleCronRelanceAbsences(request, env);
       }
 
+      // POST /api/cron/pas-de-cours — cron vendredi/mardi → push + notif si pas de cours cette semaine (X-Cron-Secret)
+      if (pathname === '/api/cron/pas-de-cours' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronPasDeCours(request, env);
+      }
+
       // POST /api/notify/discussion-nouvelle — nouvelle discussion → notif in-app élèves + admin (JWT admin)
       if (pathname === '/api/notify/discussion-nouvelle' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
@@ -8644,4 +8651,140 @@ async function handleCronRelanceAbsences(request, env) {
   }
 
   return corsResponse({ ok: true, sent: totalSent, checked: totalChecked, dow, today }, 200, {}, request);
+}
+
+async function handleCronPasDeCours(request, env) {
+  // Paris timezone (CEST été UTC+2, CET hiver UTC+1)
+  const todayDt = new Date();
+  const parisOffset = todayDt.getUTCMonth() >= 2 && todayDt.getUTCMonth() <= 9 ? 2 : 1;
+  const parisDt = new Date(todayDt.getTime() + parisOffset * 3600 * 1000);
+  const dow = parisDt.getUTCDay();
+  const today = parisDt.toISOString().slice(0, 10);
+  const yesterdayDt = new Date(parisDt.getTime() - 24 * 3600 * 1000);
+  const yesterday = yesterdayDt.toISOString().slice(0, 10);
+
+  // Ville depuis le body, sinon depuis le jour de la semaine
+  let bodyVille = null;
+  try {
+    const bodyText = await request.text();
+    if (bodyText) { const parsed = JSON.parse(bodyText); bodyVille = parsed.ville || null; }
+  } catch(e) {}
+
+  let ville = bodyVille;
+  if (!ville) {
+    if (dow === 5) ville = 'paris';
+    else if (dow === 2) ville = 'vincennes';
+    else return corsResponse({ ok: true, skipped: true, reason: 'not_a_check_day', dow, today }, 200, {}, request);
+  }
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  // Charger les dates de cours depuis tev_cours_dates
+  let coursArr = [];
+  try {
+    const pr = await fetch(
+      `${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_cours_dates&select=valeur`,
+      { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (pr.ok) {
+      const rows = await pr.json();
+      if (rows.length && rows[0].valeur) {
+        const val = rows[0].valeur;
+        coursArr = Array.isArray(val[ville]) ? val[ville] : [];
+      }
+    } else {
+      console.error('[pas-de-cours] Supabase parametres error', await pr.text().catch(() => ''));
+    }
+  } catch(e) { console.error('[pas-de-cours] fetch tev_cours_dates error', e); }
+
+  // Vérifier que hier était un jour de cours
+  if (!coursArr.includes(yesterday)) {
+    return corsResponse({ ok: true, skipped: true, reason: 'yesterday_not_a_cours_date', yesterday, ville }, 200, {}, request);
+  }
+
+  // Prochain cours après aujourd'hui
+  const futureCours = coursArr.filter(function(d) { return d > today; }).sort();
+  if (!futureCours.length) {
+    return corsResponse({ ok: true, skipped: true, reason: 'no_future_cours', ville, today }, 200, {}, request);
+  }
+  const nextCours = futureCours[0];
+
+  // Vérifier gap > 7 jours
+  const nextDtMs = new Date(nextCours + 'T12:00:00').getTime();
+  const todayMs = new Date(today + 'T12:00:00').getTime();
+  const gapDays = Math.round((nextDtMs - todayMs) / (1000 * 60 * 60 * 24));
+  if (gapDays <= 7) {
+    return corsResponse({ ok: true, skipped: true, reason: 'next_cours_within_7_days', gapDays, nextCours, ville }, 200, {}, request);
+  }
+
+  // Formater la date du prochain cours en français
+  const JOURS_PDC = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const MOIS_PDC  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const nextDtObj = new Date(nextCours + 'T12:00:00');
+  const dateLabel = `${JOURS_PDC[nextDtObj.getDay()]} ${nextDtObj.getDate()} ${MOIS_PDC[nextDtObj.getMonth()]}`;
+  const villeLabel = ville === 'paris' ? 'Paris' : 'Vincennes';
+  const pushBody = `📅 Pas de cours ${villeLabel} cette semaine · Prochain cours le ${dateLabel}`;
+
+  // Saison courante
+  const mo = parisDt.getUTCMonth() + 1;
+  const yr = parisDt.getUTCFullYear();
+  const saison = mo >= 9 ? `${yr}-${yr + 1}` : `${yr - 1}-${yr}`;
+
+  // Récupérer les élèves inscrits pour cette ville
+  let inscRows = [];
+  try {
+    const ir = await fetch(
+      `${SUPABASE_URL}/rest/v1/inscriptions_cours?statut=eq.inscrit&saison=eq.${encodeURIComponent(saison)}&ville=eq.${ville}&select=email,prenom,nom`,
+      { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (ir.ok) {
+      inscRows = await ir.json();
+    } else {
+      console.error('[pas-de-cours] Supabase inscriptions_cours error', await ir.text().catch(() => ''));
+    }
+  } catch(e) { console.error('[pas-de-cours] fetch inscriptions_cours error', e); }
+
+  // Déduplication par email (exclut les isRenewal côté affichage — filtrés par statut=inscrit en DB)
+  const emailsSeen = new Set();
+  const eleves = [];
+  for (const r of inscRows) {
+    if (r.email && !emailsSeen.has(r.email)) {
+      emailsSeen.add(r.email);
+      eleves.push(r);
+    }
+  }
+
+  // Envoyer push + notif in-app à chaque élève
+  let totalSent = 0;
+
+  for (const eleve of eleves) {
+    const emailStr = String(eleve.email || '');
+    if (!emailStr) continue;
+
+    // Notif in-app (notifications_eleve — RLS always true, SUPABASE_ANON OK)
+    try {
+      const nr = await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ email: emailStr, type: 'info', message: pushBody }),
+      });
+      if (!nr.ok) console.error('[pas-de-cours] notif_eleve error', emailStr, nr.status, await nr.text().catch(() => ''));
+    } catch(e) { console.error('[pas-de-cours] notif_eleve exception', emailStr, e); }
+
+    // Push OS
+    try {
+      const tokens = await getFcmTokensForEmail(emailStr, svcKey);
+      if (tokens.length) {
+        await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: pushBody });
+        totalSent++;
+      }
+    } catch(e) { console.error('[pas-de-cours] push error', emailStr, e); }
+  }
+
+  return corsResponse({ ok: true, sent: totalSent, checked: eleves.length, ville, nextCours, gapDays, today }, 200, {}, request);
 }
