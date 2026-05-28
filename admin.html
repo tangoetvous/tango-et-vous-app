@@ -4595,6 +4595,7 @@ var _chargerDonneesSeq = 0; // Séquence pour ignorer les résultats périmés (
 var _pendingSupprimes = new Set(); // IDs supprimés localement mais pas encore confirmés par la DB
 var _pendingCoursInserts = {}; // email → entry : inserts locaux pas encore confirmés par la DB
 var _pendingSoranoPayé = {}; // email → bool : paiement_sorano en attente de confirmation DB
+var _pendingForfait = {}; // email → true : conversion carte10→forfait en attente de confirmation DB
 var _vpPrefillIds = []; // IDs des inscriptions préchargées dans le formulaire Valider Paiement
 function demarrerRealtime() {
   if (IS_DEMO || _pollTimer) return;
@@ -8269,7 +8270,7 @@ function _buildCartesData() {
   });
   var cartesEleves = (adminData.cartes||[]).filter(function(c){
     var carteS = c.saison || saisonCourante();
-    return carteS===sai && c.statut!=='supprimé' && !_emailsSupprimés[c.email] && (c.utilises>0||c.restants>0||c.datePremierCours||c.statut==='Nouvelle carte');
+    return carteS===sai && c.statut!=='supprimé' && !_emailsSupprimés[c.email] && !_pendingForfait[c.email] && (c.utilises>0||c.restants>0||c.datePremierCours||c.statut==='Nouvelle carte');
   });
   cartesEleves.forEach(function(c){
     // Ne pas écraser _fromCoursTango=true sur les entrées fake déjà poussées dans adminData.cartes
@@ -8292,6 +8293,7 @@ function _buildCartesData() {
     if (!ct.type || ct.type.indexOf('carte')<0) return false;
     if ((ct.saison||saisonCourante())!==sai) return false;
     if (ct._isRenewalRow) return false;
+    if (_pendingForfait[ct.email]) return false;
     return !personnesVues[ct.email+'::'+_nStr((ct.prenom||'')+' '+(ct.nom||''))];
   }).forEach(function(ct){
     personnesVues[ct.email+'::'+_nStr((ct.prenom||'')+' '+(ct.nom||''))] = true;
@@ -8397,6 +8399,7 @@ function passerEnForfait(email, nom) {
   if(adminData.cartes){
     adminData.cartes = adminData.cartes.filter(function(c){ return c.email !== email; });
   }
+  _pendingForfait[email] = true;
   afficherToast('🔄 '+nom+' converti·e en forfait');
   renderTab();
   if(!IS_DEMO){
@@ -8413,7 +8416,7 @@ function passerEnForfait(email, nom) {
       .update({carte_statut:null, carte_restants:null, carte_utilises:null,
                carte_expiration:null, carte_paye:null, carte_date_achat:null})
       .eq('email', email)));
-    Promise.all(ops).then(function(){ chargerDonnees(); }).catch(function(e){ afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
+    Promise.all(ops).then(function(){ delete _pendingForfait[email]; chargerDonnees(); }).catch(function(e){ afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
   }
 }
 function confirmerSupprimerCarte(email, nom) {
