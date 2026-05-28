@@ -1,5 +1,45 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-05-27/28 — E0 couple, inscription-cours, navigation stages admin
+
+### ✅ Email E0 — variante couple (deux encadrés avec bannière violette)
+
+Quand `enCouple === true && partPrenom` dans le body de `handleNotifyInscriptionEssai` (worker.js), l'email admin affiche désormais **un seul encadré à 4 zones** au lieu d'un encadré + ligne texte "Partenaire :".
+
+**Structure** :
+1. Bannière violette `background:#6a1b9a` "👫 En couple" — **toujours affichée**, peu importe `isWaitlist`
+2. Header inscripteur — couleur normale (`#D4AF37` confirmé / `#e65100` attente)
+3. Séparateur 1px `rgba(0,0,0,.15)`
+4. Header partenaire — couleur dérivée : `isWaitlist ? '#9a2a00' : '#b8960e'`
+5. `_coursInnerBlock` — partagé (extrait comme `const` avant la branche `if/else`)
+
+**Contrainte** : `partTel` n'est pas dans le body (non envoyé par `inscription-cours.html`) — ne jamais l'afficher.
+
+**Font-size** : les deux noms en couple → `16px` (inscripteur solo = `18px`).
+
+**Couleur email partenaire** : `isWaitlist ? '#ffccaa' : '#f5e4a0'`
+
+**Fichiers modifiés** :
+- `worker.js` — commit `5800916`
+- `preview-emails-essai-v2.html` — variante confirmée (or) + variante attente (orange), nav link "E0 Couple"
+- `preview-sources-essai.html` — sous-section E0 couple ajoutée après le bloc E0 solo
+
+### ✅ `inscription-cours.html` — 3 changements UI
+
+1. **Bouton "💶 Évaluer mon tarif" retiré** — voir section "Bouton Évaluer mon tarif retiré temporairement" ci-dessous
+2. **Bouton "ENVOYER MA DEMANDE" déplacé** juste au-dessus du scroll hint (était en dessous)
+3. **Scroll hint mis à jour** : "↑ Après avoir cliqué, remontez si nécessaire en haut de la page pour visualiser votre confirmation"
+4. **Étape 3** label : "Vous venez…" → "Vous êtes…"
+
+### ✅ `admin.html` — navigation automatique vers le prochain stage
+
+Quand l'admin clique sur **Stages** dans le menu :
+- `switchTab('stages')` cherche la prochaine date de stage active via `Object.keys(adminData.stages||{}).sort().filter(d => dateAppartientSaison(d, saisonActive()) && d >= todayISO())`
+- Définit `filtreStage = _nextStage` (première date trouvée) et `filtreStageSlot = 'tous'`
+- L'admin arrive directement sur le sous-onglet "Tous" du prochain stage, sans devoir naviguer manuellement
+
+---
+
 ## Bouton "Évaluer mon tarif" retiré temporairement — 2026-05-27
 
 Dans `inscription-cours.html`, le bouton `💶 Évaluer mon tarif` (qui appelait `goTarif()`) a été **retiré temporairement** à la demande de l'admin. Il pourra être remis plus tard.

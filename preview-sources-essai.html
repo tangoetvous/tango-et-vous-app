@@ -41,6 +41,24 @@
   <div class="field"><span class="label">Lieu :</span> <span class="src">tev_params_${ville}_${saison}.adresse.nom + .rue + .transport</span></div>
   <div class="field"><span class="label">Horaire :</span> <span class="src">tev_params_${ville}_${saison}.horaires.${niveau}</span></div>
   <div class="field"><span class="label">Boutons :</span> 📞 tel: · ✉️ mailto: · 💬 sms: · Ouvrir l'admin</div>
+  <hr class="sep">
+  <h3>E0 variante — Couple (body.enCouple &amp;&amp; body.partPrenom)</h3>
+  <div class="field"><span class="label">Détection :</span> <span class="cond">enCouple === true ET partPrenom non vide</span> <span class="note">les deux conditions requises</span></div>
+  <div class="field"><span class="label">Champ body :</span> <span class="var">body.enCouple</span> <span class="note">boolean — envoyé depuis inscription-cours.html</span></div>
+  <div class="field"><span class="label">Champ body :</span> <span class="var">body.partPrenom</span> · <span class="var">body.partNom</span> <span class="note">prénom/nom du partenaire</span></div>
+  <div class="field"><span class="label">Champ body :</span> <span class="var">body.partRole</span> <span class="note">'guideur'|'guidee' — rôle du partenaire</span></div>
+  <div class="field"><span class="label">Champ body :</span> <span class="var">body.partEmail</span> <span class="note">email partenaire — peut être vide ('' si non renseigné)</span></div>
+  <div class="field"><span class="label">⚠️ Absent :</span> <span class="var">partTel</span> <span class="note">NON dans le body — inscription-cours.html ne l'envoie pas ; ne pas chercher à l'afficher</span></div>
+  <div class="field"><span class="label">Structure :</span> 1 seul encadré à 3 sections (au lieu de 2 lignes distinctes) :</div>
+  <div class="field" style="margin-left:20px;"><span class="cond">1.</span> Bannière violette <code>background:#6a1b9a</code> "👫 En couple" — <strong>toujours affichée</strong> quelle que soit la valeur de <code>isWaitlist</code></div>
+  <div class="field" style="margin-left:20px;"><span class="cond">2.</span> Header inscripteur — même couleur que solo : <code>isWaitlist ? '#e65100' : '#D4AF37'</code></div>
+  <div class="field" style="margin-left:20px;"><span class="cond">3.</span> Séparateur 1px <code>rgba(0,0,0,.15)</code></div>
+  <div class="field" style="margin-left:20px;"><span class="cond">4.</span> Header partenaire — couleur dérivée : <code>isWaitlist ? '#9a2a00' : '#b8960e'</code></div>
+  <div class="field" style="margin-left:20px;"><span class="cond">5.</span> <code>_coursInnerBlock</code> — partagé entre solo et couple (extrait comme const)</div>
+  <div class="field"><span class="label">Font-size noms :</span> <span class="note">couple → <code>16px</code> (les deux) · solo → inscripteur <code>18px</code></span></div>
+  <div class="field"><span class="label">Couleur email partenaire :</span> <code>isWaitlist ? '#ffccaa' : '#f5e4a0'</code></div>
+  <div class="field"><span class="label">Badge statut :</span> <span class="note">Solo : "✓ Validé·e" / "⏳ En attente" · Couple : "✓ Validé·e·s" / "⏳ En attente"</span></div>
+  <div class="field"><span class="label">Note emails :</span> <span class="note">Si emails distincts → E1/E6 × 2 ou E5b × 2 ; si email partagé → 1 seul email</span></div>
 </div>
 
 <h2>E1 — Confirmation élève (&gt;7 jours)</h2>
