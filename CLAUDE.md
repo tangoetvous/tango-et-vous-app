@@ -1,5 +1,73 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Playwright — tests E2E à implémenter (prévu septembre 2026)
+
+### Contexte
+- Framework : [Playwright](https://playwright.dev/) — gratuit, open source, maintenu par Microsoft
+- Exécution : **local uniquement** (`npm test`) — pas de CI GitHub Actions
+- Prérequis : Node.js installé (vérifier avec `node --version`)
+- Fichiers cibles : `admin.html` en **mode démo** (`IS_DEMO = true`) — pas de vraies données Supabase
+- Pour lancer l'implémentation : dire **"on fait Playwright"** — aucune autre question nécessaire
+
+### Scénarios prioritaires (demandés par l'utilisateur)
+1. `calcExpiration` — cartes 10
+2. Cartes 10 — couples email partagé
+3. Transfert essai → inscription tango
+
+### Catalogue complet des tests proposés
+
+#### Groupe A — `calcExpiration` (algorithme le plus fragile)
+| # | Scénario | Pourquoi c'est fragile |
+|---|----------|----------------------|
+| A1 | Carte Paris débutant, premier cours un **jeudi** → vérifier expiration = ~3 mois + semaines vacances | Algorithme itératif A+B+C, timezone, lastStored |
+| A2 | Carte Paris débutant, premier cours saisi un **mardi** (pas le bon jour) → vérifier normalisation vers le jeudi le plus proche | Bug réel corrigé 2026-05-26 : chaque semaine comptée comme gap sinon |
+| A3 | Carte Vincennes intermédiaire → vérifier expiration distincte de Paris (jour de cours différent) | Deux sets `coursArr` distincts selon ville |
+| A4 | Modifier `datePremierCours` dans modal Cartes 10 → vérifier que l'expiration se recalcule (pas mise en cache) | Garde `!c.expiration` supprimée 2026-05-08 |
+
+#### Groupe B — Cartes 10 couples email partagé
+| # | Scénario | Pourquoi c'est fragile |
+|---|----------|----------------------|
+| B1 | Élève inscrit à 2 cours (ex : VORMS × Paris + Vincennes) → vérifier qu'il apparaît **une seule fois** dans Cartes 10 | `_buildCartesData` déduplication par email::normNom |
+| B2 | Couple BUTASH/NACAK (email partagé) → vérifier que **les deux noms** apparaissent dans Détails, pas en doublon | Cas réel saison 2025-2026 |
+| B3 | Élève avec renouvellement (`isRenewal`) → vérifier que la fiche n'apparaît **pas en double** dans Élèves Tango | Bug corrigé 2026-05-14 : marqueur `_isRenewalRow` |
+| B4 | Pointer 1 cours pour un élève inscrit à **1 seul cours** → vérifier que le bouton "2 cours" est masqué | Limite journalière dynamique selon `_maxParJour` |
+
+#### Groupe C — Suppression et onglets Supprimés
+| # | Scénario | Pourquoi c'est fragile |
+|---|----------|----------------------|
+| C1 | Supprimer un élève depuis **Élèves Tango** → vérifier qu'il apparaît dans Élèves Tango → Supprimés, et **pas** dans Inscriptions Tango → Supprimés | Séparation stricte via `donnees.supprimé_de` |
+| C2 | Supprimer depuis **Inscriptions Tango** (statut `demande`) → vérifier qu'il apparaît dans Inscriptions Tango → Supprimés, et **pas** dans Élèves Tango → Supprimés | Idem — marqueur `supprimé_de='inscriptions_tango'` |
+| C3 | Rétablir un essai tango supprimé (bouton 🔄 dans Essai → Supprimés) → vérifier réapparition dans Pointage avec le bon statut | `statut_avant_suppression` doit être restauré |
+| C4 | Supprimer un élève tango → vérifier que sa carte 10 passe aussi dans Cartes 10 → Supprimées | `confirmerSupprimerEleve` doit supprimer aussi `carte_statut` |
+
+#### Groupe D — Transfert essai → inscription
+| # | Scénario | Pourquoi c'est fragile |
+|---|----------|----------------------|
+| D1 | Cliquer **"Validé·e"** sur un essai guideur → vérifier apparition dans Inscriptions Tango → Att. Paiement | `saisonActive()` vs `saisonPourNouvelleEntree()`, `_pendingCoursInserts` |
+| D2 | Cliquer **"Demande en att."** sur un essai guidée → vérifier apparition dans Inscriptions Tango → Att. Validation | Même logique, statut différent |
+| D3 | Transfert d'un essai avec partenaire (sans email) → vérifier que **deux fiches** sont créées dans Inscriptions Tango | Condition `if(ess.partenaire)` pas `if(partEmail)` — bug corrigé |
+
+#### Groupe E — Quotas guideurs/guidées
+| # | Scénario | Pourquoi c'est fragile |
+|---|----------|----------------------|
+| E1 | Badge "👨 X/22 👩 X/23" dans Élèves Tango → vérifier qu'il correspond **exactement** au nombre d'élèves visibles dans la liste | Bug corrigé 2026-05-18 : comptait `inscrit + attente_paiement` au lieu de `inscrit` seul |
+| E2 | Lignes `isRenewal` présentes en DB → vérifier qu'elles ne sont **pas comptées** dans le quota | `!e._isRenewalRow` dans `nbInscritsCours` |
+
+#### Groupe F — Polling 15s — formulaires non interrompus
+| # | Scénario | Pourquoi c'est fragile |
+|---|----------|----------------------|
+| F1 | Ouvrir l'éditeur d'une publication → attendre 20s → vérifier que le formulaire est **toujours ouvert** | Guard `if (currentTab === 'publications') return` dans `_renderTabSiPasFormulaire` |
+| F2 | Être dans Essai Tango → Pointage, scroller → attendre 20s → vérifier que la **position de scroll est préservée** | Guard `if (currentTab === 'essai' && filtreEssai === 'pointage') return` |
+| F3 | Marquer un élève **Sorano réglé** → attendre 20s → vérifier que le statut est toujours "réglé" | `_pendingSoranoPayé` anti-polling — bug réel corrigé |
+
+#### Groupe G — Inscription directe et Valider Paiement
+| # | Scénario | Pourquoi c'est fragile |
+|---|----------|----------------------|
+| G1 | Inscrire un élève à **2 cours** (formule `carte10forfait`) → vérifier que **2 entrées distinctes** apparaissent dans Élèves Tango | `soumettreInscriptionDirecte` 130+ lignes, ID fake local vs ID DB réel |
+| G2 | Valider le paiement d'un élève avec **cours changé** → vérifier que le **nouveau cours** s'affiche (pas l'ancien) | Bug corrigé 2026-05-13 : lookup par email+newCours ratait l'ancienne entrée |
+
+---
+
 ## Session 2026-05-28 — Y-mod yoga câblage + Push "pas de cours cette semaine"
 
 ### ✅ Y-mod — câblage `validerEditEssaiYoga` → `/api/notify/essai-yoga-modifie`
