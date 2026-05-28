@@ -8393,9 +8393,12 @@ function passerEnForfait(email, nom) {
       if(!d.isRenewal) ct.type='forfait';
     }
   });
-  // Retirer l'entrée carte de adminData.cartes (les bons noms de propriétés sont utilises/restants/etc., pas carte_*)
-  if(adminData.cartes){
-    adminData.cartes = adminData.cartes.filter(function(c){ return c.email !== email; });
+  // Vider les champs carte sur l'objet eleves local
+  var carteEleve=(adminData.cartes||[]).find(function(c){ return c.email===email; });
+  if(carteEleve){
+    carteEleve.carte_statut=null; carteEleve.carte_restants=null;
+    carteEleve.carte_utilises=null; carteEleve.carte_expiration=null;
+    carteEleve.carte_paye=null; carteEleve.carte_date_achat=null;
   }
   afficherToast('🔄 '+nom+' converti·e en forfait');
   renderTab();
