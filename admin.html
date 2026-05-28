@@ -8395,9 +8395,12 @@ function passerEnForfait(email, nom) {
       if(!d.isRenewal) ct.type='forfait';
     }
   });
-  // Retirer l'entrée carte de adminData.cartes (les bons noms de propriétés sont utilises/restants/etc., pas carte_*)
+  // Neutraliser localement les champs carte (eleves) + retirer les entrées fake _fromCoursTango
+  (adminData.cartes||[]).forEach(function(c){
+    if(c.email===email){ c.utilises=0; c.restants=0; c.datePremierCours=''; c.expiration=''; c.statut='Active'; }
+  });
   if(adminData.cartes){
-    adminData.cartes = adminData.cartes.filter(function(c){ return c.email !== email; });
+    adminData.cartes = adminData.cartes.filter(function(c){ return !(c.email===email && c._fromCoursTango); });
   }
   _pendingForfait[email] = true;
   afficherToast('🔄 '+nom+' converti·e en forfait');
@@ -8411,12 +8414,18 @@ function passerEnForfait(email, nom) {
         .eq('type', 'carte10')
         .eq('statut', 'inscrit'))
     ];
-    // Effacer les champs carte dans eleves
+    // ⚠️ carte_utilises/restants/statut/paye sont NOT NULL → jamais de null (UPDATE rejeté silencieusement).
+    // On neutralise la carte : 0/0 + statut 'Active' → exclue du filtre activité de _buildCartesData.
     ops.push(Promise.resolve(TEV.client.from('eleves')
-      .update({carte_statut:null, carte_restants:null, carte_utilises:null,
-               carte_expiration:null, carte_paye:null, carte_date_achat:null})
+      .update({carte_statut:'Active', carte_restants:0, carte_utilises:0,
+               carte_expiration:null, carte_paye:true, carte_date_achat:null})
       .eq('email', email)));
-    Promise.all(ops).then(function(){ delete _pendingForfait[email]; chargerDonnees(); }).catch(function(e){ afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
+    Promise.all(ops).then(function(results){
+      var errR = (results||[]).find(function(r){ return r && r.error; });
+      if(errR){ afficherToast('⚠️ Erreur conversion : '+((errR.error&&errR.error.message)||'')); }
+      delete _pendingForfait[email];
+      chargerDonnees();
+    }).catch(function(e){ delete _pendingForfait[email]; afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
   }
 }
 function confirmerSupprimerCarte(email, nom) {
