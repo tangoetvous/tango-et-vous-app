@@ -9435,28 +9435,35 @@ function _groupCouples(list) {
     if (used.indexOf(i) >= 0) continue;
     var p = list[i];
     var partIdx = -1;
+    // Recherche directe : p.partenaire contient le nom du partenaire
     if (p.partenaire) {
+      var pPart = _normNom(p.partenaire);
       for (var j = 0; j < list.length; j++) {
         if (j === i || used.indexOf(j) >= 0) continue;
         var q = list[j];
-        var qName = _normNom(q.nom);
-        var pPart = _normNom(p.partenaire);
-        // Correspondance exacte, double-nom tronqué, ou accents ignorés
-        if (qName === pPart || qName.startsWith(pPart + ' ') || pPart.startsWith(qName + ' ')) {
+        // qFull = prénom + nom (Élèves Tango) ; qShort = nom seul (Cartes 10 ou ancien format)
+        var qFull = _normNom((q.prenom ? q.prenom + ' ' : '') + q.nom);
+        var qShort = _normNom(q.nom);
+        if (qFull === pPart || qShort === pPart ||
+            qFull.startsWith(pPart + ' ') || qShort.startsWith(pPart + ' ') ||
+            pPart.startsWith(qFull + ' ') || pPart.startsWith(qShort + ' ')) {
           partIdx = j; break;
         }
       }
     }
-    // Recherche inverse : si p n'a pas de champ partenaire (ex: entrée eleves sans partenaire renseigné),
-    // chercher si une autre entrée q a p.nom comme partenaire
+    // Recherche inverse : p n'a pas de partenaire, chercher si q.partenaire désigne p
+    // pFull (prénom+nom) évite les faux positifs sur un nom commun (ex: "MARTIN" ≠ "Marie MARTIN")
     if (partIdx < 0) {
-      var pNorm = _normNom(p.nom);
+      var pFull = _normNom((p.prenom ? p.prenom + ' ' : '') + p.nom);
+      var pShort = _normNom(p.nom);
       for (var j = 0; j < list.length; j++) {
         if (j === i || used.indexOf(j) >= 0) continue;
         var q = list[j];
         if (q.partenaire) {
           var qPart = _normNom(q.partenaire);
-          if (pNorm === qPart || pNorm.startsWith(qPart + ' ') || qPart.startsWith(pNorm + ' ')) {
+          if (pFull === qPart || pShort === qPart ||
+              pFull.startsWith(qPart + ' ') || pShort.startsWith(qPart + ' ') ||
+              qPart.startsWith(pFull + ' ')) {
             partIdx = j; break;
           }
         }
