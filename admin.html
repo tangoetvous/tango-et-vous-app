@@ -9949,6 +9949,8 @@ function validerEditEssaiYoga(id) {
   if (!newDate || !newCours) { afficherToast('⚠️ Remplissez tous les champs'); return; }
   var e = (adminData.essaiYoga||[]).find(function(x){ return String(x.id)===String(id); });
   if (!e) { afficherToast('Inscription introuvable'); return; }
+  var oldDate = e.date; var oldCours = e.cours;
+  var eEmail = e.email; var ePrenom = e.prenom;
   fermerContact();
   e.date = newDate; e.cours = newCours;
   renderTab();
@@ -9957,6 +9959,11 @@ function validerEditEssaiYoga(id) {
   .then(function(res){
     if (res&&res.error){ afficherToast('⚠️ Erreur : '+(res.error.message||res.error.code||'')); chargerDonnees(); return; }
     afficherToast('✓ Modifié');
+    fetch('/api/notify/essai-yoga-modifie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+      body: JSON.stringify({ email: eEmail, prenom: ePrenom, ancienneDate: oldDate, nouvelleDateEssai: newDate, cours: newCours, ancienCours: oldCours })
+    }).catch(function(err){ console.error('[notify essai-yoga-modifie]', err); });
   })
   .catch(function(){ afficherToast('⚠️ Erreur réseau'); chargerDonnees(); });
 }

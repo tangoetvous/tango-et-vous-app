@@ -6000,7 +6000,7 @@ async function handleNotifyEssaiYogaModifie(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminYogaEmail }, to: [{ email: String(email) }], subject: `Votre cours d'essai de yoga a été modifié — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, replyTo: { email: adminYogaEmail, name: 'Florencia Garcia' }, to: [{ email: String(email) }], subject: `Votre cours d'essai de yoga a été modifié — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-essai-yoga-modifie] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
