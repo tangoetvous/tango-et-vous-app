@@ -4991,6 +4991,19 @@ function saveCoursDatesLocal() {
   } catch(e) {}
 }
 
+function _labelNivEleve(val) {
+  var map = {
+    premier:  {l:'1er cours',      bg:'#1b5e20', color:'#a5d6a7'},
+    quelques: {l:'Quelques cours', bg:'#1a237e', color:'#90caf9'},
+    '1an':    {l:'1 an',           bg:'#4a148c', color:'#ce93d8'},
+    '2ans':   {l:'2 ans',          bg:'#e65100', color:'#ffcc80'},
+    plus:     {l:'2+ ans',         bg:'#b71c1c', color:'#ef9a9a'},
+    milonga:  {l:'Milonga',        bg:'#880e4f', color:'#f48fb1'}
+  };
+  var m = map[val]; if (!m) return '';
+  return '<span style="display:inline-block;font-size:8px;font-weight:700;padding:1px 6px;border-radius:20px;background:'+m.bg+';color:'+m.color+';white-space:nowrap;margin-left:3px;">'+m.l+'</span>';
+}
+
 // Synchro inscriptions stages → localStorage pour index.html (par email)
 function syncStageInscritsToLocal() {
   try {
@@ -6846,6 +6859,7 @@ function ficheEleveInscrit(e, borderStyle, grise, isDup) {
     +'</div>'
     +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
     +'<span class="pill '+rcls+'">'+roleLbl+'</span>'
+    +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
     +(e.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report '+(e.classesReportees||e.restants)+' cours</span>':'')
     +(typeLbl?'<span class="pill pill-ok" style="font-size:8px;">'+typeLbl+'</span>':'')
     +(paiLbl?'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+'</span>':'')
@@ -7472,6 +7486,7 @@ function renderEssai() {
           +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')
           +(_dupSetAtt.has(_dupKey(e))?_DUP_BADGE:'')
           +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
+          +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
           +'</div>'
           +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
           +'</div>'
@@ -7558,6 +7573,7 @@ function renderEssai() {
           +(e.presenceConfirmee===true?' <span title="A confirmé sa présence par email">👍</span>':'')
           +pastille
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
+          +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
           +'<button class="btn-heart'+(e.interesse?' on':'')+'" data-action="toggle-interet" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'" title="Élève intéressant·e">'+(e.interesse?'❤️':'🤍')+'</button>'
           +'<button class="btn-point btn-pres'+(e.present===true?' on':e.present===false?' off':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':e.present===true?' off':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
@@ -7584,6 +7600,7 @@ function renderEssai() {
               +'</div>'
               +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
               +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
+              +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
               +'<span class="pill" style="font-size:8px;background:rgba(255,152,0,0.2);color:var(--warn-text);">attente</span>'
               +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
               +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
@@ -7780,6 +7797,7 @@ function renderEssai() {
             +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')
             +(_dupSetDate.has(_dupKey(e))?_DUP_BADGE:'')
             +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
+            +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
             +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
             +(e.presenceConfirmee===true?' <span title="A confirmé sa présence par email">👍</span>':'')
             +'</div>'
@@ -12464,6 +12482,7 @@ function ficheEleve(e, isDup) {
     +'</div>'
     +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
     +'<span class="pill '+rcls+'">'+roleLbl+'</span>'
+    +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
     +(e.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report '+(e.classesReportees||e.restants)+' cours</span>':'');
 
   // Pill validation
