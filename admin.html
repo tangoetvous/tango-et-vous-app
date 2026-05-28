@@ -8848,7 +8848,7 @@ function renderCartesDetails(d) {
   _detOrder.forEach(function(coursLbl){
     h+='<div class="section-hdr" style="margin-top:10px;">'+coursLbl+'</div>';
     var _gc=_detGroups[coursLbl], _used={}, _cp=[], _sl=[];
-    _gc.forEach(function(c){ var _uk=c.email+'::'+c.nom; if(_used[_uk])return; if(c.emailPartenaire){var p=_gc.find(function(x){return x.email===c.emailPartenaire&&!_used[x.email+'::'+x.nom];}); if(p){_used[_uk]=true;_used[p.email+'::'+p.nom]=true;_cp.push([c,p]);return;}} _used[_uk]=true;_sl.push(c); });
+    _gc.forEach(function(c){ var _uk=c.email+'::'+c.nom; if(_used[_uk])return; if(c.emailPartenaire){var p=_gc.find(function(x){ if(x===c||_used[x.email+'::'+x.nom])return false; if(c.emailPartenaire===c.email){var _pn=_normNom(c.partenaire||'');var _xn=_normNom(x.nom);return _pn&&(_xn===_pn||_xn.startsWith(_pn.split(' ')[0])||_pn.startsWith(_xn.split(' ')[0]));} return x.email===c.emailPartenaire;}); if(p){_used[_uk]=true;_used[p.email+'::'+p.nom]=true;_cp.push([c,p]);return;}} _used[_uk]=true;_sl.push(c); });
     _cp.forEach(function(pair){ h+=_coupleWrap(_carteRowDet(pair[0])+_carteRowDet(pair[1])); });
     _sl.forEach(function(c){ h+=_carteRowDet(c); });
   });
@@ -9392,10 +9392,10 @@ function _groupCouples(list) {
     var p = list[i];
     var partIdx = -1;
     if (p.partenaire) {
-      for (var j = i + 1; j < list.length; j++) {
-        if (used.indexOf(j) >= 0) continue;
+      for (var j = 0; j < list.length; j++) {
+        if (j === i || used.indexOf(j) >= 0) continue;
         var q = list[j];
-        var qName = _normNom((q.prenom + ' ' + q.nom).trim());
+        var qName = _normNom(q.nom);
         var pPart = _normNom(p.partenaire);
         // Correspondance exacte, double-nom tronqué, ou accents ignorés
         if (qName === pPart || qName.startsWith(pPart + ' ') || pPart.startsWith(qName + ' ')) {
