@@ -355,6 +355,12 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   </div>
 </div>
 
+<!-- Modal fiche élève consolidée -->
+<div class="modal-overlay" id="modal-fiche-eleve" onclick="if(event.target===this)fermerFicheEleve()">
+  <div class="modal-box" style="max-width:680px;max-height:90vh;overflow-y:auto;padding:0;" id="modal-fiche-eleve-box">
+  </div>
+</div>
+
 <!-- Modal recherche globale -->
 <div class="modal-overlay" id="modal-search" onclick="if(event.target===this)fermerRechercheGlobale()">
   <div class="modal-box" style="max-width:620px;padding:0;overflow:hidden;">
@@ -1349,6 +1355,7 @@ function ouvrirContact(nom, tel, email, ctx) {
     +telHtml+actHtml+essaiHtml
     +'<div class="modal-btns" style="margin-top:16px;">'
     +'<button class="btn btn-ghost" style="font-size:12px;" id="mc-edit">✏️ Modifier</button>'
+    +'<button class="btn btn-ghost" style="font-size:12px;" onclick="fermerContact();ouvrirFicheEleve('+JSON.stringify(email)+')">📋 Fiche</button>'
     +'<button class="modal-cancel" id="mc-close">Fermer</button>'
     +'</div>';
   gel('mc-close').addEventListener('click',fermerContact);
@@ -14650,6 +14657,161 @@ function renderDashboard() {
 
   h += '</div>';
   return h;
+}
+
+// ── Fiche élève consolidée ─────────────────────────────────────────────
+function ouvrirFicheEleve(email) {
+  var box = gel('modal-fiche-eleve-box');
+  if (!box) return;
+  var allTango    = (adminData.coursTango||[]).filter(function(e){ return e.email===email; });
+  var allYoga     = (adminData.coursYoga||[]).filter(function(e){ return e.email===email; });
+  var allEssai    = (adminData.essai||[]).filter(function(e){ return e.email===email; });
+  var allEssaiYoga= (adminData.essaiYoga||[]).filter(function(e){ return e.email===email; });
+  var allCartes   = (adminData.cartes||[]).filter(function(c){ return c.email===email; });
+  var nameSrc = allTango[0]||allYoga[0]||allEssai[0]||allCartes[0]||{};
+  var nom = ((nameSrc.prenom||'')+' '+(nameSrc.nom||'')).trim() || email;
+  var stageEntries = [];
+  Object.keys(adminData.stages||{}).forEach(function(date){
+    var jour = adminData.stages[date];
+    (jour.inscrits||[]).forEach(function(ins){
+      if (ins.email===email) stageEntries.push({date:date, label:jour.label||date, ins:ins});
+    });
+  });
+  stageEntries.sort(function(a,b){ return a.date<b.date?-1:1; });
+  var photoUrl = (allCartes[0]&&allCartes[0].photo_url)||'';
+  var photoHtml = photoUrl
+    ? '<img src="'+escHtml(photoUrl)+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);">'
+    : '<div style="width:56px;height:56px;border-radius:50%;background:var(--s3);display:inline-flex;align-items:center;justify-content:center;font-size:26px;border:2px solid var(--border);">👤</div>';
+  function sec(title, content) {
+    return '<div style="margin-bottom:18px;">'
+      +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-weight:700;padding:0 0 6px;border-bottom:1px solid var(--border);margin-bottom:10px;">'+title+'</div>'
+      +content+'</div>';
+  }
+  var h = '<div style="padding:20px 20px 4px;">';
+  h += '<div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">';
+  h += '<div>'+photoHtml+'</div>';
+  h += '<div style="flex:1;">';
+  h += '<div style="font-size:18px;font-weight:700;color:var(--text);">'+escHtml(nom)+'</div>';
+  h += '<div style="font-size:12px;color:var(--dim);margin-top:2px;">'+escHtml(email)+'</div>';
+  if (nameSrc.tel) h += '<div style="font-size:12px;color:var(--dim);margin-top:1px;">'+escHtml(nameSrc.tel)+'</div>';
+  h += '</div>';
+  h += '<button onclick="fermerFicheEleve()" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:22px;line-height:1;padding:0 4px;align-self:flex-start;">✕</button>';
+  h += '</div>';
+  // 1. Tango
+  var tangoActifs = allTango.filter(function(e){ return !e._isRenewalRow; });
+  if (tangoActifs.length > 0) {
+    var tangoMap = {};
+    tangoActifs.forEach(function(e){ var s=e.saison||'?'; if(!tangoMap[s])tangoMap[s]=[]; tangoMap[s].push(e); });
+    var tHtml = '';
+    Object.keys(tangoMap).sort().reverse().forEach(function(s){
+      tHtml += '<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--dim);font-weight:600;margin-bottom:4px;">'+escHtml(s)+'</div>';
+      tangoMap[s].forEach(function(e){
+        var sc = e.statut==='inscrit'?'#16a34a':e.statut==='supprimé'?'#666':'#e65100';
+        var rc = e.role==='guideur'?'#1565c0':'#c2185b';
+        tHtml += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:3px 0;">';
+        tHtml += '<span style="font-size:12px;color:var(--text);">'+escHtml((e.ville==='vincennes'?'Vincennes':'Paris')+' '+(e.niveau==='intermediaire'?'Interm.':'Déb.'))+'</span>';
+        tHtml += '<span style="font-size:11px;color:#fff;background:'+rc+';padding:1px 7px;border-radius:10px;">'+escHtml(e.role||'')+'</span>';
+        tHtml += '<span style="font-size:11px;color:'+sc+';">'+escHtml(e.statut||'')+'</span>';
+        if (e.type) tHtml += '<span style="font-size:11px;color:var(--dim);">'+escHtml(e.type==='carte10'?'Carte 10':'Forfait')+'</span>';
+        if (e.montant) tHtml += '<span style="font-size:11px;color:#16a34a;">'+escHtml(String(e.montant))+'€</span>';
+        if (e.paiement) tHtml += '<span style="font-size:11px;color:var(--dim);">'+escHtml(PAI_LBL[e.paiement]||e.paiement)+'</span>';
+        tHtml += '</div>';
+      });
+      tHtml += '</div>';
+    });
+    h += sec('🕺 Tango', tHtml);
+  }
+  // 2. Cartes 10
+  if (allCartes.length > 0) {
+    var cHtml = '';
+    allCartes.forEach(function(c){
+      var sc = c.statut==='Active'?'#16a34a':c.statut==='supprimé'?'#666':'#e65100';
+      cHtml += '<div style="border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:8px;">';
+      cHtml += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">';
+      cHtml += '<span style="font-size:12px;font-weight:700;color:'+sc+';">'+escHtml(c.statut||'')+'</span>';
+      cHtml += '<span style="font-size:12px;color:var(--dim);">'+escHtml(c.saison||'')+'</span>';
+      cHtml += '<span style="font-size:12px;color:var(--text);">'+(c.utilises||0)+'/10 utilisés</span>';
+      if (c.expiration) cHtml += '<span style="font-size:11px;color:var(--dim);">exp. '+escHtml(c.expiration)+'</span>';
+      cHtml += '<span style="font-size:11px;color:'+(c.paye?'#16a34a':'#e65100')+';">'+(c.paye?'✓ Payée':'⚠️ Non payée')+'</span>';
+      cHtml += '</div>';
+      if (c.datesCours && c.datesCours.length) {
+        cHtml += '<div style="margin-top:5px;font-size:11px;color:var(--dim);">'+escHtml(c.datesCours.join(' · '))+'</div>';
+      }
+      cHtml += '</div>';
+    });
+    h += sec('🃏 Cartes 10 cours', cHtml);
+  }
+  // 3. Yoga
+  if (allYoga.length > 0) {
+    var yHtml = '';
+    allYoga.forEach(function(e){
+      yHtml += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:3px 0;">';
+      yHtml += '<span style="font-size:12px;color:var(--text);">'+escHtml(e.cours==='yin'?'Yin Yoga':e.cours==='hatha'?'Hatha Yoga':'Forfait Yin+Hatha')+'</span>';
+      yHtml += '<span style="font-size:11px;color:var(--dim);">'+escHtml(e.saison||'')+'</span>';
+      if (e.montant) yHtml += '<span style="font-size:11px;color:#16a34a;">'+escHtml(String(e.montant))+'€</span>';
+      if (e.paiement) yHtml += '<span style="font-size:11px;color:var(--dim);">'+escHtml(PAI_LBL[e.paiement]||e.paiement)+'</span>';
+      yHtml += '</div>';
+    });
+    h += sec('🧘 Yoga', yHtml);
+  }
+  // 4. Stages
+  if (stageEntries.length > 0) {
+    var SL = {technique:'Technique',stage1:'Stage 1',stage2:'Stage 2',stage3:'Stage 3',stage4:'Stage 4'};
+    var sgHtml = '';
+    stageEntries.forEach(function(se){
+      var ins = se.ins;
+      var pi = ins.present===true?'✓':ins.present===false?'✗':'—';
+      var pc = ins.present===true?'#16a34a':ins.present===false?'#e65100':'var(--dim)';
+      sgHtml += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:3px 0;">';
+      sgHtml += '<span style="font-size:12px;color:var(--text);">'+escHtml(se.label)+'</span>';
+      if (ins.slots&&ins.slots.length) sgHtml += '<span style="font-size:11px;color:var(--dim);">'+ins.slots.map(function(s){return escHtml(SL[s]||s);}).join(', ')+'</span>';
+      sgHtml += '<span style="font-size:12px;color:'+pc+';">'+pi+'</span>';
+      if (ins.montant) sgHtml += '<span style="font-size:11px;color:#16a34a;">'+escHtml(String(ins.montant))+'€</span>';
+      sgHtml += '</div>';
+    });
+    h += sec('🎭 Stages', sgHtml);
+  }
+  // 5. Essais tango
+  if (allEssai.length > 0) {
+    var eHtml = '';
+    allEssai.slice().sort(function(a,b){return (a.date||'')<(b.date||'')?1:-1;}).forEach(function(e){
+      eHtml += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:3px 0;">';
+      eHtml += '<span style="font-size:12px;color:var(--text);">'+escHtml(e.date||'?')+'</span>';
+      eHtml += '<span style="font-size:11px;color:var(--dim);">'+escHtml((e.ville==='vincennes'?'Vincennes':'Paris')+' '+(e.niveau==='intermediaire'?'Interm.':'Déb.'))+'</span>';
+      if (e.statut) eHtml += '<span style="font-size:11px;color:var(--dim);">'+escHtml(e.statut)+'</span>';
+      if (e.present===true)  eHtml += '<span style="font-size:11px;color:#16a34a;">✓ présent</span>';
+      if (e.present===false) eHtml += '<span style="font-size:11px;color:#e65100;">✗ absent</span>';
+      eHtml += '</div>';
+    });
+    h += sec('🔎 Essais tango', eHtml);
+  }
+  // 6. Essais yoga
+  if (allEssaiYoga.length > 0) {
+    var eyHtml = '';
+    allEssaiYoga.slice().sort(function(a,b){var da=a.date||a.date_essai||'',db=b.date||b.date_essai||'';return da<db?1:-1;}).forEach(function(e){
+      var d = e.date||e.date_essai||'?';
+      eyHtml += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:3px 0;">';
+      eyHtml += '<span style="font-size:12px;color:var(--text);">'+escHtml(d)+'</span>';
+      eyHtml += '<span style="font-size:11px;color:var(--dim);">'+escHtml(e.cours==='yin'?'Yin':e.cours==='hatha'?'Hatha':'Forfait')+'</span>';
+      if (e.present===true)  eyHtml += '<span style="font-size:11px;color:#16a34a;">✓</span>';
+      if (e.present===false) eyHtml += '<span style="font-size:11px;color:#e65100;">✗</span>';
+      eyHtml += '</div>';
+    });
+    h += sec('🔎 Essais yoga', eyHtml);
+  }
+  if (!tangoActifs.length && !allYoga.length && !allEssai.length && !allEssaiYoga.length && !allCartes.length && !stageEntries.length) {
+    h += '<div style="color:var(--dim);font-style:italic;text-align:center;padding:20px 0;">Aucun historique trouvé</div>';
+  }
+  h += '<div style="padding:12px 0 4px;text-align:right;">';
+  h += '<button class="modal-cancel" onclick="fermerFicheEleve()">Fermer</button>';
+  h += '</div></div>';
+  box.innerHTML = h;
+  gel('modal-fiche-eleve').classList.add('vis');
+}
+
+function fermerFicheEleve() {
+  var ov = gel('modal-fiche-eleve');
+  if (ov) ov.classList.remove('vis');
 }
 
 function renderCompta() {
