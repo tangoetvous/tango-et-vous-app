@@ -7450,8 +7450,16 @@ async function handleCronRappelStageJ3(request, env) {
   const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
 
-  const d3 = new Date(); d3.setDate(d3.getDate()+3);
-  const targetDate = d3.toISOString().slice(0,10);
+  // Bug 1 fix: use date from request body if provided (workflow_dispatch override)
+  let _s4Body = {};
+  try { _s4Body = await request.json(); } catch {}
+  let targetDate;
+  if (_s4Body.date && /^\d{4}-\d{2}-\d{2}$/.test(_s4Body.date)) {
+    targetDate = _s4Body.date;
+  } else {
+    const d3 = new Date(); d3.setDate(d3.getDate()+3);
+    targetDate = d3.toISOString().slice(0,10);
+  }
 
   // Fetch stage address from Supabase params (global + per-date override)
   const _s4Sai = (function(iso){ const yr=parseInt(iso.slice(0,4)),mo=parseInt(iso.slice(5,7)); return mo>=9?(yr+'-'+(yr+1)):((yr-1)+'-'+yr); })(targetDate);
@@ -7465,12 +7473,33 @@ async function handleCronRappelStageJ3(request, env) {
   const _s4Adr       = (_s4StEntry.adresse && (_s4StEntry.adresse.nom||_s4StEntry.adresse.rue)) ? _s4StEntry.adresse : _s4GlobalAdr;
   const _s4LieuSection = (_s4Adr.nom||_s4Adr.rue) ? `<div style="border-top:1px solid #e8d5a0;padding:12px 18px 8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;">${_s4Adr.nom?`<strong>${_esc(_s4Adr.nom)}</strong><br/>`:''}${_s4Adr.rue?`${_esc(_s4Adr.rue)}<br/>`:''}${_s4Adr.transport?`<span style="font-size:12px;color:#666;">${_esc(_s4Adr.transport)}</span>`:''}</div></div>` : '';
 
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=eq.${targetDate}&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees`,
-    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
-  );
-  if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
-  const inscrits = await res.json();
+  // Dual query: new format (stage_date set) + old format (stage_date IS NULL, dates in donnees)
+  const [resNew, resOld] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=eq.${targetDate}&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=is.null&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+  ]);
+  if (!resNew.ok) return corsResponse({ ok: false, error: 'Supabase query failed (new)' }, 500, {}, request);
+  const inscritsNew = await resNew.json();
+  const inscritsOldRaw = resOld.ok ? (await resOld.json()) : [];
+  // Filter old-format: keep only those with a matching date entry in donnees.inscriptionsParDate
+  const inscritsOld = inscritsOldRaw.reduce(function(acc, e) {
+    const don = typeof e.donnees === 'string' ? JSON.parse(e.donnees || '{}') : (e.donnees || {});
+    const dateEntry = (don.inscriptionsParDate || []).find(function(d) { return d.date === targetDate; });
+    if (!dateEntry) return acc;
+    // Normalize to same shape as new-format: expose stagesDetail from the matching date entry
+    acc.push(Object.assign({}, e, { donnees: Object.assign({}, don, { stagesDetail: dateEntry.stagesDetail || dateEntry.slots || [] }) }));
+    return acc;
+  }, []);
+  // Merge and deduplicate by email (new-format takes priority)
+  const seenEmails = new Set(inscritsNew.map(function(e) { return (e.email || '').toLowerCase(); }));
+  const inscrits = inscritsNew.concat(inscritsOld.filter(function(e) {
+    const key = (e.email || '').toLowerCase();
+    if (seenEmails.has(key)) return false;
+    seenEmails.add(key);
+    return true;
+  }));
 
   const adminEmail  = 'tangoetvous@gmail.com';
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
