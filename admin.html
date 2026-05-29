@@ -1559,6 +1559,7 @@ function renderRechercheResultats(q) {
       zone: 'Élèves Tango', icon: '👥',
       prenom: e.prenom, nom: e.nom, email: e.email, tel: e.tel||'',
       detail: coursLbl + (e.role==='guideur'?' · Guideur·se':' · Guidé·e'),
+      role: e.role||'', coursKey: (e.ville||'')+'—'+(e.niveau||''),
       statut: e.statut, id: e.id,
       action: function(){ fermerRechercheGlobale(); switchTab('eleves-tango'); }
     });
@@ -1579,6 +1580,7 @@ function renderRechercheResultats(q) {
       zone: 'Inscriptions Tango', icon: '🎓',
       prenom: e.prenom, nom: e.nom, email: e.email, tel: e.tel||'',
       detail: coursLbl + ' · ' + statutLbl,
+      role: e.role||'', coursKey: (e.ville||'')+'—'+(e.niveau||''),
       statut: e.statut, id: e.id,
       action: function(){ fermerRechercheGlobale(); switchTab('cours-tango'); }
     });
@@ -1667,6 +1669,9 @@ function renderRechercheResultats(q) {
     byZone[h.zone].push(h);
   });
 
+  var _COURS_COLORS = {'paris—debutant':'#D4AF37','paris—intermediaire':'#00acc1','vincennes—debutant':'#ab47bc','vincennes—intermediaire':'#ff7043'};
+  var _COURS_LABELS = {'paris—debutant':'Paris Débutants','paris—intermediaire':'Paris Intermédiaires','vincennes—debutant':'Vincennes Débutants','vincennes—intermediaire':'Vincennes Intermédiaires'};
+  var _BDGS = 'display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;margin-right:4px;vertical-align:middle;';
   var html = '';
   Object.keys(byZone).forEach(function(zone) {
     var grp = byZone[zone];
@@ -1675,11 +1680,24 @@ function renderRechercheResultats(q) {
       var statutColor = h.statut==='inscrit'?'#4caf50':h.statut==='attente_paiement'?'#ff9800':h.statut==='demande'?'#ffd740':h.statut==='confirme'?'#4caf50':'#888';
       var telHtml = h.tel ? ' <a href="tel:' + h.tel + '" style="color:var(--dim);text-decoration:none;font-size:11px;" onclick="event.stopPropagation()">📞 ' + h.tel + '</a>' : '';
       var emailHtml = h.email ? ' <span style="color:var(--dim);font-size:11px;">· ' + escHtml(h.email) + '</span>' : '';
+      var detailHtml;
+      if (h.coursKey) {
+        var cC = _COURS_COLORS[h.coursKey] || '#888';
+        var cL = _COURS_LABELS[h.coursKey] || h.coursKey;
+        detailHtml = '<span style="' + _BDGS + 'background:' + cC + '22;color:' + cC + ';border:1px solid ' + cC + '44;">' + escHtml(cL) + '</span>';
+        if (h.role) {
+          var rC = h.role === 'guideur' ? '#1565c0' : '#c2185b';
+          var rL = h.role === 'guideur' ? 'Guideur·se' : 'Guidé·e';
+          detailHtml += '<span style="' + _BDGS + 'background:' + rC + '22;color:' + rC + ';border:1px solid ' + rC + '44;">' + escHtml(rL) + '</span>';
+        }
+      } else {
+        detailHtml = escHtml(h.detail);
+      }
       var idx = hi;
       html += '<div class="srch-hit" data-hitidx="' + hits.indexOf(h) + '" style="display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;" onmouseover="this.style.background=\'var(--s2)\'" onmouseout="this.style.background=\'\'" onclick="window._searchHits[' + hits.indexOf(h) + '].action()">'
         + '<div style="flex:1;min-width:0;">'
         + '<div style="font-weight:700;font-size:14px;color:var(--text);">' + escHtml((h.prenom||'') + ' ' + (h.nom||'').toUpperCase()) + emailHtml + '</div>'
-        + '<div style="font-size:12px;color:var(--dim);margin-top:2px;">' + escHtml(h.detail) + telHtml + '</div>'
+        + '<div style="font-size:12px;color:var(--dim);margin-top:2px;">' + detailHtml + telHtml + '</div>'
         + '</div>'
         + (h.statut ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:' + statutColor + '22;color:' + statutColor + ';border:1px solid ' + statutColor + '44;">' + escHtml(h.statut) + '</span>' : '')
         + '</div>';
