@@ -8705,16 +8705,16 @@ async function handleCronRelanceAbsences(request, env) {
       } catch(e) { console.error('[relance-absences] push error', e); }
 
       // Mettre à jour derniere_relance_abs pour éviter un double envoi la semaine prochaine
-      Promise.resolve(
-        fetch(`${SUPABASE_URL}/rest/v1/eleves?email=eq.${encodeURIComponent(String(eleve.email))}`, {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/eleves?email=eq.${encodeURIComponent(String(eleve.email))}`, {
           method: 'PATCH',
           headers: {
             'apikey': svcKey, 'Authorization': `Bearer ${svcKey}`,
             'Content-Type': 'application/json', 'Prefer': 'return=minimal',
           },
           body: JSON.stringify({ derniere_relance_abs: dateDerniere }),
-        })
-      ).catch(function(e) { console.error('[relance-absences] patch derniere_relance_abs error', e); });
+        });
+      } catch(e) { console.error('[relance-absences] patch derniere_relance_abs error', e); }
     }
   }
 
