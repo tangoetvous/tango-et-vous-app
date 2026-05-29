@@ -5429,3 +5429,44 @@ Les 3 fonctionnalités suivantes ont été décidées :
 2. **Dashboard saison** — nouveau tab `'dashboard'` avec : taux de remplissage par cours (guideurs/guidées vs CAP), total recette encaissée vs attendue, alertes (paiements en attente, cartes expirées, absences consécutives).
 
 3. **Fiche élève consolidée** — modal `ouvrirFicheEleve(email)` accessible depuis tous les onglets. Affiche : infos perso, inscriptions tango, yoga, stages, essais, présences carte 10, notes.
+
+---
+
+## Session 2026-05-29 (suite) — Recherche globale admin + Mode d'emploi + suppression Dashboard démo
+
+### ✅ Recherche globale admin (`admin.html`) — couleurs résultats
+
+La recherche globale (Ctrl+K) cherche dans tous les onglets. Les résultats sont colorés par source :
+- Couleurs retouchées pour améliorer la lisibilité sur fond sombre (commit `bb9c396`)
+
+### ✅ Onglet "Mode d'emploi" dans l'espace élève (`index.html`)
+
+Nouvel onglet `aide` ajouté dans la navigation de l'espace élève.
+
+**Navigation** : position dans `rows` de `renderNavOverlay()` — d'abord seul sur une ligne dédiée, puis déplacé sur la même ligne qu'Accueil : `['accueil', 'aide']`.
+
+**Entrées dans les dicts de navigation** :
+- `_TAB_LABELS` : `aide: 'Mode d\'emploi'`
+- `_NAV_DEFS` : `aide: { label:'Mode d\'emploi', color:'#67e8f9', svg:'...' }` (icône point d'interrogation)
+
+**Contenu (`#aide-pane`)** : accordéon de 20 sections `<details>/<summary>` couvrant toutes les rubriques du menu :
+🏠 Accueil · 💳 Forfait/Carte · 🎭 Stages · 🎯 Cours privé · 🌙 Milonga · 📅 Agenda · 🗺 Plan · 📰 Publications · 🏛 Sorano · 🎵 Musique (code promo `TangoEtVous40`) · 👟 Chaussures (adresses Lalatango + Miltango) · 🧘 Yoga · 🌀 Hypnose · ✉️ Contact · 💬 WhatsApp · 🗨 Discussions · ⭐ Avis · 🔔 Notifications · 📱 Installer l'application · 🔑 Connexion
+
+**CSS** : classes `.aide-section`, `.aide-body`, `.aide-tip` utilisant les variables CSS globales (`var(--card)`, `var(--border)`, `var(--text)`, `var(--gold)`, `var(--dim)`) — s'adapte automatiquement au thème sombre.
+
+### ✅ Suppression du Dashboard démo de l'interface élèves (`index.html`)
+
+Le mode démo (données fictives "Felipe") était accessible aux élèves via un bouton sur l'écran de connexion et via le panneau FAB de debug. Supprimé avant le lancement de l'appli auprès des vrais élèves.
+
+**4 emplacements supprimés** :
+
+| # | Emplacement | Ce qui a été retiré |
+|---|-------------|---------------------|
+| 1 | `initAuth()` | Lignes rendant `#demo-btn-wrap` visible au chargement |
+| 2 | HTML écran de connexion | `<div id="demo-btn-wrap">` avec bouton "Voir le dashboard démo" |
+| 3 | Listeners événements | `addEventListener('click')` sur `.btn-demo` |
+| 4 | Panneau FAB debug | Div + bouton "🎭 Mode démo (Felipe, 4/10 cours)" |
+
+**Ce qui a été conservé** : la fonction `demoLogin()` et `DEMO_DATA` restent dans le code pour les tests internes — seuls les éléments UI visibles par les élèves ont été retirés.
+
+**Commits** : `61d6cc3` (ajout aide + suppression démo) · `8b58510` (déplacement aide à côté d'Accueil)
