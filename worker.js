@@ -8533,6 +8533,11 @@ async function handleCronRelanceAbsences(request, env) {
     return past.slice(-2); // [avant-dernière, dernière]
   }
 
+  // Saison courante (septembre → août)
+  const _sYear = parseInt(today.slice(0, 4));
+  const _sMon  = parseInt(today.slice(5, 7));
+  const saisonCourante = (_sMon >= 9 ? _sYear : _sYear - 1) + '-' + (_sMon >= 9 ? _sYear + 1 : _sYear);
+
   let totalSent    = 0;
   let totalChecked = 0;
 
@@ -8564,6 +8569,22 @@ async function handleCronRelanceAbsences(request, env) {
       }
       eleves = await er.json();
     } catch(e) { console.error('[relance-absences] fetch eleves error (' + ville + ')', e); continue; }
+
+    // Ne garder que les élèves avec une inscription active pour cette ville/saison
+    const activeInscEmails = new Set();
+    try {
+      const ir = await fetch(
+        `${SUPABASE_URL}/rest/v1/inscriptions_cours?statut=eq.inscrit&ville=eq.${ville}&saison=eq.${encodeURIComponent(saisonCourante)}&select=email`,
+        { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+      );
+      if (ir.ok) {
+        const rows = await ir.json();
+        rows.forEach(function(r) { if (r.email) activeInscEmails.add(r.email.toLowerCase()); });
+      } else {
+        console.error('[relance-absences] inscriptions check error (' + ville + ')', await ir.text());
+      }
+    } catch(e) { console.error('[relance-absences] inscriptions fetch error (' + ville + ')', e); }
+    eleves = eleves.filter(function(e) { return activeInscEmails.has(String(e.email || '').toLowerCase()); });
 
     totalChecked += eleves.length;
 
