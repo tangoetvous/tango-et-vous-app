@@ -491,6 +491,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
         <button class="tab-btn" data-tab="discussions" style="color:#e879f9"><span class="tab-icon">🗨️</span><span class="tab-label">Discussions</span></button>
       </div>
       <div class="admin-nav-row">
+        <button class="tab-btn" data-tab="dashboard" style="color:#60a5fa"><span class="tab-icon">🏠</span><span class="tab-label">Dashboard</span></button>
         <button class="tab-btn" data-tab="compta" style="color:#34d399"><span class="tab-icon">💰</span><span class="tab-label">Compta</span></button>
       </div>
     </div>
@@ -5393,7 +5394,8 @@ function switchTab(tab) {
       'resa-salles':'🏢 Résa Salles','cours-particuliers':'🎵 Cours particuliers',
       'sorano':'🏛 Sorano','yoga':'🧘 Yoga','agenda':'📅 Agenda',
       'publications':'📝 Publications','whatsapp':'💬 WhatsApp','tarifs':'⚙️ Paramètres',
-      'discussions':'🗨️ Discussions','devis':'📋 Devis','notifications':'🔔 Notifications'
+      'discussions':'🗨️ Discussions','devis':'📋 Devis','notifications':'🔔 Notifications',
+      'compta':'💰 Compta','dashboard':'🏠 Dashboard'
     };
     _lbl.textContent = _LABELS[tab] || tab;
   }
@@ -5471,6 +5473,7 @@ function renderTab() {
     else if (currentTab==='devis')        html=renderDevis();
     else if (currentTab==='notifications') html=renderNotifications();
     else if (currentTab==='compta')        html=renderCompta();
+    else if (currentTab==='dashboard')    html=renderDashboard();
     if(isSaisonPassee()){
       var banner='<div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--warn-text);display:flex;align-items:center;gap:8px;">🔒 Saison '+saisonActive()+' archivée — consultation uniquement</div>';
       html='<div class="saison-archivee">'+banner+html+'</div>';
@@ -14454,6 +14457,199 @@ function _discEnvoyerMsg() {
       })).catch(function(){});
     }
   })();
+}
+
+function renderDashboard() {
+  var sai = saisonActive();
+  var todayStr = today();
+
+  // ── Tango fill rates ──────────────────────────────────────────────────────
+  var COURS_TANGO = [
+    {ville:'paris',     niveau:'debutant',      label:'Paris — Débutants'},
+    {ville:'paris',     niveau:'intermediaire',  label:'Paris — Intermédiaires'},
+    {ville:'vincennes', niveau:'debutant',       label:'Vincennes — Débutants'},
+    {ville:'vincennes', niveau:'intermediaire',  label:'Vincennes — Intermédiaires'},
+  ];
+
+  // ── Revenue (tango only, encaissé vs attendu) ─────────────────────────────
+  var STATUTS_PAY = {inscrit:true, attente_paiement:true};
+  var revEnc = 0, revAtt = 0;
+  var revByCours = {};
+  COURS_TANGO.forEach(function(c){ revByCours[c.ville+'—'+c.niveau] = {enc:0, att:0, label:c.label}; });
+
+  (adminData.coursTango||[]).forEach(function(e){
+    if (e._isRenewalRow) return;
+    if ((e.saison||'') !== sai) return;
+    if (!STATUTS_PAY[e.statut]) return;
+    var m = e.montant || 0;
+    var k = (e.ville||'') + '—' + (e.niveau||'');
+    if (e.statut === 'inscrit') {
+      revEnc += m;
+      if (revByCours[k]) revByCours[k].enc += m;
+    }
+    revAtt += m;
+    if (revByCours[k]) revByCours[k].att += m;
+  });
+
+  // ── Alerts ────────────────────────────────────────────────────────────────
+  // 1. Paiements en attente (attente_paiement)
+  var attPaiSet = {};
+  (adminData.coursTango||[]).forEach(function(e){
+    if (e._isRenewalRow) return;
+    if ((e.saison||'') !== sai) return;
+    if (e.statut === 'attente_paiement') attPaiSet[e.email] = (attPaiSet[e.email]||[]).concat(e);
+  });
+  var nbAttPai = Object.keys(attPaiSet).length;
+
+  // 2. Demandes en attente de validation
+  var demSet = {};
+  (adminData.coursTango||[]).forEach(function(e){
+    if (e._isRenewalRow) return;
+    if ((e.saison||'') !== sai) return;
+    if (e.statut === 'demande') demSet[e.email] = true;
+  });
+  var nbDemandes = Object.keys(demSet).length;
+
+  // 3. Cartes expirées avec cours restants
+  var carteExpSet = {};
+  (adminData.cartes||[]).forEach(function(c){
+    if (!c.expiration) return;
+    if (c.expiration >= todayStr) return;
+    if ((c.restants||0) <= 0) return;
+    if (c.statut === 'supprimé') return;
+    carteExpSet[c.email] = c;
+  });
+  var nbCarteExp = Object.keys(carteExpSet).length;
+
+  // 4. Cartes non payées
+  var carteNonPayeSet = {};
+  (adminData.cartes||[]).forEach(function(c){
+    if (c.paye === false || c.paye === 0) carteNonPayeSet[c.email] = c;
+  });
+  var nbCarteNonPaye = Object.keys(carteNonPayeSet).length;
+
+  // 5. Essai non pointés (date passée, presence_declaree null)
+  var essaiNonPointe = (adminData.essai||[]).filter(function(e){
+    return e.statut === 'confirme' && e.date < todayStr && e.present == null;
+  });
+
+  // ── Yoga fill rates ───────────────────────────────────────────────────────
+  var yinN = nbInscritsYoga('yin');
+  var hatN = nbInscritsYoga('hatha');
+
+  // ── HTML ──────────────────────────────────────────────────────────────────
+  var h = '<div style="padding:0 0 40px;">';
+  h += '<h2 style="margin:0 0 20px;font-size:18px;font-weight:700;color:var(--gold);">🏠 Dashboard — Saison '+escHtml(sai)+'</h2>';
+
+  // — Section alertes ————————————————————————————————————————————
+  var alerts = [];
+  if (nbAttPai > 0)      alerts.push({icon:'💳', label:nbAttPai+' paiement'+(nbAttPai>1?'s':'')+' en attente', tab:'cours-tango', color:'#e65100'});
+  if (nbDemandes > 0)    alerts.push({icon:'✋', label:nbDemandes+' demande'+(nbDemandes>1?'s':'')+' à valider', tab:'cours-tango', color:'#c2841b'});
+  if (nbCarteExp > 0)    alerts.push({icon:'⏰', label:nbCarteExp+' carte'+(nbCarteExp>1?'s':'')+' expirée'+(nbCarteExp>1?'s':'')+' (cours restants)', tab:'cartes', color:'#b91c1c'});
+  if (nbCarteNonPaye > 0) alerts.push({icon:'⚠️', label:nbCarteNonPaye+' carte'+(nbCarteNonPaye>1?'s':'')+' non payée'+(nbCarteNonPaye>1?'s':''), tab:'cartes', color:'#c2841b'});
+  if (essaiNonPointe.length > 0) alerts.push({icon:'📋', label:essaiNonPointe.length+' essai'+(essaiNonPointe.length>1?'s':'')+' non pointé'+(essaiNonPointe.length>1?'s':''), tab:'essai', color:'#6b7280'});
+
+  if (alerts.length > 0) {
+    h += '<div style="margin-bottom:24px;">';
+    h += '<div style="font-size:12px;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:10px;">Alertes</div>';
+    h += '<div style="display:flex;flex-wrap:wrap;gap:10px;">';
+    alerts.forEach(function(a){
+      h += '<button onclick="switchTab(\''+a.tab+'\')" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;border:1px solid '+a.color+'33;background:'+a.color+'18;cursor:pointer;font-size:13px;font-weight:600;color:'+a.color+';font-family:inherit;">';
+      h += '<span>'+a.icon+'</span><span>'+escHtml(a.label)+'</span>';
+      h += '</button>';
+    });
+    h += '</div></div>';
+  }
+
+  // — Section taux de remplissage ————————————————————————————————
+  h += '<div style="margin-bottom:24px;">';
+  h += '<div style="font-size:12px;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:10px;">Taux de remplissage</div>';
+  h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">';
+
+  COURS_TANGO.forEach(function(c){
+    var cap = capaciteCours(c.ville, c.niveau);
+    var pGui = cap.gui; var pGde = cap.gde;
+    var mGui = cap.maxGui; var mGde = cap.maxGde;
+    var pctGui = Math.round(pGui/mGui*100);
+    var pctGde = Math.round(pGde/mGde*100);
+    var colGui = pGui>=mGui ? '#dc2626' : pGui>=mGui*0.85 ? '#e65100' : '#16a34a';
+    var colGde = pGde>=mGde ? '#dc2626' : pGde>=mGde*0.85 ? '#e65100' : '#16a34a';
+
+    h += '<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">';
+    h += '<div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:10px;">'+escHtml(c.label)+'</div>';
+    // Guideurs
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+    h += '<span style="font-size:12px;color:var(--dim);">👨 Guideurs</span>';
+    h += '<span style="font-size:14px;font-weight:700;color:'+colGui+';">'+pGui+' / '+mGui+'</span>';
+    h += '</div>';
+    h += '<div style="background:var(--s3);border-radius:4px;height:6px;margin-bottom:10px;overflow:hidden;">';
+    h += '<div style="background:'+colGui+';height:100%;width:'+Math.min(pctGui,100)+'%;transition:width .3s;border-radius:4px;"></div>';
+    h += '</div>';
+    // Guidées
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+    h += '<span style="font-size:12px;color:var(--dim);">👩 Guidées</span>';
+    h += '<span style="font-size:14px;font-weight:700;color:'+colGde+';">'+pGde+' / '+mGde+'</span>';
+    h += '</div>';
+    h += '<div style="background:var(--s3);border-radius:4px;height:6px;overflow:hidden;">';
+    h += '<div style="background:'+colGde+';height:100%;width:'+Math.min(pctGde,100)+'%;transition:width .3s;border-radius:4px;"></div>';
+    h += '</div>';
+    h += '</div>';
+  });
+
+  // Yoga
+  [{label:'🧘 Yin Yoga', n:yinN}, {label:'🧘 Hatha Yoga', n:hatN}].forEach(function(y){
+    var pct = Math.round(y.n/CAP_YOGA*100);
+    var col = y.n>=CAP_YOGA ? '#dc2626' : y.n>=CAP_YOGA*0.85 ? '#e65100' : '#16a34a';
+    h += '<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">';
+    h += '<div style="font-size:12px;font-weight:700;color:var(--dim);margin-bottom:10px;">'+y.label+'</div>';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+    h += '<span style="font-size:12px;color:var(--dim);">Inscrits</span>';
+    h += '<span style="font-size:14px;font-weight:700;color:'+col+';">'+y.n+' / '+CAP_YOGA+'</span>';
+    h += '</div>';
+    h += '<div style="background:var(--s3);border-radius:4px;height:6px;overflow:hidden;">';
+    h += '<div style="background:'+col+';height:100%;width:'+Math.min(pct,100)+'%;transition:width .3s;border-radius:4px;"></div>';
+    h += '</div>';
+    h += '</div>';
+  });
+
+  h += '</div></div>';
+
+  // — Section recette ────────────────────────────────────────────
+  h += '<div style="margin-bottom:24px;">';
+  h += '<div style="font-size:12px;font-weight:700;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:10px;">Recette tango — Saison '+escHtml(sai)+'</div>';
+  h += '<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden;">';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
+  h += '<thead><tr style="border-bottom:1px solid var(--border);">';
+  h += '<th style="text-align:left;padding:10px 14px;color:var(--dim);font-weight:600;">Cours</th>';
+  h += '<th style="text-align:right;padding:10px 14px;color:var(--dim);font-weight:600;">Encaissé</th>';
+  h += '<th style="text-align:right;padding:10px 14px;color:var(--dim);font-weight:600;">Attendu</th>';
+  h += '<th style="text-align:right;padding:10px 14px;color:var(--dim);font-weight:600;">Manquant</th>';
+  h += '</tr></thead><tbody>';
+
+  COURS_TANGO.forEach(function(c, i){
+    var k = c.ville+'—'+c.niveau;
+    var rv = revByCours[k];
+    var manque = rv.att - rv.enc;
+    var bg = i%2===1 ? 'background:var(--s3);' : '';
+    h += '<tr style="'+bg+'">';
+    h += '<td style="padding:9px 14px;color:var(--text);">'+escHtml(c.label)+'</td>';
+    h += '<td style="padding:9px 14px;text-align:right;font-weight:600;color:#16a34a;">'+rv.enc+'€</td>';
+    h += '<td style="padding:9px 14px;text-align:right;color:var(--dim);">'+rv.att+'€</td>';
+    h += '<td style="padding:9px 14px;text-align:right;color:'+(manque>0?'#e65100':'var(--dim)');+';">'+manque+'€</td>';
+    h += '</tr>';
+  });
+
+  h += '<tr style="border-top:2px solid var(--border);">';
+  h += '<td style="padding:10px 14px;font-weight:700;color:var(--text);">Total</td>';
+  h += '<td style="padding:10px 14px;text-align:right;font-weight:700;color:#16a34a;">'+revEnc+'€</td>';
+  h += '<td style="padding:10px 14px;text-align:right;font-weight:700;color:var(--dim);">'+revAtt+'€</td>';
+  h += '<td style="padding:10px 14px;text-align:right;font-weight:700;color:'+(revAtt-revEnc>0?'#e65100':'var(--dim)')+';">'+(revAtt-revEnc)+'€</td>';
+  h += '</tr>';
+  h += '</tbody></table>';
+  h += '</div></div>';
+
+  h += '</div>';
+  return h;
 }
 
 function renderCompta() {
