@@ -1090,6 +1090,8 @@ var sousOngletCoursTango = 'tous'; // tous|attente_validation|valide|attente_pai
 var sousOngletEleves     = 'paris-deb'; // paris-deb|paris-int|vincennes-deb|vincennes-int
 var rechercheEleve       = '';
 var sousOngletYoga    = 'essai';      // essai | eleves
+var _essaiHistoriqueData = null;  // null = pas chargé, array = chargé
+var _yogaHistoriqueData  = null;
 var sousOngletCompta  = 'tango';      // tango | yoga | stages | tresorerie
 var _tresoSelected    = {};  // key→{source_table,source_id,type,montant,nom,prenom,email,saison,chqEmetteur,chqNumero,chqBanque,chqPhotoUrl}
 var _tresoVue         = 'deposer'; // 'deposer' | 'remises'
@@ -7650,6 +7652,7 @@ function renderEssai() {
     +'<button class="sub-tab'+(filtreEssai==='inscrire'?' active':'')+'" data-filt-essai="inscrire">&#43; Inscrire</button>'
     +'<button class="sub-tab'+(filtreEssai==='supprimes'?' active':'')+'" data-filt-essai="supprimes">🗑 Supprimés'
       +(function(){ var n=(adminData.essai||[]).filter(function(e){return e.statut==='supprimé'&&dateAppartientSaison(e.date,sai);}).length; return n?' ('+n+')':''; })()+'</button>'
+    +'<button class="sub-tab'+(filtreEssai==='historique'?' active':'')+'" data-filt-essai="historique">📋 Historique</button>'
     +'</div>'
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" data-action="rafraichir-essais">&#8635; Rafraîchir</button>':'')
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerEssaiTango()">🖨️ Imprimer</button>':'')
@@ -7705,6 +7708,8 @@ function renderEssai() {
       +hdrHtml+'<span class="mois-acc-arrow">'+(isOpen?'▼':'▶')+'</span></div>'
       +'<div id="'+id+'"'+(isOpen?'':' style="display:none;"')+'>'+bodyHtml+'</div>';
   }
+
+  if (filtreEssai==='historique') return h + renderEssaiHistorique();
 
   if (filtreEssai==='inscrire') {
     return h + '<div style="margin:-14px;">'
@@ -8111,6 +8116,84 @@ function renderEssai() {
   h += futureBodyDN;
   return h;
 }
+
+function renderEssaiHistorique() {
+  if (_essaiHistoriqueData === null) {
+    // Déclencher le chargement async
+    _essaiHistoriqueData = [];
+    (async function() {
+      try {
+        var today = new Date(); today.setHours(0,0,0,0);
+        var todayISO = today.toISOString().slice(0,10);
+        var res = await TEV.client.from('inscriptions_essai')
+          .select('*')
+          .lt('date_essai', todayISO)
+          .order('date_essai', { ascending: false })
+          .limit(500);
+        if (res.error) throw res.error;
+        _essaiHistoriqueData = res.data || [];
+      } catch(e) {
+        console.error('[historique essai]', e);
+        _essaiHistoriqueData = [];
+      }
+      renderTab();
+    })();
+    return '<div style="text-align:center;padding:40px;color:var(--dim);">⏳ Chargement de l\'historique…</div>';
+  }
+
+  var recherche = (rechercheEleve||'').toLowerCase().trim();
+  var liste = _essaiHistoriqueData.filter(function(e) {
+    if (!recherche) return true;
+    var hay = ((e.prenom||'')+' '+(e.nom||'')+' '+(e.email||'')).toLowerCase();
+    return hay.indexOf(recherche) !== -1;
+  });
+
+  var h = '<div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="_essaiHistoriqueData=null;renderTab();">🔄 Recharger</button>'
+    +'</div>';
+
+  if (liste.length === 0) {
+    return h + '<div class="empty-state">' + (recherche ? 'Aucun résultat pour "'+escHtml(recherche)+'"' : 'Aucun cours d\'essai passé.') + '</div>';
+  }
+
+  // Grouper par date (desc)
+  var byDate = {};
+  liste.forEach(function(e) {
+    var d = e.date_essai || '';
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(e);
+  });
+  var dates = Object.keys(byDate).sort().reverse();
+
+  dates.forEach(function(dateStr) {
+    var grp = byDate[dateStr];
+    var dateLabel = fmtDate(dateStr);
+    h += '<div style="margin-bottom:16px;">';
+    h += '<div style="font-size:13px;font-weight:700;color:var(--gold);padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:6px;">📅 ' + escHtml(dateLabel) + '</div>';
+    grp.forEach(function(e) {
+      var villeLabel = e.ville === 'vincennes' ? 'Vincennes' : 'Paris';
+      var nivLabel   = e.niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
+      var roleLabel  = e.role === 'guidee' ? 'Guidée' : (e.role === 'double' ? 'Double' : 'Guideur·se');
+      var roleCls    = e.role === 'guidee' ? '#c2185b' : '#1565c0';
+      var statut     = e.statut || '';
+      var statutBg   = statut === 'confirme' ? '#1b4620' : (statut === 'supprimé' ? '#2a0a0a' : '#2a1e00');
+      var statutTxt  = statut === 'confirme' ? '#81c784' : (statut === 'supprimé' ? '#ef9a9a' : '#ffcc80');
+      var statutLbl  = statut === 'confirme' ? '✓ Présent·e' : (statut === 'supprimé' ? '✕ Supprimé·e' : '⏳ Attente');
+      var pres       = e.presence_declaree === true ? ' 👍' : (e.presence_declaree === false ? ' 🚫' : '');
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:1px solid var(--border);flex-wrap:wrap;">'
+        + '<span style="flex:1;min-width:160px;">' + nomCliquable((e.prenom||'')+' '+(e.nom||''), e.email||'', e.tel||'', 'essai') + pres + '</span>'
+        + '<span style="font-size:11px;color:var(--dim);">' + escHtml(villeLabel) + ' ' + escHtml(nivLabel) + '</span>'
+        + '<span style="display:inline-block;background:'+roleCls+';color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">' + escHtml(roleLabel) + '</span>'
+        + '<span style="display:inline-block;background:'+statutBg+';color:'+statutTxt+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">' + escHtml(statutLbl) + '</span>'
+        + (e.partenaire ? '<span style="font-size:11px;color:var(--dim);">👫 '+escHtml(e.partenaire)+'</span>' : '')
+        + '</div>';
+    });
+    h += '</div>';
+  });
+
+  return h;
+}
+
 function valGuideeEssai(email, date, btn, id) {
   btn.disabled=true; btn.textContent='⏳';
 
@@ -12258,11 +12341,13 @@ function renderYoga() {
     +'<button class="sub-tab'+(sousOngletYoga==='inscrire-essai'?' active':'')+'" data-sous-yoga="inscrire-essai">✏️ Inscrire Essai</button>'
     +'<button class="sub-tab'+(sousOngletYoga==='inscrire-eleve'?' active':'')+'" data-sous-yoga="inscrire-eleve">✏️ Inscrire Élève</button>'
     +'<button class="sub-tab'+(sousOngletYoga==='supprimes'?' active':'')+'" data-sous-yoga="supprimes" style="'+(nbSuppr?'color:#ff6b6b;':'')+'">🗑 Supprimés'+(nbSuppr?' ('+nbSuppr+')':'')+'</button>'
+    +'<button class="sub-tab'+(sousOngletYoga==='historique'?' active':'')+'" data-sous-yoga="historique">📋 Historique</button>'
     +'</div>';
   if (sousOngletYoga==='eleves')          return h + renderYogaEleves();
   if (sousOngletYoga==='inscrire-essai')  return h + renderYogaInscrireEssai();
   if (sousOngletYoga==='inscrire-eleve')  return h + renderYogaInscrireEleve();
   if (sousOngletYoga==='supprimes')       return h + renderYogaSupprimes();
+  if (sousOngletYoga==='historique')      return h + renderYogaHistorique();
   return h + renderYogaEssai();
 }
 
@@ -12356,6 +12441,79 @@ function renderYogaEssai() {
     });
     h += '</div>';
   });
+  return h;
+}
+
+function renderYogaHistorique() {
+  if (_yogaHistoriqueData === null) {
+    _yogaHistoriqueData = [];
+    (async function() {
+      try {
+        var today = new Date(); today.setHours(0,0,0,0);
+        var todayISO = today.toISOString().slice(0,10);
+        var res = await TEV.client.from('inscriptions_essai_yoga')
+          .select('*')
+          .lt('date_essai', todayISO)
+          .order('date_essai', { ascending: false })
+          .limit(500);
+        if (res.error) throw res.error;
+        _yogaHistoriqueData = res.data || [];
+      } catch(e) {
+        console.error('[historique essai yoga]', e);
+        _yogaHistoriqueData = [];
+      }
+      renderTab();
+    })();
+    return '<div style="text-align:center;padding:40px;color:var(--dim);">⏳ Chargement de l\'historique…</div>';
+  }
+
+  var recherche = (rechercheEleve||'').toLowerCase().trim();
+  var liste = _yogaHistoriqueData.filter(function(e) {
+    if (!recherche) return true;
+    var hay = ((e.prenom||'')+' '+(e.nom||'')+' '+(e.email||'')).toLowerCase();
+    return hay.indexOf(recherche) !== -1;
+  });
+
+  var h = '<div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="_yogaHistoriqueData=null;renderTab();">🔄 Recharger</button>'
+    +'</div>';
+
+  if (liste.length === 0) {
+    return h + '<div class="empty-state">' + (recherche ? 'Aucun résultat pour "'+escHtml(recherche)+'"' : 'Aucun essai yoga passé.') + '</div>';
+  }
+
+  var byDate = {};
+  liste.forEach(function(e) {
+    var d = e.date_essai || '';
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(e);
+  });
+  var dates = Object.keys(byDate).sort().reverse();
+
+  dates.forEach(function(dateStr) {
+    var grp = byDate[dateStr];
+    var dateLabel = fmtDate(dateStr);
+    h += '<div style="margin-bottom:16px;">';
+    h += '<div style="font-size:13px;font-weight:700;color:var(--gold);padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:6px;">📅 ' + escHtml(dateLabel) + '</div>';
+    grp.forEach(function(e) {
+      var cours = e.cours || '';
+      var coursBg  = cours === 'yin' ? '#1a237e' : (cours === 'hatha' ? '#1b5e20' : '#4a148c');
+      var coursTxt = cours === 'yin' ? '#90caf9' : (cours === 'hatha' ? '#a5d6a7' : '#ce93d8');
+      var coursLbl = cours === 'yin' ? 'Yin Yoga' : (cours === 'hatha' ? 'Hatha Yoga' : 'Forfait');
+      var statut   = e.statut || '';
+      var statutBg = statut === 'confirme' ? '#1b4620' : (statut === 'supprimé' ? '#2a0a0a' : '#2a1e00');
+      var statutTxt= statut === 'confirme' ? '#81c784' : (statut === 'supprimé' ? '#ef9a9a' : '#ffcc80');
+      var statutLbl= statut === 'confirme' ? '✓ Confirmé·e' : (statut === 'supprimé' ? '✕ Supprimé·e' : '⏳ Attente');
+      var pres     = e.presence_declaree === true ? ' 👍' : (e.presence_declaree === false ? ' 🚫' : '');
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:1px solid var(--border);flex-wrap:wrap;">'
+        + '<span style="flex:1;min-width:160px;">' + nomCliquable((e.prenom||'')+' '+(e.nom||''), e.email||'', e.tel||'', 'yoga') + pres + '</span>'
+        + '<span style="display:inline-block;background:'+coursBg+';color:'+coursTxt+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">' + escHtml(coursLbl) + '</span>'
+        + '<span style="display:inline-block;background:'+statutBg+';color:'+statutTxt+';font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">' + escHtml(statutLbl) + '</span>'
+        + '</div>';
+    });
+    h += '</div>';
+  });
+
   return h;
 }
 
