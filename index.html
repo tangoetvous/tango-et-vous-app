@@ -2272,6 +2272,10 @@
       const { error } = await TEV.client.from('eleves').update({ visible_repertoire: val }).eq('email', email);
       if (error) throw error;
       eleveData.eleve.visible_repertoire = val;
+      const slider = document.querySelector('#repertoire-toggle + span');
+      const dot    = document.querySelector('#repertoire-toggle + span + span');
+      if (slider) slider.style.background = val ? 'var(--gold)' : '#555';
+      if (dot)    dot.style.left          = val ? '23px' : '3px';
     } catch(e) {
       alert('Erreur lors de la mise à jour. Réessayez.');
       // Revert toggle state
