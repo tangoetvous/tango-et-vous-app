@@ -1214,13 +1214,14 @@ async function handleCronEssaiJ1(request, env) {
   const nivLabel   = (n) => n === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
   const adminEmail = 'tangoetvous@gmail.com';
 
-  function getHoraire(ville) {
+  function getHoraire(ville, niveau) {
     const key = `tev_params_${ville}_${sai}`;
     const p = params[key] || {};
-    const hor = (p.horaires || {})[ville === 'vincennes' ? 'vincennes' : 'paris'] || {};
-    const deb = hor.debut || (ville === 'vincennes' ? '20h30' : '20h30');
-    const fin = hor.fin   || (ville === 'vincennes' ? '22h00' : '22h00');
-    return `${deb}–${fin}`;
+    const horaires = p.horaires || {};
+    const nk = niveau === 'intermediaire' ? 'int' : 'deb';
+    const debut = typeof horaires[nk] === 'string' ? horaires[nk] : '';
+    const fin = horaires[nk + '_fin'] || '';
+    return debut && fin ? `${debut}–${fin}` : debut || '';
   }
   function getAdresse(ville) {
     const key = `tev_params_${ville}_${sai}`;
@@ -1264,15 +1265,16 @@ async function handleCronEssaiJ1(request, env) {
     const dateCours = fmtDate(targetDate);
     const ville = ins.ville || 'paris';
     const niveau = ins.niveau || 'debutant';
-    const horaire = getHoraire(ville);
+    const horaire = getHoraire(ville, niveau);
     const adresse = getAdresse(ville);
     const livret = getLivret(ville, niveau);
     const coursAff = `${villeLabel(ville)} — ${nivLabel(niveau)}`;
     // Horaire début seul (pour la référence dans l'email)
     const pVilleKey = `tev_params_${ville}_${sai}`;
     const pVille = params[pVilleKey] || {};
-    const horObj = (pVille.horaires || {})[ville === 'vincennes' ? 'vincennes' : 'paris'] || {};
-    const horaireDebut = horObj.debut || '';
+    const _horairesRef = pVille.horaires || {};
+    const _nkRef = niveau === 'intermediaire' ? 'int' : 'deb';
+    const horaireDebut = typeof _horairesRef[_nkRef] === 'string' ? _horairesRef[_nkRef] : '';
     const dateHoraireRef = horaireDebut ? `${dateCours} à ${horaireDebut}` : dateCours;
 
     // AssoConnect URL (cours)
@@ -5392,8 +5394,10 @@ async function handleCronEssaiRappelJ7(request, env) {
   const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
 
-  const d7 = new Date(); d7.setDate(d7.getDate()+7);
-  const targetDate = d7.toISOString().slice(0,10);
+  let body = {};
+  try { body = await request.json(); } catch(_) {}
+  let targetDate = body.date;
+  if (!targetDate) { const d7 = new Date(); d7.setDate(d7.getDate()+7); targetDate = d7.toISOString().slice(0,10); }
 
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/inscriptions_essai?date_essai=eq.${targetDate}&statut=eq.confirme&type=eq.tango&select=id,email,prenom,nom,ville,niveau,date_essai,role,partenaire`,
@@ -5787,8 +5791,10 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
   const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   function fmtDate(iso) { const d = new Date(iso+'T12:00:00'); return JOURS_L[d.getDay()]+' '+d.getDate()+' '+MOIS_L[d.getMonth()]+' '+d.getFullYear(); }
 
-  const d3 = new Date(); d3.setDate(d3.getDate()+3);
-  const targetDate = d3.toISOString().slice(0,10);
+  let body = {};
+  try { body = await request.json(); } catch(_) {}
+  let targetDate = body.date;
+  if (!targetDate) { const d3 = new Date(); d3.setDate(d3.getDate()+3); targetDate = d3.toISOString().slice(0,10); }
 
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/inscriptions_essai_yoga?date_essai=eq.${targetDate}&statut=eq.confirme&select=id,email,prenom,nom,cours,date_essai`,
@@ -5893,7 +5899,7 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: adminYogaEmail }, to: [{ email: String(e.email) }], subject: `Rappel — votre essai yoga a lieu dans 3 jours — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, replyTo: { email: adminYogaEmail, name: 'Florencia Garcia' }, to: [{ email: String(e.email) }], subject: `Rappel — votre essai yoga a lieu dans 3 jours — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
       });
       if (r.ok) sent++;
     } catch(err) { console.error('[cron-essai-yoga-rappel-j3] brevo error', err); }
