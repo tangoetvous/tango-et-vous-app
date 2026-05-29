@@ -190,10 +190,6 @@
   // AUTH — OBSERVER (Supabase onAuthStateChange)
   // ================================================================
   function initAuth() {
-    // Toujours afficher le bouton démo
-    const demoWrap = $('demo-btn-wrap');
-    if (demoWrap) demoWrap.style.display = 'block';
-
     // Supabase gère automatiquement la redirection OTP
     TEV.onAuthChange(async (event, session) => {
       if (session && session.user) {
@@ -645,7 +641,8 @@
         actu:'Publications', contact:'Contact', yoga:'Yoga', preinscription:'Pré-inscription',
         hypnose:'Hypnose', whatsapp:'WhatsApp', avis:'Avis', sorano:'Sorano',
         musique:'Musique', chaussures:'Chaussures',
-        notifications:'Notifications'
+        notifications:'Notifications',
+        aide:'Mode d\'emploi'
       };
       _navLbl.textContent = _TAB_LABELS[tab] || tab;
     }
@@ -1336,7 +1333,8 @@
     discussions:          {label:'Discussions',  color:'#e879f9', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>'},
     sorano:               {label:'Sorano',       color:'#2dd4bf', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 3L2 12h3v8h6v-5h2v5h6v-8h3L12 3zm0 12.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>'},
     musique:              {label:'Musique',      color:'#fb923c', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>'},
-    chaussures:           {label:'Chaussures',   color:'#f472b6', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M22 18L22 21L19 21C16 21 11 19 9 17C7 15 5 12 4 9L3 9L3 21L4 21L4 11C7 12 11 13 13 15C16 17 19 18 22 18Z"/></svg>'}
+    chaussures:           {label:'Chaussures',   color:'#f472b6', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M22 18L22 21L19 21C16 21 11 19 9 17C7 15 5 12 4 9L3 9L3 21L4 21L4 11C7 12 11 13 13 15C16 17 19 18 22 18Z"/></svg>'},
+    aide:                 {label:'Mode d\'emploi', color:'#67e8f9', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>'}
   };
 
   function renderNavOverlay() {
@@ -1350,7 +1348,8 @@
       ['carte', 'stages', 'cours-particuliers', 'milonga', ...(isPreinscPeriod ? ['preinscription'] : [])],
       ['agenda', 'carte-lieux', 'actu', ...(hasVincennesNav ? ['sorano'] : [])],
       ['musique', 'chaussures', 'yoga', 'hypnose'],
-      ['contact', 'whatsapp', 'discussions', 'avis']
+      ['contact', 'whatsapp', 'discussions', 'avis'],
+      ['aide']
     ];
     let h = '';
     rows.forEach(row => {
@@ -3980,8 +3979,6 @@
     if (btnMagic) btnMagic.addEventListener('click', () => window.sendMagicLink());
     const authEmail = $('auth-email');
     if (authEmail) authEmail.addEventListener('keydown', e => { if (e.key === 'Enter') window.sendMagicLink(); });
-    const btnDemo = document.querySelector('.btn-demo');
-    if (btnDemo) btnDemo.addEventListener('click', () => window.demoLogin());
     const btnVerifyOtp = $('btn-verify-otp');
     if (btnVerifyOtp) btnVerifyOtp.addEventListener('click', () => window.verifyOtp());
     const authOtp = $('auth-otp');
@@ -5050,10 +5047,6 @@ a{color:var(--gold);text-decoration:none;}
       </div>
       <button class="btn-primary" id="btn-magic">Recevoir mon code de connexion</button>
       <div class="msg" id="auth-msg"></div>
-      <div id="demo-btn-wrap">
-        <p style="font-size:11px;color:#444;margin-bottom:8px;letter-spacing:1px;">— MODE DÉMONSTRATION —</p>
-        <button class="btn-demo">Voir le dashboard démo</button>
-      </div>
       <p class="auth-mention">Vos données sont utilisées uniquement pour la gestion de votre inscription.<br/>© Tango &amp; Vous — Le Regard Se Pose</p>
     </div>
   </div>
@@ -5475,6 +5468,342 @@ a{color:var(--gold);text-decoration:none;}
       </a>
 
     </div>
+  </div>
+
+  <!-- ── ONGLET MODE D'EMPLOI ─────────────────────────────── -->
+  <div class="tab-pane" id="aide-pane">
+    <div class="tab-section-title">❓ Mode d'emploi</div>
+    <div style="font-size:14px;color:var(--dim);margin-bottom:18px;line-height:1.6;">
+      Bienvenue dans votre espace élève Tango&nbsp;&amp;&nbsp;Vous&nbsp;!<br>
+      Retrouvez ici le guide de chaque rubrique du menu.
+    </div>
+
+    <style>
+      .aide-section { background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden; }
+      .aide-section summary { display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;list-style:none;font-size:14px;font-weight:700;color:var(--text); }
+      .aide-section summary::-webkit-details-marker { display:none; }
+      .aide-section summary .aide-ico { font-size:20px;flex-shrink:0; }
+      .aide-section summary .aide-arrow { margin-left:auto;font-size:12px;color:var(--dim);transition:transform .2s; }
+      .aide-section[open] summary .aide-arrow { transform:rotate(90deg); }
+      .aide-body { padding:0 16px 16px;font-size:13px;color:var(--text);line-height:1.75; }
+      .aide-body p { margin:0 0 10px; }
+      .aide-body ul { margin:4px 0 10px 16px;padding:0; }
+      .aide-body li { margin-bottom:4px; }
+      .aide-body strong { color:var(--gold); }
+      .aide-tip { background:#1a1400;border-left:3px solid var(--gold);border-radius:6px;padding:10px 12px;margin:10px 0;font-size:12px;color:var(--dim); }
+    </style>
+
+    <!-- Accueil -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🏠</span>Accueil<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>La page d'accueil est votre <strong>tableau de bord</strong> personnel. Elle affiche en un coup d'œil :</p>
+        <ul>
+          <li><strong>Prochain cours</strong> — date, horaire et lieu de votre prochain cours de tango. Un bouton 🚫&nbsp;Absent vous permet de signaler votre absence à l'avance.</li>
+          <li><strong>Prochaine milonga</strong> — la prochaine soirée dansante organisée par Tango&nbsp;&amp;&nbsp;Vous.</li>
+          <li><strong>Prochain stage</strong> — le prochain stage à venir si vous êtes inscrit·e.</li>
+        </ul>
+        <p>Vous pouvez également modifier <strong>votre numéro de téléphone</strong> directement depuis cette page (section «&nbsp;📋 Mes coordonnées&nbsp;») et ajouter ou changer <strong>votre photo de profil</strong>.</p>
+        <div class="aide-tip">💡 Pour changer votre adresse email, utilisez le lien indiqué dans la section Coordonnées — le changement se fait par retour à Florencia ou Jérémy.</div>
+      </div>
+    </details>
+
+    <!-- Forfait / Carte -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">💳</span>Forfait / Carte<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Cette rubrique affiche le suivi de votre <strong>carte de 10 cours</strong> ou de votre <strong>forfait annuel</strong>.</p>
+        <p><strong>Carte de 10 cours :</strong></p>
+        <ul>
+          <li>Une jauge circulaire indique le nombre de cours utilisés et ceux restants.</li>
+          <li>La <strong>date d'expiration</strong> est calculée automatiquement depuis votre premier cours (environ 3 mois, vacances incluses).</li>
+          <li>Un badge indique si votre carte est <strong>payée</strong> ou <strong>en attente de paiement</strong>.</li>
+          <li>Bouton <strong>«&nbsp;✓ Je pointe ma présence&nbsp;»</strong> — à utiliser le jour du cours pour enregistrer votre présence et décompter un cours de votre carte.</li>
+          <li>Bouton <strong>«&nbsp;↻ Renouveler sans payer pour l'instant&nbsp;»</strong> — apparaît quand votre carte est à 10/10. Permet de continuer à venir tout en finalisant le paiement sur AssoConnect ultérieurement.</li>
+        </ul>
+        <p><strong>Forfait annuel :</strong> affiche le statut de votre inscription pour la saison en cours.</p>
+        <div class="aide-tip">💡 Vous pouvez pointer jusqu'à 2 cours par jour si vous êtes inscrit·e à 2 cours différents.</div>
+      </div>
+    </details>
+
+    <!-- Stages -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🎭</span>Stages<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Consultez les <strong>prochains stages de tango</strong> et accédez au formulaire d'inscription.</p>
+        <ul>
+          <li>Chaque date de stage est présentée en accordéon avec les créneaux disponibles, leurs thèmes, horaires et tarifs.</li>
+          <li>Les stages passés sont également visibles plus bas.</li>
+          <li>Le bouton <strong>«&nbsp;📝 Réserver&nbsp;»</strong> ouvre le formulaire d'inscription.</li>
+        </ul>
+        <p><strong>Tarifs indicatifs par journée :</strong></p>
+        <ul>
+          <li>Technique seule (1h) : 20€</li>
+          <li>1 stage : 25€ · 2 stages : 45€ · 3 stages : 65€ · 4 stages : 85€</li>
+          <li>2 stages + Technique : 60€ · 3 + Tech : 75€ · 4 + Tech : 95€</li>
+        </ul>
+        <div class="aide-tip">💡 Le règlement se fait sur place le jour du stage. Prévoyez l'appoint.</div>
+      </div>
+    </details>
+
+    <!-- Cours privé -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🎯</span>Cours privé<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Envoyez une <strong>demande de cours particulier</strong> à Florencia et/ou Jérémy.</p>
+        <p>Le formulaire vous permet de préciser :</p>
+        <ul>
+          <li>Le professeur souhaité, la durée et le lieu</li>
+          <li>Vos objectifs (découverte, chorégraphie, accordage de couple…)</li>
+          <li>Vos disponibilités et les dates proposées</li>
+        </ul>
+        <p>Un récapitulatif vous est envoyé par email dès réception de votre demande. Florencia ou Jérémy vous recontacte pour confirmer le créneau.</p>
+      </div>
+    </details>
+
+    <!-- Milonga -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🌙</span>Milonga<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Consultez les <strong>prochaines soirées milonga</strong> organisées par l'association.</p>
+        <ul>
+          <li>Pour chaque milonga, indiquez si vous comptez venir via le bouton <strong>«&nbsp;Je pense venir&nbsp;»</strong>.</li>
+          <li>Vous pouvez voir <strong>«&nbsp;Qui sera là&nbsp;?&nbsp;»</strong> — la liste des autres élèves ayant confirmé leur venue.</li>
+          <li>Le bouton <strong>«&nbsp;Annuler ma venue&nbsp;»</strong> est toujours disponible si vos plans changent.</li>
+        </ul>
+        <div class="aide-tip">💡 Les milongas apparaissent également dans votre Agenda et dans les Publications.</div>
+      </div>
+    </details>
+
+    <!-- Agenda -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">📅</span>Agenda<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Visualisez tous les <strong>événements à venir</strong> : cours, stages, milongas et cours de yoga.</p>
+        <p>Deux vues sont disponibles :</p>
+        <ul>
+          <li><strong>Liste</strong> — tous les événements filtrables par type (Paris, Vincennes, Yoga, Stages, Milongas).</li>
+          <li><strong>Abonnements</strong> — ajoutez les dates directement dans votre calendrier téléphone (Google Agenda, Apple Calendrier). L'agenda se met à jour automatiquement toutes les 6h.</li>
+        </ul>
+        <div class="aide-tip">💡 Sur iPhone : touchez le lien d'abonnement puis «&nbsp;S'abonner&nbsp;» pour ajouter le calendrier directement. Sur Android : copiez l'URL et collez-la dans Google Agenda → «&nbsp;Ajouter un agenda&nbsp;» → «&nbsp;Via l'URL&nbsp;».</div>
+      </div>
+    </details>
+
+    <!-- Plan -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🗺</span>Plan des lieux<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Une <strong>carte interactive</strong> affiche tous les lieux liés à vos activités :</p>
+        <ul>
+          <li>Salles de cours tango (Paris et Vincennes)</li>
+          <li>Lieux de stages</li>
+          <li>Lieux des milongas</li>
+          <li>Espace de yoga</li>
+        </ul>
+        <p>Touchez un marqueur sur la carte pour voir l'adresse complète et les informations de transport. Un lien ouvre directement le plan dans votre application de navigation.</p>
+      </div>
+    </details>
+
+    <!-- Publications -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">📰</span>Publications<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Retrouvez les <strong>articles et annonces</strong> publiés par Florencia et Jérémy : nouvelles de l'association, conseils de tango, annonces de stages et milongas.</p>
+        <ul>
+          <li>Les publications apparaissent à leur date de diffusion programmée.</li>
+          <li>Pour les stages et milongas, un bouton <strong>«&nbsp;S'inscrire&nbsp;»</strong> ou <strong>«&nbsp;Je pense venir&nbsp;»</strong> est directement accessible depuis l'article.</li>
+        </ul>
+        <div class="aide-tip">💡 Activez les notifications push (rubrique 🔔 Notifications) pour être averti·e dès qu'un nouvel article est publié.</div>
+      </div>
+    </details>
+
+    <!-- Sorano -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🏛</span>Sorano (Vincennes)<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Cette rubrique est visible uniquement pour les élèves inscrits à <strong>Vincennes</strong>.</p>
+        <p>L'<strong>Espace Sorano</strong> demande une adhésion annuelle pour toute activité pratiquée dans ses locaux. Cette adhésion permet aussi de bénéficier de réductions sur les spectacles du Théâtre Sorano et de la Ville de Vincennes.</p>
+        <ul>
+          <li>Si votre adhésion est <strong>réglée</strong>, un message de confirmation s'affiche.</li>
+          <li>Si elle est <strong>en attente</strong>, un bouton vous guide pour la régler.</li>
+        </ul>
+      </div>
+    </details>
+
+    <!-- Musique -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🎵</span>Musique<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Accédez à l'application <strong>El Recodo</strong>, la plateforme de streaming dédiée au tango argentin.</p>
+        <p>El Recodo vous donne accès à des milliers d'enregistrements des grands orchestres de tango (Di Sarli, Pugliese, Troilo, D'Arienzo…).</p>
+        <ul>
+          <li>Essai gratuit 14 jours</li>
+          <li>Abonnement mensuel : 9,95€/mois · Annuel : 99€/an</li>
+          <li>Code promo exclusif Tango&nbsp;&amp;&nbsp;Vous : <strong>TangoEtVous40</strong> (40% de réduction)</li>
+        </ul>
+        <div class="aide-tip">💡 Utilisez le code promo lors de votre inscription sur el-recodo.com pour bénéficier de la réduction.</div>
+      </div>
+    </details>
+
+    <!-- Chaussures -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">👟</span>Chaussures<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Adresses des boutiques partenaires de <strong>chaussures de tango à Paris</strong> :</p>
+        <ul>
+          <li>
+            <strong>Lalatango</strong><br>
+            7 rue Boulay, 75017 Paris<br>
+            06 81 34 86 47 · lalatango.com<br>
+            Sur rendez-vous, lundi–samedi
+          </li>
+          <li style="margin-top:10px;">
+            <strong>Miltango</strong><br>
+            1 Villa du Bel Air, 75012 Paris<br>
+            07 86 55 17 37 · miltango.com<br>
+            Sur rendez-vous, dimanche après-midi
+          </li>
+        </ul>
+        <div class="aide-tip">💡 Les chaussures à semelle lisse (cuir ou daim) sont recommandées pour danser le tango. Évitez les semelles en caoutchouc qui accrochent le parquet.</div>
+      </div>
+    </details>
+
+    <!-- Yoga -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🧘</span>Yoga<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Suivez les <strong>cours de yoga</strong> animés par Florencia Garcia (association Le Regard Se Pose).</p>
+        <ul>
+          <li><strong>Yin Yoga</strong> — étirements en profondeur, postures tenues longtemps, détente du système nerveux</li>
+          <li><strong>Hatha Yoga</strong> — postures classiques, renforcement et souplesse</li>
+          <li><strong>Forfait</strong> — accès aux deux cours</li>
+        </ul>
+        <p>Lieu : <strong>Espace Sorano</strong>, 16 rue Charles Pathé, 94300 Vincennes.</p>
+        <p>Cette rubrique affiche votre prochain cours, le statut de votre inscription et un lien vers le formulaire d'essai.</p>
+      </div>
+    </details>
+
+    <!-- Hypnose -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🌀</span>Hypnose<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p><strong>Florencia Garcia</strong>, certifiée ARCHE, propose des séances d'hypnose thérapeutique et de coaching.</p>
+        <ul>
+          <li>Séances individuelles d'environ <strong>1h15</strong></li>
+          <li>Lieu : rue Raymond du Temple, Vincennes</li>
+          <li>Contact : <a href="mailto:garciabraitbart@gmail.com" style="color:var(--gold);">garciabraitbart@gmail.com</a> · 06 63 23 35 70</li>
+        </ul>
+        <p>Cette rubrique contient toutes les informations pour prendre rendez-vous et en savoir plus sur l'approche thérapeutique.</p>
+      </div>
+    </details>
+
+    <!-- Contact -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">✉️</span>Contact<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Envoyez un <strong>message rapide</strong> à Florencia et/ou Jérémy.</p>
+        <p>Les formulaires sont pré-remplis avec votre prénom et email. Choisissez le sujet dans l'accordéon correspondant :</p>
+        <ul>
+          <li>Question générale, absence, changement de cours…</li>
+          <li>Demande spécifique à Florencia (yoga, hypnose)</li>
+          <li>Demande spécifique à Jérémy</li>
+        </ul>
+        <div class="aide-tip">💡 Pour une réponse rapide, vous pouvez aussi envoyer directement un SMS ou appeler le 07 73 27 59 06.</div>
+      </div>
+    </details>
+
+    <!-- WhatsApp -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">💬</span>WhatsApp<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Rejoignez le <strong>groupe WhatsApp</strong> de votre cours pour rester en contact avec les autres élèves et recevoir les dernières nouvelles.</p>
+        <p>Le lien affiché correspond automatiquement à votre cours (Paris Débutants, Paris Intermédiaires, Vincennes Débutants ou Vincennes Intermédiaires). Si vous êtes inscrit·e à plusieurs cours, tous les liens apparaissent.</p>
+        <div class="aide-tip">💡 Les groupes WhatsApp sont modérés par Florencia et Jérémy. Utilisez-les pour des échanges conviviaux et des questions pratiques.</div>
+      </div>
+    </details>
+
+    <!-- Discussions -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🗨</span>Discussions<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>La messagerie intégrée vous permet d'<strong>échanger directement avec Florencia et Jérémy</strong> via l'application, sans quitter votre espace élève.</p>
+        <ul>
+          <li>Consultez les fils de discussion existants</li>
+          <li>Bouton <strong>«&nbsp;+ Nouvelle discussion&nbsp;»</strong> pour démarrer un nouveau fil</li>
+          <li>Vous recevez une notification push et une notification in-app dès qu'un message vous est adressé</li>
+        </ul>
+      </div>
+    </details>
+
+    <!-- Avis -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">⭐</span>Avis<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Laissez un <strong>avis Google</strong> sur notre école de tango — cela nous aide beaucoup à nous faire connaître&nbsp;!</p>
+        <p>Les liens disponibles correspondent à votre salle de cours :</p>
+        <ul>
+          <li>Page Google de la salle de <strong>Paris</strong></li>
+          <li>Page Google de la salle de <strong>Vincennes</strong></li>
+        </ul>
+        <div class="aide-tip">💡 Un avis positif, même court, fait une grande différence. Merci d'avance&nbsp;! 🙏</div>
+      </div>
+    </details>
+
+    <!-- Notifications -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🔔</span>Notifications<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Activez les <strong>notifications push</strong> pour recevoir des alertes sur votre téléphone même quand l'application est fermée.</p>
+        <p>Vous serez notifié·e pour :</p>
+        <ul>
+          <li>Nouveaux articles publiés</li>
+          <li>Rappels de stages et de milongas</li>
+          <li>Cours pointé, paiement enregistré, carte renouvelée</li>
+          <li>Nouveaux messages dans vos discussions</li>
+        </ul>
+        <p>Le bouton <strong>«&nbsp;🔔 Activer les notifications&nbsp;»</strong> demande la permission à votre navigateur. Le bouton <strong>«&nbsp;⚡ Tester&nbsp;»</strong> envoie une notification de test immédiate.</p>
+        <p>L'icône <strong>🔔</strong> dans la barre de menu affiche les notifications in-app non lues.</p>
+        <div class="aide-tip">💡 Sur iPhone, l'application doit être installée sur l'écran d'accueil (PWA) pour que les notifications push fonctionnent. Voir la rubrique suivante pour installer l'app.</div>
+      </div>
+    </details>
+
+    <!-- Installer l'app -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">📱</span>Installer l'application<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Installez l'application sur l'écran d'accueil de votre téléphone pour un accès rapide et pour activer les notifications push.</p>
+        <p><strong>Sur iPhone / iPad (Safari) :</strong></p>
+        <ul>
+          <li>Ouvrez <strong>app.tangoetvous.fr</strong> dans Safari</li>
+          <li>Touchez le bouton Partage <strong>↑</strong> (en bas de l'écran)</li>
+          <li>Faites défiler et choisissez <strong>«&nbsp;Sur l'écran d'accueil&nbsp;»</strong></li>
+          <li>Confirmez avec <strong>«&nbsp;Ajouter&nbsp;»</strong></li>
+        </ul>
+        <p><strong>Sur Android (Chrome) :</strong></p>
+        <ul>
+          <li>Ouvrez <strong>app.tangoetvous.fr</strong> dans Chrome</li>
+          <li>Touchez le menu <strong>⋮</strong> (en haut à droite)</li>
+          <li>Choisissez <strong>«&nbsp;Ajouter à l'écran d'accueil&nbsp;»</strong></li>
+        </ul>
+        <div class="aide-tip">💡 Une fois installée, l'appli se comporte comme une vraie application native. Pas besoin de passer par le navigateur à chaque fois.</div>
+      </div>
+    </details>
+
+    <!-- Connexion -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🔑</span>Connexion (lien magique)<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>L'espace élève fonctionne avec un <strong>lien magique</strong> envoyé par email — pas de mot de passe à retenir&nbsp;!</p>
+        <ol style="margin:4px 0 10px 16px;padding:0;">
+          <li>Entrez votre adresse email sur la page de connexion</li>
+          <li>Vous recevez un email avec un lien sécurisé</li>
+          <li>Cliquez sur le lien : vous êtes connecté·e</li>
+        </ol>
+        <p>La session reste active plusieurs semaines. Si vous êtes déconnecté·e, répétez simplement l'opération.</p>
+        <div class="aide-tip">💡 Utilisez toujours la même adresse email que celle communiquée à l'inscription pour accéder à vos données personnelles.</div>
+      </div>
+    </details>
+
   </div>
 
   <!-- ── ONGLET YOGA ───────────────────────────────────────── -->
@@ -6301,22 +6630,6 @@ if (new URLSearchParams(location.search).get('testpubs') === '1') {
     fab.addEventListener('click', function(){
       panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
     });
-
-    // ── Bouton mode démo ─────────────────────────────────────────
-    var demoZone = document.createElement('div');
-    demoZone.style.cssText = 'padding:8px 16px 12px;border-top:1px solid #333;flex-shrink:0;';
-    var demoBtn = document.createElement('button');
-    demoBtn.textContent = '🎭 Mode démo (Felipe, 4/10 cours)';
-    demoBtn.style.cssText = 'width:100%;padding:9px;background:#1e1a2e;border:1px solid #6a4aaa;color:#c8a0e8;font-weight:700;border-radius:8px;cursor:pointer;font-size:12px;font-family:inherit;';
-    demoBtn.addEventListener('click', function(){
-      if (typeof window.demoLogin === 'function') {
-        window.demoLogin();
-        demoBtn.textContent = '✓ Démo activée !';
-        setTimeout(function(){ demoBtn.textContent = '🎭 Mode démo (Felipe, 4/10 cours)'; }, 2000);
-      }
-    });
-    demoZone.appendChild(demoBtn);
-    panel.appendChild(demoZone);
 
     document.body.appendChild(panel);
     document.body.appendChild(fab);
