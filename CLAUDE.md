@@ -1,5 +1,39 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Annuaire des élèves (index.html — onglet `repertoire`)
+
+### Fonctionnalité
+Onglet permettant aux élèves de se retrouver entre eux et d'envoyer des messages privés via l'appli.
+
+### Colonne DB
+`eleves.visible_repertoire BOOLEAN DEFAULT false` — l'élève choisit d'apparaître ou non dans l'annuaire.
+
+### Visibilité
+- Onglet accessible à tous les élèves connectés
+- Seuls les élèves avec `visible_repertoire=true` apparaissent dans les listes
+- **Aucun email ni numéro de téléphone n'est affiché** — uniquement le prénom/nom et la photo
+- L'élève courant s'affiche dans sa propre liste (pour voir qu'il est bien dedans) mais **sans le bouton 💬** (on ne peut pas démarrer une discussion avec soi-même)
+
+### Toggle dans Accueil
+Section "Annuaire des élèves" dans `renderAccueil()` → `toggleRepertoire(val)` :
+- Met à jour `eleves.visible_repertoire` en DB
+- Met à jour l'état local `eleveData.eleve.visible_repertoire`
+- Met à jour visuellement le DOM du toggle (inline styles sur les deux `<span>`) sans re-render complet
+- Sous-titre toggle : "Apparaître dans l'onglet Annuaire des élèves (votre email et numéro de téléphone ne sont pas visibles)" en blanc (`color:#fff`)
+
+### `renderRepertoire()`
+- Groupé par cours (Paris Débutants / Paris Intermédiaires / Vincennes Débutants / Vincennes Intermédiaires)
+- Exclut les lignes `isRenewal` de `inscriptions_cours` pour le comptage des cours
+- Texte noms : `font-size:16px;color:#fff;font-weight:600`
+- Bouton 💬 absent pour l'élève courant (`isSelf = e.email.toLowerCase() === myEmail`)
+- Si non inscrit à aucun cours → non listé (filtre `!courses.size`)
+
+### Tab labels
+- `_TAB_LABELS.repertoire` = `'Annuaire des élèves'`
+- `_NAV_DEFS.repertoire.label` = `'Annuaire des élèves'`
+
+---
+
 ## Playwright — tests E2E à implémenter (prévu septembre 2026)
 
 ### Contexte

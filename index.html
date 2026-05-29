@@ -643,7 +643,7 @@
         musique:'Musique', chaussures:'Chaussures',
         notifications:'Notifications',
         aide:'Mode d\'emploi',
-        repertoire:'Nos élèves'
+        repertoire:'Annuaire des élèves'
       };
       _navLbl.textContent = _TAB_LABELS[tab] || tab;
     }
@@ -1278,7 +1278,7 @@
       const { data: elevesVis } = await TEV.client.from('eleves')
         .select('email, prenom, nom, photo_url')
         .eq('visible_repertoire', true);
-      const visible = (elevesVis || []).filter(function(e) { return (e.email || '').toLowerCase() !== myEmail; });
+      const visible = (elevesVis || []);
       const emails = visible.map(function(e) { return e.email; }).filter(Boolean);
       let insc = [];
       if (emails.length) {
@@ -1344,10 +1344,11 @@
           const photoHtml = e.photo_url
             ? '<img src="' + e.photo_url + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy">'
             : '<div style="width:44px;height:44px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">👤</div>';
+          const isSelf = (e.email || '').toLowerCase() === myEmail;
           h += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">'
             + photoHtml
-            + '<div style="flex:1;font-size:14px;color:var(--text);font-weight:600;">' + nom + '</div>'
-            + '<button onclick="ouvrirDiscRepertoire(\'' + safeEmail + '\',\'' + safeNom + '\')" style="padding:8px 14px;background:var(--s3);border:1px solid var(--border);border-radius:20px;color:var(--gold);font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">💬</button>'
+            + '<div style="flex:1;font-size:16px;color:#fff;font-weight:600;">' + nom + '</div>'
+            + (isSelf ? '' : '<button onclick="ouvrirDiscRepertoire(\'' + safeEmail + '\',\'' + safeNom + '\')" style="padding:8px 14px;background:var(--s3);border:1px solid var(--border);border-radius:20px;color:var(--gold);font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">💬</button>')
             + '</div>';
         });
         h += '</div>';
@@ -1449,7 +1450,7 @@
     musique:              {label:'Musique',      color:'#fb923c', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>'},
     chaussures:           {label:'Chaussures',   color:'#f472b6', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M22 18L22 21L19 21C16 21 11 19 9 17C7 15 5 12 4 9L3 9L3 21L4 21L4 11C7 12 11 13 13 15C16 17 19 18 22 18Z"/></svg>'},
     aide:                 {label:'Mode d\'emploi', color:'#67e8f9', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>'},
-    repertoire:           {label:'Nos élèves',     color:'#34d399', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>'}
+    repertoire:           {label:'Annuaire des élèves', color:'#34d399', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>'}
   };
 
   function renderNavOverlay() {
@@ -2232,7 +2233,7 @@
       + '<div style="display:flex;justify-content:space-between;align-items:center;">'
       + '<div>'
       + '<div style="font-size:13px;color:var(--text);font-weight:600;">Annuaire des élèves</div>'
-      + '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Apparaître dans l\'onglet "Nos élèves"</div>'
+      + '<div style="font-size:11px;color:#fff;margin-top:2px;">Apparaître dans l\'onglet Annuaire des élèves (votre email et numéro de téléphone ne sont pas visibles)</div>'
       + '</div>'
       + '<label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">'
       + '<input type="checkbox" id="repertoire-toggle" '+(eleveData.eleve.visible_repertoire ? 'checked' : '')+' onchange="toggleRepertoire(this.checked)" style="opacity:0;width:0;height:0;position:absolute;">'
