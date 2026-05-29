@@ -642,7 +642,8 @@
         hypnose:'Hypnose', whatsapp:'WhatsApp', avis:'Avis', sorano:'Sorano',
         musique:'Musique', chaussures:'Chaussures',
         notifications:'Notifications',
-        aide:'Mode d\'emploi'
+        aide:'Mode d\'emploi',
+        repertoire:'Nos élèves'
       };
       _navLbl.textContent = _TAB_LABELS[tab] || tab;
     }
@@ -684,6 +685,7 @@
     if (tab === 'discussions') { renderDiscussions(); _discStartListPoll(); }
     if (tab === 'sorano') renderSorano();
     if (tab === 'notifications') { renderNotificationsPane(); _markNotificationsRead(); }
+    if (tab === 'repertoire') renderRepertoire();
     if (tab !== 'actu') _actuStopPoll();
     if (tab !== 'discussions') { _discStopPoll(); _discStopListPoll(); if (_discView === 'new') _discView = 'list'; }
     window.scrollTo(0, 0);
@@ -737,6 +739,7 @@
   let _discMsgs        = [];
   let _discPollTO      = null;
   let _discListPollTO  = null;
+  let _discCurrentTargetEmail = '';
 
   function _discGetMonGroupe() {
     if (!eleveData || !eleveData.eleve) return [];
@@ -752,7 +755,17 @@
   }
 
   function _discPeutVoir(disc) {
-    if (!disc.groupes || !disc.groupes.length) return true;
+    if (!disc.groupes || !disc.groupes.length) {
+      // Discussion privée 1-1 : vérifier que l'élève connecté est l'un des deux participants
+      const dn = disc.donnees && (typeof disc.donnees === 'string' ? (() => { try { return JSON.parse(disc.donnees); } catch(e) { return {}; } })() : disc.donnees);
+      if (dn && dn.private === true) {
+        const myEmail = eleveData && eleveData.eleve && (eleveData.eleve.email || '').toLowerCase();
+        const creator = (disc.createur_email || disc.eleve_email || '').toLowerCase();
+        const target = (dn.targetEmail || '').toLowerCase();
+        return myEmail && (myEmail === creator || myEmail === target);
+      }
+      return true;
+    }
     const mes = _discGetMonGroupe();
     if (!mes.length) return true;
     return mes.some(g => disc.groupes.includes(g));
@@ -800,6 +813,7 @@
           date: disc.last_message_at || disc.created_at,
           created_at: disc.created_at,
           groupes: disc.groupes || [],
+          donnees: disc.donnees || {},
         })).filter(disc => {
           const ds = (disc.created_at || disc.date || '').slice(0, 10);
           return ds >= _saiStart && ds <= _saiEnd;
@@ -843,6 +857,8 @@
         // Récupère les groupes de cette discussion pour les notifications de message
         const disc = (discs || []).find(d => String(d.id) === String(el.dataset.discOpen));
         _discCurrentGroupes = (disc && disc.groupes) ? disc.groupes : [];
+        const _dn = disc && disc.donnees && (typeof disc.donnees === 'string' ? (() => { try { return JSON.parse(disc.donnees); } catch(e) { return {}; } })() : disc.donnees);
+        _discCurrentTargetEmail = (_dn && _dn.targetEmail) || '';
         _renderDiscChatView(pane);
       });
     });
@@ -911,6 +927,7 @@
             auteurEmail: elv.email || '',
             auteurNom: nomComplet,
             contenu: msg,
+            targetEmail: _discCurrentTargetEmail || undefined,
           }),
         }).catch(function(){});
       }).catch(() => {});
@@ -1250,6 +1267,103 @@
   };
 
   // ================================================================
+  // RÉPERTOIRE ÉLÈVES
+  // ================================================================
+  async function renderRepertoire() {
+    const pane = $('repertoire-pane');
+    if (!pane) return;
+    const myEmail = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
+    pane.innerHTML = '<div style="padding:16px;color:var(--text-dim);text-align:center;">Chargement…</div>';
+    try {
+      const { data: elevesVis } = await TEV.client.from('eleves')
+        .select('email, prenom, nom, photo_url')
+        .eq('visible_repertoire', true);
+      const visible = (elevesVis || []).filter(function(e) { return (e.email || '').toLowerCase() !== myEmail; });
+      const emails = visible.map(function(e) { return e.email; }).filter(Boolean);
+      let insc = [];
+      if (emails.length) {
+        const { data: inscData } = await TEV.client.from('inscriptions_cours')
+          .select('email, ville, niveau, donnees')
+          .eq('statut', 'inscrit')
+          .in('email', emails);
+        insc = (inscData || []).filter(function(i) {
+          try { const d = typeof i.donnees === 'string' ? JSON.parse(i.donnees) : (i.donnees || {}); return !d.isRenewal; } catch(e) { return true; }
+        });
+      }
+      const emailToCourses = {};
+      insc.forEach(function(i) {
+        const k = (i.email || '').toLowerCase();
+        if (!emailToCourses[k]) emailToCourses[k] = new Set();
+        emailToCourses[k].add((i.ville || '').toLowerCase() + '—' + (i.niveau || '').toLowerCase());
+      });
+      const COURSE_ORDER = ['paris—debutant', 'paris—intermediaire', 'vincennes—debutant', 'vincennes—intermediaire'];
+      const COURSE_LABELS = {
+        'paris—debutant':      'Paris — Débutants',
+        'paris—intermediaire': 'Paris — Intermédiaires',
+        'vincennes—debutant':  'Vincennes — Débutants',
+        'vincennes—intermediaire': 'Vincennes — Intermédiaires'
+      };
+      const groups = {};
+      COURSE_ORDER.forEach(function(k) { groups[k] = []; });
+      const seen = {};
+      visible.forEach(function(e) {
+        const ek = (e.email || '').toLowerCase();
+        const courses = emailToCourses[ek] || new Set();
+        if (!courses.size) return;
+        courses.forEach(function(c) {
+          if (!groups[c]) return;
+          const dedupKey = ek + '—' + c;
+          if (seen[dedupKey]) return;
+          seen[dedupKey] = true;
+          groups[c].push(e);
+        });
+      });
+      COURSE_ORDER.forEach(function(k) {
+        groups[k].sort(function(a, b) { return (a.nom || '').localeCompare(b.nom || '', 'fr'); });
+      });
+      let h = '<div style="padding:16px;">';
+      h += '<div style="font-size:12px;color:var(--text-dim);background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:16px;line-height:1.6;">'
+        + '👋 Retrouvez ici les élèves qui ont choisi de se rendre visibles dans l\'annuaire. Aucun email ni numéro de téléphone n\'est partagé — vous pouvez uniquement leur envoyer un message privé via l\'appli.'
+        + '</div>';
+      if (!eleveData || !eleveData.eleve || !eleveData.eleve.visible_repertoire) {
+        h += '<div style="font-size:12px;color:var(--text-dim);background:var(--s2);border-radius:8px;padding:8px 14px;margin-bottom:16px;">'
+          + '💡 Vous n\'apparaissez pas dans cet annuaire. Pour y figurer, activez l\'option dans <strong style="color:var(--gold);">Accueil → Mes coordonnées</strong>.'
+          + '</div>';
+      }
+      let hasAny = false;
+      COURSE_ORDER.forEach(function(key) {
+        const students = groups[key];
+        if (!students.length) return;
+        hasAny = true;
+        h += '<div style="margin-bottom:24px;">'
+          + '<div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:10px;">' + COURSE_LABELS[key] + '</div>';
+        students.forEach(function(e) {
+          const nom = ((e.prenom || '') + ' ' + (e.nom || '')).trim() || e.email;
+          const safeEmail = (e.email || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          const safeNom   = nom.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          const photoHtml = e.photo_url
+            ? '<img src="' + e.photo_url + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy">'
+            : '<div style="width:44px;height:44px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">👤</div>';
+          h += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">'
+            + photoHtml
+            + '<div style="flex:1;font-size:14px;color:var(--text);font-weight:600;">' + nom + '</div>'
+            + '<button onclick="ouvrirDiscRepertoire(\'' + safeEmail + '\',\'' + safeNom + '\')" style="padding:8px 14px;background:var(--s3);border:1px solid var(--border);border-radius:20px;color:var(--gold);font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">💬</button>'
+            + '</div>';
+        });
+        h += '</div>';
+      });
+      if (!hasAny) {
+        h += '<div style="text-align:center;color:var(--text-dim);font-size:14px;padding:40px 0;">Aucun élève n\'a encore rejoint l\'annuaire.<br><span style="font-size:12px;margin-top:8px;display:block;">Soyez le premier à activer l\'option dans Accueil → Mes coordonnées.</span></div>';
+      }
+      h += '</div>';
+      pane.innerHTML = h;
+    } catch(err) {
+      console.error('[renderRepertoire]', err);
+      pane.innerHTML = '<div style="padding:16px;color:#ef5350;text-align:center;">Erreur de chargement. Réessayez plus tard.</div>';
+    }
+  }
+
+  // ================================================================
   // YOGA PANE
   // ================================================================
   function renderYogaPane() {
@@ -1334,7 +1448,8 @@
     sorano:               {label:'Sorano',       color:'#2dd4bf', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 3L2 12h3v8h6v-5h2v5h6v-8h3L12 3zm0 12.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>'},
     musique:              {label:'Musique',      color:'#fb923c', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>'},
     chaussures:           {label:'Chaussures',   color:'#f472b6', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M22 18L22 21L19 21C16 21 11 19 9 17C7 15 5 12 4 9L3 9L3 21L4 21L4 11C7 12 11 13 13 15C16 17 19 18 22 18Z"/></svg>'},
-    aide:                 {label:'Mode d\'emploi', color:'#67e8f9', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>'}
+    aide:                 {label:'Mode d\'emploi', color:'#67e8f9', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>'},
+    repertoire:           {label:'Nos élèves',     color:'#34d399', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>'}
   };
 
   function renderNavOverlay() {
@@ -1344,7 +1459,7 @@
     const isPreinscPeriod = m >= 5 && m <= 8;
     const hasVincennesNav = !!(eleveData && eleveData.hasVincennes);
     const rows = [
-      ['accueil', 'aide'],
+      ['accueil', 'aide', 'repertoire'],
       ['carte', 'stages', 'cours-particuliers', 'milonga', ...(isPreinscPeriod ? ['preinscription'] : [])],
       ['agenda', 'carte-lieux', 'actu', ...(hasVincennesNav ? ['sorano'] : [])],
       ['musique', 'chaussures', 'yoga', 'hypnose'],
@@ -2113,6 +2228,19 @@
       + '<div style="border-top:1px solid var(--border);padding-top:10px;">'
       + '<a href="mailto:tangoetvous@gmail.com?subject='+_mailtoSujet+'&body='+_mailtoBody+'" style="display:block;text-align:center;font-size:12px;color:var(--gold);text-decoration:none;padding:4px 0;">✉️ Demander un changement d\'adresse email →</a>'
       + '</div>'
+      + '<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+      + '<div>'
+      + '<div style="font-size:13px;color:var(--text);font-weight:600;">Annuaire des élèves</div>'
+      + '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Apparaître dans l\'onglet "Nos élèves"</div>'
+      + '</div>'
+      + '<label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;">'
+      + '<input type="checkbox" id="repertoire-toggle" '+(eleveData.eleve.visible_repertoire ? 'checked' : '')+' onchange="toggleRepertoire(this.checked)" style="opacity:0;width:0;height:0;position:absolute;">'
+      + '<span onclick="document.getElementById(\'repertoire-toggle\').click()" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:'+(eleveData.eleve.visible_repertoire ? 'var(--gold)' : '#555')+';border-radius:24px;transition:.3s;"></span>'
+      + '<span onclick="document.getElementById(\'repertoire-toggle\').click()" style="position:absolute;cursor:pointer;height:18px;width:18px;left:'+(eleveData.eleve.visible_repertoire ? '23px' : '3px')+';bottom:3px;background:#fff;border-radius:50%;transition:.3s;"></span>'
+      + '</label>'
+      + '</div>'
+      + '</div>'
       + '</div>'
       + '</div>';
 
@@ -2134,6 +2262,76 @@
     } catch(e) {
       alert('Erreur lors de la mise à jour. Réessayez ou contactez-nous.');
     }
+  };
+
+  // Activer/désactiver l'apparition dans l'annuaire des élèves
+  window.toggleRepertoire = async function(val) {
+    var email = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
+    if (!email) return;
+    try {
+      const { error } = await TEV.client.from('eleves').update({ visible_repertoire: val }).eq('email', email);
+      if (error) throw error;
+      eleveData.eleve.visible_repertoire = val;
+    } catch(e) {
+      alert('Erreur lors de la mise à jour. Réessayez.');
+      // Revert toggle state
+      const tog = document.getElementById('repertoire-toggle');
+      if (tog) tog.checked = !val;
+    }
+  };
+
+  // Ouvrir une discussion privée 1-on-1 depuis le répertoire
+  window.ouvrirDiscRepertoire = async function(targetEmail, targetNom) {
+    if (!eleveData || !eleveData.eleve) return;
+    const myEmail = (eleveData.eleve.email || '').toLowerCase();
+    const myPrenom = eleveData.eleve.prenom || '';
+    const myNom    = eleveData.eleve.nom    || '';
+    const myNomComplet = (myPrenom + ' ' + myNom).trim();
+
+    // Chercher une discussion privée existante avec cette personne
+    let existing = null;
+    if (Array.isArray(_discDiscList)) {
+      existing = _discDiscList.find(function(d) {
+        var dn = d.donnees || {};
+        return dn.private === true && (
+          (d.created_by === myEmail && dn.targetEmail === targetEmail) ||
+          (d.created_by === targetEmail && dn.targetEmail === myEmail)
+        );
+      });
+    }
+
+    if (!existing) {
+      try {
+        const titre = 'Discussion avec ' + targetNom;
+        const { data, error } = await TEV.createDiscussion({ titre, eleveEmail: myEmail, eleveNom: myNomComplet, groupes: [], targetEmail });
+        if (error) throw error;
+        existing = { id: data.id, titre, created_by: myEmail, donnees: { private: true, targetEmail } };
+        // Notifier le destinataire
+        fetch('/api/notify/discussion-nouvelle-eleve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eleveEmail: myEmail, eleveNom: myNomComplet, titre, targetEmail })
+        }).catch(function(){});
+      } catch(e) {
+        console.error('[ouvrirDiscRepertoire] createDiscussion error', e);
+        alert('Impossible d\'ouvrir la discussion. Réessayez plus tard.');
+        return;
+      }
+    }
+
+    // Naviguer vers la discussion
+    _discCurrentTargetEmail = targetEmail;
+    switchTab('discussions');
+    // Attendre que le tab soit rendu avant d'ouvrir
+    setTimeout(function() {
+      if (existing && existing.id) {
+        // Simuler un clic sur la discussion
+        const el = document.querySelector('[data-disc-open="' + existing.id + '"]');
+        if (el) { el.click(); return; }
+        // Fallback: ouvrir directement
+        openDisc(existing.id, existing.titre || ('Discussion avec ' + targetNom));
+      }
+    }, 300);
   };
 
   // Déclarer/annuler une absence depuis l'espace élève
@@ -5804,6 +6002,9 @@ a{color:var(--gold);text-decoration:none;}
     </details>
 
   </div>
+
+  <!-- ── ONGLET RÉPERTOIRE ─────────────────────────────────── -->
+  <div class="tab-pane" id="repertoire-pane"></div>
 
   <!-- ── ONGLET YOGA ───────────────────────────────────────── -->
   <div class="tab-pane" id="yoga-pane">

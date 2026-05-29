@@ -3337,13 +3337,19 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
 async function handleNotifyDiscussionNouvelleEleve(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
-  const { titre, discussionId, groupes, saison, auteurEmail, auteurNom } = body;
+  const { titre, discussionId, groupes, saison, auteurEmail, auteurNom, targetEmail } = body;
   if (!titre || !saison) return jsonError(400, 'Paramètres manquants');
 
   const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  const allEmails = Array.isArray(groupes) && groupes.length > 0
-    ? await _getEmailsByGroupes(groupes, saison, svcKey)
-    : [];
+  let allEmails;
+  if (targetEmail) {
+    // Discussion privée 1-to-1 : notifier uniquement la cible
+    allEmails = [targetEmail.toLowerCase().trim()];
+  } else {
+    allEmails = Array.isArray(groupes) && groupes.length > 0
+      ? await _getEmailsByGroupes(groupes, saison, svcKey)
+      : [];
+  }
   // Exclure l'auteur de la liste des destinataires
   const emails = allEmails.filter(e => e !== (auteurEmail || '').toLowerCase().trim());
 
@@ -3398,13 +3404,19 @@ async function handleNotifyDiscussionNouvelleEleve(request, env) {
 async function handleNotifyDiscussionMessageEleve(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
-  const { discussionId, contenu, titre, groupes, saison, auteurEmail, auteurNom } = body;
+  const { discussionId, contenu, titre, groupes, saison, auteurEmail, auteurNom, targetEmail } = body;
   if (!saison) return jsonError(400, 'Paramètres manquants');
 
   const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  const allEmails = Array.isArray(groupes) && groupes.length > 0
-    ? await _getEmailsByGroupes(groupes, saison, svcKey)
-    : [];
+  let allEmails;
+  if (targetEmail) {
+    // Discussion privée 1-to-1 : notifier uniquement la cible
+    allEmails = [targetEmail.toLowerCase().trim()];
+  } else {
+    allEmails = Array.isArray(groupes) && groupes.length > 0
+      ? await _getEmailsByGroupes(groupes, saison, svcKey)
+      : [];
+  }
   // Exclure l'auteur de la liste des destinataires
   const emails = allEmails.filter(e => e !== (auteurEmail || '').toLowerCase().trim());
 

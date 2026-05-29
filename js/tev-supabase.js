@@ -502,7 +502,12 @@ async function tevGetDiscussions({ eleveEmail } = {}) {
   if (!eleveEmail) return all; // admin : toutes les discussions
   const email = eleveEmail.toLowerCase();
   // Élève : discussions publiques (créées par admin, eleve_email vide/null) + ses propres discussions
-  return all.filter(d => !d.eleve_email || d.eleve_email === email);
+  // + discussions privées 1-to-1 dont l'élève est la cible (donnees.targetEmail === email)
+  return all.filter(d => {
+    if (!d.eleve_email || d.eleve_email === email) return true;
+    const dn = d.donnees && (typeof d.donnees === 'string' ? (() => { try { return JSON.parse(d.donnees); } catch(e) { return {}; } })() : d.donnees);
+    return dn && dn.private === true && (dn.targetEmail || '').toLowerCase() === email;
+  });
 }
 
 async function tevGetMessages(discussionId) {
@@ -511,11 +516,15 @@ async function tevGetMessages(discussionId) {
   return data || [];
 }
 
-async function tevCreateDiscussion({ titre, eleveEmail, eleveNom, groupes }) {
-  const { data, error } = await _tev.from('discussions').insert({
+async function tevCreateDiscussion({ titre, eleveEmail, eleveNom, groupes, targetEmail }) {
+  const insertData = {
     titre, eleve_email: eleveEmail.toLowerCase(), eleve_nom: eleveNom || '',
     groupes: groupes || [],
-  }).select('id').single();
+  };
+  if (targetEmail) {
+    insertData.donnees = { private: true, targetEmail: targetEmail.toLowerCase() };
+  }
+  const { data, error } = await _tev.from('discussions').insert(insertData).select('id').single();
   if (error) throw error;
   return { ok: true, id: data.id };
 }
