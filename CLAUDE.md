@@ -5504,3 +5504,80 @@ Le mode démo (données fictives "Felipe") était accessible aux élèves via un
 **Ce qui a été conservé** : la fonction `demoLogin()` et `DEMO_DATA` restent dans le code pour les tests internes — seuls les éléments UI visibles par les élèves ont été retirés.
 
 **Commits** : `61d6cc3` (ajout aide + suppression démo) · `8b58510` (déplacement aide à côté d'Accueil)
+
+---
+
+## Session 2026-05-29 (suite 2) — Audit complet des 14 crons + 2 bugs corrigés
+
+### Contexte
+
+Audit demandé par l'utilisateur : "Tu peux vérifier si tous les crons du système fonctionnent bien du coup ?" — vérification que chaque handler cron dans `worker.js` respecte les règles de robustesse (await + try/catch, expéditeur Brevo vérifié, anti-doublon correct).
+
+### ✅ Résultat de l'audit — 14 handlers, 2 bugs trouvés et corrigés
+
+| Handler | Route | Workflow GitHub | Statut |
+|---------|-------|-----------------|--------|
+| `handleCronEssaiJ1` | `/api/cron/essai-j1` | `essai-j1.yml` | ✅ OK |
+| `handleCronEssaiYogaJ1` | `/api/cron/essai-yoga-j1` | `essai-yoga-j1.yml` | ✅ OK (sender corrigé session précédente) |
+| `handleCronEssaiRappelJ7` | `/api/cron/essai-rappel-j7` | `essai-rappel-j7.yml` | ✅ OK |
+| `handleCronEssaiYogaRappelJ3` | `/api/cron/essai-yoga-rappel-j3` | `essai-yoga-rappel-j3.yml` | ✅ Corrigé — bug sender Brevo (commit `fc1a134`) |
+| `handleCronRappelStageJ3` | `/api/cron/rappel-stage-j3` | `rappel-stage-j3.yml` | ✅ OK |
+| `handleCronCarteExpiree` | `/api/cron/carte-expiree` | `carte-expiree.yml` | ✅ OK |
+| `handleCronFinSaisonC4` | `/api/cron/fin-saison-c4` | `fin-saison-c4.yml` | ✅ OK |
+| `handleCronFinSaisonC5` | `/api/cron/fin-saison-c5` | `fin-saison-c5.yml` | ✅ OK |
+| `handleCronRelanceAbsences` | `/api/cron/relance-absences` | `relance-absences.yml` | ✅ Corrigé — PATCH fire-and-forget (commit `f84b823`) |
+| `handleCronEspaceEleveActivation` | `/api/cron/espace-eleve-activation` | `espace-eleve-activation.yml` | ✅ OK |
+| `handleCronPasDeCours` | `/api/cron/pas-de-cours` | `pas-de-cours.yml` | ✅ OK |
+| `handleNotifyEssaiYogaModifie` | `/api/notify/essai-yoga-modifie` | — | ✅ OK (sender corrigé session précédente) |
+| `handleCronCartePonteeJ1` | interne (pas de route cron directe) | — | ✅ OK |
+| Backup CSV | — | `backup-csv.yml` | ✅ OK (pas de worker, GitHub Actions direct) |
+
+### ✅ Bug 1 — Mauvais expéditeur Brevo dans `handleCronEssaiYogaRappelJ3` (commit `fc1a134`)
+
+**Symptôme** : l'email Y3 (rappel J-3 essai yoga) n'arrivait jamais chez les élèves — Brevo rejetait silencieusement la requête.
+
+**Cause** : `sender.email = 'regardsepose@gmail.com'` — domaine non vérifié dans Brevo.
+
+**Fix** : pattern standard yoga avec expéditeur vérifié + replyTo :
+```javascript
+sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' },
+replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }
+```
+
+### ✅ Bug 2 — PATCH `derniere_relance_abs` fire-and-forget dans `handleCronRelanceAbsences` (commit `f84b823`)
+
+**Symptôme potentiel** : l'email C6 ("Coucou, on ne t'a pas vu·e aux 2 derniers cours") pouvait être envoyé plusieurs fois de suite à la même personne pour les mêmes absences.
+
+**Cause** : la mise à jour de `eleves.derniere_relance_abs` (le mécanisme anti-doublon) était fire-and-forget via `Promise.resolve(fetch(...)).catch(fn)`. En Cloudflare Workers, dès que `corsResponse` est renvoyé, le runtime peut annuler les Promises en cours → le PATCH n'atteignait jamais Supabase → l'anti-doublon était cassé.
+
+**Avant (buggy)** :
+```javascript
+Promise.resolve(
+  fetch(`${SUPABASE_URL}/rest/v1/eleves?email=eq.${encodeURIComponent(String(eleve.email))}`, {
+    method: 'PATCH',
+    headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}`,
+               'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ derniere_relance_abs: dateDerniere }),
+  })
+).catch(function(e) { console.error('[relance-absences] patch derniere_relance_abs error', e); });
+```
+
+**Après (correct)** :
+```javascript
+try {
+  await fetch(`${SUPABASE_URL}/rest/v1/eleves?email=eq.${encodeURIComponent(String(eleve.email))}`, {
+    method: 'PATCH',
+    headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}`,
+               'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ derniere_relance_abs: dateDerniere }),
+  });
+} catch(e) { console.error('[relance-absences] patch derniere_relance_abs error', e); }
+```
+
+### Règle permanente renforcée — Cloudflare Workers + Promises
+
+**Rappel** (déjà documenté en session 2026-05-24 suite 4, confirmé par cet audit) :
+
+En Cloudflare Workers, après `return corsResponse(...)`, le runtime **peut terminer tous les fetch en cours** qui ne sont pas awaités. Le pattern `Promise.resolve(fetch(...)).catch(fn)` **n'est pas fire-and-forget fiable** — c'est un fire-and-maybe-forget.
+
+**Règle** : toute opération critique (mise à jour anti-doublon, insertion notification, envoi email) doit être `await`ée + entourée de `try/catch` **avant** le `return` du handler. Cette règle s'applique à 100% des handlers `worker.js`, crons inclus.
