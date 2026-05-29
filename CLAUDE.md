@@ -5366,3 +5366,66 @@ if (coursArr.length > 0) {
 **Fix** : ajout de `expiration: calcExpiration(date, c.ville||'paris')`, `utilises: syncData.utilises`, `restants: syncData.restants` dans le corps de la requête.
 
 **Fix secondaire** : `syncData.expiration` pour les pointages normaux = `c.expiration || calcExpiration(c.datePremierCours||date, c.ville||'paris')` (au lieu de `c.expiration` seul — null pour les nouvelles cartes).
+
+---
+
+## Session 2026-05-29 — Niveau d'expérience + tri dans Essai et Inscriptions Tango
+
+### ✅ `_labelNivEleve(val)` — badges colorés niveau d'expérience
+
+Affiche un badge coloré dans les fiches élèves (Essai Tango liste d'attente, Inscriptions Tango att. validation) à partir du champ `niveau_eleve`.
+
+**Deux formats de valeurs** selon le formulaire source :
+- `cours-essai.html` → valeurs texte complet : `"1er cours"`, `"Quelques cours"`, `"1 an – bases acquises"`, `"2 ans"`, `"Plus de 2 ans"`
+- `inscription-cours.html` → IDs courts : `"premier"`, `"quelques"`, `"1an"`, `"2ans"`, `"plus"`, `"milonga"`
+
+**Normalisation via `aliases` dict** (`.toLowerCase().trim()`) avant la lookup dans la map de badges. Sans cette normalisation, les essais affichaient toujours un badge vide.
+
+**Palette couleurs** :
+| Valeur normalisée | Label | Fond | Texte |
+|---|---|---|---|
+| `premier` | 1er cours | `#1b5e20` vert foncé | `#a5d6a7` |
+| `quelques` | Quelques cours | `#1a237e` bleu foncé | `#90caf9` |
+| `1an` | 1 an | `#4a148c` violet foncé | `#ce93d8` |
+| `2ans` | 2 ans | `#e65100` orange foncé | `#ffcc80` |
+| `plus` | 2+ ans | `#b71c1c` rouge foncé | `#ef9a9a` |
+| `milonga` | Milonga | `#880e4f` rose foncé | `#f48fb1` |
+
+### ✅ `_expRank(val)` — rang numérique pour le tri
+
+Retourne un entier 1–6 (premier=1 → milonga=6) pour le tri par expérience décroissant. Même normalisation via `aliases` que `_labelNivEleve`.
+
+```javascript
+function _expRank(val) {
+  var aliases = {'1er cours':'premier','quelques cours':'quelques','1 an – bases acquises':'1an','1 an':'1an','2 ans':'2ans','plus de 2 ans':'plus'};
+  var key = aliases[(val||'').toLowerCase().trim()] || val;
+  var ranks = {premier:1, quelques:2, '1an':3, '2ans':4, plus:5, milonga:6};
+  return ranks[key] || 0;
+}
+```
+
+### ✅ Bouton ⬆ Expérience — toggle de tri
+
+**Essai Tango → Liste d'attente** : bouton visible uniquement quand `filtreEssai==='attente'`. Tri appliqué sur `attenteGrp` **avant** `_groupCouples()` (important — le tri doit précéder le regroupement couples).
+
+**Inscriptions Tango → Att. Validation** : bouton visible uniquement quand `sousOngletCoursTango==='attente_validation'`. Tri appliqué sur `items` **après** `var items = grp[cKey]` et **avant** le filtre `!items.length`.
+
+**Variables globales** (ligne ~1082 dans `admin.html`) :
+```javascript
+var _sortEssaiByExp   = false;  // toggle liste d'attente essai tango
+var _sortInscByExp    = false;  // toggle att. validation inscriptions tango
+```
+
+**Tri** : décroissant par `_expRank(b.niveau_eleve) - _expRank(a.niveau_eleve)` → les plus expérimentés en tête (utile pour valider en priorité les milongueros sur la liste d'attente). Utilise `.slice().sort()` pour ne pas muter le tableau source.
+
+**Persistance du toggle** : désactivé entre onglets (toggle sur `renderTab()` uniquement, pas de persistance localStorage). Comportement voulu : reset à chaque navigation.
+
+### Fonctionnalités planifiées (session 2026-05-29)
+
+Les 3 fonctionnalités suivantes ont été décidées :
+
+1. **Recherche globale** — champ de recherche dans le header (Ctrl+K) qui trouve une personne dans tous les onglets (tango, yoga, essai, stages, devis). Résultats groupés par source avec navigation directe au clic.
+
+2. **Dashboard saison** — nouveau tab `'dashboard'` avec : taux de remplissage par cours (guideurs/guidées vs CAP), total recette encaissée vs attendue, alertes (paiements en attente, cartes expirées, absences consécutives).
+
+3. **Fiche élève consolidée** — modal `ouvrirFicheEleve(email)` accessible depuis tous les onglets. Affiche : infos perso, inscriptions tango, yoga, stages, essais, présences carte 10, notes.

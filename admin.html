@@ -355,6 +355,21 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   </div>
 </div>
 
+<!-- Modal recherche globale -->
+<div class="modal-overlay" id="modal-search" onclick="if(event.target===this)fermerRechercheGlobale()">
+  <div class="modal-box" style="max-width:620px;padding:0;overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--s2);">
+      <span style="font-size:18px;opacity:.6;">🔍</span>
+      <input id="search-global-input" type="text" placeholder="Rechercher un élève, email, téléphone…" autocomplete="off"
+        style="flex:1;background:transparent;border:none;outline:none;font-size:16px;color:var(--text);font-family:inherit;"
+        oninput="renderRechercheResultats(this.value)"
+        onkeydown="if(event.key==='Escape')fermerRechercheGlobale()">
+      <button onclick="fermerRechercheGlobale()" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:20px;line-height:1;padding:0 4px;">✕</button>
+    </div>
+    <div id="search-global-results" style="max-height:60vh;overflow-y:auto;padding:8px 0;"></div>
+  </div>
+</div>
+
 <!-- Modal édition paiement compta -->
 <div class="modal-overlay" id="modal-compta-edit">
   <div class="modal-box" style="max-width:380px;">
@@ -425,6 +440,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
   <div class="hdr">
     <div class="hdr-logo">TANGO &amp; VOUS</div>
     <div style="display:flex;align-items:center;gap:8px;">
+      <button id="btn-search" title="Recherche globale (Ctrl+K)" onclick="ouvrirRechercheGlobale()" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:18px;line-height:1;opacity:.75;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'">🔍</button>
       <button id="btn-notif" title="Notifications" onclick="switchTab('notifications')" style="position:relative;background:none;border:none;cursor:pointer;padding:2px 4px;font-size:18px;line-height:1;opacity:.75;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'">🔔<span id="notif-dot" style="display:none;position:absolute;top:1px;right:1px;width:8px;height:8px;background:#ef4444;border-radius:50%;border:1.5px solid var(--s1);"></span></button>
       <button data-tab="tarifs" title="Paramètres" style="background:none;border:none;cursor:pointer;padding:2px 4px;font-size:16px;line-height:1;opacity:.75;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity='.75'" onclick="switchTab('tarifs')">⚙️</button>
       <button class="admin-menu-btn" onclick="toggleAdminNav()">☰ Menu</button>
@@ -1079,6 +1095,7 @@ var comptaSort        = 'nom';        // 'nom' | 'paiement' | 'montant'
 var comptaSearch      = '';           // filtre par nom d'élève
 var _sortEssaiByExp   = false;        // tri liste d'attente essai par expérience
 var _sortInscByExp    = false;        // tri att. validation inscriptions par expérience
+var _globalSearch     = '';           // recherche globale multi-onglets
 var _comptaEditId     = null;
 var _comptaEditCtx    = '';
 var _mceEchStatus     = [null, null, null]; // null=auto, true=encaissé, false=non-encaissé
@@ -1487,6 +1504,192 @@ function fermerContact() {
   gel('modal-contact').classList.remove('vis');
   _contactCtx=null;
 }
+
+// ── Recherche globale ──────────────────────────────────────────────────────
+function ouvrirRechercheGlobale() {
+  gel('modal-search').classList.add('vis');
+  var inp = gel('search-global-input');
+  inp.value = _globalSearch;
+  setTimeout(function(){ inp.focus(); inp.select(); }, 60);
+  renderRechercheResultats(inp.value);
+}
+function fermerRechercheGlobale() {
+  gel('modal-search').classList.remove('vis');
+}
+function renderRechercheResultats(q) {
+  _globalSearch = (q||'').trim();
+  var out = gel('search-global-results');
+  if (!_globalSearch || _globalSearch.length < 2) {
+    out.innerHTML = '<div style="padding:18px 20px;color:var(--dim);font-size:13px;">Tapez au moins 2 caractères…</div>';
+    return;
+  }
+  var qn = _normNom(_globalSearch);
+  var hits = [];
+
+  function _matchPersRaw(prenom, nom, email, tel) {
+    var fullNorm = _normNom((prenom||'') + ' ' + (nom||''));
+    var revNorm  = _normNom((nom||'') + ' ' + (prenom||''));
+    var emailLc  = (email||'').toLowerCase();
+    var telClean = (tel||'').replace(/\s/g,'');
+    return fullNorm.indexOf(qn) !== -1 || revNorm.indexOf(qn) !== -1
+        || emailLc.indexOf(_globalSearch.toLowerCase()) !== -1
+        || (telClean.length > 3 && telClean.indexOf(_globalSearch.replace(/\s/g,'')) !== -1);
+  }
+
+  // ── Élèves Tango (inscrit uniquement, sans renewals) ──
+  var _tgSeen = {};
+  (adminData.coursTango||[]).forEach(function(e) {
+    if (e.statut==='supprimé') return;
+    if (e._isRenewalRow) return;
+    var key = (e.email||_normNom(e.prenom+' '+e.nom));
+    if (_tgSeen[key]) return;
+    if (!_matchPersRaw(e.prenom, e.nom, e.email, e.tel)) return;
+    _tgSeen[key] = true;
+    var coursLbl = (e.ville==='vincennes'?'Vincennes':'Paris') + ' ' + (e.niveau==='intermediaire'?'Intermédiaires':'Débutants');
+    hits.push({
+      zone: 'Élèves Tango', icon: '👥',
+      prenom: e.prenom, nom: e.nom, email: e.email, tel: e.tel||'',
+      detail: coursLbl + (e.role==='guideur'?' · Guideur·se':' · Guidé·e'),
+      statut: e.statut, id: e.id,
+      action: function(){ fermerRechercheGlobale(); switchTab('eleves-tango'); }
+    });
+  });
+
+  // ── Inscriptions Tango (demande / attente_paiement) ──
+  var _ctSeen = {};
+  (adminData.coursTango||[]).forEach(function(e) {
+    if (e.statut==='inscrit'||e.statut==='supprimé') return;
+    if (e._isRenewalRow) return;
+    var key = (e.email||_normNom(e.prenom+' '+e.nom));
+    if (_ctSeen[key]) return;
+    if (!_matchPersRaw(e.prenom, e.nom, e.email, e.tel)) return;
+    _ctSeen[key] = true;
+    var coursLbl = (e.ville==='vincennes'?'Vincennes':'Paris') + ' ' + (e.niveau==='intermediaire'?'Intermédiaires':'Débutants');
+    var statutLbl = e.statut==='attente_paiement'?'Att. paiement':e.statut==='demande'?'Att. validation':e.statut;
+    hits.push({
+      zone: 'Inscriptions Tango', icon: '🎓',
+      prenom: e.prenom, nom: e.nom, email: e.email, tel: e.tel||'',
+      detail: coursLbl + ' · ' + statutLbl,
+      statut: e.statut, id: e.id,
+      action: function(){ fermerRechercheGlobale(); switchTab('cours-tango'); }
+    });
+  });
+
+  // ── Essai Tango ──
+  (adminData.essai||[]).forEach(function(e) {
+    if (e.statut==='supprimé') return;
+    if (!_matchPersRaw(e.prenom, e.nom, e.email, e.tel)) return;
+    var dateLbl = e.date ? fmtDate(e.date) : '';
+    var villeLbl = e.ville==='vincennes'?'Vincennes':'Paris';
+    hits.push({
+      zone: 'Essai Tango', icon: '🎯',
+      prenom: e.prenom, nom: e.nom, email: e.email, tel: e.tel||'',
+      detail: dateLbl + ' · ' + villeLbl + ' ' + (e.niveau==='intermediaire'?'Intermédiaires':'Débutants'),
+      statut: e.statut, id: e.id,
+      action: function(){ fermerRechercheGlobale(); switchTab('essai'); }
+    });
+  });
+
+  // ── Essai Yoga ──
+  (adminData.essaiYoga||[]).forEach(function(e) {
+    if (!_matchPersRaw(e.prenom, e.nom, e.email, e.tel)) return;
+    var dateLbl = e.date ? fmtDate(e.date) : '';
+    hits.push({
+      zone: 'Essai Yoga', icon: '🧘',
+      prenom: e.prenom, nom: e.nom, email: e.email, tel: e.tel||'',
+      detail: dateLbl + ' · ' + (e.cours||'yoga'),
+      statut: e.statut, id: e.id,
+      action: function(){ fermerRechercheGlobale(); switchTab('yoga'); }
+    });
+  });
+
+  // ── Élèves Yoga ──
+  (adminData.coursYoga||[]).forEach(function(e) {
+    if (e.statut==='supprimé') return;
+    if (!_matchPersRaw(e.prenom, e.nom, e.email, e.tel)) return;
+    hits.push({
+      zone: 'Yoga', icon: '🌿',
+      prenom: e.prenom, nom: e.nom, email: e.email, tel: e.tel||'',
+      detail: (e.cours||'') + (e.statut==='inscrit'?' · Inscrit·e':' · '+e.statut),
+      statut: e.statut, id: e.id,
+      action: function(){ fermerRechercheGlobale(); switchTab('yoga'); }
+    });
+  });
+
+  // ── Stages ──
+  var _stSeen = {};
+  Object.values(adminData.stages||{}).forEach(function(jour) {
+    (jour.inscrits||[]).forEach(function(e) {
+      var key = (e.email||_normNom((e.prenom||'') + ' ' + (e.nom||''))) + '_stages';
+      if (_stSeen[key]) return;
+      if (!_matchPersRaw(e.prenom, e.nom, e.email, e.telephone)) return;
+      _stSeen[key] = true;
+      hits.push({
+        zone: 'Stages', icon: '💃',
+        prenom: e.prenom, nom: e.nom, email: e.email, tel: e.telephone||'',
+        detail: fmtDate(jour.date||'') + ' · ' + (e.role||''),
+        statut: e.type_confirmation||'', id: e.id,
+        action: function(){ fermerRechercheGlobale(); switchTab('stages'); }
+      });
+    });
+  });
+
+  // ── Cours particuliers ──
+  (adminData.coursParticuliers||[]).forEach(function(e) {
+    if (!_matchPersRaw(e.prenom, e.nom, e.email, e.tel)) return;
+    hits.push({
+      zone: 'Cours particuliers', icon: '🎵',
+      prenom: e.prenom, nom: e.nom, email: e.email, tel: e.tel||'',
+      detail: (e.prof||'') + (e.duree?' · '+e.duree:''),
+      statut: '', id: e.id,
+      action: function(){ fermerRechercheGlobale(); switchTab('cours-particuliers'); }
+    });
+  });
+
+  if (!hits.length) {
+    out.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-size:14px;">Aucun résultat pour <strong style="color:var(--text);">' + escHtml(_globalSearch) + '</strong></div>';
+    return;
+  }
+
+  // Grouper par zone
+  var byZone = {};
+  hits.forEach(function(h) {
+    if (!byZone[h.zone]) byZone[h.zone] = [];
+    byZone[h.zone].push(h);
+  });
+
+  var html = '';
+  Object.keys(byZone).forEach(function(zone) {
+    var grp = byZone[zone];
+    html += '<div style="padding:6px 16px 2px;font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;font-weight:700;">' + grp[0].icon + ' ' + zone + ' <span style="color:var(--gold);">(' + grp.length + ')</span></div>';
+    grp.forEach(function(h, hi) {
+      var statutColor = h.statut==='inscrit'?'#4caf50':h.statut==='attente_paiement'?'#ff9800':h.statut==='demande'?'#ffd740':h.statut==='confirme'?'#4caf50':'#888';
+      var telHtml = h.tel ? ' <a href="tel:' + h.tel + '" style="color:var(--dim);text-decoration:none;font-size:11px;" onclick="event.stopPropagation()">📞 ' + h.tel + '</a>' : '';
+      var emailHtml = h.email ? ' <span style="color:var(--dim);font-size:11px;">· ' + escHtml(h.email) + '</span>' : '';
+      var idx = hi;
+      html += '<div class="srch-hit" data-hitidx="' + hits.indexOf(h) + '" style="display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;" onmouseover="this.style.background=\'var(--s2)\'" onmouseout="this.style.background=\'\'" onclick="window._searchHits[' + hits.indexOf(h) + '].action()">'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-weight:700;font-size:14px;color:var(--text);">' + escHtml((h.prenom||'') + ' ' + (h.nom||'').toUpperCase()) + emailHtml + '</div>'
+        + '<div style="font-size:12px;color:var(--dim);margin-top:2px;">' + escHtml(h.detail) + telHtml + '</div>'
+        + '</div>'
+        + (h.statut ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:' + statutColor + '22;color:' + statutColor + ';border:1px solid ' + statutColor + '44;">' + escHtml(h.statut) + '</span>' : '')
+        + '</div>';
+    });
+  });
+  window._searchHits = hits;
+  out.innerHTML = html + '<div style="padding:8px 16px 6px;font-size:11px;color:var(--dim);text-align:right;">' + hits.length + ' résultat' + (hits.length>1?'s':'') + '</div>';
+}
+
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey||e.metaKey) && e.key==='k') {
+    e.preventDefault();
+    if (gel('modal-search').classList.contains('vis')) fermerRechercheGlobale();
+    else ouvrirRechercheGlobale();
+  }
+  if (e.key==='Escape' && gel('modal-search').classList.contains('vis')) fermerRechercheGlobale();
+});
+// ── Fin recherche globale ──────────────────────────────────────────────────
+
 function essaiVersCoursTango(email, statut, btn) {
   var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
   if(!ess){fermerContact();return;}
