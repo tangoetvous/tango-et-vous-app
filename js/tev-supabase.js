@@ -99,6 +99,7 @@ async function tevGetEleve(email) {
       tel: eleve.tel,
       statut: eleve.statut_eleve,
       photo_url: eleve.photo_url || null,
+      visible_repertoire: eleve.visible_repertoire || false,
     },
     carte: {
       coursUtilises:  eleve.carte_utilises,
