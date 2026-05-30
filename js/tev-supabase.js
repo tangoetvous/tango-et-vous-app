@@ -72,13 +72,43 @@ async function tevGetEleve(email) {
     .single();
 
   if (error || !eleve) return { error: 'not_found', email };
-  if (eleve.statut_eleve !== 'Actif') {
+
+  // Blocages explicites admin (indépendants de l'inscription)
+  if (eleve.statut_eleve === 'En attente') {
+    return {
+      error: 'not_active',
+      statut: 'En attente',
+      message: "Votre compte est en cours de validation. Vous recevrez un email dès qu'il sera activé.",
+    };
+  }
+  if (eleve.statut_eleve === 'Inactif') {
+    return {
+      error: 'not_active',
+      statut: 'Inactif',
+      message: "Votre accès est suspendu. Contactez-nous si vous pensez que c'est une erreur.",
+    };
+  }
+
+  // Vérification d'inscription active (saison courante ou prochaine)
+  const _now = new Date();
+  const _m = _now.getMonth() + 1;
+  const _y = _now.getFullYear();
+  const _saiA = _m >= 9 ? `${_y}-${_y + 1}` : `${_y - 1}-${_y}`;
+  const _saiParts = _saiA.split('-');
+  const _saiN = `${parseInt(_saiParts[0]) + 1}-${parseInt(_saiParts[1]) + 1}`;
+
+  const [{ data: _inscTango }, { data: _inscYoga }] = await Promise.all([
+    _tev.from('inscriptions_cours').select('id').eq('email', email)
+      .neq('statut', 'supprimé').in('saison', [_saiA, _saiN]).limit(1),
+    _tev.from('cours_yoga').select('id').eq('email', email)
+      .in('saison', [_saiA, _saiN]).limit(1),
+  ]);
+
+  if ((!_inscTango || !_inscTango.length) && (!_inscYoga || !_inscYoga.length)) {
     return {
       error: 'not_active',
       statut: eleve.statut_eleve,
-      message: eleve.statut_eleve === 'En attente'
-        ? "Votre compte est en cours de validation. Vous recevrez un email dès qu'il sera activé."
-        : 'Votre accès est suspendu. Contactez-nous si vous pensez que c\'est une erreur.',
+      message: "Votre inscription pour cette saison est terminée. Contactez-nous pour vous réinscrire.",
     };
   }
 
