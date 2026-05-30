@@ -5526,6 +5526,12 @@ async function handleCronEssaiRappelJ7(request, env) {
       if (r.ok) sent++;
     } catch(err) { console.error('[cron-essai-rappel-j7] brevo error', err); }
   }
+  if (sent > 0) {
+    try {
+      const resN = await _insertNotification('essai_rappel_j7', `📅 ${sent} rappel(s) J-7 envoyé(s) pour l'essai tango du ${dateLabel} · → Essai Tango`, 'essai');
+      if (!resN.ok) console.error('[cron-essai-rappel-j7] insertNotification HTTP', resN.status);
+    } catch(e) { console.error('[cron-essai-rappel-j7] insertNotification error', e); }
+  }
   return corsResponse({ ok: true, sent, checked: inscrits.length, targetDate }, 200, {}, request);
 }
 
@@ -5912,6 +5918,12 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
         body: JSON.stringify({ email: String(e.email), type: 'essai_yoga_rappel', message: `📅 Rappel : votre cours d'essai yoga a lieu dans 3 jours — ${dateLabel}`, lu: false }),
       });
     } catch(err) { console.error('[cron-essai-yoga-rappel-j3] notif error', err); }
+  }
+  if (sent > 0) {
+    try {
+      const resN = await _insertNotification('essai_yoga_rappel_j3', `📅 ${sent} rappel(s) J-3 envoyé(s) pour l'essai yoga du ${dateLabel} · → Yoga → Essai yoga`, 'yoga');
+      if (!resN.ok) console.error('[cron-essai-yoga-rappel-j3] insertNotification HTTP', resN.status);
+    } catch(e) { console.error('[cron-essai-yoga-rappel-j3] insertNotification error', e); }
   }
   return corsResponse({ ok: true, sent, checked: inscrits.length, targetDate }, 200, {}, request);
 }
@@ -7562,6 +7574,12 @@ async function handleCronRappelStageJ3(request, env) {
       const _s4Tokens = await getFcmTokensForEmail(String(e.email), SUPABASE_ANON);
       if (_s4Tokens.length) await sendFcmPush(env, _s4Tokens, { title: 'Tango & Vous', body: `📅 Votre stage a lieu dans 3 jours — ${dateLabel}` });
     } catch(err) { console.error('[cron-rappel-stage-j3] push error', err); }
+  }
+  if (sent > 0) {
+    try {
+      const resN = await _insertNotification('stage_rappel_j3', `📅 ${sent} rappel(s) J-3 envoyé(s) pour le stage du ${dateLabel} · → Stages`, 'stages');
+      if (!resN.ok) console.error('[cron-rappel-stage-j3] insertNotification HTTP', resN.status);
+    } catch(e) { console.error('[cron-rappel-stage-j3] insertNotification error', e); }
   }
   return corsResponse({ ok: true, sent, checked: inscrits.length, targetDate }, 200, {}, request);
 }
