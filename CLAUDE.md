@@ -5590,3 +5590,52 @@ try {
 En Cloudflare Workers, après `return corsResponse(...)`, le runtime **peut terminer tous les fetch en cours** qui ne sont pas awaités. Le pattern `Promise.resolve(fetch(...)).catch(fn)` **n'est pas fire-and-forget fiable** — c'est un fire-and-maybe-forget.
 
 **Règle** : toute opération critique (mise à jour anti-doublon, insertion notification, envoi email) doit être `await`ée + entourée de `try/catch` **avant** le `return` du handler. Cette règle s'applique à 100% des handlers `worker.js`, crons inclus.
+
+---
+
+## Session 2026-05-30 — Notifications panel 🔔 admin pour les crons de rappel + contrôle d'accès espace élève
+
+### ✅ Notifications panel 🔔 admin pour E4, Y3, S4 (commit `00693b6`)
+
+**Demande** : pour chaque email de rappel envoyé à un élève, l'admin doit recevoir une notification dans son panel 🔔.
+
+**Choix d'implémentation — résumé unique après la boucle** : plutôt qu'une notification par élève (qui spamerait le panel), un seul résumé `"N rappel(s) envoyé(s)"` est inséré après la boucle, conditionné sur `sent > 0` (évite les notifications fantômes si aucun rappel n'est parti ce jour-là).
+
+**Pattern appliqué dans les 3 handlers** :
+```javascript
+if (sent > 0) {
+  try {
+    const resN = await _insertNotification('<type>', `📅 ${sent} rappel(s) envoyé(s) · → <onglet>`, '<tab>');
+    if (!resN.ok) console.error('[handler] insertNotification HTTP', resN.status);
+  } catch(e) { console.error('[handler] insertNotification error', e); }
+}
+return corsResponse({ ok: true, sent, ... }, 200, {}, request);
+```
+
+| Handler | Type notif | Message | Tab |
+|---------|-----------|---------|-----|
+| `handleCronEssaiRappelJ7` (E4) | `'essai_rappel_j7'` | `📅 N rappel(s) J-7 envoyé(s) pour l'essai tango du DATE · → Essai Tango` | `'essai'` |
+| `handleCronEssaiYogaRappelJ3` (Y3) | `'essai_yoga_rappel_j3'` | `📅 N rappel(s) J-3 envoyé(s) pour l'essai yoga du DATE · → Yoga → Essai yoga` | `'yoga'` |
+| `handleCronRappelStageJ3` (S4) | `'stage_rappel_j3'` | `📅 N rappel(s) J-3 envoyé(s) pour le stage du DATE · → Stages` | `'stages'` |
+
+**C6 (`handleCronRelanceAbsences`)** : déjà avait des notifications par élève (chaque détection de 2 absences consécutives est significative). Inchangé.
+
+**Règle** : pour les crons qui envoient en boucle à plusieurs élèves, préférer un résumé unique plutôt qu'une notification par élève. Pour les détections ponctuelles et importantes (C6, carte expirée CX), une notification par élève est appropriée.
+
+### ✅ C6 — condition `carte_statut IN ('Active', 'Nouvelle carte')` confirmée
+
+`handleCronRelanceAbsences` ne relance que les élèves dont `carte_statut IN ('Active', 'Nouvelle carte')` — une carte de 10 cours active est bien requise pour déclencher l'envoi de C6. Les élèves sans carte active (forfait, etc.) ne reçoivent pas cet email.
+
+### ✅ Contrôle d'accès espace élève — basé sur l'inscription active (commit `e889abd`)
+
+`tevGetEleve()` dans `js/tev-supabase.js` a été refactorisé pour vérifier l'existence d'au moins une ligne active dans `inscriptions_cours` (statut ≠ 'supprimé') OU `cours_yoga` pour la saison courante ou la saison suivante. `statut_eleve = 'Actif'` seul **ne suffit plus** pour accéder à l'espace élève.
+
+**Règles** :
+- `statut_eleve === 'En attente'` → blocage explicite (message "compte en cours de validation")
+- `statut_eleve === 'Inactif'` → blocage explicite (message "accès suspendu")
+- Aucune des deux lignes ci-dessus + inscription active (saison courante ou suivante) → accès accordé
+- Aucune inscription active → message "Votre inscription pour cette saison est terminée. Contactez-nous pour vous réinscrire."
+
+**Avantage** : à la rentrée 2026-2027, les élèves non ré-inscrits perdent automatiquement l'accès sans intervention manuelle admin.
+
+**Ne jamais revenir à `statut_eleve = 'Actif'`** comme seul critère.
