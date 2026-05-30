@@ -888,6 +888,15 @@ Application de gestion d'une école de tango et yoga (Tango & Vous).
 - Clé cache : `tev_plan_coords_v13` — stocker les coords géocodées Nominatim pour les lieux sans GPS explicite. Incrémenter la version pour forcer re-géocodage si nécessaire.
 
 ## Décisions techniques importantes
+- **Contrôle d'accès espace élève — basé sur l'inscription active, pas `statut_eleve`** (commit `e889abd`, 2026-05-30) : `tevGetEleve()` dans `js/tev-supabase.js` vérifie l'existence d'au moins une ligne active dans `inscriptions_cours` (statut ≠ 'supprimé') OU `cours_yoga` pour la saison courante ou la saison suivante. `statut_eleve = 'Actif'` seul **ne suffit plus** pour accéder à l'espace élève. Règles :
+  - `statut_eleve === 'En attente'` → blocage explicite (message "compte en cours de validation") — indépendant de l'inscription
+  - `statut_eleve === 'Inactif'` → blocage explicite (message "accès suspendu") — indépendant de l'inscription
+  - Aucune des deux lignes ci-dessus + inscription active (saison courante ou suivante) → accès accordé
+  - Aucune inscription active → message "Votre inscription pour cette saison est terminée. Contactez-nous pour vous réinscrire."
+  - **Avantage** : à la rentrée 2026-2027, les élèves non ré-inscrits perdent automatiquement l'accès sans intervention manuelle admin. Les élèves ré-inscrits via "Valider le paiement" ou "Inscription directe" de la saison prochaine (mai–août) ont déjà accès car le check inclut `saisonSuivante`.
+  - **Période de pré-inscription (mai–août)** : les élèves qui se ré-inscrivent pour la saison suivante via les formulaires admin ont accès à l'espace élève immédiatement — la saison suivante est incluse dans le check.
+  - **Élèves yoga uniquement** : le check interroge `cours_yoga` en parallèle — les élèves sans inscription tango mais avec un cours yoga actif conservent leur accès.
+  - **Ne jamais revenir à `statut_eleve = 'Actif'`** comme seul critère — l'admin devrait mettre à jour manuellement des centaines de fiches à chaque fin de saison.
 - **`cours` non stockée** dans `inscriptions_cours` — calculée depuis ville+niveau dans `tev-supabase.js`
 - **Saison dans les formulaires admin directs** : toujours utiliser `saisonActive()` (saison affichée dans l'admin), jamais `saisonPourNouvelleEntree()` qui renvoie la saison suivante en mai-août. `saisonPourNouvelleEntree()` est réservé aux formulaires publics (inscription-cours.html, etc.)
 - **Supabase `.upsert()` + `.catch()`** : le builder Supabase n'expose pas `.catch()` directement. Toujours envelopper dans `Promise.resolve(...).catch(function(){})` ou utiliser `.then(null, fn)`.
