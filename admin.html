@@ -9892,7 +9892,18 @@ function renderStages() {
       +'<div class="stat"><div class="stat-n n-warn">'+att0.length+'</div><div class="stat-l">Attente</div></div>'
       +'</div>';
     if(!ins.length) return h+'<div class="empty-state">Aucun inscrit pour ce stage.</div>';
-    var allSorted=ins.slice().sort(function(a,b){return (a.nom+a.prenom).localeCompare(b.nom+b.prenom,'fr');});
+    // Couples en haut (ordre d'arrivée), puis singles en alternance guideur/guidée
+    var _grps0=_groupCouples(ins.slice());
+    var _cpGrps0=_grps0.filter(function(g){return g.type==='couple';});
+    var _sgList0=_grps0.filter(function(g){return g.type==='single';}).map(function(g){return g.person;});
+    var _sgGui0=_sgList0.filter(function(i){return i.role==='guideur';});
+    var _sgGde0=_sgList0.filter(function(i){return i.role==='guidee';});
+    var _altGrps0=[]; var _altMax0=Math.max(_sgGui0.length,_sgGde0.length);
+    for(var _ai0=0;_ai0<_altMax0;_ai0++){
+      if(_ai0<_sgGui0.length) _altGrps0.push({type:'single',person:_sgGui0[_ai0]});
+      if(_ai0<_sgGde0.length) _altGrps0.push({type:'single',person:_sgGde0[_ai0]});
+    }
+    var allSorted=_cpGrps0.concat(_altGrps0);
     function _cardTous(i, noMargin){
       var origIdx=ins.indexOf(i);
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
@@ -9913,7 +9924,7 @@ function renderStages() {
         +'</div>'
         +'</div></div>';
     }
-    _groupCouples(allSorted).forEach(function(g){
+    allSorted.forEach(function(g){
       if(g.type==='couple'){
         h+=_coupleWrap(_cardTous(g.persons[0],true)+_cardTous(g.persons[1],true));
       } else {
@@ -9948,7 +9959,13 @@ function renderStages() {
       });
     }
     h+='<div class="section-hdr">Pointage présences</div>';
-    _groupCouples(conf).forEach(function(grp){
+    var _ptGrps=_groupCouples(conf);
+    var _ptCp=_ptGrps.filter(function(g){return g.type==='couple';});
+    var _ptSg=_ptGrps.filter(function(g){return g.type==='single';}).map(function(g){return g.person;});
+    var _ptGui=_ptSg.filter(function(i){return i.role==='guideur';}),_ptGde=_ptSg.filter(function(i){return i.role==='guidee';});
+    var _ptAlt=[]; var _ptMax=Math.max(_ptGui.length,_ptGde.length);
+    for(var _pti=0;_pti<_ptMax;_pti++){if(_pti<_ptGui.length)_ptAlt.push({type:'single',person:_ptGui[_pti]});if(_pti<_ptGde.length)_ptAlt.push({type:'single',person:_ptGde[_pti]});}
+    _ptCp.concat(_ptAlt).forEach(function(grp){
       function _stPRow(i){
         var origIdx=ins.indexOf(i);
         var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
@@ -10045,11 +10062,14 @@ function renderStages() {
   if(!insSlot.length) return h+'<div class="empty-state">Aucun inscrit à ce créneau.</div>';
   h+='<div class="section-hdr">Inscrits ('+insSlot.length+')</div>';
 
-  // Interleave guideurs/guidées + boutons up/down pour tous les créneaux
-  var insGui=insSlot.filter(function(i){return i.role==='guideur';});
-  var insGde=insSlot.filter(function(i){return i.role==='guidee';});
-  var insAlt=[]; var ail=Math.max(insGui.length,insGde.length);
-  for(var ai=0;ai<ail;ai++){if(ai<insGui.length)insAlt.push(insGui[ai]);if(ai<insGde.length)insAlt.push(insGde[ai]);}
+  // Couples en haut, puis singles en alternance guideur/guidée
+  var _slGrps=_groupCouples(insSlot);
+  var _slCp=_slGrps.filter(function(g){return g.type==='couple';});
+  var _slSg=_slGrps.filter(function(g){return g.type==='single';}).map(function(g){return g.person;});
+  var _slGui=_slSg.filter(function(i){return i.role==='guideur';}),_slGde=_slSg.filter(function(i){return i.role==='guidee';});
+  var insAlt=[]; var ail=Math.max(_slGui.length,_slGde.length);
+  for(var ai=0;ai<ail;ai++){if(ai<_slGui.length)insAlt.push({type:'single',person:_slGui[ai]});if(ai<_slGde.length)insAlt.push({type:'single',person:_slGde[ai]});}
+  var _slFinal=_slCp.concat(insAlt);
   function _rowSlot(i, noMargin){
     var origIdx=ins.indexOf(i);
     var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
@@ -10064,7 +10084,7 @@ function renderStages() {
       +(i.email?btnEmail(i.email,i.prenom+' '+i.nom):'')
       +'</div></div>';
   }
-  _groupCouples(insAlt).forEach(function(g){
+  _slFinal.forEach(function(g){
     if(g.type==='couple'){
       h+=_coupleWrap(_rowSlot(g.persons[0],true)+_rowSlot(g.persons[1],true));
     } else {

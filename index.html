@@ -1899,7 +1899,15 @@
         + '<div style="font-size:14px;color:var(--text);letter-spacing:1px;margin-bottom:10px;">cours restants</div>';
       h += '</div></div>';
       h += dots;
-      if (carte.dateExpiration) h += '<div style="font-size:13px;color:var(--text);margin-top:4px;">Expiration : ' + formatDate(carte.dateExpiration) + '</div>';
+      if (carte.dateExpiration) {
+        var _expBadgeDays = daysUntil(carte.dateExpiration);
+        if (_expBadgeDays !== null && _expBadgeDays < 0) {
+          h += '<div style="text-align:center;margin:14px 0 6px;">'
+            + '<span style="display:inline-block;background:#c62828;color:#fff;border-radius:24px;padding:7px 24px;font-size:18px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;">⛔ Expirée</span>'
+            + '</div>';
+        }
+        h += '<div style="font-size:13px;color:var(--text);margin-top:4px;">Expiration : ' + formatDate(carte.dateExpiration) + '</div>';
+      }
       h += '</div>';
       // Boutons pointer + renouveler
       const _renewUrl = (function(){
@@ -5675,9 +5683,21 @@ a{color:var(--gold);text-decoration:none;}
   <!-- ── ONGLET MODE D'EMPLOI ─────────────────────────────── -->
   <div class="tab-pane" id="aide-pane">
     <div class="tab-section-title">❓ Mode d'emploi</div>
-    <div style="font-size:14px;color:var(--dim);margin-bottom:18px;line-height:1.6;">
+    <div style="font-size:14px;color:var(--dim);margin-bottom:14px;line-height:1.6;">
       Bienvenue dans votre espace élève Tango&nbsp;&amp;&nbsp;Vous&nbsp;!<br>
       Retrouvez ici le guide de chaque rubrique du menu.
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-size:13px;color:var(--text);line-height:1.7;">
+      <div style="font-weight:700;margin-bottom:6px;">📱 À quoi sert cette appli ?</div>
+      Cette application vous permet de <strong>pointer votre présence</strong> aux cours et de suivre votre carte de 10&nbsp;cours, de consulter les <strong>stages, milongas et publications</strong> de l'association, de vous inscrire aux cours particuliers, et d'<strong>échanger en message privé</strong> avec les autres élèves. Installez-la sur votre écran d'accueil pour y accéder directement depuis votre téléphone, sans passer par le navigateur.
+    </div>
+
+    <div style="background:#0f1a0f;border:1px solid rgba(76,175,80,0.35);border-radius:12px;padding:14px 16px;margin-bottom:18px;font-size:13px;color:var(--text);line-height:1.7;">
+      <div style="font-weight:700;color:#81c784;margin-bottom:6px;">🔔 Recevoir les notifications même appli fermée</div>
+      Appuyez sur l'icône <strong>🔔</strong> en haut de la page puis sur <strong>«&nbsp;Activer les notifications&nbsp;»</strong>.<br>
+      <span style="color:var(--dim);">Sur iPhone :</span> appuyez <strong>«&nbsp;Autoriser&nbsp;»</strong> dans la fenêtre qui s'affiche — les notifications arrivent ensuite comme pour n'importe quelle appli.<br>
+      <span style="color:var(--dim);">Sur Android :</span> autorisez les notifications dans la fenêtre du navigateur si elle s'affiche.
     </div>
 
     <style>
