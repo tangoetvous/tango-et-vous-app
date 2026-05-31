@@ -12,6 +12,19 @@
 
 Les fichiers `preview-emails-*.html` (~70-130 KB chacun) suivent la même règle : `grep` + `Read` ciblé.
 
+**Quand la tâche nécessite plusieurs zones différentes d'un gros fichier dans la même session** : ne pas accumuler les Reads dans le contexte principal — déléguer à un sous-agent qui s'exécute dans son propre contexte isolé.
+
+| Sous-agent | Quand l'utiliser |
+|------------|------------------|
+| `Explore` | Recherche read-only sur plusieurs zones (ex: "où sont définies ces 5 fonctions ?", "trouve tous les endroits qui appellent X") |
+| `general-purpose` | Tâche multi-fichiers ou nécessitant des modifications ciblées sur plusieurs zones |
+
+Seul le **résultat résumé** du sous-agent revient dans le contexte principal (typiquement 200-1000 tokens), pas les fichiers lus. Exemple :
+- ❌ Mauvais : 5 × `Read("admin.html", offset=X, limit=200)` répartis dans la session → cumul ~5000-10 000 tokens
+- ✅ Bon : 1 × `Agent(subagent_type="Explore", prompt="Trouve dans admin.html les fonctions X/Y/Z, résume leur signature + lignes")` → ~500 tokens dans le contexte principal
+
+Règle d'or : **dès qu'une tâche demande de regarder 3+ zones d'un même gros fichier, déléguer à un sous-agent.**
+
 Si l'utilisateur signale "autocompact thrashing" ou un blocage de session, vérifier en priorité si des Reads massifs ont eu lieu — c'est généralement la cause, pas CLAUDE.md.
 
 ## Push notifications — VAPID + déduplication tokens
