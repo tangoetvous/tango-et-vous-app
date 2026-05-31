@@ -1,5 +1,19 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## ⚠️ Règle technique — éviter le context overflow / autocompact thrashing
+
+`admin.html` (~15 000 lignes / ~930 KB) et `worker.js` (~8 500 lignes / ~580 KB) sont des fichiers monolithiques trop gros pour être lus entiers sans saturer le contexte. Idem pour `index.html` (~6 400 lignes / ~340 KB).
+
+**Pattern obligatoire** pour ces 3 fichiers :
+1. Toujours `grep` (via Bash) ou l'agent `Explore` d'abord pour repérer la zone concernée (numéros de ligne)
+2. Puis `Read` avec `offset` + `limit` (typiquement 50-200 lignes ciblées)
+3. **Ne jamais** faire `Read("admin.html")`, `Read("worker.js")` ou `Read("index.html")` sans bornes
+4. Pour des modifications, préférer `Edit` (qui ne renvoie que le diff appliqué) plutôt qu'un Read complet suivi d'un Write
+
+Les fichiers `preview-emails-*.html` (~70-130 KB chacun) suivent la même règle : `grep` + `Read` ciblé.
+
+Si l'utilisateur signale "autocompact thrashing" ou un blocage de session, vérifier en priorité si des Reads massifs ont eu lieu — c'est généralement la cause, pas CLAUDE.md.
+
 ## Push notifications — VAPID + déduplication tokens
 
 ### Clés VAPID — configuration actuelle (2026-05-26)
