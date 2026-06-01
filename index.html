@@ -1275,21 +1275,10 @@
     const myEmail = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
     pane.innerHTML = '<div style="padding:16px;color:var(--text-dim);text-align:center;">Chargement…</div>';
     try {
-      // La RLS eleves limite SELECT à l'email courant — on passe par le worker
-      // qui utilise la service key après validation du JWT.
-      const { data: { session } } = await TEV.client.auth.getSession();
-      const _repToken = session && session.access_token ? session.access_token : '';
-      let elevesVis = [];
-      if (_repToken) {
-        const _repR = await fetch('/api/eleve/repertoire', {
-          headers: { Authorization: 'Bearer ' + _repToken }
-        });
-        if (_repR.ok) {
-          const _repJ = await _repR.json();
-          elevesVis = _repJ.data || [];
-        }
-      }
-      const visible = elevesVis;
+      // RLS eleves limite SELECT à email=auth.email() → on passe par une fonction
+      // SECURITY DEFINER qui bypasse la RLS côté DB (SQL à exécuter dans Supabase).
+      const { data: elevesVis } = await TEV.client.rpc('get_eleves_repertoire');
+      const visible = (elevesVis || []);
       const emails = visible.map(function(e) { return e.email; }).filter(Boolean);
       let insc = [];
       if (emails.length) {
