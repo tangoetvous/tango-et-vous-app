@@ -496,6 +496,11 @@ export default {
         return await handleDebugFcmCount(request, env);
       }
 
+      // GET /api/eleve/repertoire — liste des élèves visible_repertoire=true (JWT élève requis)
+      if (pathname === '/api/eleve/repertoire' && method === 'GET') {
+        return await handleEleveRepertoire(request, env);
+      }
+
       try {
         return await env.ASSETS.fetch(request);
       } catch (assetErr) {
@@ -3745,6 +3750,44 @@ async function handleDebugFcmCount(request, env) {
     const emailCounts = {};
     rows.forEach(x => { if (x.email) emailCounts[x.email] = (emailCounts[x.email] || 0) + 1; });
     return corsResponse({ total_tokens: rows.length, distinct_emails: Object.keys(emailCounts).length, by_email: emailCounts }, 200, {}, request);
+  }
+}
+
+// GET /api/eleve/repertoire — liste des élèves visible_repertoire=true (JWT élève requis)
+// Contourne la RLS eleves (USING email=auth.email()) via service key,
+// après validation du JWT pour s'assurer que le demandeur est bien authentifié.
+// ================================================================
+async function handleEleveRepertoire(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!token) return jsonError(401, 'Auth requise', {}, request);
+
+  // Valide le JWT auprès de Supabase Auth
+  try {
+    const vr = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}` }
+    });
+    if (!vr.ok) return jsonError(401, 'Token invalide', {}, request);
+  } catch(e) {
+    return jsonError(500, 'Erreur auth', {}, request);
+  }
+
+  // Fetch avec service key pour bypasser la RLS eleves
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/eleves?visible_repertoire=eq.true&select=email,prenom,nom,photo_url`,
+      { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${svcKey}` } }
+    );
+    if (!r.ok) {
+      console.error('[repertoire] Supabase HTTP', r.status, await r.text().catch(()=>''));
+      return jsonError(500, 'Erreur DB', {}, request);
+    }
+    const data = await r.json();
+    return corsResponse({ ok: true, data: Array.isArray(data) ? data : [] }, 200, {}, request);
+  } catch(e) {
+    console.error('[repertoire] error', e);
+    return jsonError(500, 'Erreur serveur', {}, request);
   }
 }
 
