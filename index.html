@@ -2308,8 +2308,8 @@
       existing = _discDiscList.find(function(d) {
         var dn = d.donnees || {};
         return dn.private === true && (
-          (d.created_by === myEmail && dn.targetEmail === targetEmail) ||
-          (d.created_by === targetEmail && dn.targetEmail === myEmail)
+          (d.eleve_email === myEmail && (dn.targetEmail || '').toLowerCase() === targetEmail.toLowerCase()) ||
+          (d.eleve_email === targetEmail && (dn.targetEmail || '').toLowerCase() === myEmail)
         );
       });
     }
@@ -2317,9 +2317,9 @@
     if (!existing) {
       try {
         const titre = 'Discussion avec ' + targetNom;
-        const { data, error } = await TEV.createDiscussion({ titre, eleveEmail: myEmail, eleveNom: myNomComplet, groupes: [], targetEmail });
-        if (error) throw error;
-        existing = { id: data.id, titre, created_by: myEmail, donnees: { private: true, targetEmail } };
+        const result = await TEV.createDiscussion({ titre, eleveEmail: myEmail, eleveNom: myNomComplet, groupes: [], targetEmail });
+        if (!result || !result.id) throw new Error('no id returned');
+        existing = { id: result.id, titre, eleve_email: myEmail, donnees: { private: true, targetEmail } };
         // Notifier le destinataire
         fetch('/api/notify/discussion-nouvelle-eleve', {
           method: 'POST',
