@@ -10818,7 +10818,7 @@ function soranoAction(id, paye, btn) {
         Promise.resolve(fetch('https://app.tangoetvous.fr/api/notify/sorano', {
           method:'POST',
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
-          body:JSON.stringify({type:'regle',email:email,nom:_ctPrenom+' '+_ctNom,prenom:_ctPrenom,cours:_ctCours})
+          body:JSON.stringify({type:'regle',email:email,nom:_ctPrenom+' '+_ctNom,prenom:_ctPrenom,cours:_ctCours,saison:saisonActive()})
         })).catch(function(){});
       }
     }
@@ -10834,7 +10834,7 @@ function relanceSorano(email, nom, prenom, cours, btn) {
   fetch('https://app.tangoetvous.fr/api/notify/sorano', {
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
-    body:JSON.stringify({type:'relance',email:email,nom:nom,prenom:prenom||nom.split(' ')[0],cours:cours})
+    body:JSON.stringify({type:'relance',email:email,nom:nom,prenom:prenom||nom.split(' ')[0],cours:cours,saison:saisonActive()})
   }).then(function(r){return r.json();}).then(function(){
     btn.disabled=false; btn.textContent='✓ Envoyé';
     afficherToast('✉️ Relance envoyée à '+nom);

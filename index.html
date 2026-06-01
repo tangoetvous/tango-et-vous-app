@@ -1544,7 +1544,12 @@
   function renderSorano() {
     const pane = $('sorano-pane');
     if (!pane) return;
-    const _sai = (function(){ var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); })();
+    const _sai = (function(){
+      var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1;
+      // Mai–août = période pré-inscription → saison suivante
+      if(m>=5&&m<=8) return y+'-'+(y+1);
+      return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y);
+    })();
     const DEFAUT = { m16_vinc:26, m16_ext:35, p16_vinc:36, p16_ext:45 };
     function _sorTarifs() {
       try {

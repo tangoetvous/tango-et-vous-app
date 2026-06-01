@@ -1687,15 +1687,35 @@ async function sendBrevoNotification(apiKey, body) {
 // POST /api/notify/sorano — email + notification in-app
 // type: 'relance' | 'regle'
 // ================================================================
+async function _getSoranoLien(saison) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_params_adhesions_${saison}&select=valeur`, {
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` }
+    });
+    if (r.ok) {
+      const d = await r.json();
+      return (d[0] && d[0].valeur && d[0].valeur.sorano && d[0].valeur.sorano.lien) || '';
+    }
+  } catch(e) {}
+  return '';
+}
+
 async function handleNotifySorano(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
 
-  const { type, prenom, nom, email, cours } = body;
+  const { type, prenom, nom, email, cours, saison } = body;
   if (!email) return jsonError(400, 'email manquant');
 
   const prenomAff = _esc(prenom || (nom || '').split(' ')[0] || '');
   const adminEmail = 'tangoetvous@gmail.com';
+
+  const _sai = saison || (() => {
+    const now = new Date(); const m = now.getMonth() + 1; const y = now.getFullYear();
+    if (m >= 5 && m <= 8) return `${y}-${y+1}`;
+    return m >= 9 ? `${y}-${y+1}` : `${y-1}-${y}`;
+  })();
+  const soranoLien = await _getSoranoLien(_sai);
 
   // Notification in-app (toujours, même sans Brevo)
   const notifMsg = type === 'regle'
@@ -1774,7 +1794,11 @@ async function handleNotifySorano(request, env) {
         <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">L'Espace Sorano demande pour toutes les activités qui y ont lieu une adhésion nécessaire pour participer aux cours. Mais sachez que cette adhésion permet de bénéficier de réductions sur tous les spectacles proposés au Théâtre Sorano ainsi que sur ceux programmés par les services culturels de la Ville de Vincennes.</p>
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
           <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">📋 Comment procéder</p>
-          <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous vous enverrons prochainement un lien pour régler cette adhésion.</p>
+          ${soranoLien
+            ? `<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 14px;">Cliquez sur le bouton ci-dessous pour régler votre adhésion directement sur le site de l'Espace Sorano.</p>
+               <p style="text-align:center;margin:0;"><a href="${_esc(soranoLien)}" target="_blank" style="display:inline-block;background:#2dd4bf;color:#0a2a28;padding:13px 28px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:0.5px;text-decoration:none;">💳 Régler mon adhésion Sorano ${_esc(_sai)}</a></p>`
+            : `<p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous vous enverrons prochainement un lien pour régler cette adhésion.</p>`
+          }
         </div>
         <p style="font-size:14px;color:#333;margin:0 0 24px;">Si vous avez déjà réglé votre adhésion pour une autre activité à l'Espace Sorano merci de nous l'indiquer.</p>
         <p style="text-align:center;margin:0 0 24px;"><a href="mailto:tangoetvous@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a></p>
@@ -4999,6 +5023,7 @@ async function handleNotifyInscriptionCours(request, env) {
     + '</div></div>';
 
   // ── I01 élève — one email per course
+  const _sorLienI01 = await _getSoranoLien(saison || '');
   for (let ci = 0; ci < courses.length; ci++) {
     const c = courses[ci];
     // c1 uses isWaitlist; c2 computes from role2/venue2
@@ -5092,7 +5117,10 @@ async function handleNotifyInscriptionCours(request, env) {
         const soranoNote = isVinc
           ? '<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 18px;margin:0 0 20px;">'
             + '<p style="font-size:13px;color:#5d4037;font-weight:700;margin:0 0 6px;">🏛 Adh\xe9sion \xe0 l\'Espace Sorano</p>'
-            + '<p style="font-size:13px;color:#444;line-height:1.7;margin:0;">Il est aussi n\xe9cessaire de souscrire une adh\xe9sion \xe0 l\'Espace Sorano pour suivre les cours qui y ont lieu. Nous vous enverrons le lien pour r\xe9gler cette adh\xe9sion s\xe9par\xe9ment dans les prochains jours.</p>'
+            + '<p style="font-size:13px;color:#444;line-height:1.7;margin:0;">Il est aussi n\xe9cessaire de souscrire une adh\xe9sion \xe0 l\'Espace Sorano pour suivre les cours qui y ont lieu.</p>'
+            + (_sorLienI01
+              ? '<div style="text-align:center;margin:10px 0 4px;"><a href="' + _esc(_sorLienI01) + '" style="display:inline-block;background:#5d4037;color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">💳 R\xe9gler mon adh\xe9sion Sorano ' + _esc(saison || '') + '</a></div>'
+              : '<p style="font-size:13px;color:#777;line-height:1.7;margin:8px 0 0;">Nous vous enverrons le lien pour r\xe9gler cette adh\xe9sion s\xe9par\xe9ment dans les prochains jours.</p>')
             + '</div>'
           : '';
         const acNote = isCouple
@@ -6152,9 +6180,11 @@ async function handleNotifyYogaInscriptionValidee(request, env) {
     <div style="padding:16px 18px;">${sectionsYI1}</div>
   </div>`;
 
+  const _sorLienYI1 = await _getSoranoLien(sai);
   const soranoBlock = `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
     <p style="font-size:14px;color:#f57f17;font-weight:700;margin:0 0 10px;">🏛 Adhésion à l'Espace Sorano</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Il est aussi nécessaire de souscrire une adhésion à l'Espace Sorano pour suivre les cours qui y ont lieu. Nous vous enverrons le lien pour régler cette adhésion séparément dans les prochains jours.</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 ${_sorLienYI1?'14':'0'}px;">Il est aussi nécessaire de souscrire une adhésion à l'Espace Sorano pour suivre les cours qui y ont lieu.</p>
+    ${_sorLienYI1 ? `<p style="text-align:center;margin:0;"><a href="${_esc(_sorLienYI1)}" target="_blank" style="display:inline-block;background:#2dd4bf;color:#0a2a28;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">💳 Régler mon adhésion Sorano ${_esc(sai)}</a></p>` : '<p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous vous enverrons le lien pour régler cette adhésion séparément dans les prochains jours.</p>'}
   </div>`;
 
   const checklist = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
@@ -6765,9 +6795,11 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
     </table>
   </div>`;
 
+  const _sorLienI02 = ville === 'vincennes' ? await _getSoranoLien(saison) : '';
   const soranoBlock = ville === 'vincennes' ? `<div style="background:#fff9c4;border:1px solid #f9a825;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
     <p style="font-size:13px;color:#e65100;font-weight:700;margin:0 0 6px;">🏛 Adhésion à l'Espace Sorano</p>
-    <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Les cours à Vincennes ont lieu à l'Espace Sorano. Une adhésion à l'Espace Sorano est demandée. Vous recevrez prochainement les informations pour la régler.</p>
+    <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 ${_sorLienI02?'12':'0'}px;">Les cours à Vincennes ont lieu à l'Espace Sorano. Une adhésion à l'Espace Sorano est demandée.</p>
+    ${_sorLienI02 ? `<p style="text-align:center;margin:0;"><a href="${_esc(_sorLienI02)}" target="_blank" style="display:inline-block;background:#2dd4bf;color:#0a2a28;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">💳 Régler mon adhésion Sorano ${_esc(saison)}</a></p>` : '<p style="font-size:13px;color:#555;line-height:1.7;margin:0;">Vous recevrez prochainement les informations pour la régler.</p>'}
   </div>` : '';
 
   const quelquesPrec = `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
