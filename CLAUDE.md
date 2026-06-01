@@ -3,7 +3,69 @@
 ## Annuaire des élèves (index.html — onglet `repertoire`)
 
 ### Fonctionnalité
-Onglet permettant aux élèves de se retrouver entre eux et d'envoyer des messages privés via l'appli.
+Onglet permettant aux élèves de se retrouver entre eux et de s'envoyer des **messages privés 1-à-1** via l'appli. Ces messages sont **exclusivement accessibles depuis l'onglet Annuaire** — ils ne transitent pas par l'onglet Discussions.
+
+### Distinction Annuaire ↔ Discussions
+
+| | Annuaire (`repertoire`) | Discussions (`discussions`) |
+|---|---|---|
+| **Participants** | Élève ↔ Élève | Élève ↔ Admin (l'admin peut s'adresser à 1 ou plusieurs groupes) |
+| **Initiateur** | Soit l'élève (depuis une fiche), soit le destinataire | Soit l'élève, soit l'admin |
+| **Table DB** | `messages_eleves` | `discussions` + `disc_messages` |
+| **Visible dans** | Onglet Annuaire uniquement | Onglet Discussions uniquement |
+| **Push/notif** | `notifications_eleve` + push OS via `/api/eleve/message-prive` | `notifications_eleve` + push OS via handlers dédiés |
+
+**Règle permanente : ne jamais mélanger les deux systèmes.** Les messages envoyés depuis l'Annuaire n'apparaissent pas dans Discussions, et vice versa.
+
+### Table `messages_eleves`
+```sql
+CREATE TABLE messages_eleves (
+  id BIGSERIAL PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  expediteur_email TEXT NOT NULL,
+  expediteur_nom TEXT NOT NULL DEFAULT '',
+  destinataire_email TEXT NOT NULL,
+  contenu TEXT NOT NULL,
+  lu BOOLEAN NOT NULL DEFAULT false
+);
+-- RLS : les deux participants peuvent SELECT ; seul l'expéditeur peut INSERT ; seul le destinataire peut UPDATE (marquer lu)
+ALTER TABLE messages_eleves ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "msg_eleves_select" ON messages_eleves FOR SELECT USING (
+  expediteur_email = auth.email() OR destinataire_email = auth.email()
+);
+CREATE POLICY "msg_eleves_insert" ON messages_eleves FOR INSERT WITH CHECK (
+  expediteur_email = auth.email()
+);
+CREATE POLICY "msg_eleves_update" ON messages_eleves FOR UPDATE USING (
+  destinataire_email = auth.email()
+);
+GRANT SELECT, INSERT, UPDATE ON messages_eleves TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE messages_eleves_id_seq TO authenticated;
+```
+
+### Architecture messagerie Annuaire (index.html)
+
+**États** :
+- `_repPeer = null` → vue liste (tous les élèves visibles groupés par cours)
+- `_repPeer = { email, nom, photo_url }` → vue conversation avec cet élève
+
+**Fonctions** :
+- `renderRepertoire()` — dispatch vers `_repRenderList()` ou `_repRenderConv()` selon `_repPeer`
+- `_repRenderList()` — charge via RPC `get_eleves_repertoire`, charge les unread depuis `messages_eleves`, affiche les cartes
+- `_repRenderConv()` — charge l'historique avec le peer, marque lu, affiche bulles, poll toutes les 5s
+- `window._repOuvrirConv(targetEmail)` — positionne `_repPeer` et bascule en vue conversation
+- `window._repRetour()` — reset `_repPeer`, retour à la liste
+- `window._repEnvoyer()` — INSERT dans `messages_eleves` + notif push via `/api/eleve/message-prive`
+- `_repEsc(s)` — escape HTML pour sécuriser le contenu des messages
+
+**Route worker** : `POST /api/eleve/message-prive` → `handleEleveMessagePrive` → INSERT `notifications_eleve` + push OS (FCM) au destinataire. Pas d'auth requise (fire & forget).
+
+**Cache** : `_repCache` — liste des élèves visibles, chargée une fois par session onglet. Reset : non (invalidation manuelle si nécessaire). `_repUnread` — compteurs non lus par expéditeur, rechargé à chaque affichage liste.
+
+**Polling** : `_repPollTO` — toutes les 5s quand une conversation est ouverte. Stoppé au changement d'onglet (`switchTab`).
+
+### RLS bypass — get_eleves_repertoire()
+Les deux tables `eleves` (USING `email = auth.email()`) et `inscriptions_cours` (USING `is_admin() OR email = auth.email()`) bloquent le SELECT cross-user. Solution : fonction SQL SECURITY DEFINER qui bypasse les deux et retourne `(email, prenom, nom, photo_url, cours text[])` directement. Appelée via `TEV.client.rpc('get_eleves_repertoire')`.
 
 ### Colonne DB
 `eleves.visible_repertoire BOOLEAN DEFAULT false` — l'élève choisit d'apparaître ou non dans l'annuaire.
@@ -21,11 +83,13 @@ Section "Annuaire des élèves" dans `renderAccueil()` → `toggleRepertoire(val
 - Met à jour visuellement le DOM du toggle (inline styles sur les deux `<span>`) sans re-render complet
 - Sous-titre toggle : "Apparaître dans l'onglet Annuaire des élèves (votre email et numéro de téléphone ne sont pas visibles)" en blanc (`color:#fff`)
 
-### `renderRepertoire()`
+### `renderRepertoire()` — vue liste
 - Groupé par cours (Paris Débutants / Paris Intermédiaires / Vincennes Débutants / Vincennes Intermédiaires)
+- Données via RPC `get_eleves_repertoire` (bypass RLS)
 - Exclut les lignes `isRenewal` de `inscriptions_cours` pour le comptage des cours
 - Texte noms : `font-size:16px;color:#fff;font-weight:600`
-- Bouton 💬 absent pour l'élève courant (`isSelf = e.email.toLowerCase() === myEmail`)
+- Clic sur une carte (hors soi-même) → `_repOuvrirConv(email)` — pas de bouton séparé, toute la carte est cliquable
+- Badge rouge avec compteur non lus affiché sur les cartes avec messages non lus
 - Si non inscrit à aucun cours → non listé (filtre `!courses.size`)
 
 ### Tab labels

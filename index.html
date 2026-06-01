@@ -688,6 +688,7 @@
     if (tab === 'repertoire') renderRepertoire();
     if (tab !== 'actu') _actuStopPoll();
     if (tab !== 'discussions') { _discStopPoll(); _discStopListPoll(); if (_discView === 'new') _discView = 'list'; }
+    if (tab !== 'repertoire') { if (_repPollTO) { clearTimeout(_repPollTO); _repPollTO = null; } }
     window.scrollTo(0, 0);
   };
 
@@ -740,6 +741,13 @@
   let _discPollTO      = null;
   let _discListPollTO  = null;
   let _discCurrentTargetEmail = '';
+
+  // Annuaire messages privés élève↔élève
+  let _repPeer      = null;  // { email, nom, photo_url } — null = vue liste
+  let _repCache     = null;  // cache des élèves visibles
+  let _repPollTO    = null;  // timer de polling messages
+  let _repUnread    = {};    // { email: count } — messages non lus par expéditeur
+  let _repScrollBot = false; // flag pour scroller en bas après rendu
 
   function _discGetMonGroupe() {
     if (!eleveData || !eleveData.eleve) return [];
@@ -1269,89 +1277,268 @@
   // ================================================================
   // RÉPERTOIRE ÉLÈVES
   // ================================================================
+  function _repEsc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   async function renderRepertoire() {
+    if (_repPeer) { _repRenderConv(); return; }
+    await _repRenderList();
+  }
+
+  async function _repRenderList() {
     const pane = $('repertoire-pane');
     if (!pane) return;
     const myEmail = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
-    pane.innerHTML = '<div style="padding:16px;color:var(--text-dim);text-align:center;">Chargement…</div>';
-    try {
-      // RLS eleves ET inscriptions_cours limitent SELECT à email=auth.email() →
-      // on passe par une fonction SECURITY DEFINER qui bypasse les deux RLS et
-      // retourne directement chaque élève visible avec son tableau de cours.
-      const { data: elevesVis } = await TEV.client.rpc('get_eleves_repertoire');
-      const visible = (elevesVis || []);
-      const emailToCourses = {};
-      visible.forEach(function(e) {
-        const k = (e.email || '').toLowerCase();
-        if (!emailToCourses[k]) emailToCourses[k] = new Set();
-        (e.cours || []).forEach(function(c) { if (c) emailToCourses[k].add(c); });
-      });
-      const COURSE_ORDER = ['paris—debutant', 'paris—intermediaire', 'vincennes—debutant', 'vincennes—intermediaire'];
-      const COURSE_LABELS = {
-        'paris—debutant':      'Paris — Débutants',
-        'paris—intermediaire': 'Paris — Intermédiaires',
-        'vincennes—debutant':  'Vincennes — Débutants',
-        'vincennes—intermediaire': 'Vincennes — Intermédiaires'
-      };
-      const groups = {};
-      COURSE_ORDER.forEach(function(k) { groups[k] = []; });
-      const seen = {};
-      visible.forEach(function(e) {
-        const ek = (e.email || '').toLowerCase();
-        const courses = emailToCourses[ek] || new Set();
-        if (!courses.size) return;
-        courses.forEach(function(c) {
-          if (!groups[c]) return;
-          const dedupKey = ek + '—' + c;
-          if (seen[dedupKey]) return;
-          seen[dedupKey] = true;
-          groups[c].push(e);
-        });
-      });
-      COURSE_ORDER.forEach(function(k) {
-        groups[k].sort(function(a, b) { return (a.nom || '').localeCompare(b.nom || '', 'fr'); });
-      });
-      let h = '<div style="padding:16px;">';
-      h += '<div style="font-size:12px;color:var(--text-dim);background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:16px;line-height:1.6;">'
-        + '👋 Retrouvez ici les élèves qui ont choisi de se rendre visibles dans l\'annuaire. Aucun email ni numéro de téléphone n\'est partagé — vous pouvez uniquement leur envoyer un message privé via l\'appli.'
-        + '</div>';
-      if (!eleveData || !eleveData.eleve || !eleveData.eleve.visible_repertoire) {
-        h += '<div style="font-size:12px;color:var(--text-dim);background:var(--s2);border-radius:8px;padding:8px 14px;margin-bottom:16px;">'
-          + '💡 Vous n\'apparaissez pas dans cet annuaire. Pour y figurer, activez l\'option dans <strong style="color:var(--gold);">Accueil → Mes coordonnées</strong>.'
-          + '</div>';
+
+    if (!_repCache) {
+      pane.innerHTML = '<div style="padding:16px;color:var(--text-dim);text-align:center;">Chargement…</div>';
+      try {
+        const { data: elevesVis } = await TEV.client.rpc('get_eleves_repertoire');
+        _repCache = elevesVis || [];
+      } catch(err) {
+        console.error('[renderRepertoire]', err);
+        pane.innerHTML = '<div style="padding:16px;color:#ef5350;text-align:center;">Erreur de chargement. Réessayez plus tard.</div>';
+        return;
       }
-      let hasAny = false;
-      COURSE_ORDER.forEach(function(key) {
-        const students = groups[key];
-        if (!students.length) return;
-        hasAny = true;
-        h += '<div style="margin-bottom:24px;">'
-          + '<div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:10px;">' + COURSE_LABELS[key] + '</div>';
-        students.forEach(function(e) {
-          const nom = ((e.prenom || '') + ' ' + (e.nom || '')).trim() || e.email;
-          const safeEmail = (e.email || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-          const safeNom   = nom.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-          const photoHtml = e.photo_url
-            ? '<img src="' + e.photo_url + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy">'
-            : '<div style="width:44px;height:44px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">👤</div>';
-          const isSelf = (e.email || '').toLowerCase() === myEmail;
-          h += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">'
-            + photoHtml
-            + '<div style="flex:1;font-size:16px;color:#fff;font-weight:600;">' + nom + '</div>'
-            + (isSelf ? '' : '<button onclick="ouvrirDiscRepertoire(\'' + safeEmail + '\',\'' + safeNom + '\')" style="padding:8px 14px;background:var(--s3);border:1px solid var(--border);border-radius:20px;color:var(--gold);font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">💬</button>')
-            + '</div>';
-        });
-        h += '</div>';
-      });
-      if (!hasAny) {
-        h += '<div style="text-align:center;color:var(--text-dim);font-size:14px;padding:40px 0;">Aucun élève n\'a encore rejoint l\'annuaire.<br><span style="font-size:12px;margin-top:8px;display:block;">Soyez le premier à activer l\'option dans Accueil → Mes coordonnées.</span></div>';
-      }
-      h += '</div>';
-      pane.innerHTML = h;
-    } catch(err) {
-      console.error('[renderRepertoire]', err);
-      pane.innerHTML = '<div style="padding:16px;color:#ef5350;text-align:center;">Erreur de chargement. Réessayez plus tard.</div>';
     }
+
+    // Charger les messages non lus en parallèle
+    try {
+      const { data: unreadRows } = await TEV.client
+        .from('messages_eleves')
+        .select('expediteur_email')
+        .eq('destinataire_email', myEmail)
+        .eq('lu', false);
+      _repUnread = {};
+      (unreadRows || []).forEach(function(r) {
+        const k = (r.expediteur_email || '').toLowerCase();
+        _repUnread[k] = (_repUnread[k] || 0) + 1;
+      });
+    } catch(e) { /* non bloquant */ }
+
+    const visible = _repCache;
+    const emailToCourses = {};
+    visible.forEach(function(e) {
+      const k = (e.email || '').toLowerCase();
+      if (!emailToCourses[k]) emailToCourses[k] = new Set();
+      (e.cours || []).forEach(function(c) { if (c) emailToCourses[k].add(c); });
+    });
+    const COURSE_ORDER = ['paris—debutant', 'paris—intermediaire', 'vincennes—debutant', 'vincennes—intermediaire'];
+    const COURSE_LABELS = {
+      'paris—debutant':          'Paris — Débutants',
+      'paris—intermediaire':     'Paris — Intermédiaires',
+      'vincennes—debutant':      'Vincennes — Débutants',
+      'vincennes—intermediaire': 'Vincennes — Intermédiaires'
+    };
+    const groups = {};
+    COURSE_ORDER.forEach(function(k) { groups[k] = []; });
+    const seen = {};
+    visible.forEach(function(e) {
+      const ek = (e.email || '').toLowerCase();
+      const courses = emailToCourses[ek] || new Set();
+      if (!courses.size) return;
+      courses.forEach(function(c) {
+        if (!groups[c]) return;
+        const dedupKey = ek + '—' + c;
+        if (seen[dedupKey]) return;
+        seen[dedupKey] = true;
+        groups[c].push(e);
+      });
+    });
+    COURSE_ORDER.forEach(function(k) {
+      groups[k].sort(function(a, b) { return (a.nom || '').localeCompare(b.nom || '', 'fr'); });
+    });
+
+    let h = '<div style="padding:16px;">';
+    h += '<div style="font-size:12px;color:var(--text-dim);background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:16px;line-height:1.6;">'
+      + '👋 Retrouvez ici les élèves qui ont choisi de se rendre visibles dans l\'annuaire. Aucun email ni numéro de téléphone n\'est partagé — vous pouvez uniquement leur envoyer un message privé via l\'appli.'
+      + '</div>';
+    if (!eleveData || !eleveData.eleve || !eleveData.eleve.visible_repertoire) {
+      h += '<div style="font-size:12px;color:var(--text-dim);background:var(--s2);border-radius:8px;padding:8px 14px;margin-bottom:16px;">'
+        + '💡 Vous n\'apparaissez pas dans cet annuaire. Pour y figurer, activez l\'option dans <strong style="color:var(--gold);">Accueil → Mes coordonnées</strong>.'
+        + '</div>';
+    }
+    let hasAny = false;
+    COURSE_ORDER.forEach(function(key) {
+      const students = groups[key];
+      if (!students.length) return;
+      hasAny = true;
+      h += '<div style="margin-bottom:24px;">'
+        + '<div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:10px;">' + COURSE_LABELS[key] + '</div>';
+      students.forEach(function(e) {
+        const nom = ((e.prenom || '') + ' ' + (e.nom || '')).trim() || e.email;
+        const ek = (e.email || '').toLowerCase();
+        const isSelf = ek === myEmail;
+        const photoHtml = e.photo_url
+          ? '<img src="' + _repEsc(e.photo_url) + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;" loading="lazy">'
+          : '<div style="width:44px;height:44px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">👤</div>';
+        const unreadCount = isSelf ? 0 : (_repUnread[ek] || 0);
+        const unreadBadge = unreadCount > 0
+          ? '<span style="background:#e53935;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">' + unreadCount + '</span>'
+          : '';
+        const safeEmail = _repEsc(e.email || '');
+        if (isSelf) {
+          h += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);opacity:0.6;">'
+            + photoHtml
+            + '<div style="flex:1;font-size:16px;color:#fff;font-weight:600;">' + _repEsc(nom) + ' <span style="font-size:11px;color:var(--text-dim);">(vous)</span></div>'
+            + '</div>';
+        } else {
+          h += '<div onclick="_repOuvrirConv(\'' + safeEmail + '\')" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;">'
+            + photoHtml
+            + '<div style="flex:1;font-size:16px;color:#fff;font-weight:600;">' + _repEsc(nom) + '</div>'
+            + unreadBadge
+            + '<span style="color:var(--gold);font-size:18px;flex-shrink:0;">💬</span>'
+            + '</div>';
+        }
+      });
+      h += '</div>';
+    });
+    if (!hasAny) {
+      h += '<div style="text-align:center;color:var(--text-dim);font-size:14px;padding:40px 0;">Aucun élève n\'a encore rejoint l\'annuaire.<br><span style="font-size:12px;margin-top:8px;display:block;">Soyez le premier à activer l\'option dans Accueil → Mes coordonnées.</span></div>';
+    }
+    h += '</div>';
+    pane.innerHTML = h;
+  }
+
+  window._repOuvrirConv = function(targetEmail) {
+    if (!_repCache) return;
+    const peer = _repCache.find(function(e) { return (e.email||'').toLowerCase() === targetEmail.toLowerCase(); });
+    if (!peer) return;
+    _repPeer = { email: (peer.email||'').toLowerCase(), nom: ((peer.prenom||'')+' '+(peer.nom||'')).trim() || peer.email, photo_url: peer.photo_url || '' };
+    _repRenderConv();
+  };
+
+  window._repRetour = function() {
+    _repPeer = null;
+    if (_repPollTO) { clearTimeout(_repPollTO); _repPollTO = null; }
+    _repRenderList();
+  };
+
+  window._repEnvoyer = async function() {
+    const box = document.getElementById('rep-msg-input');
+    if (!box) return;
+    const txt = box.value.trim();
+    if (!txt || !_repPeer) return;
+    const myEmail = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
+    const myPrenom = (eleveData && eleveData.eleve && eleveData.eleve.prenom) || '';
+    const myNom    = (eleveData && eleveData.eleve && eleveData.eleve.nom)    || '';
+    box.value = '';
+    box.disabled = true;
+    try {
+      const { error } = await TEV.client.from('messages_eleves').insert({
+        expediteur_email: myEmail,
+        expediteur_nom:   (myPrenom + ' ' + myNom).trim() || myEmail,
+        destinataire_email: _repPeer.email,
+        contenu: txt,
+        lu: false
+      });
+      if (error) throw new Error(error.message);
+      // Notifier le destinataire (fire & forget)
+      fetch('/api/eleve/message-prive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ de: myEmail, deNom: (myPrenom + ' ' + myNom).trim(), a: _repPeer.email, extrait: txt.slice(0, 80) })
+      }).catch(function(){});
+    } catch(e) {
+      console.error('[_repEnvoyer]', e);
+      box.value = txt; // restituer le texte
+    }
+    box.disabled = false;
+    box.focus();
+    // Rafraîchir la conversation
+    _repScrollBot = true;
+    await _repRenderConv();
+  };
+
+  async function _repRenderConv() {
+    const pane = $('repertoire-pane');
+    if (!pane || !_repPeer) return;
+    const myEmail = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
+
+    // Charger les messages de la conversation
+    let msgs = [];
+    try {
+      const { data, error } = await TEV.client
+        .from('messages_eleves')
+        .select('*')
+        .or('and(expediteur_email.eq.' + _repPeer.email + ',destinataire_email.eq.' + myEmail + '),and(expediteur_email.eq.' + myEmail + ',destinataire_email.eq.' + _repPeer.email + ')')
+        .order('created_at', { ascending: true });
+      if (!error) msgs = data || [];
+    } catch(e) { console.error('[_repRenderConv]', e); }
+
+    // Marquer les messages reçus comme lus
+    const unreadIds = msgs.filter(function(m) {
+      return (m.destinataire_email||'').toLowerCase() === myEmail && !m.lu;
+    }).map(function(m) { return m.id; });
+    if (unreadIds.length) {
+      TEV.client.from('messages_eleves').update({ lu: true }).in('id', unreadIds).then(function(){
+        // Mettre à jour le compteur local
+        const k = _repPeer ? _repPeer.email : '';
+        if (k) delete _repUnread[k];
+      }).catch(function(){});
+    }
+
+    const photoHtml = _repPeer.photo_url
+      ? '<img src="' + _repEsc(_repPeer.photo_url) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" loading="lazy">'
+      : '<div style="width:36px;height:36px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>';
+
+    let h = '<div style="display:flex;flex-direction:column;height:100%;max-height:calc(100vh - 140px);">';
+    // Header
+    h += '<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">'
+      + '<button onclick="_repRetour()" style="background:none;border:none;color:var(--gold);font-size:22px;cursor:pointer;padding:0 8px 0 0;line-height:1;">←</button>'
+      + photoHtml
+      + '<div style="flex:1;font-size:16px;color:#fff;font-weight:600;">' + _repEsc(_repPeer.nom) + '</div>'
+      + '</div>';
+    // Messages
+    h += '<div id="rep-msgs" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;">';
+    if (!msgs.length) {
+      h += '<div style="text-align:center;color:var(--text-dim);font-size:13px;padding:32px 0;">Commencez la conversation !</div>';
+    } else {
+      msgs.forEach(function(m) {
+        const isMine = (m.expediteur_email||'').toLowerCase() === myEmail;
+        const d = new Date(m.created_at);
+        const dateStr = d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })
+          + ' ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+        if (isMine) {
+          h += '<div style="display:flex;flex-direction:column;align-items:flex-end;">'
+            + '<div style="background:var(--gold);color:#1a0f00;border-radius:16px 16px 4px 16px;padding:8px 12px;max-width:75%;font-size:14px;line-height:1.45;word-break:break-word;">' + _repEsc(m.contenu) + '</div>'
+            + '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">' + dateStr + '</div>'
+            + '</div>';
+        } else {
+          h += '<div style="display:flex;flex-direction:column;align-items:flex-start;">'
+            + '<div style="background:var(--s3);color:var(--text);border-radius:16px 16px 16px 4px;padding:8px 12px;max-width:75%;font-size:14px;line-height:1.45;word-break:break-word;">' + _repEsc(m.contenu) + '</div>'
+            + '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">' + dateStr + '</div>'
+            + '</div>';
+        }
+      });
+    }
+    h += '</div>';
+    // Champ envoi
+    h += '<div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;">'
+      + '<textarea id="rep-msg-input" placeholder="Votre message…" rows="2" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:14px;padding:10px 12px;resize:none;font-family:inherit;line-height:1.4;" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();_repEnvoyer();}"></textarea>'
+      + '<button onclick="_repEnvoyer()" style="background:var(--gold);color:#1a0f00;border:none;border-radius:12px;padding:0 16px;font-size:20px;cursor:pointer;flex-shrink:0;font-weight:700;">➤</button>'
+      + '</div>';
+    h += '</div>';
+
+    pane.innerHTML = h;
+
+    // Scroller en bas
+    const msgsEl = document.getElementById('rep-msgs');
+    if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight;
+    _repScrollBot = false;
+
+    // Focus sur le champ de texte
+    const inp = document.getElementById('rep-msg-input');
+    if (inp) inp.focus();
+
+    // Polling toutes les 5s pour les nouveaux messages
+    if (_repPollTO) clearTimeout(_repPollTO);
+    _repPollTO = setTimeout(async function() {
+      if (_repPeer && currentTab === 'repertoire') {
+        await _repRenderConv();
+      }
+    }, 5000);
   }
 
   // ================================================================
@@ -2295,58 +2482,7 @@
   };
 
   // Ouvrir une discussion privée 1-on-1 depuis le répertoire
-  window.ouvrirDiscRepertoire = async function(targetEmail, targetNom) {
-    if (!eleveData || !eleveData.eleve) return;
-    const myEmail = (eleveData.eleve.email || '').toLowerCase();
-    const myPrenom = eleveData.eleve.prenom || '';
-    const myNom    = eleveData.eleve.nom    || '';
-    const myNomComplet = (myPrenom + ' ' + myNom).trim();
-
-    // Chercher une discussion privée existante avec cette personne
-    let existing = null;
-    if (Array.isArray(_discDiscList)) {
-      existing = _discDiscList.find(function(d) {
-        var dn = d.donnees || {};
-        return dn.private === true && (
-          (d.eleve_email === myEmail && (dn.targetEmail || '').toLowerCase() === targetEmail.toLowerCase()) ||
-          (d.eleve_email === targetEmail && (dn.targetEmail || '').toLowerCase() === myEmail)
-        );
-      });
-    }
-
-    if (!existing) {
-      try {
-        const titre = 'Discussion avec ' + targetNom;
-        const result = await TEV.createDiscussion({ titre, eleveEmail: myEmail, eleveNom: myNomComplet, groupes: [], targetEmail });
-        if (!result || !result.id) throw new Error('no id returned');
-        existing = { id: result.id, titre, eleve_email: myEmail, donnees: { private: true, targetEmail } };
-        // Notifier le destinataire
-        fetch('/api/notify/discussion-nouvelle-eleve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ eleveEmail: myEmail, eleveNom: myNomComplet, titre, targetEmail })
-        }).catch(function(){});
-      } catch(e) {
-        console.error('[ouvrirDiscRepertoire] createDiscussion error', e);
-        alert('Impossible d\'ouvrir la discussion. Réessayez plus tard.');
-        return;
-      }
-    }
-
-    // Naviguer vers la discussion
-    _discCurrentTargetEmail = targetEmail;
-    switchTab('discussions');
-    // Attendre que le tab soit rendu avant d'ouvrir
-    setTimeout(function() {
-      if (existing && existing.id) {
-        // Simuler un clic sur la discussion
-        const el = document.querySelector('[data-disc-open="' + existing.id + '"]');
-        if (el) { el.click(); return; }
-        // Fallback: ouvrir directement
-        openDisc(existing.id, existing.titre || ('Discussion avec ' + targetNom));
-      }
-    }, 300);
-  };
+  // ouvrirDiscRepertoire remplacé par _repOuvrirConv — voir renderRepertoire()
 
   // Déclarer/annuler une absence depuis l'espace élève
   window.toggleAbsenceCours = function(date) {
@@ -5945,16 +6081,32 @@ a{color:var(--gold);text-decoration:none;}
       </div>
     </details>
 
+    <!-- Annuaire -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">👥</span>Annuaire des élèves<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>L'annuaire vous permet de retrouver vos camarades et de leur envoyer des <strong>messages privés</strong> directement dans l'appli — sans partager d'email ni de numéro de téléphone.</p>
+        <ul>
+          <li>Seuls les élèves ayant activé l'option <strong>«&nbsp;Apparaître dans l'annuaire&nbsp;»</strong> (dans Accueil) sont visibles</li>
+          <li>Cliquez sur la fiche d'un·e élève pour ouvrir une conversation privée</li>
+          <li>L'historique de chaque conversation est conservé</li>
+          <li>Un badge rouge indique les messages non lus</li>
+        </ul>
+        <div class="aide-tip">💡 Pour activer votre présence dans l'annuaire, allez dans <strong>Accueil → Annuaire des élèves</strong> et activez le toggle. Votre email et votre téléphone ne sont jamais visibles.</div>
+      </div>
+    </details>
+
     <!-- Discussions -->
     <details class="aide-section">
       <summary><span class="aide-ico">🗨</span>Discussions<span class="aide-arrow">▶</span></summary>
       <div class="aide-body">
-        <p>La messagerie intégrée vous permet d'<strong>échanger directement avec Florencia et Jérémy</strong> via l'application, sans quitter votre espace élève.</p>
+        <p>La messagerie intégrée vous permet d'<strong>échanger avec Florencia et Jérémy</strong> (les professeurs) via l'application. Les discussions peuvent être initiées par vous ou par l'équipe, et peuvent s'adresser à un ou plusieurs groupes d'élèves.</p>
         <ul>
-          <li>Consultez les fils de discussion existants</li>
-          <li>Bouton <strong>«&nbsp;+ Nouvelle discussion&nbsp;»</strong> pour démarrer un nouveau fil</li>
+          <li>Consultez les fils de discussion existants (questions sur les cours, infos pratiques, échanges avec les profs…)</li>
+          <li>Bouton <strong>«&nbsp;+ Nouvelle discussion&nbsp;»</strong> pour démarrer un nouveau fil avec les profs</li>
           <li>Vous recevez une notification push et une notification in-app dès qu'un message vous est adressé</li>
         </ul>
+        <div class="aide-tip">💡 Pour envoyer un message à un·e autre élève, utilisez l'<strong>Annuaire des élèves</strong> — cliquez sur sa fiche pour ouvrir une conversation privée.</div>
       </div>
     </details>
 

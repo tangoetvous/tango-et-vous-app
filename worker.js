@@ -501,6 +501,11 @@ export default {
         return await handleEleveRepertoire(request, env);
       }
 
+      // POST /api/eleve/message-prive — notifie le destinataire d'un nouveau message privé (sans auth)
+      if (pathname === '/api/eleve/message-prive' && method === 'POST') {
+        return await handleEleveMessagePrive(request, env);
+      }
+
       try {
         return await env.ASSETS.fetch(request);
       } catch (assetErr) {
@@ -3789,6 +3794,41 @@ async function handleEleveRepertoire(request, env) {
     console.error('[repertoire] error', e);
     return jsonError(500, 'Erreur serveur', {}, request);
   }
+}
+
+// POST /api/eleve/message-prive — push + notif in-app au destinataire d'un message privé Annuaire
+// ================================================================
+async function handleEleveMessagePrive(request, env) {
+  let de, deNom, a, extrait;
+  try {
+    ({ de, deNom, a, extrait } = await request.json());
+  } catch(e) {
+    return jsonError(400, 'Body invalide', {}, request);
+  }
+  if (!de || !a) return jsonError(400, 'Champs manquants', {}, request);
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const extrCourt = (extrait || '').slice(0, 80);
+  const msgNotif = `💬 Message de ${deNom || de} : ${extrCourt}`;
+
+  // Notif in-app élève (notifications_eleve — RLS open, anon key suffit)
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ email: a, type: 'message_prive', message: msgNotif, lu: false }),
+    });
+  } catch(e) { console.error('[messagePrivé] notif in-app', e); }
+
+  // Push OS
+  try {
+    const tokens = await getFcmTokensForEmail(a, svcKey);
+    if (tokens.length) {
+      await sendFcmPush(tokens, { title: 'Tango & Vous', body: msgNotif }, env);
+    }
+  } catch(e) { console.error('[messagePrivé] push', e); }
+
+  return corsResponse({ ok: true }, 200, {}, request);
 }
 
 // POST /api/debug/push-test — diagnostic push (JWT admin requis)
