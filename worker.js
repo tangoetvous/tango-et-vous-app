@@ -92,6 +92,14 @@ export default {
       if (pathname === '/api/admin/update-auth-email' && method === 'PATCH') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
         if (!env.SUPABASE_SERVICE_KEY) return jsonError(503, 'Service non configuré');
+        const _arCheck = await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_admin`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        let _arIsAdmin = false;
+        try { _arIsAdmin = await _arCheck.json(); } catch(e) {}
+        if (!_arIsAdmin) return jsonError(403, 'Admin requis');
         return handleUpdateAuthEmail(request, env.SUPABASE_SERVICE_KEY);
       }
 
