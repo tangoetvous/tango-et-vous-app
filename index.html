@@ -1420,35 +1420,50 @@
     if (!box) return;
     const txt = box.value.trim();
     if (!txt || !_repPeer) return;
-    const myEmail = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
     const myPrenom = (eleveData && eleveData.eleve && eleveData.eleve.prenom) || '';
     const myNom    = (eleveData && eleveData.eleve && eleveData.eleve.nom)    || '';
+
+    // Utiliser l'email de la session auth pour garantir que auth.email() = expediteur_email
+    let authEmail = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
+    try {
+      const { data: _sd } = await TEV.client.auth.getSession();
+      if (_sd && _sd.session && _sd.session.user && _sd.session.user.email) {
+        authEmail = _sd.session.user.email;
+      }
+    } catch(e) { /* utiliser le fallback eleveData */ }
+
     box.value = '';
     box.disabled = true;
+    // Effacer tout message d'erreur précédent
+    const errEl = document.getElementById('rep-send-err');
+    if (errEl) errEl.textContent = '';
+
     let sent = false;
     try {
       const { error } = await TEV.client.from('messages_eleves').insert({
-        expediteur_email: myEmail,
-        expediteur_nom:   (myPrenom + ' ' + myNom).trim() || myEmail,
+        expediteur_email: authEmail,
+        expediteur_nom:   (myPrenom + ' ' + myNom).trim() || authEmail,
         destinataire_email: _repPeer.email,
         contenu: txt,
         lu: false
       });
-      if (error) throw new Error(error.message);
+      if (error) throw new Error(error.message || error.code || JSON.stringify(error));
       sent = true;
       // Notifier le destinataire (fire & forget)
       fetch('/api/eleve/message-prive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ de: myEmail, deNom: (myPrenom + ' ' + myNom).trim(), a: _repPeer.email, extrait: txt.slice(0, 80) })
+        body: JSON.stringify({ de: authEmail, deNom: (myPrenom + ' ' + myNom).trim(), a: _repPeer.email, extrait: txt.slice(0, 80) })
       }).catch(function(){});
     } catch(e) {
       console.error('[_repEnvoyer]', e);
       box.value = txt; // restituer le texte en cas d'erreur
+      // Afficher l'erreur dans l'interface
+      const errEl2 = document.getElementById('rep-send-err');
+      if (errEl2) errEl2.textContent = 'Erreur : ' + (e.message || 'envoi impossible');
     }
     box.disabled = false;
     if (sent) {
-      // Rafraîchir la liste des messages après envoi réussi
       _repScrollBot = true;
       await _repRenderConv();
     } else {
@@ -1535,9 +1550,12 @@
     }
     h += '</div>';
     // Champ envoi
-    h += '<div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;">'
+    h += '<div style="flex-shrink:0;">'
+      + '<div id="rep-send-err" style="color:#ef5350;font-size:12px;padding:4px 16px 0;min-height:16px;"></div>'
+      + '<div style="display:flex;gap:8px;padding:8px 16px 12px;border-top:1px solid var(--border);">'
       + '<textarea id="rep-msg-input" placeholder="Votre message…" rows="2" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:14px;padding:10px 12px;resize:none;font-family:inherit;line-height:1.4;" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();_repEnvoyer();}"></textarea>'
       + '<button onclick="_repEnvoyer()" style="background:var(--gold);color:#1a0f00;border:none;border-radius:12px;padding:0 16px;font-size:20px;cursor:pointer;flex-shrink:0;font-weight:700;">➤</button>'
+      + '</div>'
       + '</div>';
     h += '</div>';
 
