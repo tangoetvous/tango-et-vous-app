@@ -1275,26 +1275,16 @@
     const myEmail = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
     pane.innerHTML = '<div style="padding:16px;color:var(--text-dim);text-align:center;">Chargement…</div>';
     try {
-      // RLS eleves limite SELECT à email=auth.email() → on passe par une fonction
-      // SECURITY DEFINER qui bypasse la RLS côté DB (SQL à exécuter dans Supabase).
+      // RLS eleves ET inscriptions_cours limitent SELECT à email=auth.email() →
+      // on passe par une fonction SECURITY DEFINER qui bypasse les deux RLS et
+      // retourne directement chaque élève visible avec son tableau de cours.
       const { data: elevesVis } = await TEV.client.rpc('get_eleves_repertoire');
       const visible = (elevesVis || []);
-      const emails = visible.map(function(e) { return e.email; }).filter(Boolean);
-      let insc = [];
-      if (emails.length) {
-        const { data: inscData } = await TEV.client.from('inscriptions_cours')
-          .select('email, ville, niveau, donnees')
-          .eq('statut', 'inscrit')
-          .in('email', emails);
-        insc = (inscData || []).filter(function(i) {
-          try { const d = typeof i.donnees === 'string' ? JSON.parse(i.donnees) : (i.donnees || {}); return !d.isRenewal; } catch(e) { return true; }
-        });
-      }
       const emailToCourses = {};
-      insc.forEach(function(i) {
-        const k = (i.email || '').toLowerCase();
+      visible.forEach(function(e) {
+        const k = (e.email || '').toLowerCase();
         if (!emailToCourses[k]) emailToCourses[k] = new Set();
-        emailToCourses[k].add((i.ville || '').toLowerCase() + '—' + (i.niveau || '').toLowerCase());
+        (e.cours || []).forEach(function(c) { if (c) emailToCourses[k].add(c); });
       });
       const COURSE_ORDER = ['paris—debutant', 'paris—intermediaire', 'vincennes—debutant', 'vincennes—intermediaire'];
       const COURSE_LABELS = {
