@@ -18,26 +18,31 @@ Onglet permettant aux élèves de se retrouver entre eux et de s'envoyer des **m
 **Règle permanente : ne jamais mélanger les deux systèmes.** Les messages envoyés depuis l'Annuaire n'apparaissent pas dans Discussions, et vice versa.
 
 ### Table `messages_eleves`
+Colonnes réelles (créées lors de la session 2026-06-01) :
+```
+id, created_at, from_email, to_email, contenu, lu
+```
+⚠️ Les colonnes s'appellent `from_email` et `to_email` (pas `expediteur_email` / `destinataire_email`). Ne pas changer ces noms.
+
 ```sql
 CREATE TABLE messages_eleves (
   id BIGSERIAL PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  expediteur_email TEXT NOT NULL,
-  expediteur_nom TEXT NOT NULL DEFAULT '',
-  destinataire_email TEXT NOT NULL,
+  from_email TEXT NOT NULL,
+  to_email TEXT NOT NULL,
   contenu TEXT NOT NULL,
   lu BOOLEAN NOT NULL DEFAULT false
 );
 -- RLS : les deux participants peuvent SELECT ; seul l'expéditeur peut INSERT ; seul le destinataire peut UPDATE (marquer lu)
 ALTER TABLE messages_eleves ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "msg_eleves_select" ON messages_eleves FOR SELECT USING (
-  expediteur_email = auth.email() OR destinataire_email = auth.email()
+  from_email = auth.email() OR to_email = auth.email()
 );
 CREATE POLICY "msg_eleves_insert" ON messages_eleves FOR INSERT WITH CHECK (
-  expediteur_email = auth.email()
+  from_email = auth.email()
 );
 CREATE POLICY "msg_eleves_update" ON messages_eleves FOR UPDATE USING (
-  destinataire_email = auth.email()
+  to_email = auth.email()
 );
 GRANT SELECT, INSERT, UPDATE ON messages_eleves TO authenticated;
 GRANT USAGE, SELECT ON SEQUENCE messages_eleves_id_seq TO authenticated;

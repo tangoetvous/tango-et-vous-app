@@ -1307,12 +1307,12 @@
     try {
       const { data: unreadRows } = await TEV.client
         .from('messages_eleves')
-        .select('expediteur_email')
-        .eq('destinataire_email', myEmail)
+        .select('from_email')
+        .eq('to_email', myEmail)
         .eq('lu', false);
       _repUnread = {};
       (unreadRows || []).forEach(function(r) {
-        const k = (r.expediteur_email || '').toLowerCase();
+        const k = (r.from_email || '').toLowerCase();
         _repUnread[k] = (_repUnread[k] || 0) + 1;
       });
     } catch(e) { /* non bloquant */ }
@@ -1441,9 +1441,8 @@
     let sent = false;
     try {
       const { error } = await TEV.client.from('messages_eleves').insert({
-        expediteur_email: authEmail,
-        expediteur_nom:   (myPrenom + ' ' + myNom).trim() || authEmail,
-        destinataire_email: _repPeer.email,
+        from_email: authEmail,
+        to_email:   _repPeer.email,
         contenu: txt,
         lu: false
       });
@@ -1489,14 +1488,13 @@
     }
 
     // Charger les messages de la conversation — deux requêtes simples fusionnées
-    // (évite .or() avec and() imbriqués qui peut être fragile selon la version supabase-js)
     let msgs = [];
     try {
       const [r1, r2] = await Promise.all([
         TEV.client.from('messages_eleves').select('*')
-          .eq('expediteur_email', myEmail).eq('destinataire_email', _repPeer.email),
+          .eq('from_email', myEmail).eq('to_email', _repPeer.email),
         TEV.client.from('messages_eleves').select('*')
-          .eq('expediteur_email', _repPeer.email).eq('destinataire_email', myEmail)
+          .eq('from_email', _repPeer.email).eq('to_email', myEmail)
       ]);
       msgs = [...(r1.data || []), ...(r2.data || [])].sort(function(a, b) {
         return new Date(a.created_at) - new Date(b.created_at);
@@ -1505,7 +1503,7 @@
 
     // Marquer les messages reçus comme lus
     const unreadIds = msgs.filter(function(m) {
-      return (m.destinataire_email||'').toLowerCase() === myEmail && !m.lu;
+      return (m.to_email||'').toLowerCase() === myEmail && !m.lu;
     }).map(function(m) { return m.id; });
     if (unreadIds.length) {
       TEV.client.from('messages_eleves').update({ lu: true }).in('id', unreadIds).then(function(){
@@ -1531,7 +1529,7 @@
       h += '<div style="text-align:center;color:var(--text-dim);font-size:13px;padding:32px 0;">Commencez la conversation !</div>';
     } else {
       msgs.forEach(function(m) {
-        const isMine = (m.expediteur_email||'').toLowerCase() === myEmail;
+        const isMine = (m.from_email||'').toLowerCase() === myEmail;
         const d = new Date(m.created_at);
         const dateStr = d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' })
           + ' ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
