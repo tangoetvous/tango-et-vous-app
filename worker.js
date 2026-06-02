@@ -529,8 +529,9 @@ export default {
         return await handleEleveRepertoire(request, env);
       }
 
-      // POST /api/eleve/message-prive — notifie le destinataire d'un nouveau message privé (sans auth)
+      // POST /api/eleve/message-prive — notifie le destinataire d'un nouveau message privé (JWT élève requis)
       if (pathname === '/api/eleve/message-prive' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
         return await handleEleveMessagePrive(request, env);
       }
 

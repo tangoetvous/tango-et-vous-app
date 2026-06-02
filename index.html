@@ -1454,10 +1454,14 @@
       if (error) throw new Error(error.message || error.code || JSON.stringify(error));
       sent = true;
       // Notifier le destinataire (fire & forget)
-      fetch('/api/eleve/message-prive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ de: authEmail, deNom: (myPrenom + ' ' + myNom).trim(), a: _repPeer.email, extrait: txt.slice(0, 80) })
+      TEV.client.auth.getSession().then(function(sd) {
+        var _jwt = sd && sd.data && sd.data.session ? sd.data.session.access_token : null;
+        if (!_jwt) return;
+        fetch('/api/eleve/message-prive', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
+          body: JSON.stringify({ de: authEmail, deNom: (myPrenom + ' ' + myNom).trim(), a: _repPeer.email, extrait: txt.slice(0, 80) })
+        }).catch(function(){});
       }).catch(function(){});
     } catch(e) {
       console.error('[_repEnvoyer]', e);
