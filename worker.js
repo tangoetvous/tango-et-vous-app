@@ -131,18 +131,21 @@ export default {
       // POST /api/notify/yoga-date — admin → emails Brevo élèves yoga (JWT admin requis)
       if (pathname === '/api/notify/yoga-date' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyYogaDate(request, env);
       }
 
       // POST /api/notify/essai-action — admin → email admin + élève(s) lors d'une action sur un essai tango
       if (pathname === '/api/notify/essai-action' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyEssaiAction(request, env);
       }
 
       // POST /api/notify/sorano — email + notification in-app pour relance ou paiement réglé
       if (pathname === '/api/notify/sorano' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifySorano(request, env);
       }
 
@@ -238,6 +241,7 @@ export default {
       // POST /api/notify/carte-pointee-admin — admin pointe → email + notif in-app élève (JWT admin)
       if (pathname === '/api/notify/carte-pointee-admin' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyCartePonteeAdmin(request, env);
       }
 
@@ -277,12 +281,14 @@ export default {
       // POST /api/notify/discussion-nouvelle — nouvelle discussion → notif in-app élèves + admin (JWT admin)
       if (pathname === '/api/notify/discussion-nouvelle' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyDiscussionNouvelle(request, jwt, env);
       }
 
       // POST /api/notify/discussion-message — nouveau message → notif in-app élèves + admin (JWT admin)
       if (pathname === '/api/notify/discussion-message' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyDiscussionMessage(request, jwt, env);
       }
 
@@ -331,18 +337,21 @@ export default {
       // POST /api/notify/stage-valide — admin valide une inscription stage en attente (JWT admin)
       if (pathname === '/api/notify/stage-valide' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyStageValide(request, env);
       }
 
       // POST /api/notify/stage-annule — admin annule une inscription stage (JWT admin)
       if (pathname === '/api/notify/stage-annule' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyStageAnnule(request, env);
       }
 
       // POST /api/notify/stage-modifie — admin modifie les créneaux d'une inscription stage (JWT admin)
       if (pathname === '/api/notify/stage-modifie' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyStageModifie(request, env);
       }
 
@@ -384,36 +393,42 @@ export default {
       // POST /api/notify/carte-paiement — paiement carte10 enregistré admin (JWT admin)
       if (pathname === '/api/notify/carte-paiement' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyCartePaiement(request, env);
       }
 
       // POST /api/notify/carte-report — carte10 reportée sur saison suivante (JWT admin)
       if (pathname === '/api/notify/carte-report' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyCarteReport(request, env);
       }
 
       // POST /api/notify/inscription-cours-validee — admin valide guidée → attente_paiement (JWT admin)
       if (pathname === '/api/notify/inscription-cours-validee' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyInscriptionCoursValidee(request, env);
       }
 
       // POST /api/notify/inscription-cours-payee — admin valide paiement → inscrit (JWT admin)
       if (pathname === '/api/notify/inscription-cours-payee' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyInscriptionCoursPaye(request, env);
       }
 
       // POST /api/notify/email-change — admin modifie l'email d'un élève (JWT admin)
       if (pathname === '/api/notify/email-change' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyEmailChange(request, env);
       }
 
       // POST /api/notify/inscription-cours-modifiee — admin modifie cours d'un élève inscrit (JWT admin)
       if (pathname === '/api/notify/inscription-cours-modifiee' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyInscriptionCoursModifiee(request, env);
       }
 
@@ -427,6 +442,7 @@ export default {
       // POST /api/notify/essai-valide — admin valide essai en attente → confirme (JWT admin)
       if (pathname === '/api/notify/essai-valide' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyEssaiValide(request, env);
       }
 
@@ -440,24 +456,28 @@ export default {
       // POST /api/notify/essai-yoga-modifie — admin modifie date/cours d'un essai yoga (JWT admin)
       if (pathname === '/api/notify/essai-yoga-modifie' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyEssaiYogaModifie(request, env);
       }
 
       // POST /api/notify/yoga-inscription-validee — admin valide paiement yoga → YI1 (JWT admin)
       if (pathname === '/api/notify/yoga-inscription-validee' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyYogaInscriptionValidee(request, env);
       }
 
       // POST /api/notify/yoga-eleve-modifie — admin modifie un élève yoga → email élève + admin (JWT admin)
       if (pathname === '/api/notify/yoga-eleve-modifie' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyYogaEleveModifie(request, env);
       }
 
       // POST /api/notify/publication-publiee — push élèves + admin quand une publication est publiée (JWT admin)
       if (pathname === '/api/notify/publication-publiee' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return handleNotifyPublicationPubliee(request, env);
       }
 
@@ -7297,6 +7317,20 @@ async function handleNotifyInscriptionCoursModifiee(request, env) {
     });
   } catch(err) { console.error('[notify-inscription-cours-modifiee] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ── Helper : vérifier si le JWT est admin (via is_admin() RPC) ──
+async function _requireAdmin(jwt) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_admin`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    let ok = false;
+    try { ok = await r.json(); } catch(e) {}
+    return ok === true;
+  } catch(e) { return false; }
 }
 
 // ── Helper : vérifier si le JWT est admin ───────────────────────
