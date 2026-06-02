@@ -3667,12 +3667,15 @@ async function handleRegisterToken(request, jwt, env) {
   const { token, platform = 'web', userAgent = '' } = body;
   if (!token) return jsonError(400, 'Token requis');
 
-  // Extraire l'email depuis le JWT (payload base64 non vérifié — confiance accordée car JWT validé par Supabase en amont)
   let email;
   try {
-    const payload = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    email = (payload.email || '').toLowerCase().trim();
-  } catch { return jsonError(400, 'JWT invalide'); }
+    const vr = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${jwt}` },
+    });
+    if (!vr.ok) return jsonError(401, 'JWT invalide ou expiré');
+    const user = await vr.json();
+    email = (user.email || '').toLowerCase().trim();
+  } catch { return jsonError(401, 'JWT invalide'); }
   if (!email) return jsonError(400, 'Email introuvable dans le JWT');
 
   const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
@@ -3751,13 +3754,7 @@ async function handleDebugFcmCount(request, env) {
   const authH = request.headers.get('Authorization') || '';
   const jwtTok = authH.startsWith('Bearer ') ? authH.slice(7) : '';
   if (!jwtTok) return jsonError(401, 'JWT requis');
-  let callerEmail;
-  try {
-    const p = JSON.parse(atob(jwtTok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
-    callerEmail = p.email;
-  } catch { return jsonError(400, 'JWT invalide'); }
-  const adminEmails = ['tangoetvous@gmail.com','jeremybraitbart@gmail.com','garciabraitbart@gmail.com','jeremy@tangoetvous.com'];
-  if (!adminEmails.includes(callerEmail)) return jsonError(403, 'Admin requis');
+  if (!await _requireAdmin(jwtTok)) return jsonError(403, 'Admin requis');
 
   const url = new URL(request.url);
   const targetEmail = url.searchParams.get('email') || '';
@@ -3869,10 +3866,13 @@ async function handleDebugPushTest(request, env) {
 
     let email;
     try {
-      const p = JSON.parse(atob(jwtTok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
-      email = p.email;
-    } catch { return jsonError(400, 'JWT invalide'); }
-
+      const vr = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${jwtTok}` },
+      });
+      if (!vr.ok) return jsonError(401, 'JWT invalide ou expiré');
+      const user = await vr.json();
+      email = user.email || '';
+    } catch { return jsonError(401, 'JWT invalide'); }
     const adminEmails = ['tangoetvous@gmail.com','jeremybraitbart@gmail.com','garciabraitbart@gmail.com','jeremy@tangoetvous.com'];
     if (!adminEmails.includes(email)) return jsonError(403, 'Admin requis');
 
