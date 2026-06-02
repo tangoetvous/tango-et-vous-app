@@ -83,6 +83,7 @@
   let currentUser = null;
   let eleveData = null;
   let _tevRealtimeChannel = null;
+  let _notifPollTimer = null;
 
   // ================================================================
   // HELPERS UI
@@ -238,6 +239,7 @@
   // ================================================================
   window.logout = async function() {
     if (_tevRealtimeChannel) { TEV.unsubscribe(_tevRealtimeChannel); _tevRealtimeChannel = null; }
+    if (_notifPollTimer) { clearInterval(_notifPollTimer); _notifPollTimer = null; }
     const wasDemo = IS_DEMO;
     IS_DEMO = false;
     eleveData = null;
@@ -297,7 +299,10 @@
         }).catch(function(){});
       // Notifications élève
       eleveData.notifications = [];
-      _loadEleveNotifications(((data.eleve&&data.eleve.email)||'').toLowerCase());
+      var _notifEmail = ((data.eleve&&data.eleve.email)||'').toLowerCase();
+      _loadEleveNotifications(_notifEmail);
+      if (_notifPollTimer) clearInterval(_notifPollTimer);
+      _notifPollTimer = setInterval(function(){ if (eleveData) _loadEleveNotifications(((eleveData.eleve&&eleveData.eleve.email)||'').toLowerCase()); }, 30000);
       // Inscriptions stages futures — chargées depuis Supabase pour statut et ID
       var _stEmail = ((data.eleve&&data.eleve.email)||'').toLowerCase();
       var _stToday = new Date().toISOString().slice(0,10);
