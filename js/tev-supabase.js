@@ -532,10 +532,14 @@ async function tevGetDiscussions({ eleveEmail } = {}) {
   const all = data || [];
   if (!eleveEmail) return all; // admin : toutes les discussions
   const email = eleveEmail.toLowerCase();
-  // Élève : discussions publiques (créées par admin, eleve_email vide/null) + ses propres discussions
-  // + discussions privées 1-to-1 dont l'élève est la cible (donnees.targetEmail === email)
+  // Élève : ses propres discussions + discussions admin (eleve_email vide) +
+  // discussions de groupe (groupes non vide) + discussions privées 1-to-1 dont il est la cible
+  // Note : _discPeutVoir() dans index.html filtre ensuite par groupe de l'élève
   return all.filter(d => {
     if (!d.eleve_email || d.eleve_email === email) return true;
+    // Discussion de groupe créée par un autre élève : visible si groupes non vide
+    const grp = d.groupes;
+    if (Array.isArray(grp) ? grp.length > 0 : (typeof grp === 'string' && grp)) return true;
     const dn = d.donnees && (typeof d.donnees === 'string' ? (() => { try { return JSON.parse(d.donnees); } catch(e) { return {}; } })() : d.donnees);
     return dn && dn.private === true && (dn.targetEmail || '').toLowerCase() === email;
   });
