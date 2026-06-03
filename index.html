@@ -82,6 +82,7 @@
   // ================================================================
   let currentUser = null;
   let eleveData = null;
+  let _eleveJwt = null;
   let _tevRealtimeChannel = null;
   let _notifPollTimer = null;
 
@@ -200,11 +201,13 @@
         }
         if (!IS_DEMO) {
           currentUser = session.user;
+          _eleveJwt = session.access_token || null;
           await loadEleveData(session.user.email);
         }
       } else if (!IS_DEMO) {
         currentUser = null;
         eleveData = null;
+        _eleveJwt = null;
         showScreen('screen-auth');
       }
     });
@@ -931,7 +934,7 @@
         const _sai2 = (function(){ const _n=new Date(),_y=_n.getFullYear(),_m=_n.getMonth()+1; return (_m>=9?_y:_y-1)+'-'+(_m>=9?_y+1:_y); })();
         fetch('/api/notify/discussion-message-eleve', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(_eleveJwt ? { 'Authorization': 'Bearer ' + _eleveJwt } : {}) },
           body: JSON.stringify({
             discussionId: _discCurrentId,
             groupes: _discCurrentGroupes,
@@ -1123,7 +1126,7 @@
           const _sai = (function(){ const _n=new Date(),_y=_n.getFullYear(),_m=_n.getMonth()+1; return (_m>=9?_y:_y-1)+'-'+(_m>=9?_y+1:_y); })();
           fetch('/api/notify/discussion-nouvelle-eleve', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(_eleveJwt ? { 'Authorization': 'Bearer ' + _eleveJwt } : {}) },
             body: JSON.stringify({
               titre, discussionId: d.id,
               groupes: groupesSel, saison: _sai,

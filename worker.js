@@ -367,13 +367,15 @@ export default {
         return handleNotifyMilongaRsvp(request, env);
       }
 
-      // POST /api/notify/discussion-nouvelle-eleve — élève crée une discussion (sans auth admin)
+      // POST /api/notify/discussion-nouvelle-eleve — élève crée une discussion (JWT élève requis)
       if (pathname === '/api/notify/discussion-nouvelle-eleve' && method === 'POST') {
+        if (!jwt || !await _requireEleve(jwt)) return jsonError(401, 'Authentification requise');
         return handleNotifyDiscussionNouvelleEleve(request, env);
       }
 
-      // POST /api/notify/discussion-message-eleve — message dans une discussion (sans auth admin)
+      // POST /api/notify/discussion-message-eleve — message dans une discussion (JWT élève requis)
       if (pathname === '/api/notify/discussion-message-eleve' && method === 'POST') {
+        if (!jwt || !await _requireEleve(jwt)) return jsonError(401, 'Authentification requise');
         return handleNotifyDiscussionMessageEleve(request, env);
       }
 
@@ -7353,6 +7355,15 @@ async function handleNotifyInscriptionCoursModifiee(request, env) {
 }
 
 // ── Helper : vérifier si le JWT est admin (via is_admin() RPC) ──
+async function _requireEleve(jwt) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${jwt}` }
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
 async function _requireAdmin(jwt) {
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_admin`, {
