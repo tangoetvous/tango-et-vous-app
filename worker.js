@@ -8418,10 +8418,24 @@ async function handleNotifyPublicationPubliee(request, env) {
       tokenList = [...new Set((await getAllFcmTokens(svcKey)).filter(Boolean))];
       console.log('[publication-publiee] tokens found:', tokenList.length, '(all FCM tokens — no group filter)');
     } else {
-      // Publication ciblée → respecter le filtre de groupe
-      const tokenArrays = await Promise.all(emails.map(e => getFcmTokensForEmail(e, svcKey)));
-      tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
-      console.log('[publication-publiee] tokens found:', tokenList.length, 'for', emails.length, 'emails (group filter)');
+      // Publication ciblée → 1 seule requête pour tous les tokens, filtre par emailSet côté client
+      // (évite N subrequêtes Cloudflare — limite = 50/invocation, dépassée avec ~150 élèves)
+      const emailSetLower = new Set([...emailSet].map(e => String(e).toLowerCase().trim()));
+      let allTokenRows = [];
+      try {
+        const rt = await fetch(
+          `${SUPABASE_URL}/rest/v1/fcm_tokens?select=email,token`,
+          { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+        );
+        if (rt.ok) allTokenRows = await rt.json();
+      } catch(e) { console.error('[publication-publiee] fetch all tokens', e); }
+      tokenList = [...new Set(
+        (Array.isArray(allTokenRows) ? allTokenRows : [])
+          .filter(row => row.email && emailSetLower.has(String(row.email).toLowerCase().trim()))
+          .map(row => row.token)
+          .filter(Boolean)
+      )];
+      console.log('[publication-publiee] tokens found:', tokenList.length, 'for', emails.length, 'emails (group filter, bulk)');
     }
     if (tokenList.length > 0) {
       await sendFcmPush(env, tokenList, { title: pushTitle, body: pushBody });
