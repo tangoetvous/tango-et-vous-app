@@ -13707,11 +13707,14 @@ function chargerDiscussions(callback) {
   }
   TEV.getDiscussions().then(function(discs) {
     adminData.discussions = discs.map(function(d) {
+      var grp = d.groupes;
+      if (!Array.isArray(grp)) grp = (typeof grp === 'string' && grp) ? [grp] : [];
       return {
         id: d.id, titre: d.titre,
         createur_email: d.eleve_email, createur_nom: d.eleve_nom,
         statut: d.fermee ? 'ferme' : 'ouvert',
-        groupes: d.groupes || [],
+        groupes: grp,
+        donnees: d.donnees || null,
         date: d.last_message_at || d.created_at,
         created_at: d.created_at,
       };
@@ -14652,12 +14655,20 @@ function _discEnvoyerMsg() {
   // Notif in-app élèves des groupes + panel admin — fire and forget
   (function(){
     var _disc=(adminData.discussions||[]).find(function(d){return String(d.id)===String(_discCurrentId);});
-    var _groupes=_disc?(_disc.groupes||[]):[];
-    if(_groupes.length>0){
+    var grps=_disc?_disc.groupes:null;
+    var _groupes=Array.isArray(grps)?grps:(typeof grps==='string'&&grps?[grps]:[]);
+    // Fallback pour discussions privées (groupes=[]) : notifier via targetEmail ou créateur
+    var _targetEmail='';
+    if(_groupes.length===0&&_disc){
+      var _dn=_disc.donnees;
+      if(typeof _dn==='string'){try{_dn=JSON.parse(_dn);}catch(e){_dn=null;}}
+      _targetEmail=(_dn&&_dn.targetEmail)||_disc.createur_email||'';
+    }
+    if(_groupes.length>0||_targetEmail){
       Promise.resolve(fetch('/api/notify/discussion-message',{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
-        body:JSON.stringify({discussionId:_discCurrentId,contenu:msg,titre:_discCurrentTitle||'Discussion',groupes:_groupes,saison:saisonActive(),adminNom:nom}),
+        body:JSON.stringify({discussionId:_discCurrentId,contenu:msg,titre:_discCurrentTitle||'Discussion',groupes:_groupes,targetEmail:_targetEmail,saison:saisonCourante(),adminNom:nom}),
       })).catch(function(){});
     }
   })();

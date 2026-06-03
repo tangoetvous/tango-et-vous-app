@@ -3370,13 +3370,20 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
 async function handleNotifyDiscussionMessage(request, jwt, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
-  const { discussionId, contenu, groupes, saison, adminNom, titre } = body;
+  const { discussionId, contenu, saison, adminNom, titre, targetEmail } = body;
   if (!saison) return jsonError(400, 'Paramètres manquants');
+  // Normalise groupes : accepte array ou string (TEXT vs TEXT[] selon config Supabase)
+  let groupes = body.groupes;
+  if (!Array.isArray(groupes)) groupes = (typeof groupes === 'string' && groupes) ? [groupes] : [];
 
   const _svcKeyDiscMsg = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-  const emails = Array.isArray(groupes) && groupes.length > 0
+  let emails = groupes.length > 0
     ? await _getEmailsByGroupes(groupes, saison, _svcKeyDiscMsg)
     : [];
+  // Fallback pour discussions privées : notifier directement le targetEmail / créateur
+  if (emails.length === 0 && targetEmail) {
+    emails = [targetEmail.toLowerCase().trim()];
+  }
 
   const titreLabel  = titre || 'Discussion';
   const extrait     = contenu ? (contenu.length > 60 ? contenu.slice(0, 60) + '…' : contenu) : '';
