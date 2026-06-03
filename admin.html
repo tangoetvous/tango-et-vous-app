@@ -5194,6 +5194,12 @@ async function chargerDonnees() {
     updateNotifBadge();
     _renderTabSiPasFormulaire();
     syncStageInscritsToLocal();
+    // Refresh discussions en arrière-plan (non chargées par chargerDonnees)
+    if (!IS_DEMO && currentTab === 'discussions') {
+      chargerDiscussions(function() {
+        if (currentTab === 'discussions' && _discView === 'list') renderTab();
+      });
+    }
     // Sync présences milonga depuis Supabase (fire-and-forget)
     if (!IS_DEMO) {
       Promise.resolve(TEV.client.from('milonga_presences').select('*').gte('date', today())).then(function(res) {
