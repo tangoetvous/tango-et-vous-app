@@ -3850,7 +3850,7 @@ async function handleEleveMessagePrive(request, env) {
   try {
     const tokens = await getFcmTokensForEmail(a, svcKey);
     if (tokens.length) {
-      await sendFcmPush(tokens, { title: 'Tango & Vous', body: msgNotif }, env);
+      await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: msgNotif });
     }
   } catch(e) { console.error('[messagePrivé] push', e); }
 
