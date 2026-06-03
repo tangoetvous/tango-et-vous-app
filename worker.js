@@ -3547,6 +3547,17 @@ async function handleNotifyDiscussionMessageEleve(request, env) {
     } catch(e) { console.error('[discussion-message-eleve] push error', e); }
   }
 
+  // Push OS admin + panel 🔔
+  try {
+    const notifMsgAdmin = `💬 ${auteurNom||auteurEmail||'Un élève'} : ${extrait || titreLabel}`;
+    await _insertNotification('discussion_message', notifMsgAdmin, 'discussions');
+    const adminTokens = await getFcmTokensAdmin(svcKey);
+    if (adminTokens.length) await sendFcmPush(env, adminTokens, {
+      title: 'Tango & Vous — Admin',
+      body: notifMsgAdmin,
+    });
+  } catch(e) { console.error('[discussion-message-eleve] push admin error', e); }
+
   return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
 }
 

@@ -14651,7 +14651,7 @@ function _discEnvoyerMsg() {
   TEV.postMessage({discussionId:_discCurrentId,auteur:'admin',auteurEmail:adminData._email||'',auteurNom:nom,contenu:msg}).catch(function(){});
   // Notif in-app élèves des groupes + panel admin — fire and forget
   (function(){
-    var _disc=(adminData.discussions||[]).find(function(d){return d.id===_discCurrentId;});
+    var _disc=(adminData.discussions||[]).find(function(d){return String(d.id)===String(_discCurrentId);});
     var _groupes=_disc?(_disc.groupes||[]):[];
     if(_groupes.length>0){
       Promise.resolve(fetch('/api/notify/discussion-message',{
