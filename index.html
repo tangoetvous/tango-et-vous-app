@@ -1190,13 +1190,17 @@
       if (!sub) return;
 
       var token = JSON.stringify(sub.toJSON());
-      if (cached === token) return true; // déjà enregistré avec le même endpoint
 
-      // Get JWT from Supabase session (v2 API)
+      // Get JWT + email from Supabase session (getSession est local, pas de requête réseau)
       var session = null;
       try { const { data: _sd } = await TEV.client.auth.getSession(); session = _sd ? _sd.session : null; } catch(e) {}
       var jwt = session ? session.access_token : null;
       if (!jwt) return;
+      var currentEmail = session.user ? String(session.user.email || '').toLowerCase() : '';
+
+      // Skip si même token ET même email → déjà enregistré pour cet utilisateur sur cet appareil
+      var cachedEmail = localStorage.getItem('tev_fcm_email') || '';
+      if (cached === token && currentEmail && cachedEmail === currentEmail) return true;
 
       var platform = /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'ios' : 'web';
       const r = await fetch('/api/register-token', {
@@ -1206,6 +1210,7 @@
       });
       if (r.ok) {
         localStorage.setItem('tev_fcm_token', token);
+        if (currentEmail) localStorage.setItem('tev_fcm_email', currentEmail);
         return true;
       } else {
         const errText = await r.text().catch(() => '');
