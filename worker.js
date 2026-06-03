@@ -3243,6 +3243,29 @@ async function getAllFcmTokens(svcKey) {
   }
 }
 
+// Retourne une Map<email_lowercase → token[]> en une seule requête (évite N subrequêtes).
+// Utiliser à la place de N appels getFcmTokensForEmail dans les handlers/crons batch.
+async function _buildTokenMap(svcKey) {
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/fcm_tokens?select=email,token`,
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (!r.ok) { console.error('[_buildTokenMap] HTTP', r.status); return new Map(); }
+    const rows = await r.json();
+    const map = new Map();
+    if (Array.isArray(rows)) {
+      for (const row of rows) {
+        if (!row.email || !row.token) continue;
+        const key = String(row.email).toLowerCase().trim();
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(row.token);
+      }
+    }
+    return map;
+  } catch(e) { console.error('[_buildTokenMap] error', e); return new Map(); }
+}
+
 // ================================================================
 // Helper : récupère les emails des élèves inscrits dans des groupes
 // groupes : ['paris-debutants', 'paris-intermediaires', ...]
@@ -3322,8 +3345,8 @@ async function handleNotifyDiscussionNouvelle(request, jwt, env) {
   let pushSent = 0;
   if (emails.length > 0) {
     try {
-      const tokenArrays = await Promise.all(emails.map(e => getFcmTokensForEmail(e, _svcKeyDisc)));
-      const tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
+      const _tMapDisc = await _buildTokenMap(_svcKeyDisc);
+      const tokenList = [...new Set(emails.flatMap(e => _tMapDisc.get(String(e).toLowerCase().trim()) || []).filter(Boolean))];
       console.log('[discussion-nouvelle] tokens found:', tokenList.length, 'for', emails.length, 'emails');
       if (tokenList.length > 0) {
         await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
@@ -3381,8 +3404,8 @@ async function handleNotifyDiscussionMessage(request, jwt, env) {
   let pushSent = 0;
   if (emails.length > 0) {
     try {
-      const tokenArrays = await Promise.all(emails.map(e => getFcmTokensForEmail(e, _svcKeyDiscMsg)));
-      const tokenList = [...new Set(tokenArrays.flat().filter(Boolean))];
+      const _tMapDiscMsg = await _buildTokenMap(_svcKeyDiscMsg);
+      const tokenList = [...new Set(emails.flatMap(e => _tMapDiscMsg.get(String(e).toLowerCase().trim()) || []).filter(Boolean))];
       console.log('[discussion-message] tokens found:', tokenList.length, 'for', emails.length, 'emails');
       if (tokenList.length > 0) {
         await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
@@ -3421,21 +3444,24 @@ async function handleNotifyDiscussionNouvelleEleve(request, env) {
   const notifMsgEleve = `💬 Nouvelle discussion : ${titre}`;
   const notifMsgAdmin = `💬 Discussion créée par ${auteurNom||auteurEmail||'un élève'} : "${titre}" · ${emails.length} élève${emails.length !== 1 ? 's' : ''} notifié${emails.length !== 1 ? 's' : ''}`;
 
-  // Notifs in-app élèves
-  const inserts = emails.map(email =>
-    fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
-        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ email, type: 'discussion_nouvelle', message: notifMsgEleve, lu: false }),
-    }).catch(e => console.error('[discussion-nouvelle-eleve] notif_eleve error', e))
-  );
+  // Notifs in-app élèves — batch INSERT (1 subrequest)
+  if (emails.length > 0) {
+    try {
+      const rows = emails.map(email => ({ email, type: 'discussion_nouvelle', message: notifMsgEleve, lu: false }));
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(rows),
+      });
+      if (!r.ok) console.error('[discussion-nouvelle-eleve] batch notif_eleve HTTP', r.status);
+    } catch(e) { console.error('[discussion-nouvelle-eleve] notif_eleve error', e); }
+  }
 
   // Panel 🔔 admin
-  const adminInsert = _insertNotification('discussion_nouvelle', notifMsgAdmin, 'discussions')
-    .catch(e => console.error('[discussion-nouvelle-eleve] notifications error', e));
-
-  await Promise.all([...inserts, adminInsert]);
+  try {
+    await _insertNotification('discussion_nouvelle', notifMsgAdmin, 'discussions');
+  } catch(e) { console.error('[discussion-nouvelle-eleve] notifications error', e); }
 
   // Push OS admin
   try {
@@ -3446,16 +3472,17 @@ async function handleNotifyDiscussionNouvelleEleve(request, env) {
     });
   } catch(e) { console.error('[discussion-nouvelle-eleve] push admin error', e); }
 
-  // Push OS élèves (exclut l'auteur)
-  await Promise.all(emails.map(async function(eleveEmail) {
+  // Push OS élèves — 1 seule requête fcm_tokens (évite N subrequêtes Cloudflare)
+  if (emails.length > 0) {
     try {
-      const tokens = await getFcmTokensForEmail(String(eleveEmail), svcKey);
-      if (tokens.length) await sendFcmPush(env, tokens, {
-        title: 'Tango & Vous',
-        body: notifMsgEleve,
-      });
-    } catch(e) { console.error('[discussion-nouvelle-eleve] push error', eleveEmail, e); }
-  }));
+      const _tMapDNE = await _buildTokenMap(svcKey);
+      const emailSetLower = new Set(emails.map(e => String(e).toLowerCase().trim()));
+      const tokenList = [...new Set(
+        [...emailSetLower].flatMap(e => _tMapDNE.get(e) || []).filter(Boolean)
+      )];
+      if (tokenList.length) await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
+    } catch(e) { console.error('[discussion-nouvelle-eleve] push error', e); }
+  }
 
   return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
 }
@@ -3490,28 +3517,31 @@ async function handleNotifyDiscussionMessageEleve(request, env) {
   const auteur       = auteurNom || auteurEmail || '?';
   const notifMsgEleve = `💬 ${auteur} : ${extrait || titreLabel}`;
 
-  // Notifs in-app élèves
-  const inserts = emails.map(email =>
-    fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
-        'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ email, type: 'discussion_message', message: notifMsgEleve, lu: false }),
-    }).catch(e => console.error('[discussion-message-eleve] notif_eleve error', e))
-  );
-
-  await Promise.all(inserts);
-
-  // Push OS élèves (exclut l'auteur)
-  await Promise.all(emails.map(async function(eleveEmail) {
+  // Notifs in-app élèves — batch INSERT (1 subrequest)
+  if (emails.length > 0) {
     try {
-      const tokens = await getFcmTokensForEmail(String(eleveEmail), svcKey);
-      if (tokens.length) await sendFcmPush(env, tokens, {
-        title: 'Tango & Vous',
-        body: notifMsgEleve,
+      const rows = emails.map(email => ({ email, type: 'discussion_message', message: notifMsgEleve, lu: false }));
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(rows),
       });
-    } catch(e) { console.error('[discussion-message-eleve] push error', eleveEmail, e); }
-  }));
+      if (!r.ok) console.error('[discussion-message-eleve] batch notif_eleve HTTP', r.status);
+    } catch(e) { console.error('[discussion-message-eleve] notif_eleve error', e); }
+  }
+
+  // Push OS élèves — 1 seule requête fcm_tokens (évite N subrequêtes Cloudflare)
+  if (emails.length > 0) {
+    try {
+      const _tMapDME = await _buildTokenMap(svcKey);
+      const emailSetLower = new Set(emails.map(e => String(e).toLowerCase().trim()));
+      const tokenList = [...new Set(
+        [...emailSetLower].flatMap(e => _tMapDME.get(e) || []).filter(Boolean)
+      )];
+      if (tokenList.length) await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body: notifMsgEleve });
+    } catch(e) { console.error('[discussion-message-eleve] push error', e); }
+  }
 
   return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
 }
@@ -7683,6 +7713,7 @@ async function handleCronRappelStageJ3(request, env) {
   const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
+  const _s4TokenMap = await _buildTokenMap(env.SUPABASE_SERVICE_KEY || SUPABASE_ANON);
   let sent = 0;
   for (const e of inscrits) {
     if (!e.email || !env.BREVO_API_KEY) continue;
@@ -7729,7 +7760,7 @@ async function handleCronRappelStageJ3(request, env) {
       if (r.ok) sent++;
     } catch(err) { console.error('[cron-rappel-stage-j3] error', err); }
     try {
-      const _s4Tokens = await getFcmTokensForEmail(String(e.email), SUPABASE_ANON);
+      const _s4Tokens = _s4TokenMap.get(String(e.email).toLowerCase().trim()) || [];
       if (_s4Tokens.length) await sendFcmPush(env, _s4Tokens, { title: 'Tango & Vous', body: `📅 Votre stage a lieu dans 3 jours — ${dateLabel}` });
     } catch(err) { console.error('[cron-rappel-stage-j3] push error', err); }
   }
@@ -8573,7 +8604,7 @@ async function handleCronFinSaisonC4(request, env) {
       if (r.ok) sent++; else console.error('[cron fin-saison-c4] Brevo error', e.email, await r.text());
     } catch(err) { console.error('[cron fin-saison-c4] fetch error', err); }
     try {
-      const _c4Tokens = await getFcmTokensForEmail(String(e.email), svcKey);
+      const _c4Tokens = _c4TokenMap.get(String(e.email).toLowerCase().trim()) || [];
       if (_c4Tokens.length) await sendFcmPush(env, _c4Tokens, { title: 'Tango & Vous', body: `📅 Il vous reste ${restants} cours — reportez votre carte avant le 31 août ${anneeFin}` });
     } catch(err) { console.error('[cron fin-saison-c4] push error', err); }
   }
@@ -8627,6 +8658,7 @@ async function handleCronFinSaisonC5(request, env) {
   const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
   const btnLienHref = lienCours || 'https://www.tangoetvous.com';
+  const _c5TokenMap = await _buildTokenMap(svcKey);
 
   let sent = 0;
   for (const e of eleves) {
@@ -8676,7 +8708,7 @@ async function handleCronFinSaisonC5(request, env) {
       if (r.ok) sent++; else console.error('[cron fin-saison-c5] Brevo error', e.email, await r.text());
     } catch(err) { console.error('[cron fin-saison-c5] fetch error', err); }
     try {
-      const _c5Tokens = await getFcmTokensForEmail(String(e.email), svcKey);
+      const _c5Tokens = _c5TokenMap.get(String(e.email).toLowerCase().trim()) || [];
       if (_c5Tokens.length) await sendFcmPush(env, _c5Tokens, { title: 'Tango & Vous', body: `⚠️ Dernier rappel — reportez vos ${restants} cours avant le 31 août ${anneeFin}` });
     } catch(err) { console.error('[cron fin-saison-c5] push error', err); }
   }
@@ -8812,6 +8844,7 @@ async function handleCronRelanceAbsences(request, env) {
     eleves = eleves.filter(function(e) { return activeInscEmails.has(String(e.email || '').toLowerCase()); });
 
     totalChecked += eleves.length;
+    const _c6TokenMap = await _buildTokenMap(svcKey);
 
     for (const eleve of eleves) {
       // Anti-doublon : déjà relancé pour cette dernière date d'absence
@@ -8890,7 +8923,7 @@ async function handleCronRelanceAbsences(request, env) {
 
       // Push OS élève
       try {
-        const _c6Tokens = await getFcmTokensForEmail(String(eleve.email), svcKey);
+        const _c6Tokens = _c6TokenMap.get(String(eleve.email).toLowerCase().trim()) || [];
         if (_c6Tokens.length) await sendFcmPush(env, _c6Tokens, { title: 'Tango & Vous', body: '💙 On prend de tes nouvelles — tes cours sont préservés' });
       } catch(e) { console.error('[relance-absences] push error', e); }
 
