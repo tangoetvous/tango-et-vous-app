@@ -1038,10 +1038,10 @@
     _discStopListPoll();
     if (IS_DEMO) return;
     function doListPoll() {
+      _discListPollTO = setTimeout(doListPoll, 10000);
       if (currentTab !== 'discussions' || _discView !== 'list') return;
       _discDiscList = null;
       renderDiscussions();
-      _discListPollTO = setTimeout(doListPoll, 10000);
     }
     _discListPollTO = setTimeout(doListPoll, 10000);
   }
@@ -1099,7 +1099,7 @@
       const btn = $('disc-form-submit');
       btn.disabled = true; btn.textContent = '…';
       const elv = (eleveData && eleveData.eleve) || {};
-      const nomComplet = elv.nom || elv.email || 'Élève';
+      const nomComplet = [(elv.prenom||''), (elv.nom||'')].filter(Boolean).join(' ') || elv.email || 'Élève';
       if (IS_DEMO) {
         const fakeId = 'disc_demo_' + Date.now();
         const newDisc = { id:fakeId, titre, groupes:groupesSel, createur_email:elv.email||'', createur_nom:nomComplet, statut:'ouvert', date:new Date().toISOString() };
