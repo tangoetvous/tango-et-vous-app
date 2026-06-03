@@ -6,6 +6,7 @@
 //   - FIREBASE_SERVICE_ACCOUNT : JSON service account Firebase → push FCM v1
 //   - CRON_SECRET            : protège les routes cron GitHub Actions
 //   - SUPABASE_SERVICE_KEY   : auth admin Supabase (update-auth-email)
+//   - HMAC_SECRET            : clé de signature des tokens d'action email (annuler/confirmer)
 //
 // Routes :
 //   POST  /admin/api/devis             — formulaire public → demandes_devis
@@ -2146,7 +2147,7 @@ async function handleStagesConfirmer(request, url, env) {
   const rpcR = await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirmer_stage`, {
     method: 'POST',
     headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_email: email, p_date: date, p_token: token, p_secret: SUPABASE_ANON })
+    body: JSON.stringify({ p_email: email, p_date: date, p_token: token, p_secret: env.HMAC_SECRET || SUPABASE_ANON })
   });
   if (!rpcR.ok) return new Response('Erreur serveur', { status: 500, headers: { 'Content-Type': 'text/plain' } });
   const result = await rpcR.json();
@@ -4341,7 +4342,7 @@ async function handleNotifyInscriptionEssai(request, env) {
   let annulerUrl  = `mailto:${adminEmail}?subject=${encodeURIComponent('Annulation essai tango ' + prenom + ' ' + nom)}`;
   let reporterUrl = `${APP_URL}/cours-essai.html`;
   if (inscId) {
-    const tk = (await _calHmac(`${inscId}:${(email || '').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
+    const tk = (await _calHmac(`${inscId}:${(email || '').toLowerCase()}`, env.HMAC_SECRET || SUPABASE_ANON)).slice(0, 32);
     confirmUrl  = `${APP_URL}/api/essai/confirmer?id=${inscId}&token=${tk}`;
     annulerUrl  = `${APP_URL}/api/essai/annuler?id=${inscId}&token=${tk}`;
     reporterUrl = `${APP_URL}/api/essai/reporter?id=${inscId}&token=${tk}`;
@@ -4662,7 +4663,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
   // RLS sur inscriptions_essai bloque le SELECT/UPDATE pour anon.
   // → appel d'une fonction SECURITY DEFINER qui bypass la RLS de manière contrôlée
   //   (vérifie le HMAC server-side avant d'agir).
-  const rpcBody = JSON.stringify({ p_id: parseInt(id, 10), p_token: token, p_action: dbAction, p_secret: SUPABASE_ANON });
+  const rpcBody = JSON.stringify({ p_id: parseInt(id, 10), p_token: token, p_action: dbAction, p_secret: env.HMAC_SECRET || SUPABASE_ANON });
   const rpcR = await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirmer_annuler_essai`, {
     method: 'POST',
     headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json' },
@@ -4911,7 +4912,7 @@ async function handleEssaiYogaConfirmer(request, url, env) {
   const rpcR = await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirmer_essai_yoga`, {
     method: 'POST',
     headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_id: parseInt(id, 10), p_token: token, p_secret: SUPABASE_ANON })
+    body: JSON.stringify({ p_id: parseInt(id, 10), p_token: token, p_secret: env.HMAC_SECRET || SUPABASE_ANON })
   });
   if (!rpcR.ok) return new Response('Erreur serveur', { status: 500, headers: { 'Content-Type': 'text/html;charset=utf-8' } });
   const result = await rpcR.json();
@@ -5603,7 +5604,7 @@ async function handleCronEssaiRappelJ7(request, env) {
     const params = paramsRaw[parKey] || {};
     const adresse = params.adresse || {};
     const horaires = params.horaires || {};
-    const tk = await _calHmac(`${e.id}:${(e.email||'').toLowerCase()}`, SUPABASE_ANON).then(h => h.slice(0, 32)).catch(() => 'j7');
+    const tk = await _calHmac(`${e.id}:${(e.email||'').toLowerCase()}`, env.HMAC_SECRET || SUPABASE_ANON).then(h => h.slice(0, 32)).catch(() => 'j7');
     const confirmUrl  = `https://app.tangoetvous.fr/api/essai/confirmer?id=${e.id}&token=${tk}`;
     const annulUrl    = `https://app.tangoetvous.fr/api/essai/annuler?id=${e.id}&token=${tk}`;
     const reporterUrl = `https://app.tangoetvous.fr/api/essai/reporter?id=${e.id}&token=${tk}`;
@@ -5881,7 +5882,7 @@ async function handleNotifyEssaiValide(request, env) {
   let annulerUrl  = `mailto:${adminEmail}?subject=${encodeURIComponent('Annulation essai tango ' + prenom + ' ' + nom)}`;
   let reporterUrl = `${APP_URL}/cours-essai.html`;
   if (id) {
-    const tk = (await _calHmac(`${id}:${(email||'').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
+    const tk = (await _calHmac(`${id}:${(email||'').toLowerCase()}`, env.HMAC_SECRET || SUPABASE_ANON)).slice(0, 32);
     confirmUrl  = `${APP_URL}/api/essai/confirmer?id=${id}&token=${tk}`;
     annulerUrl  = `${APP_URL}/api/essai/annuler?id=${id}&token=${tk}`;
     reporterUrl = `${APP_URL}/api/essai/reporter?id=${id}&token=${tk}`;
@@ -6056,7 +6057,7 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
     }
     const livretBlockY3 = _livBtnsY3 ? `<div style="text-align:center;margin:0 0 22px;">${_livBtnsY3}</div>` : '';
     const APP_URL_Y3 = 'https://app.tangoetvous.fr';
-    const tkY3 = (await _calHmac(`${e.id}:${(e.email||'').toLowerCase()}`, SUPABASE_ANON)).slice(0, 32);
+    const tkY3 = (await _calHmac(`${e.id}:${(e.email||'').toLowerCase()}`, env.HMAC_SECRET || SUPABASE_ANON)).slice(0, 32);
     const confirmUrl = `${APP_URL_Y3}/api/essai-yoga/confirmer?id=${e.id}&token=${tkY3}`;
     const htmlEleve  = wrap(`${headerYoga}
       <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre essai yoga a lieu dans 3 jours !</span></div>
@@ -7599,7 +7600,7 @@ async function handleNotifyInscriptionStage(request, env) {
       const theirDateObj = rec.theirDates.find(function(d) { return d.date === dateStr; });
       const stagesBlock = buildEleveStagesBlock([dateObj], rec.pren, rec.nom, rec.role, theirDateObj ? [theirDateObj] : [], rec.theirPren, rec.theirNom, rec.theirRole);
 
-      const _tk = (await _calHmac(String(rec.to) + ':' + dateStr, SUPABASE_ANON)).slice(0, 32);
+      const _tk = (await _calHmac(String(rec.to) + ':' + dateStr, env.HMAC_SECRET || SUPABASE_ANON)).slice(0, 32);
       const _confirmUrl = `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(rec.to))}&date=${dateStr}&token=${_tk}`;
 
       if (isConfirme) {
@@ -7733,7 +7734,7 @@ async function handleCronRappelStageJ3(request, env) {
       <div style="padding:12px 18px;">${slotsHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}</div>
       ${_s4LieuSection}
     </div>`;
-    const _s4Token = (await _calHmac(String(e.email) + ':' + targetDate, SUPABASE_ANON)).slice(0, 32);
+    const _s4Token = (await _calHmac(String(e.email) + ':' + targetDate, env.HMAC_SECRET || SUPABASE_ANON)).slice(0, 32);
     const _s4ConfirmUrl = `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(e.email))}&date=${targetDate}&token=${_s4Token}`;
     const htmlEleve = wrap(`${headerEleve}
       <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre stage a lieu dans 3 jours !</span></div>
@@ -7834,7 +7835,7 @@ async function handleNotifyStageValide(request, env) {
     </div>`;
   }
   const _s3bFirstDate = inscriptionsParDate[0]?.date || '';
-  const _s3bToken = proche && _s3bFirstDate ? (await _calHmac(String(email) + ':' + _s3bFirstDate, SUPABASE_ANON)).slice(0, 32) : '';
+  const _s3bToken = proche && _s3bFirstDate ? (await _calHmac(String(email) + ':' + _s3bFirstDate, env.HMAC_SECRET || SUPABASE_ANON)).slice(0, 32) : '';
   const _s3bConfirmUrl = proche && _s3bFirstDate ? `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(email))}&date=${_s3bFirstDate}&token=${_s3bToken}` : '#';
   const confirmBtn = proche ? `<div style="text-align:center;margin:0 0 22px;"><a href="${_s3bConfirmUrl}" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>` : '';
   const rappelNote = proche ? '' : `<p style="font-size:13px;color:#555;text-align:center;margin:0 0 20px;">Vous recevrez un rappel 3 jours avant le stage.</p>`;
