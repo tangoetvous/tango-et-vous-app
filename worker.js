@@ -302,13 +302,14 @@ export default {
       // GET /api/config-check — diagnostic : quels secrets sont configurés (JWT admin requis)
       if (pathname === '/api/config-check' && method === 'GET') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
-        const ok = await checkAdminJwt(jwt, env);
+        const ok = await _requireAdmin(jwt);
         if (!ok) return jsonError(403, 'Admin requis');
         return corsResponse({
-          brevo_api_key:           !!env.BREVO_API_KEY,
+          brevo_api_key:            !!env.BREVO_API_KEY,
           firebase_service_account: !!env.FIREBASE_SERVICE_ACCOUNT,
-          cron_secret:             !!env.CRON_SECRET,
-          supabase_service_key:    !!env.SUPABASE_SERVICE_KEY,
+          cron_secret:              !!env.CRON_SECRET,
+          supabase_service_key:     !!env.SUPABASE_SERVICE_KEY,
+          hmac_secret:              !!env.HMAC_SECRET,
         }, 200, {}, request);
       }
 
@@ -7365,22 +7366,6 @@ async function _requireAdmin(jwt) {
   } catch(e) { return false; }
 }
 
-// ── Helper : vérifier si le JWT est admin ───────────────────────
-async function checkAdminJwt(jwt, env) {
-  try {
-    const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
-    const payload = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    const email = payload.email;
-    if (!email) return false;
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/eleves?email=eq.${encodeURIComponent(email)}&role=eq.admin&select=email&limit=1`,
-      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
-    );
-    if (!r.ok) return false;
-    const rows = await r.json();
-    return Array.isArray(rows) && rows.length > 0;
-  } catch { return false; }
-}
 
 // ================================================================
 // POST /api/notify/inscription-stage
