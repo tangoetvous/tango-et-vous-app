@@ -623,7 +623,7 @@ async function handleDemandeDevis(request, env) {
   const isEvent = body.mode === 'event';
   const nomAffD = `${(body.prenom || '')} ${(body.nom || '')}`.trim();
   const typeAff = isEvent ? _esc(body.type_evenement || 'Événement') : _esc(body.type_demande || 'Cours privé');
-  const dateAff = isEvent && body.date_evenement ? ` · ${_esc(body.date_evenement)}` : '';
+  const dateAff = isEvent && body.date_evenement ? ` · ${body.date_evenement.split('-').reverse().join('/')}` : '';
   const notifMsgD = `💼 Demande devis — ${nomAffD} · ${typeAff}${dateAff} · ⏳ À traiter · → Devis → Demandes`;
   try {
     const resN = await _insertNotification('demande_devis', notifMsgD, 'devis');
@@ -1569,6 +1569,7 @@ async function handleCronEssaiYogaJ1(request, env) {
 function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 async function sendBrevoNotification(apiKey, body) {
+  function fmtDateFr(iso) { return iso ? iso.split('-').reverse().join('/') : ''; }
   const prestations = (body.prestations_labels || []).map(_esc).join(', ') || '(non précisé)';
   const nomAff = _esc(`${body.civilite || ''} ${body.prenom || ''} ${body.nom || ''}`.trim());
   const isEvent = body.mode === 'event';
@@ -1585,7 +1586,7 @@ async function sendBrevoNotification(apiKey, body) {
   if (isEvent) {
     detailRows = [
       row('Type d\'événement', body.type_evenement ? _esc(body.type_evenement) : ''),
-      row('Date', body.date_evenement ? _esc(body.date_evenement) + (body.date_flexible === 'oui' ? ' <span style="color:#888;font-size:11px;">(flexible)</span>' : '') : ''),
+      row('Date', body.date_evenement ? _esc(fmtDateFr(body.date_evenement)) + (body.date_flexible === 'oui' ? ' <span style="color:#888;font-size:11px;">(flexible)</span>' : '') : ''),
       row('Horaire', body.horaire_evenement ? _esc(body.horaire_evenement) : ''),
       row('Lieu', body.lieu ? _esc(body.lieu) + (body.code_postal ? ' (' + _esc(body.code_postal) + ')' : '') : ''),
       row('Durée prestation', body.duree_prestation ? _esc(body.duree_prestation) : ''),
@@ -1596,7 +1597,9 @@ async function sendBrevoNotification(apiKey, body) {
       row('Type de demande', body.type_demande ? _esc(body.type_demande) : ''),
       row('Pour qui', body.pour_qui ? _esc(body.pour_qui) : ''),
       row('Niveau tango', body.niveau_tango ? _esc(body.niveau_tango) : ''),
+      row('Date limite souhaitée', body.date_butoir ? _esc(fmtDateFr(body.date_butoir)) + (body.date_butoir_flexible === 'oui' ? ' <span style="color:#888;font-size:11px;">(flexible)</span>' : '') : ''),
       row('Lieu cours', body.lieu_cours ? _esc(body.lieu_cours) : ''),
+      row('Commune domicile', body.commune_domicile ? _esc(body.commune_domicile) : ''),
       row('Disponibilités', body.dates_periodes ? _esc(body.dates_periodes) : ''),
       row('Budget', body.budget ? _esc(body.budget) : ''),
     ].join('');
@@ -1644,7 +1647,7 @@ async function sendBrevoNotification(apiKey, body) {
         sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
         to: [{ email: 'tangoetvous@gmail.com', name: 'Admin Tango & Vous' }],
         subject: isEvent
-          ? `[Devis] ${nomAff} (${_esc(body.type_evenement||'événement')}) — ${_esc(body.date_evenement||'')}`
+          ? `[Devis] ${nomAff} (${_esc(body.type_evenement||'événement')}) — ${_esc(fmtDateFr(body.date_evenement||''))}`
           : `[Devis] ${nomAff} (${_esc(body.type_demande||'cours privé')})${body.niveau_tango ? ' — Niveau ' + _esc(body.niveau_tango) : ''}`,
         htmlContent: adminHtml,
       }),
@@ -1656,11 +1659,21 @@ async function sendBrevoNotification(apiKey, body) {
     const demandeurPrenom = _esc(body.prenom || body.nom || 'Madame, Monsieur');
     const recapRows = isEvent ? [
       row('Type d\'événement', body.type_evenement ? _esc(body.type_evenement) : ''),
-      row('Date', body.date_evenement ? _esc(body.date_evenement) : ''),
+      row('Date', body.date_evenement ? _esc(fmtDateFr(body.date_evenement)) + (body.date_flexible === 'oui' ? ' (flexible)' : '') : ''),
+      row('Horaire', body.horaire_evenement ? _esc(body.horaire_evenement) : ''),
+      row('Lieu', body.lieu ? _esc(body.lieu) + (body.code_postal ? ' (' + _esc(body.code_postal) + ')' : '') : ''),
+      row('Durée prestation', body.duree_prestation ? _esc(body.duree_prestation) : ''),
       row('Prestations', prestations),
+      row('Budget', body.budget ? _esc(body.budget) : ''),
     ].join('') : [
       row('Type de demande', body.type_demande ? _esc(body.type_demande) : ''),
+      row('Pour qui', body.pour_qui ? _esc(body.pour_qui) : ''),
+      row('Niveau tango', body.niveau_tango ? _esc(body.niveau_tango) : ''),
+      row('Date limite souhaitée', body.date_butoir ? _esc(fmtDateFr(body.date_butoir)) + (body.date_butoir_flexible === 'oui' ? ' (flexible)' : '') : ''),
+      row('Lieu cours', body.lieu_cours ? _esc(body.lieu_cours) + (body.commune_domicile ? ' — ' + _esc(body.commune_domicile) : '') : ''),
+      row('Disponibilités', body.dates_periodes ? _esc(body.dates_periodes) : ''),
       row('Prestations', prestations),
+      row('Budget', body.budget ? _esc(body.budget) : ''),
     ].join('');
 
     const d2Html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
