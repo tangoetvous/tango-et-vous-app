@@ -14759,6 +14759,7 @@ function renderDashboard() {
   // 3. Cartes expirées avec cours restants
   var carteExpSet = {};
   (adminData.cartes||[]).forEach(function(c){
+    if ((c.saison||'') !== sai) return;
     if (!c.expiration) return;
     if (c.expiration >= todayStr) return;
     if ((c.restants||0) <= 0) return;
@@ -14770,14 +14771,23 @@ function renderDashboard() {
   // 4. Cartes non payées
   var carteNonPayeSet = {};
   (adminData.cartes||[]).forEach(function(c){
+    if ((c.saison||'') !== sai) return;
     if (c.paye === false || c.paye === 0) carteNonPayeSet[c.email] = c;
   });
   var nbCarteNonPaye = Object.keys(carteNonPayeSet).length;
 
   // 5. Essai non pointés (date passée, presence_declaree null)
   var essaiNonPointe = (adminData.essai||[]).filter(function(e){
-    return e.statut === 'confirme' && e.date < todayStr && e.present == null;
+    return e.statut === 'confirme' && e.date < todayStr && e.present == null && dateAppartientSaison(e.date, sai);
   });
+
+  // 6. Essais en attente de validation
+  var nbEssaiAttente = (adminData.essai||[]).filter(function(e){
+    return e.statut === 'attente' && dateAppartientSaison(e.date, sai);
+  }).length;
+  var nbEssaiYogaAttente = (adminData.essaiYoga||[]).filter(function(e){
+    return e.statut === 'attente' && dateAppartientSaison(e.date, sai);
+  }).length;
 
   // ── Yoga fill rates ───────────────────────────────────────────────────────
   var yinN = nbInscritsYoga('yin');
@@ -14793,6 +14803,8 @@ function renderDashboard() {
   if (nbDemandes > 0)    alerts.push({icon:'✋', label:nbDemandes+' demande'+(nbDemandes>1?'s':'')+' à valider', tab:'cours-tango', color:'#c2841b'});
   if (nbCarteExp > 0)    alerts.push({icon:'⏰', label:nbCarteExp+' carte'+(nbCarteExp>1?'s':'')+' expirée'+(nbCarteExp>1?'s':'')+' (cours restants)', tab:'cartes', color:'#b91c1c'});
   if (nbCarteNonPaye > 0) alerts.push({icon:'⚠️', label:nbCarteNonPaye+' carte'+(nbCarteNonPaye>1?'s':'')+' non payée'+(nbCarteNonPaye>1?'s':''), tab:'cartes', color:'#c2841b'});
+  if (nbEssaiAttente > 0)     alerts.push({icon:'✋', label:nbEssaiAttente+' essai'+(nbEssaiAttente>1?'s':'')+' tango en attente', tab:'essai', color:'#c2841b'});
+  if (nbEssaiYogaAttente > 0) alerts.push({icon:'🧘', label:nbEssaiYogaAttente+' essai'+(nbEssaiYogaAttente>1?'s':'')+' yoga en attente', tab:'yoga', color:'#2e7d32'});
   if (essaiNonPointe.length > 0) alerts.push({icon:'📋', label:essaiNonPointe.length+' essai'+(essaiNonPointe.length>1?'s':'')+' non pointé'+(essaiNonPointe.length>1?'s':''), tab:'essai', color:'#6b7280'});
 
   if (alerts.length > 0) {
