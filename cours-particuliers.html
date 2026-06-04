@@ -111,14 +111,9 @@ select option{background:var(--s2);color:var(--text);}
 .lieu-check:has(input:checked){border-color:var(--gold);color:var(--gold);background:#1e1800;}
 .lieu-check input[type=checkbox]{width:auto;padding:0;border:none;background:transparent;accent-color:var(--gold);flex-shrink:0;cursor:pointer;}
 
-/* ── Select multiple objectifs ── */
-.obj-select{
-  width:100%;padding:4px;
-  background:#100d00;border:1px solid var(--gold-border);
-  color:#e8c84a;border-radius:7px;font-size:13px;
-  font-family:var(--font-b);cursor:pointer;
-}
-.obj-select option{padding:7px 8px;background:#100d00;color:#e8c84a;}
+/* ── Cases à cocher objectifs (même style que lieux) ── */
+.obj-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px;}
+@media(max-width:420px){.obj-grid{grid-template-columns:1fr;}}
 
 /* ── Récap ── */
 .recap{background:#080700;border:2px solid var(--gold-border);border-radius:12px;padding:14px;margin-bottom:14px;}
@@ -279,6 +274,16 @@ const OBJECTIFS = [
   { id:'choregraphie', label:'💍 Chorégraphie'             },
   { id:'autre',        label:'✨ Autre objectif'           },
 ];
+
+const NIV_LBL = {
+  debutant: 'Débutant(e) — jamais dansé',
+  quelques: 'Quelques cours',
+  '1an':    '1 an — bases acquises',
+  '2ans':   '2 ans de cours',
+  plus:     'Plus de 2 ans',
+  milonga:  'Je sors régulièrement en milonga',
+};
+function niveauLabel(val) { return NIV_LBL[val] || val; }
 
 // SVG professeurs
 const SVG = {
@@ -467,9 +472,14 @@ function sCours() {
 
   const showCP = S.lieux.some(id => { const l=LIEUX.find(x=>x.id===id); return l&&l.cp; });
 
-  const objOptions = OBJECTIFS.map(o =>
-    `<option value="${o.id}" ${S.objectifs.includes(o.id) ? 'selected' : ''}>${o.label}</option>`
-  ).join('');
+  const objChecks = OBJECTIFS.map(o => `
+    <label class="lieu-check">
+      <input type="checkbox" value="${o.id}"
+             ${S.objectifs.includes(o.id) ? 'checked' : ''}
+             onchange="toggleObj('${o.id}', this.checked)"
+             style="width:auto;padding:0;border:none;background:transparent;"/>
+      ${o.label}
+    </label>`).join('');
 
   const dureeBtns = DUREES.map(d =>
     `<button type="button" class="btn-choix duree-btn${S.duree===d?' sel':''}" data-duree="${d}" onclick="toggleDuree(this)">
@@ -497,11 +507,8 @@ function sCours() {
     </div>
 
     <div class="cadre">
-      <div class="cadre-titre">Vos attentes <span class="opt-lbl">— sélection multiple</span></div>
-      <p style="font-size:11px;color:#9a8050;margin-bottom:8px;">Sur ordinateur : maintenez Ctrl (PC) ou ⌘ (Mac) pour sélectionner plusieurs. Sur mobile : appuyez pour cocher/décocher.</p>
-      <select multiple id="i-obj" size="7" class="obj-select">
-        ${objOptions}
-      </select>
+      <div class="cadre-titre">Vos attentes <span class="opt-lbl">— plusieurs choix possibles</span></div>
+      <div class="obj-grid">${objChecks}</div>
       <div class="field" style="margin-top:14px;margin-bottom:0;">
         <label>Décrivez votre projet <span class="opt-lbl">— facultatif</span></label>
         <textarea id="i-rem" rows="3" placeholder="Plus vous nous en dites, mieux nous pourrons préparer votre cours…">${S.remarque}</textarea>
@@ -545,6 +552,14 @@ function toggleLieu(id, checked) {
   if (cpField) cpField.style.display = showCP ? '' : 'none';
 }
 
+function toggleObj(id, checked) {
+  if (checked) {
+    if (!S.objectifs.includes(id)) S.objectifs.push(id);
+  } else {
+    S.objectifs = S.objectifs.filter(function(x){ return x !== id; });
+  }
+}
+
 function toggleDuree(btn) {
   const d = btn.dataset.duree;
   S.duree = S.duree === d ? '' : d;
@@ -562,15 +577,21 @@ function buildRecap() {
   const lieuRaw = S.lieux.map(id => { const l=LIEUX.find(x=>x.id===id); return l?l.label.replace(/^[^\s]+\s/,''):id; }).join(' / ');
   const lieuFull = lieuRaw + (S.lieuDetail ? ` (${S.lieuDetail})` : '');
 
+  // Remarque : lire depuis le DOM si disponible (formulaire encore ouvert)
+  const remEl = document.getElementById('i-rem');
+  const remarqueVal = remEl ? remEl.value.trim() : S.remarque;
+
   return `
     <div class="recap-sec">Récapitulatif de votre demande</div>
     <div class="recap-row"><span class="rk">👤 Nom</span><span class="rv">${S.prenom} ${S.nom}</span></div>
     <div class="recap-row"><span class="rk">📧 Email</span><span class="rv">${S.email}</span></div>
     <div class="recap-row"><span class="rk">📞 Téléphone</span><span class="rv">${S.tel}</span></div>
+    ${S.niveauEleve ? `<div class="recap-row"><span class="rk">📊 Niveau</span><span class="rv">${niveauLabel(S.niveauEleve)}</span></div>` : ''}
     ${S.prof ? `<div class="recap-row"><span class="rk">🎓 Professeur(e)</span><span class="rv">${profNom(S.prof)}</span></div>` : ''}
     ${lieuFull ? `<div class="recap-row"><span class="rk">📍 Lieu(x)</span><span class="rv">${lieuFull}</span></div>` : ''}
     ${objLabels ? `<div class="recap-row"><span class="rk">🎯 Objectif(s)</span><span class="rv">${objLabels}</span></div>` : ''}
-    ${S.duree ? `<div class="recap-row"><span class="rk">⏱ Durée</span><span class="rv">${S.duree}</span></div>` : ''}`;
+    ${S.duree ? `<div class="recap-row"><span class="rk">⏱ Durée</span><span class="rv">${S.duree}</span></div>` : ''}
+    ${remarqueVal ? `<div class="recap-row"><span class="rk">💬 Notes</span><span class="rv">${remarqueVal}</span></div>` : ''}`;
 }
 
 // ================================================================
@@ -580,8 +601,6 @@ async function soumettre() {
   // Lire état depuis DOM
   const hasCp = S.lieux.some(function(id){ var l=LIEUX.find(function(x){return x.id===id;}); return l&&l.cp; });
   if (hasCp) S.lieuDetail = v('i-lieu-detail');
-  var objSel = document.getElementById('i-obj');
-  S.objectifs = objSel ? Array.from(objSel.selectedOptions).map(function(o){ return o.value; }) : [];
   S.remarque = v('i-rem');
 
   // Validation
@@ -657,10 +676,15 @@ function afficherSucces() {
   const lieuStr = S.lieux.map(function(id){ var l=LIEUX.find(function(x){return x.id===id;}); return l?l.label.replace(/^[^\s]+\s/,''):id; }).join(' / ');
 
   $('success-recap').innerHTML = `
-    <div class="s-line"><span class="s-ico">🎓</span><span>Cours avec <strong>${profNom(S.prof)}</strong>${S.duree?' — '+S.duree:''} — ${lieuStr}</span></div>
+    <div class="s-line"><span class="s-ico">👤</span><span>${S.prenom} ${S.nom}</span></div>
+    <div class="s-line"><span class="s-ico">📧</span><span>${S.email}</span></div>
+    <div class="s-line"><span class="s-ico">📞</span><span>${S.tel}</span></div>
+    ${S.niveauEleve ? `<div class="s-line"><span class="s-ico">📊</span><span>${niveauLabel(S.niveauEleve)}</span></div>` : ''}
+    ${S.prof ? `<div class="s-line"><span class="s-ico">🎓</span><span>Cours avec <strong>${profNom(S.prof)}</strong>${S.duree?' — '+S.duree:''}</span></div>` : ''}
+    ${lieuStr ? `<div class="s-line"><span class="s-ico">📍</span><span>${lieuStr}${S.lieuDetail?' ('+S.lieuDetail+')':''}</span></div>` : ''}
     ${objLabels ? `<div class="s-line"><span class="s-ico">🎯</span><span>${objLabels}</span></div>` : ''}
-    <div class="s-line"><span class="s-ico">📞</span><span>Florencia &amp; Jérémy vous recontacteront à l'adresse <strong>${S.email}</strong> ou au <strong>${S.tel}</strong> pour fixer un créneau.</span></div>
-    <div class="s-line"><span class="s-ico">💬</span><span>Vous pouvez aussi nous joindre directement sur <a href="tel:+33661727998" style="color:var(--gold);">06 61 72 79 98</a> ou <a href="mailto:tangoetvous@gmail.com" style="color:var(--gold);">tangoetvous@gmail.com</a></span></div>`;
+    ${S.remarque ? `<div class="s-line"><span class="s-ico">💬</span><span style="white-space:pre-wrap;">${S.remarque}</span></div>` : ''}
+    <div class="s-line"><span class="s-ico">✉️</span><span>Florencia &amp; Jérémy vous recontacteront à l'adresse <strong>${S.email}</strong> ou au <strong>${S.tel}</strong> pour fixer un créneau.</span></div>`;
 
   $('success').style.display = 'block';
   window.scrollTo(0,0);

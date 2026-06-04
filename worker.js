@@ -8204,6 +8204,7 @@ async function handleNotifyCoursParticulier(request, env) {
       <table style="width:100%;border-collapse:collapse;">
         ${row('Professeur', prof)}
         ${row('Durée', duree)}
+        ${row('Niveau', niveauEleve)}
         ${row('Lieu', lieu)}
         ${row('Objectifs', objectifs)}
         ${row('Disponibilités', dispoTexte)}

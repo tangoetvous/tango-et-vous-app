@@ -14146,11 +14146,12 @@ function _renderCPListe(liste, STATUTS, STATUTS_OPTS) {
     });
     card += '</select></div>';
 
+    var _cpNivLbl = {'debutant':'Débutant — jamais dansé','quelques':'Quelques cours','1an':'1 an — bases acquises','2ans':'2 ans de cours','plus':'Plus de 2 ans','milonga':'Sort régulièrement en milonga'};
     var infoParts = [];
     if (cp.professeur) infoParts.push('👤 '+escHtml(cp.professeur));
     if (cp.duree)      infoParts.push('⏱ '+escHtml(cp.duree));
     if (cp.lieu)       infoParts.push('📍 '+escHtml(cp.lieu)+(cp.lieu_detail?' ('+escHtml(cp.lieu_detail)+')':''));
-    if (cp.niveau)     infoParts.push('📊 '+escHtml(cp.niveau));
+    if (cp.niveau)     infoParts.push('📊 '+escHtml(_cpNivLbl[cp.niveau]||cp.niveau));
     if (infoParts.length) card += '<div style="margin-top:6px;font-size:12px;color:var(--dim);">'+infoParts.join(' · ')+'</div>';
     if (cp.objectifs)  card += '<div style="margin-top:6px;font-size:13px;color:var(--gold);font-weight:600;">'+escHtml(cp.objectifs)+'</div>';
     if (cp.dispos)     card += '<div style="margin-top:5px;font-size:12px;color:var(--text);">🗓 '+escHtml(cp.dispos)+'</div>';
