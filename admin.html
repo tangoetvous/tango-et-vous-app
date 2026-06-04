@@ -5041,6 +5041,7 @@ async function chargerDonnees() {
           _isNewFormat: true,
           prenom: ins.prenom || '', nom: ins.nom || '', email: ins.email || '',
           tel: ins.telephone || '', role: _normRole(ins.role || ''),
+          niveau: ins.niveau || '',
           slots: ins.stage_nom ? ins.stage_nom.split('|').map(function(s){var m=(s.trim()).match(/(technique|stage\d+)$/);return m?m[1]:s.trim();}).filter(Boolean) : [],
           present: ins.presence_declaree != null ? ins.presence_declaree : null,
           montant: ins.total_inscrit || 0,
@@ -5063,6 +5064,7 @@ async function chargerDonnees() {
             _dbId: ins.id,
             prenom: ins.prenom || '', nom: ins.nom || '', email: ins.email || '',
             tel: ins.telephone || '', role: _normRole(ins.role || ''),
+            niveau: ins.niveau || '',
             slots: slots, present: null,
             montant: di.prixInscrit || ins.total_inscrit || 0,
             attente: ins.type_confirmation === 'attente',
@@ -9978,7 +9980,7 @@ function renderStages() {
         var stpConfBadge = i.presenceConfirmee ? ' <span class="pill pill-ok" style="font-size:8px;">👍</span>' : '';
         return '<div class="point-row" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;"><div class="point-nom" style="display:flex;align-items:center;gap:6px;">'+i.prenom+' '+i.nom
           +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span>'+stpConfBadge+'</div>'
-          +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
+          +'<div class="point-sub">'+(i.niveau?i.niveau+' · ':'')+''+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:6px;">'
           +'<button class="btn-point btn-pres'+(i.present===true?' on':'')+'" data-action="pointer-stage-pres" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✓</button>'
           +'<button class="btn-point btn-abs'+(i.present===false?' on':'')+'" data-action="pointer-stage-abs" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✗</button>'
@@ -10002,20 +10004,51 @@ function renderStages() {
       +'<div class="stat"><div class="stat-n">'+att2.filter(function(i){return i.role==='guideur';}).length+'</div><div class="stat-l">Guideurs</div></div>'
       +'<div class="stat"><div class="stat-n">'+att2.filter(function(i){return i.role==='guidee';}).length+'</div><div class="stat-l">Guidées</div></div>'
       +'</div>';
+    var _niveauRank={'Débutant':0,'Intermédiaire':1,'Avancé':2};
+    var _niveauColor={
+      'Débutant':  'background:rgba(74,222,128,.15);color:#4ade80',
+      'Intermédiaire':'background:rgba(251,191,36,.15);color:#fbbf24',
+      'Avancé':    'background:rgba(248,113,113,.15);color:#f87171'
+    };
+    function _niveauBadge(niv){
+      if(!niv) return '';
+      return '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;'
+        +(_niveauColor[niv]||'background:rgba(148,163,184,.15);color:#94a3b8')+'">'
+        +niv+'</span>';
+    }
     function _attStageCard(i){
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
       return '<div class="card hl-warn" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top">'
         +'<div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+(i.prenom+' '+i.nom).replace(/"/g,'&quot;')+'" data-email="'+(i.email||'')+'" data-tel="'+(i.tel||'')+'" data-ctx="stage">'+i.prenom+' '+i.nom+'</div>'
         +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(', ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
-        +'<span class="pill '+rcls+'" style="font-size:9px;">'+i.role+'</span></div>'
+        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+        +_niveauBadge(i.niveau)
+        +'<span class="pill '+rcls+'" style="font-size:9px;">'+i.role+'</span>'
+        +'</div></div>'
         +'<div class="btn-row">'
         +'<button class="btn btn-ok" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button>'
         +'</div></div>';
     }
-    _groupCouples(att2).forEach(function(grp){
-      if(grp.type==='couple') h+=_coupleWrap(_attStageCard(grp.persons[0])+_attStageCard(grp.persons[1]));
-      else h+=_attStageCard(grp.person);
+    // Grouper par niveau (Débutant → Intermédiaire → Avancé)
+    var _niveaux=['Débutant','Intermédiaire','Avancé'];
+    var _sansniveau=att2.filter(function(i){return !i.niveau;});
+    _niveaux.forEach(function(niv){
+      var group=att2.filter(function(i){return i.niveau===niv;});
+      if(!group.length) return;
+      h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);">'
+        +niv+' <span style="font-weight:400;opacity:.7;">'+group.length+'</span></div>';
+      _groupCouples(group).forEach(function(grp){
+        if(grp.type==='couple') h+=_coupleWrap(_attStageCard(grp.persons[0])+_attStageCard(grp.persons[1]));
+        else h+=_attStageCard(grp.person);
+      });
     });
+    if(_sansniveau.length){
+      h+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);">Niveau non renseigné</div>';
+      _groupCouples(_sansniveau).forEach(function(grp){
+        if(grp.type==='couple') h+=_coupleWrap(_attStageCard(grp.persons[0])+_attStageCard(grp.persons[1]));
+        else h+=_attStageCard(grp.person);
+      });
+    }
     return h;
   }
 
