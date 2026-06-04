@@ -355,8 +355,10 @@
               return true;
             }).length || 1;
             if (eleveData.carte) {
-              // Si au moins une inscription carte10 existe → carte10, sinon forfait
-              eleveData.carte.type = hasCarte10 ? 'carte10' : 'forfait';
+              // carte10 si au moins une inscription type='carte10', OU si carte_statut indique une carte active
+              // (le type peut être vide si l'inscription a été créée via le flux essai sans passer par VP)
+              var isCarteActive = eleveData.carte.statut === 'Active' || eleveData.carte.statut === 'Nouvelle carte';
+              eleveData.carte.type = (hasCarte10 || isCarteActive) ? 'carte10' : 'forfait';
             }
           } else if (eleveData.carte && !eleveData.carte.type) {
             // Pas de données inscriptions — déduire depuis eleves
