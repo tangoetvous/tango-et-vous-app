@@ -24,7 +24,6 @@ html{background:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%;
 body{
   font-family:var(--font-b);font-size:14px;color:var(--text);
   background:var(--bg);min-height:100vh;
-  /* En mode iframe Wix, on peut forcer transparent : */
 }
 
 /* ── Wrapper ── */
@@ -84,11 +83,11 @@ select option{background:var(--s2);color:var(--text);}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 @media(max-width:460px){.row2{grid-template-columns:1fr;}}
 
-/* ── Boutons choix ── */
+/* ── Boutons choix (prof, durée) ── */
 .btn-choix-grp{display:flex;gap:9px;flex-wrap:wrap;margin-top:6px;}
 .btn-choix{
   flex:1;min-width:80px;
-  background:#12100000;border:2px solid var(--gold-border);color:#c9a84c;
+  border:2px solid var(--gold-border);color:#c9a84c;
   padding:12px 8px;border-radius:10px;cursor:pointer;
   text-align:center;font-size:12px;font-weight:700;font-family:var(--font-b);
   letter-spacing:.5px;transition:all .22s;
@@ -100,18 +99,26 @@ select option{background:var(--s2);color:var(--text);}
 .btn-choix svg{width:26px;height:26px;transition:all .22s;}
 .btn-choix.sel svg{filter:drop-shadow(0 0 4px rgba(212,175,55,.5));}
 
-/* ── Grille objectifs ── */
-.obj-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
-@media(max-width:420px){.obj-grid{grid-template-columns:1fr;}}
-.obj-btn{
-  background:#100d00;border:2px solid var(--gold-border);color:#f0f0f0;
-  padding:12px 10px;border-radius:10px;cursor:pointer;
-  text-align:left;font-size:12px;font-family:var(--font-b);
-  transition:all .22s;line-height:1.5;
+/* ── Cases à cocher lieux ── */
+.lieux-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px;}
+.lieu-check{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 11px;background:#100d00;
+  border:1px solid var(--gold-border);border-radius:7px;
+  cursor:pointer;font-size:12px;color:#c9a84c;
+  transition:border-color .2s,color .2s,background .2s;user-select:none;
 }
-.obj-btn:hover{border-color:var(--gold);color:var(--gold);background:#1e1800;}
-.obj-btn.sel{border-color:var(--gold);background:#261d00;color:var(--gold);}
-.obj-icn{font-size:16px;display:block;margin-bottom:4px;}
+.lieu-check:has(input:checked){border-color:var(--gold);color:var(--gold);background:#1e1800;}
+.lieu-check input[type=checkbox]{width:auto;padding:0;border:none;background:transparent;accent-color:var(--gold);flex-shrink:0;cursor:pointer;}
+
+/* ── Select multiple objectifs ── */
+.obj-select{
+  width:100%;padding:4px;
+  background:#100d00;border:1px solid var(--gold-border);
+  color:#e8c84a;border-radius:7px;font-size:13px;
+  font-family:var(--font-b);cursor:pointer;
+}
+.obj-select option{padding:7px 8px;background:#100d00;color:#e8c84a;}
 
 /* ── Récap ── */
 .recap{background:#080700;border:2px solid var(--gold-border);border-radius:12px;padding:14px;margin-bottom:14px;}
@@ -136,7 +143,6 @@ select option{background:var(--s2);color:var(--text);}
   font-family:var(--font-b);letter-spacing:1px;cursor:pointer;transition:opacity .2s;
 }
 .btn-next:hover{opacity:.88;}
-.btn-next:disabled{opacity:.4;cursor:default;}
 .btn-submit{
   width:100%;background:var(--gold);color:#000;border:none;
   padding:14px;border-radius:7px;font-size:15px;font-weight:700;
@@ -174,21 +180,7 @@ select option{background:var(--s2);color:var(--text);}
 }
 .btn-nouveau:hover{background:var(--gold);color:#000;}
 
-/* ── Jours dispo ── */
-.jours-grp{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
-.jour-btn{
-  width:44px;height:44px;border-radius:8px;
-  border:2px solid var(--gold-border);color:#c9a84c;
-  font-size:12px;font-weight:700;letter-spacing:.5px;
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;transition:all .2s;background:#100d00;
-  font-family:var(--font-b);
-}
-.jour-btn.sel{border-color:var(--gold);background:#261d00;color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.25);}
-.horaire-row{display:flex;align-items:flex-end;gap:10px;}
-.horaire-row .field{flex:1;margin-bottom:0;}
-.horaire-sep{color:var(--gold);font-size:20px;padding-bottom:10px;flex-shrink:0;}
-.opt-lbl{font-size:13px;font-weight:600;color:#c8962a;margin-left:6px;letter-spacing:0;}
+.opt-lbl{font-size:13px;font-weight:600;color:#c8962a;margin-left:6px;letter-spacing:0;text-transform:none;}
 
 /* ── Footer ── */
 .footer{font-size:11px;color:var(--faint);text-align:center;padding:14px 24px 18px;border-top:1px solid var(--border);line-height:1.7;}
@@ -257,7 +249,7 @@ var _inIframe = window.self !== window.top;
 // ================================================================
 // ⚙️  CONFIGURATION
 // ================================================================
-const IS_DEMO    = false;
+const IS_DEMO = false;
 
 // ================================================================
 // DONNÉES DE RÉFÉRENCE
@@ -271,21 +263,21 @@ const PROFESSEURS = [
 const DUREES = ['1 heure','1h30','2 heures'];
 
 const LIEUX = [
-  { id:'nation',     label:'Nation — Paris',                 cp: false },
-  { id:'gambetta',   label:'Gambetta — Paris',               cp: false },
-  { id:'vincennes',  label:'Vincennes / Montreuil / Fontenay', cp: false },
-  { id:'domicile',   label:'À domicile',                     cp: true  },
-  { id:'vos-locaux', label:'Dans vos locaux',                cp: true  },
+  { id:'nation',     label:'📍 Nation — Paris',                   cp: false },
+  { id:'gambetta',   label:'📍 Gambetta — Paris',                 cp: false },
+  { id:'vincennes',  label:'📍 Vincennes / Montreuil / Fontenay', cp: false },
+  { id:'domicile',   label:'🏠 À domicile',                       cp: true  },
+  { id:'vos-locaux', label:'🏢 Dans vos locaux',                  cp: true  },
 ];
 
 const OBJECTIFS = [
-  { id:'decouverte',    ico:'🌱', label:'Découverte du tango',      detail:'1ère initiation, seul(e) ou en couple' },
-  { id:'passer-cap',   ico:'🎯', label:'Passer un cap',             detail:'Déblocage, éclaircissements' },
-  { id:'accordage',    ico:'💑', label:'Accordage de couple',        detail:'Abrazo, musicalité commune' },
-  { id:'sequence',     ico:'🔄', label:'Travail sur une séquence',  detail:'Technique spécifique' },
-  { id:'scene',        ico:'🎭', label:'Tango de scène',            detail:'Portés, sauts, vocabulaire scénico' },
-  { id:'choregraphie', ico:'💍', label:'Chorégraphie',              detail:'Mariage, spectacle, démo…' },
-  { id:'autre',        ico:'✨', label:'Autre objectif',            detail:'Décrivez dans vos remarques' },
+  { id:'decouverte',    label:'🌱 Découverte du tango'     },
+  { id:'passer-cap',   label:'🎯 Passer un cap'            },
+  { id:'accordage',    label:'💑 Accordage de couple'       },
+  { id:'sequence',     label:'🔄 Travail sur une séquence' },
+  { id:'scene',        label:'🎭 Tango de scène'           },
+  { id:'choregraphie', label:'💍 Chorégraphie'             },
+  { id:'autre',        label:'✨ Autre objectif'           },
 ];
 
 // SVG professeurs
@@ -305,13 +297,11 @@ function freshState() {
     prenom: '', nom: '', email: '', tel: '',
     // Étape 2 — Le cours
     prof: null, lieux: [], lieuDetail: '',
-    // Étape 3 — L'objectif
+    // Vos attentes
     objectifs: [],
     niveauEleve: '', remarque: '',
-    // Étape 4 — Disponibilités
+    // Durée
     duree: '',
-    jours: [], heureDebut: '', heureFin: '', propositionsDates: '',
-    dispoTexte: '', urgence: '',
   };
 }
 let S = freshState();
@@ -340,7 +330,6 @@ window.addEventListener('message', function(ev) {
   if (d.nom)    S.nom    = d.nom;
   if (d.email)  S.email  = d.email;
   if (d.tel)    S.tel    = d.tel;
-  // Mettre à jour les champs si l'étape 'qui' est déjà rendue
   ['pre:prenom','nom:nom','eml:email','tel:tel'].forEach(function(pair) {
     var parts = pair.split(':');
     var el = document.getElementById('i-'+parts[0]);
@@ -362,13 +351,11 @@ function _scrollHint() {
 }
 
 // ================================================================
-// STEPS CONFIG
+// STEPS CONFIG — 2 étapes seulement
 // ================================================================
 const STEPS = [
   { id:'qui',   lbl:'Qui' },
-  { id:'cours', lbl:'Le cours' },
-  { id:'obj',   lbl:'Objectif' },
-  { id:'dispos',lbl:'Disponibilités' },
+  { id:'cours', lbl:'Votre demande' },
 ];
 
 // ================================================================
@@ -381,7 +368,7 @@ function v(id)      { const el=document.getElementById(id); return el ? el.value
 function profNom(id){ const p=PROFESSEURS.find(x=>x.id===id); return p?p.nom:''; }
 function lieuLabel(lieux){
   if (!lieux || !lieux.length) return '';
-  return lieux.map(id => { const l=LIEUX.find(x=>x.id===id); return l?l.label:id; }).join(' / ');
+  return lieux.map(id => { const l=LIEUX.find(x=>x.id===id); return l?l.label.replace(/^[^\s]+\s/,''):id; }).join(' / ');
 }
 
 // ================================================================
@@ -389,7 +376,6 @@ function lieuLabel(lieux){
 // ================================================================
 function render() {
   const tot = STEPS.length, cur = S.step;
-  // Steps bar
   let bar = '';
   STEPS.forEach((s,i) => {
     const n = i+1, cls = n<cur ? 'done' : n===cur ? 'active' : '';
@@ -399,7 +385,6 @@ function render() {
   });
   $('steps-bar').innerHTML = bar;
   $('pfill').style.width = (tot > 1 ? (cur-1)/(tot-1)*100 : 0) + '%';
-  // Screen
   $('app').innerHTML = buildStep(STEPS[cur-1].id);
   hideErr();
   window.scrollTo(0,0);
@@ -410,10 +395,8 @@ function render() {
 function jumpTo(n) { if (n < S.step) { S.step = n; render(); } }
 
 function buildStep(id) {
-  if (id === 'qui')    return sQui();
-  if (id === 'cours')  return sCours();
-  if (id === 'obj')    return sObjectif();
-  if (id === 'dispos') return sDispos();
+  if (id === 'qui')   return sQui();
+  if (id === 'cours') return sCours();
   return '';
 }
 
@@ -465,7 +448,7 @@ function nextQui() {
 }
 
 // ================================================================
-// ÉTAPE 2 — LE COURS
+// ÉTAPE 2 — VOTRE DEMANDE (fusionnée : cours + objectifs + durée)
 // ================================================================
 function sCours() {
   const profBtns = PROFESSEURS.map(p => `
@@ -473,16 +456,30 @@ function sCours() {
       ${SVG[p.id]}<span>${p.nom}</span>
     </button>`).join('');
 
-  const lieuBtns = LIEUX.map(l => `
-    <button type="button" class="btn-choix${S.lieux.includes(l.id)?' sel':''}" onclick="setLieu('${l.id}')">
-      <span style="font-size:18px;">${l.id==='domicile'?'🏠':l.id==='vos-locaux'?'🏢':'📍'}</span>
-      <span>${l.label}</span>
-    </button>`).join('');
+  const lieuChecks = LIEUX.map(l => `
+    <label class="lieu-check">
+      <input type="checkbox" value="${l.id}"
+             ${S.lieux.includes(l.id) ? 'checked' : ''}
+             onchange="toggleLieu('${l.id}', this.checked)"
+             style="width:auto;padding:0;border:none;background:transparent;"/>
+      ${l.label}
+    </label>`).join('');
 
   const showCP = S.lieux.some(id => { const l=LIEUX.find(x=>x.id===id); return l&&l.cp; });
 
+  const objOptions = OBJECTIFS.map(o =>
+    `<option value="${o.id}" ${S.objectifs.includes(o.id) ? 'selected' : ''}>${o.label}</option>`
+  ).join('');
+
+  const dureeBtns = DUREES.map(d =>
+    `<button type="button" class="btn-choix duree-btn${S.duree===d?' sel':''}" data-duree="${d}" onclick="toggleDuree(this)">
+      <span style="font-size:16px;">⏱</span><span>${d}</span>
+    </button>`).join('');
+
+  const recap = buildRecap();
+
   return `
-    <div class="etape-lbl">Étape 2 — Le cours</div>
+    <div class="etape-lbl">Étape 2 — Votre demande</div>
     <div class="etape-sous">Définissez les modalités de votre cours particulier.</div>
 
     <div class="cadre">
@@ -492,167 +489,34 @@ function sCours() {
 
     <div class="cadre">
       <div class="cadre-titre">Lieu(x) souhaité(s) <span class="opt-lbl">— plusieurs choix possibles</span></div>
-      <div style="display:flex;flex-direction:column;gap:8px;">${lieuBtns}</div>
-      ${showCP ? `
-      <div class="field" style="margin-top:12px;margin-bottom:0;">
-        <label>Code postal</label>
+      <div class="lieux-grid">${lieuChecks}</div>
+      <div id="cp-field" style="margin-top:10px;${showCP ? '' : 'display:none;'}">
+        <label style="font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:5px;">Code postal</label>
         <input type="text" id="i-lieu-detail" value="${S.lieuDetail}" placeholder="Ex : 75020" inputmode="numeric" maxlength="5"/>
-      </div>` : ''}
-    </div>
-
-    <p style="text-align:center;color:#D4AF37;font-size:13px;font-weight:600;margin:18px 0 10px;letter-spacing:.3px;">↑ Après avoir cliqué, remontez en haut de la page pour continuer</p>
-    <div class="nav">
-      <button class="btn-back" onclick="prev()">← Retour</button>
-      <button class="btn-next" onclick="nextCours()">Continuer →</button>
-    </div>
-    ${_scrollHint()}`;
-}
-
-function setProf(id) {
-  const cpEl = document.getElementById('i-lieu-detail');
-  if (cpEl) S.lieuDetail = cpEl.value;
-  S.prof = id; render();
-}
-function setLieu(id) {
-  const cpEl = document.getElementById('i-lieu-detail');
-  if (cpEl) S.lieuDetail = cpEl.value;
-  const idx = S.lieux.indexOf(id);
-  if (idx === -1) S.lieux.push(id); else S.lieux.splice(idx, 1);
-  render();
-}
-function toggleDuree(btn) {
-  const d = btn.dataset.duree;
-  S.duree = S.duree === d ? '' : d;
-  document.querySelectorAll('.duree-btn').forEach(b => b.classList.toggle('sel', b.dataset.duree === S.duree));
-}
-function toggleJour(btn) {
-  const j = btn.dataset.jour;
-  const idx = S.jours.indexOf(j);
-  if (idx === -1) S.jours.push(j); else S.jours.splice(idx, 1);
-  btn.classList.toggle('sel', S.jours.includes(j));
-}
-
-function nextCours() {
-  const hasCp = S.lieux.some(id => { const l=LIEUX.find(x=>x.id===id); return l&&l.cp; });
-  if (hasCp) S.lieuDetail = v('i-lieu-detail');
-  if (!S.prof)        { showErr('Merci de choisir un(e) professeur(e).'); return; }
-  if (!S.lieux.length){ showErr('Merci de choisir au moins un lieu.'); return; }
-  S.step++; render();
-}
-
-// ================================================================
-// ÉTAPE 3 — OBJECTIF
-// ================================================================
-function sObjectif() {
-  const objBtns = OBJECTIFS.map(o => `
-    <button type="button" class="obj-btn${S.objectifs.includes(o.id)?' sel':''}" onclick="toggleObj('${o.id}')">
-      <span class="obj-icn">${o.ico}</span>
-      <strong>${o.label}</strong><br/>
-      <span style="font-size:11px;color:inherit;opacity:.7;">${o.detail}</span>
-    </button>`).join('');
-
-  return `
-    <div class="etape-lbl">Étape 3 — Votre objectif</div>
-    <div class="etape-sous">Sélectionnez un ou plusieurs objectifs pour ce cours.</div>
-    <div class="cadre">
-      <div class="cadre-titre">Qu'est-ce qui vous amène ? (choix multiple)</div>
-      <div class="obj-grid">${objBtns}</div>
-    </div>
-    <div class="cadre">
-      <div class="cadre-titre">Informations complémentaires</div>
-      <div class="field">
-        <label>Décrivez votre projet ou vos attentes</label>
-        <textarea id="i-rem" rows="4" placeholder="Plus vous nous en dites, mieux nous pourrons préparer votre cours…">${S.remarque}</textarea>
       </div>
     </div>
-    <p style="text-align:center;color:#D4AF37;font-size:13px;font-weight:600;margin:18px 0 10px;letter-spacing:.3px;">↑ Après avoir cliqué, remontez en haut de la page pour continuer</p>
-    <div class="nav">
-      <button class="btn-back" onclick="prev()">← Retour</button>
-      <button class="btn-next" onclick="nextObj()">Continuer →</button>
+
+    <div class="cadre">
+      <div class="cadre-titre">Vos attentes <span class="opt-lbl">— sélection multiple</span></div>
+      <p style="font-size:11px;color:#9a8050;margin-bottom:8px;">Sur ordinateur : maintenez Ctrl (PC) ou ⌘ (Mac) pour sélectionner plusieurs. Sur mobile : appuyez pour cocher/décocher.</p>
+      <select multiple id="i-obj" size="7" class="obj-select">
+        ${objOptions}
+      </select>
+      <div class="field" style="margin-top:14px;margin-bottom:0;">
+        <label>Décrivez votre projet <span class="opt-lbl">— facultatif</span></label>
+        <textarea id="i-rem" rows="3" placeholder="Plus vous nous en dites, mieux nous pourrons préparer votre cours…">${S.remarque}</textarea>
+      </div>
     </div>
-    ${_scrollHint()}`;
-}
-
-function toggleObj(id) {
-  const idx = S.objectifs.indexOf(id);
-  if (idx === -1) S.objectifs.push(id);
-  else S.objectifs.splice(idx,1);
-  render();
-}
-
-function nextObj() {
-  S.remarque = v('i-rem');
-  if (S.objectifs.length === 0) { showErr('Merci de sélectionner au moins un objectif.'); return; }
-  S.step++; render();
-}
-
-// ================================================================
-// ÉTAPE 4 — DISPONIBILITÉS
-// ================================================================
-const JOURS_LIST = [
-  {id:'Lu',lbl:'Lu'},{id:'Ma',lbl:'Ma'},{id:'Me',lbl:'Me'},
-  {id:'Je',lbl:'Je'},{id:'Ve',lbl:'Ve'}
-];
-
-function sDispos() {
-  const recap = buildRecap();
-
-  const dureeBtns = DUREES.map(d =>
-    `<button type="button" class="btn-choix duree-btn${S.duree===d?' sel':''}" data-duree="${d}" onclick="toggleDuree(this)">
-      <span style="font-size:16px;">⏱</span><span>${d}</span>
-    </button>`).join('');
-
-  const joursBtns = JOURS_LIST.map(j =>
-    `<button type="button" class="jour-btn${S.jours.includes(j.id)?' sel':''}" data-jour="${j.id}" onclick="toggleJour(this)">${j.lbl}</button>`
-  ).join('');
-
-  return `
-    <div class="etape-lbl">Étape 4 — Vos disponibilités</div>
-    <div class="etape-sous">Indiquez-nous quand vous êtes disponible — nous trouverons un créneau ensemble.</div>
 
     <div class="cadre">
       <div class="cadre-titre">Durée souhaitée</div>
       <div class="btn-choix-grp">${dureeBtns}</div>
     </div>
 
-    <div class="cadre">
-      <div class="cadre-titre">Créneaux préférés <span class="opt-lbl">— facultatif</span></div>
-      <div class="field">
-        <label>Jours disponibles</label>
-        <div class="jours-grp">${joursBtns}</div>
-      </div>
-      <div class="horaire-row">
-        <div class="field"><label>À partir de</label><input type="text" id="i-hdeb" value="${S.heureDebut}" placeholder="ex : 10h"/></div>
-        <div class="horaire-sep">→</div>
-        <div class="field"><label>Jusqu'à</label><input type="text" id="i-hfin" value="${S.heureFin}" placeholder="ex : 17h"/></div>
-      </div>
-      <div class="field" style="margin-bottom:0;">
-        <label>Propositions de dates</label>
-        <textarea id="i-pdates" rows="2" placeholder="Ex : semaine du 16 juin, ou 25 juin après-midi…">${S.propositionsDates}</textarea>
-      </div>
-    </div>
-
-    <div class="cadre">
-      <div class="cadre-titre">Informations complémentaires <span class="opt-lbl">— facultatif</span></div>
-      <div class="field">
-        <label>Délai souhaité</label>
-        <select id="i-urgence">
-          <option value="">— Sélectionner —</option>
-          <option value="urgent"   ${S.urgence==='urgent'?'selected':''}>Urgent — dans les 2 semaines</option>
-          <option value="1mois"    ${S.urgence==='1mois'?'selected':''}>Dans le mois</option>
-          <option value="flexible" ${S.urgence==='flexible'?'selected':''}>Flexible — on s'adapte</option>
-          <option value="mariage"  ${S.urgence==='mariage'?'selected':''}>Date fixe (mariage, spectacle…)</option>
-        </select>
-      </div>
-      <div class="field" style="margin-bottom:0;">
-        <label>Autres précisions</label>
-        <textarea id="i-dispo" rows="2" placeholder="Tout autre élément qui nous aiderait à planifier…">${S.dispoTexte}</textarea>
-      </div>
-    </div>
-
     <div class="recap">${recap}</div>
 
     ${_inIframe ? '' : '<div class="cf-turnstile" data-sitekey="0x4AAAAAADCDhidbX3fOzZl5" data-theme="dark" id="tev-ts" style="margin-bottom:12px;"></div>'}
+    <p style="text-align:center;color:#D4AF37;font-size:13px;font-weight:600;margin:18px 0 10px;letter-spacing:.3px;">↑ Après avoir cliqué, remontez en haut de la page pour voir la confirmation</p>
     <button class="btn-submit" id="btn-sub" onclick="soumettre()">ENVOYER MA DEMANDE</button>
     <p style="font-size:11px;color:#666;text-align:center;margin-top:10px;">En envoyant ce formulaire, vous acceptez notre <a href="/confidentialite.html" target="_blank" style="color:#D4AF37;">politique de confidentialité</a>.</p>
 
@@ -663,6 +527,30 @@ function sDispos() {
     ${_scrollHint()}`;
 }
 
+function setProf(id) {
+  S.prof = id; render();
+}
+
+function toggleLieu(id, checked) {
+  if (checked) {
+    if (!S.lieux.includes(id)) S.lieux.push(id);
+  } else {
+    S.lieux = S.lieux.filter(function(x){ return x !== id; });
+  }
+  var showCP = S.lieux.some(function(lid) {
+    var l = LIEUX.find(function(x){ return x.id === lid; });
+    return l && l.cp;
+  });
+  var cpField = document.getElementById('cp-field');
+  if (cpField) cpField.style.display = showCP ? '' : 'none';
+}
+
+function toggleDuree(btn) {
+  const d = btn.dataset.duree;
+  S.duree = S.duree === d ? '' : d;
+  document.querySelectorAll('.duree-btn').forEach(b => b.classList.toggle('sel', b.dataset.duree === S.duree));
+}
+
 // ================================================================
 // RÉCAPITULATIF
 // ================================================================
@@ -671,34 +559,34 @@ function buildRecap() {
     const o = OBJECTIFS.find(x=>x.id===id); return o ? o.label : id;
   }).join(', ');
 
-  const lieuFull = lieuLabel(S.lieux) + (S.lieuDetail ? ` (${S.lieuDetail})` : '');
-  const joursLbl = {Lu:'Lundi',Ma:'Mardi',Me:'Mercredi',Je:'Jeudi',Ve:'Vendredi'};
-  const joursStr = S.jours.map(j => joursLbl[j]||j).join(', ');
+  const lieuRaw = S.lieux.map(id => { const l=LIEUX.find(x=>x.id===id); return l?l.label.replace(/^[^\s]+\s/,''):id; }).join(' / ');
+  const lieuFull = lieuRaw + (S.lieuDetail ? ` (${S.lieuDetail})` : '');
 
   return `
     <div class="recap-sec">Récapitulatif de votre demande</div>
     <div class="recap-row"><span class="rk">👤 Nom</span><span class="rv">${S.prenom} ${S.nom}</span></div>
     <div class="recap-row"><span class="rk">📧 Email</span><span class="rv">${S.email}</span></div>
     <div class="recap-row"><span class="rk">📞 Téléphone</span><span class="rv">${S.tel}</span></div>
-    <div class="recap-row"><span class="rk">🎓 Professeur(e)</span><span class="rv">${profNom(S.prof)}</span></div>
-    <div class="recap-row"><span class="rk">📍 Lieu(x)</span><span class="rv">${lieuFull}</span></div>
-    <div class="recap-row"><span class="rk">🎯 Objectif(s)</span><span class="rv">${objLabels}</span></div>
-    ${S.duree ? `<div class="recap-row"><span class="rk">⏱ Durée</span><span class="rv">${S.duree}</span></div>` : ''}
-    ${joursStr ? `<div class="recap-row"><span class="rk">📅 Jours</span><span class="rv">${joursStr}</span></div>` : ''}
-    ${(S.heureDebut||S.heureFin) ? `<div class="recap-row"><span class="rk">🕐 Horaire</span><span class="rv">${S.heureDebut||'?'} – ${S.heureFin||'?'}</span></div>` : ''}
-    ${S.propositionsDates ? `<div class="recap-row"><span class="rk">📆 Dates</span><span class="rv" style="font-size:12px;">${S.propositionsDates}</span></div>` : ''}
-    ${S.remarque ? `<div class="recap-row"><span class="rk">💬 Remarque</span><span class="rv" style="font-size:12px;">${S.remarque}</span></div>` : ''}`;
+    ${S.prof ? `<div class="recap-row"><span class="rk">🎓 Professeur(e)</span><span class="rv">${profNom(S.prof)}</span></div>` : ''}
+    ${lieuFull ? `<div class="recap-row"><span class="rk">📍 Lieu(x)</span><span class="rv">${lieuFull}</span></div>` : ''}
+    ${objLabels ? `<div class="recap-row"><span class="rk">🎯 Objectif(s)</span><span class="rv">${objLabels}</span></div>` : ''}
+    ${S.duree ? `<div class="recap-row"><span class="rk">⏱ Durée</span><span class="rv">${S.duree}</span></div>` : ''}`;
 }
 
 // ================================================================
 // SOUMISSION
 // ================================================================
 async function soumettre() {
-  S.heureDebut       = v('i-hdeb');
-  S.heureFin         = v('i-hfin');
-  S.propositionsDates= v('i-pdates');
-  S.dispoTexte       = v('i-dispo');
-  S.urgence          = v('i-urgence');
+  // Lire état depuis DOM
+  const hasCp = S.lieux.some(function(id){ var l=LIEUX.find(function(x){return x.id===id;}); return l&&l.cp; });
+  if (hasCp) S.lieuDetail = v('i-lieu-detail');
+  var objSel = document.getElementById('i-obj');
+  S.objectifs = objSel ? Array.from(objSel.selectedOptions).map(function(o){ return o.value; }) : [];
+  S.remarque = v('i-rem');
+
+  // Validation
+  if (!S.prof)         { showErr('Merci de choisir un(e) professeur(e).'); return; }
+  if (!S.lieux.length) { showErr('Merci de choisir au moins un lieu.'); return; }
 
   if (!_inIframe) {
     const tsToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
@@ -708,12 +596,8 @@ async function soumettre() {
   const btn = $('btn-sub');
   btn.disabled = true; btn.classList.add('loading');
 
-  const joursLbl = {Lu:'Lundi',Ma:'Mardi',Me:'Mercredi',Je:'Jeudi',Ve:'Vendredi'};
-  const dispoParts = [];
-  if (S.jours.length) dispoParts.push('Jours : ' + S.jours.map(j=>joursLbl[j]||j).join(', '));
-  if (S.heureDebut||S.heureFin) dispoParts.push('Horaires : '+(S.heureDebut||'?')+' – '+(S.heureFin||'?'));
-  if (S.propositionsDates) dispoParts.push('Dates proposées : '+S.propositionsDates);
-  if (S.dispoTexte) dispoParts.push('Autres : '+S.dispoTexte);
+  const lieuStr = S.lieux.map(function(id){ var l=LIEUX.find(function(x){return x.id===id;}); return l?l.label.replace(/^[^\s]+\s/,''):id; }).join(' / ')
+                 + (S.lieuDetail ? ` (${S.lieuDetail})` : '');
 
   const payload = {
     eleveId:    S.eleveId,
@@ -724,12 +608,12 @@ async function soumettre() {
     niveauEleve:S.niveauEleve,
     prof:       S.prof,
     duree:      S.duree,
-    lieu:       lieuLabel(S.lieux) + (S.lieuDetail ? ` (${S.lieuDetail})` : ''),
+    lieu:       lieuStr,
     lieuDetail: S.lieuDetail,
     objectifs:  S.objectifs.join(', '),
     remarque:   S.remarque,
-    dispoTexte: dispoParts.join('\n'),
-    urgence:    S.urgence,
+    dispoTexte: '',
+    urgence:    '',
     source:     S.pwaMode ? 'pwa' : 'wix',
   };
 
@@ -767,12 +651,14 @@ function afficherSucces() {
   $('prog-zone').style.display = 'none';
 
   const objLabels = S.objectifs.map(id => {
-    const o = OBJECTIFS.find(x=>x.id===id); return o ? o.ico+' '+o.label : id;
+    const o = OBJECTIFS.find(x=>x.id===id); return o ? o.label : id;
   }).join(' · ');
 
+  const lieuStr = S.lieux.map(function(id){ var l=LIEUX.find(function(x){return x.id===id;}); return l?l.label.replace(/^[^\s]+\s/,''):id; }).join(' / ');
+
   $('success-recap').innerHTML = `
-    <div class="s-line"><span class="s-ico">🎓</span><span>Cours avec <strong>${profNom(S.prof)}</strong>${S.duree?' — '+S.duree:''} — ${lieuLabel(S.lieux)}</span></div>
-    <div class="s-line"><span class="s-ico">🎯</span><span>${objLabels}</span></div>
+    <div class="s-line"><span class="s-ico">🎓</span><span>Cours avec <strong>${profNom(S.prof)}</strong>${S.duree?' — '+S.duree:''} — ${lieuStr}</span></div>
+    ${objLabels ? `<div class="s-line"><span class="s-ico">🎯</span><span>${objLabels}</span></div>` : ''}
     <div class="s-line"><span class="s-ico">📞</span><span>Florencia &amp; Jérémy vous recontacteront à l'adresse <strong>${S.email}</strong> ou au <strong>${S.tel}</strong> pour fixer un créneau.</span></div>
     <div class="s-line"><span class="s-ico">💬</span><span>Vous pouvez aussi nous joindre directement sur <a href="tel:+33661727998" style="color:var(--gold);">06 61 72 79 98</a> ou <a href="mailto:tangoetvous@gmail.com" style="color:var(--gold);">tangoetvous@gmail.com</a></span></div>`;
 
