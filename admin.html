@@ -15659,8 +15659,9 @@ function _renderComptaYoga() {
 
 function _renderComptaStages() {
   var stages=adminData.stages||{};
-  var dates=Object.keys(stages).sort();
-  if (!dates.length) return '<div style="color:var(--dim);font-size:13px;padding:16px 0;">Aucun stage.</div>';
+  var sai=saisonActive();
+  var dates=Object.keys(stages).sort().filter(function(d){return dateAppartientSaison(d,sai);});
+  if (!dates.length) return '<div style="color:var(--dim);font-size:13px;padding:16px 0;">Aucun stage pour la saison '+sai+'.</div>';
   var h='';
   var grandTotal=0, grandCount=0;
   dates.forEach(function(d){
