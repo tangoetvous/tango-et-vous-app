@@ -565,7 +565,6 @@ async function handleDemandeDevis(request, env) {
     prestations_labels: body.prestations_labels || [],
     budget:             body.budget || '',
     message:            body.message || '',
-    comment_connu:      body.comment_connu || '',
     civilite:           body.civilite || '',
     prenom:             (body.prenom || '').trim(),
     nom:                (body.nom || '').trim(),
@@ -585,7 +584,6 @@ async function handleDemandeDevis(request, env) {
       date_flexible:     !!body.date_flexible,
       lieu:              body.lieu              || '',
       code_postal:       body.code_postal       || '',
-      nombre_invites:    body.nombre_invites ? parseInt(body.nombre_invites) : null,
       duree_prestation:  body.duree_prestation  || '',
     });
   } else {
@@ -595,11 +593,8 @@ async function handleDemandeDevis(request, env) {
       niveau_tango:         body.niveau_tango         || '',
       date_butoir:          body.date_butoir          || '',
       date_butoir_flexible: !!body.date_butoir_flexible,
-      professeur:           body.professeur           || '',
       lieu_cours:           body.lieu_cours           || '',
       commune_domicile:     body.commune_domicile     || '',
-      duree_cours:          body.duree_cours          || '',
-      nombre_cours:         body.nombre_cours         || '',
       dates_periodes:       body.dates_periodes       || '',
     });
   }
@@ -629,8 +624,7 @@ async function handleDemandeDevis(request, env) {
   const nomAffD = `${(body.prenom || '')} ${(body.nom || '')}`.trim();
   const typeAff = isEvent ? _esc(body.type_evenement || 'Événement') : _esc(body.type_demande || 'Cours privé');
   const dateAff = isEvent && body.date_evenement ? ` · ${_esc(body.date_evenement)}` : '';
-  const invitesAff = isEvent && body.nombre_invites ? ` · ${body.nombre_invites} invités` : '';
-  const notifMsgD = `💼 Demande devis — ${nomAffD} · ${typeAff}${dateAff}${invitesAff} · ⏳ À traiter · → Devis → Demandes`;
+  const notifMsgD = `💼 Demande devis — ${nomAffD} · ${typeAff}${dateAff} · ⏳ À traiter · → Devis → Demandes`;
   try {
     const resN = await _insertNotification('demande_devis', notifMsgD, 'devis');
     if (!resN.ok) console.error('[demandeDevis] insertNotification HTTP', resN.status, await resN.text().catch(() => ''));
@@ -1594,7 +1588,6 @@ async function sendBrevoNotification(apiKey, body) {
       row('Date', body.date_evenement ? _esc(body.date_evenement) + (body.date_flexible === 'oui' ? ' <span style="color:#888;font-size:11px;">(flexible)</span>' : '') : ''),
       row('Horaire', body.horaire_evenement ? _esc(body.horaire_evenement) : ''),
       row('Lieu', body.lieu ? _esc(body.lieu) + (body.code_postal ? ' (' + _esc(body.code_postal) + ')' : '') : ''),
-      row('Nb invités', body.nombre_invites ? _esc(String(body.nombre_invites)) : ''),
       row('Durée prestation', body.duree_prestation ? _esc(body.duree_prestation) : ''),
       row('Budget', body.budget ? _esc(body.budget) : ''),
     ].join('');
@@ -1603,10 +1596,7 @@ async function sendBrevoNotification(apiKey, body) {
       row('Type de demande', body.type_demande ? _esc(body.type_demande) : ''),
       row('Pour qui', body.pour_qui ? _esc(body.pour_qui) : ''),
       row('Niveau tango', body.niveau_tango ? _esc(body.niveau_tango) : ''),
-      row('Professeur souhaité', body.professeur ? _esc(body.professeur) : ''),
       row('Lieu cours', body.lieu_cours ? _esc(body.lieu_cours) : ''),
-      row('Durée cours', body.duree_cours ? _esc(body.duree_cours) : ''),
-      row('Nb de cours', body.nombre_cours ? _esc(String(body.nombre_cours)) : ''),
       row('Disponibilités', body.dates_periodes ? _esc(body.dates_periodes) : ''),
       row('Budget', body.budget ? _esc(body.budget) : ''),
     ].join('');
@@ -1654,8 +1644,8 @@ async function sendBrevoNotification(apiKey, body) {
         sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
         to: [{ email: 'tangoetvous@gmail.com', name: 'Admin Tango & Vous' }],
         subject: isEvent
-          ? `[Devis] ${nomAff} (${_esc(body.type_evenement||'événement')}) — ${_esc(body.date_evenement||'')}${body.nombre_invites ? ' — ' + body.nombre_invites + ' invités' : ''}`
-          : `[Devis] ${nomAff} (${_esc(body.type_demande||'cours privé')}) — ${body.nombre_cours ? body.nombre_cours + ' cours' : 'cours privé'}${body.niveau_tango ? ' — Niveau ' + _esc(body.niveau_tango) : ''}`,
+          ? `[Devis] ${nomAff} (${_esc(body.type_evenement||'événement')}) — ${_esc(body.date_evenement||'')}`
+          : `[Devis] ${nomAff} (${_esc(body.type_demande||'cours privé')})${body.niveau_tango ? ' — Niveau ' + _esc(body.niveau_tango) : ''}`,
         htmlContent: adminHtml,
       }),
     });

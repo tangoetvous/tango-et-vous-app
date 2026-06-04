@@ -6367,7 +6367,6 @@ function handleAction(action, btn) {
         var evtLieu       = demande ? [demande.lieu, demande.adresse_evenement].filter(Boolean).join('\n') : '';
         var evtDetailsParts = [];
         if (demande && demande.type_evenement) evtDetailsParts.push(demande.type_evenement);
-        if (demande && demande.nombre_invites) evtDetailsParts.push(demande.nombre_invites + ' invités');
         if (demande && demande.duree_prestation) evtDetailsParts.push('Durée : ' + demande.duree_prestation);
         var evtDetails = evtDetailsParts.join(' · ');
 
@@ -13940,12 +13939,10 @@ function _autoCreerBrouillon(demande) {
     var evtDetailsParts = [];
     if (demande.mode === 'event') {
       if (demande.type_evenement) evtDetailsParts.push(demande.type_evenement);
-      if (demande.nombre_invites) evtDetailsParts.push(demande.nombre_invites + ' invités');
       if (demande.duree_prestation) evtDetailsParts.push('Durée : ' + demande.duree_prestation);
     } else {
       if (demande.type_demande) evtDetailsParts.push(demande.type_demande);
       if (demande.pour_qui) evtDetailsParts.push('Pour : ' + demande.pour_qui);
-      if (demande.nombre_cours) evtDetailsParts.push(demande.nombre_cours + ' cours');
     }
     var pres = (demande.prestations_labels||[]).map(function(lbl){ return { intitule:lbl, prix:0 }; });
     return fetch('/api/devis/creer', {
@@ -14340,7 +14337,6 @@ function renderDevis() {
       if (d.date_evenement) summaryParts.push('📅 ' + d.date_evenement + (d.date_flexible ? ' <span style="color:var(--faint);">(flex)</span>' : ''));
       if (d.horaire_evenement) summaryParts.push('🕐 ' + d.horaire_evenement);
       if (d.lieu) summaryParts.push('📍 ' + d.lieu + (d.code_postal ? ' ' + d.code_postal : ''));
-      if (d.nombre_invites) summaryParts.push('👥 ' + d.nombre_invites);
     } else {
       if (d.type_demande) summaryParts.push(d.type_demande);
       if (d.date_butoir) summaryParts.push('🗓 ' + d.date_butoir);
@@ -14384,28 +14380,23 @@ function renderDevis() {
         card += _dvRow('Date', d.date_evenement ? d.date_evenement + (d.date_flexible ? ' (flexible)' : '') : '');
         card += _dvRow('Horaire', d.horaire_evenement);
         card += _dvRow('Lieu', (d.lieu||'') + (d.code_postal ? ' ('+d.code_postal+')' : ''));
-        card += _dvRow('Nombre d\'invités', d.nombre_invites ? d.nombre_invites + ' personnes' : '');
         card += _dvRow('Durée prestation', d.duree_prestation);
       } else {
         card += _dvRow('Type de demande', d.type_demande);
         card += _dvRow('Pour qui', d.pour_qui);
         card += _dvRow('Niveau tango', d.niveau_tango);
         card += _dvRow('Date butoir', d.date_butoir ? d.date_butoir + (d.date_butoir_flexible ? ' (flexible)' : '') : '');
-        card += _dvRow('Professeur souhaité', d.professeur);
         card += _dvRow('Lieu des cours', d.lieu_cours);
         card += _dvRow('Commune domicile', d.commune_domicile);
-        card += _dvRow('Durée / cours', d.duree_cours);
-        card += _dvRow('Nombre de cours', d.nombre_cours);
         card += _dvRow('Disponibilités', d.dates_periodes);
       }
       if (d.budget) card += _dvRow('Budget', d.budget);
       if (d.message) {
         card += '<div style="margin-top:8px;">'
-          + '<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Message</div>'
+          + '<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Détails</div>'
           + '<div style="font-size:13px;color:var(--text);white-space:pre-wrap;background:var(--s3);border-radius:6px;padding:8px 10px;border:1px solid var(--border);">' + escHtml(d.message) + '</div>'
           + '</div>';
       }
-      if (d.comment_connu) card += _dvRow('Comment connu', '💬 ' + d.comment_connu);
       if (isSoc) {
         if (d.nom_societe) card += _dvRow('Société', d.nom_societe);
         if (d.adresse_facturation) card += _dvRow('Adresse facturation', d.adresse_facturation.replace(/\n/g, ', '));
