@@ -9787,14 +9787,17 @@ function _normNom(s) {
 function _dupEmails(list) {
   var seen = {}, dups = new Set();
   (list||[]).forEach(function(e) {
-    var k = ((e.email||'').toLowerCase().trim()) || _normNom((e.prenom||'')+' '+(e.nom||''));
+    var k = _dupKey(e);
     if (!k) return;
     if (seen[k]) dups.add(k); else seen[k] = true;
   });
   return dups;
 }
 function _dupKey(e) {
-  return ((e.email||'').toLowerCase().trim()) || _normNom((e.prenom||'')+' '+(e.nom||''));
+  // Combine email + nom pour que les couples avec email partagé ne soient pas faussement signalés
+  var email = (e.email||'').toLowerCase().trim();
+  var name  = _normNom((e.prenom||'')+' '+(e.nom||''));
+  return email ? (email+'|'+name) : name;
 }
 var _DUP_BADGE = '<span style="background:#f97316;color:#fff;font-size:8px;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:2px;white-space:nowrap;">⚠️ doublon</span>';
 function _groupCouples(list) {
