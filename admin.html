@@ -7663,6 +7663,7 @@ function renderEssai() {
     +'</div>'
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" data-action="rafraichir-essais">&#8635; Rafraîchir</button>':'')
     +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerEssaiTango()">🖨️ Imprimer</button>':'')
+    +(filtreEssai!=='inscrire'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="_exportEmails(\'essai\')">📋 Emails</button>':'')
     +(filtreEssai==='attente'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;'+(_sortEssaiByExp?'color:var(--gold);border-color:var(--gold);':'')+'" onclick="_sortEssaiByExp=!_sortEssaiByExp;renderTab()">⬆ Expérience</button>':'')
     +'</div>';
   if(filtreEssai!=='inscrire') h+=_tevSearchBar();
@@ -8907,6 +8908,29 @@ function imprimerCartesPointage() {
     sections.push({ title: k, headers: ['Nom', 'Cours utilisés', 'Expiration', 'Statut', '✓'], rows: rows });
   });
   _tevPrint('Pointage Cartes 10 · ' + fmtDate(today()), sections);
+}
+
+function _exportEmails(source) {
+  var sai = saisonActive();
+  var rawEmails;
+  if (source === 'essai') {
+    rawEmails = (adminData.essai||[])
+      .filter(function(e){ return e.statut !== 'supprimé' && dateAppartientSaison(e.date, sai); })
+      .map(function(e){ return (e.email||'').trim().toLowerCase(); });
+  } else {
+    rawEmails = (adminData.coursTango||[])
+      .filter(function(e){ return e.statut !== 'supprimé' && (e.saison||saisonCourante()) === sai && !e._isRenewalRow; })
+      .map(function(e){ return (e.email||'').trim().toLowerCase(); });
+  }
+  var seen = {}, unique = [];
+  rawEmails.forEach(function(em){ if (em && !seen[em]) { seen[em]=true; unique.push(em); } });
+  unique.sort();
+  var txt = unique.join(', ');
+  navigator.clipboard.writeText(txt).then(function(){
+    afficherToast('📋 '+unique.length+' email'+(unique.length>1?'s':'')+' copié'+(unique.length>1?'s':'')+' dans le presse-papier');
+  }).catch(function(){
+    window.prompt('Copiez ces '+unique.length+' emails :', txt);
+  });
 }
 
 function imprimerEssaiTango() {
@@ -12907,7 +12931,8 @@ function renderCoursTango() {
   if(liste.length) {
     h+='<div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:4px;">'
       +(sousOngletCoursTango==='attente_validation'?'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;'+(_sortInscByExp?'color:var(--gold);border-color:var(--gold);':'')+'" onclick="_sortInscByExp=!_sortInscByExp;renderTab()">⬆ Expérience</button>':'')
-      +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerInscriptionsTango()">🖨️ Imprimer / PDF</button></div>';
+      +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerInscriptionsTango()">🖨️ Imprimer / PDF</button>'
+      +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="_exportEmails(\'cours-tango\')">📋 Emails</button></div>';
     h+=_tevSearchBar();
   }
   liste = liste.slice().sort(function(a,b){
