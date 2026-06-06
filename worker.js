@@ -5068,9 +5068,15 @@ async function handleNotifyInscriptionCours(request, env) {
     return debut + (fin ? '–' + fin : '');
   }
   function getFirstDate(ville) {
-    const today = new Date().toISOString().slice(0, 10);
     const arr = Array.isArray(coursDatesList[ville]) ? coursDatesList[ville] : [];
-    return arr.filter(function(d){ return String(d) >= today; }).sort()[0] || '';
+    const datesForSaison = arr.filter(function(d) {
+      const dt = new Date(String(d) + 'T12:00:00');
+      const m = dt.getMonth() + 1;
+      const y = dt.getFullYear();
+      const dSaison = m >= 9 ? (y + '-' + (y + 1)) : ((y - 1) + '-' + y);
+      return dSaison === saison;
+    });
+    return datesForSaison.sort()[0] || '';
   }
   function getLivretUrl(ville, niveau) {
     const p = ville === 'vincennes' ? vincParams : parisParams;
