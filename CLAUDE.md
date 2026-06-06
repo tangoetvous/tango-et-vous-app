@@ -1,5 +1,26 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Configuration emails — état actuel (2026-06-06)
+
+### Expéditeur Brevo : `contact@tangoetvous.fr` ✅
+- Domaine `tangoetvous.fr` authentifié dans Brevo (SPF + DKIM via Cloudflare, configuration automatique)
+- Redirection `contact@tangoetvous.fr` → `tangoetvous@gmail.com` configurée dans Cloudflare Email Routing
+- Tous les emails sortants partent depuis `contact@tangoetvous.fr` (tango + yoga)
+- Les réponses arrivent dans `tangoetvous@gmail.com` via la redirection Cloudflare
+- Les replyTo yoga (`regardsepose@gmail.com`) sont inchangés
+
+### Règle permanente — expéditeur Brevo
+**Ne jamais utiliser `tangoetvous@gmail.com` comme `sender.email`** dans `worker.js`. Gmail applique DMARC strict — les emails envoyés via Brevo avec une adresse `@gmail.com` en expéditeur risquent d'aller en spam ou d'être rejetés.
+
+Toujours utiliser `contact@tangoetvous.fr` comme `sender.email` pour tous les emails (tango et yoga). C'est le seul expéditeur vérifié avec SPF+DKIM valides.
+
+### À faire sur tout nouveau projet similaire (en priorité, avant tout envoi d'email)
+1. Authentifier le domaine dans Brevo → Paramètres → Expéditeurs & IP → Domaines → méthode automatique via Cloudflare
+2. Configurer Cloudflare Email Routing : `contact@mondomaine.fr` → adresse Gmail de l'admin
+3. Changer l'expéditeur dans le code : `sender.email = 'contact@mondomaine.fr'`
+
+---
+
 ## Annuaire des élèves (index.html — onglet `repertoire`)
 
 ### Fonctionnalité
