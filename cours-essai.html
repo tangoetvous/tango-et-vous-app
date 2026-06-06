@@ -886,6 +886,12 @@ async function soumettre(){
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_email)){err.textContent="Adresse email invalide.";err.style.display="block";return;}
   if(_tel.replace(/\D/g,'').length<10){err.textContent="Numéro de téléphone invalide (10 chiffres minimum).";err.style.display="block";return;}
 
+  if(choixVenue === "avec-part") {
+    const ppVal = document.getElementById("pp") ? document.getElementById("pp").value.trim() : "";
+    const pnVal = document.getElementById("pn") ? document.getElementById("pn").value.trim() : "";
+    if(!ppVal || !pnVal){err.textContent="Merci de renseigner le prénom et le nom de votre partenaire.";err.style.display="block";return;}
+  }
+
   btn.disabled=true; btn.textContent="Envoi en cours…";
 
   const payload={
