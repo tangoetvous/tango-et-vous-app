@@ -1190,6 +1190,8 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - Durée de conservation : durée relation + 1 an
 
 ## À faire / en suspens
+- [ ] **Environnement staging** : créer un environnement de test (2ème Worker Cloudflare + 2ème projet Supabase) pointant sur le même repo GitHub, branche `staging`. Workflow GitHub Actions dédié : push sur `staging` → déploie sur le Worker de test. Permet de valider les nouveautés avant de les merger sur `main` (prod). Demi-journée de travail.
+- [ ] **Clone pour autre école** : dupliquer le repo dans un nouveau repo GitHub indépendant, créer un nouveau projet Supabase + Worker Cloudflare + domaine, puis adapter le code (nom école, couleurs, emails admin dans `is_admin()` et `worker.js`, libellés métier). Les deux repos évoluent ensuite indépendamment. Voir section "Pistes de généralisation / revente future" pour les éléments à adapter.
 - [ ] **Articles tango — Publications** : rédiger les articles tango à diffuser dans l'espace élève (onglet Publications) et les programmer. **Rythme : 1 article par semaine, début octobre → fin juin** (~39 articles par saison). À faire avec l'utilisateur : choix des sujets, rédaction, dates de publication.
 - [ ] **Renseigner les thèmes des stages** : compléter dans Paramètres les thèmes des stages à venir (saison courante) ET de la saison prochaine 2026-2027 — à faire avec l'utilisateur.
 - [ ] **Rappels emails automatiques cb3x** : relances automatiques aux échéances pour les paiements CB en plusieurs fois.
