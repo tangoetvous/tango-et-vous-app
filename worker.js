@@ -930,7 +930,7 @@ async function handleNotifyYogaDate(request, env) {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Florencia Garcia — Yoga', email: 'tangoetvous@gmail.com' },
+          sender: { name: 'Florencia Garcia — Yoga', email: 'contact@tangoetvous.fr' },
           replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' },
           to: [{ email: String(email) }],
           subject,
@@ -979,7 +979,7 @@ async function handleNotifyEssaiAction(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
       });
       if (r.ok) sent++;
       else console.error('[notify essai-action] Brevo error', toEmail, await r.text());
@@ -1289,7 +1289,7 @@ async function handleCronEssaiJ1(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
       });
       if (r.ok) sent++;
       else console.error('[cron essai-j1] Brevo error', toEmail, await r.text());
@@ -1456,7 +1456,7 @@ async function handleCronEssaiYogaJ1(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: 'tangoetvous@gmail.com' }, replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Yoga', email: 'contact@tangoetvous.fr' }, replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
       });
       if (r.ok) sent++;
       else console.error('[cron essai-yoga-j1] Brevo error', toEmail, await r.text());
@@ -1644,7 +1644,7 @@ async function sendBrevoNotification(apiKey, body) {
       method: 'POST',
       headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
+        sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
         to: [{ email: 'tangoetvous@gmail.com', name: 'Admin Tango & Vous' }],
         subject: isEvent
           ? `[Devis] ${nomAff} (${_esc(body.type_evenement||'événement')}) — ${_esc(fmtDateFr(body.date_evenement||''))}`
@@ -1718,7 +1718,7 @@ async function sendBrevoNotification(apiKey, body) {
         method: 'POST',
         headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
+          sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
           to: [{ email: String(body.email) }],
           subject: `Votre demande de devis a bien été reçue — Tango & Vous`,
           htmlContent: d2Html,
@@ -1803,7 +1803,7 @@ async function handleNotifySorano(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(toEmail) }], subject, htmlContent: html }),
       });
       if (r.ok) sent++;
       else console.error('[notify sorano] Brevo error', toEmail, await r.text());
@@ -1932,7 +1932,7 @@ async function handleNotifyCartePointage(request, env) {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: { name: 'Tango & Vous', email: adminEmail },
+        sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
         to: [{ email: adminEmail }],
         subject: `🃏 [Carte 10] ${nomAff} a pointé — ${nb} cours ce jour · ${Number(utilises)===10?'CARTE TERMINÉE ':''}${utilises!=null?utilises+'/10 total':'?/10'} · ${source==='qr'?'QR':'appli'}`,
         htmlContent: html,
@@ -2109,7 +2109,7 @@ async function handleCronCartePonteeJ1(request, env) {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Tango & Vous', email: adminEmail },
+          sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
           to: [{ email: String(emailAddr) }],
           subject: `✓ Présence enregistrée le ${dateLabel} — Carte Tango & Vous`,
           htmlContent: html,
@@ -3110,7 +3110,7 @@ async function handleNotifyCarteEpuisee(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: to }], subject, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: to }], subject, htmlContent: html }),
       });
       if (r.ok) sent++; else console.error('[carte-epuisee] Brevo error', await r.text());
     } catch(e) { console.error('[carte-epuisee] fetch error', e); }
@@ -3205,7 +3205,7 @@ async function handleCronCarteExpiree(request, env) {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Tango & Vous', email: adminEmail },
+          sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
           to: [{ email: String(e.email) }],
           subject: `⏰ Votre carte de 10 cours a expiré — ${e.restants || 0} cours non utilisés · Tango & Vous`,
           htmlContent: htmlEleve,
@@ -3649,7 +3649,7 @@ async function handleCronRelanceCb3x(request, env) {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: { name: 'Tango & Vous', email: adminEmail },
+        sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
         to: [{ email: String(toEmail) }],
         subject, htmlContent: html,
       }),
@@ -4294,7 +4294,7 @@ async function handleNotifyInscriptionEssai(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
       });
       if (r.ok) sent++; else console.error('[inscription-essai] Brevo error', to, await r.text());
     } catch(e) { console.error('[inscription-essai] fetch error', e); }
@@ -4794,7 +4794,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
           method: 'POST',
           headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sender: { name: 'Tango & Vous', email: adminEmail },
+            sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
             to: [{ email: adminEmail }],
             subject: `${icon} [Essai tango] ${libelle} — ${nameAff} · ${coursDate}`,
             htmlContent: htmlAdmin
@@ -4873,7 +4873,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
+          sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
           to: [{ email: result.email, name: `${result.prenom||''} ${result.nom||''}`.trim() }],
           subject: isReport ? "↩ Votre cours d'essai tango reporté — Tango & Vous" : "✕ Votre cours d'essai tango annulé — Tango & Vous",
           htmlContent: _htmlClicker,
@@ -4894,7 +4894,7 @@ async function handleEssaiConfirmerAnnuler(request, url, action, env) {
             method: 'POST',
             headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' },
+              sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
               to: [{ email: result.partner_email, name: _partNomComplet }],
               subject: isReport ? "↩ Votre cours d'essai tango reporté — Tango & Vous" : "✕ Votre cours d'essai tango annulé — Tango & Vous",
               htmlContent: _htmlPart,
@@ -5026,7 +5026,7 @@ async function handleNotifyInscriptionCours(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
       });
       if (r.ok) sent++; else console.error('[inscription-cours] Brevo error', to, await r.text());
     } catch(e) { console.error('[inscription-cours] fetch error', e); }
@@ -5351,7 +5351,7 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
     return c === 'yin' ? 'Yin Yoga' : c === 'hatha' ? 'Hatha Yoga' : 'Yin & Hatha Yoga (Forfait)';
   }
   const adminYogaEmail = 'regardsepose@gmail.com';
-  const senderEmail    = 'tangoetvous@gmail.com';  // tangoetvous vérifié Brevo ; replyTo → regardsepose
+  const senderEmail    = 'contact@tangoetvous.fr';  // tangoetvous vérifié Brevo ; replyTo → regardsepose
   let sent = 0;
 
   async function sendBrevo(to, subj, html, senderName) {
@@ -5716,7 +5716,7 @@ async function handleCronEssaiRappelJ7(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(e.email) }], subject: `Rappel — votre cours d'essai tango a lieu dans 7 jours`, htmlContent: htmlEleve }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(e.email) }], subject: `Rappel — votre cours d'essai tango a lieu dans 7 jours`, htmlContent: htmlEleve }),
       });
       if (r.ok) sent++;
     } catch(err) { console.error('[cron-essai-rappel-j7] brevo error', err); }
@@ -5819,7 +5819,7 @@ async function handleNotifyEssaiAnnuleAdmin(request, env) {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: { name: 'Tango & Vous', email: adminEmail },
+        sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
         to: [{ email: String(email) }],
         subject: `📋 Votre cours d'essai du ${dateLabel} — inscription modifiée · Tango & Vous`,
         htmlContent: htmlEleve,
@@ -5974,7 +5974,7 @@ async function handleNotifyEssaiValide(request, env) {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: { name: 'Tango & Vous', email: adminEmail },
+        sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
         to: [{ email: String(email) }],
         subject: `✓ Bonne nouvelle — votre cours d'essai du ${dateLabel} est confirmé ! — Tango & Vous`,
         htmlContent: htmlEleve,
@@ -6100,7 +6100,7 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, replyTo: { email: adminYogaEmail, name: 'Florencia Garcia' }, to: [{ email: String(e.email) }], subject: `Rappel — votre essai yoga a lieu dans 3 jours — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'contact@tangoetvous.fr' }, replyTo: { email: adminYogaEmail, name: 'Florencia Garcia' }, to: [{ email: String(e.email) }], subject: `Rappel — votre essai yoga a lieu dans 3 jours — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
       });
       if (r.ok) sent++;
     } catch(err) { console.error('[cron-essai-yoga-rappel-j3] brevo error', err); }
@@ -6232,7 +6232,7 @@ async function handleNotifyEssaiYogaModifie(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, replyTo: { email: adminYogaEmail, name: 'Florencia Garcia' }, to: [{ email: String(email) }], subject: `Votre cours d'essai de yoga a été modifié — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'contact@tangoetvous.fr' }, replyTo: { email: adminYogaEmail, name: 'Florencia Garcia' }, to: [{ email: String(email) }], subject: `Votre cours d'essai de yoga a été modifié — Cours de yoga avec Florencia Garcia`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-essai-yoga-modifie] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
@@ -6382,7 +6382,7 @@ async function handleNotifyYogaInscriptionValidee(request, env) {
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }, to: [{ email: String(email) }], subject: "Bienvenue dans votre cours de yoga ! — Cours de yoga avec Florencia Garcia", htmlContent: htmlEleve }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'contact@tangoetvous.fr' }, replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }, to: [{ email: String(email) }], subject: "Bienvenue dans votre cours de yoga ! — Cours de yoga avec Florencia Garcia", htmlContent: htmlEleve }),
       });
       if (!res.ok) { const b = await res.text().catch(() => ''); console.error('[yoga-insc-validee] Brevo élève HTTP', res.status, b); }
     } catch(err) { console.error('[yoga-insc-validee] Brevo élève error', err); }
@@ -6412,7 +6412,7 @@ async function handleNotifyYogaInscriptionValidee(request, env) {
       const resA = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, to: [{ email: 'regardsepose@gmail.com' }], subject: `[Yoga] Inscription ${prenomAff} ${nomAff} — ${coursLabel} — ${sai}`, htmlContent: htmlAdmin }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'contact@tangoetvous.fr' }, to: [{ email: 'regardsepose@gmail.com' }], subject: `[Yoga] Inscription ${prenomAff} ${nomAff} — ${coursLabel} — ${sai}`, htmlContent: htmlAdmin }),
       });
       if (!resA.ok) { const b = await resA.text().catch(() => ''); console.error('[yoga-insc-validee] Brevo admin HTTP', resA.status, b); }
     } catch(err) { console.error('[yoga-insc-validee] Brevo admin error', err); }
@@ -6515,7 +6515,7 @@ async function handleNotifyYogaEleveModifie(request, env) {
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }, to: [{ email: String(email) }], subject: "Votre inscription au yoga a été modifiée — Cours de yoga avec Florencia Garcia", htmlContent: htmlEleve }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'contact@tangoetvous.fr' }, replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' }, to: [{ email: String(email) }], subject: "Votre inscription au yoga a été modifiée — Cours de yoga avec Florencia Garcia", htmlContent: htmlEleve }),
       });
       if (!res.ok) { const b = await res.text().catch(() => ''); console.error('[yoga-eleve-modifie] Brevo élève HTTP', res.status, b); }
     } catch(err) { console.error('[yoga-eleve-modifie] Brevo élève error', err); }
@@ -6539,7 +6539,7 @@ async function handleNotifyYogaEleveModifie(request, env) {
       const resA = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'tangoetvous@gmail.com' }, to: [{ email: 'regardsepose@gmail.com' }], subject: `[Yoga] Modification — ${prenomAff} ${nomAff} · ${coursLabel}`, htmlContent: htmlAdmin }),
+        body: JSON.stringify({ sender: { name: 'Florencia Garcia — Le Regard Se Pose', email: 'contact@tangoetvous.fr' }, to: [{ email: 'regardsepose@gmail.com' }], subject: `[Yoga] Modification — ${prenomAff} ${nomAff} · ${coursLabel}`, htmlContent: htmlAdmin }),
       });
       if (!resA.ok) { const b = await resA.text().catch(() => ''); console.error('[yoga-eleve-modifie] Brevo admin HTTP', resA.status, b); }
     } catch(err) { console.error('[yoga-eleve-modifie] Brevo admin error', err); }
@@ -6628,7 +6628,7 @@ async function handleCronEspaceEleveActivation(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(e.email) }], subject: `✓ Votre espace élève est prêt — Tango & Vous`, htmlContent: htmlEleve }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(e.email) }], subject: `✓ Votre espace élève est prêt — Tango & Vous`, htmlContent: htmlEleve }),
       });
       if (r.ok) sent++;
     } catch(err) { console.error('[cron-espace-eleve-activation] brevo error', err); }
@@ -6685,7 +6685,7 @@ async function handleNotifyCarteBienvenue(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `Bienvenue dans votre cours de tango — Tango & Vous`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: `Bienvenue dans votre cours de tango — Tango & Vous`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-carte-bienvenue] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
@@ -6743,7 +6743,7 @@ async function handleNotifyCarteRenouvellement(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: isAdmin ? `Votre carte de 10 cours a été renouvelée — paiement à finaliser` : `Nouvelle carte ouverte — pensez à finaliser votre paiement`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: isAdmin ? `Votre carte de 10 cours a été renouvelée — paiement à finaliser` : `Nouvelle carte ouverte — pensez à finaliser votre paiement`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-carte-renouvellement] brevo error', err); }
 
@@ -6815,7 +6815,7 @@ async function handleNotifyCartePaiement(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `Votre paiement a bien été enregistré — Tango & Vous`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: `Votre paiement a bien été enregistré — Tango & Vous`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-carte-paiement] brevo error', err); }
 
@@ -6877,7 +6877,7 @@ async function handleNotifyCarteReport(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `Votre carte a été reportée pour la saison ${saisonSuivante} — Tango & Vous`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: `Votre carte a été reportée pour la saison ${saisonSuivante} — Tango & Vous`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-carte-report] brevo error', err); }
 
@@ -7009,7 +7009,7 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'tangoetvous@gmail.com' }, to: [{ email: String(email) }], subject: `Bonne nouvelle — votre inscription au tango est confirmée, procédez à votre inscription sur AssoConnect`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: `Bonne nouvelle — votre inscription au tango est confirmée, procédez à votre inscription sur AssoConnect`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-inscription-cours-validee] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
@@ -7176,7 +7176,7 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-inscription-cours-payee] error', err); }
 
@@ -7238,7 +7238,7 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
       await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: adminEmail }], subject: subjAdmin03, htmlContent: adminHtml03 }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: adminEmail }], subject: subjAdmin03, htmlContent: adminHtml03 }),
       });
     } catch(e) { console.error('[notify-cours-payee] admin email error', e); }
 
@@ -7315,7 +7315,7 @@ async function handleNotifyEmailChange(request, env) {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender: { name: 'Tango & Vous', email: adminEmail },
+        sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
         to: [{ email: String(newEmail) }],
         subject: `📋 Votre adresse email a été mise à jour — Tango & Vous`,
         htmlContent: htmlEleve,
@@ -7369,7 +7369,7 @@ async function handleNotifyInscriptionCoursModifiee(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `Votre inscription au tango a été modifiée — Tango & Vous`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: `Votre inscription au tango a été modifiée — Tango & Vous`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-inscription-cours-modifiee] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
@@ -7492,7 +7492,7 @@ async function handleNotifyInscriptionStage(request, env) {
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
       });
       if (!res.ok) {
         const txt = await res.text().catch(function() { return ''; });
@@ -7773,7 +7773,7 @@ async function handleCronRappelStageJ3(request, env) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(e.email) }], subject: s4Subj, htmlContent: htmlEleve }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(e.email) }], subject: s4Subj, htmlContent: htmlEleve }),
       });
       if (r.ok) sent++;
     } catch(err) { console.error('[cron-rappel-stage-j3] error', err); }
@@ -7878,7 +7878,7 @@ async function handleNotifyStageValide(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: s3Subj, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: s3Subj, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-stage-valide] error', err); }
 
@@ -7975,7 +7975,7 @@ async function handleNotifyStageAnnule(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(email) }], subject: `Votre inscription au stage a été annulée — Tango & Vous`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: `Votre inscription au stage a été annulée — Tango & Vous`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-stage-annule] error', err); }
   try {
@@ -8087,7 +8087,7 @@ async function handleNotifyStageModifie(request, env) {
         await fetch('https://api.brevo.com/v3/smtp/email', {
           method: 'POST',
           headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
+          body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
         });
       } catch(err) { console.error('[notify-stage-modifie] sendMail error', err); }
     }
@@ -8154,7 +8154,7 @@ async function handleNotifyCoursParticulier(request, env) {
       await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: adminEmail }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
       });
     } catch(err) { console.error('[notify-cp] sendMail error', err); }
   }
@@ -8614,7 +8614,7 @@ async function handleCronFinSaisonC4(request, env) {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Tango & Vous', email: adminEmail },
+          sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
           to: [{ email: String(e.email) }],
           subject: `📅 Il vous reste ${restants} cours — reportez votre carte sur la saison ${saiNext}`,
           htmlContent: htmlEleve,
@@ -8718,7 +8718,7 @@ async function handleCronFinSaisonC5(request, env) {
         method: 'POST',
         headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: { name: 'Tango & Vous', email: adminEmail },
+          sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
           to: [{ email: String(e.email) }],
           subject: `⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}`,
           htmlContent: htmlEleve,
@@ -8917,7 +8917,7 @@ async function handleCronRelanceAbsences(request, env) {
             method: 'POST',
             headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              sender: { name: 'Tango & Vous', email: adminEmail },
+              sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
               to: [{ email: String(eleve.email) }],
               subject: 'On prend de tes nouvelles… 👋',
               htmlContent: htmlEleve,
