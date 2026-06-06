@@ -4495,7 +4495,7 @@ async function handleNotifyInscriptionEssai(request, env) {
 
   const adminBtns = `<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
     ${tel ? `<a href="tel:${_esc(tel)}" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>` : ''}
-    <a href="https://mail.google.com/mail/?view=cm&amp;to=${encodeURIComponent(email || '')}" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email Gmail</a>
+    <a href="mailto:${_esc(email || '')}" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a>
     ${tel ? `<a href="sms:${_esc(tel)}" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>` : ''}
     ${isConfirme ? `<a href="${APP_URL}/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l'admin →</a>` : ''}
   </div>`;
@@ -5150,7 +5150,7 @@ async function handleNotifyInscriptionCours(request, env) {
     + '<div style="padding:24px;">' + adminBlocs
     + '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">'
     + (telFmt ? '<a href="tel:' + _esc(telFmt) + '" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>' : '')
-    + '<a href="https://mail.google.com/mail/?view=cm&amp;to=' + encodeURIComponent(email || '') + '" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email Gmail</a>'
+    + '<a href="mailto:' + _esc(email || '') + '" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a>'
     + (telFmt ? '<a href="sms:' + _esc(telFmt) + '" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>' : '')
     + '<a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l&apos;admin →</a>'
     + '</div></div>'
@@ -5439,7 +5439,7 @@ async function handleNotifyInscriptionEssaiYoga(request, env) {
     + '</div>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">'
     + (telFmt ? '<a href="tel:' + _esc(telFmt) + '" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>' : '')
-    + '<a href="https://mail.google.com/mail/?view=cm&amp;to=' + encodeURIComponent(email || '') + '" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email Gmail</a>'
+    + '<a href="mailto:' + _esc(email || '') + '" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a>'
     + (telFmt ? '<a href="sms:' + _esc(telFmt) + '" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>' : '')
     + '<a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l&rsquo;admin →</a>'
     + '</div></div>'
@@ -7229,7 +7229,7 @@ async function handleNotifyInscriptionCoursPaye(request, env) {
       + '<div style="padding:24px;">' + adminBlocs03
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">'
       + (telFmt03 ? '<a href="tel:' + _esc(telFmt03) + '" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>' : '')
-      + '<a href="https://mail.google.com/mail/?view=cm&amp;to=' + encodeURIComponent(email||'') + '" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email Gmail</a>'
+      + '<a href="mailto:' + _esc(email||'') + '" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a>'
       + (telFmt03 ? '<a href="sms:' + _esc(telFmt03) + '" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>' : '')
       + '<a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l\'admin →</a>'
       + '</div></div>'
