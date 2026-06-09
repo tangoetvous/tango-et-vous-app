@@ -2040,9 +2040,10 @@ async function handleCronCartePonteeJ1(request, env) {
 
   const adminEmail = 'tangoetvous@gmail.com';
 
+  const _svcKeyCP1 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/notifications_eleve?type=eq.carte_pointee_pending_email&lu=eq.false&select=id,email,message`,
-    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyCP1}` } }
   );
   if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
   const pending = await res.json();
@@ -6004,9 +6005,10 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
   let targetDate = body.date;
   if (!targetDate) { const d3 = new Date(); d3.setDate(d3.getDate()+3); targetDate = d3.toISOString().slice(0,10); }
 
+  const _svcKeyYJ3 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/inscriptions_essai_yoga?date_essai=eq.${targetDate}&statut=eq.confirme&select=id,email,prenom,nom,cours,date_essai`,
-    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyYJ3}` } }
   );
   if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
   const inscrits = await res.json();
@@ -6582,9 +6584,10 @@ async function handleCronEspaceEleveActivation(request, env) {
   const d7ago = new Date(); d7ago.setDate(d7ago.getDate()-7);
   const targetDate = d7ago.toISOString().slice(0,10);
 
+  const _svcKeyEEA = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/inscriptions_cours?statut=eq.inscrit&created_at=gte.${targetDate}T00:00:00&created_at=lt.${targetDate}T23:59:59&select=email,prenom,nom`,
-    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyEEA}` } }
   );
   if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
   const inscrits = await res.json();
@@ -7694,9 +7697,10 @@ async function handleCronRappelStageJ3(request, env) {
 
   // Fetch stage address from Supabase params (global + per-date override)
   const _s4Sai = (function(iso){ const yr=parseInt(iso.slice(0,4)),mo=parseInt(iso.slice(5,7)); return mo>=9?(yr+'-'+(yr+1)):((yr-1)+'-'+yr); })(targetDate);
+  const _svcKeyS4 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const [_s4ParRes, _s4DtRes] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_params_stages_${_s4Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
-    fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_dates_stages_${_s4Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+    fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_params_stages_${_s4Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyS4}` } }),
+    fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_dates_stages_${_s4Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyS4}` } }),
   ]);
   const _s4GlobalAdr = _s4ParRes.ok ? (((await _s4ParRes.json())[0]||{}).valeur?.adresse||{}) : {};
   const _s4DatesArr  = _s4DtRes.ok  ? (((await _s4DtRes.json())[0]||{}).valeur?.stages||[])    : [];
@@ -7707,9 +7711,9 @@ async function handleCronRappelStageJ3(request, env) {
   // Dual query: new format (stage_date set) + old format (stage_date IS NULL, dates in donnees)
   const [resNew, resOld] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=eq.${targetDate}&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees`,
-      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyS4}` } }),
     fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=is.null&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees`,
-      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }),
+      { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyS4}` } }),
   ]);
   if (!resNew.ok) return corsResponse({ ok: false, error: 'Supabase query failed (new)' }, 500, {}, request);
   const inscritsNew = await resNew.json();
