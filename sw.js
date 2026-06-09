@@ -1,5 +1,5 @@
 // sw.js — Service Worker Tango & Vous PWA (native Web Push, no Firebase)
-const CACHE = 'tv-cartes-v16';
+const CACHE = 'tv-cartes-v17';
 const PRECACHE = ['/', '/index.html'];
 
 // ── Push notifications (native Web Push Protocol) ────────────────
@@ -51,7 +51,10 @@ self.addEventListener('activate', function(e) {
 self.addEventListener('fetch', function(e) {
   // Ne pas intercepter les ressources externes (Supabase, CDN, Firebase, Google)
   if (!e.request.url.startsWith(self.location.origin)) return;
+  // Pour les fichiers HTML, forcer le rechargement réseau (bypass HTTP cache)
+  var isHtml = e.request.headers.get('accept') && e.request.headers.get('accept').indexOf('text/html') !== -1;
+  var fetchRequest = isHtml ? new Request(e.request, { cache: 'reload' }) : e.request;
   e.respondWith(
-    fetch(e.request).catch(function() { return caches.match(e.request).then(function(r) { return r || new Response('', { status: 503 }); }); })
+    fetch(fetchRequest).catch(function() { return caches.match(e.request).then(function(r) { return r || new Response('', { status: 503 }); }); })
   );
 });
