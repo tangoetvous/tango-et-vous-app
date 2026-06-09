@@ -2876,6 +2876,7 @@ var stageTarifsOpen    = {};       // {date: bool}  true=tarifs par date ouverts
 var stageAdresseOpen   = {};       // {date: bool}  true=adresse par date ouverte
 var stageVisuelOpen    = {};       // {date: bool}  true=visuel par date ouvert
 var milongaAccordion  = {};       // {mil-idx-section: bool}  true=ouvert
+var _ctAccordOpen     = {};       // {id: bool}  true=accordéon inscription tango ouvert
 var milDateDetailsOpen = {};       // {'idx-date': bool}  true=détails date milonga ouverts
 var STAGE_NOM_DEFAUT = 'Stages avec Florencia Garcia et Jérémy Braitbart';
 
@@ -6192,6 +6193,13 @@ function handleAction(action, btn) {
       break;
     case 'suppr-date-param':
       supprimerDateParam(btn.dataset.type||'paris', btn.dataset.date||'');
+      break;
+    case 'toggle-accord-ct':
+      (function(){
+        var id = btn.dataset.id || '';
+        _ctAccordOpen[id] = !_ctAccordOpen[id];
+        renderTab();
+      })();
       break;
     case 'toggle-accord-mil':
       (function(){
@@ -13042,31 +13050,30 @@ function ficheEleve(e, isDup) {
   var isValide = e.statut==='valide'||e.statut==='attente_paiement'||e.statut==='inscrit';
   var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
   var roleLbl = e.role==='guideur'?'Guideur':'Guidée';
+  var open = !!_ctAccordOpen[String(e.id)];
+  var arrow = open ? '▾' : '▸';
 
-  var h = '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'" style="flex-wrap:wrap;align-items:flex-start;gap:6px;padding:9px 0;">'
+  // Ligne toujours visible : nom + badge validation + flèche
+  var h = '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'" style="flex-wrap:wrap;align-items:center;gap:6px;padding:9px 0;">'
     +'<div style="flex:1;min-width:160px;">'
     +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+(isDup?_DUP_BADGE:'')+'</div>'
     +(e.partenaire?'<div class="point-sub">♥ '+e.partenaire+'</div>':'')
     +'</div>'
-    +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
-    +'<span class="pill '+rcls+'">'+roleLbl+'</span>'
-    +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
-    +(e.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report '+(e.classesReportees||e.restants)+' cours</span>':'');
+    +'<div style="display:flex;gap:4px;align-items:center;">'
+    +(isValide?'<span class="pill pill-ok">validé.e</span>':'<span class="pill pill-warn">non validé.e</span>')
+    +'<button data-action="toggle-accord-ct" data-id="'+e.id+'" style="background:none;border:none;cursor:pointer;color:var(--dim);font-size:13px;padding:2px 5px;line-height:1;" title="Voir détails">'+arrow+'</button>'
+    +'</div>';
 
-  // Pill validation
-  if(isValide){
-    h += '<span class="pill pill-ok">validé.e</span>';
-  } else {
-    h += '<span class="pill pill-warn">non validé.e</span>';
-  }
-  // Pill inscription (uniquement si validé)
+  // Détails dépliables
+  h += '<div style="width:100%;display:'+(open?'flex':'none')+';gap:4px;align-items:center;flex-wrap:wrap;padding-top:4px;">';
+  h += '<span class="pill '+rcls+'">'+roleLbl+'</span>';
+  h += (e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'');
+  h += (e.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report '+(e.classesReportees||e.restants)+' cours</span>':'');
   if(e.statut==='valide'||e.statut==='attente_paiement'){
     h += '<span class="pill pill-gold">att. paiement</span>';
   } else if(e.statut==='inscrit'){
     h += '<span class="pill pill-ok">inscrit.e</span>';
   }
-
-  // Boutons d'action
   if(e.statut==='demande'||e.statut==='attente'){
     h += '<button class="btn-point btn-ok" data-action="cours-tango-statut" data-id="'+e.id+'" data-statut="attente_paiement">✓ Valider</button>';
   }
@@ -13077,7 +13084,9 @@ function ficheEleve(e, isDup) {
     h += '<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;" title="Envoyer un email">✉️</a>';
   }
   h += '<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-cours-inscr" data-id="'+e.id+'" title="Supprimer">✕</button>';
-  h += '</div></div>';
+  h += '</div>';
+
+  h += '</div>';
   return h;
 }
 
