@@ -1,5 +1,102 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-06-09 — Thème clair Inscriptions Tango + tri guideurs/guidées
+
+### ✅ Thème clair sur l'onglet Inscriptions Tango (`admin.html`)
+
+Appliqué sur les sous-onglets `tous`, `attente_validation`, `attente_paiement` uniquement (pas sur les formulaires `inscrire` / `valider_paiement`).
+
+#### Mécanisme : deux classes CSS scoped
+
+**`body.ct-light-page`** — activée/désactivée dans `renderTab()` :
+```javascript
+var _ctLightPage = currentTab==='cours-tango'
+  && ['tous','attente_validation','attente_paiement'].indexOf(sousOngletCoursTango)>=0;
+document.body.classList.toggle('ct-light-page', _ctLightPage);
+```
+Effets : fond de page `#f0f0f5`, textes `#111`, labels stats `#000 font-weight:700`, titres de section en doré `#7c5c00` à 13px.
+
+**`.ci-light`** — div wrapper autour du pipeline de chaque cours dans `renderCoursTango()` :
+```javascript
+h += '<div class="section-hdr">'+lbl+'</div>'
+   + '<div class="ci-light">'
+   + ciInscritsHtml   // accordéon "Déjà inscrits"
+   + note             // "— en attente de paiement ou validation —"
+   // + pipeline _gcGroups.forEach (inside ci-light, closed after)
+   + '</div>';
+```
+Effets : fond blanc pour les `.point-row`, noms en `#111 !important`, sous-textes (partenaire ♥) en `#111`, flèche toggle en `#111 !important`, pills en couleurs claires.
+
+#### Règles CSS à réutiliser sur d'autres rubriques
+
+Pour appliquer le même thème clair à un autre onglet `monOnglet` :
+
+1. **Ajouter la garde dans `renderTab()`** :
+```javascript
+var _ctLightPage = (currentTab==='cours-tango' && [...])
+  || (currentTab==='monOnglet' && [...]);
+document.body.classList.toggle('ct-light-page', _ctLightPage);
+```
+
+2. **Envelopper le listing dans `.ci-light`** (si `.point-row` sont utilisés).
+
+3. **CSS déjà en place et réutilisable** (ne pas dupliquer, il s'applique à tout `.ci-light`) :
+```css
+.ci-light .point-row   { background:#fff; border:1px solid #222; }
+.ci-light .point-nom   { color:#111 !important; }
+.ci-light .point-sub   { color:#111; }
+.ci-light .ci-note     { color:#111; }
+.ci-light [data-action="toggle-accord-ct"] { color:#111 !important; }
+/* pills en couleurs claires */
+.ci-light .pill-guideur { background:#bfdbfe; color:#1e3a8a; border-color:#3b82f6; }
+.ci-light .pill-guidee  { background:#fce7f3; color:#831843; border-color:#ec4899; }
+.ci-light .pill-ok      { background:#bbf7d0; color:#14532d; }
+.ci-light .pill-warn    { background:#fed7aa; color:#7c2d12; }
+.ci-light .pill-gold    { background:#fef08a; color:#713f12; }
+```
+
+4. **CSS `body.ct-light-page` déjà en place** :
+```css
+body.ct-light-page { background:#f0f0f5; }
+body.ct-light-page #tab-content { color:#111; }
+body.ct-light-page #tab-content .section-hdr { color:#7c5c00; font-size:13px; }
+body.ct-light-page #tab-content .stat  { background:#fff; border-color:#888; }
+body.ct-light-page #tab-content .stat-n { color:#111 !important; }
+body.ct-light-page #tab-content .stat-l { color:#000; font-weight:700; }
+body.ct-light-page #tab-content .sub-tab { background:#fff; color:#333; }
+body.ct-light-page #tab-content .sub-tab.active { background:#fef08a; color:#713f12; }
+body.ct-light-page #tab-content .btn-ghost { background:#fff; color:#333; }
+body.ct-light-page #tab-content input[type="search"] { background:#fff !important; color:#111 !important; }
+body.ct-light-page #tab-content .empty-state { color:#555; }
+```
+
+#### Tri guideurs / guidées
+
+**Accordéon "Déjà inscrits"** (`inscritsT`) : guideurs en premier (triés alpha) puis guidées (triées alpha), intercalés (guideur[0], guidée[0], guideur[1], guidée[1]…).
+
+**Pipeline des demandes** (`_gcGroups`) : couples en haut, puis alternance guideur/guidée intercalée. Exception : si `_sortInscByExp` est actif (Att. Validation triée par expérience), l'alternance est désactivée.
+
+```javascript
+// Couples en premier, puis alternance guideur/guidée pour les solos
+// — sauf si le tri par expérience est actif (Att. validation)
+if(!(sousOngletCoursTango==='attente_validation' && _sortInscByExp)){
+  var _gcCpl = _gcGroups.filter(function(g){ return g.type==='couple'; });
+  var _gcGui = _gcGroups.filter(function(g){ return g.type!=='couple' && g.person.role==='guideur'; });
+  var _gcGde = _gcGroups.filter(function(g){ return g.type!=='couple' && g.person.role!=='guideur'; });
+  _gcGroups = _gcCpl.slice();
+  for(var gi=0; gi<Math.max(_gcGui.length,_gcGde.length); gi++){
+    if(_gcGui[gi]) _gcGroups.push(_gcGui[gi]);
+    if(_gcGde[gi]) _gcGroups.push(_gcGde[gi]);
+  }
+}
+```
+
+#### Accordéon "Déjà inscrits (Élèves Tango)"
+
+Affiché au-dessus du pipeline, replié par défaut, état persisté dans `_ciDejaInscritsOpen[cKey]` (survit au polling 15s). `data-action="toggle-ci-inscrit"` géré dans `handleAction()`. Contient les élèves `statut='inscrit'` du cours (distincts des demandes en attente dans le pipeline).
+
+---
+
 ## Session 2026-06-09 — Crons service key + filtre saison espace élève
 
 ### ✅ Crons : service key obligatoire pour les SELECT Supabase
