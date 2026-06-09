@@ -175,10 +175,27 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .login-box{background:var(--s1);border:1px solid var(--gold-border);border-radius:14px;padding:28px 22px;width:100%;max-width:360px;text-align:center;}
 .login-logo{font-family:var(--font-d);font-size:26px;font-weight:300;letter-spacing:6px;color:var(--gold);margin-bottom:4px;}
 .login-sub{font-size:10px;letter-spacing:3px;color:var(--dim);margin-bottom:24px;text-transform:uppercase;}
-.ci-deja-hdr{background:#dbeafe;border:1px solid #222;border-radius:8px;padding:8px 12px;margin:0 0 4px;display:flex;align-items:center;gap:8px;justify-content:space-between;cursor:pointer;user-select:none;}
+.ci-deja-hdr{background:#dbeafe;border:1px solid #222;border-radius:8px;padding:8px 12px;margin:4px 0 2px;display:flex;align-items:center;gap:8px;justify-content:space-between;cursor:pointer;user-select:none;}
 .ci-deja-row{background:#eff6ff;border-left:2px solid #222;display:flex;align-items:center;gap:6px;padding:5px 12px;margin:1px 0;}
 .ci-pill-guideur{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#bfdbfe;color:#1e3a8a;border:1px solid #3b82f6;}
 .ci-pill-guidee{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;background:#fce7f3;color:#831843;border:1px solid #ec4899;}
+/* Thème clair scopé — listing Inscriptions Tango (même visuel que preview-inscriptions-tango.html) */
+.ci-light{background:#f8f8fb;border:1px solid #444;border-radius:10px;padding:10px 14px;margin-bottom:16px;}
+.ci-light .point-row{background:#fff;border:1px solid #222;border-radius:6px;margin-bottom:3px;padding:9px 10px!important;border-bottom:1px solid #222;}
+.ci-light .point-nom,.ci-light .point-nom .nom-clickable{color:#111;}
+.ci-light .point-nom .nom-clickable:hover{color:#92610a;}
+.ci-light .point-sub{color:#333;}
+.ci-light .pill-guideur{background:#bfdbfe;color:#1e3a8a;border-color:#3b82f6;}
+.ci-light .pill-guidee{background:#fce7f3;color:#831843;border-color:#ec4899;}
+.ci-light .pill-ok{background:#bbf7d0;color:#14532d;border-color:#22c55e;}
+.ci-light .pill-warn{background:#fed7aa;color:#7c2d12;border-color:#f97316;}
+.ci-light .pill-gold{background:#fef08a;color:#713f12;border-color:#eab308;}
+.ci-light .btn-point.btn-ok{background:#bbf7d0;color:#14532d;border-color:#22c55e;}
+.ci-light .btn-point.btn-gold{background:#fef08a;color:#713f12;border-color:#eab308;}
+.ci-light .btn-point.btn-ghost{background:#fff;color:#333;border-color:#888;}
+.ci-light .btn-err{background:#fecaca;color:#7f1d1d;border:1px solid #ef4444;}
+.ci-light [data-action="toggle-accord-ct"]{color:#333!important;}
+.ci-light .ci-note{font-size:11px;color:#555;font-style:italic;margin:10px 0 4px;text-align:center;}
 </style>
 </head>
 <body>
@@ -13056,8 +13073,9 @@ function renderCoursTango() {
       }
     }
     h += '<div class="section-hdr">'+lbl+' ('+items.length+')'+badgeHtml+'</div>'
-      +'<div style="padding:0 16px;">'
-      + ciInscritsHtml;
+      +'<div class="ci-light">'
+      + ciInscritsHtml
+      + (ciInscritsHtml?'<div class="ci-note">— en attente de paiement ou validation —</div>':'');
     var _dupSetInscr=_dupEmails(items);
     _groupCouples(items).forEach(function(g){
       if(g.type==='couple') h+=_coupleWrap(ficheEleve(g.persons[0],_dupSetInscr.has(_dupKey(g.persons[0])))+ficheEleve(g.persons[1],_dupSetInscr.has(_dupKey(g.persons[1]))));
