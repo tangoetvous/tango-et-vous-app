@@ -1214,10 +1214,10 @@ async function handleCronEssaiJ1(request, env) {
 
   // Récupère les essais de la date cible avec presence_declaree non null
   const sbUrl = 'https://qhngqzvvllktuwspojxc.supabase.co';
-  const sbKey = SUPABASE_ANON;
+  const sbKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const qs = `date_essai=eq.${targetDate}&presence_declaree=not.is.null&select=id,prenom,nom,email,ville,niveau,presence_declaree`;
   const resp = await fetch(`${sbUrl}/rest/v1/inscriptions_essai?${qs}`, {
-    headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` }
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${sbKey}` }
   });
   if (!resp.ok) {
     console.error('[cron essai-j1] Supabase error', await resp.text());
@@ -1388,10 +1388,10 @@ async function handleCronEssaiYogaJ1(request, env) {
   }
 
   const sbUrl = 'https://qhngqzvvllktuwspojxc.supabase.co';
-  const sbKey = SUPABASE_ANON;
+  const sbKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const qs = `date_essai=eq.${targetDate}&presence_declaree=not.is.null&select=id,prenom,nom,email,cours,presence_declaree`;
   const resp = await fetch(`${sbUrl}/rest/v1/inscriptions_essai_yoga?${qs}`, {
-    headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` }
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${sbKey}` }
   });
   if (!resp.ok) {
     console.error('[cron essai-yoga-j1] Supabase error', await resp.text());
@@ -5600,9 +5600,10 @@ async function handleCronEssaiRappelJ7(request, env) {
   let targetDate = body.date;
   if (!targetDate) { const d7 = new Date(); d7.setDate(d7.getDate()+7); targetDate = d7.toISOString().slice(0,10); }
 
+  const _svcKeyJ7 = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/inscriptions_essai?date_essai=eq.${targetDate}&statut=eq.confirme&type=eq.tango&select=id,email,prenom,nom,ville,niveau,date_essai,role,partenaire`,
-    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` } }
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyJ7}` } }
   );
   if (!res.ok) return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
   const inscrits = await res.json();
