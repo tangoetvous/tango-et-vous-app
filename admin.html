@@ -13062,6 +13062,17 @@ function renderCoursTango() {
         seenInsT[k2] = true; return true;
       });
       inscritsT.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
+      // Alternance guideur / guidée (chacun trié alphabétiquement)
+      (function(){
+        var _gT = inscritsT.filter(function(e){ return e.role==='guideur'; });
+        var _dT = inscritsT.filter(function(e){ return e.role!=='guideur'; });
+        var _alt = [];
+        for (var ai=0; ai<Math.max(_gT.length,_dT.length); ai++){
+          if(_gT[ai]) _alt.push(_gT[ai]);
+          if(_dT[ai]) _alt.push(_dT[ai]);
+        }
+        inscritsT = _alt;
+      })();
       if (inscritsT.length) {
         var nbGui = inscritsT.filter(function(e){ return e.role === 'guideur'; }).length;
         var nbGde = inscritsT.length - nbGui;
@@ -13094,7 +13105,20 @@ function renderCoursTango() {
       + ciInscritsHtml
       + (ciInscritsHtml?'<div class="ci-note">— en attente de paiement ou validation —</div>':'');
     var _dupSetInscr=_dupEmails(items);
-    _groupCouples(items).forEach(function(g){
+    var _gcGroups=_groupCouples(items);
+    // Alternance guideur / guidée pour les solos (couples en premier, déjà équilibrés)
+    // — sauf si le tri par expérience est actif (Att. validation)
+    if(!(sousOngletCoursTango==='attente_validation' && _sortInscByExp)){
+      var _gcCpl=_gcGroups.filter(function(g){ return g.type==='couple'; });
+      var _gcGui=_gcGroups.filter(function(g){ return g.type!=='couple' && g.person.role==='guideur'; });
+      var _gcGde=_gcGroups.filter(function(g){ return g.type!=='couple' && g.person.role!=='guideur'; });
+      _gcGroups=_gcCpl.slice();
+      for(var gi=0; gi<Math.max(_gcGui.length,_gcGde.length); gi++){
+        if(_gcGui[gi]) _gcGroups.push(_gcGui[gi]);
+        if(_gcGde[gi]) _gcGroups.push(_gcGde[gi]);
+      }
+    }
+    _gcGroups.forEach(function(g){
       if(g.type==='couple') h+=_coupleWrap(ficheEleve(g.persons[0],_dupSetInscr.has(_dupKey(g.persons[0])))+ficheEleve(g.persons[1],_dupSetInscr.has(_dupKey(g.persons[1]))));
       else h+=ficheEleve(g.person,_dupSetInscr.has(_dupKey(g.person)));
     });
