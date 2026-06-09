@@ -1,5 +1,50 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-06-09 — Crons service key + filtre saison espace élève
+
+### ✅ Crons : service key obligatoire pour les SELECT Supabase
+
+7 handlers cron utilisaient `SUPABASE_ANON` dans le header `Authorization` pour leurs requêtes SELECT. La RLS bloque silencieusement les SELECT anon sur `inscriptions_essai`, `inscriptions_essai_yoga`, `inscriptions_cours`, `inscriptions_stages`, `notifications_eleve` → les crons retournaient `{"checked":0,"sent":0}` sans erreur.
+
+**Fix appliqué dans `worker.js`** : `const _svcKeyXxx = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;` + `Authorization: Bearer ${_svcKeyXxx}` dans les handlers suivants :
+- `handleCronEssaiRappelJ7` (rappel J-7 essai tango — E4)
+- `handleCronEssaiJ1` (lendemain essai tango — E-J1a/J1b)
+- `handleCronEssaiYogaJ1` (lendemain essai yoga — Y-J1a/J1b)
+- `handleCronCartePonteeJ1` (récap carte pointée — CP-E)
+- `handleCronEssaiYogaRappelJ3` (rappel J-3 essai yoga — Y3)
+- `handleCronEspaceEleveActivation` (invitation espace élève — P1)
+- `handleCronRappelStageJ3` (rappel J-3 stage — S4)
+
+**Règle permanente** : tout nouveau handler cron qui fait un SELECT sur une table protégée par RLS doit utiliser `env.SUPABASE_SERVICE_KEY || SUPABASE_ANON` (jamais `SUPABASE_ANON` seul). Les 6 autres handlers (`handleCronCarteExpiree`, `handleCronRelanceCb3x`, `handleCronFinSaisonC4`, `handleCronFinSaisonC5`, `handleCronRelanceAbsences`, `handleCronPasDeCours`) utilisaient déjà le service key correctement.
+
+### ✅ Filtre saison dans l'espace élève (index.html)
+
+**Problème** : un élève pré-inscrit pour la saison suivante (ex : Stéphane, 1 cours 2025-2026 + 2 cours 2026-2027) voyait toutes ses inscriptions actives simultanément dans l'espace élève — 3 badges "Forfait annuel actif", "Tes cours" avec 3 lignes, discussions des 2 saisons, Sorano basé sur un cours futur.
+
+**Fix** : ajout de `_saisonCourante()` (helper qui retourne `AAAA-(AAAA+1)` selon si le mois courant ≥ 9 ou non) et filtrage systématique par saison aux 4 endroits concernés dans `index.html` :
+
+```javascript
+function _saisonCourante() {
+  var _n = new Date(); var _m = _n.getMonth() + 1; var _y = _n.getFullYear();
+  return _m >= 9 ? (_y + '-' + (_y + 1)) : ((_y - 1) + '-' + _y);
+}
+```
+
+| Endroit | Variable | Effet |
+|---------|----------|-------|
+| Callback `inscriptions_cours` | `hasCarte10` | Type carte détecté sur la saison courante uniquement |
+| Callback `inscriptions_cours` | `eleveData.hasVincennes` | Sorano affiché uniquement si Vincennes CETTE saison |
+| Callback `inscriptions_cours` | `eleveData.soranoPayé` | Statut Sorano de la saison courante uniquement |
+| Callback `inscriptions_cours` | `eleveData.nbCoursInscrits` | Max pointages/jour basé sur la saison courante |
+| `renderAccueil()` | `_inscrActives` | "Tes cours" + badges Forfait = saison courante uniquement |
+| Onglet Discussions | `_inscActives` | Groupes de discussions = cours de la saison courante |
+
+**Comportement attendu** : avant le 1/9 → `_saisonCourante()` = `2025-2026`. À partir du 1/9 → `2026-2027` automatiquement. Aucune intervention manuelle à la rentrée.
+
+**Si quelque chose casse** : `eleveData.inscriptionsTango` lui-même contient toujours TOUTES les inscriptions non supprimées (non filtré par saison) — c'est voulu pour l'historique carte (lignes `isRenewal`). Seuls les 4 usages listés ci-dessus filtrent par saison. Si un autre endroit du code doit afficher les cours multi-saisons, lire `eleveData.inscriptionsTango` directement sans appliquer le filtre `_saisonCourante()`.
+
+---
+
 ## Configuration emails — état actuel (2026-06-06)
 
 ### Expéditeur Brevo : `contact@tangoetvous.fr` ✅
