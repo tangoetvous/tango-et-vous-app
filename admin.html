@@ -2877,6 +2877,7 @@ var stageAdresseOpen   = {};       // {date: bool}  true=adresse par date ouvert
 var stageVisuelOpen    = {};       // {date: bool}  true=visuel par date ouvert
 var milongaAccordion  = {};       // {mil-idx-section: bool}  true=ouvert
 var _ctAccordOpen     = {};       // {id: bool}  true=accordéon inscription tango ouvert
+var _ciDejaInscritsOpen = {};    // {cKey: bool} true=accordéon "déjà inscrits" ouvert
 var milDateDetailsOpen = {};       // {'idx-date': bool}  true=détails date milonga ouverts
 var STAGE_NOM_DEFAUT = 'Stages avec Florencia Garcia et Jérémy Braitbart';
 
@@ -6198,6 +6199,13 @@ function handleAction(action, btn) {
       (function(){
         var id = btn.dataset.id || '';
         _ctAccordOpen[id] = !_ctAccordOpen[id];
+        renderTab();
+      })();
+      break;
+    case 'toggle-ci-inscrit':
+      (function(){
+        var key = btn.dataset.key || '';
+        _ciDejaInscritsOpen[key] = !_ciDejaInscritsOpen[key];
         renderTab();
       })();
       break;
@@ -12973,9 +12981,9 @@ function renderCoursTango() {
     var lbl = COURS_LBL2[cKey] || cKey;
     var badgeHtml = '';
     var inscritsHtml = '';
+    var ciInscritsHtml = '';
     if (sousOngletCoursTango === 'attente_paiement' && ville && niveau) {
       badgeHtml = ' &nbsp; ' + capBadge(ville, niveau);
-      var sai = saisonActive();
       var inscrits = (adminData.coursTango||[]).filter(function(e){
         return e.statut === 'inscrit' && !e._isRenewalRow
           && e.ville === ville && e.niveau === niveau
@@ -13002,8 +13010,50 @@ function renderCoursTango() {
         inscritsHtml += '</div>';
       }
     }
+    if (sousOngletCoursTango === 'tous' && ville && niveau) {
+      var inscritsT = (adminData.coursTango||[]).filter(function(e){
+        return e.statut === 'inscrit' && !e._isRenewalRow
+          && e.ville === ville && e.niveau === niveau
+          && (e.saison || saisonCourante()) === sai;
+      });
+      var seenInsT = {};
+      inscritsT = inscritsT.filter(function(e){
+        var k2 = _normNom((e.prenom||'')+' '+(e.nom||''));
+        if (!k2) return true;
+        if (seenInsT[k2]) return false;
+        seenInsT[k2] = true; return true;
+      });
+      inscritsT.sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||''); });
+      if (inscritsT.length) {
+        var nbGui = inscritsT.filter(function(e){ return e.role === 'guideur'; }).length;
+        var nbGde = inscritsT.length - nbGui;
+        var ciOpen = !!_ciDejaInscritsOpen[cKey];
+        ciInscritsHtml = '<div data-action="toggle-ci-inscrit" data-key="'+cKey+'" style="display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px 12px;margin:0 0 6px;background:rgba(30,58,138,0.18);border:1px solid rgba(59,130,246,0.25);border-radius:8px;cursor:pointer;user-select:none;">'
+          + '<div style="display:flex;align-items:center;gap:8px;">'
+          + '<span style="color:#7eb8ff;font-size:12px;">'+(ciOpen?'▾':'▸')+'</span>'
+          + '<span style="font-size:11px;font-weight:600;color:var(--text-faint);letter-spacing:0.3px;">Déjà inscrits (Élèves Tango)</span>'
+          + '</div>'
+          + '<div style="display:flex;gap:8px;font-size:10px;">'
+          + '<span style="color:#7eb8ff;font-weight:600;">👨 '+nbGui+' guideur'+(nbGui>1?'s':'')+'</span>'
+          + '<span style="color:#ff85c0;font-weight:600;">👩 '+nbGde+' guidée'+(nbGde>1?'s':'')+'</span>'
+          + '</div>'
+          + '</div>';
+        if (ciOpen) {
+          ciInscritsHtml += '<div style="margin-bottom:8px;">';
+          inscritsT.forEach(function(e){
+            var rcls = e.role==='guideur'?'pill-guideur':'pill-guidee';
+            ciInscritsHtml += '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:rgba(30,58,138,0.08);border-left:2px solid rgba(59,130,246,0.3);margin:1px 0;border-radius:0 4px 4px 0;">'
+              + '<span style="font-size:12px;flex:1;font-weight:500;">'+(e.prenom||'')+' '+(e.nom||'').toUpperCase()+'</span>'
+              + '<span class="pill '+rcls+'">'+(e.role==='guideur'?'Guideur':'Guidée')+'</span>'
+              + '</div>';
+          });
+          ciInscritsHtml += '</div>';
+        }
+      }
+    }
     h += '<div class="section-hdr">'+lbl+' ('+items.length+')'+badgeHtml+'</div>'
-      +'<div style="padding:0 16px;">';
+      +'<div style="padding:0 16px;">'
+      + ciInscritsHtml;
     var _dupSetInscr=_dupEmails(items);
     _groupCouples(items).forEach(function(g){
       if(g.type==='couple') h+=_coupleWrap(ficheEleve(g.persons[0],_dupSetInscr.has(_dupKey(g.persons[0])))+ficheEleve(g.persons[1],_dupSetInscr.has(_dupKey(g.persons[1]))));
