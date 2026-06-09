@@ -5,64 +5,64 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Preview — Inscriptions Tango</title>
 <style>
-  body { background:#0e0e14; color:#e0e0e0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:14px; margin:0; padding:16px; }
-  h3 { color:#D4AF37; font-size:13px; letter-spacing:1px; text-transform:uppercase; margin:20px 0 8px; border-bottom:1px solid rgba(212,175,55,0.25); padding-bottom:6px; }
+  body { background:#f0f0f5; color:#1a1a1a; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:14px; margin:0; padding:16px; }
+  h3 { color:#7c5c00; font-size:13px; letter-spacing:1px; text-transform:uppercase; margin:20px 0 8px; border-bottom:1px solid rgba(180,130,0,0.3); padding-bottom:6px; }
 
   /* Pills */
   .pill { display:inline-flex; align-items:center; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:600; }
-  .pill-guideur  { background:rgba(100,160,255,0.15); color:#7eb8ff; border:1px solid rgba(100,160,255,0.3); }
-  .pill-guidee   { background:rgba(255,120,180,0.15); color:#ff85c0; border:1px solid rgba(255,120,180,0.3); }
-  .pill-ok       { background:rgba(76,175,80,0.15);   color:#81c784; border:1px solid rgba(76,175,80,0.3); }
-  .pill-warn     { background:rgba(255,152,0,0.15);   color:#ffb74d; border:1px solid rgba(255,152,0,0.3); }
-  .pill-gold     { background:rgba(212,175,55,0.15);  color:#D4AF37; border:1px solid rgba(212,175,55,0.3); }
+  .pill-guideur  { background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd; }
+  .pill-guidee   { background:#fce7f3; color:#be185d; border:1px solid #f9a8d4; }
+  .pill-ok       { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+  .pill-warn     { background:#fff7ed; color:#9a3412; border:1px solid #fdba74; }
+  .pill-gold     { background:#fef9c3; color:#854d0e; border:1px solid #fde047; }
 
   /* Boutons */
-  .btn-ok   { background:rgba(76,175,80,0.2);  color:#81c784; border:1px solid rgba(76,175,80,0.4);  padding:3px 8px; border-radius:6px; font-size:10px; cursor:pointer; }
-  .btn-gold { background:rgba(212,175,55,0.2); color:#D4AF37; border:1px solid rgba(212,175,55,0.4); padding:3px 8px; border-radius:6px; font-size:10px; cursor:pointer; }
-  .btn-err  { background:rgba(229,57,53,0.15); color:#ef9a9a; border:1px solid rgba(229,57,53,0.3);  padding:3px 7px; border-radius:6px; font-size:10px; cursor:pointer; }
-  .btn-ghost{ background:none; color:#888; border:1px solid #333; padding:3px 7px; border-radius:6px; font-size:10px; cursor:pointer; }
+  .btn-ok   { background:#dcfce7; color:#166534; border:1px solid #86efac; padding:3px 8px; border-radius:6px; font-size:10px; cursor:pointer; }
+  .btn-gold { background:#fef9c3; color:#854d0e; border:1px solid #fde047; padding:3px 8px; border-radius:6px; font-size:10px; cursor:pointer; }
+  .btn-err  { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding:3px 7px; border-radius:6px; font-size:10px; cursor:pointer; }
+  .btn-ghost{ background:#fff;    color:#555;    border:1px solid #ccc;    padding:3px 7px; border-radius:6px; font-size:10px; cursor:pointer; }
 
-  /* Fiches accordéon (pipeline) */
-  .point-row { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
-  .point-nom { font-size:13px; color:#e0e0e0; font-weight:600; cursor:pointer; }
-  .point-nom:hover { color:#D4AF37; }
+  /* Fiches accordéon (pipeline) — fond blanc */
+  .point-row { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:9px 10px; border-bottom:1px solid #e5e7eb; background:#fff; border-radius:6px; margin-bottom:3px; }
+  .point-nom { font-size:13px; color:#111; font-weight:600; cursor:pointer; }
+  .point-nom:hover { color:#92610a; }
   .point-sub { font-size:11px; color:#888; margin-top:2px; }
   .details-row { width:100%; display:flex; gap:4px; align-items:center; flex-wrap:wrap; padding-top:4px; }
 
-  /* Section "Déjà inscrits" */
+  /* Section "Déjà inscrits" — fond légèrement plus clair */
   .inscrits-accordion-header {
     display:flex; align-items:center; gap:8px; justify-content:space-between;
     padding:8px 12px; margin:4px 0 2px;
-    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+    background:#e8eef8; border:1px solid #c7d4ec;
     border-radius:8px; cursor:pointer; user-select:none;
   }
-  .inscrits-accordion-header:hover { background:rgba(255,255,255,0.07); }
-  .inscrits-label { font-size:11px; color:#aaa; font-weight:600; letter-spacing:0.3px; }
+  .inscrits-accordion-header:hover { background:#dce6f5; }
+  .inscrits-label { font-size:11px; color:#3a4a6b; font-weight:600; letter-spacing:0.3px; }
   .inscrits-counts { display:flex; gap:6px; font-size:10px; }
-  .inscrits-arrow { color:#888; font-size:12px; }
+  .inscrits-arrow { color:#5a6a8b; font-size:12px; }
 
   .inscrits-list { display:none; }
   .inscrits-list.open { display:block; }
 
   .inscrit-row {
-    display:flex; align-items:center; gap:6px; padding:6px 12px;
-    background:rgba(255,255,255,0.03); border-left:2px solid rgba(255,255,255,0.08);
+    display:flex; align-items:center; gap:6px; padding:5px 12px;
+    background:#f0f5ff; border-left:2px solid #c7d4ec;
     margin:1px 0;
   }
-  .inscrit-nom { font-size:12px; color:#bbb; flex:1; }
+  .inscrit-nom { font-size:12px; color:#374151; flex:1; }
 
-  .toggle-arrow { background:none; border:none; cursor:pointer; color:#888; font-size:13px; padding:2px 5px; line-height:1; }
+  .toggle-arrow { background:none; border:none; cursor:pointer; color:#666; font-size:13px; padding:2px 5px; line-height:1; }
 
-  .section { background:#161622; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 14px; margin-bottom:16px; }
-  .note { font-size:11px; color:#666; font-style:italic; margin:12px 0 4px; text-align:center; }
+  .section { background:#f8f8fb; border:1px solid #ddd; border-radius:10px; padding:10px 14px; margin-bottom:16px; }
+  .note { font-size:11px; color:#999; font-style:italic; margin:10px 0 4px; text-align:center; }
 </style>
 </head>
 <body>
 
 <div style="max-width:620px;margin:0 auto;">
 
-  <div style="color:#D4AF37;font-size:18px;font-weight:300;margin-bottom:4px;">Inscriptions Tango — Tous</div>
-  <div style="font-size:11px;color:#666;margin-bottom:20px;">Aperçu de la proposition de changement</div>
+  <div style="color:#7c5c00;font-size:18px;font-weight:600;margin-bottom:4px;">Inscriptions Tango — Tous</div>
+  <div style="font-size:11px;color:#999;margin-bottom:20px;">Aperçu de la proposition de changement</div>
 
   <!-- ═══ PARIS DÉBUTANTS ═══ -->
   <h3>Paris — Débutants</h3>
@@ -87,7 +87,7 @@
       <div class="inscrit-row"><span class="inscrit-nom">Lucas PETIT</span><span class="pill pill-guideur">Guideur</span></div>
       <div class="inscrit-row"><span class="inscrit-nom">Emma LEROY</span><span class="pill pill-guidee">Guidée</span></div>
       <div class="inscrit-row"><span class="inscrit-nom">Hugo MOREAU</span><span class="pill pill-guideur">Guideur</span></div>
-      <div style="font-size:10px;color:#555;padding:5px 12px;font-style:italic;">… 20 autres élèves</div>
+      <div style="font-size:10px;color:#888;padding:5px 12px;font-style:italic;">… 20 autres élèves</div>
     </div>
 
     <div class="note">— en attente de paiement ou validation —</div>
@@ -156,7 +156,7 @@
     <div class="inscrits-list" id="inscrits-paris-int">
       <div class="inscrit-row"><span class="inscrit-nom">Jean DURAND</span><span class="pill pill-guideur">Guideur</span></div>
       <div class="inscrit-row"><span class="inscrit-nom">Isabelle SIMON</span><span class="pill pill-guidee">Guidée</span></div>
-      <div style="font-size:10px;color:#555;padding:5px 12px;font-style:italic;">… 36 autres élèves</div>
+      <div style="font-size:10px;color:#888;padding:5px 12px;font-style:italic;">… 36 autres élèves</div>
     </div>
 
     <div class="note">— en attente de paiement ou validation —</div>
@@ -174,7 +174,7 @@
 
   </div>
 
-  <div style="font-size:11px;color:#555;text-align:center;margin-top:24px;">
+  <div style="font-size:11px;color:#999;text-align:center;margin-top:24px;">
     Les compteurs guideurs/guidées sont visibles même accordéon fermé.<br>
     Cliquer sur ▸ déroule la liste complète des inscrits.
   </div>
