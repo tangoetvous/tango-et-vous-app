@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview — Inscriptions Tango</title>
+<style>
+  body { background:#0e0e14; color:#e0e0e0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:14px; margin:0; padding:16px; }
+  h3 { color:#D4AF37; font-size:13px; letter-spacing:1px; text-transform:uppercase; margin:20px 0 8px; border-bottom:1px solid rgba(212,175,55,0.25); padding-bottom:6px; }
+
+  /* Pills */
+  .pill { display:inline-flex; align-items:center; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:600; }
+  .pill-guideur  { background:rgba(100,160,255,0.15); color:#7eb8ff; border:1px solid rgba(100,160,255,0.3); }
+  .pill-guidee   { background:rgba(255,120,180,0.15); color:#ff85c0; border:1px solid rgba(255,120,180,0.3); }
+  .pill-ok       { background:rgba(76,175,80,0.15);   color:#81c784; border:1px solid rgba(76,175,80,0.3); }
+  .pill-warn     { background:rgba(255,152,0,0.15);   color:#ffb74d; border:1px solid rgba(255,152,0,0.3); }
+  .pill-gold     { background:rgba(212,175,55,0.15);  color:#D4AF37; border:1px solid rgba(212,175,55,0.3); }
+
+  /* Boutons */
+  .btn-ok   { background:rgba(76,175,80,0.2);  color:#81c784; border:1px solid rgba(76,175,80,0.4);  padding:3px 8px; border-radius:6px; font-size:10px; cursor:pointer; }
+  .btn-gold { background:rgba(212,175,55,0.2); color:#D4AF37; border:1px solid rgba(212,175,55,0.4); padding:3px 8px; border-radius:6px; font-size:10px; cursor:pointer; }
+  .btn-err  { background:rgba(229,57,53,0.15); color:#ef9a9a; border:1px solid rgba(229,57,53,0.3);  padding:3px 7px; border-radius:6px; font-size:10px; cursor:pointer; }
+  .btn-ghost{ background:none; color:#888; border:1px solid #333; padding:3px 7px; border-radius:6px; font-size:10px; cursor:pointer; }
+
+  /* Fiches accordéon (pipeline) */
+  .point-row { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .point-nom { font-size:13px; color:#e0e0e0; font-weight:600; cursor:pointer; }
+  .point-nom:hover { color:#D4AF37; }
+  .point-sub { font-size:11px; color:#888; margin-top:2px; }
+  .details-row { width:100%; display:flex; gap:4px; align-items:center; flex-wrap:wrap; padding-top:4px; }
+
+  /* Section "Déjà inscrits" */
+  .inscrits-accordion-header {
+    display:flex; align-items:center; gap:8px; justify-content:space-between;
+    padding:8px 12px; margin:4px 0 2px;
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+    border-radius:8px; cursor:pointer; user-select:none;
+  }
+  .inscrits-accordion-header:hover { background:rgba(255,255,255,0.07); }
+  .inscrits-label { font-size:11px; color:#aaa; font-weight:600; letter-spacing:0.3px; }
+  .inscrits-counts { display:flex; gap:6px; font-size:10px; }
+  .inscrits-arrow { color:#888; font-size:12px; }
+
+  .inscrits-list { display:none; }
+  .inscrits-list.open { display:block; }
+
+  .inscrit-row {
+    display:flex; align-items:center; gap:6px; padding:6px 12px;
+    background:rgba(255,255,255,0.03); border-left:2px solid rgba(255,255,255,0.08);
+    margin:1px 0;
+  }
+  .inscrit-nom { font-size:12px; color:#bbb; flex:1; }
+
+  .toggle-arrow { background:none; border:none; cursor:pointer; color:#888; font-size:13px; padding:2px 5px; line-height:1; }
+
+  .section { background:#161622; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 14px; margin-bottom:16px; }
+  .note { font-size:11px; color:#666; font-style:italic; margin:12px 0 4px; text-align:center; }
+</style>
+</head>
+<body>
+
+<div style="max-width:620px;margin:0 auto;">
+
+  <div style="color:#D4AF37;font-size:18px;font-weight:300;margin-bottom:4px;">Inscriptions Tango — Tous</div>
+  <div style="font-size:11px;color:#666;margin-bottom:20px;">Aperçu de la proposition de changement</div>
+
+  <!-- ═══ PARIS DÉBUTANTS ═══ -->
+  <h3>Paris — Débutants</h3>
+  <div class="section">
+
+    <!-- Accordéon "Déjà inscrits" -->
+    <div class="inscrits-accordion-header" onclick="toggleInscrits('paris-deb',this)">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="inscrits-arrow" id="arrow-paris-deb">▸</span>
+        <span class="inscrits-label">Déjà inscrits (Élèves Tango)</span>
+      </div>
+      <div class="inscrits-counts">
+        <span style="color:#7eb8ff;">👨 14 guideurs</span>
+        <span style="color:#ff85c0;">👩 12 guidées</span>
+      </div>
+    </div>
+
+    <div class="inscrits-list" id="inscrits-paris-deb">
+      <div class="inscrit-row"><span class="inscrit-nom">Sophie MARTIN</span><span class="pill pill-guidee">Guidée</span></div>
+      <div class="inscrit-row"><span class="inscrit-nom">Thomas BERNARD</span><span class="pill pill-guideur">Guideur</span></div>
+      <div class="inscrit-row"><span class="inscrit-nom">Marie DUPONT</span><span class="pill pill-guidee">Guidée</span></div>
+      <div class="inscrit-row"><span class="inscrit-nom">Lucas PETIT</span><span class="pill pill-guideur">Guideur</span></div>
+      <div class="inscrit-row"><span class="inscrit-nom">Emma LEROY</span><span class="pill pill-guidee">Guidée</span></div>
+      <div class="inscrit-row"><span class="inscrit-nom">Hugo MOREAU</span><span class="pill pill-guideur">Guideur</span></div>
+      <div style="font-size:10px;color:#555;padding:5px 12px;font-style:italic;">… 20 autres élèves</div>
+    </div>
+
+    <div class="note">— en attente de paiement ou validation —</div>
+
+    <!-- Fiche pipeline : non validée, accordéon fermé -->
+    <div class="point-row">
+      <div style="flex:1;min-width:160px;">
+        <div class="point-nom">Alice FONTAINE</div>
+        <div class="point-sub">♥ Pierre Fontaine</div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <span class="pill pill-guidee">Guidée</span>
+        <span class="pill pill-warn">non validé.e</span>
+        <button class="toggle-arrow" onclick="toggleFiche('f1',this)">▸</button>
+      </div>
+    </div>
+
+    <!-- Fiche pipeline : validée, accordéon ouvert -->
+    <div class="point-row">
+      <div style="flex:1;min-width:160px;">
+        <div class="point-nom">Pierre FONTAINE</div>
+        <div class="point-sub">♥ Alice Fontaine</div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <span class="pill pill-guideur">Guideur</span>
+        <span class="pill pill-ok">validé.e</span>
+        <button class="toggle-arrow" onclick="toggleFiche('f2',this)">▾</button>
+      </div>
+      <div class="details-row" id="f2">
+        <span class="pill pill-gold">att. paiement</span>
+        <button class="btn-gold">💳 A payé</button>
+        <button class="btn-ghost">✉️</button>
+        <button class="btn-err">✕</button>
+      </div>
+    </div>
+
+    <!-- Fiche pipeline : non validée seule -->
+    <div class="point-row">
+      <div style="flex:1;min-width:160px;">
+        <div class="point-nom">Camille ROUSSEAU</div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <span class="pill pill-guidee">Guidée</span>
+        <span class="pill pill-warn">non validé.e</span>
+        <button class="toggle-arrow" onclick="toggleFiche('f3',this)">▸</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ PARIS INTERMÉDIAIRES ═══ -->
+  <h3>Paris — Intermédiaires</h3>
+  <div class="section">
+
+    <div class="inscrits-accordion-header" onclick="toggleInscrits('paris-int',this)">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="inscrits-arrow" id="arrow-paris-int">▸</span>
+        <span class="inscrits-label">Déjà inscrits (Élèves Tango)</span>
+      </div>
+      <div class="inscrits-counts">
+        <span style="color:#7eb8ff;">👨 18 guideurs</span>
+        <span style="color:#ff85c0;">👩 20 guidées</span>
+      </div>
+    </div>
+
+    <div class="inscrits-list" id="inscrits-paris-int">
+      <div class="inscrit-row"><span class="inscrit-nom">Jean DURAND</span><span class="pill pill-guideur">Guideur</span></div>
+      <div class="inscrit-row"><span class="inscrit-nom">Isabelle SIMON</span><span class="pill pill-guidee">Guidée</span></div>
+      <div style="font-size:10px;color:#555;padding:5px 12px;font-style:italic;">… 36 autres élèves</div>
+    </div>
+
+    <div class="note">— en attente de paiement ou validation —</div>
+
+    <div class="point-row">
+      <div style="flex:1;min-width:160px;">
+        <div class="point-nom">Julien MERCIER</div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <span class="pill pill-guideur">Guideur</span>
+        <span class="pill pill-ok">validé.e</span>
+        <button class="toggle-arrow" onclick="toggleFiche('f4',this)">▸</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="font-size:11px;color:#555;text-align:center;margin-top:24px;">
+    Les compteurs guideurs/guidées sont visibles même accordéon fermé.<br>
+    Cliquer sur ▸ déroule la liste complète des inscrits.
+  </div>
+
+</div>
+
+<script>
+function toggleInscrits(key, header) {
+  var list = document.getElementById('inscrits-' + key);
+  var arrow = document.getElementById('arrow-' + key);
+  var isOpen = list.classList.contains('open');
+  list.classList.toggle('open', !isOpen);
+  arrow.textContent = isOpen ? '▸' : '▾';
+}
+function toggleFiche(id, btn) {
+  var div = document.getElementById(id);
+  if (!div) return;
+  var isOpen = div.style.display === 'flex';
+  div.style.display = isOpen ? 'none' : 'flex';
+  btn.textContent = isOpen ? '▸' : '▾';
+}
+</script>
+</body>
+</html>
