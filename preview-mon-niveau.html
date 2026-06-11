@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Preview — Mon niveau · Test (interface élève)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600;700&display=swap"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#D4AF37;
+  --bg:#0a0a0a;--surface:#111;--surface2:#181818;--surface3:#1f1f1f;
+  --border:#2a2a2a;--text:#fff;--dim:#888;--faint:#666;
+  --radius:14px;
+  --font-d:'Cormorant Garamond',Georgia,serif;
+  --font-b:'Montserrat',sans-serif;
+  /* États de maîtrise */
+  --st0:#6b7280; /* inconnu */
+  --st1:#ef5350; /* non acquis */
+  --st2:#ffa726; /* en cours d'acquisition */
+  --st3:#66bb6a; /* acquis */
+  --st4:#42a5f5; /* incorporé */
+  --st5:#D4AF37; /* en mode tanguero */
+}
+body{font-family:var(--font-b);font-size:15px;color:var(--text);background:var(--bg);min-height:100vh;}
+.wrap{max-width:520px;margin:0 auto;padding-bottom:60px;}
+
+.preview-banner{background:#fff8e6;border-bottom:1px solid #e6c94a;padding:9px 16px;font-size:12px;color:#7a5f00;text-align:center;letter-spacing:.05em;}
+
+/* Header app élève */
+.hdr{background:#000;border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
+.hdr-tv{font-family:var(--font-d);font-size:18px;letter-spacing:3px;color:var(--gold);}
+.hdr-tab{font-size:12px;letter-spacing:2.5px;color:#fff;text-transform:uppercase;font-weight:600;}
+
+/* Séparateur d'écrans du preview */
+.scr-sep{margin:36px 16px 14px;padding:10px 14px;background:#1a1400;border:1px dashed #6e5100;border-radius:8px;font-size:12px;color:#e6c94a;letter-spacing:.1em;text-transform:uppercase;font-weight:700;}
+.scr-note{margin:0 16px 14px;font-size:12px;color:var(--dim);line-height:1.7;}
+
+.pane{padding:18px 16px;}
+.sec-title{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);margin:4px 2px 12px;font-weight:600;}
+
+/* ════ ÉCRAN 1 — ACCUEIL ════ */
+.intro-card{background:linear-gradient(135deg,#16120a 0%,#241c08 100%);border:1.5px solid var(--gold);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;}
+.intro-title{font-family:var(--font-d);font-size:24px;font-weight:300;color:var(--gold);letter-spacing:1px;margin-bottom:8px;}
+.intro-txt{font-size:13px;color:#d8cfb8;line-height:1.75;}
+
+.self-lvl{display:flex;gap:8px;margin-bottom:18px;}
+.lvl-btn{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 6px;text-align:center;cursor:pointer;color:var(--dim);font-size:12px;font-weight:700;font-family:var(--font-b);display:flex;flex-direction:column;gap:4px;align-items:center;}
+.lvl-btn .lvl-ico{font-size:22px;}
+.lvl-btn.sel{border-color:var(--gold);background:#1f1a08;color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.18);}
+
+.legend-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+.leg-row{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid #1d1d1d;}
+.leg-row:last-child{border-bottom:none;}
+.leg-dot{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid;}
+.leg-name{font-size:13px;font-weight:700;margin-bottom:1px;}
+.leg-desc{font-size:12px;color:var(--dim);line-height:1.55;}
+
+.abrazo-leg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.ab-chip{font-size:11px;padding:5px 11px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:#ccc;}
+.ab-chip b{color:var(--gold);}
+
+.btn-gold{width:100%;background:var(--gold);color:#000;border:none;padding:15px;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-b);letter-spacing:1px;cursor:pointer;}
+
+/* ════ ÉCRAN 2A — LISTE COMPACTE ════ */
+.prog-wrap{margin-bottom:16px;}
+.prog-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:5px;}
+.prog-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,#8a6500,var(--gold));border-radius:3px;}
+
+.grp-hdr{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 10px;}
+.grp-name{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;}
+.grp-count{font-size:11px;color:var(--dim);}
+
+.item-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.item-top{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.item-name{font-size:14px;font-weight:600;color:#fff;flex:1;}
+.badge-ab{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.5px;flex-shrink:0;}
+.ab-O{background:#0d2538;color:#64b5f6;border:1px solid #1e4a6e;}
+.ab-F{background:#2d1430;color:#ce93d8;border:1px solid #5e2a66;}
+.ab-OF{background:#10261c;color:#81c784;border:1px solid #2a5e3e;}
+.badge-vid{font-size:10px;padding:3px 8px;border-radius:10px;background:#1a1400;color:var(--gold);border:1px solid #4a3a00;flex-shrink:0;cursor:pointer;}
+.badge-vid.off{background:var(--surface3);color:var(--faint);border-color:var(--border);}
+.seg{display:flex;gap:5px;}
+.seg-dot{flex:1;height:34px;border-radius:8px;background:var(--surface3);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;color:var(--faint);}
+.seg-lbl-sel{margin-top:7px;font-size:11px;font-weight:700;text-align:center;}
+
+/* ════ ÉCRAN 2B — CARTE PAR CARTE ════ */
+.big-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px 18px;text-align:center;}
+.big-grp{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px;}
+.big-name{font-family:var(--font-d);font-size:30px;font-weight:400;color:#fff;letter-spacing:1px;margin-bottom:8px;}
+.big-badges{display:flex;gap:8px;justify-content:center;margin-bottom:16px;}
+.video-ph{background:#000;border:1px solid var(--border);border-radius:12px;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;margin-bottom:18px;color:var(--dim);font-size:12px;}
+.video-ph .vp-ico{font-size:34px;}
+.opt-stack{display:flex;flex-direction:column;gap:7px;}
+.opt-btn{display:flex;align-items:center;gap:12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:11px;padding:11px 14px;cursor:pointer;text-align:left;}
+.opt-ico{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid;}
+.opt-name{font-size:13px;font-weight:700;}
+.opt-desc{font-size:11px;color:var(--dim);line-height:1.4;}
+.card-nav{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px;color:var(--dim);}
+.card-nav a{color:var(--gold);text-decoration:none;}
+
+/* ════ ÉCRAN 3 — RÉSULTATS ════ */
+.res-hero{background:linear-gradient(135deg,#16120a 0%,#241c08 100%);border:1.5px solid var(--gold);border-radius:var(--radius);padding:20px;text-align:center;margin-bottom:16px;}
+.res-hero-lbl{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#b8a268;margin-bottom:6px;}
+.res-hero-lvl{font-family:var(--font-d);font-size:34px;font-weight:400;color:var(--gold);letter-spacing:2px;}
+.res-hero-sub{font-size:12px;color:#d8cfb8;margin-top:8px;line-height:1.6;}
+.res-lvl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px 16px;margin-bottom:10px;}
+.res-lvl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+.res-lvl-name{font-size:13px;font-weight:700;}
+.res-lvl-pct{font-family:var(--font-d);font-size:22px;color:var(--gold);}
+.res-bar{height:7px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-bottom:6px;}
+.res-bar-f{height:100%;border-radius:4px;}
+.res-lvl-sub{font-size:11px;color:var(--dim);}
+.gap-card{background:var(--surface);border:1px solid #4a3a00;border-radius:var(--radius);padding:16px;margin:14px 0;}
+.gap-title{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:11px;}
+.gap-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #1d1d1d;font-size:13px;}
+.gap-row:last-child{border-bottom:none;}
+.gap-state{font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;flex-shrink:0;}
+.gap-nm{flex:1;}
+.gap-vid{font-size:12px;color:var(--gold);flex-shrink:0;cursor:pointer;}
+.cta-cp{background:linear-gradient(135deg,#1a1030 0%,#2d1b5e 100%);border:1.5px solid #a78bfa;border-radius:var(--radius);padding:18px;text-align:center;margin-top:16px;}
+.cta-cp-txt{font-size:13px;color:#e2d9f8;line-height:1.7;margin-bottom:13px;}
+.cta-cp-btn{display:inline-block;background:#7c5cd6;color:#fff;border:none;padding:13px 24px;border-radius:10px;font-size:13px;font-weight:700;font-family:var(--font-b);letter-spacing:.5px;cursor:pointer;text-decoration:none;}
+.res-note{font-size:11px;color:var(--faint);text-align:center;margin-top:14px;line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="preview-banner">🎨 Preview — rubrique « Mon niveau · Test » · non fonctionnel · 4 écrans présentés</div>
+
+<div class="hdr">
+  <div class="hdr-tv">T &amp; V</div>
+  <div class="hdr-tab">Mon niveau · Test</div>
+  <div style="width:40px;"></div>
+</div>
+
+<!-- ═══════════════════════ ÉCRAN 1 ═══════════════════════ -->
+<div class="scr-sep">Écran 1 — Accueil du test</div>
+<div class="scr-note">L'élève déclare son niveau ressenti, découvre l'échelle des 6 états de maîtrise et la légende des abrazos, puis démarre.</div>
+
+<div class="pane">
+
+  <div class="intro-card">
+    <div class="intro-title">Où en es-tu dans ton tango ?</div>
+    <div class="intro-txt">
+      Évalue toi-même ta maîtrise de chaque séquence et notion, du vocabulaire débutant
+      jusqu'aux notions avancées. À la fin, tu sauras précisément <b style="color:var(--gold);">ce
+      qui te manque pour valider chaque niveau</b> — et comment le combler.
+      <br/><br/>Tes réponses sont conservées : tu peux mettre à jour ton évaluation au fil
+      de ta progression.
+    </div>
+  </div>
+
+  <div class="sec-title">Ton niveau, selon toi</div>
+  <div class="self-lvl">
+    <div class="lvl-btn"><span class="lvl-ico">🌱</span>Débutant</div>
+    <div class="lvl-btn sel"><span class="lvl-ico">💃</span>Intermédiaire</div>
+    <div class="lvl-btn"><span class="lvl-ico">🔥</span>Avancé</div>
+  </div>
+
+  <div class="sec-title">L'échelle de maîtrise</div>
+  <div class="legend-card">
+    <div class="leg-row">
+      <div class="leg-dot" style="border-color:var(--st0);color:var(--st0);">?</div>
+      <div><div class="leg-name" style="color:var(--st0);">Inconnu</div>
+      <div class="leg-desc">Tu ne sais absolument pas ce que c'est.</div></div>
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot" style="border-color:var(--st1);color:var(--st1);">✗</div>
+      <div><div class="leg-name" style="color:var(--st1);">Non acquis</div>
+      <div class="leg-desc">Tu ne connais pas cette séquence ou notion, ou tu l'as oubliée.</div></div>
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot" style="border-color:var(--st2);color:var(--st2);">~</div>
+      <div><div class="leg-name" style="color:var(--st2);">En cours d'acquisition</div>
+      <div class="leg-desc">Tu connais, mais tu ne sais pas encore le faire.</div></div>
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot" style="border-color:var(--st3);color:var(--st3);">✓</div>
+      <div><div class="leg-name" style="color:var(--st3);">Acquis</div>
+      <div class="leg-desc">Tu connais et tu sais l'exécuter.</div></div>
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot" style="border-color:var(--st4);color:var(--st4);">★</div>
+      <div><div class="leg-name" style="color:var(--st4);">Incorporé</div>
+      <div class="leg-desc">Tu peux l'exécuter rien qu'en pensant à son nom.</div></div>
+    </div>
+    <div class="leg-row">
+      <div class="leg-dot" style="border-color:var(--st5);color:var(--st5);">🕺</div>
+      <div><div class="leg-name" style="color:var(--st5);">En mode tanguero</div>
+      <div class="leg-desc">Tu joues avec — spatialement, musicalement — tu improvises avec facilité.</div></div>
+    </div>
+  </div>
+
+  <div class="sec-title">Les abrazos</div>
+  <div class="abrazo-leg">
+    <span class="ab-chip"><b>O</b> — abrazo ouvert</span>
+    <span class="ab-chip"><b>F</b> — abrazo fermé</span>
+    <span class="ab-chip"><b>OF</b> — ouvert et/ou fermé</span>
+  </div>
+
+  <button class="btn-gold">Commencer mon évaluation →</button>
+  <div class="res-note">70 séquences et notions · ~10 min · reprise possible à tout moment</div>
+
+</div>
+
+<!-- ═══════════════════════ ÉCRAN 2A ═══════════════════════ -->
+<div class="scr-sep">Écran 2 — Variante A · Liste compacte</div>
+<div class="scr-note">Tout le vocabulaire visible d'un coup, groupé par niveau. Chaque ligne a 6 pastilles — un tap suffit. Rapide pour balayer 70 items, idéal pour les mises à jour ultérieures.</div>
+
+<div class="pane">
+
+  <div class="prog-wrap">
+    <div class="prog-lbl"><span>Vocabulaire Débutant</span><span>12 / 70 évalués</span></div>
+    <div class="prog-track"><div class="prog-fill" style="width:17%;"></div></div>
+  </div>
+
+  <div class="grp-hdr"><span class="grp-name">🌱 Vocabulaire Débutant</span><span class="grp-count">3/17</span></div>
+
+  <div class="item-row">
+    <div class="item-top">
+      <span class="item-name">Baldosa</span>
+      <span class="badge-ab ab-F">F</span>
+      <span class="badge-vid">🎥 Démo</span>
+    </div>
+    <div class="seg">
+      <div class="seg-dot">?</div>
+      <div class="seg-dot">✗</div>
+      <div class="seg-dot">~</div>
+      <div class="seg-dot" style="background:#10261c;border-color:var(--st3);color:var(--st3);font-weight:700;">✓</div>
+      <div class="seg-dot">★</div>
+      <div class="seg-dot">🕺</div>
+    </div>
+    <div class="seg-lbl-sel" style="color:var(--st3);">Acquis</div>
+  </div>
+
+  <div class="item-row">
+    <div class="item-top">
+      <span class="item-name">Huit arrière</span>
+      <span class="badge-ab ab-F">F</span>
+      <span class="badge-vid">🎥 Démo</span>
+    </div>
+    <div class="seg">
+      <div class="seg-dot">?</div>
+      <div class="seg-dot">✗</div>
+      <div class="seg-dot">~</div>
+      <div class="seg-dot">✓</div>
+      <div class="seg-dot" style="background:#0d2538;border-color:var(--st4);color:var(--st4);font-weight:700;">★</div>
+      <div class="seg-dot">🕺</div>
+    </div>
+    <div class="seg-lbl-sel" style="color:var(--st4);">Incorporé</div>
+  </div>
+
+  <div class="item-row">
+    <div class="item-top">
+      <span class="item-name">Structure du tour</span>
+      <span class="badge-ab ab-OF">OF</span>
+      <span class="badge-vid off">🎥 À venir</span>
+    </div>
+    <div class="seg">
+      <div class="seg-dot">?</div>
+      <div class="seg-dot" style="background:#2a0f0e;border-color:var(--st1);color:var(--st1);font-weight:700;">✗</div>
+      <div class="seg-dot">~</div>
+      <div class="seg-dot">✓</div>
+      <div class="seg-dot">★</div>
+      <div class="seg-dot">🕺</div>
+    </div>
+    <div class="seg-lbl-sel" style="color:var(--st1);">Non acquis</div>
+  </div>
+
+  <div class="item-row">
+    <div class="item-top">
+      <span class="item-name">Sandwich</span>
+      <span class="badge-ab ab-F">F</span>
+      <span class="badge-vid">🎥 Démo</span>
+    </div>
+    <div class="seg">
+      <div class="seg-dot">?</div>
+      <div class="seg-dot">✗</div>
+      <div class="seg-dot">~</div>
+      <div class="seg-dot">✓</div>
+      <div class="seg-dot">★</div>
+      <div class="seg-dot">🕺</div>
+    </div>
+  </div>
+
+  <div class="grp-hdr"><span class="grp-name">🧭 Notions Débutant</span><span class="grp-count">0/3</span></div>
+
+  <div class="item-row">
+    <div class="item-top">
+      <span class="item-name">Savoir aller lentement, normalement, rapidement</span>
+    </div>
+    <div class="seg">
+      <div class="seg-dot">?</div>
+      <div class="seg-dot">✗</div>
+      <div class="seg-dot">~</div>
+      <div class="seg-dot">✓</div>
+      <div class="seg-dot">★</div>
+      <div class="seg-dot">🕺</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════ ÉCRAN 2B ═══════════════════════ -->
+<div class="scr-sep">Écran 2 — Variante B · Carte par carte</div>
+<div class="scr-note">Une séquence à la fois, avec la vidéo en avant et les 6 états explicités à chaque fois. Plus immersif et pédagogique, mais plus long (70 écrans). Les deux variantes peuvent coexister : carte-par-carte au premier passage, liste compacte pour les mises à jour.</div>
+
+<div class="pane">
+
+  <div class="prog-wrap">
+    <div class="prog-lbl"><span>Vocabulaire Intermédiaire</span><span>24 / 70</span></div>
+    <div class="prog-track"><div class="prog-fill" style="width:34%;"></div></div>
+  </div>
+
+  <div class="big-card">
+    <div class="big-grp">💃 Vocabulaire Intermédiaire · 5/16</div>
+    <div class="big-name">Tour avec quebrada</div>
+    <div class="big-badges">
+      <span class="badge-ab ab-F" style="font-size:10px;padding:3px 10px;">F — abrazo fermé</span>
+    </div>
+    <div class="video-ph">
+      <span class="vp-ico">🎥</span>
+      <span>Mini-vidéo de démonstration</span>
+      <span style="font-size:10px;color:var(--faint);">(alimentée au fur et à mesure)</span>
+    </div>
+    <div class="opt-stack">
+      <div class="opt-btn">
+        <div class="opt-ico" style="border-color:var(--st0);color:var(--st0);">?</div>
+        <div><div class="opt-name" style="color:var(--st0);">Inconnu</div>
+        <div class="opt-desc">Je ne sais pas du tout ce que c'est</div></div>
+      </div>
+      <div class="opt-btn">
+        <div class="opt-ico" style="border-color:var(--st1);color:var(--st1);">✗</div>
+        <div><div class="opt-name" style="color:var(--st1);">Non acquis</div>
+        <div class="opt-desc">Je ne connais pas, ou j'ai oublié</div></div>
+      </div>
+      <div class="opt-btn" style="border-color:var(--st2);background:#241606;">
+        <div class="opt-ico" style="border-color:var(--st2);color:var(--st2);">~</div>
+        <div><div class="opt-name" style="color:var(--st2);">En cours d'acquisition</div>
+        <div class="opt-desc">Je connais, mais je ne sais pas encore le faire</div></div>
+      </div>
+      <div class="opt-btn">
+        <div class="opt-ico" style="border-color:var(--st3);color:var(--st3);">✓</div>
+        <div><div class="opt-name" style="color:var(--st3);">Acquis</div>
+        <div class="opt-desc">Je connais et je sais l'exécuter</div></div>
+      </div>
+      <div class="opt-btn">
+        <div class="opt-ico" style="border-color:var(--st4);color:var(--st4);">★</div>
+        <div><div class="opt-name" style="color:var(--st4);">Incorporé</div>
+        <div class="opt-desc">Je l'exécute rien qu'en pensant à son nom</div></div>
+      </div>
+      <div class="opt-btn">
+        <div class="opt-ico" style="border-color:var(--st5);color:var(--st5);">🕺</div>
+        <div><div class="opt-name" style="color:var(--st5);">En mode tanguero</div>
+        <div class="opt-desc">Je joue avec, je l'improvise avec facilité</div></div>
+      </div>
+    </div>
+    <div class="card-nav">
+      <a href="javascript:void(0)">← Précédent</a>
+      <span>24 / 70</span>
+      <a href="javascript:void(0)">Passer →</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════ ÉCRAN 3 ═══════════════════════ -->
+<div class="scr-sep">Écran 3 — Résultats &amp; bilan</div>
+<div class="scr-note">Niveau estimé vs niveau déclaré, taux de validation par niveau, liste précise des manques avec accès direct aux vidéos, et passerelle vers les cours particuliers préremplie avec les séquences à travailler.</div>
+
+<div class="pane">
+
+  <div class="res-hero">
+    <div class="res-hero-lbl">Ton niveau estimé</div>
+    <div class="res-hero-lvl">Intermédiaire</div>
+    <div class="res-hero-sub">
+      Cohérent avec ton ressenti 👍<br/>
+      Le niveau Débutant est presque entièrement validé.
+      Il te manque <b style="color:var(--gold);">4 séquences</b> pour le valider complètement.
+    </div>
+  </div>
+
+  <div class="res-lvl-card">
+    <div class="res-lvl-top"><span class="res-lvl-name">🌱 Débutant</span><span class="res-lvl-pct">85%</span></div>
+    <div class="res-bar"><div class="res-bar-f" style="width:85%;background:var(--st3);"></div></div>
+    <div class="res-lvl-sub">17/20 acquis ou plus · 3 en cours d'acquisition</div>
+  </div>
+  <div class="res-lvl-card">
+    <div class="res-lvl-top"><span class="res-lvl-name">💃 Intermédiaire</span><span class="res-lvl-pct">55%</span></div>
+    <div class="res-bar"><div class="res-bar-f" style="width:55%;background:var(--st2);"></div></div>
+    <div class="res-lvl-sub">12/22 acquis ou plus · 6 en cours · 4 inconnus ou non acquis</div>
+  </div>
+  <div class="res-lvl-card">
+    <div class="res-lvl-top"><span class="res-lvl-name">🔥 Avancé</span><span class="res-lvl-pct">14%</span></div>
+    <div class="res-bar"><div class="res-bar-f" style="width:14%;background:var(--st1);"></div></div>
+    <div class="res-lvl-sub">4/28 acquis ou plus</div>
+  </div>
+
+  <div class="gap-card">
+    <div class="gap-title">🎯 Pour valider le niveau Débutant</div>
+    <div class="gap-row">
+      <span class="gap-state" style="background:#241606;color:var(--st2);border:1px solid var(--st2);">en cours</span>
+      <span class="gap-nm">Structure du tour <span class="badge-ab ab-OF">OF</span></span>
+      <span class="gap-vid">🎥</span>
+    </div>
+    <div class="gap-row">
+      <span class="gap-state" style="background:#241606;color:var(--st2);border:1px solid var(--st2);">en cours</span>
+      <span class="gap-nm">Salida 40 <span class="badge-ab ab-F">F</span></span>
+      <span class="gap-vid">🎥</span>
+    </div>
+    <div class="gap-row">
+      <span class="gap-state" style="background:#241606;color:var(--st2);border:1px solid var(--st2);">en cours</span>
+      <span class="gap-nm">Miroir <span class="badge-ab ab-OF">OF</span></span>
+      <span class="gap-vid">🎥</span>
+    </div>
+    <div class="gap-row">
+      <span class="gap-state" style="background:#2a0f0e;color:var(--st1);border:1px solid var(--st1);">non acquis</span>
+      <span class="gap-nm">Abrazo intègre pendant la danse</span>
+      <span class="gap-vid" style="color:var(--faint);">—</span>
+    </div>
+  </div>
+
+  <div class="gap-card" style="border-color:var(--border);">
+    <div class="gap-title" style="color:var(--dim);">💃 Pour valider le niveau Intermédiaire — 10 manques</div>
+    <div class="gap-row">
+      <span class="gap-state" style="background:#1c1c1f;color:var(--st0);border:1px solid var(--st0);">inconnu</span>
+      <span class="gap-nm">Roulo <span class="badge-ab ab-O">O</span></span>
+      <span class="gap-vid">🎥</span>
+    </div>
+    <div class="gap-row">
+      <span class="gap-state" style="background:#2a0f0e;color:var(--st1);border:1px solid var(--st1);">non acquis</span>
+      <span class="gap-nm">Boleo arrière au sol <span class="badge-ab ab-F">F</span></span>
+      <span class="gap-vid">🎥</span>
+    </div>
+    <div class="gap-row" style="border-bottom:none;">
+      <span style="font-size:12px;color:var(--gold);cursor:pointer;">Voir les 8 autres ▾</span>
+    </div>
+  </div>
+
+  <div class="cta-cp">
+    <div class="cta-cp-txt">
+      💡 Un <b style="color:#fff;">cours particulier</b> est le moyen le plus efficace de
+      combler ces manques de façon ciblée — Florencia et Jérémy construisent
+      la séance autour de <b style="color:#fff;">tes</b> points à travailler.
+    </div>
+    <a class="cta-cp-btn" href="javascript:void(0)">🎯 Réserver un cours particulier →</a>
+    <div style="font-size:10px;color:#b8a8d8;margin-top:9px;">La demande sera préremplie avec les séquences à travailler</div>
+  </div>
+
+  <div class="res-note">
+    Ton évaluation est enregistrée. Tu peux la mettre à jour à tout moment —
+    ta progression sera visible d'un test à l'autre. 📈
+  </div>
+
+</div>
+
+</div>
+</body>
+</html>
