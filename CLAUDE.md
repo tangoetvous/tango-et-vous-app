@@ -853,6 +853,69 @@ Avant de modifier un handler qui lit `yogaHoraires` :
 
 ---
 
+## Auto-zoom iOS Safari sur les champs de formulaire — règle permanente
+
+### Symptôme
+Sur iOS Safari, dès qu'un utilisateur tape dans un champ de formulaire, la page zoome automatiquement. Ce zoom persiste sur les étapes suivantes (ex : récapitulatif).
+
+### Cause
+iOS Safari zoome automatiquement sur tout champ (`input`, `select`, `textarea`) dont le `font-size` est **inférieur à 16px** au moment du focus.
+
+### Règle permanente — `font-size: 16px` minimum sur tous les champs
+
+**Tout formulaire public doit avoir `font-size: 16px` sur tous ses champs de saisie.** Ne jamais utiliser `font-size: 14px` ou `font-size: 15px` sur un champ interactif.
+
+```css
+/* ✅ Correct — pas de zoom iOS */
+.field input[type="text"],
+.field input[type="email"],
+.field input[type="tel"],
+.field input[type="date"],
+.field input[type="number"],
+.field select,
+.field textarea {
+  font-size: 16px;
+}
+
+/* ❌ Interdit — déclenche le zoom automatique iOS */
+.field input { font-size: 14px; }
+```
+
+### ⚠️ Piège : les styles inline écrasent toujours les règles CSS
+
+Si un champ a un `style=""` inline avec `font-size:15px`, la règle CSS `font-size: 16px` ne s'applique **pas** — le style inline gagne toujours. Il faut corriger le style inline lui-même.
+
+```html
+<!-- ❌ Ce textarea zoomera malgré la règle CSS font-size:16px -->
+<textarea style="font-size:15px; ..."></textarea>
+
+<!-- ✅ Correct -->
+<textarea style="font-size:16px; ..."></textarea>
+```
+
+**Conséquence** : une correction CSS dans un media query ou dans une règle générale est inefficace si le champ incriminé a un style inline. Toujours inspecter les styles inline en priorité quand le fix ne fonctionne pas.
+
+### Formulaires concernés (à vérifier/corriger)
+
+| Formulaire | État |
+|------------|------|
+| `demande-devis.html` | ✅ Corrigé (16px, inline styles fixés) |
+| `cours-essai.html` | ⚠️ À vérifier |
+| `inscription-cours.html` | ⚠️ À vérifier |
+| `essai-yoga.html` | ⚠️ À vérifier |
+| `stages-pwa.html` | ⚠️ À vérifier |
+| `cours-particuliers.html` | ⚠️ À vérifier |
+
+### Pourquoi un fix en media query `(max-width: 640px)` peut échouer
+
+1. L'appareil a une largeur > 640px (iPad, certains Android en paysage) → la règle ne s'applique pas
+2. Un style inline sur l'élément prend la priorité
+3. Cache navigateur non vidé après déploiement
+
+**Solution recommandée** : changer directement le `font-size` dans la règle principale (pas dans un media query), et vérifier tous les styles inline.
+
+---
+
 ## Formulaires publics dans Wix iframe — règle `.insert().select('id')` interdite
 
 ### Symptôme
