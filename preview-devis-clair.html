@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview — Demande de Devis (fond clair)</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   THÈME CLAIR — remplace les variables noires du formulaire réel
+   ============================================================ */
+:root {
+  --bg: #f7f4ef;
+  --bg-soft: #eeebe4;
+  --bg-card: #ffffff;
+  --bg-elevated: #f3f0ea;
+  --gold: #8a6500;
+  --gold-bright: #b58900;
+  --gold-dim: #c4a24a;
+  --text: #1a1a1a;
+  --text-dim: #333;
+  --text-faint: #555;
+  --border: #d5cec5;
+  --border-active: var(--gold);
+  --error: #c0392b;
+  --success: #2e7d32;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
+  --radius: 4px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+body { padding: 24px 16px 80px; }
+
+@media (max-width: 640px) {
+  body { padding: 8px 0 60px; font-size: 14px; }
+  .container { padding: 0; }
+  .form-card { border-radius: 0; border-left: none; border-right: none; padding: 16px 12px; }
+  .header { margin-bottom: 12px; }
+  .header-eyebrow { font-size: 9px; margin-bottom: 6px; }
+  .header-sep { margin: 6px auto 4px; }
+  .header-sub { display: none; }
+  .progress { margin-bottom: 12px; }
+  .progress-dot { width: 22px; height: 22px; font-size: 10px; }
+  .progress-line { width: 16px; }
+  .step-title { font-size: 18px; }
+  .step-desc { font-size: 12px; margin-bottom: 16px; }
+  .prestation-card { padding: 12px 10px 12px 42px; }
+  .prestation-card .icon { width: 28px; height: 28px; left: 10px; }
+  .header h1 { font-size: 22px; margin-bottom: 4px; }
+}
+
+.container { max-width: 720px; margin: 0 auto; }
+
+/* EN-TÊTE */
+.header { text-align: center; margin-bottom: 32px; }
+.header-eyebrow {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 12px;
+}
+.header h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(26px, 5vw, 42px); font-weight: 500;
+  letter-spacing: 0.02em; line-height: 1.1; margin-bottom: 8px; color: var(--gold);
+}
+.header h1 .accent { font-style: italic; }
+.header-sep {
+  width: 60px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 16px auto 12px;
+}
+.header-sub { font-size: 13px; color: var(--text-dim); font-weight: 300; max-width: 480px; margin: 0 auto; }
+
+/* PROGRESSION */
+.progress {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; margin-bottom: 28px; flex-wrap: nowrap;
+  overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 4px 0;
+}
+.progress-step { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.progress-dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--bg-card);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: var(--text-faint);
+  font-family: 'Montserrat', sans-serif;
+}
+.progress-step.active .progress-dot { border-color: var(--gold); background: var(--gold); color: #fff; }
+.progress-step.done .progress-dot { border-color: var(--gold); background: transparent; color: var(--gold); }
+.progress-line { width: 24px; height: 1px; background: var(--border); flex-shrink: 0; }
+.progress-line.done { background: var(--gold-dim); }
+.progress-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-faint); display: none; }
+@media (min-width: 640px) {
+  .progress-label { display: block; }
+  .progress-step.active .progress-label { color: var(--gold); }
+  .progress-line { width: 40px; }
+}
+
+/* CARTE FORMULAIRE */
+.form-card {
+  background: var(--bg-soft); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 20px;
+  box-shadow: var(--shadow); position: relative; margin-bottom: 40px;
+}
+@media (min-width: 640px) { .form-card { padding: 40px 36px; } }
+.form-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.step-title {
+  font-family: 'Cormorant Garamond', serif; font-size: 24px;
+  font-weight: 500; margin-bottom: 6px; letter-spacing: 0.01em; color: var(--text);
+}
+.step-title .num { color: var(--gold); font-style: italic; margin-right: 8px; }
+.step-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 24px; font-weight: 300; }
+
+/* SÉPARATEUR ÉTAPES */
+.step-sep {
+  border: none; border-top: 1px solid var(--border);
+  margin: 36px 0 32px;
+}
+
+/* GRILLE PRESTATIONS */
+.prestations-grid {
+  display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 8px;
+}
+@media (min-width: 560px) { .prestations-grid { grid-template-columns: 1fr 1fr; } }
+.prestation-card {
+  position: relative; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 14px 16px 52px; cursor: pointer;
+  display: flex; align-items: center; min-height: 64px; user-select: none;
+}
+.prestation-card:hover { border-color: var(--gold-dim); background: var(--bg-elevated); }
+.prestation-card.selected {
+  border-color: var(--gold); background: linear-gradient(135deg, rgba(138,101,0,0.06), rgba(138,101,0,0.02));
+  box-shadow: inset 0 0 0 1px var(--gold);
+}
+.prestation-card .icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px; color: var(--gold); flex-shrink: 0;
+}
+.prestation-card .label { font-size: 13px; font-weight: 400; line-height: 1.35; color: var(--text); }
+.prestation-card.selected .label { color: var(--gold); font-weight: 500; }
+.prestation-card .check {
+  position: absolute; top: 10px; right: 10px; width: 20px; height: 20px;
+  border-radius: 50%; border: 1.5px solid var(--gold-dim);
+  background: rgba(138,101,0,0.05); display: flex; align-items: center; justify-content: center;
+}
+.prestation-card.selected .check { background: var(--gold); border-color: var(--gold); }
+.prestation-card .check svg { width: 12px; height: 12px; color: #fff; opacity: 0; }
+.prestation-card.selected .check svg { opacity: 1; }
+
+/* CHAMPS */
+.field { margin-bottom: 18px; }
+.field-row { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 18px; }
+@media (min-width: 560px) {
+  .field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .field-row.cols-2-1 { grid-template-columns: 2fr 1fr; }
+}
+.field-row .field { margin-bottom: 0; }
+.field label {
+  display: block; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 8px; font-weight: 500;
+}
+.field label .req { color: var(--error); margin-left: 2px; }
+.field input[type="text"], .field input[type="email"], .field input[type="tel"],
+.field input[type="date"], .field input[type="number"], .field select, .field textarea {
+  width: 100%; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px; color: var(--text);
+  font-family: 'Montserrat', sans-serif; font-size: 14px; -webkit-appearance: none; appearance: none;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: var(--gold); background: var(--bg-elevated);
+  box-shadow: 0 0 0 3px rgba(138,101,0,0.1);
+}
+.field input::placeholder, .field textarea::placeholder { color: var(--text-faint); opacity: 0.8; }
+.field textarea { min-height: 100px; resize: vertical; font-family: 'Montserrat', sans-serif; }
+.field select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%238a6500' d='M6 8L0 0h12z'/></svg>");
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px;
+}
+.field-hint { font-size: 11px; color: var(--text-faint); margin-top: 6px; font-style: italic; }
+
+/* PILLS */
+.pill-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 999px; padding: 8px 18px; font-size: 12px; cursor: pointer;
+  letter-spacing: 0.05em; user-select: none; color: var(--text);
+}
+.pill:hover { border-color: var(--gold-dim); }
+.pill.selected { background: var(--gold); border-color: var(--gold); color: #fff; font-weight: 500; }
+
+/* CHECKBOX */
+.check-field {
+  display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
+  font-size: 12px; color: var(--text-dim); line-height: 1.5; user-select: none;
+}
+.check-field input { display: none; }
+.check-field .box {
+  flex-shrink: 0; width: 20px; height: 20px; border: 1.5px solid var(--gold-dim);
+  border-radius: 4px; background: rgba(138,101,0,0.04);
+  display: flex; align-items: center; justify-content: center; margin-top: 1px;
+}
+.check-field .box svg { width: 13px; height: 13px; color: #fff; opacity: 0; }
+
+/* NAV BOUTONS */
+.nav {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); gap: 12px;
+}
+.btn {
+  font-family: 'Montserrat', sans-serif; font-size: 12px; letter-spacing: 0.15em;
+  text-transform: uppercase; padding: 12px 22px; border-radius: var(--radius);
+  border: 1px solid transparent; cursor: pointer; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-prev { background: transparent; color: var(--text-dim); border-color: var(--border); }
+.btn-next, .btn-submit {
+  background: var(--gold); color: #fff; font-weight: 600; margin-left: auto;
+}
+.btn-next:hover, .btn-submit:hover { background: var(--gold-bright); }
+
+/* RÉCAP */
+.recap { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.recap-section { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+.recap-section:last-child { border-bottom: 0; }
+.recap-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.recap-section h3 { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--gold); font-weight: 500; font-style: italic; }
+.recap-edit {
+  background: transparent; border: 1px solid var(--border); color: var(--text-faint);
+  font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 0.18em;
+  text-transform: uppercase; padding: 5px 10px; border-radius: var(--radius); cursor: pointer;
+}
+.recap-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 4px 0; font-size: 13px; }
+.recap-row .key { color: var(--text-faint); flex-shrink: 0; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding-top: 4px; min-width: 70px; }
+.recap-row .val { color: var(--text); text-align: right; flex: 1; font-weight: 400; }
+.recap-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.recap-tag { background: rgba(138,101,0,0.08); border: 1px solid var(--gold-dim); color: var(--gold); padding: 5px 11px; border-radius: 999px; font-size: 11px; }
+
+/* PIED DE PAGE */
+.footer { text-align: center; margin-top: 28px; font-size: 11px; color: var(--text-faint); letter-spacing: 0.1em; }
+.footer a { color: var(--gold); text-decoration: none; }
+
+/* BANDEAU PREVIEW */
+.preview-banner {
+  background: #fffbe6; border: 1px solid #e6c94a; border-radius: 6px;
+  padding: 10px 16px; margin-bottom: 24px; font-size: 12px; color: #7a5f00;
+  text-align: center; letter-spacing: 0.05em;
+}
+
+/* MODE BANNER */
+.mode-banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(138,101,0,0.05); border: 1px solid var(--gold-dim);
+  border-left: 3px solid var(--gold); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 22px; font-size: 12px; color: var(--text-dim); line-height: 1.5;
+}
+.mode-banner .icon { flex-shrink: 0; color: var(--gold); font-style: italic; font-family: 'Cormorant Garamond', serif; font-size: 18px; line-height: 1; margin-top: 1px; }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="preview-banner">
+    🎨 Preview — thème clair · formulaire non fonctionnel
+  </div>
+
+  <!-- EN-TÊTE -->
+  <header class="header">
+    <div class="header-eyebrow">Tango &amp; Vous · Événementiel</div>
+    <h1>Formulaire — Demande de <span class="accent">Devis</span></h1>
+    <div class="header-sep"></div>
+    <p class="header-sub">
+      Mariage, soirée d'entreprise, anniversaire, festival… Dites-nous tout
+      sur votre événement et nous vous répondrons sous 48&nbsp;h.
+    </p>
+  </header>
+
+  <!-- PROGRESSION -->
+  <div class="progress">
+    <div class="progress-step done" data-step="1">
+      <div class="progress-dot">✓</div>
+      <span class="progress-label">Prestations</span>
+    </div>
+    <div class="progress-line done"></div>
+    <div class="progress-step active" data-step="2">
+      <div class="progress-dot">2</div>
+      <span class="progress-label">Événement</span>
+    </div>
+    <div class="progress-line"></div>
+    <div class="progress-step" data-step="3">
+      <div class="progress-dot">3</div>
+      <span class="progress-label">Contact</span>
+    </div>
+    <div class="progress-line"></div>
+    <div class="progress-step" data-step="4">
+      <div class="progress-dot">4</div>
+      <span class="progress-label">Récap</span>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       ÉTAPE 1 — Prestations
+       ============================================================ -->
+  <div class="form-card">
+    <h2 class="step-title"><span class="num">I.</span>Quelle prestation vous intéresse ?</h2>
+    <p class="step-desc">Sélectionnez une ou plusieurs options.</p>
+
+    <div class="prestations-grid">
+
+      <div class="prestation-card selected">
+        <span class="icon">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="6" r="2.5"/><path d="M11 9v6l-3 8M11 15l3 5"/>
+            <circle cx="21" cy="5" r="2.5"/><path d="M21 8v7l3 8M21 15l-3 4"/>
+            <path d="M11 14c1 1 3 1 4 0M14 14c1 1 3 1 4 0"/>
+          </svg>
+        </span>
+        <span class="label">Démonstration de Tango Argentin</span>
+        <span class="check">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+        </span>
+      </div>
+
+      <div class="prestation-card">
+        <span class="icon">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="14" width="20" height="10" rx="2"/>
+            <path d="M9 14V9c0-1 1-2 2-2M23 14V9c0-1-1-2-2-2"/>
+            <line x1="11" y1="17" x2="21" y2="17"/><line x1="11" y1="20" x2="21" y2="20"/>
+          </svg>
+        </span>
+        <span class="label">Démonstration avec Orchestre</span>
+        <span class="check">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+        </span>
+      </div>
+
+      <div class="prestation-card">
+        <span class="icon">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="16" cy="16" r="11"/><path d="M16 9v7l5 3"/>
+          </svg>
+        </span>
+        <span class="label">Initiation au Tango en groupe</span>
+        <span class="check">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+        </span>
+      </div>
+
+      <div class="prestation-card">
+        <span class="icon">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8h20v14H18l-3 4-3-4H6z"/>
+            <line x1="10" y1="13" x2="22" y2="13"/><line x1="10" y1="17" x2="18" y2="17"/>
+          </svg>
+        </span>
+        <span class="label">Conférence sur le Tango</span>
+        <span class="check">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+        </span>
+      </div>
+
+      <div class="prestation-card">
+        <span class="icon">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 26C9 22 4 18 4 12c0-3 2-5 5-5 2 0 5 1 7 4 2-3 5-4 7-4 3 0 5 2 5 5 0 6-5 10-12 14z"/>
+          </svg>
+        </span>
+        <span class="label">Chorégraphie pour Mariage / Événement</span>
+        <span class="check">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+        </span>
+      </div>
+
+      <div class="prestation-card">
+        <span class="icon">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8h20v12H6z"/><path d="M6 8l4-3h12l4 3"/>
+            <line x1="12" y1="14" x2="20" y2="14"/>
+          </svg>
+        </span>
+        <span class="label">Spectacle SUR MESURE</span>
+        <span class="check">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+        </span>
+      </div>
+
+      <div class="prestation-card">
+        <span class="icon">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4l3 8h8l-6 5 2 9-7-5-7 5 2-9-6-5h8z"/>
+          </svg>
+        </span>
+        <span class="label">Démonstration de Folklore Argentin</span>
+        <span class="check">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+        </span>
+      </div>
+
+      <div class="prestation-card">
+        <span class="icon">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 14h22v3a6 6 0 0 1-6 6H11a6 6 0 0 1-6-6z"/>
+            <line x1="9" y1="14" x2="9" y2="10"/><line x1="13" y1="14" x2="13" y2="8"/><line x1="17" y1="14" x2="17" y2="10"/>
+          </svg>
+        </span>
+        <span class="label">Buffet par un Traiteur Argentin</span>
+        <span class="check">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+        </span>
+      </div>
+
+      <div class="prestation-card" style="grid-column: 1 / -1;">
+        <span class="icon">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="12" width="22" height="14" rx="1"/>
+            <line x1="5" y1="17" x2="27" y2="17"/><line x1="16" y1="12" x2="16" y2="26"/>
+            <path d="M16 12c-2-3-6-3-6 0 0 2 3 2 6 0zM16 12c2-3 6-3 6 0 0 2-3 2-6 0z"/>
+          </svg>
+        </span>
+        <span class="label">Offrir une Initiation au Tango</span>
+        <span class="check">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+        </span>
+      </div>
+
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-next">Continuer <span>→</span></button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       ÉTAPE 2 — Événement
+       ============================================================ -->
+  <div class="form-card">
+    <h2 class="step-title"><span class="num">II.</span>Votre événement</h2>
+    <p class="step-desc">Quelques informations pour cadrer votre demande.</p>
+
+    <div class="field">
+      <label for="typeEvenement">Type d'événement <span class="req">*</span></label>
+      <select id="typeEvenement">
+        <option value="">— Sélectionnez —</option>
+        <option>Mariage</option>
+        <option>Soirée d'entreprise / Comité d'entreprise</option>
+        <option>Festival / Événement culturel</option>
+        <option>Autre</option>
+      </select>
+    </div>
+
+    <div class="field-row cols-2-1">
+      <div class="field">
+        <label for="dateEvenement">Date envisagée</label>
+        <input type="date" id="dateEvenement" value="2026-09-19">
+        <div class="field-hint">Laissez vide si la date n'est pas encore fixée.</div>
+      </div>
+      <div class="field">
+        <label>Date flexible ?</label>
+        <label class="check-field" style="margin-top:10px;">
+          <input type="checkbox" id="dateFlexible">
+          <span class="box">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+          </span>
+          <span>Oui, flexible</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="horaireEvenement">Horaire envisagé <span style="color:var(--text-faint);font-weight:400;">(facultatif)</span></label>
+      <input type="text" id="horaireEvenement" placeholder="Ex : 20h30, après le dîner, 19h–21h…">
+    </div>
+
+    <div class="field">
+      <label for="lieu">Lieu de la Prestation <span class="req">*</span></label>
+      <input type="text" id="lieu" placeholder="Salle des fêtes, 12 rue des Fleurs, 75020 Paris…">
+    </div>
+
+    <div class="field-row cols-2">
+      <div class="field">
+        <label for="nbInvites">Nombre d'invités</label>
+        <input type="number" id="nbInvites" placeholder="Ex : 80">
+      </div>
+      <div class="field">
+        <label for="dureePrestation">Durée souhaitée</label>
+        <select id="dureePrestation">
+          <option value="">— Sélectionnez —</option>
+          <option>Démonstration courte (5–10 min)</option>
+          <option>30 minutes</option>
+          <option>1 heure</option>
+          <option>Soirée entière</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="budget">Budget envisagé <span style="color:var(--text-faint);font-weight:400;">— Facultatif</span></label>
+      <select id="budget">
+        <option value="">— Optionnel —</option>
+        <option>Moins de 200 €</option>
+        <option>200 à 500 €</option>
+        <option>500 à 1 000 €</option>
+        <option>1 000 à 2 500 €</option>
+        <option>Plus de 5 000 €</option>
+        <option>À discuter</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="message">Des détails à savoir ? <span style="color:var(--text-faint);font-weight:400;">— Facultatif</span></label>
+      <textarea id="message" placeholder="Décrivez votre événement, vos envies, le contexte, l'ambiance souhaitée…"></textarea>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-prev">← Retour</button>
+      <button class="btn btn-next">Continuer <span>→</span></button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       ÉTAPE 3 — Coordonnées
+       ============================================================ -->
+  <div class="form-card">
+    <h2 class="step-title"><span class="num">III.</span>Vos coordonnées</h2>
+    <p class="step-desc">Pour vous recontacter avec un devis personnalisé.</p>
+
+    <div class="field">
+      <label>Civilité</label>
+      <div class="pill-group">
+        <div class="pill">Mme</div>
+        <div class="pill selected">M.</div>
+        <div class="pill">Préfère ne pas dire</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Vous êtes</label>
+      <div class="pill-group">
+        <div class="pill selected">Particulier</div>
+        <div class="pill">Société / Organisation</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="adresse">Adresse <span class="req">*</span></label>
+      <textarea id="adresse" rows="2" placeholder="12 rue des Fleurs&#10;75020 Paris"></textarea>
+    </div>
+
+    <div class="field-row cols-2">
+      <div class="field">
+        <label for="prenom">Prénom <span class="req">*</span></label>
+        <input type="text" id="prenom" placeholder="Marie">
+      </div>
+      <div class="field">
+        <label for="nom">Nom <span class="req">*</span></label>
+        <input type="text" id="nom" placeholder="DUPONT">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="email">Email <span class="req">*</span></label>
+      <input type="email" id="email" placeholder="marie@exemple.fr">
+    </div>
+
+    <div class="field">
+      <label for="telephone">Téléphone <span class="req">*</span></label>
+      <input type="tel" id="telephone" placeholder="06 00 00 00 00">
+    </div>
+
+    <div class="field" style="margin-top:24px;">
+      <label class="check-field">
+        <input type="checkbox" id="rgpd">
+        <span class="box">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 6l3 3 5-6"/></svg>
+        </span>
+        <span>J'accepte que mes données soient utilisées uniquement pour traiter cette demande de devis. <span class="req">*</span></span>
+      </label>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-prev">← Retour</button>
+      <button class="btn btn-next">Vérifier <span>→</span></button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       ÉTAPE 4 — Récapitulatif
+       ============================================================ -->
+  <div class="form-card">
+    <h2 class="step-title"><span class="num">IV.</span>Récapitulatif</h2>
+    <p class="step-desc">Vérifiez vos informations avant l'envoi. Vous pouvez modifier chaque section.</p>
+
+    <div class="recap">
+      <div class="recap-section">
+        <div class="recap-section-head">
+          <h3>Prestations</h3>
+          <button class="recap-edit">Modifier</button>
+        </div>
+        <div class="recap-tags">
+          <span class="recap-tag">Démonstration de Tango Argentin</span>
+          <span class="recap-tag">Initiation au Tango en groupe</span>
+        </div>
+      </div>
+      <div class="recap-section">
+        <div class="recap-section-head">
+          <h3>Événement</h3>
+          <button class="recap-edit">Modifier</button>
+        </div>
+        <div class="recap-row"><span class="key">Type</span><span class="val">Mariage</span></div>
+        <div class="recap-row"><span class="key">Date</span><span class="val">19 septembre 2026</span></div>
+        <div class="recap-row"><span class="key">Lieu</span><span class="val">Domaine de la Roseraie, 12 allée des Roses, 77000 Melun</span></div>
+        <div class="recap-row"><span class="key">Invités</span><span class="val">120</span></div>
+        <div class="recap-row"><span class="key">Budget</span><span class="val">1 000 à 2 500 €</span></div>
+      </div>
+      <div class="recap-section">
+        <div class="recap-section-head">
+          <h3>Contact</h3>
+          <button class="recap-edit">Modifier</button>
+        </div>
+        <div class="recap-row"><span class="key">Nom</span><span class="val">M. Thomas DUPONT</span></div>
+        <div class="recap-row"><span class="key">Email</span><span class="val">thomas.dupont@exemple.fr</span></div>
+        <div class="recap-row"><span class="key">Tél.</span><span class="val">06 12 34 56 78</span></div>
+      </div>
+    </div>
+
+    <div class="nav" style="justify-content:flex-end;">
+      <button class="btn btn-prev">← Retour</button>
+      <button class="btn btn-submit">Envoyer la demande ✓</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    Tango &amp; Vous — Événementiel ·
+    <a href="https://www.tangoetvous.com" target="_blank" rel="noopener">tangoetvous.com</a>
+  </div>
+
+</div>
+</body>
+</html>
