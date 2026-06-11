@@ -4956,6 +4956,10 @@ var _pendingSupprimes = new Set(); // IDs supprimés localement mais pas encore 
 var _pendingCoursInserts = {}; // email → entry : inserts locaux pas encore confirmés par la DB
 var _pendingSoranoPayé = {}; // email → bool : paiement_sorano en attente de confirmation DB
 var _vpPrefillIds = []; // IDs des inscriptions préchargées dans le formulaire Valider Paiement
+var _openElevesAcc = new Set();
+var _openEssaiAcc  = new Set();
+var _openStagesAcc = new Set();
+var _openYogaAcc   = new Set();
 function demarrerRealtime() {
   if (IS_DEMO || _pollTimer) return;
   // Polling toutes les 15s — fiable quelle que soit la source (Wix, autre appareil)
@@ -6336,6 +6340,34 @@ function handleAction(action, btn) {
         renderTab();
       })();
       break;
+    case 'toggle-acc-eleve':
+      (function(){
+        var k=btn.dataset.id||'';
+        if(_openElevesAcc.has(k))_openElevesAcc.delete(k);else _openElevesAcc.add(k);
+        renderTab();
+      })();
+      break;
+    case 'toggle-acc-essai':
+      (function(){
+        var k=btn.dataset.id||'';
+        if(_openEssaiAcc.has(k))_openEssaiAcc.delete(k);else _openEssaiAcc.add(k);
+        renderTab();
+      })();
+      break;
+    case 'toggle-acc-stage':
+      (function(){
+        var k=btn.dataset.id||'';
+        if(_openStagesAcc.has(k))_openStagesAcc.delete(k);else _openStagesAcc.add(k);
+        renderTab();
+      })();
+      break;
+    case 'toggle-acc-yoga':
+      (function(){
+        var k=btn.dataset.id||'';
+        if(_openYogaAcc.has(k))_openYogaAcc.delete(k);else _openYogaAcc.add(k);
+        renderTab();
+      })();
+      break;
     case 'toggle-accord-mil':
       (function(){
         var k = 'mil-'+(btn.dataset.idx||'0')+'-'+(btn.dataset.section||'');
@@ -7310,13 +7342,18 @@ function ficheEleveInscrit(e, borderStyle, grise, isDup) {
   var typeLbl={forfait:'Forfait',carte10:'Carte 10',carte:'Carte 10',unitaire:'À l\'unité'}[e.type]||e.type||'';
   var paiLbl=PAI_LBL[e.paiement]||e.paiement||'';
   var griseStyle=grise?'opacity:.38;filter:grayscale(1);':'';
+  var _ak=String(e.id||e.email||'');
+  var _ao=_openElevesAcc.has(_ak);
   return '<div class="point-row" style="'+(borderStyle||'')+griseStyle+'flex-wrap:wrap;align-items:center;gap:5px;padding:8px 0;">'
     +'<div style="flex:1;min-width:160px;">'
     +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+(isDup?_DUP_BADGE:'')+'</div>'
     +(e.partenaire?'<div class="point-sub">♥ '+e.partenaire+'</div>':'')
     +'</div>'
-    +'<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">'
+    +'<div style="display:flex;gap:4px;align-items:center;">'
     +'<span class="pill '+rcls+'">'+roleLbl+'</span>'
+    +'<button class="btn-point btn-ghost" data-action="toggle-acc-eleve" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
+    +'</div>'
+    +(_ao?'<div style="width:100%;display:flex;gap:4px;align-items:center;flex-wrap:wrap;padding:5px 0 2px;border-top:1px solid var(--border);margin-top:2px;">'
     +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
     +(e.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report '+(e.classesReportees||e.restants)+' cours</span>':'')
     +(typeLbl?'<span class="pill pill-ok" style="font-size:8px;">'+typeLbl+'</span>':'')
@@ -7324,7 +7361,8 @@ function ficheEleveInscrit(e, borderStyle, grise, isDup) {
     +(e.email?'<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;font-size:11px;">✉️</a>':'')
     +'<button class="btn-point btn-ghost" onclick="ouvrirChangementCours(\''+e.id+'\')" title="Changer de cours" style="font-size:11px;">✏️</button>'
     +'<button class="btn-point btn-ghost" onclick="supprimerEleve(\''+e.id+'\')" title="Supprimer l\'élève" style="font-size:11px;color:#ff6b6b;">🗑</button>'
-    +'</div></div>';
+    +'</div>':'')
+    +'</div>';
 }
 function ouvrirModalLierPartenaire(id) {
   var e = (adminData.coursTango||[]).find(function(x){return x.id===id;});
@@ -8031,19 +8069,25 @@ function renderEssai() {
         if(ctStatut==='inscrit') pastille='<span class="pill pill-ok" style="font-size:8px;padding:1px 5px;">Inscrit</span>';
         else if(ctStatut==='valide'||ctStatut==='attente_paiement') pastille='<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">att. paiem.</span>';
         else if(ctStatut==='demande') pastille='<span style="display:inline-block;background:#FFD600;color:#003399;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;border:2px solid #003399;white-space:nowrap;">DEM</span>';
-        return '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+(_dupSetConf.has(_dupKey(e))?_DUP_BADGE:'')+'</div>'
+        var _ak='ec_'+String(e.id||e.email||'');
+        var _ao=_openEssaiAcc.has(_ak);
+        return '<div class="point-row" style="flex-wrap:wrap;" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+(_dupSetConf.has(_dupKey(e))?_DUP_BADGE:'')+'</div>'
           +'<div class="point-sub">'+e.ville+(e.partenaire?' · <span style="color:#c0392b;">♥ '+e.partenaire+'</span>':'')+'</div></div>'
-          +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
-          +(e.presenceConfirmee===true?' <span title="A confirmé sa présence par email">👍</span>':'')
-          +pastille
+          +'<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
+          +'<button class="btn-point btn-ghost" data-action="toggle-acc-essai" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
+          +'</div>'
+          +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;justify-content:flex-end;">'
+          +(e.presenceConfirmee===true?'<span title="A confirmé sa présence par email">👍</span>':'')
+          +pastille
           +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
           +'<button class="btn-heart'+(e.interesse?' on':'')+'" data-action="toggle-interet" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'" title="Élève intéressant·e">'+(e.interesse?'❤️':'🤍')+'</button>'
           +'<button class="btn-point btn-pres'+(e.present===true?' on':e.present===false?' off':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':e.present===true?' off':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
           +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
           +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
-          +'</div></div>';
+          +'</div>':'')
+          +'</div>';
       };
       _groupCouples(conf).forEach(function(g){
         if(g.type==='couple'){
@@ -8059,18 +8103,24 @@ function renderEssai() {
         _groupCouples(attenteGrp).forEach(function(g){
           var _mkAttPtCard = function(e) {
             var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-            return '<div class="point-row" style="opacity:0.9;">'
+            var _ak='ea_'+String(e.id||e.email||'');
+            var _ao=_openEssaiAcc.has(_ak);
+            return '<div class="point-row" style="opacity:0.9;flex-wrap:wrap;">'
               +'<div style="flex:1;min-width:0;"><div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')+(_dupSetAtt.has(_dupKey(e))?_DUP_BADGE:'')+'</div>'
               +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
               +'</div>'
-              +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
+              +'<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
               +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
-              +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
               +'<span class="pill" style="font-size:8px;background:rgba(255,152,0,0.2);color:var(--warn-text);">attente</span>'
+              +'<button class="btn-point btn-ghost" data-action="toggle-acc-essai" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
+              +'</div>'
+              +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;justify-content:flex-end;">'
+              +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
               +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
               +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
               +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
-              +'</div></div>';
+              +'</div>':'')
+              +'</div>';
           };
           if(g.type==='couple') body+=_coupleWrap(_mkAttPtCard(g.persons[0])+_mkAttPtCard(g.persons[1]));
           else body+=_mkAttPtCard(g.person);
@@ -10137,18 +10187,30 @@ function renderStages() {
         ?'<span class="pill pill-warn" style="font-size:9px;">Attente</span>'
         :'<span class="pill pill-ok" style="font-size:9px;">Validé·e</span>';
       var confBadge = i.presenceConfirmee ? '<span class="pill pill-ok" style="font-size:8px;">👍</span>' : '';
-      return '<div class="card'+(i.attente?' hl-warn':'')+'"'+(noMargin?' style="margin-bottom:0;"':'')+' data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top">'
+      var _ak='st_'+(i.email||i.prenom+'_'+i.nom);
+      var _ao=_openStagesAcc.has(_ak);
+      var _cardStyle=noMargin?'margin-bottom:0;':'';
+      return '<div class="card'+(i.attente?' hl-warn':'')+'" style="'+_cardStyle+'" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top" style="margin-bottom:0;">'
         +'<div style="flex:1;min-width:0;">'
         +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
-        +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span>'+statPill+confBadge+'</div>'
-        +'<div class="card-sub" style="margin-top:3px;">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.montant?' · '+(i.montant)+'€':'')+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</div>'
+        +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span>'+statPill+'</div>'
         +'</div>'
-        +'<div style="display:flex;gap:4px;flex-shrink:0;">'
+        +'<div style="display:flex;gap:4px;flex-shrink:0;align-items:center;">'
+        +'<button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" data-action="toggle-acc-stage" data-id="'+_ak+'">'+(_ao?'▴':'▾')+'</button>'
+        +'</div>'
+        +'</div>'
+        +(_ao?'<div style="border-top:1px solid var(--border);padding-top:8px;margin-top:6px;">'
+        +'<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:6px;">'
+        +confBadge
+        +'<span class="card-sub" style="flex:1;">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.montant?' · '+(i.montant)+'€':'')+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</span>'
+        +'</div>'
+        +'<div style="display:flex;gap:4px;">'
         +(i.attente?'<button class="btn btn-ok" style="padding:4px 8px;font-size:11px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button>':'')
         +'<button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" data-action="editer-slots-stage" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✏️</button>'
         +'<button class="btn btn-err" style="padding:4px 8px;font-size:11px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="all">✕</button>'
         +'</div>'
-        +'</div></div>';
+        +'</div>':'')
+        +'</div>';
     }
     allSorted.forEach(function(g){
       if(g.type==='couple'){
@@ -12677,14 +12739,19 @@ function renderYogaEssai() {
       }
       // Deux sous-sections : Yin Yoga (yin + forfait) puis Hatha Yoga (hatha + forfait)
       function rowYoga(e) {
-        return '<div class="point-row">'
+        var _ak='yg_'+String(e.id||e.email||'');
+        var _ao=_openYogaAcc.has(_ak);
+        return '<div class="point-row" style="flex-wrap:wrap;">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
           +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','yoga')
           +(e.cours==='forfait'?'<span class="pill pill-info" style="font-size:8px;padding:1px 5px;">Forfait</span>':'')
           +'</div>'
           +'</div>'
-          +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;">'
+          +'<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
+          +'<button class="btn-point btn-ghost" data-action="toggle-acc-yoga" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
+          +'</div>'
+          +(_ao?'<div style="width:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;justify-content:flex-end;">'
           +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Conf.</span>':'')
           +(estDejaEleveYoga(e.email)
             ?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>'
@@ -12694,7 +12761,8 @@ function renderYogaEssai() {
           +'<button class="btn-point btn-abs'+(e.present===false?' on':(e.present===true?' off':''))+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
           +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai-yoga" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
           +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-yoga-inscr" data-date="'+date+'" data-email="'+e.email+'" title="Supprimer">✕</button>'
-          +'</div></div>';
+          +'</div>':'')
+          +'</div>';
       }
       var subHdrStyle = 'font-size:11px;font-weight:700;color:#a78bfa;padding:8px 0 4px;margin-top:4px;border-top:1px solid rgba(167,139,250,0.2);';
       var yin     = ins.filter(function(e){ return e.cours==='yin'||e.cours==='forfait'; });
