@@ -904,7 +904,7 @@ Si un champ a un `style=""` inline avec `font-size:15px`, la règle CSS `font-si
 | `inscription-cours.html` | ⚠️ À vérifier |
 | `essai-yoga.html` | ⚠️ À vérifier |
 | `stages-pwa.html` | ⚠️ À vérifier |
-| `cours-particuliers.html` | ⚠️ À vérifier |
+| `cours-particuliers.html` | ✅ Corrigé (16px, thème clair appliqué) |
 
 ### Pourquoi un fix en media query `(max-width: 640px)` peut échouer
 
