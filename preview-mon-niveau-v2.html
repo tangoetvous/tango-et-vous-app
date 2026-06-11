@@ -264,6 +264,14 @@ const GROUPS = [
 const ALL = GROUPS.flatMap(g => g.items.map(it => ({...it, gid:g.id, lvl:g.lvl})));
 const TOTAL = ALL.length; // 70
 
+function getVisibleLvls() {
+  if(selfLevel==='deb') return ['deb'];
+  if(selfLevel==='int') return ['deb','int'];
+  return ['deb','int','adv'];
+}
+function getVisibleItems() { return ALL.filter(it=>getVisibleLvls().includes(it.lvl)); }
+function getTotal() { return getVisibleItems().length; }
+
 /* ═══════════════════════════════ STATE ═══════════════════════════════ */
 
 let selfLevel = null;
@@ -347,7 +355,7 @@ function renderS1() {
     </div>
 
     <button class="btn-gold" id="btn-start" onclick="goScreen(2)">Commencer mon évaluation →</button>
-    <div class="note-sm" style="margin-top:10px;">70 séquences et notions · ~10 min · reprise possible à tout moment</div>
+    <div class="note-sm" style="margin-top:10px;">${selfLevel==='deb'?'20 séquences et notions · ~3 min':selfLevel==='int'?'42 séquences et notions · ~6 min':'70 séquences et notions · ~10 min'} · reprise possible à tout moment</div>
     ${Object.keys(answers).length > 0 ? `<button class="btn-ghost" style="width:100%;margin-top:10px;" onclick="if(confirm('Effacer toutes tes réponses ?')){answers={};selfLevel=null;saveLS();renderS1();}">↺ Recommencer à zéro</button>` : ''}
   `;
 
@@ -366,7 +374,8 @@ function renderS1() {
 /* ═══════════════════════════════ SCREEN 2 ═══════════════════════════════ */
 
 function getFilteredGroups() {
-  return GROUPS.map(g => ({
+  const visLvls = getVisibleLvls();
+  return GROUPS.filter(g => visLvls.includes(g.lvl)).map(g => ({
     ...g,
     items: g.items.filter(it => {
       if(activeFilter==='todo') return answers[it.id] === undefined;
@@ -387,11 +396,13 @@ function renderS2() {
 }
 
 function renderFilters() {
-  const done = Object.keys(answers).length;
-  const review = ALL.filter(it => answers[it.id]!==undefined && answers[it.id]<=2).length;
-  const todo = TOTAL - done;
+  const vis = getVisibleItems();
+  const total = getTotal();
+  const done = Object.keys(answers).filter(k=>vis.some(it=>it.id===+k)).length;
+  const review = vis.filter(it => answers[it.id]!==undefined && answers[it.id]<=2).length;
+  const todo = total - done;
   document.getElementById('filter-row').innerHTML = [
-    {f:'all',   lbl:`Tous (${TOTAL})`},
+    {f:'all',   lbl:`Tous (${total})`},
     {f:'todo',  lbl:`Non évalués (${todo})`},
     {f:'review',lbl:`À revoir (${review})`},
   ].map(c=>`<span class="fchip${activeFilter===c.f?' act':''}" data-f="${c.f}">${c.lbl}</span>`).join('');
@@ -486,29 +497,33 @@ function updateGroupCount(id) {
 }
 
 function updateFilterChips() {
-  const done = Object.keys(answers).length;
-  const review = ALL.filter(it=>answers[it.id]!==undefined&&answers[it.id]<=2).length;
-  const todo = TOTAL-done;
-  const map = {all:`Tous (${TOTAL})`,todo:`Non évalués (${todo})`,review:`À revoir (${review})`};
+  const vis = getVisibleItems();
+  const total = getTotal();
+  const done = Object.keys(answers).filter(k=>vis.some(it=>it.id===+k)).length;
+  const review = vis.filter(it=>answers[it.id]!==undefined&&answers[it.id]<=2).length;
+  const todo = total-done;
+  const map = {all:`Tous (${total})`,todo:`Non évalués (${todo})`,review:`À revoir (${review})`};
   document.querySelectorAll('[data-f]').forEach(c=>{ c.textContent = map[c.dataset.f]; });
 }
 
 function updateProg() {
-  const done = Object.keys(answers).length;
-  const pct  = Math.round(done/TOTAL*100);
-  document.getElementById('prog-txt').textContent = done+' / '+TOTAL+' évalués';
+  const vis   = getVisibleItems();
+  const total = getTotal();
+  const done  = Object.keys(answers).filter(k=>vis.some(it=>it.id===+k)).length;
+  const pct   = total ? Math.round(done/total*100) : 0;
+  document.getElementById('prog-txt').textContent = done+' / '+total+' évalués';
   document.getElementById('prog-fill').style.width = pct+'%';
   const btn = document.getElementById('btn-res');
   btn.disabled = done === 0;
-  btn.classList.toggle('complete', done >= TOTAL);
-  btn.textContent = done >= TOTAL ? '✓ Voir mes résultats →' : 'Voir mes résultats →';
+  btn.classList.toggle('complete', done >= total);
+  btn.textContent = done >= total ? '✓ Voir mes résultats →' : 'Voir mes résultats →';
 }
 
 /* ═══════════════════════════════ SCREEN 3 ═══════════════════════════════ */
 
 function computeStats() {
   const out = {};
-  ['deb','int','adv'].forEach(lvl => {
+  getVisibleLvls().forEach(lvl => {
     const items = ALL.filter(x=>x.lvl===lvl);
     const acq   = items.filter(x=>(answers[x.id]||0)>=3);
     const wip   = items.filter(x=>answers[x.id]===2);
@@ -523,13 +538,16 @@ function computeStats() {
 }
 
 function renderS3() {
-  const stats = computeStats();
-  const done  = Object.keys(answers).length;
+  const stats    = computeStats();
+  const visLvls  = getVisibleLvls();
+  const vis      = getVisibleItems();
+  const total    = getTotal();
+  const done     = Object.keys(answers).filter(k=>vis.some(it=>it.id===+k)).length;
 
-  // Estimate level
-  let est = 'deb';
-  if(stats.deb.pct>=60) est='int';
-  if(stats.deb.pct>=60 && stats.int.pct>=55) est='adv';
+  // Estimate level based on visible levels only
+  let est = visLvls[0];
+  if(visLvls.includes('int') && stats.deb && stats.deb.pct>=60) est='int';
+  if(visLvls.includes('adv') && stats.deb && stats.deb.pct>=60 && stats.int && stats.int.pct>=55) est='adv';
   const estLabel = {deb:'Débutant',int:'Intermédiaire',adv:'Avancé'}[est];
   const declLabel= {deb:'Débutant',int:'Intermédiaire',adv:'Avancé'}[selfLevel]||'non déclaré';
   const match = est===selfLevel;
@@ -539,8 +557,8 @@ function renderS3() {
     : (est<selfLevel||(!selfLevel)) ? 'Voici ta progression réelle — aucun jugement, c\'est là que tout se construit !'
     : 'Tu es peut-être plus avancé que tu ne le penses 😊';
 
-  // Focus level: first level not yet validated
-  const focus = ['deb','int','adv'].find(l=>stats[l].pct<80) || 'adv';
+  // Focus level: first visible level not yet validated
+  const focus = visLvls.find(l=>stats[l] && stats[l].pct<80) || visLvls[visLvls.length-1];
   const focusLabel = {deb:'🌱 Débutant',int:'💃 Intermédiaire',adv:'🔥 Avancé'}[focus];
 
   function barColor(p) { return p>=75?'var(--c3)':p>=45?'var(--c2)':'var(--c1)'; }
@@ -568,7 +586,7 @@ function renderS3() {
   }
 
   document.getElementById('s3-pane').innerHTML = `
-    ${done<TOTAL ? `<div class="incomplete-warn">⚠️ ${TOTAL-done} item${TOTAL-done>1?'s':''} non évalué${TOTAL-done>1?'s':''} — résultats partiels. <span onclick="goScreen(2)" style="color:var(--gold);cursor:pointer;">Compléter →</span></div>` : ''}
+    ${done<total ? `<div class="incomplete-warn">⚠️ ${total-done} item${total-done>1?'s':''} non évalué${total-done>1?'s':''} — résultats partiels. <span onclick="goScreen(2)" style="color:var(--gold);cursor:pointer;">Compléter →</span></div>` : ''}
 
     <div class="res-hero">
       <div class="res-lbl">Ton niveau estimé</div>
@@ -579,7 +597,7 @@ function renderS3() {
       </div>
     </div>
 
-    ${['deb','int','adv'].map(l=>{
+    ${visLvls.map(l=>{
       const {pct,acq,items,wip,nok} = stats[l];
       const lbl = {deb:'🌱 Débutant',int:'💃 Intermédiaire',adv:'🔥 Avancé'}[l];
       return `<div class="res-card">
@@ -619,7 +637,10 @@ if(Object.keys(answers).length>0 && currentScreen===1){
   // Show progress badge on start button once rendered
   setTimeout(()=>{
     const b = document.getElementById('btn-start');
-    if(b) b.textContent = `Continuer mon évaluation (${Object.keys(answers).length}/70) →`;
+    const vis = getVisibleItems();
+    const done = Object.keys(answers).filter(k=>vis.some(it=>it.id===+k)).length;
+    const tot  = getTotal();
+    if(b) b.textContent = `Continuer mon évaluation (${done}/${tot}) →`;
   }, 0);
 }
 </script>
