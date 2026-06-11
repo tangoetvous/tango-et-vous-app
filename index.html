@@ -1778,6 +1778,8 @@
   let _nivFilter = 'all';  // 'all' | 'todo' | 'review'
   let _nivScreen = 1;
   let _nivLoaded = false;
+  let _nivVideos = {};
+  let _nivVideosLoaded = false;
 
   function _nivEmail() { return ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase(); }
   function _nivSave() {
@@ -1805,6 +1807,16 @@
 
   function renderNiveau() {
     if (!_nivLoaded) _nivLoad();
+    if (!_nivVideosLoaded) {
+      _nivVideosLoaded = true;
+      TEV.client.from('parametres').select('valeur').eq('cle','tev_niv_videos').maybeSingle()
+        .then(function(res){
+          if (res && res.data && res.data.valeur && typeof res.data.valeur==='object') {
+            _nivVideos = res.data.valeur;
+            if (_nivScreen===2) _nivRenderItems();
+          }
+        }).catch(function(){});
+    }
     const pane = $('niveau-pane');
     if (!pane) return;
     pane.onclick = _nivOnClick;
@@ -1848,8 +1860,28 @@
       more.style.display='none';
       return;
     }
+    const vid = e.target.closest('[data-niv-vid]');
+    if (vid) { _nivOpenVideo(+vid.dataset.nivVid); return; }
     const cta = e.target.closest('[data-niv-cta]');
     if (cta) { switchTab('cours-particuliers'); return; }
+  }
+
+  function _nivOpenVideo(id) {
+    const url = _nivVideos[id];
+    if (!url) return;
+    const it = _NIV_ALL.find(x=>x.id===id);
+    const existing = document.getElementById('niv-vid-modal');
+    if (existing) existing.remove();
+    const m = document.createElement('div');
+    m.id = 'niv-vid-modal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+    m.innerHTML = '<div style="max-width:560px;width:100%;">'
+      +'<div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:12px;text-align:center;">'+(it?it.n:'')+'</div>'
+      +'<video src="'+url+'" autoplay controls playsinline style="width:100%;border-radius:10px;background:#000;max-height:70vh;display:block;"></video>'
+      +'<button style="display:block;width:100%;margin-top:12px;background:transparent;border:1px solid rgba(255,255,255,.2);color:#aaa;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;" data-niv-vid-close="1">✕ Fermer</button>'
+      +'</div>';
+    m.addEventListener('click', function(e2){ if(e2.target===m||e2.target.dataset.nivVidClose) m.remove(); });
+    document.body.appendChild(m);
   }
 
   /* ── Écran 1 — accueil ── */
@@ -1954,8 +1986,9 @@
     const sel = _nivAns[it.id];
     const done = sel !== undefined;
     const dots = _NIV_ST.map((s,i)=>`<div class="niv-seg-dot${sel===i?' niv-d'+i:''}" data-niv-id="${it.id}" data-niv-st="${i}">${s.ico}</div>`).join('');
+    const vidBtn = _nivVideos[it.id] ? `<button class="niv-vid-btn" data-niv-vid="${it.id}" aria-label="Voir la vidéo">▶</button>` : '';
     return `<div class="niv-item-row${done?' done':''}" id="niv-ir-${it.id}">
-      <div class="niv-item-top"><span class="niv-item-name">${it.n}</span>${_nivAbBadge(it.ab)}</div>
+      <div class="niv-item-top"><span class="niv-item-name">${it.n}</span>${_nivAbBadge(it.ab)}${vidBtn}</div>
       <div class="niv-seg">${dots}</div>
       <div class="niv-seg-lbl" style="color:${done?_NIV_ST[sel].col:'transparent'};">${done?_NIV_ST[sel].name:''}</div>
     </div>`;
@@ -5905,6 +5938,7 @@ a{color:var(--gold);text-decoration:none;}
 .niv-btn-gold{width:100%;background:var(--gold);color:#000;border:none;padding:15px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer;font-family:inherit;}
 .niv-btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border);padding:12px 16px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
 .niv-note-sm{font-size:11px;color:var(--text-faint);text-align:center;line-height:1.7;padding:6px 0;}
+.niv-vid-btn{background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.35);color:var(--gold);border-radius:50%;width:20px;height:20px;font-size:9px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:5px;padding:0;line-height:1;vertical-align:middle;}
 .niv-prog-sticky{position:sticky;top:52px;z-index:50;background:#0d0d0d;border-bottom:1px solid var(--border);padding:9px 16px 11px;margin:0 -16px 12px;}
 .niv-prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
 .niv-prog-count{font-size:11px;color:var(--text-dim);}

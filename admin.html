@@ -3248,23 +3248,86 @@ function renderParametres() {
 // ── Section Fonctionnalités dans Paramètres ──────────────────
 // Flags stockés dans Supabase `parametres` (clé autonome, mirrorée en
 // localStorage par chargerParamsRemote). Lus par l'espace élève au login.
+var _nivVidExpanded = false;
+var _NIV_VID_REF = [
+  {g:'🌱 Vocabulaire Débutant', items:[
+    {id:1,n:'Baldosa'},{id:2,n:'Rebonds'},{id:3,n:'Marches'},{id:4,n:'Huit arrière'},{id:5,n:'Huit avant'},
+    {id:6,n:'Sandwich'},{id:7,n:'Paradas'},{id:8,n:'Salida'},{id:9,n:'Marche circulaire'},{id:10,n:'Huit coupé'},
+    {id:11,n:'Structure du tour'},{id:12,n:'Medialuna'},{id:13,n:'Tour simple'},{id:14,n:'Système croisé et marches'},
+    {id:15,n:'Salida 40 (en système croisé)'},{id:16,n:'Marche en tournant'},{id:17,n:'Miroir'},
+  ]},
+  {g:'🧭 Notions Débutant', items:[
+    {id:18,n:'Savoir aller lentement, normalement, rapidement'},{id:19,n:'Notions de circulation dans le bal'},{id:20,n:'Abrazo intègre pendant la danse'},
+  ]},
+  {g:'💃 Vocabulaire Intermédiaire', items:[
+    {id:21,n:'Marche côte à côte'},{id:22,n:'½ tour'},{id:23,n:'Huit sans déplacement'},{id:24,n:"Sacada de l'homme"},
+    {id:25,n:'Tour avec quebrada'},{id:26,n:'Tour avec sacadas'},{id:27,n:'Tour milonguero'},{id:28,n:'Barridas'},
+    {id:29,n:'Calesita'},{id:30,n:'Medialuna avec roulo'},{id:31,n:'Roulo'},{id:32,n:'Lapiz + parada'},
+    {id:33,n:'Gancho de la femme pour le bal'},{id:34,n:'Boleo arrière au sol'},{id:71,n:'Fioritures'},
+  ]},
+  {g:'🧭 Notions Intermédiaires', items:[
+    {id:37,n:'Notion de musicalité de vals'},{id:38,n:'Notion de musicalité de milonga'},{id:39,n:'Notion de temps et contretemps'},
+    {id:40,n:'Gérer le sens du bal'},{id:41,n:'Improviser dans le bal'},{id:42,n:'Abrazo fermé'},
+  ]},
+  {g:'🔥 Vocabulaire Avancé', items:[
+    {id:43,n:'Bloqueo'},{id:44,n:'Tour avec sacadas'},{id:45,n:'Sacada de la femme'},{id:46,n:'Ocho milonguero'},
+    {id:47,n:'Tour milonguero en cadena'},{id:48,n:'Planeo'},{id:49,n:'Enrosque'},{id:50,n:'Lapiz'},
+    {id:51,n:'Gancho'},{id:52,n:'Boleos circulaires'},{id:53,n:'Boleos en ligne'},{id:54,n:'Altération'},
+    {id:55,n:"Boleos arrière et avant en l'air"},{id:56,n:'Colgada'},{id:57,n:'Volcada'},{id:58,n:'Aguja'},
+    {id:59,n:'Croisés forcés'},{id:60,n:'Patadas'},{id:61,n:'Chilena'},{id:62,n:"Pivot sur 2 appuis de l'homme"},
+    {id:63,n:"Pivot sur 2 appuis de la femme"},{id:64,n:'Séquences rapides'},{id:65,n:'Séquences lentes'},
+    {id:72,n:'Vocabulaire de milonga'},{id:73,n:'Pas de vals'},
+  ]},
+  {g:'🧭 Notions Avancées', items:[
+    {id:66,n:"Construction musicale en fonction de l'orchestre"},{id:67,n:'Contretemps, dobletiempo et syncope'},
+    {id:68,n:"Gestion de l'espace réduit"},{id:69,n:"Gérer l'abrazo en fonction des séquences"},
+    {id:70,n:'Je crée mes propres séquences'},{id:74,n:'Je choisis comment je veux danser, mon style'},
+  ]},
+];
+
 function _renderFeaturesSection() {
   var nivOn = false;
   try { var v = JSON.parse(localStorage.getItem('tev_feature_mon_niveau')||'{}'); nivOn = !!v.enabled; } catch(e){}
+  var videos = {};
+  try { videos = JSON.parse(localStorage.getItem('tev_niv_videos')||'{}'); } catch(e){}
+  var nbVids = Object.keys(videos).filter(function(k){ return !!videos[k]; }).length;
+  var iS = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 7px;font-size:11px;';
   var h = '<div style="margin-top:24px;">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Fonctionnalités</div>'
     +'<div class="card" style="padding:14px 16px;">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">'
     +'<div>'
     +'<div style="font-size:13px;font-weight:600;color:var(--text);">📈 Mon niveau · Test</div>'
-    +'<div style="font-size:11px;color:var(--dim);margin-top:3px;line-height:1.5;">Rubrique d\'auto-évaluation (70 séquences et notions) dans l\'espace élève. '
+    +'<div style="font-size:11px;color:var(--dim);margin-top:3px;line-height:1.5;">Rubrique d\'auto-évaluation (72 séquences et notions) dans l\'espace élève. '
     +(nivOn ? 'Visible dans le menu élève.' : 'Masquée — les élèves ne la voient pas.')+'</div>'
     +'</div>'
     +'<button class="btn '+(nivOn?'btn-gold':'btn-ghost')+'" data-action="toggle-feature-mon-niveau" data-etat="'+(nivOn?'1':'0')+'"'
     +' style="font-size:12px;flex-shrink:0;min-width:90px;">'+(nivOn?'✓ Activée':'Désactivée')+'</button>'
     +'</div>'
-    +'</div>'
+    // Section vidéos
+    +'<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;display:flex;align-items:center;justify-content:space-between;">'
+    +'<div style="font-size:12px;font-weight:600;color:var(--text);">📹 Vidéos pédagogiques'+(nbVids>0?' <span style="font-weight:400;color:var(--dim);">('+nbVids+'/72)</span>':'')+'</div>'
+    +'<button class="btn btn-ghost" data-action="toggle-niv-vid-section" style="font-size:11px;padding:4px 10px;">'+(_nivVidExpanded?'▲ Réduire':'▼ Gérer')+'</button>'
     +'</div>';
+  if (_nivVidExpanded) {
+    h += '<div style="margin-top:10px;">'
+      +'<div style="font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.5;">Collez l\'URL Cloudinary de la vidéo pour chaque item. Laissez vide pour désactiver.</div>';
+    _NIV_VID_REF.forEach(function(group) {
+      h += '<div style="font-size:11px;font-weight:700;color:var(--gold);margin:10px 0 5px;letter-spacing:0.5px;">'+group.g+'</div>';
+      group.items.forEach(function(it) {
+        var val = (videos[it.id]||'').replace(/"/g,'&quot;');
+        h += '<div style="display:grid;grid-template-columns:160px 1fr 16px;align-items:center;gap:6px;margin-bottom:4px;">'
+          +'<span style="font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+it.n+'">'+it.n+'</span>'
+          +'<input type="url" class="niv-vid-inp" data-id="'+it.id+'" value="'+val+'" placeholder="https://res.cloudinary.com/…" style="'+iS+'">'
+          +'<span style="color:'+(val?'#4caf50':'transparent')+';">▶</span>'
+          +'</div>';
+      });
+    });
+    h += '<div class="btn-row" style="margin-top:12px;">'
+      +'<button class="btn btn-gold" data-action="sauver-niv-videos" style="font-size:12px;">💾 Enregistrer les vidéos</button>'
+      +'</div></div>';
+  }
+  h += '</div></div>';
   return h;
 }
 
@@ -6748,6 +6811,40 @@ function handleAction(action, btn) {
       break;
     case 'go-to-params':
       switchTab('tarifs');
+      break;
+    case 'toggle-niv-vid-section':
+      (function() {
+        _nivVidExpanded = !_nivVidExpanded;
+        if (_nivVidExpanded && !IS_DEMO) {
+          TEV.client.from('parametres').select('valeur').eq('cle','tev_niv_videos').maybeSingle()
+            .then(function(res){
+              if (res && res.data && res.data.valeur) {
+                try { localStorage.setItem('tev_niv_videos', JSON.stringify(res.data.valeur)); } catch(e){}
+              }
+              renderTab();
+            }).catch(function(){ renderTab(); });
+        } else {
+          renderTab();
+        }
+      })();
+      break;
+    case 'sauver-niv-videos':
+      (function() {
+        var data = {};
+        document.querySelectorAll('.niv-vid-inp').forEach(function(inp) {
+          var val = (inp.value||'').trim();
+          if (val) data[inp.dataset.id] = val;
+        });
+        try { localStorage.setItem('tev_niv_videos', JSON.stringify(data)); } catch(e){}
+        if (!IS_DEMO) {
+          Promise.resolve(TEV.setParam('tev_niv_videos', data))
+            .then(function(res){ afficherToast(res&&res.ok===false ? '⚠️ Erreur Supabase' : '✓ Vidéos enregistrées'); })
+            .catch(function(){ afficherToast('⚠️ Erreur Supabase'); });
+        } else {
+          afficherToast('✓ Vidéos enregistrées');
+        }
+        renderTab();
+      })();
       break;
     case 'toggle-feature-mon-niveau':
       (function() {
