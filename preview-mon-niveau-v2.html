@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mon niveau · Test — Preview interactif</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600;700&display=swap"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#D4AF37;
+  --bg:#0a0a0a;--s1:#111;--s2:#181818;--s3:#1f1f1f;
+  --border:#2a2a2a;--text:#fff;--dim:#888;--faint:#555;
+  --r:14px;
+  --font-d:'Cormorant Garamond',Georgia,serif;
+  --font-b:'Montserrat',sans-serif;
+  --c0:#6b7280;--c1:#ef5350;--c2:#ffa726;--c3:#66bb6a;--c4:#42a5f5;--c5:#D4AF37;
+}
+html,body{height:100%;-webkit-text-size-adjust:100%;}
+body{font-family:var(--font-b);font-size:15px;color:var(--text);background:var(--bg);}
+#app{max-width:520px;margin:0 auto;min-height:100vh;}
+.screen{display:none;padding-bottom:80px;}
+.screen.active{display:block;}
+
+/* ── Banner ── */
+.preview-banner{background:#1a1300;border-bottom:1px solid #4a3600;padding:7px 14px;font-size:11px;color:#c8a84a;text-align:center;letter-spacing:.05em;}
+
+/* ── Header ── */
+.hdr{position:sticky;top:0;z-index:100;background:#000;border-bottom:1px solid var(--border);padding:13px 18px;display:flex;align-items:center;gap:12px;}
+.hdr-back{font-size:20px;cursor:pointer;color:var(--gold);flex-shrink:0;line-height:1;padding:0 4px;}
+.hdr-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#fff;font-weight:600;flex:1;}
+.hdr-logo{font-family:var(--font-d);font-size:17px;letter-spacing:3px;color:var(--gold);}
+
+/* ── Progress sticky (screen 2) ── */
+.prog-sticky{position:sticky;top:49px;z-index:90;background:#0d0d0d;border-bottom:1px solid var(--border);padding:9px 16px 11px;}
+.prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.prog-count{font-size:11px;color:var(--dim);}
+.btn-res{font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px solid var(--gold);color:var(--gold);background:transparent;cursor:pointer;font-family:var(--font-b);transition:all .2s;}
+.btn-res:disabled{opacity:.35;cursor:default;}
+.btn-res.complete{background:var(--gold);color:#000;}
+.prog-track{height:5px;background:var(--s3);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,#8a6500,var(--gold));border-radius:3px;transition:width .3s ease;}
+
+.pane{padding:16px;}
+
+/* ════ SCREEN 1 ════ */
+.intro-card{background:linear-gradient(135deg,#16120a 0%,#241c08 100%);border:1.5px solid var(--gold);border-radius:var(--r);padding:18px 20px;margin-bottom:16px;}
+.intro-title{font-family:var(--font-d);font-size:24px;font-weight:300;color:var(--gold);letter-spacing:1px;margin-bottom:8px;}
+.intro-txt{font-size:13px;color:#d8cfb8;line-height:1.75;}
+.sec-label{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);margin:4px 2px 10px;font-weight:600;}
+.self-btns{display:flex;gap:8px;margin-bottom:18px;}
+.lvl-btn{flex:1;background:var(--s2);border:1.5px solid var(--border);border-radius:12px;padding:12px 4px;text-align:center;cursor:pointer;color:var(--dim);font-size:11px;font-weight:700;font-family:var(--font-b);display:flex;flex-direction:column;gap:4px;align-items:center;transition:all .15s;}
+.lvl-btn .ico{font-size:22px;}
+.lvl-btn.sel{border-color:var(--gold);background:#1f1a08;color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.18);}
+.legend-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:14px;}
+.leg-row{display:flex;align-items:flex-start;gap:11px;padding:8px 0;border-bottom:1px solid #1d1d1d;}
+.leg-row:last-child{border-bottom:none;}
+.leg-dot{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid;}
+.leg-name{font-size:12px;font-weight:700;margin-bottom:1px;}
+.leg-desc{font-size:11px;color:var(--dim);line-height:1.5;}
+.abrazo-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;}
+.ab-chip{font-size:11px;padding:5px 11px;border-radius:20px;background:var(--s2);border:1px solid var(--border);color:#ccc;}
+.ab-chip b{color:var(--gold);}
+.btn-gold{width:100%;background:var(--gold);color:#000;border:none;padding:15px;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-b);letter-spacing:1px;cursor:pointer;}
+.btn-ghost{background:transparent;color:var(--dim);border:1px solid var(--border);padding:12px 16px;border-radius:10px;font-size:12px;font-weight:600;font-family:var(--font-b);cursor:pointer;}
+.note-sm{font-size:11px;color:var(--faint);text-align:center;line-height:1.7;padding:6px 0;}
+
+/* ════ SCREEN 2 ════ */
+.filter-row{display:flex;gap:7px;margin-bottom:12px;overflow-x:auto;padding-bottom:3px;-webkit-overflow-scrolling:touch;}
+.fchip{font-size:11px;padding:5px 13px;border-radius:20px;border:1px solid var(--border);color:var(--dim);background:var(--s2);cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:var(--font-b);font-weight:600;}
+.fchip.act{background:var(--s1);border-color:var(--gold);color:var(--gold);}
+.grp-hdr{display:flex;align-items:center;justify-content:space-between;padding:15px 0 8px;}
+.grp-name{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;}
+.grp-count{font-size:10px;color:var(--dim);}
+.grp-count.full{color:var(--c3);}
+.item-row{background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:11px 13px;margin-bottom:7px;transition:border-color .2s;}
+.item-row.done{border-color:#2a3020;}
+.item-top{display:flex;align-items:center;gap:7px;margin-bottom:9px;}
+.item-name{font-size:13px;font-weight:600;flex:1;line-height:1.3;}
+.badge-ab{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0;letter-spacing:.5px;}
+.ab-O{background:#0d2538;color:#64b5f6;border:1px solid #1e4a6e;}
+.ab-F{background:#2d1430;color:#ce93d8;border:1px solid #5e2a66;}
+.ab-OF{background:#10261c;color:#81c784;border:1px solid #2a5e3e;}
+.seg{display:flex;gap:4px;}
+.seg-dot{flex:1;height:32px;border-radius:7px;background:var(--s3);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;color:var(--faint);transition:all .12s;-webkit-tap-highlight-color:transparent;user-select:none;}
+.seg-dot:active{transform:scale(.9);}
+.d0{background:#1c1c1f;border-color:var(--c0)!important;color:var(--c0)!important;font-weight:700;}
+.d1{background:#2a0f0e;border-color:var(--c1)!important;color:var(--c1)!important;font-weight:700;}
+.d2{background:#241606;border-color:var(--c2)!important;color:var(--c2)!important;font-weight:700;}
+.d3{background:#10261c;border-color:var(--c3)!important;color:var(--c3)!important;font-weight:700;}
+.d4{background:#0d2538;border-color:var(--c4)!important;color:var(--c4)!important;font-weight:700;}
+.d5{background:#1f1800;border-color:var(--c5)!important;color:var(--c5)!important;font-weight:700;}
+.seg-lbl{margin-top:5px;font-size:10px;font-weight:700;text-align:center;min-height:14px;transition:color .15s;}
+.empty-filter{text-align:center;padding:32px 0;color:var(--dim);font-size:13px;}
+
+/* ════ SCREEN 3 ════ */
+.res-hero{background:linear-gradient(135deg,#16120a 0%,#241c08 100%);border:1.5px solid var(--gold);border-radius:var(--r);padding:20px;text-align:center;margin-bottom:14px;}
+.res-lbl{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#b8a268;margin-bottom:6px;}
+.res-lvl{font-family:var(--font-d);font-size:36px;font-weight:400;color:var(--gold);letter-spacing:2px;}
+.res-sub{font-size:12px;color:#d8cfb8;margin-top:8px;line-height:1.65;}
+.res-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:14px 15px;margin-bottom:8px;}
+.res-card-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;}
+.res-card-name{font-size:13px;font-weight:700;}
+.res-card-pct{font-family:var(--font-d);font-size:22px;color:var(--gold);}
+.res-bar{height:6px;background:var(--s3);border-radius:3px;overflow:hidden;margin-bottom:5px;}
+.res-bar-f{height:100%;border-radius:3px;transition:width .6s ease;}
+.res-sub2{font-size:11px;color:var(--dim);}
+.gap-card{background:var(--s1);border:1px solid #4a3a00;border-radius:var(--r);padding:15px;margin:12px 0;}
+.gap-title{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px;}
+.gap-row{display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid #1d1d1d;font-size:12px;}
+.gap-row:last-child{border-bottom:none;}
+.gap-badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:9px;flex-shrink:0;letter-spacing:.3px;}
+.gap-name{flex:1;line-height:1.35;}
+.gap-more{font-size:11px;color:var(--gold);cursor:pointer;padding:5px 0;}
+.cta-cp{background:linear-gradient(135deg,#1a1030 0%,#2d1b5e 100%);border:1.5px solid #a78bfa;border-radius:var(--r);padding:18px;text-align:center;margin:14px 0 8px;}
+.cta-txt{font-size:13px;color:#e2d9f8;line-height:1.7;margin-bottom:13px;}
+.cta-btn{display:inline-block;background:#7c5cd6;color:#fff;border:none;padding:13px 24px;border-radius:10px;font-size:13px;font-weight:700;font-family:var(--font-b);cursor:pointer;text-decoration:none;}
+.incomplete-warn{background:var(--s2);border:1px solid #4a3a00;border-radius:10px;padding:12px 14px;font-size:12px;color:#b8a268;margin-bottom:14px;}
+.res-actions{display:flex;gap:10px;margin-top:14px;}
+.res-actions .btn-ghost{flex:1;padding:12px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══════ SCREEN 1 ══════ -->
+<div class="screen active" id="s1">
+  <div class="preview-banner">🎨 Preview interactif — Mon niveau · Test · tes réponses sont sauvegardées localement</div>
+  <div class="hdr">
+    <div class="hdr-logo">T &amp; V</div>
+    <div style="flex:1;text-align:right;font-size:10px;letter-spacing:2px;color:#fff;text-transform:uppercase;">Mon niveau · Test</div>
+  </div>
+  <div class="pane" id="s1-pane"></div>
+</div>
+
+<!-- ══════ SCREEN 2 ══════ -->
+<div class="screen" id="s2">
+  <div class="hdr">
+    <span class="hdr-back" onclick="goScreen(1)">←</span>
+    <div class="hdr-title">Mon niveau · Test</div>
+  </div>
+  <div class="prog-sticky">
+    <div class="prog-top">
+      <span id="prog-txt" class="prog-count">0 / 70 évalués</span>
+      <button class="btn-res" id="btn-res" onclick="goScreen(3)" disabled>Voir mes résultats →</button>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <div class="pane">
+    <div class="filter-row" id="filter-row"></div>
+    <div id="items-wrap"></div>
+    <div class="note-sm" style="padding:20px 0 4px;">↑ Remonte pour voir la barre de progression</div>
+  </div>
+</div>
+
+<!-- ══════ SCREEN 3 ══════ -->
+<div class="screen" id="s3">
+  <div class="hdr">
+    <span class="hdr-back" onclick="goScreen(2)">←</span>
+    <div class="hdr-title">Mes résultats</div>
+  </div>
+  <div class="pane" id="s3-pane"></div>
+</div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════ DATA ═══════════════════════════════ */
+
+const ST = [
+  {ico:'?',  name:'Inconnu',              desc:'Tu ne sais absolument pas ce que c\'est.',                              col:'#6b7280'},
+  {ico:'✗',  name:'Non acquis',           desc:'Tu ne connais pas bien cette séquence ou notion, ou tu l\'as oubliée.', col:'#ef5350'},
+  {ico:'~',  name:'En cours',             desc:'Tu connais, mais tu ne sais pas encore bien le faire.',                 col:'#ffa726'},
+  {ico:'✓',  name:'Acquis',               desc:'Tu connais et tu sais l\'exécuter.',                                   col:'#66bb6a'},
+  {ico:'★',  name:'Incorporé',            desc:'Tu peux l\'exécuter rien qu\'en pensant à son nom.',                   col:'#42a5f5'},
+  {ico:'🕺', name:'En mode tanguero',     desc:'Tu joues avec — spatialement, musicalement — tu improvises avec facilité.', col:'#D4AF37'},
+];
+
+const GROUPS = [
+  { id:'vd', lvl:'deb', label:'🌱 Vocabulaire Débutant', items:[
+    {id:1,  n:'Baldosa',                         ab:'F',  v:1},
+    {id:2,  n:'Rebonds',                         ab:'F',  v:1},
+    {id:3,  n:'Marches',                         ab:'F',  v:1},
+    {id:4,  n:'Huit arrière',                    ab:'F',  v:1},
+    {id:5,  n:'Huit avant',                      ab:'F',  v:1},
+    {id:6,  n:'Sandwich',                        ab:'F',  v:1},
+    {id:7,  n:'Paradas',                         ab:'F',  v:1},
+    {id:8,  n:'Salida',                          ab:'F',  v:1},
+    {id:9,  n:'Marche circulaire',               ab:'F',  v:1},
+    {id:10, n:'Huit coupé',                      ab:'F',  v:1},
+    {id:11, n:'Structure du tour',               ab:'OF', v:1},
+    {id:12, n:'Medialuna',                       ab:'O',  v:0},
+    {id:13, n:'Tour milonguero débutant',        ab:'F',  v:1},
+    {id:14, n:'Système croisé et marches',       ab:'F',  v:1},
+    {id:15, n:'Salida 40',                       ab:'F',  v:1},
+    {id:16, n:'Marche en tournant',              ab:'F',  v:1},
+    {id:17, n:'Miroir',                          ab:'OF', v:0},
+  ]},
+  { id:'nd', lvl:'deb', label:'🧭 Notions Débutant', items:[
+    {id:18, n:'Savoir aller lentement, normalement, rapidement', ab:null, v:0},
+    {id:19, n:'Notions de circulation dans le bal',              ab:null, v:0},
+    {id:20, n:'Abrazo intègre pendant la danse',                 ab:null, v:0},
+  ]},
+  { id:'vi', lvl:'int', label:'💃 Vocabulaire Intermédiaire', items:[
+    {id:21, n:'Marche côte à côte',              ab:'O',  v:1},
+    {id:22, n:'½ tour',                          ab:'O',  v:0},
+    {id:23, n:'Huit sans déplacement',           ab:'F',  v:0},
+    {id:24, n:'Sacada de l\'homme',              ab:'OF', v:1},
+    {id:25, n:'Tour avec quebrada',              ab:'F',  v:1},
+    {id:26, n:'Tour avec sacadas',               ab:'OF', v:1},
+    {id:27, n:'Tour milonguero',                 ab:'F',  v:1},
+    {id:28, n:'Barridas',                        ab:'OF', v:1},
+    {id:29, n:'Calesita',                        ab:'F',  v:0},
+    {id:30, n:'Medialuna',                       ab:'O',  v:0},
+    {id:31, n:'Roulo',                           ab:'O',  v:1},
+    {id:32, n:'Lapiz + parada',                  ab:'O',  v:0},
+    {id:33, n:'Gancho de la femme pour le bal',  ab:'F',  v:1},
+    {id:34, n:'Boleo arrière au sol',            ab:'F',  v:1},
+    {id:35, n:'Pas de milonga',                  ab:'F',  v:1},
+    {id:36, n:'Pas de vals',                     ab:'F',  v:1},
+  ]},
+  { id:'ni', lvl:'int', label:'🧭 Notions Intermédiaires', items:[
+    {id:37, n:'Notion de musicalité de vals',           ab:null, v:0},
+    {id:38, n:'Notion de musicalité de milonga',        ab:null, v:0},
+    {id:39, n:'Notion de temps et contretemps',         ab:null, v:0},
+    {id:40, n:'Gérer le sens du bal',                   ab:null, v:0},
+    {id:41, n:'Improviser dans le bal',                 ab:null, v:0},
+    {id:42, n:'Abrazo fermé',                           ab:'F',  v:0},
+  ]},
+  { id:'va', lvl:'adv', label:'🔥 Vocabulaire Avancé', items:[
+    {id:43, n:'Bloqueo',                                     ab:'F',  v:0},
+    {id:44, n:'Tour avec sacadas',                           ab:null, v:0},
+    {id:45, n:'Sacada de la femme',                          ab:'OF', v:0},
+    {id:46, n:'Ocho milonguero',                             ab:'F',  v:0},
+    {id:47, n:'Tour milonguero (avancé)',                    ab:'F',  v:0},
+    {id:48, n:'Planeo',                                      ab:'O',  v:0},
+    {id:49, n:'Enrosque',                                    ab:'OF', v:0},
+    {id:50, n:'Lapiz',                                       ab:'O',  v:0},
+    {id:51, n:'Gancho',                                      ab:'O',  v:0},
+    {id:52, n:'Boleos circulaires',                          ab:'OF', v:0},
+    {id:53, n:'Boleos en ligne',                             ab:'O',  v:0},
+    {id:54, n:'Altération',                                  ab:'OF', v:0},
+    {id:55, n:'Boleos arrière et avant en l\'air',           ab:'OF', v:0},
+    {id:56, n:'Colgada',                                     ab:'OF', v:0},
+    {id:57, n:'Volcada',                                     ab:'F',  v:0},
+    {id:58, n:'Aguja',                                       ab:'O',  v:0},
+    {id:59, n:'Croisés forcés',                              ab:'OF', v:0},
+    {id:60, n:'Patadas',                                     ab:'O',  v:0},
+    {id:61, n:'Chilena',                                     ab:'O',  v:0},
+    {id:62, n:'Pivot sur 2 appuis de l\'homme',              ab:'O',  v:0},
+    {id:63, n:'Pivot sur 2 appuis de la femme',              ab:'OF', v:0},
+    {id:64, n:'Séquences rapides',                           ab:null, v:0},
+    {id:65, n:'Séquences lentes',                            ab:null, v:0},
+  ]},
+  { id:'na', lvl:'adv', label:'🧭 Notions Avancées', items:[
+    {id:66, n:'Construction musicale en fonction de l\'orchestre', ab:null, v:0},
+    {id:67, n:'Contretemps, dobletiempo et syncope',               ab:null, v:0},
+    {id:68, n:'Gestion de l\'espace réduit',                       ab:null, v:0},
+    {id:69, n:'Gérer l\'abrazo en fonction des séquences',         ab:null, v:0},
+    {id:70, n:'Je crée mes propres séquences',                     ab:null, v:0},
+  ]},
+];
+
+const ALL = GROUPS.flatMap(g => g.items.map(it => ({...it, gid:g.id, lvl:g.lvl})));
+const TOTAL = ALL.length; // 70
+
+/* ═══════════════════════════════ STATE ═══════════════════════════════ */
+
+let selfLevel = null;
+let answers = {}; // {id: stateIdx 0-5}
+let activeFilter = 'all';
+let currentScreen = 1;
+let gapExpanded = {};
+
+// Persist to localStorage
+function saveLS() {
+  try {
+    localStorage.setItem('tev_niv_a', JSON.stringify(answers));
+    localStorage.setItem('tev_niv_l', selfLevel||'');
+  } catch(e){}
+}
+function loadLS() {
+  try {
+    const a = localStorage.getItem('tev_niv_a');
+    if(a) answers = JSON.parse(a);
+    const l = localStorage.getItem('tev_niv_l');
+    if(l) selfLevel = l || null;
+  } catch(e){}
+}
+loadLS();
+
+/* ═══════════════════════════════ NAVIGATION ═══════════════════════════════ */
+
+function goScreen(n) {
+  document.getElementById('s'+currentScreen).classList.remove('active');
+  currentScreen = n;
+  const el = document.getElementById('s'+n);
+  el.classList.add('active');
+  window.scrollTo(0,0);
+  if(n===1) renderS1();
+  if(n===2) renderS2();
+  if(n===3) renderS3();
+}
+
+/* ═══════════════════════════════ SCREEN 1 ═══════════════════════════════ */
+
+function renderS1() {
+  document.getElementById('s1-pane').innerHTML = `
+    <div class="intro-card">
+      <div class="intro-title">Où en es-tu dans ton tango ?</div>
+      <div class="intro-txt">
+        Évalue ta maîtrise de chaque séquence et notion, du vocabulaire débutant
+        jusqu'aux notions avancées. À la fin, tu verras précisément
+        <b style="color:var(--gold);">ce qui te manque pour valider chaque niveau</b> — et comment le combler.<br/><br/>
+        Tes réponses sont sauvegardées : tu peux reprendre à tout moment et suivre ta progression.
+      </div>
+    </div>
+
+    <div class="sec-label">Ton niveau, selon toi</div>
+    <div class="self-btns">
+      <div class="lvl-btn${selfLevel==='deb'?' sel':''}" data-lvl="deb">
+        <span class="ico">🌱</span>Débutant
+      </div>
+      <div class="lvl-btn${selfLevel==='int'?' sel':''}" data-lvl="int">
+        <span class="ico">💃</span>Intermédiaire
+      </div>
+      <div class="lvl-btn${selfLevel==='adv'?' sel':''}" data-lvl="adv">
+        <span class="ico">🔥</span>Avancé
+      </div>
+    </div>
+
+    <div class="sec-label">L'échelle de maîtrise</div>
+    <div class="legend-card">
+      ${ST.map(s=>`
+      <div class="leg-row">
+        <div class="leg-dot" style="border-color:${s.col};color:${s.col};">${s.ico}</div>
+        <div><div class="leg-name" style="color:${s.col};">${s.name}</div>
+        <div class="leg-desc">${s.desc}</div></div>
+      </div>`).join('')}
+    </div>
+
+    <div class="sec-label">Les abrazos</div>
+    <div class="abrazo-row">
+      <span class="ab-chip"><b>O</b> — abrazo ouvert</span>
+      <span class="ab-chip"><b>F</b> — abrazo fermé</span>
+      <span class="ab-chip"><b>OF</b> — ouvert et/ou fermé</span>
+    </div>
+
+    <button class="btn-gold" id="btn-start" onclick="goScreen(2)">Commencer mon évaluation →</button>
+    <div class="note-sm" style="margin-top:10px;">70 séquences et notions · ~10 min · reprise possible à tout moment</div>
+    ${Object.keys(answers).length > 0 ? `<button class="btn-ghost" style="width:100%;margin-top:10px;" onclick="if(confirm('Effacer toutes tes réponses ?')){answers={};selfLevel=null;saveLS();renderS1();}">↺ Recommencer à zéro</button>` : ''}
+  `;
+
+  // Level buttons click
+  document.getElementById('s1-pane').addEventListener('click', function(e) {
+    const b = e.target.closest('[data-lvl]');
+    if(b) {
+      selfLevel = b.dataset.lvl;
+      saveLS();
+      document.querySelectorAll('.lvl-btn').forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel');
+    }
+  });
+}
+
+/* ═══════════════════════════════ SCREEN 2 ═══════════════════════════════ */
+
+function getFilteredGroups() {
+  return GROUPS.map(g => ({
+    ...g,
+    items: g.items.filter(it => {
+      if(activeFilter==='todo') return answers[it.id] === undefined;
+      if(activeFilter==='review') return answers[it.id] !== undefined && answers[it.id] <= 2;
+      return true;
+    })
+  })).filter(g => g.items.length > 0);
+}
+
+function renderS2() {
+  renderFilters();
+  renderItemsList();
+  updateProg();
+  // Attach click delegation once
+  const wrap = document.getElementById('items-wrap');
+  wrap.removeEventListener('click', onItemClick);
+  wrap.addEventListener('click', onItemClick);
+}
+
+function renderFilters() {
+  const done = Object.keys(answers).length;
+  const review = ALL.filter(it => answers[it.id]!==undefined && answers[it.id]<=2).length;
+  const todo = TOTAL - done;
+  document.getElementById('filter-row').innerHTML = [
+    {f:'all',   lbl:`Tous (${TOTAL})`},
+    {f:'todo',  lbl:`Non évalués (${todo})`},
+    {f:'review',lbl:`À revoir (${review})`},
+  ].map(c=>`<span class="fchip${activeFilter===c.f?' act':''}" data-f="${c.f}">${c.lbl}</span>`).join('');
+
+  document.getElementById('filter-row').addEventListener('click', function(e) {
+    const chip = e.target.closest('[data-f]');
+    if(chip) { activeFilter = chip.dataset.f; renderFilters(); renderItemsList(); }
+  });
+}
+
+function renderItemsList() {
+  const wrap = document.getElementById('items-wrap');
+  const groups = getFilteredGroups();
+  if(!groups.length) {
+    wrap.innerHTML = '<div class="empty-filter">Aucun élément dans ce filtre 👍</div>';
+    return;
+  }
+  wrap.innerHTML = groups.map(g => {
+    const cnt = g.items.filter(it=>answers[it.id]!==undefined).length;
+    return `<div class="grp-hdr">
+      <span class="grp-name">${g.label}</span>
+      <span class="grp-count${cnt===g.items.length?' full':''}" id="gc-${g.id}">${cnt}/${g.items.length}</span>
+    </div>
+    ${g.items.map(renderItemRow).join('')}`;
+  }).join('');
+}
+
+function abBadge(ab) {
+  if(!ab) return '';
+  const cls = ab==='O'?'ab-O':ab==='F'?'ab-F':'ab-OF';
+  return `<span class="badge-ab ${cls}">${ab}</span>`;
+}
+
+function renderItemRow(it) {
+  const sel = answers[it.id];
+  const done = sel !== undefined;
+  const dots = ST.map((s,i)=>`<div class="seg-dot${sel===i?' d'+i:''}" data-id="${it.id}" data-st="${i}">${s.ico}</div>`).join('');
+  const lblColor = done ? ST[sel].col : 'transparent';
+  const lblText  = done ? ST[sel].name : '';
+  return `<div class="item-row${done?' done':''}" id="ir-${it.id}">
+    <div class="item-top">
+      <span class="item-name">${it.n}</span>
+      ${abBadge(it.ab)}
+    </div>
+    <div class="seg">${dots}</div>
+    <div class="seg-lbl" style="color:${lblColor};">${lblText}</div>
+  </div>`;
+}
+
+function onItemClick(e) {
+  const dot = e.target.closest('[data-id]');
+  if(!dot) return;
+  const id  = +dot.dataset.id;
+  const st  = +dot.dataset.st;
+  // Toggle off if same
+  if(answers[id] === st) delete answers[id];
+  else answers[id] = st;
+  saveLS();
+  // Update only this row (no full re-render = no scroll jump)
+  patchItemRow(id);
+  updateProg();
+  updateGroupCount(id);
+  updateFilterChips();
+}
+
+function patchItemRow(id) {
+  const row = document.getElementById('ir-'+id);
+  if(!row) return;
+  const sel = answers[id];
+  // Update dots
+  row.querySelectorAll('.seg-dot').forEach((d,i)=>{
+    d.className = 'seg-dot' + (sel===i ? ' d'+i : '');
+  });
+  // Update label
+  const lbl = row.querySelector('.seg-lbl');
+  lbl.textContent = sel!==undefined ? ST[sel].name : '';
+  lbl.style.color  = sel!==undefined ? ST[sel].col  : 'transparent';
+  // Update done class
+  row.classList.toggle('done', sel!==undefined);
+}
+
+function updateGroupCount(id) {
+  const it = ALL.find(x=>x.id===id);
+  if(!it) return;
+  const g = GROUPS.find(x=>x.id===it.gid);
+  if(!g) return;
+  const el = document.getElementById('gc-'+g.id);
+  if(!el) return;
+  const cnt = g.items.filter(x=>answers[x.id]!==undefined).length;
+  el.textContent = cnt+'/'+g.items.length;
+  el.className = 'grp-count' + (cnt===g.items.length?' full':'');
+}
+
+function updateFilterChips() {
+  const done = Object.keys(answers).length;
+  const review = ALL.filter(it=>answers[it.id]!==undefined&&answers[it.id]<=2).length;
+  const todo = TOTAL-done;
+  const map = {all:`Tous (${TOTAL})`,todo:`Non évalués (${todo})`,review:`À revoir (${review})`};
+  document.querySelectorAll('[data-f]').forEach(c=>{ c.textContent = map[c.dataset.f]; });
+}
+
+function updateProg() {
+  const done = Object.keys(answers).length;
+  const pct  = Math.round(done/TOTAL*100);
+  document.getElementById('prog-txt').textContent = done+' / '+TOTAL+' évalués';
+  document.getElementById('prog-fill').style.width = pct+'%';
+  const btn = document.getElementById('btn-res');
+  btn.disabled = done === 0;
+  btn.classList.toggle('complete', done >= TOTAL);
+  btn.textContent = done >= TOTAL ? '✓ Voir mes résultats →' : 'Voir mes résultats →';
+}
+
+/* ═══════════════════════════════ SCREEN 3 ═══════════════════════════════ */
+
+function computeStats() {
+  const out = {};
+  ['deb','int','adv'].forEach(lvl => {
+    const items = ALL.filter(x=>x.lvl===lvl);
+    const acq   = items.filter(x=>(answers[x.id]||0)>=3);
+    const wip   = items.filter(x=>answers[x.id]===2);
+    const nok   = items.filter(x=>answers[x.id]!==undefined&&(answers[x.id]||0)<=1);
+    const pct   = items.length ? Math.round(acq.length/items.length*100) : 0;
+    const gaps  = items
+      .filter(x=>(answers[x.id]===undefined||(answers[x.id]||0)<3))
+      .sort((a,b)=>(answers[a.id]??-1)-(answers[b.id]??-1));
+    out[lvl] = {items,acq,wip,nok,pct,gaps};
+  });
+  return out;
+}
+
+function renderS3() {
+  const stats = computeStats();
+  const done  = Object.keys(answers).length;
+
+  // Estimate level
+  let est = 'deb';
+  if(stats.deb.pct>=60) est='int';
+  if(stats.deb.pct>=60 && stats.int.pct>=55) est='adv';
+  const estLabel = {deb:'Débutant',int:'Intermédiaire',adv:'Avancé'}[est];
+  const declLabel= {deb:'Débutant',int:'Intermédiaire',adv:'Avancé'}[selfLevel]||'non déclaré';
+  const match = est===selfLevel;
+
+  const matchMsg = match
+    ? 'Cohérent avec ton ressenti 👍'
+    : (est<selfLevel||(!selfLevel)) ? 'Voici ta progression réelle — aucun jugement, c\'est là que tout se construit !'
+    : 'Tu es peut-être plus avancé que tu ne le penses 😊';
+
+  // Focus level: first level not yet validated
+  const focus = ['deb','int','adv'].find(l=>stats[l].pct<80) || 'adv';
+  const focusLabel = {deb:'🌱 Débutant',int:'💃 Intermédiaire',adv:'🔥 Avancé'}[focus];
+
+  function barColor(p) { return p>=75?'var(--c3)':p>=45?'var(--c2)':'var(--c1)'; }
+
+  function stMeta(id) {
+    const s = answers[id];
+    if(s===undefined) return {lbl:'?',      bg:'#1c1c1f',col:'var(--c0)',brd:'var(--c0)'};
+    if(s===0)         return {lbl:'inconnu',bg:'#1c1c1f',col:'var(--c0)',brd:'var(--c0)'};
+    if(s===1)         return {lbl:'non acquis',bg:'#2a0f0e',col:'var(--c1)',brd:'var(--c1)'};
+    return               {lbl:'en cours', bg:'#241606',col:'var(--c2)',brd:'var(--c2)'};
+  }
+
+  function gapList(items, max) {
+    const shown = items.slice(0,max);
+    const rest  = items.length-max;
+    return shown.map(it => {
+      const m = stMeta(it.id);
+      return `<div class="gap-row">
+        <span class="gap-badge" style="background:${m.bg};color:${m.col};border:1px solid ${m.brd};">${m.lbl}</span>
+        <span class="gap-name">${it.n}${abBadge(it.ab)}</span>
+      </div>`;
+    }).join('')
+    + (rest>0 ? `<div class="gap-more" onclick="this.parentNode.querySelectorAll('.hidden-gap').forEach(x=>x.style.display='flex');this.style.display='none'">+ ${rest} autre${rest>1?'s':''} ▾</div>
+    ${items.slice(max).map(it=>{ const m=stMeta(it.id); return `<div class="gap-row hidden-gap" style="display:none"><span class="gap-badge" style="background:${m.bg};color:${m.col};border:1px solid ${m.brd};">${m.lbl}</span><span class="gap-name">${it.n}${abBadge(it.ab)}</span></div>`; }).join('')}` : '');
+  }
+
+  document.getElementById('s3-pane').innerHTML = `
+    ${done<TOTAL ? `<div class="incomplete-warn">⚠️ ${TOTAL-done} item${TOTAL-done>1?'s':''} non évalué${TOTAL-done>1?'s':''} — résultats partiels. <span onclick="goScreen(2)" style="color:var(--gold);cursor:pointer;">Compléter →</span></div>` : ''}
+
+    <div class="res-hero">
+      <div class="res-lbl">Ton niveau estimé</div>
+      <div class="res-lvl">${estLabel}</div>
+      <div class="res-sub">
+        ${matchMsg}
+        ${selfLevel ? `<br/><span style="color:var(--dim);font-size:11px;">Déclaré : ${declLabel}</span>` : ''}
+      </div>
+    </div>
+
+    ${['deb','int','adv'].map(l=>{
+      const {pct,acq,items,wip,nok} = stats[l];
+      const lbl = {deb:'🌱 Débutant',int:'💃 Intermédiaire',adv:'🔥 Avancé'}[l];
+      return `<div class="res-card">
+        <div class="res-card-top"><span class="res-card-name">${lbl}</span><span class="res-card-pct">${pct}%</span></div>
+        <div class="res-bar"><div class="res-bar-f" style="width:${pct}%;background:${barColor(pct)};"></div></div>
+        <div class="res-sub2">${acq.length}/${items.length} acquis ou plus${wip.length?` · ${wip.length} en cours`:''}${nok.length?` · ${nok.length} non acquis`:''}</div>
+      </div>`;
+    }).join('')}
+
+    ${stats[focus].gaps.length>0 ? `
+    <div class="gap-card">
+      <div class="gap-title">🎯 À travailler — ${focusLabel}</div>
+      ${gapList(stats[focus].gaps, 7)}
+    </div>` : `<div class="note-sm" style="padding:14px 0;">🎉 Tous les niveaux semblent bien maîtrisés !</div>`}
+
+    <div class="cta-cp">
+      <div class="cta-txt">
+        💡 Un <b style="color:#fff;">cours particulier</b> est le moyen le plus efficace de
+        combler ces lacunes de façon ciblée — Florencia et Jérémy construisent la séance
+        autour de <b style="color:#fff;">tes</b> points à travailler.
+      </div>
+      <span class="cta-btn">🎯 Réserver un cours particulier →</span>
+      <div style="font-size:10px;color:#b8a8d8;margin-top:9px;">La demande sera pré-remplie avec tes séquences à travailler</div>
+    </div>
+
+    <div class="res-actions">
+      <button class="btn-ghost" onclick="goScreen(2)">← Modifier mes réponses</button>
+      <button class="btn-ghost" onclick="if(confirm('Effacer toutes tes réponses ?')){answers={};selfLevel=null;saveLS();goScreen(1);}">↺ Recommencer</button>
+    </div>
+    <div class="note-sm" style="margin-top:12px;">Ton évaluation est sauvegardée automatiquement. Tu peux revenir la mettre à jour à tout moment — ta progression sera visible d\'un test à l\'autre. 📈</div>
+  `;
+}
+
+/* ══ INIT ══ */
+renderS1();
+if(Object.keys(answers).length>0 && currentScreen===1){
+  // Show progress badge on start button once rendered
+  setTimeout(()=>{
+    const b = document.getElementById('btn-start');
+    if(b) b.textContent = `Continuer mon évaluation (${Object.keys(answers).length}/70) →`;
+  }, 0);
+}
+</script>
+</body>
+</html>
