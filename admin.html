@@ -3239,6 +3239,32 @@ function renderParametres() {
   // ── Section WhatsApp ────────────────────────────────────
   h += _renderWhatsappParamSection(sai);
 
+  // ── Section Fonctionnalités (flags globaux, non liés à la saison) ──
+  h += _renderFeaturesSection();
+
+  return h;
+}
+
+// ── Section Fonctionnalités dans Paramètres ──────────────────
+// Flags stockés dans Supabase `parametres` (clé autonome, mirrorée en
+// localStorage par chargerParamsRemote). Lus par l'espace élève au login.
+function _renderFeaturesSection() {
+  var nivOn = false;
+  try { var v = JSON.parse(localStorage.getItem('tev_feature_mon_niveau')||'{}'); nivOn = !!v.enabled; } catch(e){}
+  var h = '<div style="margin-top:24px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Fonctionnalités</div>'
+    +'<div class="card" style="padding:14px 16px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">'
+    +'<div>'
+    +'<div style="font-size:13px;font-weight:600;color:var(--text);">📈 Mon niveau · Test</div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-top:3px;line-height:1.5;">Rubrique d\'auto-évaluation (70 séquences et notions) dans l\'espace élève. '
+    +(nivOn ? 'Visible dans le menu élève.' : 'Masquée — les élèves ne la voient pas.')+'</div>'
+    +'</div>'
+    +'<button class="btn '+(nivOn?'btn-gold':'btn-ghost')+'" data-action="toggle-feature-mon-niveau" data-etat="'+(nivOn?'1':'0')+'"'
+    +' style="font-size:12px;flex-shrink:0;min-width:90px;">'+(nivOn?'✓ Activée':'Désactivée')+'</button>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
   return h;
 }
 
@@ -6722,6 +6748,20 @@ function handleAction(action, btn) {
       break;
     case 'go-to-params':
       switchTab('tarifs');
+      break;
+    case 'toggle-feature-mon-niveau':
+      (function() {
+        var newVal = btn.dataset.etat !== '1';
+        var data = { enabled: newVal };
+        try { localStorage.setItem('tev_feature_mon_niveau', JSON.stringify(data)); } catch(e) {}
+        if (!IS_DEMO) {
+          Promise.resolve(TEV.setParam('tev_feature_mon_niveau', data)).then(function(res) {
+            if (res && res.ok === false) afficherToast('⚠️ Erreur de sauvegarde Supabase');
+          }).catch(function() { afficherToast('⚠️ Erreur de sauvegarde Supabase'); });
+        }
+        afficherToast(newVal ? '✓ Rubrique "Mon niveau · Test" activée pour les élèves' : '✓ Rubrique "Mon niveau · Test" masquée');
+        renderTab();
+      })();
       break;
     case 'sauver-adhesion-lrp':
       (function() {
