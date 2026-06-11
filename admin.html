@@ -7360,7 +7360,7 @@ function ficheEleveInscrit(e, borderStyle, grise, isDup) {
     +(paiLbl?'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+'</span>':'')
     +(e.email?'<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;font-size:11px;">✉️</a>':'')
     +'<button class="btn-point btn-ghost" onclick="ouvrirChangementCours(\''+e.id+'\')" title="Changer de cours" style="font-size:11px;">✏️</button>'
-    +'<button class="btn-point btn-ghost" onclick="supprimerEleve(\''+e.id+'\')" title="Supprimer l\'élève" style="font-size:11px;color:#ff6b6b;">🗑</button>'
+    +'<button class="btn-point btn-ghost" onclick="supprimerEleve(\''+e.id+'\')" title="Supprimer l\'élève" style="font-size:11px;color:#ff6b6b;margin-left:auto;">🗑</button>'
     +'</div>':'')
     +'</div>';
 }
@@ -7982,22 +7982,28 @@ function renderEssai() {
       var _dupSetAtt=_dupEmails(attenteGrp);
       function _attEssaiCard(e){
         var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-        return '<div class="point-row">'
+        var _ak='att_'+String(e.id||e.email||'');
+        var _ao=_openEssaiAcc.has(_ak);
+        return '<div class="point-row" style="flex-wrap:wrap;">'
           +'<div style="flex:1;min-width:0;">'
           +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
           +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')
           +(_dupSetAtt.has(_dupKey(e))?_DUP_BADGE:'')
           +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+e.role+'</span>'
-          +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
           +'</div>'
           +(e.partenaire?'<div class="point-sub">avec '+e.partenaire+'</div>':'')
           +'</div>'
-          +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">'
+          +'<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
+          +'<button class="btn-point btn-ghost" data-action="toggle-acc-essai" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
+          +'</div>'
+          +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
+          +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
           +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="email-attente" data-email="'+e.email+'" data-date="'+grp.date+'" data-niveau="'+grp.niveau+'" data-role="'+e.role+'">✉️</button>'
           +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
           +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
-          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
-          +'</div></div>';
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;margin-left:auto;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
+          +'</div>':'')
+          +'</div>';
       }
       _groupCouples(attenteGrp).forEach(function(g){
         if(g.type==='couple') body+=_coupleWrap(_attEssaiCard(g.persons[0])+_attEssaiCard(g.persons[1]));
@@ -8077,7 +8083,7 @@ function renderEssai() {
           +'<span class="pill '+rcls+'" style="font-size:8px;padding:1px 5px;">'+e.role+'</span>'
           +'<button class="btn-point btn-ghost" data-action="toggle-acc-essai" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
           +'</div>'
-          +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;justify-content:flex-end;">'
+          +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
           +(e.presenceConfirmee===true?'<span title="A confirmé sa présence par email">👍</span>':'')
           +pastille
           +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
@@ -8085,7 +8091,7 @@ function renderEssai() {
           +'<button class="btn-point btn-pres'+(e.present===true?' on':e.present===false?' off':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':e.present===true?' off':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
           +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
-          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;margin-left:auto;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +'</div>':'')
           +'</div>';
       };
@@ -8114,11 +8120,11 @@ function renderEssai() {
               +'<span class="pill" style="font-size:8px;background:rgba(255,152,0,0.2);color:var(--warn-text);">attente</span>'
               +'<button class="btn-point btn-ghost" data-action="toggle-acc-essai" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
               +'</div>'
-              +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;justify-content:flex-end;">'
+              +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
               +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
               +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
               +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
-              +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
+              +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;margin-left:auto;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
               +'</div>':'')
               +'</div>';
           };
@@ -8306,7 +8312,9 @@ function renderEssai() {
         var _mkEssaiDateCard = function(e) {
           var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
           var vraiAtt=estVraimentAttente(e,ins);
-          return '<div class="point-row">'
+          var _ak='ed_'+String(e.id||e.email||'');
+          var _ao=_openEssaiAcc.has(_ak);
+          return '<div class="point-row" style="flex-wrap:wrap;">'
             +'<div style="flex:1;min-width:0;">'
             +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'
             +nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','essai')
@@ -8318,14 +8326,18 @@ function renderEssai() {
             +'</div>'
             +(e.partenaire?'<div class="point-sub"><span style="color:#c0392b;">♥ '+e.partenaire+'</span></div>':'')
             +'</div>'
-            +'<div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">'
+            +'<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
+            +'<button class="btn-point btn-ghost" data-action="toggle-acc-essai" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
+            +'</div>'
+            +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
             +(vraiAtt
               ?'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
               :'<span class="pill pill-ok" style="font-size:8px;">Validé.e</span>')
             +btnEmail(e.email,e.prenom+' '+e.nom)
             +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
-            +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
-            +'</div></div>';
+            +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;margin-left:auto;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
+            +'</div>':'')
+            +'</div>';
         };
         _groupCouples(ins).forEach(function(g){
           if(g.type==='couple'){
@@ -10204,10 +10216,10 @@ function renderStages() {
         +confBadge
         +'<span class="card-sub" style="flex:1;">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.montant?' · '+(i.montant)+'€':'')+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</span>'
         +'</div>'
-        +'<div style="display:flex;gap:4px;">'
+        +'<div style="display:flex;gap:4px;align-items:center;">'
         +(i.attente?'<button class="btn btn-ok" style="padding:4px 8px;font-size:11px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button>':'')
         +'<button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" data-action="editer-slots-stage" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✏️</button>'
-        +'<button class="btn btn-err" style="padding:4px 8px;font-size:11px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="all">✕</button>'
+        +'<button class="btn btn-err" style="padding:4px 8px;font-size:11px;margin-left:auto;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="all">✕</button>'
         +'</div>'
         +'</div>':'')
         +'</div>';
@@ -12751,7 +12763,7 @@ function renderYogaEssai() {
           +'<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
           +'<button class="btn-point btn-ghost" data-action="toggle-acc-yoga" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
           +'</div>'
-          +(_ao?'<div style="width:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;justify-content:flex-end;">'
+          +(_ao?'<div style="width:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
           +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Conf.</span>':'')
           +(estDejaEleveYoga(e.email)
             ?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>'
@@ -12760,7 +12772,7 @@ function renderYogaEssai() {
           +'<button class="btn-point btn-pres'+(e.present===true?' on':(e.present===false?' off':''))+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':(e.present===true?' off':''))+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
           +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai-yoga" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
-          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-yoga-inscr" data-date="'+date+'" data-email="'+e.email+'" title="Supprimer">✕</button>'
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;margin-left:auto;" data-action="suppr-yoga-inscr" data-date="'+date+'" data-email="'+e.email+'" title="Supprimer">✕</button>'
           +'</div>':'')
           +'</div>';
       }
@@ -12875,7 +12887,9 @@ function renderYogaEleves() {
     var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;
     var paiLbl = PAI_LBL[e.paiement]||e.paiement||'';
     var tel = _yogaTel(e);
-    return '<div class="point-row" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'">'
+    var _ak='ye_'+String(e.id||e.email||'');
+    var _ao=_openYogaAcc.has(_ak);
+    return '<div class="point-row" style="flex-wrap:wrap;" data-snom="'+(e.nom+' '+e.prenom).toLowerCase().replace(/"/g,'&quot;')+'">'
       +'<div style="flex:1;min-width:0;">'
       +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',tel,'yoga')+'</div>'
       +'<div class="point-sub"><span class="pill pill-info" style="font-size:8px;">'+coursLbl+'</span>'
@@ -12885,10 +12899,14 @@ function renderYogaEleves() {
       +'</div>'
       +'<div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">'
       +'<span class="pill pill-ok" style="font-size:10px;">Inscrit.e</span>'
+      +'<button class="btn-point btn-ghost" data-action="toggle-acc-yoga" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
+      +'</div>'
+      +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
       +btnEmail(e.email,e.prenom+' '+e.nom)
       +'<button class="btn-point btn-ghost" onclick="ouvrirChangementCoursYoga(\''+e.id+'\')" title="Modifier" style="font-size:11px;">✏️</button>'
-      +'<button class="btn-point btn-ghost" onclick="supprimerEleveYoga(\''+e.id+'\')" title="Supprimer" style="font-size:11px;color:#ff6b6b;">🗑</button>'
-      +'</div></div>';
+      +'<button class="btn-point btn-ghost" onclick="supprimerEleveYoga(\''+e.id+'\')" title="Supprimer" style="font-size:11px;color:#ff6b6b;margin-left:auto;">🗑</button>'
+      +'</div>':'')
+      +'</div>';
   }
   var secStyle = 'font-size:12px;font-weight:700;color:#a78bfa;padding:10px 0 6px;border-bottom:1px solid rgba(167,139,250,0.3);margin-bottom:6px;';
   h += '<div style="'+secStyle+'">🌙 Yin Yoga 10h30 <span style="font-weight:400;color:var(--dim);">'+yin.length+' élève'+(yin.length>1?'s':'')+'</span> &nbsp;'+capBadgeYoga('yin')+'</div>';
