@@ -13348,10 +13348,19 @@ function renderCoursTango() {
       }
     }
     // Sous-onglet 'tous' : personnes non validées (demande/attente) en bas de chaque section
+    // avec alternance guideur/guidée à l'intérieur de chaque sous-groupe
     if (sousOngletCoursTango === 'tous') {
       var _gcValides   = _gcGroups.filter(function(g){ var s=g.type==='couple'?g.persons[0].statut:g.person.statut; return s!=='demande'&&s!=='attente'; });
       var _gcDemandes  = _gcGroups.filter(function(g){ var s=g.type==='couple'?g.persons[0].statut:g.person.statut; return s==='demande'||s==='attente'; });
-      _gcGroups = _gcValides.concat(_gcDemandes);
+      function _altGrp(arr){
+        var cpl=arr.filter(function(g){return g.type==='couple';});
+        var gui=arr.filter(function(g){return g.type!=='couple'&&g.person.role==='guideur';});
+        var gde=arr.filter(function(g){return g.type!=='couple'&&g.person.role!=='guideur';});
+        var r=cpl.slice();
+        for(var _i=0;_i<Math.max(gui.length,gde.length);_i++){if(gui[_i])r.push(gui[_i]);if(gde[_i])r.push(gde[_i]);}
+        return r;
+      }
+      _gcGroups = _altGrp(_gcValides).concat(_altGrp(_gcDemandes));
     }
     var _gcPivot = (sousOngletCoursTango==='tous') ? _gcGroups.findIndex(function(g){ var s=g.type==='couple'?g.persons[0].statut:g.person.statut; return s==='demande'||s==='attente'; }) : -1;
     _gcGroups.forEach(function(g, gi){
