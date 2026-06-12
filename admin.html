@@ -13347,7 +13347,15 @@ function renderCoursTango() {
         if(_gcGde[gi]) _gcGroups.push(_gcGde[gi]);
       }
     }
-    _gcGroups.forEach(function(g){
+    // Sous-onglet 'tous' : personnes non validées (demande/attente) en bas de chaque section
+    if (sousOngletCoursTango === 'tous') {
+      var _gcValides   = _gcGroups.filter(function(g){ var s=g.type==='couple'?g.persons[0].statut:g.person.statut; return s!=='demande'&&s!=='attente'; });
+      var _gcDemandes  = _gcGroups.filter(function(g){ var s=g.type==='couple'?g.persons[0].statut:g.person.statut; return s==='demande'||s==='attente'; });
+      _gcGroups = _gcValides.concat(_gcDemandes);
+    }
+    var _gcPivot = (sousOngletCoursTango==='tous') ? _gcGroups.findIndex(function(g){ var s=g.type==='couple'?g.persons[0].statut:g.person.statut; return s==='demande'||s==='attente'; }) : -1;
+    _gcGroups.forEach(function(g, gi){
+      if (_gcPivot > 0 && gi === _gcPivot) h += '<div style="font-size:10px;color:var(--warn-text);font-weight:600;padding:6px 4px 3px;opacity:0.8;">— non validé·e·s —</div>';
       if(g.type==='couple') h+=_coupleWrap(ficheEleve(g.persons[0],_dupSetInscr.has(_dupKey(g.persons[0])))+ficheEleve(g.persons[1],_dupSetInscr.has(_dupKey(g.persons[1]))));
       else h+=ficheEleve(g.person,_dupSetInscr.has(_dupKey(g.person)));
     });
