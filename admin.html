@@ -7354,13 +7354,13 @@ function ficheEleveInscrit(e, borderStyle, grise, isDup) {
     +'<button class="btn-point btn-ghost" data-action="toggle-acc-eleve" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
     +'</div>'
     +(_ao?'<div style="width:100%;display:flex;gap:4px;align-items:center;flex-wrap:wrap;padding:5px 0 2px;border-top:1px solid var(--border);margin-top:2px;">'
+    +'<button class="btn-point btn-ghost" onclick="supprimerEleve(\''+e.id+'\')" title="Supprimer l\'élève" style="font-size:11px;color:#ff6b6b;">🗑</button>'
     +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
     +(e.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report '+(e.classesReportees||e.restants)+' cours</span>':'')
     +(typeLbl?'<span class="pill pill-ok" style="font-size:8px;">'+typeLbl+'</span>':'')
     +(paiLbl?'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+'</span>':'')
     +(e.email?'<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;font-size:11px;">✉️</a>':'')
     +'<button class="btn-point btn-ghost" onclick="ouvrirChangementCours(\''+e.id+'\')" title="Changer de cours" style="font-size:11px;">✏️</button>'
-    +'<button class="btn-point btn-ghost" onclick="supprimerEleve(\''+e.id+'\')" title="Supprimer l\'élève" style="font-size:11px;color:#ff6b6b;margin-left:auto;">🗑</button>'
     +'</div>':'')
     +'</div>';
 }
@@ -7997,11 +7997,11 @@ function renderEssai() {
           +'<button class="btn-point btn-ghost" data-action="toggle-acc-essai" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
           +'</div>'
           +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
           +'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" data-action="email-attente" data-email="'+e.email+'" data-date="'+grp.date+'" data-niveau="'+grp.niveau+'" data-role="'+e.role+'">✉️</button>'
           +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
           +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
-          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;margin-left:auto;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +'</div>':'')
           +'</div>';
       }
@@ -8084,6 +8084,7 @@ function renderEssai() {
           +'<button class="btn-point btn-ghost" data-action="toggle-acc-essai" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
           +'</div>'
           +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +(e.presenceConfirmee===true?'<span title="A confirmé sa présence par email">👍</span>':'')
           +pastille
           +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
@@ -8091,7 +8092,6 @@ function renderEssai() {
           +'<button class="btn-point btn-pres'+(e.present===true?' on':e.present===false?' off':'')+'" data-action="pointer-essai-pres" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':e.present===true?' off':'')+'" data-action="pointer-essai-abs" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
           +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
-          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;margin-left:auto;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +'</div>':'')
           +'</div>';
       };
@@ -8121,10 +8121,10 @@ function renderEssai() {
               +'<button class="btn-point btn-ghost" data-action="toggle-acc-essai" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
               +'</div>'
               +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
+              +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
               +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
               +'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
               +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
-              +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;margin-left:auto;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
               +'</div>':'')
               +'</div>';
           };
@@ -8330,12 +8330,12 @@ function renderEssai() {
             +'<button class="btn-point btn-ghost" data-action="toggle-acc-essai" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
             +'</div>'
             +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
+            +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
             +(vraiAtt
               ?'<button class="btn btn-gold" style="padding:3px 9px;font-size:10px;" data-action="val-guidee-essai" data-email="'+e.email+'" data-date="'+date+'" data-id="'+(e.id||'')+'">✓ Valider</button>'
               :'<span class="pill pill-ok" style="font-size:8px;">Validé.e</span>')
             +btnEmail(e.email,e.prenom+' '+e.nom)
             +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
-            +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;margin-left:auto;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
             +'</div>':'')
             +'</div>';
         };
@@ -10217,9 +10217,9 @@ function renderStages() {
         +'<span class="card-sub" style="flex:1;">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.montant?' · '+(i.montant)+'€':'')+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</span>'
         +'</div>'
         +'<div style="display:flex;gap:4px;align-items:center;">'
+        +'<button class="btn btn-err" style="padding:4px 8px;font-size:11px;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="all">✕</button>'
         +(i.attente?'<button class="btn btn-ok" style="padding:4px 8px;font-size:11px;" data-action="val-att-stage" data-date="'+filtreStage+'" data-nom="'+i.prenom+' '+i.nom+'">✓ Valider</button>':'')
         +'<button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" data-action="editer-slots-stage" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✏️</button>'
-        +'<button class="btn btn-err" style="padding:4px 8px;font-size:11px;margin-left:auto;" data-action="annuler-stage-inscrit" data-date="'+filtreStage+'" data-idx="'+origIdx+'" data-slot="all">✕</button>'
         +'</div>'
         +'</div>':'')
         +'</div>';
@@ -12764,6 +12764,7 @@ function renderYogaEssai() {
           +'<button class="btn-point btn-ghost" data-action="toggle-acc-yoga" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
           +'</div>'
           +(_ao?'<div style="width:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
+          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-yoga-inscr" data-date="'+date+'" data-email="'+e.email+'" title="Supprimer">✕</button>'
           +(e.presenceConfirmee?'<span class="pill pill-ok" style="font-size:8px;">✓ Conf.</span>':'')
           +(estDejaEleveYoga(e.email)
             ?'<span class="pill pill-ok" style="font-size:8px;">Inscrit.e</span>'
@@ -12772,7 +12773,6 @@ function renderYogaEssai() {
           +'<button class="btn-point btn-pres'+(e.present===true?' on':(e.present===false?' off':''))+'" data-action="pointer-yoga-pres" data-date="'+date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✓</button>'
           +'<button class="btn-point btn-abs'+(e.present===false?' on':(e.present===true?' off':''))+'" data-action="pointer-yoga-abs" data-date="'+date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'">✗</button>'
           +'<button class="btn btn-ghost" style="padding:3px 7px;font-size:10px;" data-action="editer-essai-yoga" data-id="'+(e.id||'')+'" title="Modifier">✏️</button>'
-          +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;margin-left:auto;" data-action="suppr-yoga-inscr" data-date="'+date+'" data-email="'+e.email+'" title="Supprimer">✕</button>'
           +'</div>':'')
           +'</div>';
       }
@@ -12902,9 +12902,9 @@ function renderYogaEleves() {
       +'<button class="btn-point btn-ghost" data-action="toggle-acc-yoga" data-id="'+_ak+'" style="font-size:9px;padding:2px 5px;min-width:20px;">'+(_ao?'▴':'▾')+'</button>'
       +'</div>'
       +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
+      +'<button class="btn-point btn-ghost" onclick="supprimerEleveYoga(\''+e.id+'\')" title="Supprimer" style="font-size:11px;color:#ff6b6b;">🗑</button>'
       +btnEmail(e.email,e.prenom+' '+e.nom)
       +'<button class="btn-point btn-ghost" onclick="ouvrirChangementCoursYoga(\''+e.id+'\')" title="Modifier" style="font-size:11px;">✏️</button>'
-      +'<button class="btn-point btn-ghost" onclick="supprimerEleveYoga(\''+e.id+'\')" title="Supprimer" style="font-size:11px;color:#ff6b6b;margin-left:auto;">🗑</button>'
       +'</div>':'')
       +'</div>';
   }
