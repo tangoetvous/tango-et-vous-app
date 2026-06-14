@@ -4964,7 +4964,7 @@ function demarrerRealtime() {
   if (IS_DEMO || _pollTimer) return;
   // Polling toutes les 15s — fiable quelle que soit la source (Wix, autre appareil)
   console.log('[TEV] Polling 15s démarré');
-  _pollTimer = setInterval(function() { console.log('[TEV] poll'); chargerDonnees(); }, 15000);
+  _pollTimer = setInterval(function() { console.log('[TEV] poll'); chargerDonnees(); }, 8000);
   // Realtime en bonus (peut être bloqué par RLS anon → admin, mais accélère si ça marche)
   if (!_realtimeChannel) {
     var _reloadTimer = null;
@@ -13426,6 +13426,7 @@ function ficheEleve(e, isDup) {
 
   // Détails dépliables
   h += '<div style="width:100%;display:'+(open?'flex':'none')+';gap:4px;align-items:center;flex-wrap:wrap;padding-top:4px;">';
+  h += '<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-cours-inscr" data-id="'+e.id+'" title="Supprimer">✕</button>';
   h += (e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'');
   h += (e.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report '+(e.classesReportees||e.restants)+' cours</span>':'');
   if(e.statut==='valide'||e.statut==='attente_paiement'){
@@ -13442,7 +13443,6 @@ function ficheEleve(e, isDup) {
   if(e.email){
     h += '<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;" title="Envoyer un email">✉️</a>';
   }
-  h += '<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-cours-inscr" data-id="'+e.id+'" title="Supprimer">✕</button>';
   h += '</div>';
 
   h += '</div>';
