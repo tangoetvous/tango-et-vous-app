@@ -1,5 +1,40 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-06-15 — « Mon niveau » : curriculum éditable + niveau Avancé 2
+
+### ✅ Curriculum data-driven, commun à toutes les saisons
+
+La rubrique « Mon niveau » (espace élève, `index.html`) et le gestionnaire de vidéos pédagogiques (admin → Paramètres → Fonctionnalités) lisent désormais le vocabulaire/notions depuis une **source unique éditable**, stockée dans Supabase `parametres` clé **`tev_niv_curriculum`** (⚠️ **sans suffixe de saison** — commune à toutes les saisons).
+
+**4 niveaux cumulatifs** (au lieu de 3) : `deb` (Débutant), `int` (Intermédiaire), `adv` (Avancé 1), `adv2` (Avancé 2). 8 groupes (Vocabulaire + Notions × 4 niveaux), 108 items par défaut.
+
+**Format stocké** :
+```json
+{ "groups": [ { "id":"vd", "lvl":"deb", "label":"🌱 Vocabulaire Débutant",
+               "items":[ {"id":1,"n":"Marche face à face","ab":"F"}, … ] }, … ] }
+```
+`ab` (abrazo) : `null` | `"O"` (ouvert) | `"F"` (fermé) | `"OF"` (les deux).
+
+**Édition admin** : Paramètres → Fonctionnalités → **📚 Vocabulaire & notions** (accordéon `_nivCurrExpanded`). Ajout / modif / suppression d'items par groupe + sélecteur abrazo. Sauvegarde → `TEV.setParam('tev_niv_curriculum', …)`. Les **labels de groupe et les niveaux ne sont pas éditables** (structure stable) — seuls les items le sont.
+
+**Réutilisation des ids** : les réponses élève (`tev_niv_a_<email>`) et les vidéos (`tev_niv_videos`) sont **indexées par `item.id`**. Un nouvel item ajouté reçoit `id = max(ids)+1` (`_nivCurrNextId`). Ne jamais réutiliser un id supprimé.
+
+### ⚠️ Règle permanente — garder les deux défauts synchronisés
+
+Le curriculum par défaut est **dupliqué** dans deux fichiers (apps séparées, pas de JS partagé) :
+- `index.html` → `const _NIV_GROUPS_DEFAULT` (+ `_NIV_LEVELS`)
+- `admin.html` → `var _NIV_CURRICULUM_DEFAULT` (+ même structure)
+
+Toute modification du défaut doit être appliquée **aux deux** à l'identique (mêmes ids, mêmes noms, mêmes abrazos). Le défaut sert de fallback quand `tev_niv_curriculum` est absent en DB.
+
+### Mécanique
+
+- **index.html** : `_NIV_GROUPS`/`_NIV_ALL` sont des `let` reconstruits par `_nivRebuildAll()`. `renderNiveau()` charge `tev_niv_curriculum` (async, une fois via `_nivCurriculumLoaded`) et appelle `_nivApplyCurriculum()` (validation défensive) puis re-render. `_nivVisLvls()` est générique sur l'ordre de `_NIV_LEVELS`. Labels via `_nivLvlName()` / `_nivLvlLabel()`. Estimation de niveau (`est`) généralisée : on monte d'un cran tant que les niveaux précédents sont ≥55 %.
+- **admin.html** : `_NIV_CURRICULUM` (cache mémoire) chargé via `_nivCurrLoad()` (localStorage → fallback défaut). `chargerParamsRemote` mirrore `tev_niv_curriculum` en localStorage (via `getAllParams`) et invalide le cache (`_NIV_CURRICULUM = null`). `_nivFetchRemote()` recharge vidéos + curriculum à l'ouverture d'un éditeur. Le gestionnaire de vidéos itère sur `_nivCurrGroups()` (plus de `_NIV_VID_REF` hardcodé).
+- **Polling 15s** : garde ajoutée dans `_renderTabSiPasFormulaire` — `if (currentTab==='parametres' && (_nivCurrExpanded || _nivVidExpanded)) return;` pour ne pas écraser les saisies en cours.
+
+---
+
 ## Session 2026-06-09 — Thème clair Inscriptions Tango + tri guideurs/guidées
 
 ### ✅ Thème clair sur l'onglet Inscriptions Tango (`admin.html`)

@@ -3283,41 +3283,120 @@ function renderParametres() {
 // Flags stockés dans Supabase `parametres` (clé autonome, mirrorée en
 // localStorage par chargerParamsRemote). Lus par l'espace élève au login.
 var _nivVidExpanded = false;
-var _NIV_VID_REF = [
-  {g:'🌱 Vocabulaire Débutant', items:[
-    {id:1,n:'Baldosa'},{id:2,n:'Rebonds'},{id:3,n:'Marches'},{id:4,n:'Huit arrière'},{id:5,n:'Huit avant'},
-    {id:6,n:'Sandwich'},{id:7,n:'Paradas'},{id:8,n:'Salida'},{id:9,n:'Marche circulaire'},{id:10,n:'Huit coupé'},
-    {id:11,n:'Structure du tour'},{id:12,n:'Medialuna'},{id:13,n:'Tour simple'},{id:14,n:'Système croisé et marches'},
-    {id:15,n:'Salida 40 (en système croisé)'},{id:16,n:'Marche en tournant'},{id:17,n:'Miroir'},
+var _nivCurrExpanded = false;
+// Curriculum « Mon niveau » — commun à TOUTES les saisons (pas de suffixe saison).
+// Source de vérité éditable par l'admin → clé Supabase `tev_niv_curriculum`.
+// Doit rester synchronisé avec _NIV_GROUPS_DEFAULT dans index.html.
+var _NIV_CURRICULUM_DEFAULT = { groups: [
+  { id:'vd', lvl:'deb', label:'🌱 Vocabulaire Débutant', items:[
+    {id:1,n:'Marche face à face',ab:'F'},{id:2,n:'Baldosa',ab:'F'},{id:3,n:'Rebonds',ab:'F'},
+    {id:4,n:'Marches',ab:'F'},{id:5,n:'Huit arrière',ab:'F'},{id:6,n:'Huit avant',ab:'F'},
+    {id:7,n:'Sandwich',ab:'F'},{id:8,n:'Paradas',ab:'F'},{id:9,n:'Salida',ab:'F'},
+    {id:10,n:'Marche circulaire',ab:'F'},{id:11,n:'Huit coupé',ab:'F'},{id:12,n:'Structure du tour',ab:'OF'},
+    {id:13,n:'Medialuna',ab:'O'},{id:14,n:'Tour simple',ab:'F'},{id:15,n:'Système croisé et marches',ab:'F'},
+    {id:16,n:'Salida 40 (en système croisé)',ab:'F'},{id:17,n:'Marche en tournant',ab:'F'},{id:18,n:'Miroir',ab:'OF'},
   ]},
-  {g:'🧭 Notions Débutant', items:[
-    {id:18,n:'Savoir aller lentement, normalement, rapidement'},{id:19,n:'Notions de circulation dans le bal'},{id:20,n:'Abrazo intègre pendant la danse'},
+  { id:'nd', lvl:'deb', label:'🧭 Notions Débutant', items:[
+    {id:19,n:"Savoir s'arrêter dans la marche",ab:null},{id:20,n:'Savoir aller lentement, normalement, rapidement',ab:null},
+    {id:21,n:'Notions de circulation dans le bal',ab:null},{id:22,n:'Abrazo intègre pendant la danse',ab:null},
   ]},
-  {g:'💃 Vocabulaire Intermédiaire', items:[
-    {id:21,n:'Marche côte à côte'},{id:22,n:'½ tour'},{id:23,n:'Huit sans déplacement'},{id:24,n:"Sacada de l'homme"},
-    {id:25,n:'Tour avec quebrada'},{id:26,n:'Tour avec sacadas'},{id:27,n:'Tour milonguero'},{id:28,n:'Barridas'},
-    {id:29,n:'Calesita'},{id:30,n:'Medialuna avec roulo'},{id:31,n:'Roulo'},{id:32,n:'Lapiz + parada'},
-    {id:33,n:'Gancho de la femme pour le bal'},{id:34,n:'Boleo arrière au sol'},{id:71,n:'Fioritures'},
+  { id:'vi', lvl:'int', label:'💃 Vocabulaire Intermédiaire', items:[
+    {id:23,n:'Marche sur 6 lignes en système normal',ab:null},{id:24,n:'Marche côte à côte',ab:'O'},{id:25,n:'½ tour',ab:'O'},
+    {id:26,n:'Huit sans déplacement',ab:'F'},{id:27,n:"Sacada de l'homme",ab:'OF'},{id:28,n:'Tour avec quebrada',ab:'F'},
+    {id:29,n:'Tour avec sacadas',ab:'OF'},{id:30,n:'Tour milonguero',ab:'F'},{id:31,n:'Barridas',ab:'OF'},
+    {id:32,n:'Calesita',ab:'F'},{id:33,n:'Medialuna avec roulo',ab:'O'},{id:34,n:'Roulo',ab:'O'},
+    {id:35,n:'Lapiz + parada',ab:'O'},{id:36,n:'Gancho de la femme pour le bal',ab:'F'},{id:37,n:'Boleo arrière au sol',ab:'F'},
+    {id:38,n:'Fioritures',ab:'OF'},
   ]},
-  {g:'🧭 Notions Intermédiaires', items:[
-    {id:37,n:'Notion de musicalité de vals'},{id:38,n:'Notion de musicalité de milonga'},{id:39,n:'Notion de temps et contretemps'},
-    {id:40,n:'Gérer le sens du bal'},{id:41,n:'Improviser dans le bal'},{id:42,n:'Abrazo fermé'},
+  { id:'ni', lvl:'int', label:'🧭 Notions Intermédiaires', items:[
+    {id:39,n:'Intention',ab:null},{id:40,n:'Séquence rythmique',ab:null},{id:41,n:'Système appilado',ab:null},
+    {id:42,n:'Notion de musicalité de milonga',ab:null},{id:43,n:'Notion de temps et contretemps',ab:null},
+    {id:44,n:'Gérer le sens du bal',ab:null},{id:45,n:'Improviser dans le bal',ab:null},{id:46,n:'Fluidité de la danse',ab:null},
+    {id:47,n:'Abrazo fermé',ab:'F'},{id:48,n:'Invitation : cabeceo et mirada',ab:null},{id:49,n:"Improviser tout un morceau sans s'arrêter",ab:null},
   ]},
-  {g:'🔥 Vocabulaire Avancé', items:[
-    {id:43,n:'Bloqueo'},{id:44,n:'Tour avec sacadas'},{id:45,n:'Sacada de la femme'},{id:46,n:'Ocho milonguero'},
-    {id:47,n:'Tour milonguero en cadena'},{id:48,n:'Planeo'},{id:49,n:'Enrosque'},{id:50,n:'Lapiz'},
-    {id:51,n:'Gancho'},{id:52,n:'Boleos circulaires'},{id:53,n:'Boleos en ligne'},{id:54,n:'Altération'},
-    {id:55,n:"Boleos arrière et avant en l'air"},{id:56,n:'Colgada'},{id:57,n:'Volcada'},{id:58,n:'Aguja'},
-    {id:59,n:'Croisés forcés'},{id:60,n:'Patadas'},{id:61,n:'Chilena'},{id:62,n:"Pivot sur 2 appuis de l'homme"},
-    {id:63,n:"Pivot sur 2 appuis de la femme"},{id:64,n:'Séquences rapides'},{id:65,n:'Séquences lentes'},
-    {id:72,n:'Vocabulaire de milonga'},{id:73,n:'Pas de vals'},
+  { id:'va', lvl:'adv', label:'🔥 Vocabulaire Avancé 1', items:[
+    {id:50,n:'Surpivots',ab:null},{id:51,n:'Marche sur 4 lignes en système croisé',ab:null},{id:52,n:'Bloqueo',ab:'F'},
+    {id:53,n:'Tour avec sacadas',ab:null},{id:54,n:'Sacada de la femme',ab:'OF'},{id:55,n:'Ocho milonguero',ab:'F'},
+    {id:56,n:'Tour milonguero en cadena',ab:'F'},{id:57,n:'Lapiz',ab:'O'},{id:58,n:'Boleos circulaires en arrière',ab:'OF'},
+    {id:59,n:'Boleos circulaires en avant',ab:'OF'},{id:60,n:'Gancho sur place',ab:'O'},{id:61,n:"Pivot sur 2 appuis de l'homme",ab:'O'},
+    {id:62,n:'Pivot sur 2 appuis de la femme',ab:'OF'},{id:63,n:'Fioritures avancées',ab:null},{id:64,n:'Séquences simples de milonga',ab:null},
   ]},
-  {g:'🧭 Notions Avancées', items:[
-    {id:66,n:"Construction musicale en fonction de l'orchestre"},{id:67,n:'Contretemps, dobletiempo et syncope'},
-    {id:68,n:"Gestion de l'espace réduit"},{id:69,n:"Gérer l'abrazo en fonction des séquences"},
-    {id:70,n:'Je crée mes propres séquences'},{id:74,n:'Je choisis comment je veux danser, mon style'},
+  { id:'na', lvl:'adv', label:'🧭 Notions Avancées 1', items:[
+    {id:65,n:'Intention puis déplacement',ab:null},{id:66,n:'Différents types de guidages',ab:null},{id:67,n:'Savoir déstructurer les bases',ab:null},
+    {id:68,n:"L'abrazo ne se déforme pas",ab:null},{id:69,n:'Contretemps, dobletiempo et syncope',ab:null},{id:70,n:"Gestion de l'espace réduit",ab:null},
+    {id:71,n:'Séquence dynamique',ab:null},{id:72,n:'Travail musical et spatial sur la salida 40',ab:null},{id:73,n:'Musicalité de la vals',ab:null},
+    {id:74,n:'Musicalité de la milonga',ab:null},{id:75,n:'Danser tout un morceau simplement et avec musicalité',ab:null},
   ]},
-];
+  { id:'va2', lvl:'adv2', label:'⚡ Vocabulaire Avancé 2', items:[
+    {id:76,n:'Planeo',ab:'O'},{id:77,n:'Enrosque',ab:'OF'},{id:78,n:'Gancho dans la dynamique du tour',ab:'O'},
+    {id:79,n:'Boleos en ligne',ab:'O'},{id:80,n:'Altération',ab:'OF'},{id:81,n:'Mouvements en colgadita',ab:'F'},
+    {id:82,n:'Séquences de sacadas',ab:null},{id:83,n:'Croisés rythmiques',ab:null},{id:84,n:'Colgada',ab:'OF'},
+    {id:85,n:'Volcada',ab:'F'},{id:86,n:'Aguja',ab:'O'},{id:87,n:'Croisés forcés',ab:'OF'},
+    {id:88,n:'Patadas',ab:'O'},{id:89,n:'Chilena',ab:'O'},{id:90,n:'Séquences rapides',ab:null},
+    {id:91,n:'Séquences lentes',ab:null},{id:92,n:'Séquences avancées de milonga',ab:'F'},{id:93,n:'Séquences de vals',ab:'F'},
+    {id:94,n:'Tour avec sacadas et croisés',ab:'OF'},{id:95,n:'Cuartas sacadas',ab:'O'},
+  ]},
+  { id:'na2', lvl:'adv2', label:'🧭 Notions Avancées 2', items:[
+    {id:96,n:'Abrazo confortable et fonctionnel',ab:null},{id:97,n:"Construction musicale en fonction de l'orchestre",ab:null},
+    {id:98,n:"Gérer l'abrazo en fonction des séquences",ab:null},{id:99,n:'Je crée mes propres séquences',ab:null},
+    {id:100,n:'Je choisis comment je veux danser, mon style',ab:null},{id:101,n:'Comprendre la différence entre tango salon et tango milonguero',ab:null},
+    {id:102,n:'Séquences lentes',ab:null},{id:103,n:'Séquences rapides',ab:null},{id:104,n:'Gestion des « variations »',ab:null},
+    {id:105,n:"Durée de l'intention",ab:null},{id:106,n:'Pisada',ab:null},{id:107,n:'Qualité du mouvement',ab:null},
+    {id:108,n:'Jouer avec les syncopes sur la vals',ab:null},
+  ]},
+]};
+var _NIV_CURRICULUM = null;
+function _nivCurrLoad() {
+  if (_NIV_CURRICULUM && Array.isArray(_NIV_CURRICULUM.groups)) return _NIV_CURRICULUM;
+  try {
+    var raw = JSON.parse(localStorage.getItem('tev_niv_curriculum')||'null');
+    if (raw && Array.isArray(raw.groups) && raw.groups.length) { _NIV_CURRICULUM = raw; return raw; }
+  } catch(e){}
+  _NIV_CURRICULUM = JSON.parse(JSON.stringify(_NIV_CURRICULUM_DEFAULT));
+  return _NIV_CURRICULUM;
+}
+function _nivCurrGroups() { return _nivCurrLoad().groups; }
+function _nivCurrNextId() {
+  var mx = 0;
+  _nivCurrGroups().forEach(function(g){ (g.items||[]).forEach(function(it){ if(+it.id>mx) mx=+it.id; }); });
+  return mx + 1;
+}
+function _nivCurrCount() {
+  var n = 0;
+  _nivCurrGroups().forEach(function(g){ n += (g.items||[]).length; });
+  return n;
+}
+// Synchronise les saisies du DOM (éditeur) vers _NIV_CURRICULUM avant toute mutation/sauvegarde
+function _nivCurrSyncFromDOM() {
+  var groups = _nivCurrGroups();
+  document.querySelectorAll('.niv-curr-name').forEach(function(inp){
+    var g = groups.find(function(x){return x.id===inp.dataset.gid;}); if(!g) return;
+    var it = (g.items||[]).find(function(x){return +x.id===+inp.dataset.iid;}); if(!it) return;
+    it.n = (inp.value||'').trim();
+  });
+  document.querySelectorAll('.niv-curr-ab').forEach(function(sel){
+    var g = groups.find(function(x){return x.id===sel.dataset.gid;}); if(!g) return;
+    var it = (g.items||[]).find(function(x){return +x.id===+sel.dataset.iid;}); if(!it) return;
+    it.ab = sel.value || null;
+  });
+}
+// Récupère vidéos + curriculum depuis Supabase (une passe) puis callback
+function _nivFetchRemote(cb) {
+  if (IS_DEMO) { cb && cb(); return; }
+  Promise.all([
+    TEV.client.from('parametres').select('valeur').eq('cle','tev_niv_videos').maybeSingle(),
+    TEV.client.from('parametres').select('valeur').eq('cle','tev_niv_curriculum').maybeSingle()
+  ]).then(function(rs){
+    try { if(rs[0]&&rs[0].data&&rs[0].data.valeur) localStorage.setItem('tev_niv_videos', JSON.stringify(rs[0].data.valeur)); } catch(e){}
+    try {
+      if(rs[1]&&rs[1].data&&rs[1].data.valeur&&Array.isArray(rs[1].data.valeur.groups)){
+        localStorage.setItem('tev_niv_curriculum', JSON.stringify(rs[1].data.valeur));
+        _NIV_CURRICULUM = null; // forcer le rechargement depuis localStorage
+      }
+    } catch(e){}
+    cb && cb();
+  }).catch(function(){ cb && cb(); });
+}
 
 function _renderFeaturesSection() {
   var nivOn = false;
@@ -3332,26 +3411,60 @@ function _renderFeaturesSection() {
     +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">'
     +'<div>'
     +'<div style="font-size:13px;font-weight:600;color:var(--text);">📈 Mon niveau · Test</div>'
-    +'<div style="font-size:11px;color:var(--dim);margin-top:3px;line-height:1.5;">Rubrique d\'auto-évaluation (72 séquences et notions) dans l\'espace élève. '
+    +'<div style="font-size:11px;color:var(--dim);margin-top:3px;line-height:1.5;">Rubrique d\'auto-évaluation ('+_nivCurrCount()+' séquences et notions) dans l\'espace élève. '
     +(nivOn ? 'Visible dans le menu élève.' : 'Masquée — les élèves ne la voient pas.')+'</div>'
     +'</div>'
     +'<button class="btn '+(nivOn?'btn-gold':'btn-ghost')+'" data-action="toggle-feature-mon-niveau" data-etat="'+(nivOn?'1':'0')+'"'
     +' style="font-size:12px;flex-shrink:0;min-width:90px;">'+(nivOn?'✓ Activée':'Désactivée')+'</button>'
     +'</div>'
-    // Section vidéos
+    // ── Sous-section : Vocabulaire & notions (curriculum éditable) ──
     +'<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;display:flex;align-items:center;justify-content:space-between;">'
-    +'<div style="font-size:12px;font-weight:600;color:var(--text);">📹 Vidéos pédagogiques'+(nbVids>0?' <span style="font-weight:400;color:var(--dim);">('+nbVids+'/72)</span>':'')+'</div>'
+    +'<div style="font-size:12px;font-weight:600;color:var(--text);">📚 Vocabulaire & notions <span style="font-weight:400;color:var(--dim);">('+_nivCurrCount()+')</span></div>'
+    +'<button class="btn btn-ghost" data-action="toggle-niv-curr-section" style="font-size:11px;padding:4px 10px;">'+(_nivCurrExpanded?'▲ Réduire':'▼ Gérer')+'</button>'
+    +'</div>';
+  if (_nivCurrExpanded) {
+    var abOpts = function(cur){
+      return ['','O','F','OF'].map(function(o){
+        var lbl = o===''?'—':o;
+        return '<option value="'+o+'"'+((cur||'')===o?' selected':'')+'>'+lbl+'</option>';
+      }).join('');
+    };
+    h += '<div style="margin-top:10px;">'
+      +'<div style="font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.5;">Ajoutez, modifiez ou supprimez les séquences et notions. '
+      +'Colonne « abrazo » : — (aucun), O (ouvert), F (fermé), OF (les deux). '
+      +'<b>Commun à toutes les saisons.</b> Pensez à enregistrer.</div>';
+    _nivCurrGroups().forEach(function(group) {
+      h += '<div style="font-size:11px;font-weight:700;color:var(--gold);margin:12px 0 5px;letter-spacing:0.5px;">'+(group.label||group.id)+'</div>';
+      (group.items||[]).forEach(function(it) {
+        var nm = (it.n||'').replace(/"/g,'&quot;');
+        h += '<div style="display:grid;grid-template-columns:1fr 56px 24px;align-items:center;gap:6px;margin-bottom:4px;">'
+          +'<input type="text" class="niv-curr-name" data-gid="'+group.id+'" data-iid="'+it.id+'" value="'+nm+'" placeholder="Nom de la séquence ou notion" style="'+iS+'">'
+          +'<select class="niv-curr-ab" data-gid="'+group.id+'" data-iid="'+it.id+'" style="'+iS+'padding:4px 2px;">'+abOpts(it.ab)+'</select>'
+          +'<button class="btn" data-action="niv-curr-del" data-gid="'+group.id+'" data-iid="'+it.id+'" style="font-size:11px;color:#e53935;border-color:#e53935;background:transparent;padding:3px 0;" title="Supprimer">✕</button>'
+          +'</div>';
+      });
+      h += '<button class="btn" data-action="niv-curr-add" data-gid="'+group.id+'" style="font-size:11px;margin:2px 0 4px;background:transparent;border:1px dashed var(--border);color:var(--dim);padding:4px 10px;">➕ Ajouter</button>';
+    });
+    h += '<div class="btn-row" style="margin-top:14px;gap:8px;">'
+      +'<button class="btn btn-gold" data-action="niv-curr-save" style="font-size:12px;">💾 Enregistrer le vocabulaire</button>'
+      +'<button class="btn btn-ghost" data-action="niv-curr-reset" style="font-size:12px;">↺ Réinitialiser</button>'
+      +'</div></div>';
+  }
+  h +=
+    // Section vidéos
+    '<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;display:flex;align-items:center;justify-content:space-between;">'
+    +'<div style="font-size:12px;font-weight:600;color:var(--text);">📹 Vidéos pédagogiques'+(nbVids>0?' <span style="font-weight:400;color:var(--dim);">('+nbVids+'/'+_nivCurrCount()+')</span>':'')+'</div>'
     +'<button class="btn btn-ghost" data-action="toggle-niv-vid-section" style="font-size:11px;padding:4px 10px;">'+(_nivVidExpanded?'▲ Réduire':'▼ Gérer')+'</button>'
     +'</div>';
   if (_nivVidExpanded) {
     h += '<div style="margin-top:10px;">'
       +'<div style="font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.5;">Collez l\'URL Cloudinary de la vidéo pour chaque item. Laissez vide pour désactiver.</div>';
-    _NIV_VID_REF.forEach(function(group) {
-      h += '<div style="font-size:11px;font-weight:700;color:var(--gold);margin:10px 0 5px;letter-spacing:0.5px;">'+group.g+'</div>';
-      group.items.forEach(function(it) {
+    _nivCurrGroups().forEach(function(group) {
+      h += '<div style="font-size:11px;font-weight:700;color:var(--gold);margin:10px 0 5px;letter-spacing:0.5px;">'+(group.label||group.id)+'</div>';
+      (group.items||[]).forEach(function(it) {
         var val = (videos[it.id]||'').replace(/"/g,'&quot;');
         h += '<div style="display:grid;grid-template-columns:160px 1fr 16px;align-items:center;gap:6px;margin-bottom:4px;">'
-          +'<span style="font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+it.n+'">'+it.n+'</span>'
+          +'<span style="font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+(it.n||'').replace(/"/g,'&quot;')+'">'+(it.n||'')+'</span>'
           +'<input type="url" class="niv-vid-inp" data-id="'+it.id+'" value="'+val+'" placeholder="https://res.cloudinary.com/…" style="'+iS+'">'
           +'<span style="color:'+(val?'#4caf50':'transparent')+';">▶</span>'
           +'</div>';
@@ -5671,6 +5784,7 @@ function _renderTabSiPasFormulaire() {
   if (currentTab === 'publications' && gel('pub-ed') && gel('pub-ed').innerHTML.trim()) return; // formulaire pub ouvert — ne pas écraser
   if (currentTab === 'notifications') return; // ne pas interrompre la lecture des notifs
   if (currentTab === 'agenda') return; // ne pas interrompre la navigation entre les mois
+  if (currentTab === 'parametres' && (_nivCurrExpanded || _nivVidExpanded)) return; // éditeur Mon niveau ouvert — ne pas écraser les saisies
   if (_editCarteId !== null) return; // modal ✏️ Modifier carte ouverte
   // Ne pas re-rendre si l'utilisateur est en train de saisir dans un champ
   var ae = document.activeElement;
@@ -6963,16 +7077,61 @@ function handleAction(action, btn) {
       (function() {
         _nivVidExpanded = !_nivVidExpanded;
         if (_nivVidExpanded && !IS_DEMO) {
-          TEV.client.from('parametres').select('valeur').eq('cle','tev_niv_videos').maybeSingle()
-            .then(function(res){
-              if (res && res.data && res.data.valeur) {
-                try { localStorage.setItem('tev_niv_videos', JSON.stringify(res.data.valeur)); } catch(e){}
-              }
-              renderTab();
-            }).catch(function(){ renderTab(); });
+          _nivFetchRemote(function(){ renderTab(); });
         } else {
           renderTab();
         }
+      })();
+      break;
+    case 'toggle-niv-curr-section':
+      (function() {
+        _nivCurrExpanded = !_nivCurrExpanded;
+        if (_nivCurrExpanded && !IS_DEMO) {
+          _nivFetchRemote(function(){ renderTab(); });
+        } else {
+          renderTab();
+        }
+      })();
+      break;
+    case 'niv-curr-add':
+      (function() {
+        _nivCurrSyncFromDOM();
+        var g = _nivCurrGroups().find(function(x){return x.id===btn.dataset.gid;});
+        if (g) { g.items = g.items||[]; g.items.push({id:_nivCurrNextId(), n:'', ab:null}); }
+        renderTab();
+      })();
+      break;
+    case 'niv-curr-del':
+      (function() {
+        _nivCurrSyncFromDOM();
+        var g = _nivCurrGroups().find(function(x){return x.id===btn.dataset.gid;});
+        if (g) g.items = (g.items||[]).filter(function(it){ return +it.id !== +btn.dataset.iid; });
+        renderTab();
+      })();
+      break;
+    case 'niv-curr-reset':
+      (function() {
+        if (!confirm('Réinitialiser le vocabulaire et les notions à la liste par défaut ? Les modifications non enregistrées seront perdues.')) return;
+        _NIV_CURRICULUM = JSON.parse(JSON.stringify(_NIV_CURRICULUM_DEFAULT));
+        afficherToast('↺ Liste par défaut restaurée — pensez à enregistrer');
+        renderTab();
+      })();
+      break;
+    case 'niv-curr-save':
+      (function() {
+        _nivCurrSyncFromDOM();
+        // Retirer les items sans nom
+        _nivCurrGroups().forEach(function(g){ g.items = (g.items||[]).filter(function(it){ return (it.n||'').trim(); }); });
+        var data = _nivCurrLoad();
+        try { localStorage.setItem('tev_niv_curriculum', JSON.stringify(data)); } catch(e){}
+        if (!IS_DEMO) {
+          Promise.resolve(TEV.setParam('tev_niv_curriculum', data))
+            .then(function(res){ afficherToast(res&&res.ok===false ? '⚠️ Erreur Supabase' : '✓ Vocabulaire enregistré'); })
+            .catch(function(){ afficherToast('⚠️ Erreur Supabase'); });
+        } else {
+          afficherToast('✓ Vocabulaire enregistré');
+        }
+        renderTab();
       })();
       break;
     case 'sauver-niv-videos':
@@ -14332,6 +14491,7 @@ async function chargerParamsRemote() {
         }
       } catch(e) {}
     });
+    _NIV_CURRICULUM = null; // invalider le cache curriculum (rechargé depuis localStorage au prochain accès)
     if (changed) {
       chargerTarifs();
       chargerLivrets();

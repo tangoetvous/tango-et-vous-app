@@ -1685,93 +1685,98 @@
     {ico:'★',  name:'Incorporé',        desc:'Tu peux l\'exécuter rien qu\'en pensant à son nom.',                    col:'#42a5f5'},
     {ico:'🕺', name:'En mode tanguero', desc:'Tu joues avec — spatialement, musicalement — tu improvises avec facilité.', col:'#D4AF37'},
   ];
-  const _NIV_GROUPS = [
+  // Niveaux cumulatifs (ordre = visibilité). Structure stable, non éditable.
+  const _NIV_LEVELS = [
+    {id:'deb',  ico:'🌱', name:'Débutant'},
+    {id:'int',  ico:'💃', name:'Intermédiaire'},
+    {id:'adv',  ico:'🔥', name:'Avancé 1'},
+    {id:'adv2', ico:'⚡', name:'Avancé 2'},
+  ];
+  // Curriculum par défaut (commun à toutes les saisons). Éditable par l'admin
+  // dans Paramètres → Fonctionnalités → Vocabulaire & notions, sauvegardé dans
+  // la clé Supabase `tev_niv_curriculum` (sans suffixe de saison).
+  const _NIV_GROUPS_DEFAULT = [
     { id:'vd', lvl:'deb', label:'🌱 Vocabulaire Débutant', items:[
-      {id:1,  n:'Baldosa',                              ab:'F'},
-      {id:2,  n:'Rebonds',                              ab:'F'},
-      {id:3,  n:'Marches',                              ab:'F'},
-      {id:4,  n:'Huit arrière',                         ab:'F'},
-      {id:5,  n:'Huit avant',                           ab:'F'},
-      {id:6,  n:'Sandwich',                             ab:'F'},
-      {id:7,  n:'Paradas',                              ab:'F'},
-      {id:8,  n:'Salida',                               ab:'F'},
-      {id:9,  n:'Marche circulaire',                    ab:'F'},
-      {id:10, n:'Huit coupé',                           ab:'F'},
-      {id:11, n:'Structure du tour',                    ab:'OF'},
-      {id:12, n:'Medialuna',                            ab:'O'},
-      {id:13, n:'Tour simple',                          ab:'F'},
-      {id:14, n:'Système croisé et marches',            ab:'F'},
-      {id:15, n:'Salida 40 (en système croisé)',        ab:'F'},
-      {id:16, n:'Marche en tournant',                   ab:'F'},
-      {id:17, n:'Miroir',                               ab:'OF'},
+      {id:1, n:'Marche face à face',ab:'F'},{id:2, n:'Baldosa',ab:'F'},{id:3, n:'Rebonds',ab:'F'},
+      {id:4, n:'Marches',ab:'F'},{id:5, n:'Huit arrière',ab:'F'},{id:6, n:'Huit avant',ab:'F'},
+      {id:7, n:'Sandwich',ab:'F'},{id:8, n:'Paradas',ab:'F'},{id:9, n:'Salida',ab:'F'},
+      {id:10,n:'Marche circulaire',ab:'F'},{id:11,n:'Huit coupé',ab:'F'},{id:12,n:'Structure du tour',ab:'OF'},
+      {id:13,n:'Medialuna',ab:'O'},{id:14,n:'Tour simple',ab:'F'},{id:15,n:'Système croisé et marches',ab:'F'},
+      {id:16,n:'Salida 40 (en système croisé)',ab:'F'},{id:17,n:'Marche en tournant',ab:'F'},{id:18,n:'Miroir',ab:'OF'},
     ]},
     { id:'nd', lvl:'deb', label:'🧭 Notions Débutant', items:[
-      {id:18, n:'Savoir aller lentement, normalement, rapidement', ab:null},
-      {id:19, n:'Notions de circulation dans le bal',              ab:null},
-      {id:20, n:'Abrazo intègre pendant la danse',                 ab:null},
+      {id:19,n:'Savoir s\'arrêter dans la marche',ab:null},{id:20,n:'Savoir aller lentement, normalement, rapidement',ab:null},
+      {id:21,n:'Notions de circulation dans le bal',ab:null},{id:22,n:'Abrazo intègre pendant la danse',ab:null},
     ]},
     { id:'vi', lvl:'int', label:'💃 Vocabulaire Intermédiaire', items:[
-      {id:21, n:'Marche côte à côte',              ab:'O'},
-      {id:22, n:'½ tour',                          ab:'O'},
-      {id:23, n:'Huit sans déplacement',           ab:'F'},
-      {id:24, n:'Sacada de l\'homme',              ab:'OF'},
-      {id:25, n:'Tour avec quebrada',              ab:'F'},
-      {id:26, n:'Tour avec sacadas',               ab:'OF'},
-      {id:27, n:'Tour milonguero',                 ab:'F'},
-      {id:28, n:'Barridas',                        ab:'OF'},
-      {id:29, n:'Calesita',                        ab:'F'},
-      {id:30, n:'Medialuna avec roulo',            ab:'O'},
-      {id:31, n:'Roulo',                           ab:'O'},
-      {id:32, n:'Lapiz + parada',                  ab:'O'},
-      {id:33, n:'Gancho de la femme pour le bal',  ab:'F'},
-      {id:34, n:'Boleo arrière au sol',            ab:'F'},
-      {id:71, n:'Fioritures',                      ab:'OF'},
+      {id:23,n:'Marche sur 6 lignes en système normal',ab:null},{id:24,n:'Marche côte à côte',ab:'O'},{id:25,n:'½ tour',ab:'O'},
+      {id:26,n:'Huit sans déplacement',ab:'F'},{id:27,n:'Sacada de l\'homme',ab:'OF'},{id:28,n:'Tour avec quebrada',ab:'F'},
+      {id:29,n:'Tour avec sacadas',ab:'OF'},{id:30,n:'Tour milonguero',ab:'F'},{id:31,n:'Barridas',ab:'OF'},
+      {id:32,n:'Calesita',ab:'F'},{id:33,n:'Medialuna avec roulo',ab:'O'},{id:34,n:'Roulo',ab:'O'},
+      {id:35,n:'Lapiz + parada',ab:'O'},{id:36,n:'Gancho de la femme pour le bal',ab:'F'},{id:37,n:'Boleo arrière au sol',ab:'F'},
+      {id:38,n:'Fioritures',ab:'OF'},
     ]},
     { id:'ni', lvl:'int', label:'🧭 Notions Intermédiaires', items:[
-      {id:37, n:'Notion de musicalité de vals',           ab:null},
-      {id:38, n:'Notion de musicalité de milonga',        ab:null},
-      {id:39, n:'Notion de temps et contretemps',         ab:null},
-      {id:40, n:'Gérer le sens du bal',                   ab:null},
-      {id:41, n:'Improviser dans le bal',                 ab:null},
-      {id:42, n:'Abrazo fermé',                           ab:'F'},
+      {id:39,n:'Intention',ab:null},{id:40,n:'Séquence rythmique',ab:null},{id:41,n:'Système appilado',ab:null},
+      {id:42,n:'Notion de musicalité de milonga',ab:null},{id:43,n:'Notion de temps et contretemps',ab:null},
+      {id:44,n:'Gérer le sens du bal',ab:null},{id:45,n:'Improviser dans le bal',ab:null},{id:46,n:'Fluidité de la danse',ab:null},
+      {id:47,n:'Abrazo fermé',ab:'F'},{id:48,n:'Invitation : cabeceo et mirada',ab:null},{id:49,n:'Improviser tout un morceau sans s\'arrêter',ab:null},
     ]},
-    { id:'va', lvl:'adv', label:'🔥 Vocabulaire Avancé', items:[
-      {id:43, n:'Bloqueo',                                     ab:'F'},
-      {id:44, n:'Tour avec sacadas',                           ab:null},
-      {id:45, n:'Sacada de la femme',                          ab:'OF'},
-      {id:46, n:'Ocho milonguero',                             ab:'F'},
-      {id:47, n:'Tour milonguero en cadena',                   ab:'F'},
-      {id:48, n:'Planeo',                                      ab:'O'},
-      {id:49, n:'Enrosque',                                    ab:'OF'},
-      {id:50, n:'Lapiz',                                       ab:'O'},
-      {id:51, n:'Gancho',                                      ab:'O'},
-      {id:52, n:'Boleos circulaires',                          ab:'OF'},
-      {id:53, n:'Boleos en ligne',                             ab:'O'},
-      {id:54, n:'Altération',                                  ab:'OF'},
-      {id:55, n:'Boleos arrière et avant en l\'air',           ab:'OF'},
-      {id:56, n:'Colgada',                                     ab:'OF'},
-      {id:57, n:'Volcada',                                     ab:'F'},
-      {id:58, n:'Aguja',                                       ab:'O'},
-      {id:59, n:'Croisés forcés',                              ab:'OF'},
-      {id:60, n:'Patadas',                                     ab:'O'},
-      {id:61, n:'Chilena',                                     ab:'O'},
-      {id:62, n:'Pivot sur 2 appuis de l\'homme',              ab:'O'},
-      {id:63, n:'Pivot sur 2 appuis de la femme',              ab:'OF'},
-      {id:64, n:'Séquences rapides',                           ab:null},
-      {id:65, n:'Séquences lentes',                            ab:null},
-      {id:72, n:'Vocabulaire de milonga',                      ab:'F'},
-      {id:73, n:'Pas de vals',                                 ab:'F'},
+    { id:'va', lvl:'adv', label:'🔥 Vocabulaire Avancé 1', items:[
+      {id:50,n:'Surpivots',ab:null},{id:51,n:'Marche sur 4 lignes en système croisé',ab:null},{id:52,n:'Bloqueo',ab:'F'},
+      {id:53,n:'Tour avec sacadas',ab:null},{id:54,n:'Sacada de la femme',ab:'OF'},{id:55,n:'Ocho milonguero',ab:'F'},
+      {id:56,n:'Tour milonguero en cadena',ab:'F'},{id:57,n:'Lapiz',ab:'O'},{id:58,n:'Boleos circulaires en arrière',ab:'OF'},
+      {id:59,n:'Boleos circulaires en avant',ab:'OF'},{id:60,n:'Gancho sur place',ab:'O'},{id:61,n:'Pivot sur 2 appuis de l\'homme',ab:'O'},
+      {id:62,n:'Pivot sur 2 appuis de la femme',ab:'OF'},{id:63,n:'Fioritures avancées',ab:null},{id:64,n:'Séquences simples de milonga',ab:null},
     ]},
-    { id:'na', lvl:'adv', label:'🧭 Notions Avancées', items:[
-      {id:66, n:'Construction musicale en fonction de l\'orchestre', ab:null},
-      {id:67, n:'Contretemps, dobletiempo et syncope',               ab:null},
-      {id:68, n:'Gestion de l\'espace réduit',                       ab:null},
-      {id:69, n:'Gérer l\'abrazo en fonction des séquences',         ab:null},
-      {id:70, n:'Je crée mes propres séquences',                     ab:null},
-      {id:74, n:'Je choisis comment je veux danser, mon style',      ab:null},
+    { id:'na', lvl:'adv', label:'🧭 Notions Avancées 1', items:[
+      {id:65,n:'Intention puis déplacement',ab:null},{id:66,n:'Différents types de guidages',ab:null},{id:67,n:'Savoir déstructurer les bases',ab:null},
+      {id:68,n:'L\'abrazo ne se déforme pas',ab:null},{id:69,n:'Contretemps, dobletiempo et syncope',ab:null},{id:70,n:'Gestion de l\'espace réduit',ab:null},
+      {id:71,n:'Séquence dynamique',ab:null},{id:72,n:'Travail musical et spatial sur la salida 40',ab:null},{id:73,n:'Musicalité de la vals',ab:null},
+      {id:74,n:'Musicalité de la milonga',ab:null},{id:75,n:'Danser tout un morceau simplement et avec musicalité',ab:null},
+    ]},
+    { id:'va2', lvl:'adv2', label:'⚡ Vocabulaire Avancé 2', items:[
+      {id:76,n:'Planeo',ab:'O'},{id:77,n:'Enrosque',ab:'OF'},{id:78,n:'Gancho dans la dynamique du tour',ab:'O'},
+      {id:79,n:'Boleos en ligne',ab:'O'},{id:80,n:'Altération',ab:'OF'},{id:81,n:'Mouvements en colgadita',ab:'F'},
+      {id:82,n:'Séquences de sacadas',ab:null},{id:83,n:'Croisés rythmiques',ab:null},{id:84,n:'Colgada',ab:'OF'},
+      {id:85,n:'Volcada',ab:'F'},{id:86,n:'Aguja',ab:'O'},{id:87,n:'Croisés forcés',ab:'OF'},
+      {id:88,n:'Patadas',ab:'O'},{id:89,n:'Chilena',ab:'O'},{id:90,n:'Séquences rapides',ab:null},
+      {id:91,n:'Séquences lentes',ab:null},{id:92,n:'Séquences avancées de milonga',ab:'F'},{id:93,n:'Séquences de vals',ab:'F'},
+      {id:94,n:'Tour avec sacadas et croisés',ab:'OF'},{id:95,n:'Cuartas sacadas',ab:'O'},
+    ]},
+    { id:'na2', lvl:'adv2', label:'🧭 Notions Avancées 2', items:[
+      {id:96,n:'Abrazo confortable et fonctionnel',ab:null},{id:97,n:'Construction musicale en fonction de l\'orchestre',ab:null},
+      {id:98,n:'Gérer l\'abrazo en fonction des séquences',ab:null},{id:99,n:'Je crée mes propres séquences',ab:null},
+      {id:100,n:'Je choisis comment je veux danser, mon style',ab:null},{id:101,n:'Comprendre la différence entre tango salon et tango milonguero',ab:null},
+      {id:102,n:'Séquences lentes',ab:null},{id:103,n:'Séquences rapides',ab:null},{id:104,n:'Gestion des « variations »',ab:null},
+      {id:105,n:'Durée de l\'intention',ab:null},{id:106,n:'Pisada',ab:null},{id:107,n:'Qualité du mouvement',ab:null},
+      {id:108,n:'Jouer avec les syncopes sur la vals',ab:null},
     ]},
   ];
-  const _NIV_ALL = _NIV_GROUPS.flatMap(g => g.items.map(it => ({...it, gid:g.id, lvl:g.lvl})));
+  let _NIV_GROUPS = _NIV_GROUPS_DEFAULT.map(g => ({...g, items: g.items.map(it => ({...it}))}));
+  let _NIV_ALL = [];
+  function _nivRebuildAll() { _NIV_ALL = _NIV_GROUPS.flatMap(g => g.items.map(it => ({...it, gid:g.id, lvl:g.lvl}))); }
+  _nivRebuildAll();
+  // Applique un curriculum chargé depuis Supabase (validation défensive)
+  function _nivApplyCurriculum(obj) {
+    try {
+      if (obj && Array.isArray(obj.groups) && obj.groups.length) {
+        const clean = obj.groups
+          .filter(g => g && g.id && g.lvl && Array.isArray(g.items))
+          .map(g => ({
+            id:g.id, lvl:g.lvl, label:g.label||g.id,
+            items: g.items.filter(it => it && it.id!=null && it.n)
+                          .map(it => ({id:+it.id, n:String(it.n), ab:it.ab||null}))
+          }))
+          .filter(g => g.items.length);
+        if (clean.length) { _NIV_GROUPS = clean; _nivRebuildAll(); return true; }
+      }
+    } catch(e){}
+    return false;
+  }
+  function _nivLvlMeta(id) { return _NIV_LEVELS.find(l => l.id===id) || {ico:'',name:id}; }
+  function _nivLvlName(id) { return _nivLvlMeta(id).name; }
+  function _nivLvlLabel(id) { const l=_nivLvlMeta(id); return (l.ico?l.ico+' ':'')+l.name; }
 
   let _nivSelf = null;     // 'deb' | 'int' | 'adv'
   let _nivAns = {};        // {id: stateIdx 0-5}
@@ -1780,6 +1785,7 @@
   let _nivLoaded = false;
   let _nivVideos = {};
   let _nivVideosLoaded = false;
+  let _nivCurriculumLoaded = false;
 
   function _nivEmail() { return ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase(); }
   function _nivSave() {
@@ -1797,9 +1803,9 @@
     _nivLoaded = true;
   }
   function _nivVisLvls() {
-    if(_nivSelf==='deb') return ['deb'];
-    if(_nivSelf==='int') return ['deb','int'];
-    return ['deb','int','adv'];
+    const order = _NIV_LEVELS.map(l => l.id);
+    const idx = order.indexOf(_nivSelf);
+    return idx < 0 ? order.slice() : order.slice(0, idx + 1);
   }
   function _nivVisItems() { const v=_nivVisLvls(); return _NIV_ALL.filter(it=>v.includes(it.lvl)); }
   function _nivTotal() { return _nivVisItems().length; }
@@ -1807,6 +1813,15 @@
 
   function renderNiveau() {
     if (!_nivLoaded) _nivLoad();
+    if (!_nivCurriculumLoaded) {
+      _nivCurriculumLoaded = true;
+      TEV.client.from('parametres').select('valeur').eq('cle','tev_niv_curriculum').maybeSingle()
+        .then(function(res){
+          if (res && res.data && res.data.valeur && _nivApplyCurriculum(res.data.valeur)) {
+            renderNiveau();
+          }
+        }).catch(function(){});
+    }
     if (!_nivVideosLoaded) {
       _nivVideosLoaded = true;
       TEV.client.from('parametres').select('valeur').eq('cle','tev_niv_videos').maybeSingle()
@@ -1887,9 +1902,8 @@
   /* ── Écran 1 — accueil ── */
   function _nivRenderS1(pane) {
     const done = Object.keys(_nivAns).length;
-    const cntNote = _nivSelf==='deb' ? '20 séquences et notions · ~3 min'
-                  : _nivSelf==='int' ? '42 séquences et notions · ~6 min'
-                  : '70 séquences et notions · ~10 min';
+    const _ct = _nivTotal();
+    const cntNote = _ct + ' séquences et notions · ~' + Math.max(3, Math.round(_ct/7.5)) + ' min';
     pane.innerHTML = `
       <div class="niv-intro-card">
         <div class="niv-intro-title">Où en es-tu dans ton tango ?</div>
@@ -1902,9 +1916,7 @@
       </div>
       <div class="niv-sec-label">Ton niveau, selon toi</div>
       <div class="niv-self-btns">
-        <div class="niv-lvl-btn${_nivSelf==='deb'?' sel':''}" data-niv-lvl="deb"><span class="niv-ico">🌱</span>Débutant</div>
-        <div class="niv-lvl-btn${_nivSelf==='int'?' sel':''}" data-niv-lvl="int"><span class="niv-ico">💃</span>Intermédiaire</div>
-        <div class="niv-lvl-btn${_nivSelf==='adv'?' sel':''}" data-niv-lvl="adv"><span class="niv-ico">🔥</span>Avancé</div>
+        ${_NIV_LEVELS.map(l=>`<div class="niv-lvl-btn${_nivSelf===l.id?' sel':''}" data-niv-lvl="${l.id}"><span class="niv-ico">${l.ico}</span>${l.name}</div>`).join('')}
       </div>
       <div class="niv-sec-label">L'échelle de maîtrise</div>
       <div class="niv-legend-card">
@@ -2076,11 +2088,15 @@
     const total   = _nivTotal();
     const done    = _nivDone();
 
+    // Niveau estimé : on monte d'un cran tant que tous les niveaux précédents
+    // atteignent ≥55 % d'items acquis.
     let est = visLvls[0];
-    if(visLvls.includes('int') && stats.deb && stats.deb.pct>=60) est='int';
-    if(visLvls.includes('adv') && stats.deb && stats.deb.pct>=60 && stats.int && stats.int.pct>=55) est='adv';
-    const estLabel = {deb:'Débutant',int:'Intermédiaire',adv:'Avancé'}[est];
-    const declLabel= {deb:'Débutant',int:'Intermédiaire',adv:'Avancé'}[_nivSelf]||'non déclaré';
+    for (let _i=1; _i<visLvls.length; _i++) {
+      const _prevOk = visLvls.slice(0,_i).every(l => stats[l] && stats[l].pct>=55);
+      if (_prevOk) est = visLvls[_i]; else break;
+    }
+    const estLabel = _nivLvlName(est);
+    const declLabel= _nivSelf ? _nivLvlName(_nivSelf) : 'non déclaré';
     const match = est===_nivSelf;
     const matchMsg = match
       ? 'Cohérent avec ton ressenti 👍'
@@ -2088,7 +2104,7 @@
       : 'Tu es peut-être plus avancé que tu ne le penses 😊';
 
     const focus = visLvls.find(l=>stats[l] && stats[l].pct<80) || visLvls[visLvls.length-1];
-    const focusLabel = {deb:'🌱 Débutant',int:'💃 Intermédiaire',adv:'🔥 Avancé'}[focus];
+    const focusLabel = _nivLvlLabel(focus);
 
     function barColor(p) { return p>=75?'var(--nivc3)':p>=45?'var(--nivc2)':'var(--nivc1)'; }
     function stMeta(id) {
@@ -2128,7 +2144,7 @@
       </div>
       ${visLvls.map(l=>{
         const {pct,acq,items,wip,nok} = stats[l];
-        const lbl = {deb:'🌱 Débutant',int:'💃 Intermédiaire',adv:'🔥 Avancé'}[l];
+        const lbl = _nivLvlLabel(l);
         return `<div class="niv-res-card">
           <div class="niv-res-card-top"><span class="niv-res-card-name">${lbl}</span><span class="niv-res-card-pct">${pct}%</span></div>
           <div class="niv-res-bar"><div class="niv-res-bar-f" style="width:${pct}%;background:${barColor(pct)};"></div></div>
@@ -5923,8 +5939,8 @@ a{color:var(--gold);text-decoration:none;}
 .niv-intro-title{font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:300;color:var(--gold);letter-spacing:1px;margin-bottom:8px;}
 .niv-intro-txt{font-size:15px;color:#d8cfb8;line-height:1.75;}
 .niv-sec-label{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);margin:4px 2px 10px;font-weight:600;}
-.niv-self-btns{display:flex;gap:8px;margin-bottom:18px;}
-.niv-lvl-btn{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px 4px;text-align:center;cursor:pointer;color:var(--text-dim);font-size:13px;font-weight:700;display:flex;flex-direction:column;gap:4px;align-items:center;transition:all .15s;}
+.niv-self-btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+.niv-lvl-btn{flex:1 1 calc(50% - 4px);min-width:calc(50% - 4px);background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px 4px;text-align:center;cursor:pointer;color:var(--text-dim);font-size:13px;font-weight:700;display:flex;flex-direction:column;gap:4px;align-items:center;transition:all .15s;}
 .niv-lvl-btn .niv-ico{font-size:22px;}
 .niv-lvl-btn.sel{border-color:var(--gold);background:#1f1a08;color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.18);}
 .niv-legend-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;}
