@@ -9212,7 +9212,8 @@ async function handleCronYogaFinSaison(request, env) {
   const saisonAffCourante = saisonCourante.replace('-', '–');
   const saisonAffSuivante = saisonSuivante.replace('-', '–');
 
-  const LIEN_AVIS_GOOGLE = 'https://g.page/r/Cc3KZ-LLiNFJEBM/review';
+  const yogaAvisParams = params[`tev_params_yoga_${saisonCourante}`] || {};
+  const LIEN_AVIS_GOOGLE = (yogaAvisParams.avis || {}).google_url || 'https://g.page/r/Cc3KZ-LLiNFJEBM/review';
 
   function buildHtml(prenom) {
     const prenomAff = _esc(prenom || 'tous');

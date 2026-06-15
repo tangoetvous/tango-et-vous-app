@@ -157,6 +157,7 @@ input,select,textarea{font-family:var(--font-b);color:var(--text);}
 .ae-stage{background:#201800;border-color:#D4AF37;color:#D4AF37;}
 .ae-milonga{background:#1a0800;border-color:#ff8c00;color:#ff8c00;}
 .ae-cours-yoga{background:#1a1230;border-color:#a78bfa;color:#a78bfa;}
+.ae-demo{background:#2a0a14;border-color:#fb7185;color:#fb7185;}
 .ae-titre{font-size:12px;font-weight:600;color:inherit;}
 .ae-sub{font-size:10px;color:#e0e0e0;opacity:1;}
 .btn-point.btn-abs{margin-left:10px;}
@@ -1152,7 +1153,7 @@ var _discPollTO        = null;
 var filtreEssaiYoga   = 'dates';      // dates | pointage
 var agendaMois      = new Date().getMonth();
 var agendaAnnee     = new Date().getFullYear();
-var agendaCats      = {paris:true, vincennes:true, stage:true, milonga:true, yoga:true};
+var agendaCats      = {paris:true, vincennes:true, stage:true, milonga:true, yoga:true, demos:true};
 var agendaShowPast  = false; // afficher les dates déjà passées de la saison courante
 var sousOngletAgenda = 'calendrier'; // 'calendrier' | 'modif'
 // Modifications d'occurrences : annulations, reports, changements horaire/lieu, notes
@@ -2802,6 +2803,20 @@ var MILONGAS_DEFAULTS = [
     color:'#f472b6', horaire_debut:'', horaire_fin:'', dates:[] }
 ];
 var MILONGAS = null;
+var DEMOS_LIST = null;
+function chargerDemos(sai) {
+  var key = 'tev_demos_' + (sai || saisonParametres || saisonCourante());
+  try {
+    var raw = JSON.parse(localStorage.getItem(key)||'null');
+    DEMOS_LIST = (raw && Array.isArray(raw.demos)) ? raw.demos : [];
+  } catch(e) { DEMOS_LIST = []; }
+}
+function sauverDemos(sai) {
+  var key = 'tev_demos_' + (sai || saisonParametres || saisonCourante());
+  var val = {demos: DEMOS_LIST || [], modifie: today()};
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){}
+  if (!IS_DEMO) TEV.setParam(key, val).catch(function(){});
+}
 function chargerMilongas(sai) {
   var key = 'tev_milongas_' + (sai || saisonParametres || saisonCourante());
   try {
@@ -3230,6 +3245,25 @@ function renderParametres() {
     +' style="margin-top:4px;font-size:12px;width:100%;background:transparent;border:1px dashed var(--border);color:var(--dim);">➕ Ajouter une milonga</button>';
   h += '</div>';
 
+  // ── Section Démonstrations ─────────────────────────────────
+  chargerDemos(sai);
+  h += '<div style="margin-top:24px;">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Démonstrations</div>'
+    +'<div class="card" style="padding:14px 16px;">'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">Spectacles et démonstrations à afficher dans l\'Agenda (catégorie 🎤 Démos).</div>';
+  (DEMOS_LIST||[]).forEach(function(demo, idx) {
+    h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+      +'<input id="demo-date-'+idx+'" type="date" value="'+(demo.date||'')+'" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);flex:0 0 130px;">'
+      +'<input id="demo-nom-'+idx+'" type="text" value="'+(demo.nom||'').replace(/"/g,'&quot;')+'" placeholder="Nom du spectacle" style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--card);color:var(--text);">'
+      +'<button class="btn" data-action="suppr-demo" data-idx="'+idx+'" style="font-size:11px;color:#e53935;border-color:#e53935;background:transparent;padding:5px 8px;white-space:nowrap;">✕</button>'
+      +'</div>';
+  });
+  h += '<div style="display:flex;gap:8px;margin-top:4px;">'
+    +'<button class="btn" data-action="ajouter-demo" style="font-size:12px;flex:1;background:transparent;border:1px dashed var(--border);color:var(--dim);">➕ Ajouter une démonstration</button>'
+    +'<button class="btn btn-gold" data-action="sauver-demos" data-saison="'+sai+'" style="font-size:12px;">💾 Enregistrer</button>'
+    +'</div>'
+    +'</div></div>';
+
   // ── Section Résa Salles ────────────────────────────────────
   h += '<div style="margin-top:24px;">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;">Résa Salles</div>';
@@ -3458,6 +3492,11 @@ function _renderParamCard(type, sai) {
   // Section Liens AssoConnect (sauf Stages)
   if (type !== 'stages') {
     h += _renderAccordSection(type, 'assoconnect', '🔗 Liens AssoConnect', _renderSecAssoconnectContent(type, sai));
+  }
+
+  // Section Avis Google (yoga uniquement)
+  if (type === 'yoga') {
+    h += _renderAccordSection(type, 'avis', '⭐ Avis Google', _renderSecAvisYogaContent(type, sai));
   }
 
   return h+'</div>';
@@ -4354,6 +4393,40 @@ function supprimerLivretParam(type, sai, key) {
   if (key) delete saved[key]; else saved = {};
   _saveParam(type, sai, 'livret', saved);
   afficherToast('✓ Livret supprimé');
+  renderTab();
+}
+
+// ── Contenu : Avis Google (yoga uniquement) ───────────────────
+function _renderSecAvisYogaContent(type, sai) {
+  var saved = _loadParam(type, sai, 'avis');
+  var url = saved.google_url || '';
+  var inputStyle = 'width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--border);'
+                 + 'border-radius:6px;font-size:12px;background:var(--card);color:var(--text);';
+  var h = '<div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;">';
+  h += '<div style="font-size:11px;color:var(--dim);">Lien vers la page pour laisser un avis Google (utilisé dans les emails de fin de saison et dans l\'espace élève).</div>';
+  if (url) {
+    h += '<div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;">'
+       + '<span style="font-size:16px;">⭐</span>'
+       + '<div style="flex:1;min-width:0;font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+url+'</div>'
+       + '<a href="'+url+'" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" style="font-size:11px;white-space:nowrap;">Ouvrir</a>'
+       + '</div>';
+  }
+  h += '<input id="pm-avis-google-url-'+type+'" type="url" style="'+inputStyle+'"'
+     + ' placeholder="https://g.page/r/…/review"'
+     + ' value="'+(url).replace(/"/g,'&quot;')+'" autocapitalize="none">';
+  h += '<div class="btn-row">'
+     + '<button class="btn btn-gold" data-action="sauver-avis-yoga" data-type="'+type+'" data-saison="'+sai+'"'
+     + ' style="font-size:12px;">✓ Enregistrer le lien</button>'
+     + '</div></div>';
+  return h;
+}
+function sauverAvisYogaParam(type, sai) {
+  var el = gel('pm-avis-google-url-'+type);
+  var url = el ? el.value.trim() : '';
+  var saved = _loadParam(type, sai, 'avis');
+  if (url) saved.google_url = url; else delete saved.google_url;
+  _saveParam(type, sai, 'avis', saved);
+  afficherToast('✓ Lien avis Google enregistré');
   renderTab();
 }
 
@@ -6394,6 +6467,38 @@ function handleAction(action, btn) {
     case 'ajouter-nouvelle-milonga':
       ajouterNouvelleMilonga();
       break;
+    case 'ajouter-demo':
+      chargerDemos(saisonParametres||saisonCourante());
+      DEMOS_LIST.push({id: Date.now(), date: today(), nom: ''});
+      sauverDemos(saisonParametres||saisonCourante());
+      renderTab();
+      break;
+    case 'suppr-demo':
+      (function(){
+        var _idx = parseInt(btn.dataset.idx||'0');
+        chargerDemos(saisonParametres||saisonCourante());
+        DEMOS_LIST.splice(_idx, 1);
+        sauverDemos(saisonParametres||saisonCourante());
+        renderTab();
+      })();
+      break;
+    case 'sauver-demos':
+      (function(){
+        var _sai = btn.dataset.saison || saisonParametres || saisonCourante();
+        chargerDemos(_sai);
+        var _list = DEMOS_LIST || [];
+        _list.forEach(function(demo, _idx) {
+          var dEl = gel('demo-date-'+_idx);
+          var nEl = gel('demo-nom-'+_idx);
+          if (dEl) demo.date = dEl.value.trim();
+          if (nEl) demo.nom  = nEl.value.trim();
+        });
+        DEMOS_LIST = _list.filter(function(d){ return d.date && d.nom; });
+        sauverDemos(_sai);
+        afficherToast('✓ Démonstrations enregistrées');
+        renderTab();
+      })();
+      break;
     case 'supprimer-milonga':
       supprimerMilonga(parseInt(btn.dataset.idx)||0);
       break;
@@ -6466,6 +6571,9 @@ function handleAction(action, btn) {
       break;
     case 'suppr-livret-param':
       supprimerLivretParam(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante(), btn.dataset.key||'');
+      break;
+    case 'sauver-avis-yoga':
+      sauverAvisYogaParam(btn.dataset.type||'yoga', btn.dataset.saison||saisonCourante());
       break;
     case 'sauver-assoconnect-type':
       sauverAssoconnectType(btn.dataset.type||'paris', btn.dataset.saison||saisonCourante());
@@ -11251,6 +11359,13 @@ function getEventsForDate(dateStr) {
     evts.push({cat:'cours-yoga', titre:'Yin Yoga',   heure:_ovY.heure||_hY.yin  ||_dY.yin,   sub:_ovY.lieu||''});
     evts.push({cat:'cours-yoga', titre:'Hatha Yoga', heure:_ovY.heure||_hY.hatha||_dY.hatha, sub:_ovY.lieu||''});
   }
+  if (agendaCats.demos) {
+    (DEMOS_LIST||[]).forEach(function(demo) {
+      if (demo.date === dateStr) {
+        evts.push({cat:'demo', titre:demo.nom||'Démonstration', heure:'', sub:''});
+      }
+    });
+  }
   return evts;
 }
 // ── Onglet WhatsApp — QR codes ────────────────────────────────
@@ -11379,6 +11494,7 @@ function _renderCalAbonnements() {
 function renderAgendaCalendrier() {
   var _saiCal = saisonActive();
   chargerMilongas(_saiCal); // garantit que MILONGAS correspond à la saison affichée
+  chargerDemos(_saiCal);    // garantit que DEMOS_LIST correspond à la saison affichée
   var _saiStart = _saiCal.split('-')[0] + '-09-01';
   var _saiEnd   = _saiCal.split('-')[1] + '-08-31';
   var todayStr=today();
@@ -11390,6 +11506,7 @@ function renderAgendaCalendrier() {
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.stage?'#201800':'transparent')+';border-color:'+(agendaCats.stage?'#D4AF37':'var(--border)')+';color:'+(agendaCats.stage?'#D4AF37':'var(--dim)')+';" data-cat-ag="stage">💃 Stages</button>'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.milonga?'#1a0800':'transparent')+';border-color:'+(agendaCats.milonga?'#ff8c00':'var(--border)')+';color:'+(agendaCats.milonga?'#ff8c00':'var(--dim)')+';" data-cat-ag="milonga">🎶 Milongas</button>'
     +'<button class="cat-pill-ag" style="background:'+(agendaCats.yoga?'#1a1230':'transparent')+';border-color:'+(agendaCats.yoga?'#a78bfa':'var(--border)')+';color:'+(agendaCats.yoga?'#a78bfa':'var(--dim)')+';" data-cat-ag="yoga">🧘 Yoga</button>'
+    +'<button class="cat-pill-ag" style="background:'+(agendaCats.demos?'#2a0a14':'transparent')+';border-color:'+(agendaCats.demos?'#fb7185':'var(--border)')+';color:'+(agendaCats.demos?'#fb7185':'var(--dim)')+';" data-cat-ag="demos">🎤 Démos</button>'
     +'</div>'
     +(_isCurrentSai
       ? '<div style="margin:8px 0 14px;"><button class="cat-pill-ag" style="background:'+(agendaShowPast?'#2a1a00':'transparent')+';border-color:var(--gold);color:var(--gold);font-size:11px;letter-spacing:.6px;" data-toggle-past="1">'+(agendaShowPast?'◀ Masquer les dates passées':'▶ Voir les dates passées de la saison')+'</button></div>'
