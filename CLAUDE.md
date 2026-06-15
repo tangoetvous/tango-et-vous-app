@@ -1400,6 +1400,15 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] **Articles tango — Publications** : rédiger les articles tango à diffuser dans l'espace élève (onglet Publications) et les programmer. **Rythme : 1 article par semaine, début octobre → fin juin** (~39 articles par saison). À faire avec l'utilisateur : choix des sujets, rédaction, dates de publication.
 - [ ] **Renseigner les thèmes des stages** : compléter dans Paramètres les thèmes des stages à venir (saison courante) ET de la saison prochaine 2026-2027 — à faire avec l'utilisateur.
 - [ ] **Rappels emails automatiques cb3x** : relances automatiques aux échéances pour les paiements CB en plusieurs fois.
+- [ ] **Email automatique fin de saison yoga — cron 15 juin** : chaque 15 juin, envoyer à tous les élèves yoga de la saison courante (`cours_yoga WHERE statut='inscrit' AND saison=saisonCourante`) un email de fin de saison avec lien de ré-inscription à la saison suivante. Détails :
+  - **Déclencheur** : cron GitHub Actions `0 7 15 6 *` (7h UTC = 9h Paris) → `POST /api/cron/yoga-fin-saison`
+  - **Destinataires** : tous les emails distincts dans `cours_yoga` avec `statut='inscrit'` et `saison=saisonCourante()` — utiliser `SUPABASE_SERVICE_KEY` pour bypasser la RLS
+  - **Lien réinscription** : lu depuis `tev_liens_assoconnect` (table `parametres`) → clé de la saison suivante → champ `yoga`. Même clé que celle configurée dans Paramètres → Yoga → Liens AssoConnect → "Cours réguliers". Fallback : chaîne vide si non configuré (ne pas envoyer l'email sans lien valide).
+  - **Template** : reprend `email-yoga-fin-saison.html` — en-tête violet dégradé, encadré date dernier cours, bouton violet réinscription, bouton contour avis Google. La date du dernier cours et la saison sont calculées dynamiquement (pas hardcodées).
+  - **Date dernier cours** : à récupérer depuis `tev_cours_dates.yoga` (dernière date de la saison courante dans le tableau trié) — pas hardcodée.
+  - **Saisons** : calculées depuis `_saisonCourante()` et `_saisonSuivante()` (ex : 2025-2026 et 2026-2027).
+  - **Branding yoga obligatoire** : sender `contact@tangoetvous.fr`, replyTo `regardsepose@gmail.com`, header "Cours de Yoga avec Florencia Garcia", signature Florencia — voir règles branding yoga dans CLAUDE.md.
+  - **Workflow** : `.github/workflows/yoga-fin-saison.yml` avec `workflow_dispatch` pour test manuel + cron annuel.
 - [ ] **Mettre à jour les actions GitHub vers Node.js 24** : `actions/checkout@v4` → `@v5`, `actions/upload-artifact@v4` → `@v5`, `dawidd6/action-send-mail@v3` → `@v5` dans `backup-csv.yml` et `keep-alive.yml`.
 - [ ] **Playwright — tests E2E (septembre 2026)** : tests E2E sur `admin.html` en mode démo, ciblés sur les points fragiles (couples email partagé dans Cartes 10, `calcExpiration`). Playwright démarre/arrête le serveur local automatiquement, une seule commande `npm test`. Voir section "Playwright — tests E2E à implémenter" ci-dessus pour le catalogue complet des scénarios (groupes A–G).
 
