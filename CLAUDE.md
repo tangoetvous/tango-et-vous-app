@@ -1409,6 +1409,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
   - **Saisons** : calculées depuis `_saisonCourante()` et `_saisonSuivante()` (ex : 2025-2026 et 2026-2027).
   - **Branding yoga obligatoire** : sender `contact@tangoetvous.fr`, replyTo `regardsepose@gmail.com`, header "Cours de Yoga avec Florencia Garcia", signature Florencia — voir règles branding yoga dans CLAUDE.md.
   - **Workflow** : `.github/workflows/yoga-fin-saison.yml` avec `workflow_dispatch` pour test manuel + cron annuel.
+- [ ] **Redirection `tangoetvous.fr` → `www.tangoetvous.com`** : à configurer dans Cloudflare (pas de code). Deux étapes : (1) DNS → ajouter enregistrement `A` `@` `192.0.2.1` en mode Proxied ☁️ ; (2) Rules → Redirect Rules → Dynamic redirect `concat("https://www.tangoetvous.com", http.request.uri.path)` status 301, condition hostname = `tangoetvous.fr`. Objectif : éviter la page blanche et concentrer l'autorité SEO sur le site Wix.
 - [ ] **Mettre à jour les actions GitHub vers Node.js 24** : `actions/checkout@v4` → `@v5`, `actions/upload-artifact@v4` → `@v5`, `dawidd6/action-send-mail@v3` → `@v5` dans `backup-csv.yml` et `keep-alive.yml`.
 - [ ] **Playwright — tests E2E (septembre 2026)** : tests E2E sur `admin.html` en mode démo, ciblés sur les points fragiles (couples email partagé dans Cartes 10, `calcExpiration`). Playwright démarre/arrête le serveur local automatiquement, une seule commande `npm test`. Voir section "Playwright — tests E2E à implémenter" ci-dessus pour le catalogue complet des scénarios (groupes A–G).
 
