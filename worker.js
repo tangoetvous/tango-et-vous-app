@@ -513,6 +513,13 @@ export default {
         return handleCronCartePonteeJ1(request, env);
       }
 
+      // POST /api/cron/yoga-fin-saison — 15 juin → email fin de saison yoga à tous les élèves (X-Cron-Secret)
+      if (pathname === '/api/cron/yoga-fin-saison' && method === 'POST') {
+        const cronSecret = request.headers.get('X-Cron-Secret');
+        if (!env.CRON_SECRET || cronSecret !== env.CRON_SECRET) return jsonError(401, 'Secret invalide');
+        return handleCronYogaFinSaison(request, env);
+      }
+
       // GET /api/stages/confirmer — élève confirme sa présence via lien email (token HMAC)
       if (pathname === '/api/stages/confirmer' && (method === 'GET' || method === 'PATCH')) {
         return handleStagesConfirmer(request, url, env);
@@ -9108,4 +9115,206 @@ async function handleCronPasDeCours(request, env) {
   }
 
   return corsResponse({ ok: true, sent: totalSent, checked: eleves.length, ville, nextCours, gapDays, today }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/cron/yoga-fin-saison — email fin de saison yoga
+// Déclenché le 15 juin par GitHub Actions (cron annuel)
+// Envoie à tous les élèves yoga inscrits de la saison courante :
+//  - remerciements pour la saison
+//  - date du dernier cours (depuis tev_cours_dates.yoga)
+//  - bouton réinscription (depuis tev_liens_assoconnect[saisonSuivante].yoga)
+//  - bouton avis Google
+// ================================================================
+async function handleCronYogaFinSaison(request, env) {
+  const MOIS_L  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T12:00:00');
+    return JOURS_L[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS_L[d.getMonth()];
+  }
+
+  // Calcul des saisons (mois >= 9 → nouvelle saison)
+  const now = new Date();
+  const parisOffset = now.getMonth() >= 2 && now.getMonth() <= 9 ? 2 : 1; // CEST/CET approx
+  const paris = new Date(now.getTime() + parisOffset * 3600000);
+  const y = paris.getUTCFullYear(), mo = paris.getUTCMonth() + 1;
+  const saisonCourante = mo >= 9 ? `${y}-${y+1}` : `${y-1}-${y}`;
+  const nextY = mo >= 9 ? y + 1 : y;
+  const saisonSuivante = `${nextY}-${nextY+1}`;
+
+  if (!env.BREVO_API_KEY) {
+    console.log('[yoga-fin-saison] BREVO_API_KEY absent — skip');
+    return corsResponse({ ok: true, sent: 0, skipped: true }, 200, {}, request);
+  }
+
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+
+  // Charger les paramètres Supabase
+  let params = {};
+  try {
+    const pr = await fetch(`${SUPABASE_URL}/rest/v1/parametres?select=cle,valeur`, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` }
+    });
+    if (pr.ok) {
+      const rows = await pr.json();
+      for (const row of rows) {
+        try { params[row.cle] = typeof row.valeur === 'string' ? JSON.parse(row.valeur) : row.valeur; } catch {}
+      }
+    }
+  } catch(e) { console.error('[yoga-fin-saison] params fetch error', e); }
+
+  // Dernière date de cours yoga de la saison courante
+  const coursDatesTous = params['tev_cours_dates'] || {};
+  const yogaDates = Array.isArray(coursDatesTous.yoga) ? coursDatesTous.yoga : [];
+  const saisonPrefix = saisonCourante.slice(0, 4); // ex: "2025"
+  const yogaDatesSaison = yogaDates
+    .filter(d => typeof d === 'string' && d >= `${saisonPrefix}-09-01` && d <= `${parseInt(saisonPrefix)+1}-08-31`)
+    .sort();
+  const dernierCours = yogaDatesSaison.length ? yogaDatesSaison[yogaDatesSaison.length - 1] : null;
+  const dernierCoursLabel = dernierCours ? fmtDate(dernierCours) : '';
+
+  // Lien AssoConnect yoga de la saison suivante
+  const liensAC = params['tev_liens_assoconnect'] || {};
+  const lienReinscription = (liensAC[saisonSuivante] || {}).yoga || '';
+
+  if (!lienReinscription) {
+    console.warn('[yoga-fin-saison] Lien AssoConnect yoga saison suivante absent — arrêt');
+    return corsResponse({ ok: false, error: 'lien_assoconnect_absent', saisonSuivante }, 400, {}, request);
+  }
+
+  // Charger tous les élèves yoga inscrits de la saison courante
+  const eleveRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/cours_yoga?statut=eq.inscrit&saison=eq.${encodeURIComponent(saisonCourante)}&select=email,prenom,nom`,
+    { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${svcKey}` } }
+  );
+  if (!eleveRes.ok) {
+    console.error('[yoga-fin-saison] Supabase cours_yoga error', await eleveRes.text());
+    return corsResponse({ ok: false, error: 'supabase_error' }, 500, {}, request);
+  }
+  const eleveRows = await eleveRes.json();
+
+  // Dédupliquer par email (un élève peut avoir yin + hatha)
+  const seen = new Set();
+  const eleves = [];
+  for (const r of eleveRows) {
+    if (r.email && !seen.has(r.email.toLowerCase())) {
+      seen.add(r.email.toLowerCase());
+      eleves.push(r);
+    }
+  }
+
+  if (!eleves.length) {
+    return corsResponse({ ok: true, sent: 0, checked: 0, saisonCourante }, 200, {}, request);
+  }
+
+  // Template email — reprend le design de email-yoga-fin-saison.html
+  const saisonAffCourante = saisonCourante.replace('-', '–');
+  const saisonAffSuivante = saisonSuivante.replace('-', '–');
+
+  const LIEN_AVIS_GOOGLE = 'https://g.page/r/Cc3KZ-LLiNFJEBM/review';
+
+  function buildHtml(prenom) {
+    const prenomAff = _esc(prenom || 'tous');
+    return `<!DOCTYPE html><html lang="fr"><body style="margin:0;padding:0;background:#0e0e18;font-family:Arial,sans-serif;">
+<div style="max-width:580px;margin:0 auto;">
+
+  <!-- En-tête violet dégradé -->
+  <div style="background:linear-gradient(135deg,#1a1030 0%,#2d1b5e 100%);border-radius:14px 14px 0 0;padding:32px 36px 26px;text-align:center;border:1.5px solid #a78bfa;border-bottom:none;">
+    <div style="font-size:32px;margin-bottom:10px;letter-spacing:2px;">🧘</div>
+    <div style="font-family:Georgia,serif;font-size:11px;color:#a78bfa;letter-spacing:3.5px;text-transform:uppercase;margin-bottom:8px;">Cours de Yoga</div>
+    <div style="font-family:Georgia,serif;font-size:24px;color:#ffffff;font-weight:normal;letter-spacing:1px;">Florencia Garcia</div>
+    <div style="margin-top:14px;">
+      <span style="font-size:11px;color:#c4b0fa;letter-spacing:1.5px;text-transform:uppercase;">Fin de saison ${_esc(saisonAffCourante)}</span>
+      <span style="font-size:14px;color:#a78bfa;font-weight:700;margin:0 6px;">→</span>
+      <span style="font-size:11px;color:#a78bfa;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Rentrée ${_esc(saisonAffSuivante)}</span>
+    </div>
+  </div>
+
+  <!-- Corps blanc -->
+  <div style="background:#ffffff;padding:36px 40px 32px;font-family:Arial,sans-serif;font-size:15px;line-height:1.8;color:#2c2c2c;border:1.5px solid #a78bfa;border-top:none;border-bottom:none;">
+
+    <p style="margin:0 0 20px;">Bonjour ${prenomAff},</p>
+
+    ${dernierCoursLabel ? `<div style="background:#f8f4ff;border-left:3px solid #a78bfa;border-radius:0 8px 8px 0;padding:14px 18px;margin:0 0 24px;">
+      <span style="font-size:13px;color:#7c5cbf;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Dernier cours de la saison</span><br>
+      <span style="font-size:18px;color:#2d1b5e;font-weight:700;">${_esc(dernierCoursLabel)}</span>
+    </div>` : ''}
+
+    <p style="margin:0 0 18px;">
+      Je vous remercie pour cette année passée ensemble et pour votre confiance.
+      J'ai eu beaucoup de plaisir à partager les pratiques avec vous et je vous souhaite
+      à tous un <strong style="color:#2d1b5e;">très bel été</strong>&nbsp;🌞
+    </p>
+
+    <div style="text-align:center;margin:28px 0 24px;">
+      <span style="font-size:18px;opacity:0.5;">🌙 &nbsp;✦&nbsp; ☀️</span>
+    </div>
+
+    <p style="margin:0 0 10px;">
+      Pour ceux qui souhaitent réserver une place pour la rentrée <strong>${_esc(saisonAffSuivante)}</strong>,
+      vous pouvez déjà le faire ici&nbsp;:
+    </p>
+
+    <div style="text-align:center;margin:20px 0 32px;">
+      <a href="${_esc(lienReinscription)}"
+         style="display:inline-block;background:#a78bfa;color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:700;padding:15px 30px;border-radius:10px;letter-spacing:0.3px;">
+        🧘 Réserver ma place pour ${_esc(saisonAffSuivante)}
+      </a>
+    </div>
+
+    <p style="margin:0 0 10px;">
+      Et si vous voulez soutenir mes cours de Yoga, n'hésitez pas à laisser un avis Google&nbsp;:
+    </p>
+
+    <div style="text-align:center;margin:20px 0 32px;">
+      <a href="${LIEN_AVIS_GOOGLE}"
+         style="display:inline-block;background:#ffffff;color:#7c5cbf;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:700;padding:15px 30px;border-radius:10px;letter-spacing:0.3px;border:2px solid #a78bfa;">
+        ⭐ Laisser un avis Google
+      </a>
+    </div>
+
+    <div style="border-top:1px solid #ede8ff;padding-top:22px;margin-top:8px;">
+      <p style="margin:0 0 4px;">Amicalement,</p>
+      <p style="margin:0;font-family:Georgia,serif;font-size:18px;color:#7c5cbf;font-style:italic;">Florencia</p>
+    </div>
+
+  </div>
+
+  <!-- Pied de page -->
+  <div style="background:linear-gradient(135deg,#1a1030 0%,#2d1b5e 100%);border-radius:0 0 14px 14px;padding:16px 36px;text-align:center;font-family:Arial,sans-serif;font-size:11px;color:#c4b0fa;border:1.5px solid #a78bfa;border-top:none;">
+    Association Le Regard Se Pose &nbsp;·&nbsp;
+    <a href="mailto:garciabraitbart@gmail.com" style="color:#a78bfa;text-decoration:none;">garciabraitbart@gmail.com</a>
+    &nbsp;·&nbsp; 06 63 23 35 70
+  </div>
+
+</div>
+</body></html>`;
+  }
+
+  const subject = `Merci pour cette belle saison 🧘 · Inscriptions ouvertes pour ${saisonAffSuivante}`;
+
+  let sent = 0;
+  for (const eleve of eleves) {
+    const toEmail = String(eleve.email || '');
+    if (!toEmail) continue;
+    try {
+      const html = buildHtml(eleve.prenom || '');
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: 'Florencia Garcia — Yoga', email: 'contact@tangoetvous.fr' },
+          replyTo: { email: 'regardsepose@gmail.com', name: 'Florencia Garcia' },
+          to: [{ email: toEmail }],
+          subject,
+          htmlContent: html,
+        }),
+      });
+      if (r.ok) { sent++; }
+      else { console.error('[yoga-fin-saison] Brevo error', toEmail, r.status, await r.text()); }
+    } catch(e) { console.error('[yoga-fin-saison] fetch error', toEmail, e); }
+  }
+
+  return corsResponse({ ok: true, sent, checked: eleves.length, saisonCourante, saisonSuivante, dernierCours }, 200, {}, request);
 }

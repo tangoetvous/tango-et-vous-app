@@ -1,0 +1,30 @@
+name: Email élèves yoga — Fin de saison (15 juin)
+
+on:
+  schedule:
+    # 15 juin à 9h UTC = 11h Paris (CEST été)
+    - cron: '0 9 15 6 *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Simulation sans envoi réel (mettre 'true' pour tester)"
+        required: false
+        default: 'false'
+
+jobs:
+  yoga-fin-saison:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Email fin de saison yoga — tous les élèves inscrits
+        run: |
+          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X POST \
+            https://app.tangoetvous.fr/api/cron/yoga-fin-saison \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          cat /tmp/body.txt
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "Erreur — code HTTP $response"
+            exit 1
+          fi
