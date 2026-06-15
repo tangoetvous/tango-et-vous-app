@@ -2883,6 +2883,7 @@ async function handlePublicICS(slug) {
     'milongas':               'Milongas',
     'yoga-yin':               'Yin Yoga',
     'yoga-hatha':             'Hatha Yoga',
+    'demos':                  'Démonstrations — Tango & Vous',
   };
 
   const events = [];
@@ -2983,6 +2984,19 @@ async function handlePublicICS(slug) {
       const ev = { uid:`yoga-hatha-${d}@tangoetvous.fr`, dtstart:_calIcsDate(d,hor.hatha), summary:'Hatha Yoga', location:loc(p.adresse) };
       if (hor.hatha_fin) ev.dtend = _calIcsDate(d, hor.hatha_fin); else ev.duration = 'PT1H30M';
       events.push(ev);
+    });
+
+  } else if (slug === 'demos') {
+    const demosCur  = (P[`tev_demos_${saiCur}`]  || {}).demos || [];
+    const demosNext = (P[`tev_demos_${saiNext}`] || {}).demos || [];
+    const demosAll  = [...demosCur];
+    demosNext.forEach(dn => {
+      if (!demosAll.find(d => d.date === dn.date && d.nom === dn.nom)) demosAll.push(dn);
+    });
+    demosAll.forEach(demo => {
+      if (!demo.date || !demo.nom) return;
+      const uid = `demo-${demo.date}-${(demo.nom||'').replace(/[^a-z0-9]/gi,'').toLowerCase().slice(0,20)}@tangoetvous.fr`;
+      events.push({ uid, dtstart:_calIcsDate(demo.date, '20h00'), summary:`🎤 ${demo.nom}`, duration:'PT2H' });
     });
   }
 
