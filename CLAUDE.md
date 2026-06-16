@@ -21,11 +21,26 @@ La rubrique « Mon niveau » (espace élève, `index.html`) et le gestionnaire d
 
 ### ⚠️ Règle permanente — garder les deux défauts synchronisés
 
-Le curriculum par défaut est **dupliqué** dans deux fichiers (apps séparées, pas de JS partagé) :
-- `index.html` → `const _NIV_GROUPS_DEFAULT` (+ `_NIV_LEVELS`)
+Le curriculum par défaut est **dupliqué** dans trois fichiers (apps séparées, pas de JS partagé) :
+- `index.html` → `const _NIV_GROUPS_DEFAULT` (+ `_NIV_LEVELS` + `_NIV_ST`)
 - `admin.html` → `var _NIV_CURRICULUM_DEFAULT` (+ même structure)
+- `mon-niveau.html` → `const _NIV_GROUPS_DEFAULT` (+ `_NIV_LEVELS` + `_NIV_ST`) — page publique Wix (voir ci-dessous)
 
-Toute modification du défaut doit être appliquée **aux deux** à l'identique (mêmes ids, mêmes noms, mêmes abrazos). Le défaut sert de fallback quand `tev_niv_curriculum` est absent en DB.
+Toute modification du défaut doit être appliquée **aux trois** à l'identique (mêmes ids, mêmes noms, mêmes abrazos). Le défaut sert de fallback quand `tev_niv_curriculum` est absent en DB.
+
+### Page publique `mon-niveau.html` — intégrable Wix (créée 2026-06-15)
+
+Version **autonome et publique** de la rubrique « Mon niveau », destinée à être intégrée en iframe sur le site Wix (`www.tangoetvous.com`). Permet à n'importe quel visiteur de faire l'auto-évaluation **sans connexion**.
+
+- **URL** : `https://app.tangoetvous.fr/mon-niveau.html`
+- **Headers / CSP** : le fichier n'est PAS dans la liste DENY de `_headers` (seuls `admin.html` et `index.html` y sont) → il hérite de la règle `/*` qui autorise les domaines Wix en `frame-ancestors`. Aucun header spécifique à ajouter.
+- **Données** : lit `tev_niv_curriculum` et `tev_niv_videos` depuis Supabase via `TEV.client` (clé anon, lecture publique) — **exactement** comme `index.html`. Donc le curriculum reste piloté depuis Paramètres → Fonctionnalités → Vocabulaire & notions, et la page Wix se met à jour automatiquement.
+- **Réponses élève** : stockées en `localStorage` aux clés **`tev_niv_a`** et **`tev_niv_l`** (sans suffixe d'email, contrairement à index.html qui utilise `tev_niv_a_<email>`). Aucune écriture en base, aucune auth.
+- **Bouton CTA résultats** : `const _NIV_CTA_URL = 'https://app.tangoetvous.fr/cours-particuliers.html'` → `window.open(_NIV_CTA_URL, '_blank')`. À remplacer par l'URL de la page Wix « cours particuliers » si souhaité.
+- **Hauteur iframe** : `postMessage({type:'tevHeight',height:h},'*')` (load + resize + MutationObserver), même mécanisme que les formulaires publics.
+- **Thème** : sombre (variables `:root` copiées de l'espace élève), header noir « TANGO & VOUS / Mon niveau ».
+- **Limites connues** : (1) cloisonnement du `localStorage` en iframe Wix (Safari/Chrome) → les réponses peuvent ne pas persister d'une visite à l'autre ; (2) pas de synchro avec le compte élève (version anonyme).
+- **⚠️ Règle de sync** : `mon-niveau.html` duplique tout le JS de la rubrique (`_NIV_ST`, `_NIV_LEVELS`, `_NIV_GROUPS_DEFAULT`, `_nivRenderS1/2/3`, etc.). Toute modification de « Mon niveau » dans `index.html` (logique de rendu, échelle de maîtrise, estimation) doit être répercutée ici aussi.
 
 ### Mécanique
 

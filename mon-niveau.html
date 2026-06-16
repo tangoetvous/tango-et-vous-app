@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Tango &amp; Vous — Mon niveau</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600;700&display=swap"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#D4AF37;--gold-dim:#8a6800;--gold-pale:#2a1f00;
+  --bg:#0a0a0a;--surface:#111;--surface2:#181818;--surface3:#1f1f1f;
+  --border:#2a2a2a;--text:#fff;--text-dim:#888;--text-faint:#444;
+  --font-display:'Cormorant Garamond',Georgia,serif;
+  --font-body:'Montserrat',sans-serif;
+}
+html{background:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+body{font-family:var(--font-body);font-size:15px;color:var(--text);background:var(--bg);min-height:100vh;}
+.wrap{max-width:560px;margin:0 auto;}
+.hdr{background:#000;border-bottom:2px solid var(--gold);padding:18px 24px 14px;text-align:center;position:sticky;top:0;z-index:60;}
+.hdr-logo{font-family:var(--font-display);font-size:22px;font-weight:300;letter-spacing:5px;color:var(--gold);}
+.hdr-sub{font-size:12px;letter-spacing:2px;color:#fff;text-transform:uppercase;margin-top:6px;}
+.niv-wrap{padding:16px;}
+
+/* ════ MON NIVEAU · TEST (copie autonome de l'espace élève) ════ */
+#niveau-pane{--nivc0:#6b7280;--nivc1:#ef5350;--nivc2:#ffa726;--nivc3:#66bb6a;--nivc4:#42a5f5;--nivc5:#D4AF37;}
+.niv-intro-card{background:linear-gradient(135deg,#16120a 0%,#241c08 100%);border:1.5px solid var(--gold);border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+.niv-intro-title{font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:300;color:var(--gold);letter-spacing:1px;margin-bottom:8px;}
+.niv-intro-txt{font-size:15px;color:#d8cfb8;line-height:1.75;}
+.niv-sec-label{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);margin:4px 2px 10px;font-weight:600;}
+.niv-self-btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+.niv-lvl-btn{flex:1 1 calc(50% - 4px);min-width:calc(50% - 4px);background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px 4px;text-align:center;cursor:pointer;color:var(--text-dim);font-size:13px;font-weight:700;display:flex;flex-direction:column;gap:4px;align-items:center;transition:all .15s;}
+.niv-lvl-btn .niv-ico{font-size:22px;}
+.niv-lvl-btn.sel{border-color:var(--gold);background:#1f1a08;color:var(--gold);box-shadow:0 0 0 2px rgba(212,175,55,.18);}
+.niv-legend-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;}
+.niv-leg-row{display:flex;align-items:flex-start;gap:11px;padding:8px 0;border-bottom:1px solid #1d1d1d;}
+.niv-leg-row:last-child{border-bottom:none;}
+.niv-leg-dot{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid;}
+.niv-leg-name{font-size:13px;font-weight:700;margin-bottom:1px;}
+.niv-leg-desc{font-size:13px;color:#fff;line-height:1.5;}
+.niv-abrazo-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;}
+.niv-ab-chip{font-size:11px;padding:5px 11px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:#ccc;}
+.niv-ab-chip b{color:var(--gold);}
+.niv-btn-gold{width:100%;background:var(--gold);color:#000;border:none;padding:15px;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer;font-family:inherit;}
+.niv-btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border);padding:12px 16px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+.niv-note-sm{font-size:13px;color:var(--text-faint);text-align:center;line-height:1.7;padding:6px 0;}
+.niv-vid-btn{background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.35);color:var(--gold);border-radius:50%;width:20px;height:20px;font-size:9px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:5px;padding:0;line-height:1;vertical-align:middle;}
+.niv-prog-sticky{position:sticky;top:60px;z-index:50;background:#0d0d0d;border-bottom:1px solid var(--border);padding:9px 16px 11px;margin:0 -16px 12px;}
+.niv-prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.niv-prog-count{font-size:13px;color:var(--text-dim);}
+.niv-btn-res{font-size:13px;font-weight:700;padding:5px 13px;border-radius:20px;border:1.5px solid var(--gold);color:var(--gold);background:transparent;cursor:pointer;font-family:inherit;transition:all .2s;}
+.niv-btn-res:disabled{opacity:.35;cursor:default;}
+.niv-btn-res.complete{background:var(--gold);color:#000;}
+.niv-prog-track{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+.niv-prog-fill{height:100%;background:linear-gradient(90deg,#8a6500,var(--gold));border-radius:3px;transition:width .3s ease;}
+.niv-hdr-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.niv-hdr-back{font-size:20px;cursor:pointer;color:var(--gold);line-height:1;padding:0 4px;}
+.niv-hdr-title{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#fff;font-weight:600;}
+.niv-filter-row{display:flex;gap:7px;margin-bottom:12px;overflow-x:auto;padding-bottom:3px;-webkit-overflow-scrolling:touch;}
+.niv-fchip{font-size:13px;padding:5px 13px;border-radius:20px;border:1px solid var(--border);color:var(--text-dim);background:var(--surface2);cursor:pointer;white-space:nowrap;flex-shrink:0;font-weight:600;}
+.niv-fchip.act{background:var(--surface);border-color:var(--gold);color:var(--gold);}
+.niv-grp-hdr{display:flex;align-items:center;justify-content:space-between;padding:15px 0 8px;}
+.niv-grp-name{font-size:20px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;}
+.niv-grp-count{font-size:10px;color:var(--text-dim);}
+.niv-grp-count.full{color:var(--nivc3);}
+.niv-item-row{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:11px 13px;margin-bottom:7px;transition:border-color .2s;}
+.niv-item-row.done{border-color:#2a3020;}
+.niv-item-top{display:flex;align-items:center;gap:7px;margin-bottom:9px;}
+.niv-item-name{font-size:15px;font-weight:600;flex:1;line-height:1.3;color:var(--text);}
+.niv-badge-ab{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0;letter-spacing:.5px;}
+.niv-ab-O{background:#0d2538;color:#64b5f6;border:1px solid #1e4a6e;}
+.niv-ab-F{background:#2d1430;color:#ce93d8;border:1px solid #5e2a66;}
+.niv-ab-OF{background:#10261c;color:#81c784;border:1px solid #2a5e3e;}
+.niv-seg{display:flex;gap:4px;}
+.niv-seg-dot{flex:1;height:32px;border-radius:7px;background:var(--surface3);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;color:var(--text-faint);transition:all .12s;-webkit-tap-highlight-color:transparent;user-select:none;}
+.niv-seg-dot:active{transform:scale(.9);}
+.niv-d0{background:#1c1c1f;border-color:var(--nivc0)!important;color:var(--nivc0)!important;font-weight:700;}
+.niv-d1{background:#2a0f0e;border-color:var(--nivc1)!important;color:var(--nivc1)!important;font-weight:700;}
+.niv-d2{background:#241606;border-color:var(--nivc2)!important;color:var(--nivc2)!important;font-weight:700;}
+.niv-d3{background:#10261c;border-color:var(--nivc3)!important;color:var(--nivc3)!important;font-weight:700;}
+.niv-d4{background:#0d2538;border-color:var(--nivc4)!important;color:var(--nivc4)!important;font-weight:700;}
+.niv-d5{background:#1f1800;border-color:var(--nivc5)!important;color:var(--nivc5)!important;font-weight:700;}
+.niv-seg-lbl{margin-top:5px;font-size:10px;font-weight:700;text-align:center;min-height:14px;transition:color .15s;}
+.niv-empty-filter{text-align:center;padding:32px 0;color:var(--text-dim);font-size:15px;}
+.niv-res-hero{background:linear-gradient(135deg,#16120a 0%,#241c08 100%);border:1.5px solid var(--gold);border-radius:14px;padding:20px;text-align:center;margin-bottom:14px;}
+.niv-res-lbl{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#b8a268;margin-bottom:6px;}
+.niv-res-lvl{font-family:'Cormorant Garamond',Georgia,serif;font-size:36px;font-weight:400;color:var(--gold);letter-spacing:2px;}
+.niv-res-sub{font-size:14px;color:#d8cfb8;margin-top:8px;line-height:1.65;}
+.niv-res-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 15px;margin-bottom:8px;}
+.niv-res-card-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;}
+.niv-res-card-name{font-size:15px;font-weight:700;color:var(--text);}
+.niv-res-card-pct{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;color:var(--gold);}
+.niv-res-bar{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:5px;}
+.niv-res-bar-f{height:100%;border-radius:3px;transition:width .6s ease;}
+.niv-res-sub2{font-size:13px;color:var(--text-dim);}
+.niv-gap-card{background:var(--surface);border:1px solid #4a3a00;border-radius:14px;padding:15px;margin:12px 0;}
+.niv-gap-title{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px;}
+.niv-gap-row{display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid #1d1d1d;font-size:14px;color:var(--text);}
+.niv-gap-row:last-child{border-bottom:none;}
+.niv-gap-badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:9px;flex-shrink:0;letter-spacing:.3px;}
+.niv-gap-name{flex:1;line-height:1.35;}
+.niv-gap-more{font-size:13px;color:var(--gold);cursor:pointer;padding:5px 0;}
+.niv-cta-cp{background:linear-gradient(135deg,#1a1030 0%,#2d1b5e 100%);border:1.5px solid #a78bfa;border-radius:14px;padding:18px;text-align:center;margin:14px 0 8px;}
+.niv-cta-txt{font-size:15px;color:#e2d9f8;line-height:1.7;margin-bottom:13px;}
+.niv-cta-btn{display:inline-block;background:#7c5cd6;color:#fff;border:none;padding:13px 24px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;}
+.niv-incomplete-warn{background:var(--surface2);border:1px solid #4a3a00;border-radius:10px;padding:12px 14px;font-size:14px;color:#b8a268;margin-bottom:14px;}
+.niv-res-actions{display:flex;gap:10px;margin-top:14px;}
+.niv-res-actions .niv-btn-ghost{flex:1;padding:12px;}
+</style>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://qhngqzvvllktuwspojxc.supabase.co" crossorigin>
+<script src="/js/supabase.min.js"></script>
+<script src="js/tev-supabase.js?v=3"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="hdr-logo">TANGO &amp; VOUS</div>
+    <div class="hdr-sub">Mon niveau · auto-évaluation</div>
+  </div>
+  <div class="niv-wrap">
+    <div id="niveau-pane"></div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   MON NIVEAU · TEST — version publique autonome (intégrable Wix)
+   Copie de la rubrique de l'espace élève (index.html). Le curriculum
+   et les vidéos sont lus depuis Supabase (clés publiques anon, mêmes
+   que l'app : tev_niv_curriculum / tev_niv_videos). Les réponses sont
+   stockées en localStorage (clés tev_niv_a / tev_niv_l, sans email).
+   ⚠️ Si vous modifiez « Mon niveau » dans index.html, répercutez ici.
+   ================================================================ */
+(function(){
+  function $(id){ return document.getElementById(id); }
+
+  const _NIV_ST = [
+    {ico:'?',  name:'Inconnu',          desc:'Tu ne sais absolument pas ce que c\'est.',                              col:'#6b7280'},
+    {ico:'✗',  name:'Non acquis',       desc:'Tu ne connais pas bien cette séquence ou notion, ou tu l\'as oubliée.', col:'#ef5350'},
+    {ico:'~',  name:'En cours',         desc:'Tu connais, mais tu ne sais pas encore bien le faire.',                 col:'#ffa726'},
+    {ico:'✓',  name:'Acquis',           desc:'Tu connais et tu sais l\'exécuter.',                                    col:'#66bb6a'},
+    {ico:'★',  name:'Incorporé',        desc:'Tu peux l\'exécuter rien qu\'en pensant à son nom.',                    col:'#42a5f5'},
+    {ico:'🕺', name:'En mode tanguero', desc:'Tu joues avec — spatialement, musicalement — tu improvises avec facilité.', col:'#D4AF37'},
+  ];
+  const _NIV_LEVELS = [
+    {id:'deb',  ico:'🌱', name:'Débutant'},
+    {id:'int',  ico:'💃', name:'Intermédiaire'},
+    {id:'adv',  ico:'🔥', name:'Avancé 1'},
+    {id:'adv2', ico:'⚡', name:'Avancé 2'},
+  ];
+  const _NIV_GROUPS_DEFAULT = [
+    { id:'vd', lvl:'deb', label:'🌱 Vocabulaire Débutant', items:[
+      {id:1, n:'Marche face à face',ab:'F'},{id:2, n:'Baldosa',ab:'F'},{id:3, n:'Rebonds',ab:'F'},
+      {id:4, n:'Marches',ab:'F'},{id:5, n:'Huit arrière',ab:'F'},{id:6, n:'Huit avant',ab:'F'},
+      {id:7, n:'Sandwich',ab:'F'},{id:8, n:'Paradas',ab:'F'},{id:9, n:'Salida',ab:'F'},
+      {id:10,n:'Marche circulaire',ab:'F'},{id:11,n:'Huit coupé',ab:'F'},{id:12,n:'Structure du tour',ab:'OF'},
+      {id:13,n:'Medialuna',ab:'O'},{id:14,n:'Tour simple',ab:'F'},{id:15,n:'Système croisé et marches',ab:'F'},
+      {id:16,n:'Salida 40 (en système croisé)',ab:'F'},{id:17,n:'Marche en tournant',ab:'F'},{id:18,n:'Miroir',ab:'OF'},
+    ]},
+    { id:'nd', lvl:'deb', label:'🧭 Notions Débutant', items:[
+      {id:19,n:'Savoir s\'arrêter dans la marche',ab:null},{id:20,n:'Savoir aller lentement, normalement, rapidement',ab:null},
+      {id:21,n:'Notions de circulation dans le bal',ab:null},{id:22,n:'Abrazo intègre pendant la danse',ab:null},
+    ]},
+    { id:'vi', lvl:'int', label:'💃 Vocabulaire Intermédiaire', items:[
+      {id:23,n:'Marche sur 6 lignes en système normal',ab:null},{id:24,n:'Marche côte à côte',ab:'O'},{id:25,n:'½ tour',ab:'O'},
+      {id:26,n:'Huit sans déplacement',ab:'F'},{id:27,n:'Sacada de l\'homme',ab:'OF'},{id:28,n:'Tour avec quebrada',ab:'F'},
+      {id:29,n:'Tour avec sacadas',ab:'OF'},{id:30,n:'Tour milonguero',ab:'F'},{id:31,n:'Barridas',ab:'OF'},
+      {id:32,n:'Calesita',ab:'F'},{id:33,n:'Medialuna avec roulo',ab:'O'},{id:34,n:'Roulo',ab:'O'},
+      {id:35,n:'Lapiz + parada',ab:'O'},{id:36,n:'Gancho de la femme pour le bal',ab:'F'},{id:37,n:'Boleo arrière au sol',ab:'F'},
+      {id:38,n:'Fioritures',ab:'OF'},
+    ]},
+    { id:'ni', lvl:'int', label:'🧭 Notions Intermédiaires', items:[
+      {id:39,n:'Intention',ab:null},{id:40,n:'Séquence rythmique',ab:null},{id:41,n:'Système appilado',ab:null},
+      {id:42,n:'Notion de musicalité de milonga',ab:null},{id:43,n:'Notion de temps et contretemps',ab:null},
+      {id:44,n:'Gérer le sens du bal',ab:null},{id:45,n:'Improviser dans le bal',ab:null},{id:46,n:'Fluidité de la danse',ab:null},
+      {id:47,n:'Abrazo fermé',ab:'F'},{id:48,n:'Invitation : cabeceo et mirada',ab:null},{id:49,n:'Improviser tout un morceau sans s\'arrêter',ab:null},
+    ]},
+    { id:'va', lvl:'adv', label:'🔥 Vocabulaire Avancé 1', items:[
+      {id:50,n:'Surpivots',ab:null},{id:51,n:'Marche sur 4 lignes en système croisé',ab:null},{id:52,n:'Bloqueo',ab:'F'},
+      {id:53,n:'Tour avec sacadas',ab:null},{id:54,n:'Sacada de la femme',ab:'OF'},{id:55,n:'Ocho milonguero',ab:'F'},
+      {id:56,n:'Tour milonguero en cadena',ab:'F'},{id:57,n:'Lapiz',ab:'O'},{id:58,n:'Boleos circulaires en arrière',ab:'OF'},
+      {id:59,n:'Boleos circulaires en avant',ab:'OF'},{id:60,n:'Gancho sur place',ab:'O'},{id:61,n:'Pivot sur 2 appuis de l\'homme',ab:'O'},
+      {id:62,n:'Pivot sur 2 appuis de la femme',ab:'OF'},{id:63,n:'Fioritures avancées',ab:null},{id:64,n:'Séquences simples de milonga',ab:null},
+    ]},
+    { id:'na', lvl:'adv', label:'🧭 Notions Avancées 1', items:[
+      {id:65,n:'Intention puis déplacement',ab:null},{id:66,n:'Différents types de guidages',ab:null},{id:67,n:'Savoir déstructurer les bases',ab:null},
+      {id:68,n:'L\'abrazo ne se déforme pas',ab:null},{id:69,n:'Contretemps, dobletiempo et syncope',ab:null},{id:70,n:'Gestion de l\'espace réduit',ab:null},
+      {id:71,n:'Séquence dynamique',ab:null},{id:72,n:'Travail musical et spatial sur la salida 40',ab:null},{id:73,n:'Musicalité de la vals',ab:null},
+      {id:74,n:'Musicalité de la milonga',ab:null},{id:75,n:'Danser tout un morceau simplement et avec musicalité',ab:null},
+    ]},
+    { id:'va2', lvl:'adv2', label:'⚡ Vocabulaire Avancé 2', items:[
+      {id:76,n:'Planeo',ab:'O'},{id:77,n:'Enrosque',ab:'OF'},{id:78,n:'Gancho dans la dynamique du tour',ab:'O'},
+      {id:79,n:'Boleos en ligne',ab:'O'},{id:80,n:'Altération',ab:'OF'},{id:81,n:'Mouvements en colgadita',ab:'F'},
+      {id:82,n:'Séquences de sacadas',ab:null},{id:83,n:'Croisés rythmiques',ab:null},{id:84,n:'Colgada',ab:'OF'},
+      {id:85,n:'Volcada',ab:'F'},{id:86,n:'Aguja',ab:'O'},{id:87,n:'Croisés forcés',ab:'OF'},
+      {id:88,n:'Patadas',ab:'O'},{id:89,n:'Chilena',ab:'O'},{id:90,n:'Séquences rapides',ab:null},
+      {id:91,n:'Séquences lentes',ab:null},{id:92,n:'Séquences avancées de milonga',ab:'F'},{id:93,n:'Séquences de vals',ab:'F'},
+      {id:94,n:'Tour avec sacadas et croisés',ab:'OF'},{id:95,n:'Cuartas sacadas',ab:'O'},
+    ]},
+    { id:'na2', lvl:'adv2', label:'🧭 Notions Avancées 2', items:[
+      {id:96,n:'Abrazo confortable et fonctionnel',ab:null},{id:97,n:'Construction musicale en fonction de l\'orchestre',ab:null},
+      {id:98,n:'Gérer l\'abrazo en fonction des séquences',ab:null},{id:99,n:'Je crée mes propres séquences',ab:null},
+      {id:100,n:'Je choisis comment je veux danser, mon style',ab:null},{id:101,n:'Comprendre la différence entre tango salon et tango milonguero',ab:null},
+      {id:102,n:'Séquences lentes',ab:null},{id:103,n:'Séquences rapides',ab:null},{id:104,n:'Gestion des « variations »',ab:null},
+      {id:105,n:'Durée de l\'intention',ab:null},{id:106,n:'Pisada',ab:null},{id:107,n:'Qualité du mouvement',ab:null},
+      {id:108,n:'Jouer avec les syncopes sur la vals',ab:null},
+    ]},
+  ];
+  let _NIV_GROUPS = _NIV_GROUPS_DEFAULT.map(g => ({...g, items: g.items.map(it => ({...it}))}));
+  let _NIV_ALL = [];
+  function _nivRebuildAll() { _NIV_ALL = _NIV_GROUPS.flatMap(g => g.items.map(it => ({...it, gid:g.id, lvl:g.lvl}))); }
+  _nivRebuildAll();
+  function _nivApplyCurriculum(obj) {
+    try {
+      if (obj && Array.isArray(obj.groups) && obj.groups.length) {
+        const clean = obj.groups
+          .filter(g => g && g.id && g.lvl && Array.isArray(g.items))
+          .map(g => ({
+            id:g.id, lvl:g.lvl, label:g.label||g.id,
+            items: g.items.filter(it => it && it.id!=null && it.n)
+                          .map(it => ({id:+it.id, n:String(it.n), ab:it.ab||null}))
+          }))
+          .filter(g => g.items.length);
+        if (clean.length) { _NIV_GROUPS = clean; _nivRebuildAll(); return true; }
+      }
+    } catch(e){}
+    return false;
+  }
+  function _nivLvlMeta(id) { return _NIV_LEVELS.find(l => l.id===id) || {ico:'',name:id}; }
+  function _nivLvlName(id) { return _nivLvlMeta(id).name; }
+  function _nivLvlLabel(id) { const l=_nivLvlMeta(id); return (l.ico?l.ico+' ':'')+l.name; }
+
+  let _nivSelf = null;
+  let _nivAns = {};
+  let _nivFilter = 'all';
+  let _nivScreen = 1;
+  let _nivLoaded = false;
+  let _nivVideos = {};
+  let _nivVideosLoaded = false;
+  let _nivCurriculumLoaded = false;
+
+  function _nivSave() {
+    try {
+      localStorage.setItem('tev_niv_a', JSON.stringify(_nivAns));
+      localStorage.setItem('tev_niv_l', _nivSelf||'');
+    } catch(e){}
+  }
+  function _nivLoad() {
+    try {
+      const a = localStorage.getItem('tev_niv_a');
+      _nivAns = a ? JSON.parse(a) : {};
+      _nivSelf = localStorage.getItem('tev_niv_l') || null;
+    } catch(e){ _nivAns = {}; _nivSelf = null; }
+    _nivLoaded = true;
+  }
+  function _nivVisLvls() {
+    const order = _NIV_LEVELS.map(l => l.id);
+    const idx = order.indexOf(_nivSelf);
+    return idx < 0 ? order.slice() : order.slice(0, idx + 1);
+  }
+  function _nivVisItems() { const v=_nivVisLvls(); return _NIV_ALL.filter(it=>v.includes(it.lvl)); }
+  function _nivTotal() { return _nivVisItems().length; }
+  function _nivDone() { const vis=_nivVisItems(); return Object.keys(_nivAns).filter(k=>vis.some(it=>it.id===+k)).length; }
+
+  function renderNiveau() {
+    if (!_nivLoaded) _nivLoad();
+    if (!_nivCurriculumLoaded && window.TEV && TEV.client) {
+      _nivCurriculumLoaded = true;
+      TEV.client.from('parametres').select('valeur').eq('cle','tev_niv_curriculum').maybeSingle()
+        .then(function(res){
+          if (res && res.data && res.data.valeur && _nivApplyCurriculum(res.data.valeur)) {
+            renderNiveau();
+          }
+        }).catch(function(){});
+    }
+    if (!_nivVideosLoaded && window.TEV && TEV.client) {
+      _nivVideosLoaded = true;
+      TEV.client.from('parametres').select('valeur').eq('cle','tev_niv_videos').maybeSingle()
+        .then(function(res){
+          if (res && res.data && res.data.valeur && typeof res.data.valeur==='object') {
+            _nivVideos = res.data.valeur;
+            if (_nivScreen===2) _nivRenderItems();
+          }
+        }).catch(function(){});
+    }
+    const pane = $('niveau-pane');
+    if (!pane) return;
+    pane.onclick = _nivOnClick;
+    if (_nivScreen===2) _nivRenderS2(pane);
+    else if (_nivScreen===3) _nivRenderS3(pane);
+    else _nivRenderS1(pane);
+  }
+  function _nivGo(n) { _nivScreen = n; renderNiveau(); window.scrollTo(0,0); }
+
+  function _nivOnClick(e) {
+    const needLvl = e.target.closest('[data-niv-need-lvl]');
+    if (needLvl) {
+      const msg = $('niv-need-lvl-msg');
+      if (msg) { msg.style.color = '#ff6b6b'; msg.textContent = '⚠️ Choisis ton niveau ci-dessus avant de continuer'; }
+      return;
+    }
+    const go = e.target.closest('[data-niv-go]');
+    if (go) { _nivGo(+go.dataset.nivGo); return; }
+    const lvl = e.target.closest('[data-niv-lvl]');
+    if (lvl) {
+      _nivSelf = lvl.dataset.nivLvl;
+      _nivSave();
+      _nivRenderS1($('niveau-pane'));
+      return;
+    }
+    const reset = e.target.closest('[data-niv-reset]');
+    if (reset) {
+      if (confirm('Effacer toutes tes réponses ?')) { _nivAns={}; _nivSelf=null; _nivFilter='all'; _nivSave(); _nivGo(1); }
+      return;
+    }
+    const chip = e.target.closest('[data-niv-f]');
+    if (chip) { _nivFilter = chip.dataset.nivF; _nivRenderFilters(); _nivRenderItems(); return; }
+    const dot = e.target.closest('[data-niv-id]');
+    if (dot) {
+      const id = +dot.dataset.nivId, st = +dot.dataset.nivSt;
+      if (_nivAns[id] === st) delete _nivAns[id]; else _nivAns[id] = st;
+      _nivSave();
+      _nivPatchRow(id);
+      _nivUpdateProg();
+      _nivUpdateGroupCount(id);
+      _nivUpdateChips();
+      return;
+    }
+    const more = e.target.closest('[data-niv-more]');
+    if (more) {
+      more.parentNode.querySelectorAll('.niv-hidden-gap').forEach(x=>x.style.display='flex');
+      more.style.display='none';
+      return;
+    }
+    const vid = e.target.closest('[data-niv-vid]');
+    if (vid) { _nivOpenVideo(+vid.dataset.nivVid); return; }
+    const cta = e.target.closest('[data-niv-cta]');
+    if (cta) { window.open(_NIV_CTA_URL, '_blank'); return; }
+  }
+
+  // URL du formulaire « cours particuliers » ouvert par le bouton CTA des résultats.
+  // ⚠️ Remplacez par l'URL de votre page Wix « cours particuliers » si vous préférez.
+  const _NIV_CTA_URL = 'https://app.tangoetvous.fr/cours-particuliers.html';
+
+  function _nivOpenVideo(id) {
+    const url = _nivVideos[id];
+    if (!url) return;
+    const it = _NIV_ALL.find(x=>x.id===id);
+    const existing = document.getElementById('niv-vid-modal');
+    if (existing) existing.remove();
+    const m = document.createElement('div');
+    m.id = 'niv-vid-modal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+    m.innerHTML = '<div style="max-width:560px;width:100%;">'
+      +'<div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:12px;text-align:center;">'+(it?it.n:'')+'</div>'
+      +'<video src="'+url+'" autoplay controls playsinline style="width:100%;border-radius:10px;background:#000;max-height:70vh;display:block;"></video>'
+      +'<button style="display:block;width:100%;margin-top:12px;background:transparent;border:1px solid rgba(255,255,255,.2);color:#aaa;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;" data-niv-vid-close="1">✕ Fermer</button>'
+      +'</div>';
+    m.addEventListener('click', function(e2){ if(e2.target===m||e2.target.dataset.nivVidClose) m.remove(); });
+    document.body.appendChild(m);
+  }
+
+  /* ── Écran 1 — accueil ── */
+  function _nivRenderS1(pane) {
+    const done = Object.keys(_nivAns).length;
+    const _ct = _nivTotal();
+    const cntNote = _ct + ' séquences et notions · ~' + Math.max(3, Math.round(_ct/7.5)) + ' min';
+    pane.innerHTML = `
+      <div class="niv-intro-card">
+        <div class="niv-intro-title">Où en es-tu dans ton tango ?</div>
+        <div class="niv-intro-txt">
+          Évalue ta maîtrise de chaque séquence et notion, du vocabulaire débutant
+          jusqu'aux notions avancées. À la fin, tu verras précisément
+          <b style="color:var(--gold);">ce qui te manque pour valider chaque niveau</b> — et comment le combler.<br/><br/>
+          Tes réponses sont sauvegardées : tu peux reprendre à tout moment et suivre ta progression.
+        </div>
+      </div>
+      <div class="niv-sec-label">Ton niveau, selon toi</div>
+      <div class="niv-self-btns">
+        ${_NIV_LEVELS.map(l=>`<div class="niv-lvl-btn${_nivSelf===l.id?' sel':''}" data-niv-lvl="${l.id}"><span class="niv-ico">${l.ico}</span>${l.name}</div>`).join('')}
+      </div>
+      <div class="niv-sec-label">L'échelle de maîtrise</div>
+      <div class="niv-legend-card">
+        ${_NIV_ST.map(s=>`
+        <div class="niv-leg-row">
+          <div class="niv-leg-dot" style="border-color:${s.col};color:${s.col};">${s.ico}</div>
+          <div><div class="niv-leg-name" style="color:${s.col};">${s.name}</div>
+          <div class="niv-leg-desc">${s.desc}</div></div>
+        </div>`).join('')}
+      </div>
+      <div class="niv-sec-label">Les abrazos</div>
+      <div class="niv-abrazo-row">
+        <span class="niv-ab-chip"><b>O</b> — abrazo ouvert</span>
+        <span class="niv-ab-chip"><b>F</b> — abrazo fermé</span>
+        <span class="niv-ab-chip"><b>OF</b> — ouvert et/ou fermé</span>
+      </div>
+      <button class="niv-btn-gold"${_nivSelf?' data-niv-go="2"':' data-niv-need-lvl="1" style="opacity:.5;cursor:not-allowed;"'}>${done>0?`Continuer mon évaluation (${_nivDone()}/${_nivTotal()}) →`:'Commencer mon évaluation →'}</button>
+      ${!_nivSelf ? '<div class="niv-note-sm" id="niv-need-lvl-msg" style="margin-top:10px;color:var(--gold);">↑ Choisis d\'abord ton niveau pour commencer</div>' : ''}
+      <div class="niv-note-sm" style="margin-top:10px;">${cntNote} · reprise possible à tout moment</div>
+      ${done>0 ? '<button class="niv-btn-ghost" style="width:100%;margin-top:10px;" data-niv-reset="1">↺ Recommencer à zéro</button>' : ''}
+    `;
+  }
+
+  /* ── Écran 2 — évaluation ── */
+  function _nivFilteredGroups() {
+    const visLvls = _nivVisLvls();
+    return _NIV_GROUPS.filter(g => visLvls.includes(g.lvl)).map(g => ({
+      ...g,
+      items: g.items.filter(it => {
+        if(_nivFilter==='todo') return _nivAns[it.id] === undefined;
+        if(_nivFilter==='review') return _nivAns[it.id] !== undefined && _nivAns[it.id] <= 2;
+        return true;
+      })
+    })).filter(g => g.items.length > 0);
+  }
+
+  function _nivRenderS2(pane) {
+    pane.innerHTML = `
+      <div class="niv-prog-sticky">
+        <div class="niv-hdr-row" style="margin-bottom:7px;">
+          <span class="niv-hdr-back" data-niv-go="1">←</span>
+          <div class="niv-hdr-title">Mon niveau · Test</div>
+        </div>
+        <div class="niv-prog-top">
+          <span id="niv-prog-txt" class="niv-prog-count">0 / 0 évalués</span>
+          <button class="niv-btn-res" id="niv-btn-res" data-niv-go="3" disabled>Voir mes résultats →</button>
+        </div>
+        <div class="niv-prog-track"><div class="niv-prog-fill" id="niv-prog-fill" style="width:0%"></div></div>
+      </div>
+      <div class="niv-filter-row" id="niv-filter-row"></div>
+      <div id="niv-items-wrap"></div>
+      <div class="niv-note-sm" style="padding:20px 0 4px;">↑ Remonte pour voir la barre de progression</div>
+    `;
+    _nivRenderFilters();
+    _nivRenderItems();
+    _nivUpdateProg();
+  }
+
+  function _nivRenderFilters() {
+    const el = $('niv-filter-row');
+    if (!el) return;
+    const vis = _nivVisItems();
+    const total = _nivTotal();
+    const done = _nivDone();
+    const review = vis.filter(it => _nivAns[it.id]!==undefined && _nivAns[it.id]<=2).length;
+    el.innerHTML = [
+      {f:'all',   lbl:`Tous (${total})`},
+      {f:'todo',  lbl:`Non évalués (${total-done})`},
+      {f:'review',lbl:`À revoir (${review})`},
+    ].map(c=>`<span class="niv-fchip${_nivFilter===c.f?' act':''}" data-niv-f="${c.f}">${c.lbl}</span>`).join('');
+  }
+
+  function _nivAbBadge(ab) {
+    if(!ab) return '';
+    const cls = ab==='O'?'niv-ab-O':ab==='F'?'niv-ab-F':'niv-ab-OF';
+    return `<span class="niv-badge-ab ${cls}">${ab}</span>`;
+  }
+
+  function _nivItemRow(it) {
+    const sel = _nivAns[it.id];
+    const done = sel !== undefined;
+    const dots = _NIV_ST.map((s,i)=>`<div class="niv-seg-dot${sel===i?' niv-d'+i:''}" data-niv-id="${it.id}" data-niv-st="${i}">${s.ico}</div>`).join('');
+    const vidBtn = _nivVideos[it.id] ? `<button class="niv-vid-btn" data-niv-vid="${it.id}" aria-label="Voir la vidéo">▶</button>` : '';
+    return `<div class="niv-item-row${done?' done':''}" id="niv-ir-${it.id}">
+      <div class="niv-item-top"><span class="niv-item-name">${it.n}</span>${_nivAbBadge(it.ab)}${vidBtn}</div>
+      <div class="niv-seg">${dots}</div>
+      <div class="niv-seg-lbl" style="color:${done?_NIV_ST[sel].col:'transparent'};">${done?_NIV_ST[sel].name:''}</div>
+    </div>`;
+  }
+
+  function _nivRenderItems() {
+    const wrap = $('niv-items-wrap');
+    if (!wrap) return;
+    const groups = _nivFilteredGroups();
+    if(!groups.length) { wrap.innerHTML = '<div class="niv-empty-filter">Aucun élément dans ce filtre 👍</div>'; return; }
+    wrap.innerHTML = groups.map(g => {
+      const cnt = g.items.filter(it=>_nivAns[it.id]!==undefined).length;
+      return `<div class="niv-grp-hdr">
+        <span class="niv-grp-name">${g.label}</span>
+        <span class="niv-grp-count${cnt===g.items.length?' full':''}" id="niv-gc-${g.id}">${cnt}/${g.items.length}</span>
+      </div>
+      ${g.items.map(_nivItemRow).join('')}`;
+    }).join('');
+  }
+
+  function _nivPatchRow(id) {
+    const row = $('niv-ir-'+id);
+    if (!row) return;
+    const sel = _nivAns[id];
+    row.querySelectorAll('.niv-seg-dot').forEach((d,i)=>{ d.className = 'niv-seg-dot' + (sel===i ? ' niv-d'+i : ''); });
+    const lbl = row.querySelector('.niv-seg-lbl');
+    lbl.textContent = sel!==undefined ? _NIV_ST[sel].name : '';
+    lbl.style.color  = sel!==undefined ? _NIV_ST[sel].col  : 'transparent';
+    row.classList.toggle('done', sel!==undefined);
+  }
+
+  function _nivUpdateGroupCount(id) {
+    const it = _NIV_ALL.find(x=>x.id===id);
+    if (!it) return;
+    const g = _NIV_GROUPS.find(x=>x.id===it.gid);
+    if (!g) return;
+    const el = $('niv-gc-'+g.id);
+    if (!el) return;
+    const cnt = g.items.filter(x=>_nivAns[x.id]!==undefined).length;
+    el.textContent = cnt+'/'+g.items.length;
+    el.className = 'niv-grp-count' + (cnt===g.items.length?' full':'');
+  }
+
+  function _nivUpdateChips() {
+    const vis = _nivVisItems();
+    const total = _nivTotal();
+    const done = _nivDone();
+    const review = vis.filter(it=>_nivAns[it.id]!==undefined&&_nivAns[it.id]<=2).length;
+    const map = {all:`Tous (${total})`,todo:`Non évalués (${total-done})`,review:`À revoir (${review})`};
+    document.querySelectorAll('[data-niv-f]').forEach(c=>{ c.textContent = map[c.dataset.nivF]; });
+  }
+
+  function _nivUpdateProg() {
+    const total = _nivTotal();
+    const done  = _nivDone();
+    const txt = $('niv-prog-txt'), fill = $('niv-prog-fill'), btn = $('niv-btn-res');
+    if (!txt || !fill || !btn) return;
+    txt.textContent = done+' / '+total+' évalués';
+    fill.style.width = (total ? Math.round(done/total*100) : 0)+'%';
+    btn.disabled = done === 0;
+    btn.classList.toggle('complete', done >= total);
+    btn.textContent = done >= total ? '✓ Voir mes résultats →' : 'Voir mes résultats →';
+  }
+
+  /* ── Écran 3 — résultats ── */
+  function _nivStats() {
+    const out = {};
+    _nivVisLvls().forEach(lvl => {
+      const items = _NIV_ALL.filter(x=>x.lvl===lvl);
+      const acq   = items.filter(x=>(_nivAns[x.id]||0)>=3);
+      const wip   = items.filter(x=>_nivAns[x.id]===2);
+      const nok   = items.filter(x=>_nivAns[x.id]!==undefined&&(_nivAns[x.id]||0)<=1);
+      const pct   = items.length ? Math.round(acq.length/items.length*100) : 0;
+      const gaps  = items
+        .filter(x=>(_nivAns[x.id]===undefined||(_nivAns[x.id]||0)<3))
+        .sort((a,b)=>((_nivAns[a.id]!==undefined?_nivAns[a.id]:-1))-((_nivAns[b.id]!==undefined?_nivAns[b.id]:-1)));
+      out[lvl] = {items,acq,wip,nok,pct,gaps};
+    });
+    return out;
+  }
+
+  function _nivRenderS3(pane) {
+    const stats   = _nivStats();
+    const visLvls = _nivVisLvls();
+    const total   = _nivTotal();
+    const done    = _nivDone();
+
+    let est = visLvls[0];
+    for (let _i=1; _i<visLvls.length; _i++) {
+      const _prevOk = visLvls.slice(0,_i).every(l => stats[l] && stats[l].pct>=55);
+      if (_prevOk) est = visLvls[_i]; else break;
+    }
+    const estLabel = _nivLvlName(est);
+    const declLabel= _nivSelf ? _nivLvlName(_nivSelf) : 'non déclaré';
+    const match = est===_nivSelf;
+    const matchMsg = match
+      ? 'Cohérent avec ton ressenti 👍'
+      : (est<_nivSelf||(!_nivSelf)) ? 'Voici ta progression réelle — aucun jugement, c\'est là que tout se construit !'
+      : 'Tu es peut-être plus avancé que tu ne le penses 😊';
+
+    const focus = visLvls.find(l=>stats[l] && stats[l].pct<80) || visLvls[visLvls.length-1];
+    const focusLabel = _nivLvlLabel(focus);
+
+    function barColor(p) { return p>=75?'var(--nivc3)':p>=45?'var(--nivc2)':'var(--nivc1)'; }
+    function stMeta(id) {
+      const s = _nivAns[id];
+      if(s===undefined) return {lbl:'?',         bg:'#1c1c1f',col:'var(--nivc0)',brd:'var(--nivc0)'};
+      if(s===0)         return {lbl:'inconnu',   bg:'#1c1c1f',col:'var(--nivc0)',brd:'var(--nivc0)'};
+      if(s===1)         return {lbl:'non acquis',bg:'#2a0f0e',col:'var(--nivc1)',brd:'var(--nivc1)'};
+      return              {lbl:'en cours',  bg:'#241606',col:'var(--nivc2)',brd:'var(--nivc2)'};
+    }
+    function gapList(items, max) {
+      const shown = items.slice(0,max);
+      const rest  = items.length-max;
+      return shown.map(it => {
+        const m = stMeta(it.id);
+        return `<div class="niv-gap-row">
+          <span class="niv-gap-badge" style="background:${m.bg};color:${m.col};border:1px solid ${m.brd};">${m.lbl}</span>
+          <span class="niv-gap-name">${it.n}${_nivAbBadge(it.ab)}</span>
+        </div>`;
+      }).join('')
+      + (rest>0 ? `<div class="niv-gap-more" data-niv-more="1">+ ${rest} autre${rest>1?'s':''} ▾</div>
+      ${items.slice(max).map(it=>{ const m=stMeta(it.id); return `<div class="niv-gap-row niv-hidden-gap" style="display:none"><span class="niv-gap-badge" style="background:${m.bg};color:${m.col};border:1px solid ${m.brd};">${m.lbl}</span><span class="niv-gap-name">${it.n}${_nivAbBadge(it.ab)}</span></div>`; }).join('')}` : '');
+    }
+
+    pane.innerHTML = `
+      <div class="niv-hdr-row">
+        <span class="niv-hdr-back" data-niv-go="2">←</span>
+        <div class="niv-hdr-title">Mes résultats</div>
+      </div>
+      ${done<total ? `<div class="niv-incomplete-warn">⚠️ ${total-done} item${total-done>1?'s':''} non évalué${total-done>1?'s':''} — résultats partiels. <span data-niv-go="2" style="color:var(--gold);cursor:pointer;">Compléter →</span></div>` : ''}
+      <div class="niv-res-hero">
+        <div class="niv-res-lbl">Ton niveau estimé</div>
+        <div class="niv-res-lvl">${estLabel}</div>
+        <div class="niv-res-sub">
+          ${matchMsg}
+          ${_nivSelf ? `<br/><span style="color:var(--text-dim);font-size:11px;">Déclaré : ${declLabel}</span>` : ''}
+        </div>
+      </div>
+      ${visLvls.map(l=>{
+        const {pct,acq,items,wip,nok} = stats[l];
+        const lbl = _nivLvlLabel(l);
+        return `<div class="niv-res-card">
+          <div class="niv-res-card-top"><span class="niv-res-card-name">${lbl}</span><span class="niv-res-card-pct">${pct}%</span></div>
+          <div class="niv-res-bar"><div class="niv-res-bar-f" style="width:${pct}%;background:${barColor(pct)};"></div></div>
+          <div class="niv-res-sub2">${acq.length}/${items.length} acquis ou plus${wip.length?` · ${wip.length} en cours`:''}${nok.length?` · ${nok.length} non acquis`:''}</div>
+        </div>`;
+      }).join('')}
+      ${stats[focus].gaps.length>0 ? `
+      <div class="niv-gap-card">
+        <div class="niv-gap-title">🎯 À travailler — ${focusLabel}</div>
+        ${gapList(stats[focus].gaps, 7)}
+      </div>` : `<div class="niv-note-sm" style="padding:14px 0;">🎉 Tous les niveaux semblent bien maîtrisés !</div>`}
+      <div class="niv-cta-cp">
+        <div class="niv-cta-txt">
+          💡 Un <b style="color:#fff;">cours particulier</b> est le moyen le plus efficace de
+          combler ces lacunes de façon ciblée — Florencia et Jérémy construisent la séance
+          autour de <b style="color:#fff;">tes</b> points à travailler.
+        </div>
+        <span class="niv-cta-btn" data-niv-cta="1">🎯 Réserver un cours particulier →</span>
+      </div>
+      <div class="niv-res-actions">
+        <button class="niv-btn-ghost" data-niv-go="2">← Modifier mes réponses</button>
+        <button class="niv-btn-ghost" data-niv-reset="1">↺ Recommencer</button>
+      </div>
+      <div class="niv-note-sm" style="margin-top:12px;">Ton évaluation est sauvegardée automatiquement. Tu peux revenir la mettre à jour à tout moment — ta progression sera visible d'un test à l'autre. 📈</div>
+    `;
+  }
+
+  // Lancement
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderNiveau);
+  } else {
+    renderNiveau();
+  }
+})();
+</script>
+
+<script>
+/* Hauteur transmise au parent Wix (iframe) */
+(function(){
+  function _tevH(){var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight);try{window.parent.postMessage({type:'tevHeight',height:h},'*');}catch(e){}}
+  window.addEventListener('load',_tevH);
+  window.addEventListener('resize',_tevH);
+  new MutationObserver(function(){setTimeout(_tevH,60);}).observe(document.body,{subtree:true,childList:true,attributes:true});
+})();
+</script>
+</body>
+</html>
