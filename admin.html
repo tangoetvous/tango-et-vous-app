@@ -14068,15 +14068,57 @@ window.soumettreValiderPaiement = function(force) {
   }catch(ex){if(err){err.textContent='Erreur : '+(ex&&ex.message||String(ex));err.style.display='block';}console.error('soumettreValiderPaiement:',ex);}
 };
 
+// Construit le bloc "Reprendre un·e élève de la saison en cours" au-dessus d'une iframe
+// d'inscription. Ne s'affiche que si la saison active ≠ saison courante (contexte pré-inscription).
+function _ndPrefillDropdown(iframeId, baseUrl) {
+  var saiCour = saisonCourante();
+  if (saisonActive() === saiCour) return { drop: '', radius: '8px' };
+  var seen = {};
+  var elevesCour = (adminData.coursTango||[]).filter(function(e){
+    if (e.statut!=='inscrit' || (e.saison||saisonCourante())!==saiCour || e._isRenewalRow) return false;
+    var k = (e.email||'').toLowerCase() || '_id'+e.id;
+    if (seen[k]) return false; seen[k]=1; return true;
+  }).sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||'')||(a.prenom||'').localeCompare(b.prenom||''); });
+  if (!elevesCour.length) return { drop: '', radius: '8px' };
+  var drop = '<div style="padding:12px 16px;background:var(--s2);border-radius:8px 8px 0 0;border-bottom:1px solid var(--border);margin-bottom:0;">'
+    +'<label style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--gold);display:block;margin-bottom:6px;">Reprendre un·e élève '+escHtml(saiCour)+' (préremplit nom / email / téléphone)</label>'
+    +'<select id="nd-eleve-prec-'+iframeId+'" onchange="_ndPrefillIframe(this.value,\''+iframeId+'\',\''+baseUrl+'\')" style="width:100%;">'
+    +'<option value="">— Sélectionner pour préremplir —</option>';
+  elevesCour.forEach(function(e){
+    drop += '<option value="'+e.id+'">'+escHtml(e.prenom)+' '+escHtml(e.nom)+(e.email?' · '+escHtml(e.email):'')+'</option>';
+  });
+  drop += '</select></div>';
+  return { drop: drop, radius: '0 0 8px 8px' };
+}
+
+// Recharge l'iframe avec ?prefill=1&prenom=…&nom=…&email=…&tel=… quand on choisit un·e élève.
+window._ndPrefillIframe = function(id, iframeId, baseUrl) {
+  var iframe = gel(iframeId); if (!iframe) return;
+  if (!id) { iframe.src = baseUrl; return; }
+  var e = (adminData.coursTango||[]).find(function(x){ return String(x.id)===String(id); });
+  if (!e) return;
+  var params = new URLSearchParams(baseUrl.split('?')[1]||'');
+  params.set('prefill','1');
+  if (e.prenom) params.set('prenom', e.prenom);
+  if (e.nom)    params.set('nom',    e.nom);
+  if (e.email)  params.set('email',  e.email);
+  if (e.tel)    params.set('tel',    e.tel);
+  iframe.src = 'inscription-cours.html?' + params.toString();
+};
+
 function renderFormulaireDemandeAdmin() {
+  var bd = _ndPrefillDropdown('nd-iframe-dem', 'inscription-cours.html?admin=1');
   return '<div style="margin:-14px;">'
-    +'<iframe src="inscription-cours.html?admin=1" style="border:none;width:100%;height:900px;border-radius:8px;" title="Formulaire nouvelle demande"></iframe>'
+    + bd.drop
+    +'<iframe id="nd-iframe-dem" src="inscription-cours.html?admin=1" style="border:none;width:100%;height:900px;border-radius:'+bd.radius+';" title="Formulaire nouvelle demande"></iframe>'
     +'</div>';
 }
 
 function renderFormulairePreinscriptionAdmin() {
+  var bd = _ndPrefillDropdown('nd-iframe-pre', 'inscription-cours.html?admin=1&mode=preinscription');
   return '<div style="margin:-14px;">'
-    +'<iframe src="inscription-cours.html?admin=1&mode=preinscription" style="border:none;width:100%;height:900px;border-radius:8px;" title="Formulaire pré-inscription"></iframe>'
+    + bd.drop
+    +'<iframe id="nd-iframe-pre" src="inscription-cours.html?admin=1&mode=preinscription" style="border:none;width:100%;height:900px;border-radius:'+bd.radius+';" title="Formulaire pré-inscription"></iframe>'
     +'</div>';
 }
 
