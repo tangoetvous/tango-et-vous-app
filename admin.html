@@ -13807,26 +13807,6 @@ function renderValiderPaiement() {
     h += '<option value="'+e.id+'">'+e.prenom+' '+e.nom+' · '+_coursDbToLbl(e)+'</option>';
   });
   h += '</select></div>';
-  // Reprise d'un·e élève de la saison en cours (utile en pré-inscription pour la saison suivante) —
-  // préremplit uniquement l'identité (nom / email / téléphone), ne touche ni aux cours ni à _vpPrefillIds.
-  var saiCour = saisonCourante();
-  if (sai !== saiCour) {
-    var _vpSeen = {};
-    var elevesCour = (adminData.coursTango||[]).filter(function(e){
-      if (e.statut!=='inscrit' || (e.saison||saisonCourante())!==saiCour || e._isRenewalRow) return false;
-      var k = (e.email||'').toLowerCase() || ('_id'+e.id);
-      if (_vpSeen[k]) return false; _vpSeen[k]=1; return true;
-    }).sort(function(a,b){ return (a.nom||'').localeCompare(b.nom||'')||(a.prenom||'').localeCompare(b.prenom||''); });
-    if (elevesCour.length) {
-      h += '<div class="field"><label>Ou reprendre un·e élève de '+saiCour+' (préremplit nom / email / téléphone)</label>'
-        +'<select id="vp-eleve-prec-select" onchange="vpPrefillEleve(this.value)">'
-        +'<option value="">— Élève '+saiCour+' —</option>';
-      elevesCour.forEach(function(e){
-        h += '<option value="'+e.id+'">'+e.prenom+' '+e.nom+(e.email?' · '+e.email:'')+'</option>';
-      });
-      h += '</select></div>';
-    }
-  }
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
     +'<div class="field" style="margin:0;"><label>Prénom *</label><input type="text" id="vp-prenom" autocomplete="given-name"/></div>'
     +'<div class="field" style="margin:0;"><label>Nom *</label><input type="text" id="vp-nom" autocomplete="family-name"/></div>'
@@ -13974,16 +13954,6 @@ window.vpPrefill = function(id) {
       var mEl=gel('vp-montant-'+ci); if(mEl&&ins.montant) mEl.value=ins.montant;
     });
   },60);
-};
-// Reprise d'un·e élève d'une saison antérieure : préremplit UNIQUEMENT l'identité.
-// Ne modifie ni les cours cochés, ni _vpPrefillIds, ni aucune logique de soumission →
-// la validation se comporte exactement comme une saisie manuelle de ces 4 champs.
-window.vpPrefillEleve = function(id) {
-  if(!id) return;
-  var e = (adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
-  if(!e) return;
-  var flds = {prenom:'vp-prenom', nom:'vp-nom', email:'vp-email', tel:'vp-tel'};
-  Object.keys(flds).forEach(function(k){ var el=gel(flds[k]); if(el) el.value=e[k]||''; });
 };
 
 window.soumettreValiderPaiement = function(force) {
