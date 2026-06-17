@@ -3594,8 +3594,6 @@
     const _stSaiEnd   = _stSai.split('-')[1] + '-08-31';
     const _stInSeason = STAGES_DATA.filter(s => s.date >= _stSaiStart && s.date <= _stSaiEnd);
     const future = _stInSeason.filter(s => s.date >= todayStr).sort((a,b) => a.date < b.date ? -1 : 1);
-    const past   = _stInSeason.filter(s => s.date <  todayStr).sort((a,b) => a.date < b.date ? 1 : -1);
-    const all    = [...future, ...past];
 
     // Adresse fraîche depuis localStorage (pour refléter les changements admin sans reload)
     const _stAdrFrais = _lp('stages').adresse || {};
@@ -3614,10 +3612,10 @@
     const _hasThm = t => t && t !== '\u00c0 venir';
     const _thLbl  = (t, prefix) => prefix + (_hasThm(t) ? ' \u2014 ' + t : (t === '\u00c0 venir' ? ' \u2014 th\u00e8me \u00e0 venir' : ''));
     const _tarVal = (tar, key) => tar[key] != null ? tar[key] : (key === 'stage_technique' ? TAR_TECH : TAR_STG);
-    all.forEach(s => {
+    future.forEach(s => {
       const d = new Date(s.date + 'T00:00:00');
       const df = d.getDate() + '\u00a0' + MOIS_LONG[d.getMonth()] + '\u00a0' + d.getFullYear();
-      const isPast = s.date < todayStr;
+      const isPast = false; // seules les dates futures sont affich\u00e9es
       const hor = Object.assign({}, HST, s.horaires||{});
       const tar = s.tarifs||{};
       const hasTech = s.technique !== false;
