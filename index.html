@@ -3696,6 +3696,30 @@
   function _saveMilPresences(list) {
     try { localStorage.setItem('tev_milonga_presences', JSON.stringify(list)); } catch(e) {}
   }
+  // Synchronise les présences milonga depuis Supabase → localStorage → re-render
+  function _syncMilPresencesDB() {
+    var todayStr = new Date().toLocaleDateString('sv');
+    Promise.resolve(
+      TEV.client.from('milonga_presences').select('date,milonga_id,milonga_nom,email,prenom,nom').gte('date', todayStr)
+    ).then(function(res) {
+      if (!res || res.error || !Array.isArray(res.data) || !res.data.length) return;
+      var local = _loadMilPresences();
+      var changed = false;
+      res.data.forEach(function(row) {
+        var exists = local.some(function(p) {
+          return p.date === row.date && (p.email || '').toLowerCase() === (row.email || '').toLowerCase();
+        });
+        if (!exists) {
+          local.push({ date: row.date, milongaId: row.milonga_id || '', milongaNom: row.milonga_nom || '', email: row.email || '', prenom: row.prenom || '', nom: row.nom || '', ts: 0 });
+          changed = true;
+        }
+      });
+      if (changed) {
+        _saveMilPresences(local);
+        if (currentTab === 'milonga') renderMilonga();
+      }
+    }).catch(function() {});
+  }
   function _toggleMilPresence(date, milId, milNom, elv, present) {
     var list = _loadMilPresences();
     var emailLow = (elv.email || '').toLowerCase().trim();
@@ -3835,6 +3859,7 @@
   };
 
   function renderMilonga() {
+    _syncMilPresencesDB(); // fetch autres élèves depuis Supabase (fire & forget, re-render si changement)
     const elv = eleveData.eleve || {};
     const emailLow = (elv.email || '').toLowerCase().trim();
     const presences = _loadMilPresences();
