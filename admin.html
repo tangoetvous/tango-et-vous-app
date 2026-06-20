@@ -14686,8 +14686,8 @@ function _autoCreerBrouillon(demande) {
 
 function _dvRow(label, val) {
   if (!val) return '';
-  return '<div style="display:flex;gap:6px;font-size:12px;margin-top:3px;">'
-    + '<span style="color:var(--dim);min-width:130px;flex-shrink:0;">' + label + '</span>'
+  return '<div style="display:flex;gap:6px;font-size:15px;margin-top:4px;">'
+    + '<span style="color:var(--dim);min-width:150px;flex-shrink:0;">' + label + '</span>'
     + '<span style="color:var(--text);word-break:break-word;">' + escHtml(String(val)) + '</span></div>';
 }
 
@@ -14740,33 +14740,33 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
     h += '<div class="card-top"><div>'
       + '<div class="card-nom" style="display:flex;align-items:center;gap:8px;">'
       +   '<span style="color:var(--gold);font-weight:700;">' + dv.numero + '</span>'
-      +   '<span class="pill ' + st.cls + '" style="font-size:11px;">' + st.lbl + '</span>'
+      +   '<span class="pill ' + st.cls + '" style="font-size:13px;">' + st.lbl + '</span>'
       + '</div>'
       + '<div class="card-sub">'
       +   (dv.client_nom ? dv.client_nom : '') + (montant ? ' · ' + montant : '') + (dt ? ' · ' + dt : '')
       + '</div>';
     if (dv.evt_date || dv.evt_lieu) {
-      h += '<div style="font-size:12px;color:var(--dim);margin-top:2px;">' + evtDate.replace(' · ','') + evtLieu + '</div>';
+      h += '<div style="font-size:14px;color:var(--dim);margin-top:2px;">' + evtDate.replace(' · ','') + evtLieu + '</div>';
     }
     h += '</div></div>';
 
     // Prestations
     if (Array.isArray(dv.prestations) && dv.prestations.length) {
       var presLabels = dv.prestations.map(function(p){ return p.intitule || '—'; }).join(' · ');
-      h += '<div style="font-size:12px;color:var(--dim);margin-top:6px;">' + presLabels + '</div>';
+      h += '<div style="font-size:14px;color:var(--dim);margin-top:6px;">' + presLabels + '</div>';
     }
 
     // Boutons
     h += '<div class="btn-row" style="margin-top:10px;">';
-    h += '<button class="btn btn-ghost" style="font-size:12px;" data-action="ouvrir-generateur" data-numero="' + dv.numero + '">📄 Ouvrir / Retoucher</button>';
-    h += '<a href="' + gmailUrl + '" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Envoyer par email</a>';
+    h += '<button class="btn btn-ghost" style="font-size:14px;" data-action="ouvrir-generateur" data-numero="' + dv.numero + '">📄 Ouvrir / Retoucher</button>';
+    h += '<a href="' + gmailUrl + '" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:14px;">✉️ Envoyer par email</a>';
     if (publicUrl) {
-      h += '<button class="btn btn-ghost" style="font-size:12px;" onclick="navigator.clipboard.writeText(\''+publicUrl+'\').then(function(){afficherToast(\'🔗 Lien copié !\')})">🔗 Lien client</button>';
+      h += '<button class="btn btn-ghost" style="font-size:14px;" onclick="navigator.clipboard.writeText(\''+publicUrl+'\').then(function(){afficherToast(\'🔗 Lien copié !\')})">🔗 Lien client</button>';
     }
     if (dv.statut === 'brouillon') {
-      h += '<button class="btn btn-ghost" style="font-size:12px;" data-action="emettre-devis" data-id="' + dv.id + '">✓ Marquer émis</button>';
+      h += '<button class="btn btn-ghost" style="font-size:14px;" data-action="emettre-devis" data-id="' + dv.id + '">✓ Marquer émis</button>';
     }
-    h += '<button class="btn btn-ghost" style="font-size:12px;color:#e55;margin-left:auto;" data-action="supprimer-devis" data-id="' + dv.id + '" data-statut="' + dv.statut + '" data-numero="' + dv.numero + '">🗑️</button>';
+    h += '<button class="btn btn-ghost" style="font-size:14px;color:#e55;margin-left:auto;" data-action="supprimer-devis" data-id="' + dv.id + '" data-statut="' + dv.statut + '" data-numero="' + dv.numero + '">🗑️</button>';
     h += '</div></div>';
   });
 
@@ -14962,7 +14962,7 @@ function renderDevis() {
   if (_devisFormClientOuvert) {
     return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
       + '<button class="btn btn-ghost" data-action="fermer-form-client">← Retour</button>'
-      + '<span style="color:var(--dim);font-size:13px;">Formulaire client — Demande de devis</span>'
+      + '<span style="color:var(--dim);font-size:15px;">Formulaire client — Demande de devis</span>'
       + '</div>'
       + '<iframe src="/demande-devis.html" '
       + 'style="width:100%;height:calc(100vh - 130px);border:none;border-radius:8px;">'
@@ -14975,7 +14975,7 @@ function renderDevis() {
       + (_devisGenerateurNumero ? '?numero=' + encodeURIComponent(_devisGenerateurNumero) : '');
     return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
       + '<button class="btn btn-ghost" data-action="fermer-generateur">← Retour</button>'
-      + '<span style="color:var(--dim);font-size:13px;">'
+      + '<span style="color:var(--dim);font-size:15px;">'
       + (_devisGenerateurNumero || 'Nouveau devis') + '</span>'
       + '</div>'
       + '<iframe src="' + src + '" '
@@ -15014,13 +15014,13 @@ function renderDevis() {
   var nbAnciennes = demandesAnciennes.length;
 
   var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap;">'
-    + '<h2 style="margin:0;font-size:16px;">📋 Devis</h2>'
+    + '<h2 style="margin:0;font-size:20px;">📋 Devis</h2>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-    + '<button class="btn btn-ghost" style="font-size:13px;" data-action="toggle-devis-vue">'
+    + '<button class="btn btn-ghost" style="font-size:15px;" data-action="toggle-devis-vue">'
     + (_devisVue === 'demandes' ? '📂 Devis générés ('+devisList.length+')' : '📥 Demandes ('+demandes.length+')')
     + '</button>'
-    + '<button class="btn btn-ghost" style="font-size:13px;" data-action="ouvrir-form-client">🔗 Formulaire client</button>'
-    + '<button class="btn btn-gold" style="font-size:13px;" data-action="ouvrir-generateur" data-numero="">📄 Nouveau devis</button>'
+    + '<button class="btn btn-ghost" style="font-size:15px;" data-action="ouvrir-form-client">🔗 Formulaire client</button>'
+    + '<button class="btn btn-gold" style="font-size:15px;" data-action="ouvrir-generateur" data-numero="">📄 Nouveau devis</button>'
     + '</div></div>';
 
   if (!demandes.length && !devisList.length) {
@@ -15071,11 +15071,11 @@ function renderDevis() {
       + '<div class="card-nom">'
       + nom
       + (isSoc && d.nom_societe ? ' — ' + d.nom_societe : '')
-      + (isSoc ? ' <span style="font-size:10px;color:var(--dim);font-weight:400;border:1px solid var(--border);border-radius:3px;padding:1px 5px;">Société</span>' : '')
+      + (isSoc ? ' <span style="font-size:13px;color:var(--dim);font-weight:400;border:1px solid var(--border);border-radius:3px;padding:1px 5px;">Société</span>' : '')
       + '</div>'
       + '<div class="card-sub">' + (d.email||'') + (d.telephone ? ' · ' + d.telephone : '') + (dt ? ' · ' + dt : '') + '</div>'
       + '</div>';
-    card += '<select class="input" style="width:auto;font-size:12px;padding:4px 8px;" data-action="statut-demande-devis" data-id="'+d.id+'">';
+    card += '<select class="input" style="width:auto;font-size:15px;padding:4px 8px;" data-action="statut-demande-devis" data-id="'+d.id+'">';
     STATUTS_PIPELINE.forEach(function(s) {
       card += '<option value="'+s+'"'+(d.statut===s?' selected':'')+'>'+(STATUT_DEMANDE[s]?STATUT_DEMANDE[s].lbl:s)+'</option>';
     });
@@ -15083,12 +15083,12 @@ function renderDevis() {
 
     // ── Prestations
     if (prestations) {
-      card += '<div style="margin-top:6px;font-size:13px;color:var(--gold);font-weight:600;">' + prestations + '</div>';
+      card += '<div style="margin-top:6px;font-size:15px;color:var(--gold);font-weight:600;">' + prestations + '</div>';
     }
 
     // ── Résumé clé
     if (summaryParts.length) {
-      card += '<div style="margin-top:4px;font-size:12px;color:var(--dim);">' + summaryParts.join(' · ') + '</div>';
+      card += '<div style="margin-top:4px;font-size:14px;color:var(--dim);">' + summaryParts.join(' · ') + '</div>';
     }
 
     // ── Détails (section expansible)
@@ -15112,8 +15112,8 @@ function renderDevis() {
       if (d.budget) card += _dvRow('Budget', d.budget);
       if (d.message) {
         card += '<div style="margin-top:8px;">'
-          + '<div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Détails</div>'
-          + '<div style="font-size:13px;color:var(--text);white-space:pre-wrap;background:var(--s3);border-radius:6px;padding:8px 10px;border:1px solid var(--border);">' + escHtml(d.message) + '</div>'
+          + '<div style="font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">Détails</div>'
+          + '<div style="font-size:15px;color:var(--text);white-space:pre-wrap;background:var(--s3);border-radius:6px;padding:8px 10px;border:1px solid var(--border);">' + escHtml(d.message) + '</div>'
           + '</div>';
       }
       if (isSoc) {
@@ -15130,12 +15130,12 @@ function renderDevis() {
           var dvSt = STATUT_DEVIS[dv.statut] || { cls:'pill-warn', lbl:dv.statut };
           var montant = dv.montant_ht ? Number(dv.montant_ht).toLocaleString('fr-FR')+'€ HT' : '';
           card += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">'
-            + '<span style="font-weight:600;font-size:12px;color:var(--gold);">'+dv.numero+'</span>'
-            + '<span class="pill '+dvSt.cls+'" style="font-size:10px;">'+dvSt.lbl+'</span>'
-            + (montant ? '<span style="font-size:12px;color:var(--dim);">'+montant+'</span>' : '')
-            + '<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;" data-action="ouvrir-generateur" data-numero="'+dv.numero+'">📄 Ouvrir</button>'
-            + (dv.statut==='brouillon' ? '<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;" data-action="emettre-devis" data-id="'+dv.id+'">✓ Marquer émis</button>' : '')
-            + '<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;color:#e55;" data-action="supprimer-devis" data-id="'+dv.id+'" data-statut="'+dv.statut+'" data-numero="'+dv.numero+'">🗑️</button>'
+            + '<span style="font-weight:600;font-size:15px;color:var(--gold);">'+dv.numero+'</span>'
+            + '<span class="pill '+dvSt.cls+'" style="font-size:13px;">'+dvSt.lbl+'</span>'
+            + (montant ? '<span style="font-size:14px;color:var(--dim);">'+montant+'</span>' : '')
+            + '<button class="btn btn-ghost" style="font-size:13px;padding:2px 8px;" data-action="ouvrir-generateur" data-numero="'+dv.numero+'">📄 Ouvrir</button>'
+            + (dv.statut==='brouillon' ? '<button class="btn btn-ghost" style="font-size:13px;padding:2px 8px;" data-action="emettre-devis" data-id="'+dv.id+'">✓ Marquer émis</button>' : '')
+            + '<button class="btn btn-ghost" style="font-size:13px;padding:2px 8px;color:#e55;" data-action="supprimer-devis" data-id="'+dv.id+'" data-statut="'+dv.statut+'" data-numero="'+dv.numero+'">🗑️</button>'
             + '</div>';
         });
         card += '</div>';
@@ -15180,27 +15180,27 @@ function renderDevis() {
         +'&to='+encodeURIComponent(d.email)
         +'&su='+gmailSujet
         +'&body='+gmailCorps;
-      card += '<a href="'+gmailHref+'" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Gmail</a>';
+      card += '<a href="'+gmailHref+'" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:14px;">✉️ Gmail</a>';
     }
 
     if (d.telephone) {
       var telClean = escHtml(d.telephone.replace(/\s/g,''));
-      card += '<a href="tel:'+telClean+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;" title="Appeler">📞 Appeler</a>';
-      card += '<a href="sms:'+telClean+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;" title="Envoyer un SMS">💬 SMS</a>';
+      card += '<a href="tel:'+telClean+'" class="btn btn-ghost" style="text-decoration:none;font-size:14px;" title="Appeler">📞 Appeler</a>';
+      card += '<a href="sms:'+telClean+'" class="btn btn-ghost" style="text-decoration:none;font-size:14px;" title="Envoyer un SMS">💬 SMS</a>';
     }
 
-    card += '<button class="btn btn-ghost" data-action="creer-devis" data-id="'+d.id+'" style="font-size:12px;">📋 Créer un devis</button>';
-    card += '<button class="btn btn-ghost" data-action="toggle-demande-detail" data-id="'+d.id+'" style="font-size:12px;">'
+    card += '<button class="btn btn-ghost" data-action="creer-devis" data-id="'+d.id+'" style="font-size:14px;">📋 Créer un devis</button>';
+    card += '<button class="btn btn-ghost" data-action="toggle-demande-detail" data-id="'+d.id+'" style="font-size:14px;">'
       + (expanded ? '▴ Réduire' : '▾ Voir tout') + '</button>';
-    card += '<button class="btn btn-ghost" data-action="supprimer-demande-devis" data-id="'+d.id+'" style="font-size:12px;color:#e55;margin-left:auto;">🗑️</button>';
+    card += '<button class="btn btn-ghost" data-action="supprimer-demande-devis" data-id="'+d.id+'" style="font-size:14px;color:#e55;margin-left:auto;">🗑️</button>';
     card += '</div></div>';
     return card;
   }
 
   // Onglet anciennes / récentes
   h += '<div style="display:flex;gap:6px;margin-bottom:14px;">'
-    + '<button class="btn'+((!_devisAnciennes)?' btn-gold':' btn-ghost')+'" style="font-size:12px;" data-action="devis-vue-recentes">6 derniers mois ('+(demandesRecentes.length)+')</button>'
-    + (nbAnciennes>0 ? '<button class="btn'+((_devisAnciennes)?' btn-gold':' btn-ghost')+'" style="font-size:12px;" data-action="devis-vue-anciennes">Anciennes ('+(nbAnciennes)+')</button>' : '')
+    + '<button class="btn'+((!_devisAnciennes)?' btn-gold':' btn-ghost')+'" style="font-size:14px;" data-action="devis-vue-recentes">6 derniers mois ('+(demandesRecentes.length)+')</button>'
+    + (nbAnciennes>0 ? '<button class="btn'+((_devisAnciennes)?' btn-gold':' btn-ghost')+'" style="font-size:14px;" data-action="devis-vue-anciennes">Anciennes ('+(nbAnciennes)+')</button>' : '')
     + '</div>';
 
   var listeAffichee = _devisAnciennes ? demandesAnciennes : demandesRecentes;
