@@ -14684,6 +14684,12 @@ function _autoCreerBrouillon(demande) {
   });
 }
 
+function _dvDateFr(iso) {
+  if (!iso) return '';
+  var s = String(iso).slice(0, 10);
+  var p = s.split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : s;
+}
 function _dvRow(label, val) {
   if (!val) return '';
   return '<div style="display:flex;gap:6px;font-size:15px;margin-top:4px;">'
@@ -14713,8 +14719,8 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
     var clientNomComplet = demande
       ? ((demande.civilite ? demande.civilite + ' ' : '') + (demande.prenom||'') + ' ' + (demande.nom||'')).trim()
       : (dv.client_nom || '');
-    var dt = dv.date_emission || (dv.created_at ? dv.created_at.slice(0,10) : '');
-    var evtDate = dv.evt_date ? ' · 📅 ' + dv.evt_date : '';
+    var dt = _dvDateFr(dv.date_emission || dv.created_at);
+    var evtDate = dv.evt_date ? ' · 📅 ' + _dvDateFr(dv.evt_date) : '';
     var evtLieu = dv.evt_lieu ? ' · 📍 ' + dv.evt_lieu : '';
 
     // Lien public client
@@ -14724,7 +14730,7 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
     var gmailSubject = encodeURIComponent('Devis ' + dv.numero + ' – Tango & Vous / Le Regard Se Pose');
     var gmailBody = encodeURIComponent(
       'Bonjour ' + (demande ? (demande.prenom || dv.client_nom) : dv.client_nom) + ',\n\n'
-      + 'Veuillez trouver votre devis ' + dv.numero + (dv.evt_date ? ' pour votre événement du ' + dv.evt_date : '') + ' en suivant ce lien :\n'
+      + 'Veuillez trouver votre devis ' + dv.numero + (dv.evt_date ? ' pour votre événement du ' + _dvDateFr(dv.evt_date) : '') + ' en suivant ce lien :\n'
       + (publicUrl ? publicUrl + '\n' : '')
       + '\nN\'hésitez pas à me contacter pour toute question.\n\n'
       + 'Cordialement,\n'
@@ -15043,7 +15049,7 @@ function renderDevis() {
   });
 
   function cardDemande(d) {
-    var dt = d.created_at ? _discRelDate(d.created_at) : '';
+    var dt = d.created_at ? _dvDateFr(d.created_at) : '';
     var nom = ((d.civilite ? d.civilite + ' ' : '') + (d.prenom||'') + ' ' + (d.nom||'')).trim();
     var prestations = (d.prestations_labels || []).join(', ') || (d.prestations_ids || []).join(', ');
     var dvList = devisParDemande[d.id] || [];
@@ -15053,12 +15059,12 @@ function renderDevis() {
     // ── Résumé (toujours visible)
     var summaryParts = [];
     if (d.mode === 'event') {
-      if (d.date_evenement) summaryParts.push('📅 ' + d.date_evenement + (d.date_flexible ? ' <span style="color:var(--faint);">(flex)</span>' : ''));
+      if (d.date_evenement) summaryParts.push('📅 ' + _dvDateFr(d.date_evenement) + (d.date_flexible ? ' <span style="color:var(--faint);">(flex)</span>' : ''));
       if (d.horaire_evenement) summaryParts.push('🕐 ' + d.horaire_evenement);
       if (d.lieu) summaryParts.push('📍 ' + d.lieu + (d.code_postal ? ' ' + d.code_postal : ''));
     } else {
       if (d.type_demande) summaryParts.push(d.type_demande);
-      if (d.date_butoir) summaryParts.push('🗓 ' + d.date_butoir);
+      if (d.date_butoir) summaryParts.push('🗓 ' + _dvDateFr(d.date_butoir));
       if (d.lieu_cours) summaryParts.push('📍 ' + d.lieu_cours);
       if (d.pour_qui) summaryParts.push('Pour : ' + d.pour_qui);
     }
@@ -15096,7 +15102,7 @@ function renderDevis() {
       card += '<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">';
       if (d.mode === 'event') {
         card += _dvRow('Type d\'événement', d.type_evenement);
-        card += _dvRow('Date', d.date_evenement ? d.date_evenement + (d.date_flexible ? ' (flexible)' : '') : '');
+        card += _dvRow('Date', d.date_evenement ? _dvDateFr(d.date_evenement) + (d.date_flexible ? ' (flexible)' : '') : '');
         card += _dvRow('Horaire', d.horaire_evenement);
         card += _dvRow('Lieu', (d.lieu||'') + (d.code_postal ? ' ('+d.code_postal+')' : ''));
         card += _dvRow('Durée prestation', d.duree_prestation);
@@ -15104,7 +15110,7 @@ function renderDevis() {
         card += _dvRow('Type de demande', d.type_demande);
         card += _dvRow('Pour qui', d.pour_qui);
         card += _dvRow('Niveau tango', d.niveau_tango);
-        card += _dvRow('Date butoir', d.date_butoir ? d.date_butoir + (d.date_butoir_flexible ? ' (flexible)' : '') : '');
+        card += _dvRow('Date butoir', d.date_butoir ? _dvDateFr(d.date_butoir) + (d.date_butoir_flexible ? ' (flexible)' : '') : '');
         card += _dvRow('Lieu des cours', d.lieu_cours);
         card += _dvRow('Commune domicile', d.commune_domicile);
         card += _dvRow('Disponibilités', d.dates_periodes);
@@ -15156,7 +15162,7 @@ function renderDevis() {
           'Bonjour '+(d.prenom||d.nom||'')+',\n\n'
           +'Veuillez trouver ci-joint notre devis '+dvAssoc.numero
           +(d.type_evenement ? ' pour votre '+d.type_evenement.toLowerCase() : '')
-          +(dvAssoc.evt_date ? ' du '+dvAssoc.evt_date : '')+'.\n\n'
+          +(dvAssoc.evt_date ? ' du '+_dvDateFr(dvAssoc.evt_date) : '')+'.\n\n'
           +'N\'hésitez pas à me contacter pour toute question ou pour convenir d\'un rendez-vous.\n\n'
           +'Cordialement,\n'
           +'Tango & Vous — Le Regard Se Pose\n'
@@ -15168,7 +15174,7 @@ function renderDevis() {
         gmailCorps = encodeURIComponent(
           'Bonjour '+(d.prenom||d.nom||'')+',\n\n'
           +'Suite à votre demande concernant '+contexte.toLowerCase()
-          +(d.date_evenement ? ' le '+d.date_evenement : '')
+          +(d.date_evenement ? ' le '+_dvDateFr(d.date_evenement) : '')
           +(d.lieu ? ' ('+d.lieu+')' : '')+'.\n\n'
           +'[Votre message]\n\n'
           +'Cordialement,\n'
