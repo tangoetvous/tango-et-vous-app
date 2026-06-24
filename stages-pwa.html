@@ -661,6 +661,7 @@ function buildDateEntry(st, globalHor, globalAdr) {
   if(st.technique!==false) items.push({id:st.date+'-technique',horaire:hor('tech_deb')+'–'+hor('tech_fin'),theme:'Technique Leader & Follower',type:'technique'});
   if(n>=1) items.push({id:st.date+'-stage1',horaire:hor('s1_deb')+'–'+hor('s1_fin'),theme:(st.themes&&st.themes[0])||'',type:'stage1'});
   if(n>=2) items.push({id:st.date+'-stage2',horaire:hor('s2_deb')+'–'+hor('s2_fin'),theme:(st.themes&&st.themes[1])||'',type:'stage2'});
+  items.sort(function(a,b){ return (a.horaire||'').localeCompare(b.horaire||''); });
   var dateTarifs = st.tarifs ? Object.assign({},TARIFS_STAGES,st.tarifs) : null;
   // Adresse : per-date override ou global ou null (fallback aux constantes par défaut)
   var adresse = st.adresse && (st.adresse.nom || st.adresse.rue) ? st.adresse : (globalAdr || null);
