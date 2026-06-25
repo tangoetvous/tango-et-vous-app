@@ -2650,7 +2650,9 @@
       ? _coursLines.map(function(l){ return '<div style="margin-top:3px;">· ' + l + '</div>'; }).join('')
       : ' ' + _coursLines[0];
 
-    h += '<div style="background:var(--hero-grad);padding:18px 20px 14px;text-align:center;position:relative;overflow:hidden;">'
+    h += '<div class="accueil-hero-wrap" style="background:var(--hero-grad);padding:18px var(--hero-side-pad,20px) 14px;text-align:center;position:relative;overflow:hidden;">'
+      + '<span class="hero-sd hero-sd-l">✦</span>'
+      + '<span class="hero-sd hero-sd-r">✦</span>'
       + '<div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(212,175,55,0.12) 0%,transparent 70%);pointer-events:none;"></div>'
       + '<div style="font-family:var(--font-display,serif);font-size:26px;font-weight:300;color:var(--gold);letter-spacing:1px;margin-bottom:4px;position:relative;">Bonjour ' + prenom + ' !</div>'
       + '<div style="font-size:16px;color:var(--text);line-height:1.6;position:relative;">' + _coursIntro + _coursBody
@@ -5141,7 +5143,8 @@ body.theme-light{
   --gold:#9a7800;
   --gold-dim:#c8a820;
   --gold-pale:#fef9e7;
-  --hero-grad:linear-gradient(160deg,#ddd0f5 0%,#c8b0ee 50%,#ddd0f5 100%);
+  --hero-grad:transparent;
+  --hero-side-pad:34px;
   --carte-suivi-bg:#ffffff;
   --carte-suivi-border:#c8a820;
   /* Alias courts utilisés dans les inline styles */
@@ -5247,6 +5250,15 @@ body.theme-light .niv-ab-chip{color:var(--text);}
 body.theme-light .niv-ab-chip b{color:var(--gold);}
 /* Mon Niveau — bouton CTA or : texte blanc sur fond or sombre */
 body.theme-light .niv-btn-gold{color:#fff;}
+/* Hero Accueil — décorations latérales dorées (thème clair uniquement) */
+.hero-sd{display:none;position:absolute;top:10px;bottom:10px;width:22px;flex-direction:column;align-items:center;justify-content:center;color:rgba(200,168,32,0.65);font-size:9px;z-index:2;}
+body.theme-light .hero-sd{display:flex;}
+body.theme-light .hero-sd-l{left:8px;}
+body.theme-light .hero-sd-r{right:8px;}
+.hero-sd::before,.hero-sd::after{content:'';display:block;width:1px;flex:1;background:linear-gradient(to bottom,transparent,rgba(200,168,32,0.5) 50%,transparent);}
+.hero-sd::before{margin-bottom:4px;}
+.hero-sd::after{margin-top:4px;}
+body.theme-light .accueil-hero-wrap{border-bottom:1px solid rgba(200,168,32,0.25);}
 /* Carte/Forfait — alerte non payée et pastille non payée */
 body.theme-light #nonpaye-warn{background:#fff8e1!important;border-color:#e65100!important;color:#7c3a00!important;}
 body.theme-light #nonpaye-warn a{color:#7c3a00!important;}
