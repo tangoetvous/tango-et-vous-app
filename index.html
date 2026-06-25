@@ -2548,31 +2548,29 @@
   }
 
   /* ── Mode d'emploi — vidéo paramétrable ── */
-  var _aideLastUrl = null; // null = jamais chargé, '' = chargé, pas de vidéo, 'https://...' = vidéo active
+  var _aideLastUrl = null;
   function renderAide() {
     TEV.client.from('parametres').select('valeur').eq('cle','tev_aide_video_url').maybeSingle()
       .then(function(r) {
         var raw = (r && r.data && r.data.valeur) ? r.data.valeur : '';
         var url = (typeof raw === 'string') ? raw.trim() : '';
-        // Valider : doit ressembler à une URL réelle
-        if (url && !url.match(/^https?:\/\//)) url = '';
-        if (url === _aideLastUrl) return; // rien de changé depuis le dernier rendu
+        if (url === _aideLastUrl) return;
         _aideLastUrl = url;
         var wrap = $('aide-video-wrap');
         if (!wrap) return;
         if (!url) { wrap.innerHTML = ''; return; }
-        var m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?.*?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+        // Extraire l'ID YouTube depuis tous les formats d'URL courants
+        var m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?.*?v=|embed\/|shorts\/|v\/))([a-zA-Z0-9_-]{11})/);
         var vid = m ? m[1] : null;
         if (vid) {
+          // Même rendu que les publications — iframe YouTube
           wrap.innerHTML = '<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;margin-bottom:16px;">'
-            + '<iframe src="https://www.youtube-nocookie.com/embed/' + vid + '?rel=0" '
+            + '<iframe src="https://www.youtube.com/embed/' + vid + '?rel=0" '
             + 'style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" '
             + 'allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>'
             + '</div>';
         } else {
-          wrap.innerHTML = '<video src="' + url + '" controls playsinline '
-            + 'style="width:100%;border-radius:12px;margin-bottom:16px;display:block;" '
-            + 'onerror="this.style.display=\'none\'"></video>';
+          wrap.innerHTML = '';
         }
       }).catch(function(){});
   }
