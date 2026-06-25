@@ -2569,13 +2569,22 @@
             + 'allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>'
             + '</div>';
         } else if (/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url) || url.indexOf('/video/upload/') !== -1) {
-          // Cloudinary video ou URL vidéo directe
-          // Pour Cloudinary : forcer MP4/H.264 pour compatibilité iOS
-          var videoSrc = url;
+          // Cloudinary video ou URL vidéo directe.
+          // On sert l'original (iOS lit nativement le HEVC) ET une variante
+          // transcodée MP4/H.264 en repli — le navigateur prend la 1re lisible.
+          var srcMp4 = url;
           if (url.indexOf('res.cloudinary.com') !== -1 && url.indexOf('/video/upload/') !== -1 && url.indexOf('/f_') === -1) {
-            videoSrc = url.replace('/video/upload/', '/video/upload/f_mp4,vc_h264,q_auto/');
+            srcMp4 = url.replace('/video/upload/', '/video/upload/f_mp4,vc_h264,q_auto/');
           }
-          wrap.innerHTML = '<video src="' + videoSrc + '" controls playsinline webkit-playsinline preload="metadata" style="width:100%;border-radius:12px;margin-bottom:16px;display:block;"></video>';
+          var srcs = '<source src="' + url + '">';
+          if (srcMp4 !== url) srcs += '<source src="' + srcMp4 + '" type="video/mp4">';
+          wrap.innerHTML =
+            '<video controls playsinline webkit-playsinline preload="metadata" '
+            + 'style="width:100%;border-radius:12px;margin-bottom:8px;display:block;background:#000;">'
+            + srcs + '</video>'
+            + '<div style="font-size:12px;margin-bottom:16px;">'
+            + '<a href="' + url + '" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:underline;">▶ Ouvrir la vidéo dans un nouvel onglet</a>'
+            + '</div>';
         } else {
           wrap.innerHTML = '';
         }
