@@ -2548,19 +2548,21 @@
   }
 
   /* ── Mode d'emploi — vidéo paramétrable ── */
-  var _aideVideoLoaded = false;
+  var _aideLastUrl = null; // null = jamais chargé, '' = chargé, pas de vidéo, 'https://...' = vidéo active
   function renderAide() {
-    if (_aideVideoLoaded) return;
-    _aideVideoLoaded = true;
     TEV.client.from('parametres').select('valeur').eq('cle','tev_aide_video_url').maybeSingle()
       .then(function(r) {
-        var url = (r.data && r.data.valeur) ? String(r.data.valeur).trim() : '';
-        if (!url) return;
-        var vid = null;
-        var m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?.*?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
-        if (m) vid = m[1];
+        var raw = (r && r.data && r.data.valeur) ? r.data.valeur : '';
+        var url = (typeof raw === 'string') ? raw.trim() : '';
+        // Valider : doit ressembler à une URL réelle
+        if (url && !url.match(/^https?:\/\//)) url = '';
+        if (url === _aideLastUrl) return; // rien de changé depuis le dernier rendu
+        _aideLastUrl = url;
         var wrap = $('aide-video-wrap');
         if (!wrap) return;
+        if (!url) { wrap.innerHTML = ''; return; }
+        var m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?.*?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+        var vid = m ? m[1] : null;
         if (vid) {
           wrap.innerHTML = '<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;margin-bottom:16px;">'
             + '<iframe src="https://www.youtube-nocookie.com/embed/' + vid + '?rel=0" '
@@ -2568,7 +2570,9 @@
             + 'allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>'
             + '</div>';
         } else {
-          wrap.innerHTML = '<video src="' + url + '" controls playsinline style="width:100%;border-radius:12px;margin-bottom:16px;"></video>';
+          wrap.innerHTML = '<video src="' + url + '" controls playsinline '
+            + 'style="width:100%;border-radius:12px;margin-bottom:16px;display:block;" '
+            + 'onerror="this.style.display=\'none\'"></video>';
         }
       }).catch(function(){});
   }
