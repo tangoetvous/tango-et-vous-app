@@ -86,6 +86,7 @@
   let _tevRealtimeChannel = null;
   let _notifPollTimer = null;
   let _featMonNiveau = false; // flag Supabase tev_feature_mon_niveau.enabled — rubrique "Mon niveau · Test"
+  let _bandeauAccueil = null; // { texte, actif } — bandeau défilant accueil
 
   // ================================================================
   // HELPERS UI
@@ -290,6 +291,12 @@
         .then(function(res){
           var on = !!(res && res.data && res.data.valeur && res.data.valeur.enabled);
           if (on !== _featMonNiveau) { _featMonNiveau = on; renderNavOverlay(); }
+        }).catch(function(){});
+      // Bandeau défilant accueil (non-bloquant)
+      TEV.client.from('parametres').select('valeur').eq('cle','tev_bandeau_accueil').maybeSingle()
+        .then(function(res){
+          _bandeauAccueil = (res && res.data && res.data.valeur) ? res.data.valeur : null;
+          if (currentTab === 'accueil') renderAccueil();
         }).catch(function(){});
       // Rafraîchir les dates de cours depuis Supabase (pour calcul expiration carte 10)
       tevRefreshCoursDates().catch(function(){});
@@ -2962,6 +2969,9 @@
       }
     })();
 
+    if (_bandeauAccueil && _bandeauAccueil.actif && _bandeauAccueil.texte) {
+      h += '<div class="bandeau-defilant"><span class="bandeau-inner">' + _repEsc(_bandeauAccueil.texte).toUpperCase() + '</span></div>';
+    }
     h += '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#e05252;font-weight:700;margin-bottom:10px;">📅 Prochains rendez-vous</div>';
     h += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">';
 
@@ -5996,6 +6006,11 @@ a{color:var(--gold);text-decoration:none;}
   transition:opacity .2s;width:100%;
 }
 .btn-inscrire:hover{opacity:.88;}
+.bandeau-defilant{overflow:hidden;background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.25);border-radius:8px;padding:10px 0;margin-bottom:14px;}
+.bandeau-inner{display:inline-block;white-space:nowrap;animation:marquee-scroll 22s linear infinite;font-size:13px;font-weight:700;letter-spacing:3px;color:var(--gold);padding:0 40px;}
+@keyframes marquee-scroll{from{transform:translateX(100vw);}to{transform:translateX(-100%);}}
+body.theme-light .bandeau-defilant{background:rgba(154,120,0,0.08);border-color:rgba(154,120,0,0.3);}
+body.theme-light .bandeau-inner{color:#7c5c00;}
 .acc-item{
   margin:0 20px 6px;border:1px solid var(--border);
   border-radius:var(--radius);overflow:hidden;

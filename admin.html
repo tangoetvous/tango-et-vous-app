@@ -3492,6 +3492,20 @@ function _renderFeaturesSection() {
     +'<div id="aide-vid-prog" style="display:none;font-size:12px;padding:4px 0;"></div>'
     +(_aideVidUrl?'<button class="btn btn-ghost" style="font-size:12px;color:#e53935;border-color:#e53935;" data-action="aide-vid-clear">✕ Supprimer la vidéo</button>':'')
     +'</div>';
+  // ── Bandeau défilant accueil ──────────────────────────────────
+  var _bandeauData = {};
+  try { _bandeauData = JSON.parse(localStorage.getItem('tev_bandeau_accueil')||'{}'); } catch(e){}
+  var _bandeauTexte = _bandeauData.texte || '';
+  var _bandeauActif = !!_bandeauData.actif;
+  h += '<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;">'
+    +'<div style="font-size:12px;font-weight:600;color:var(--text);">📢 Bandeau défilant accueil</div>'
+    +'<button class="btn '+(_bandeauActif?'btn-gold':'btn-ghost')+'" data-action="toggle-bandeau-accueil" data-etat="'+(_bandeauActif?'1':'0')+'" style="font-size:12px;flex-shrink:0;min-width:90px;">'+(_bandeauActif?'✓ Actif':'Inactif')+'</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">Texte affiché en majuscules en défilement dans l\'accueil élève, juste avant « Prochains rendez-vous ».</div>'
+    +'<textarea id="bandeau-texte" rows="2" style="'+iS+'resize:vertical;margin-bottom:6px;" placeholder="Ex : Inscriptions ouvertes pour la saison 2026-2027 !">'+escHtml(_bandeauTexte)+'</textarea>'
+    +'<button class="btn btn-ghost" data-action="save-bandeau-accueil" style="font-size:12px;">💾 Enregistrer</button>'
+    +'</div>';
   h += '</div></div>';
   return h;
 }
@@ -7187,6 +7201,30 @@ function handleAction(action, btn) {
           }).catch(function() { afficherToast('⚠️ Erreur de sauvegarde Supabase'); });
         }
         afficherToast(newVal ? '✓ Rubrique "Mon niveau · Test" activée pour les élèves' : '✓ Rubrique "Mon niveau · Test" masquée');
+        renderTab();
+      })();
+      break;
+    case 'toggle-bandeau-accueil':
+      (function() {
+        var cur = {};
+        try { cur = JSON.parse(localStorage.getItem('tev_bandeau_accueil')||'{}'); } catch(e){}
+        cur.actif = btn.dataset.etat !== '1';
+        try { localStorage.setItem('tev_bandeau_accueil', JSON.stringify(cur)); } catch(e){}
+        if (!IS_DEMO) Promise.resolve(TEV.setParam('tev_bandeau_accueil', cur)).catch(function(){});
+        afficherToast(cur.actif ? '✓ Bandeau activé' : '✓ Bandeau désactivé');
+        renderTab();
+      })();
+      break;
+    case 'save-bandeau-accueil':
+      (function() {
+        var inp = gel('bandeau-texte');
+        if (!inp) return;
+        var cur = {};
+        try { cur = JSON.parse(localStorage.getItem('tev_bandeau_accueil')||'{}'); } catch(e){}
+        cur.texte = inp.value.trim();
+        try { localStorage.setItem('tev_bandeau_accueil', JSON.stringify(cur)); } catch(e){}
+        if (!IS_DEMO) Promise.resolve(TEV.setParam('tev_bandeau_accueil', cur)).catch(function(){});
+        afficherToast('✓ Bandeau enregistré');
         renderTab();
       })();
       break;
