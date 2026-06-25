@@ -707,6 +707,7 @@
     if (tab === 'notifications') { renderNotificationsPane(); _markNotificationsRead(); }
     if (tab === 'repertoire') renderRepertoire();
     if (tab === 'niveau') renderNiveau();
+    if (tab === 'aide') renderAide();
     if (tab !== 'actu') _actuStopPoll();
     if (tab !== 'discussions') { _discStopPoll(); _discStopListPoll(); if (_discView === 'new') _discView = 'list'; }
     if (tab !== 'repertoire') { if (_repPollTO) { clearTimeout(_repPollTO); _repPollTO = null; } }
@@ -2544,6 +2545,32 @@
     SHOPS.forEach(function(s){ h += _shoeCard(s); });
     h += '</div>';
     pane.innerHTML = h;
+  }
+
+  /* ── Mode d'emploi — vidéo paramétrable ── */
+  var _aideVideoLoaded = false;
+  function renderAide() {
+    if (_aideVideoLoaded) return;
+    _aideVideoLoaded = true;
+    TEV.client.from('parametres').select('valeur').eq('cle','tev_aide_video_url').maybeSingle()
+      .then(function(r) {
+        var url = (r.data && r.data.valeur) ? String(r.data.valeur).trim() : '';
+        if (!url) return;
+        var vid = null;
+        var m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?.*?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+        if (m) vid = m[1];
+        var wrap = $('aide-video-wrap');
+        if (!wrap) return;
+        if (vid) {
+          wrap.innerHTML = '<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:12px;margin-bottom:16px;">'
+            + '<iframe src="https://www.youtube-nocookie.com/embed/' + vid + '?rel=0" '
+            + 'style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" '
+            + 'allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>'
+            + '</div>';
+        } else {
+          wrap.innerHTML = '<video src="' + url + '" controls playsinline style="width:100%;border-radius:12px;margin-bottom:16px;"></video>';
+        }
+      }).catch(function(){});
   }
 
   window.toggleYogaEssaiForm = function() {
@@ -6682,6 +6709,8 @@ a{color:var(--gold);text-decoration:none;}
   <!-- ── ONGLET MODE D'EMPLOI ─────────────────────────────── -->
   <div class="tab-pane" id="aide-pane">
     <div class="tab-section-title">❓ Mode d'emploi</div>
+    <!-- Vidéo paramétrable (injectée par renderAide() depuis tev_aide_video_url) -->
+    <div id="aide-video-wrap"></div>
     <div style="font-size:14px;color:var(--dim);margin-bottom:14px;line-height:1.6;">
       Bienvenue dans votre espace élève Tango&nbsp;&amp;&nbsp;Vous&nbsp;!<br>
       Retrouvez ici le guide de chaque rubrique du menu.
@@ -7024,6 +7053,59 @@ a{color:var(--gold);text-decoration:none;}
           <li>Choisissez <strong>«&nbsp;Ajouter à l'écran d'accueil&nbsp;»</strong></li>
         </ul>
         <div class="aide-tip">💡 Une fois installée, l'appli se comporte comme une vraie application native. Pas besoin de passer par le navigateur à chaque fois.</div>
+      </div>
+    </details>
+
+    <!-- Agrandir les écritures -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🔎</span>Agrandir les écritures<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>Si les textes vous paraissent trop petits, vous pouvez les agrandir directement depuis les réglages de votre téléphone.</p>
+        <p><strong>Sur iPhone :</strong></p>
+        <ul>
+          <li>Réglages → <strong>Accessibilité</strong> → <strong>Affichage et taille du texte</strong> → <strong>Texte plus grand</strong></li>
+          <li>Activez «&nbsp;Tailles accessibles&nbsp;» puis glissez le curseur vers la droite</li>
+        </ul>
+        <p><strong>Sur Android :</strong></p>
+        <ul>
+          <li>Réglages → <strong>Accessibilité</strong> → <strong>Taille de police et affichage</strong></li>
+          <li>Ajustez le curseur «&nbsp;Taille de police&nbsp;» selon votre préférence</li>
+        </ul>
+        <p><strong>Zoom rapide sur la page :</strong> posez deux doigts sur l'écran et écartez-les pour zoomer. Resserrez pour dézoomer.</p>
+        <div class="aide-tip">💡 Ces réglages s'appliquent à toutes vos applications — pas seulement à l'espace élève.</div>
+      </div>
+    </details>
+
+    <!-- Thème clair / Thème obscur -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">🌓</span>Thème clair / Thème obscur<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>L'application propose deux habillages visuels, basculables à tout moment via le bouton <strong>Aa</strong> dans la barre de menu en haut de l'écran.</p>
+        <ul>
+          <li><strong>Thème obscur</strong> (défaut) — fond sombre, idéal en intérieur ou le soir, moins fatigant pour les yeux dans l'obscurité.</li>
+          <li><strong>Thème clair</strong> — fond blanc, meilleure lisibilité en plein jour ou en extérieur.</li>
+        </ul>
+        <p>Le choix est <strong>enregistré automatiquement</strong> : l'application s'ouvrira la prochaine fois dans le thème que vous avez sélectionné.</p>
+        <div class="aide-tip">💡 Si les textes paraissent difficiles à lire dans un contexte lumineux, essayez le thème clair — la différence est souvent spectaculaire !</div>
+      </div>
+    </details>
+
+    <!-- Mon niveau -->
+    <details class="aide-section">
+      <summary><span class="aide-ico">📊</span>Mon niveau<span class="aide-arrow">▶</span></summary>
+      <div class="aide-body">
+        <p>La rubrique <strong>Mon niveau</strong> vous permet de faire un <strong>auto-bilan</strong> sur le vocabulaire et les notions du tango, du niveau Débutant jusqu'au niveau Avancé&nbsp;2.</p>
+        <p><strong>Comment ça marche ?</strong></p>
+        <ul>
+          <li>Choisissez d'abord votre niveau dans la liste (Débutant, Intermédiaire, Avancé&nbsp;1, Avancé&nbsp;2)</li>
+          <li>Cliquez sur <strong>«&nbsp;Commencer mon évaluation&nbsp;»</strong></li>
+          <li>Pour chaque notion, touchez l'une des 5 cases de l'échelle pour indiquer votre maîtrise :<br>
+            <span style="color:var(--text-dim);">😶 Pas encore · 🌱 Découverte · 🔄 En cours · ✅ À l'aise · ⭐ Maîtrisé</span></li>
+          <li>Vos réponses sont <strong>sauvegardées automatiquement</strong> — vous pouvez reprendre à tout moment</li>
+        </ul>
+        <p><strong>Résultats :</strong> à la fin du test, un <strong>score par niveau</strong> s'affiche ainsi qu'une <strong>estimation de votre niveau actuel</strong>, calculée en fonction de vos réponses.</p>
+        <p><strong>Vidéos pédagogiques :</strong> pour certaines notions, un bouton <strong>▶</strong> apparaît à côté de l'item — il ouvre directement la vidéo explicative correspondante.</p>
+        <div class="aide-tip">💡 L'auto-évaluation est sans jugement — elle sert à vous aider à identifier ce que vous voulez travailler, pas à vous noter !</div>
       </div>
     </details>
 
