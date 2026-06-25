@@ -3458,15 +3458,19 @@ function _renderFeaturesSection() {
     +'</div>';
   if (_nivVidExpanded) {
     h += '<div style="margin-top:10px;">'
-      +'<div style="font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.5;">Collez l\'URL Cloudinary de la vidéo pour chaque item. Laissez vide pour désactiver.</div>';
+      +'<div style="font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.5;">Pour chaque item, uploadez une vidéo (📹) ou collez une URL Cloudinary. La vidéo est enregistrée automatiquement après upload. Laissez vide pour désactiver.</div>';
     _nivCurrGroups().forEach(function(group) {
-      h += '<div style="font-size:11px;font-weight:700;color:var(--gold);margin:10px 0 5px;letter-spacing:0.5px;">'+(group.label||group.id)+'</div>';
+      h += '<div style="font-size:11px;font-weight:700;color:var(--gold);margin:12px 0 6px;letter-spacing:0.5px;">'+(group.label||group.id)+'</div>';
       (group.items||[]).forEach(function(it) {
         var val = (videos[it.id]||'').replace(/"/g,'&quot;');
-        h += '<div style="display:grid;grid-template-columns:160px 1fr 16px;align-items:center;gap:6px;margin-bottom:4px;">'
-          +'<span style="font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+(it.n||'').replace(/"/g,'&quot;')+'">'+(it.n||'')+'</span>'
-          +'<input type="url" class="niv-vid-inp" data-id="'+it.id+'" value="'+val+'" placeholder="https://res.cloudinary.com/…" style="'+iS+'">'
-          +'<span style="color:'+(val?'#4caf50':'transparent')+';">▶</span>'
+        h += '<div style="margin-bottom:8px;">'
+          +'<div style="font-size:11px;color:'+(val?'#4caf50':'var(--dim)')+';margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+(it.n||'').replace(/"/g,'&quot;')+'">'+(val?'▶ ':'')+(it.n||'')+'</div>'
+          +'<div style="display:flex;gap:6px;align-items:center;">'
+          +'<input type="url" id="niv-vid-inp-'+it.id+'" class="niv-vid-inp" data-id="'+it.id+'" value="'+val+'" placeholder="https://res.cloudinary.com/…" style="'+iS+'flex:1;">'
+          +'<label for="niv-vid-file-'+it.id+'" style="flex-shrink:0;cursor:pointer;background:var(--s3);border:1px solid var(--border);border-radius:5px;padding:4px 9px;font-size:13px;" title="Uploader une vidéo">📹</label>'
+          +'<input type="file" id="niv-vid-file-'+it.id+'" accept="image/*,video/*" style="display:none;" onchange="uploadNivVideo(this,\''+it.id+'\')">'
+          +'</div>'
+          +'<div id="niv-vid-prog-'+it.id+'" style="display:none;font-size:10px;padding:2px 0;"></div>'
           +'</div>';
       });
     });
@@ -12916,6 +12920,32 @@ function uploadAideVideo(input) {
     })
     .catch(function(){if(prog){prog.textContent='❌ Erreur réseau';prog.style.color='#e53935';}})
     .finally(function(){setTimeout(function(){if(prog)prog.style.display='none';},3000);});
+}
+function uploadNivVideo(input, id) {
+  var file=input.files[0]; if(!file)return;
+  var prog=gel('niv-vid-prog-'+id);
+  if(prog){prog.style.display='block';prog.style.color='var(--gold)';prog.textContent='⏳ Upload en cours…';}
+  var fd=new FormData(); fd.append('file',file); fd.append('upload_preset','tango_uploads');
+  fetch('https://api.cloudinary.com/v1_1/'+CLOUDINARY_NAME+'/auto/upload',{method:'POST',body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.secure_url){
+        var inp=gel('niv-vid-inp-'+id); if(inp) inp.value=d.secure_url;
+        // Enregistrement automatique de toutes les vidéos (sans re-render)
+        var data={};
+        document.querySelectorAll('.niv-vid-inp').forEach(function(x){
+          var v=(x.value||'').trim(); if(v) data[x.dataset.id]=v;
+        });
+        try{localStorage.setItem('tev_niv_videos',JSON.stringify(data));}catch(e){}
+        if(!IS_DEMO) Promise.resolve(TEV.setParam('tev_niv_videos',data)).catch(function(){});
+        if(prog){prog.textContent='✅ Vidéo enregistrée';prog.style.color='#4caf50';}
+      } else {
+        var msg=d.error&&d.error.message?d.error.message:'Échec upload';
+        if(prog){prog.textContent='❌ '+msg;prog.style.color='#e53935';}
+      }
+    })
+    .catch(function(){if(prog){prog.textContent='❌ Erreur réseau';prog.style.color='#e53935';}})
+    .finally(function(){setTimeout(function(){if(prog&&prog.textContent.indexOf('✅')===-1)prog.style.display='none';},5000);});
 }
 function savePub(existingId) {
   var titre=(gel('ed-titre')||{}).value||''; var cat=(gel('ed-cat')||{}).value||'actu';

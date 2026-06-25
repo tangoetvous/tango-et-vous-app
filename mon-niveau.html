@@ -344,22 +344,24 @@ body{font-family:var(--font-body);font-size:15px;color:var(--text);background:va
   // ⚠️ Remplacez par l'URL de votre page Wix « cours particuliers » si vous préférez.
   const _NIV_CTA_URL = 'https://app.tangoetvous.fr/cours-particuliers.html';
 
+  // Transcode les vidéos Cloudinary en MP4/H.264 pour une lecture fiable
+  // (iOS ne lit pas le HEVC/.mov en lecture intégrée ; le lecteur natif
+  // plein écran, lui, ouvre une URL directe sans souci).
+  function _nivVideoSrc(url) {
+    if (!url) return url;
+    if (url.indexOf('res.cloudinary.com') !== -1 && url.indexOf('/video/upload/') !== -1 && url.indexOf('/f_') === -1) {
+      return url
+        .replace('/video/upload/', '/video/upload/f_mp4,vc_h264,q_auto/')
+        .replace(/\.[a-z0-9]+($|\?)/i, '.mp4$1');
+    }
+    return url;
+  }
+
   function _nivOpenVideo(id) {
     const url = _nivVideos[id];
     if (!url) return;
-    const it = _NIV_ALL.find(x=>x.id===id);
-    const existing = document.getElementById('niv-vid-modal');
-    if (existing) existing.remove();
-    const m = document.createElement('div');
-    m.id = 'niv-vid-modal';
-    m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
-    m.innerHTML = '<div style="max-width:560px;width:100%;">'
-      +'<div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:12px;text-align:center;">'+(it?it.n:'')+'</div>'
-      +'<video src="'+url+'" autoplay controls playsinline style="width:100%;border-radius:10px;background:#000;max-height:70vh;display:block;"></video>'
-      +'<button style="display:block;width:100%;margin-top:12px;background:transparent;border:1px solid rgba(255,255,255,.2);color:#aaa;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;" data-niv-vid-close="1">✕ Fermer</button>'
-      +'</div>';
-    m.addEventListener('click', function(e2){ if(e2.target===m||e2.target.dataset.nivVidClose) m.remove(); });
-    document.body.appendChild(m);
+    // Ouvre dans le lecteur natif plein écran (fiable sur iOS)
+    window.open(_nivVideoSrc(url), '_blank');
   }
 
   /* ── Écran 1 — accueil ── */
@@ -462,7 +464,8 @@ body{font-family:var(--font-body);font-size:15px;color:var(--text);background:va
     const sel = _nivAns[it.id];
     const done = sel !== undefined;
     const dots = _NIV_ST.map((s,i)=>`<div class="niv-seg-dot${sel===i?' niv-d'+i:''}" data-niv-id="${it.id}" data-niv-st="${i}">${s.ico}</div>`).join('');
-    const vidBtn = _nivVideos[it.id] ? `<button class="niv-vid-btn" data-niv-vid="${it.id}" aria-label="Voir la vidéo">▶</button>` : '';
+    const _vu = _nivVideos[it.id];
+    const vidBtn = _vu ? `<a class="niv-vid-btn" href="${_nivVideoSrc(_vu)}" target="_blank" rel="noopener" aria-label="Voir la vidéo" style="text-decoration:none;" onclick="event.stopPropagation()">▶</a>` : '';
     return `<div class="niv-item-row${done?' done':''}" id="niv-ir-${it.id}">
       <div class="niv-item-top"><span class="niv-item-name">${it.n}</span>${_nivAbBadge(it.ab)}${vidBtn}</div>
       <div class="niv-seg">${dots}</div>

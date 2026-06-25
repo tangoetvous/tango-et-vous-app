@@ -1888,7 +1888,26 @@
     if (cta) { switchTab('cours-particuliers'); return; }
   }
 
+  // Transcode les vidéos Cloudinary en MP4/H.264 pour une lecture fiable
+  // (iOS ne lit pas le HEVC/.mov en lecture intégrée ; le lecteur natif
+  // plein écran, lui, ouvre une URL directe sans souci).
+  function _nivVideoSrc(url) {
+    if (!url) return url;
+    if (url.indexOf('res.cloudinary.com') !== -1 && url.indexOf('/video/upload/') !== -1 && url.indexOf('/f_') === -1) {
+      return url
+        .replace('/video/upload/', '/video/upload/f_mp4,vc_h264,q_auto/')
+        .replace(/\.[a-z0-9]+($|\?)/i, '.mp4$1');
+    }
+    return url;
+  }
+
   function _nivOpenVideo(id) {
+    const url = _nivVideos[id];
+    if (!url) return;
+    // Ouvre dans le lecteur natif plein écran (fiable sur iOS)
+    window.open(_nivVideoSrc(url), '_blank');
+  }
+  function _nivOpenVideoLegacy(id) {
     const url = _nivVideos[id];
     if (!url) return;
     const it = _NIV_ALL.find(x=>x.id===id);
@@ -2006,7 +2025,8 @@
     const sel = _nivAns[it.id];
     const done = sel !== undefined;
     const dots = _NIV_ST.map((s,i)=>`<div class="niv-seg-dot${sel===i?' niv-d'+i:''}" data-niv-id="${it.id}" data-niv-st="${i}">${s.ico}</div>`).join('');
-    const vidBtn = _nivVideos[it.id] ? `<button class="niv-vid-btn" data-niv-vid="${it.id}" aria-label="Voir la vidéo">▶</button>` : '';
+    const _vu = _nivVideos[it.id];
+    const vidBtn = _vu ? `<a class="niv-vid-btn" href="${_nivVideoSrc(_vu)}" target="_blank" rel="noopener" aria-label="Voir la vidéo" style="text-decoration:none;" onclick="event.stopPropagation()">▶</a>` : '';
     return `<div class="niv-item-row${done?' done':''}" id="niv-ir-${it.id}">
       <div class="niv-item-top"><span class="niv-item-name">${it.n}</span>${_nivAbBadge(it.ab)}${vidBtn}</div>
       <div class="niv-seg">${dots}</div>
