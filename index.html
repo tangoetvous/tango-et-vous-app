@@ -2582,8 +2582,11 @@
           var srcs = '';
           if (srcMp4) srcs += '<source src="' + srcMp4 + '" type="video/mp4">';
           srcs += '<source src="' + url + '">';
+          // Pas de playsinline : sur iOS, le tap lance le lecteur natif
+          // plein écran (qui sait décoder le HEVC/.mov), pas la lecture
+          // intégrée qui échoue silencieusement.
           wrap.innerHTML =
-            '<video controls playsinline webkit-playsinline preload="metadata" '
+            '<video controls preload="metadata" '
             + 'style="width:100%;border-radius:12px;margin-bottom:8px;display:block;background:#000;">'
             + srcs + '</video>'
             + '<div style="font-size:12px;margin-bottom:16px;">'
