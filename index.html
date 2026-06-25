@@ -87,7 +87,6 @@
   let _notifPollTimer = null;
   let _featMonNiveau = false; // flag Supabase tev_feature_mon_niveau.enabled — rubrique "Mon niveau · Test"
   let _bandeauAccueil = null; // { texte, actif } — bandeau défilant accueil
-  let _bandeauLastFetch = 0;  // timestamp du dernier fetch tev_bandeau_accueil
 
   // ================================================================
   // HELPERS UI
@@ -292,6 +291,12 @@
         .then(function(res){
           var on = !!(res && res.data && res.data.valeur && res.data.valeur.enabled);
           if (on !== _featMonNiveau) { _featMonNiveau = on; renderNavOverlay(); }
+        }).catch(function(){});
+      // Bandeau défilant accueil (non-bloquant)
+      TEV.client.from('parametres').select('valeur').eq('cle','tev_bandeau_accueil').maybeSingle()
+        .then(function(res){
+          _bandeauAccueil = (res && res.data && res.data.valeur) ? res.data.valeur : null;
+          if (currentTab === 'accueil') renderAccueil();
         }).catch(function(){});
       // Rafraîchir les dates de cours depuis Supabase (pour calcul expiration carte 10)
       tevRefreshCoursDates().catch(function(){});
@@ -2702,17 +2707,6 @@
   function renderAccueil() {
     const pane = $('accueil-pane');
     if (!pane || !eleveData) return;
-    // Re-fetch bandeau si données absentes ou > 30s (se déclenche en arrière-plan, re-render quand reçu)
-    if (Date.now() - _bandeauLastFetch > 30000) {
-      _bandeauLastFetch = Date.now();
-      TEV.client.from('parametres').select('valeur').eq('cle','tev_bandeau_accueil').maybeSingle()
-        .then(function(res){
-          var fresh = (res && res.data && res.data.valeur) ? res.data.valeur : null;
-          var changed = JSON.stringify(fresh) !== JSON.stringify(_bandeauAccueil);
-          _bandeauAccueil = fresh;
-          if (changed && currentTab === 'accueil') renderAccueil();
-        }).catch(function(){});
-    }
     const todayStr = new Date().toISOString().slice(0, 10);
     const eleve = eleveData.eleve || {};
     const carte = eleveData.carte || {};
