@@ -3477,15 +3477,16 @@ function _renderFeaturesSection() {
   // ── Sous-section : Vidéo Mode d'emploi ──
   var _aideVidUrl = '';
   try { _aideVidUrl = JSON.parse(localStorage.getItem('tev_aide_video_url')||'""') || ''; } catch(e){}
-  var iS2 = 'width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:8px;';
   h += '<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;">'
     +'<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">🎬 Vidéo Mode d\'emploi</div>'
-    +'<div style="font-size:11px;color:var(--dim);margin-bottom:8px;line-height:1.5;">Collez ici l\'URL d\'une vidéo YouTube. Elle s\'affichera en haut de l\'onglet Mode d\'emploi dans l\'espace élève.</div>'
-    +'<input type="url" id="aide-vid-url" placeholder="https://www.youtube.com/watch?v=…" value="'+_escAttr(_aideVidUrl)+'" style="'+iS2+'">'
-    +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-    +'<button class="btn btn-gold" style="font-size:12px;" data-action="aide-vid-save">💾 Enregistrer</button>'
-    +(_aideVidUrl?'<button class="btn btn-ghost" style="font-size:12px;color:#e53935;border-color:#e53935;" data-action="aide-vid-clear">✕ Supprimer</button>':'')
-    +'</div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:8px;line-height:1.5;">Vidéo affichée en haut de l\'onglet Mode d\'emploi dans l\'espace élève.</div>'
+    +'<label for="aide-vid-file" style="display:block;border:2px dashed var(--border);border-radius:8px;padding:12px;text-align:center;cursor:pointer;margin-bottom:8px;background:var(--s3);">'
+    +(_aideVidUrl?'<video src="'+_escAttr(_aideVidUrl)+'" style="max-height:80px;max-width:100%;border-radius:6px;display:block;margin:0 auto 6px;" muted playsinline></video>':'')
+    +'<div style="font-size:12px;color:var(--dim);">📹 Appuyez pour uploader une vidéo</div>'
+    +'</label>'
+    +'<input type="file" id="aide-vid-file" accept="image/*,video/*" style="display:none;" onchange="uploadAideVideo(this)">'
+    +'<div id="aide-vid-prog" style="display:none;font-size:12px;padding:4px 0;"></div>'
+    +(_aideVidUrl?'<button class="btn btn-ghost" style="font-size:12px;color:#e53935;border-color:#e53935;" data-action="aide-vid-clear">✕ Supprimer la vidéo</button>':'')
     +'</div>';
   h += '</div></div>';
   return h;
@@ -7162,16 +7163,6 @@ function handleAction(action, btn) {
         } else {
           afficherToast('✓ Vidéos enregistrées');
         }
-        renderTab();
-      })();
-      break;
-    case 'aide-vid-save':
-      (function(){
-        var url = (gel('aide-vid-url')||{}).value||'';
-        url = url.trim();
-        try{localStorage.setItem('tev_aide_video_url',JSON.stringify(url));}catch(e){}
-        if(!IS_DEMO) Promise.resolve(TEV.setParam('tev_aide_video_url',url)).catch(function(){});
-        afficherToast(url ? '✓ Vidéo enregistrée' : '✓ URL effacée');
         renderTab();
       })();
       break;
