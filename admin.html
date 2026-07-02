@@ -7374,6 +7374,40 @@ window.newsToggleAll = function() {
   NEWS_RUBRIQUES.forEach(function(r){ var c=gel('news-chk-'+r.id); if(c) c.checked = !allChecked; });
   newsUpdateSelection();
 };
+window.newsDetail = function() {
+  var el = gel('news-detail');
+  if (!el) return;
+  if (el.innerHTML.trim()) { el.innerHTML=''; return; }
+  var h = '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px;">'
+    +'<tr style="color:var(--dim);text-align:left;">'
+    +'<th style="padding:4px 6px;border-bottom:1px solid var(--border);">Rubrique</th>'
+    +'<th style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right;">Fiches</th>'
+    +'<th style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right;">Emails uniques</th>'
+    +'<th style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right;">Sans email</th>'
+    +'<th style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right;">Doublons</th>'
+    +'</tr>';
+  NEWS_RUBRIQUES.forEach(function(r) {
+    var fiches = r.get();
+    var total = fiches.length;
+    var sans = fiches.filter(function(e){ var em=((e&&e.email)||'').trim(); return !em || em.indexOf('@')<=0; }).length;
+    var uniq = newsEmailsOf(r.id).length;
+    var doublons = Math.max(0, total - sans - uniq);
+    h += '<tr>'
+      +'<td style="padding:4px 6px;border-bottom:1px solid var(--border);color:'+r.color+';">'+r.icon+' '+r.lbl+'</td>'
+      +'<td style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right;color:var(--text);">'+total+'</td>'
+      +'<td style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right;color:var(--gold);font-weight:700;">'+uniq+'</td>'
+      +'<td style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right;color:'+(sans?'#ff6b6b':'var(--dim)')+';">'+sans+'</td>'
+      +'<td style="padding:4px 6px;border-bottom:1px solid var(--border);text-align:right;color:var(--dim);">'+doublons+'</td>'
+      +'</tr>';
+  });
+  h += '</table>'
+    +'<div style="font-size:10px;color:var(--dim);margin-top:6px;line-height:1.5;">'
+    +'<b>Fiches</b> : nombre de lignes dans la rubrique (toutes saisons). '
+    +'<b>Emails uniques</b> : le compteur newsletter — une même adresse ne compte qu\'une fois. '
+    +'<b>Doublons</b> : même adresse présente sur plusieurs fiches (ex : couple avec email partagé, réinscription saison suivante, forfait yoga).'
+    +'</div>';
+  el.innerHTML = h;
+};
 window.newsCopier = function() {
   var emails = newsGetSelectedEmails();
   if (!emails.length) { afficherToast('⚠️ Sélectionnez au moins une rubrique'); return; }
@@ -7426,8 +7460,11 @@ function renderRepertoire() {
     +'<div id="news-sel-count" style="font-size:11px;color:var(--dim);margin-bottom:10px;">Aucune adresse sélectionnée</div>'
     +'<div class="btn-row">'
     +'<button class="btn btn-ghost" onclick="newsToggleAll()">☑︎ Tout sélectionner</button>'
+    +'<button class="btn btn-ghost" onclick="newsDetail()">🔍 Vérifier les comptes</button>'
     +'<button class="btn btn-gold" onclick="newsCopier()">📋 Copier les adresses</button>'
-    +'</div></div>';
+    +'</div>'
+    +'<div id="news-detail"></div>'
+    +'</div>';
   // ── Section message de groupe ──
   h += '<div class="card" style="margin-bottom:20px;">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:12px;">✉️ Message de groupe</div>'
