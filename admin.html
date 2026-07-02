@@ -14071,10 +14071,17 @@ function changerStatutCoursTango(id, statut, btn) {
   var entry=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
   var ops=[Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:statut}).eq('id',id))];
   // Valider aussi le partenaire en DB (était seulement en démo)
+  var ptReal=null;
   if(statut==='attente_paiement'&&entry&&entry.emailPartenaire){
-    var ptReal=(adminData.coursTango||[]).find(function(x){return x.email===entry.emailPartenaire&&(x.statut==='demande'||x.statut==='attente');});
+    ptReal=(adminData.coursTango||[]).find(function(x){return x.email===entry.emailPartenaire&&(x.statut==='demande'||x.statut==='attente');});
     if(ptReal) ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'attente_paiement'}).eq('id',ptReal.id)));
   }
+  // Mise à jour optimiste : refléter immédiatement le nouveau statut à l'écran
+  // (le re-rendu post-chargerDonnees peut être sauté par la garde anti-scroll)
+  var _oldStatut=entry?entry.statut:null, _oldStatutPt=ptReal?ptReal.statut:null;
+  if(entry) entry.statut=statut;
+  if(ptReal) ptReal.statut='attente_paiement';
+  renderTab();
   Promise.all(ops).then(function(){
     if(statut==='attente_paiement'&&entry){
       var _lp=JSON.parse(localStorage.getItem('tev_params_'+(entry.ville||'paris')+'_'+saisonActive())||'{}');
@@ -14093,7 +14100,13 @@ function changerStatutCoursTango(id, statut, btn) {
       })).catch(function(){});
     }
     chargerDonnees();
-  }).catch(function(){btn.disabled=false;});
+  }).catch(function(){
+    // Échec DB : revenir à l'état précédent pour ne pas afficher un faux statut
+    if(entry&&_oldStatut!==null) entry.statut=_oldStatut;
+    if(ptReal&&_oldStatutPt!==null) ptReal.statut=_oldStatutPt;
+    afficherToast('⚠️ Erreur — statut non enregistré');
+    renderTab();
+  });
 }
 
 function prefillVP(id){ vpPrefill(id); }
