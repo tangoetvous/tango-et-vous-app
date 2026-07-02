@@ -950,10 +950,10 @@ Si un champ a un `style=""` inline avec `font-size:15px`, la règle CSS `font-si
 | Formulaire | État |
 |------------|------|
 | `demande-devis.html` | ✅ Corrigé (16px, inline styles fixés) |
-| `cours-essai.html` | ⚠️ À vérifier |
-| `inscription-cours.html` | ⚠️ À vérifier |
-| `essai-yoga.html` | ⚠️ À vérifier |
-| `stages-pwa.html` | ⚠️ À vérifier |
+| `cours-essai.html` | ✅ Corrigé 2026-07-02 (règle globale 14→16px + textarea inline `rem` 14→16px) |
+| `inscription-cours.html` | ✅ Corrigé 2026-07-02 (règle globale 14→16px) |
+| `essai-yoga.html` | ✅ Vérifié 2026-07-02 — déjà à 16px |
+| `stages-pwa.html` | ✅ Corrigé 2026-07-02 (`.champ input/textarea` 15→16px) |
 | `cours-particuliers.html` | ✅ Corrigé (16px, thème clair appliqué) |
 
 ### Pourquoi un fix en media query `(max-width: 640px)` peut échouer
