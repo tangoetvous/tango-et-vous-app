@@ -4485,7 +4485,7 @@ async function handleNotifyInscriptionEssai(request, env) {
         <div style="flex:1;"><div style="font-size:16px;font-weight:700;color:#fff;">${_partNameAff}</div>
         ${_partEmailAff ? `<div style="font-size:12px;color:${isWaitlist ? '#ffccaa' : '#f5e4a0'};margin-top:2px;">${_partEmailAff}</div>` : ''}
         </div>
-        <span style="background:${roleBadgeCol(partRole||'')};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${roleLabel(partRole||'')}</span>
+        <span style="background:${roleBadgeCol(partRole || (role === 'guidee' ? 'guideur' : 'guidee'))};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${roleLabel(partRole || (role === 'guidee' ? 'guideur' : 'guidee'))}</span>
       </div>
       ${_coursInnerBlock}
     </div>`;
@@ -4550,7 +4550,7 @@ async function handleNotifyInscriptionEssai(request, env) {
   // ─── Emails élèves ───
   const targets = [{ to: email, pren: prenom, r: role, duoAvec: (enCouple && partPrenom) ? (partPrenom || '') : null }];
   if (enCouple && partEmail && partEmail.toLowerCase() !== (email || '').toLowerCase()) {
-    targets.push({ to: partEmail, pren: partPrenom || '', r: partRole || role, duoAvec: prenom || '' });
+    targets.push({ to: partEmail, pren: partPrenom || '', r: partRole || (role === 'guidee' ? 'guideur' : role === 'guideur' ? 'guidee' : role), duoAvec: prenom || '' });
   }
 
   for (const tgt of targets) {

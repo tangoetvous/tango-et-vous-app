@@ -935,6 +935,8 @@ async function soumettre(){
     // - Seule guidée → attente (admin valide manuellement depuis liste d'attente)
     // - Guideur seul → confirme, sauf si quota guideurs dépassé en sept/oct/nov → attente
     const enCouple = payload.avecPart === 'Oui';
+    // Rôle partenaire : toujours l'inverse du rôle de l'inscripteur si le champ caché est vide
+    const partRoleEff = enCouple ? (payload.partRole || getRolePartenaireAuto(payload.role)) : (payload.partRole || '');
     const moisDate = parseInt(dateIso.slice(5, 7), 10);
     const hasLimits = moisDate >= 9 && moisDate < 12;
     let statutFinal;
@@ -955,7 +957,7 @@ async function soumettre(){
       avec_partenaire:payload.avecPart||'', genre:payload.genre||'',
       part_prenom:payload.partPrenom||'', part_nom:payload.partNom||'',
       part_email:(payload.partEmail||'').trim().toLowerCase(), part_tel:payload.partTel||'',
-      part_role:payload.partRole||'', remarque:payload.remarque||'',
+      part_role:partRoleEff, remarque:payload.remarque||'',
       statut:statutFinal, type:'tango',
     };
 
@@ -968,7 +970,7 @@ async function soumettre(){
         email:(payload.partEmail||'').trim().toLowerCase(), tel:payload.partTel||'',
         date_essai:dateIso, ville:(payload.lieu||'').toLowerCase(),
         niveau:niveauNorm, horaire:payload.horaire||'',
-        role:payload.partRole||'', niveau_eleve:'',
+        role:partRoleEff, niveau_eleve:'',
         avec_partenaire:'Oui', genre:'',
         part_prenom:payload.prenom, part_nom:payload.nom,
         part_email:payload.email.trim().toLowerCase(), part_tel:payload.tel,
@@ -992,8 +994,8 @@ async function soumettre(){
         statut: statutFinal, enCouple: enCouple,
         partPrenom: payload.partPrenom||'', partNom: payload.partNom||'',
         partEmail: (payload.partEmail||'').trim().toLowerCase(),
-        partRole: payload.partRole||'',
-        gratuit: !!(rowPrincipal.gratuit),
+        partRole: partRoleEff,
+        gratuit: !!choix.gratuit,
         niveauEleve: payload.niveauEleve||''
       })
     }).catch(function(){});
