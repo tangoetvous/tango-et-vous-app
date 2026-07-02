@@ -4290,8 +4290,11 @@ async function handleNotifyInscriptionEssai(request, env) {
   if (!env.BREVO_API_KEY) return corsResponse({ ok: true, sent: 0, skipped: true }, 200, {}, request);
 
   const { prenom, nom, email, tel, role, ville, niveau, dateIso, statut, enCouple,
-          partPrenom, partNom, partEmail, partRole, gratuit, inscId: inscIdFromBody,
+          partPrenom, partNom, partEmail, partRole, gratuit: gratuitBody, inscId: inscIdFromBody,
           niveauEleve } = body;
+  // Gratuité recalculée côté serveur (règle métier : cours de septembre gratuits pour les débutants)
+  // — ne dépend pas du flag client, qui peut être absent (anciens formulaires en cache)
+  const gratuit = !!gratuitBody || (niveau !== 'intermediaire' && String(dateIso || '').slice(5, 7) === '09');
 
   const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
