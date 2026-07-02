@@ -4544,7 +4544,7 @@ async function handleNotifyInscriptionEssai(request, env) {
         const tokens = await getFcmTokensAdmin(_svcKey);
         if (tokens.length) await sendFcmPush(env, tokens, {
           title: 'Tango & Vous — Admin',
-          body: `🎯 Essai tango — ${nomAff} · ${fmtDateCourt(dateIso)} · ${statutAff}`
+          body: `🎯 Essai tango — ${nomAff}${enCouple && partPrenom ? ' · 👫 En duo' : ''} · ${fmtDateCourt(dateIso)} · ${statutAff}`
         });
       } catch(e) { console.error('[essai-inscription] push error', e); }
     }
@@ -5201,7 +5201,7 @@ async function handleNotifyInscriptionCours(request, env) {
     const tokens = await getFcmTokensAdmin(_svcKeyInscr);
     if (tokens.length) await sendFcmPush(env, tokens, {
       title: 'Tango & Vous — Admin',
-      body: `🎓 ${isWaitGlobal ? 'Demande' : 'Inscription'} tango — ${prenom} ${nom} · ${villeLabel(c0.ville)} ${nivLabel(c0.niveau)}`
+      body: `🎓 ${isWaitGlobal ? 'Demande' : 'Inscription'} tango — ${prenom} ${nom}${c0.venue === 'avec-part' && c0.pPrenom ? ' · 👫 En duo' : ''} · ${villeLabel(c0.ville)} ${nivLabel(c0.niveau)}`
     });
   } catch(e) { console.error('[notify-inscription-cours] push error', e); }
 
