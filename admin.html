@@ -7339,15 +7339,23 @@ window.repOuvrirGmail = function() {
 // ================================================================
 // NEWSLETTER — export des adresses de toutes les rubriques
 // ================================================================
+// Saison d'une fiche datée (created_at) : sept→août
+function _newsSaisonFromDate(iso) {
+  if (!iso) return '';
+  var d = new Date(String(iso).slice(0,10)+'T12:00:00');
+  if (isNaN(d)) return '';
+  var m = d.getMonth()+1, y = d.getFullYear();
+  return m >= 9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y);
+}
 var NEWS_RUBRIQUES = [
-  {id:'essai-tango',  lbl:'Essai Tango',        icon:'💃', color:'#60b0ff', get:function(){ return (adminData.essai||adminData.coursEssai||[]); }},
-  {id:'essai-yoga',   lbl:'Essai Yoga',         icon:'🧘', color:'#a78bfa', get:function(){ return (adminData.essaiYoga||[]); }},
-  {id:'eleves-tango', lbl:'Élèves Tango',       icon:'👥', color:'#4ade80', get:function(){ return (adminData.coursTango||[]).filter(function(e){ return e.statut==='inscrit'; }); }},
-  {id:'inscr-tango',  lbl:'Inscriptions Tango', icon:'📝', color:'#fbbf24', get:function(){ return (adminData.coursTango||[]).filter(function(e){ return e.statut==='demande'||e.statut==='attente_paiement'||e.statut==='attente'; }); }},
-  {id:'yoga',         lbl:'Yoga',               icon:'🌿', color:'#40d8c0', get:function(){ return (adminData.coursYoga||[]).filter(function(e){ return e.statut!=='supprimé'; }); }},
-  {id:'stages',       lbl:'Stages',             icon:'🎭', color:'#f472b6', get:function(){ var out=[]; Object.values(adminData.stages||{}).forEach(function(jour){ (jour.inscrits||[]).forEach(function(e){ out.push(e); }); }); return out.length?out:(adminData.inscriptionsStages||[]); }},
-  {id:'cours-part',   lbl:'Cours particuliers', icon:'🎯', color:'#c084fc', get:function(){ return (adminData.coursParticuliers||[]); }},
-  {id:'devis',        lbl:'Devis',              icon:'💼', color:'#26a69a', get:function(){ return (adminData.demandesDevis||[]); }}
+  {id:'essai-tango',  lbl:'Essai Tango',        icon:'💃', color:'#60b0ff', get:function(){ var sai=saisonActive(); return (adminData.essai||adminData.coursEssai||[]).filter(function(e){ return e.saison ? e.saison===sai : dateAppartientSaison(e.date, sai); }); }},
+  {id:'essai-yoga',   lbl:'Essai Yoga',         icon:'🧘', color:'#a78bfa', get:function(){ var sai=saisonActive(); return (adminData.essaiYoga||[]).filter(function(e){ return dateAppartientSaison(e.date, sai); }); }},
+  {id:'eleves-tango', lbl:'Élèves Tango',       icon:'👥', color:'#4ade80', get:function(){ var sai=saisonActive(); return (adminData.coursTango||[]).filter(function(e){ return e.statut==='inscrit' && (e.saison||saisonCourante())===sai; }); }},
+  {id:'inscr-tango',  lbl:'Inscriptions Tango', icon:'📝', color:'#fbbf24', get:function(){ var sai=saisonActive(); return (adminData.coursTango||[]).filter(function(e){ return (e.statut==='demande'||e.statut==='attente_paiement'||e.statut==='attente') && (e.saison||saisonCourante())===sai; }); }},
+  {id:'yoga',         lbl:'Yoga',               icon:'🌿', color:'#40d8c0', get:function(){ var sai=saisonActive(); return (adminData.coursYoga||[]).filter(function(e){ return e.statut!=='supprimé' && (e.saison||saisonCourante())===sai; }); }},
+  {id:'stages',       lbl:'Stages',             icon:'🎭', color:'#f472b6', get:function(){ var sai=saisonActive(); var out=[]; Object.keys(adminData.stages||{}).forEach(function(date){ if(!dateAppartientSaison(date, sai)) return; ((adminData.stages[date]||{}).inscrits||[]).forEach(function(e){ out.push(e); }); }); return out; }},
+  {id:'cours-part',   lbl:'Cours particuliers', icon:'🎯', color:'#c084fc', get:function(){ var sai=saisonActive(); return (adminData.coursParticuliers||[]).filter(function(e){ var s=_newsSaisonFromDate(e.created_at||e.date); return !s || s===sai; }); }},
+  {id:'devis',        lbl:'Devis',              icon:'💼', color:'#26a69a', get:function(){ var sai=saisonActive(); return (adminData.demandesDevis||[]).filter(function(e){ var s=_newsSaisonFromDate(e.created_at); return !s || s===sai; }); }}
 ];
 function newsEmailsOf(id) {
   var r = NEWS_RUBRIQUES.find(function(x){ return x.id===id; });
@@ -7402,7 +7410,7 @@ window.newsDetail = function() {
   });
   h += '</table>'
     +'<div style="font-size:10px;color:var(--dim);margin-top:6px;line-height:1.5;">'
-    +'<b>Fiches</b> : nombre de lignes dans la rubrique (toutes saisons). '
+    +'<b>Fiches</b> : nombre de lignes dans la rubrique (saison '+saisonActive()+'). '
     +'<b>Emails uniques</b> : le compteur newsletter — une même adresse ne compte qu\'une fois. '
     +'<b>Doublons</b> : même adresse présente sur plusieurs fiches (ex : couple avec email partagé, réinscription saison suivante, forfait yoga).'
     +'</div>';
@@ -7446,7 +7454,7 @@ function renderRepertoire() {
   // ── Encadré Newsletter (toutes rubriques, toutes saisons) ──
   h += '<div class="card" style="margin-bottom:20px;border:1px solid var(--gold);">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:6px;">📰 Newsletter — export des adresses</div>'
-    +'<div style="font-size:11px;color:var(--dim);margin-bottom:10px;">Cochez les rubriques puis copiez les adresses (dédoublonnées, toutes saisons confondues) pour les coller dans votre liste newsletter.</div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:10px;">Cochez les rubriques puis copiez les adresses (dédoublonnées) pour les coller dans votre liste newsletter. Saison : <b style="color:var(--gold);">'+sai+'</b> (changez-la avec le sélecteur en haut).</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
   NEWS_RUBRIQUES.forEach(function(r) {
     var n = newsEmailsOf(r.id).length;
