@@ -9685,6 +9685,30 @@ function imprimerStage() {
   _tevPrint('Pointage Stage · ' + (st.label || fmtDate(filtreStage)), [{ headers: ['Nom', 'Rôle', 'Créneaux', 'Paiement', 'Statut', '✓'], rows: rows }]);
 }
 
+window.stageCopierEmails = function() {
+  if (!filtreStage) return;
+  var st = (adminData.stages || {})[filtreStage];
+  if (!st) return;
+  var set = {}, sansEmail = 0;
+  (st.inscrits || []).filter(function(i){ return !i.attente; }).forEach(function(i) {
+    var em = ((i && i.email) || '').trim().toLowerCase();
+    if (em && em.indexOf('@') > 0) set[em] = true;
+    else sansEmail++;
+  });
+  var emails = Object.keys(set);
+  if (!emails.length) { afficherToast('⚠️ Aucun email pour les inscrits validés de cette date'); return; }
+  var txt = emails.join(', ');
+  var done = function() {
+    afficherToast('✓ ' + emails.length + ' adresse' + (emails.length>1?'s':'') + ' copiée' + (emails.length>1?'s':'')
+      + (sansEmail ? ' — ⚠️ ' + sansEmail + ' inscrit·e·s sans email' : ''));
+  };
+  var fallback = function() {
+    var ta = document.createElement('textarea'); ta.value = txt;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
+  };
+  try { navigator.clipboard.writeText(txt).then(done, fallback); } catch(e) { fallback(); }
+};
+
 function imprimerEssaiYoga() {
   var sai = saisonActive();
   var liste = (adminData.essaiYoga || []).filter(function(e) { return dateAppartientSaison(e.date, sai); });
@@ -10579,7 +10603,10 @@ function renderStages() {
   var st=stages[filtreStage], ins=st.inscrits||[];
   h+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'
     +'<div style="font-family:var(--font-d);font-size:20px;font-weight:300;color:var(--gold);">'+(st.label||fmtDate(filtreStage))+'</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="stageCopierEmails()">📋 Copier les emails validés</button>'
     +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerStage()">🖨️ Imprimer / PDF</button>'
+    +'</div>'
     +'</div>';
 
   // Trouver l'entrée STAGES pour la date active → créneaux dynamiques
