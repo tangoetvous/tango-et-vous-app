@@ -4425,8 +4425,8 @@ async function handleNotifyInscriptionEssai(request, env) {
   }
 
   function coursBox(withMaps, duoAvecPrenom, personRole) {
-    const tarif = duoAvecPrenom ? '30 € pour le duo' : (gratuit ? 'Gratuit 🎁' : '15 €');
-    const tarifStyle = (gratuit && !duoAvecPrenom) ? 'color:#2e7d32;font-weight:700;' : 'color:#111;font-weight:700;';
+    const tarif = gratuit ? 'Gratuit 🎁' : (duoAvecPrenom ? '30 € pour le duo' : '15 €');
+    const tarifStyle = gratuit ? 'color:#2e7d32;font-weight:700;' : 'color:#111;font-weight:700;';
     return `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Votre cours d'essai</div>
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
