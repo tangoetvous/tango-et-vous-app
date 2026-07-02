@@ -7803,15 +7803,23 @@ function supprimerDefinitivementEleve(id) {
   var nom = (e.prenom||'')+' '+(e.nom||'');
   var email = e.email;
   if (!confirm('Supprimer définitivement '+nom+' ? Cette action est irréversible.')) return;
-  // Retirer toutes les inscriptions de cet email (incluant les cartes10) + l'entrée cartes
-  adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return x.email!==email; });
-  if (adminData.cartes) adminData.cartes = adminData.cartes.filter(function(c){ return c.email!==email; });
+  var _hasEmail = (email||'').trim() !== '';
+  // Retirer toutes les inscriptions de cet email (incluant les cartes10) + l'entrée cartes.
+  // ⚠️ Fiche SANS email : cibler uniquement CETTE ligne par id (jamais par email vide).
+  if (_hasEmail) {
+    adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return x.email!==email; });
+    if (adminData.cartes) adminData.cartes = adminData.cartes.filter(function(c){ return c.email!==email; });
+  } else {
+    adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return String(x.id)!==String(id); });
+  }
   afficherToast('🗑 '+nom+' supprimé·e définitivement');
   renderTab();
   if (!IS_DEMO) {
-    var ops = [
+    var ops = _hasEmail ? [
       Promise.resolve(TEV.client.from('inscriptions_cours').delete().eq('email', email)),
       Promise.resolve(TEV.client.from('eleves').delete().eq('email', email))
+    ] : [
+      Promise.resolve(TEV.client.from('inscriptions_cours').delete().eq('id', id))
     ];
     Promise.all(ops)
     .then(function(){ chargerDonnees(); })
@@ -7899,8 +7907,8 @@ function delierPartenaire(id) {
   if (!IS_DEMO) {
     TEV.client.from('inscriptions_cours').update({partenaire:'',email_partenaire:''}).eq('id',e.id).catch(function(){});
     if (p) TEV.client.from('inscriptions_cours').update({partenaire:'',email_partenaire:''}).eq('id',p.id).catch(function(){});
-    TEV.client.from('eleves').update({partenaire:'',email_partenaire:''}).eq('email',(e.email||'').toLowerCase()).catch(function(){});
-    if (p) TEV.client.from('eleves').update({partenaire:'',email_partenaire:''}).eq('email',(p.email||'').toLowerCase()).catch(function(){});
+    if ((e.email||'').trim()) TEV.client.from('eleves').update({partenaire:'',email_partenaire:''}).eq('email',e.email.toLowerCase()).catch(function(){});
+    if (p && (p.email||'').trim()) TEV.client.from('eleves').update({partenaire:'',email_partenaire:''}).eq('email',p.email.toLowerCase()).catch(function(){});
   }
 }
 function validerLierPartenaire(id, selId) {
@@ -7919,7 +7927,7 @@ function validerLierPartenaire(id, selId) {
   if (!IS_DEMO) {
     Promise.resolve(TEV.client.from('inscriptions_cours').update({partenaire:pNom,email_partenaire:p.email||''}).eq('id',e.id)).catch(function(){});
     Promise.resolve(TEV.client.from('inscriptions_cours').update({partenaire:eNom,email_partenaire:e.email||''}).eq('id',p.id)).catch(function(){});
-    Promise.resolve(TEV.client.from('eleves').update({partenaire:pNom,email_partenaire:p.email||''}).eq('email',(e.email||'').toLowerCase())).catch(function(){});
+    if ((e.email||'').trim()) Promise.resolve(TEV.client.from('eleves').update({partenaire:pNom,email_partenaire:p.email||''}).eq('email',e.email.toLowerCase())).catch(function(){});
     if (p.email) Promise.resolve(TEV.client.from('eleves').update({partenaire:eNom,email_partenaire:e.email||''}).eq('email',p.email.toLowerCase())).catch(function(){});
     setTimeout(chargerDonnees, 500);
   }
@@ -8095,7 +8103,7 @@ function validerChangementCours(id) {
     var mainUpdate={ville:e.ville,niveau:e.niveau,paiement:paiement,montant:montant,donnees:e.donnees||null};
     if(pPart){mainUpdate.partenaire=e.partenaire;mainUpdate.email_partenaire=e.emailPartenaire;}
     var ops=[Promise.resolve(TEV.client.from('inscriptions_cours').update(mainUpdate).eq('id',id))];
-    if(carteLocale) ops.push(Promise.resolve(TEV.client.from('eleves').update({ville:e.ville,niveau:e.niveau}).eq('email',(e.email||'').toLowerCase())));
+    if(carteLocale && (e.email||'').trim()) ops.push(Promise.resolve(TEV.client.from('eleves').update({ville:e.ville,niveau:e.niveau}).eq('email',e.email.toLowerCase())));
     _renewsToSave.forEach(function(rw){
       ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({
         montant:rw.montant, paiement:rw.paiement, donnees:rw.donnees
@@ -8103,7 +8111,7 @@ function validerChangementCours(id) {
     });
     if(pPart){
       ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({partenaire:pPart.partenaire,email_partenaire:pPart.emailPartenaire}).eq('id',pPart.id)));
-      ops.push(Promise.resolve(TEV.client.from('eleves').update({partenaire:e.partenaire,email_partenaire:e.emailPartenaire}).eq('email',(e.email||'').toLowerCase())));
+      if((e.email||'').trim()) ops.push(Promise.resolve(TEV.client.from('eleves').update({partenaire:e.partenaire,email_partenaire:e.emailPartenaire}).eq('email',e.email.toLowerCase())));
       if(pPart.email) ops.push(Promise.resolve(TEV.client.from('eleves').update({partenaire:pPart.partenaire,email_partenaire:pPart.emailPartenaire}).eq('email',pPart.email.toLowerCase())));
     }
     Promise.all(ops).then(function(){
@@ -9454,6 +9462,7 @@ function renderCartesSupprimees(d) {
   return h;
 }
 function supprimerDefinitivementCarte(email, nom) {
+  if (!(email||'').trim()) { afficherToast('⚠️ Fiche sans email — suppression impossible ici'); return; }
   if (!confirm('Supprimer définitivement la carte de '+nom+' ? Cette action est irréversible.')) return;
   adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return x.email!==email; });
   if (adminData.cartes) adminData.cartes = adminData.cartes.filter(function(c){ return c.email!==email; });
@@ -11317,6 +11326,7 @@ function annulerStageInscrit(date, idx, slot, btn) {
   };
   var q;
   if(supprimerTout){
+    if(!dbId && !(person.email||'').trim()){btn.disabled=false;afficherToast('⚠️ Fiche sans email — rechargez la page puis réessayez');return;}
     q=TEV.client.from('inscriptions_stages').delete();
     q=dbId?q.eq('id',dbId):q.eq('email',person.email||'').is('stage_date',null);
     q.then(function(){_notifyStageCancel();chargerDonnees();}).catch(function(){btn.disabled=false;});
@@ -11520,7 +11530,8 @@ function valAttStage(date, nom, btn) {
   var q=TEV.client.from('inscriptions_stages').update({type_confirmation:'confirme'});
   // Utiliser l'id DB si disponible (le plus sûr), sinon fallback email+date
   if(st&&st._dbId) q=q.eq('id',st._dbId);
-  else q=q.eq('email',st&&st.email||'').eq('stage_date',date);
+  else if(st&&(st.email||'').trim()) q=q.eq('email',st.email).eq('stage_date',date);
+  else {btn.disabled=false;btn.textContent='✓ Valider';afficherToast('⚠️ Fiche sans email — rechargez la page puis réessayez');return;}
   q.then(function(){
     // S3 — admin valide inscription stage attente → confirme
     if (st && st.email) {

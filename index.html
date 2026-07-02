@@ -3862,8 +3862,8 @@
         { date:date, milonga_id:milId||'', milonga_nom:milNom||'', email:elv.email||'', prenom:pren, nom:nomFam },
         { onConflict:'date,email' }
       )).catch(function(){});
-    } else {
-      Promise.resolve(TEV.client.from('milonga_presences').delete().eq('date', date).eq('email', elv.email||'')).catch(function(){});
+    } else if ((elv.email||'').trim()) {
+      Promise.resolve(TEV.client.from('milonga_presences').delete().eq('date', date).eq('email', elv.email)).catch(function(){});
     }
   }
 
