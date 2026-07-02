@@ -1529,9 +1529,11 @@ function sauverContact(btn) {
   } else {
     // Email d'origine vide : JAMAIS de WHERE email='' (toucherait toutes les fiches sans
     // email — bug Karine Blum 2026-07-02). On cible par ID les lignes de CETTE personne.
-    var _idNum=function(id){ return /^\d+$/.test(String(id)); };
-    var _idsCT=(adminData.coursTango||[]).filter(_matchOld).map(function(x){return x.id;}).filter(_idNum);
-    var _idsES=(adminData.essai||[]).filter(_matchOld).map(function(x){return x.id;}).filter(_idNum);
+    // ids DB réels = texte (ex 'INS775366') ou nombre — on accepte tout id non vide ;
+    // un id local jamais inséré en DB ne matchera simplement aucune ligne (no-op)
+    var _idOk=function(id){ return id!==undefined && id!==null && String(id)!==''; };
+    var _idsCT=(adminData.coursTango||[]).filter(_matchOld).map(function(x){return x.id;}).filter(_idOk).map(String);
+    var _idsES=(adminData.essai||[]).filter(_matchOld).map(function(x){return x.id;}).filter(_idOk).map(String);
     _dbUpdates=[
       _idsCT.length?Promise.resolve(TEV.client.from('inscriptions_cours').update({prenom:pr,nom:no,tel:tel,email:emailNew}).in('id',_idsCT)):Promise.resolve({}),
       Promise.resolve({}), // eleves : pas de fiche sans email (email UNIQUE requis)
