@@ -1787,6 +1787,7 @@ document.addEventListener('keydown', function(e) {
 // ── Fin recherche globale ──────────────────────────────────────────────────
 
 function essaiVersCoursTango(email, statut, btn) {
+  if(!(email||'').trim()){afficherToast('⚠️ Fiche sans email — complétez d\'abord l\'email (✏️ Modifier)');return;}
   var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
   if(!ess){fermerContact();return;}
   var ct=adminData.coursTango||[];
@@ -1815,6 +1816,7 @@ function essaiVersCoursTango(email, statut, btn) {
   afficherToast('✓ '+(ess.prenom||'')+' — '+(lbls[statut]||statut)+' dans Inscr Tango');
 }
 function ouvrirFormulaireInscriptionEssai(email) {
+  if(!(email||'').trim()){afficherToast('⚠️ Fiche sans email — complétez d\'abord l\'email (✏️ Modifier)');return;}
   var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
   if(!ess) return;
   var villeLabel=ess.ville==='vincennes'?'Vincennes':'Paris';
@@ -1855,6 +1857,7 @@ function ouvrirFormulaireInscriptionEssai(email) {
   gel('modal-contact').classList.add('vis');
 }
 function soumettreInscriptionEssai(email) {
+  if(!(email||'').trim()){afficherToast('⚠️ Fiche sans email — complétez d\'abord l\'email (✏️ Modifier)');return;}
   var prenom=((gel('ei-prenom')||{}).value||'').trim();
   var nom=((gel('ei-nom')||{}).value||'').trim();
   var tel=((gel('ei-tel')||{}).value||'').trim();
@@ -1904,6 +1907,7 @@ function soumettreInscriptionEssai(email) {
   setTimeout(function(){fermerContact();switchTab('eleves-tango');},1500);
 }
 function ouvrirFormulaireEssaiStatut(email, statut) {
+  if(!(email||'').trim()){afficherToast('⚠️ Fiche sans email — complétez d\'abord l\'email (✏️ Modifier)');return;}
   var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
   if(!ess) return;
   var villeLabel=ess.ville==='vincennes'?'Vincennes':'Paris';
@@ -1932,6 +1936,7 @@ function ouvrirFormulaireEssaiStatut(email, statut) {
   gel('modal-contact').classList.add('vis');
 }
 function soumettreEssaiStatut(email, statut) {
+  if(!(email||'').trim()){afficherToast('⚠️ Fiche sans email — complétez d\'abord l\'email (✏️ Modifier)');return;}
   var coursEl=document.querySelector('input[name="es-cours"]:checked');
   var cours=coursEl?coursEl.value:'Paris — Jeudi — Débutant';
   var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
@@ -1997,6 +2002,7 @@ function soumettreEssaiStatut(email, statut) {
   }
 }
 function envoyerEssaiVersVP(email) {
+  if(!(email||'').trim()){afficherToast('⚠️ Fiche sans email — complétez d\'abord l\'email (✏️ Modifier)');return;}
   var ess=(adminData.essai||[]).find(function(e){return e.email===email;});
   if(!ess){fermerContact();return;}
   var villeLabel=ess.ville==='vincennes'?'Vincennes':'Paris';
