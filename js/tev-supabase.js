@@ -19,6 +19,51 @@ if (!window.supabase) {
 }
 const _tev = window.supabase ? window.supabase.createClient(TEV_SUPABASE_URL, TEV_SUPABASE_KEY) : null;
 
+// ── GARDE-FOU anti-écrasement massif (incident Karine Blum, 2026-07-02) ────────
+// Les fiches partenaires sans email partagent toutes email='' en DB. Un UPDATE /
+// DELETE / UPSERT filtré par `.eq('email', '')` toucherait donc TOUTES ces fiches
+// (toutes personnes, toutes saisons) au lieu d'une seule. Ce wrapper intercepte
+// toute mutation dont le filtre email est vide et la BLOQUE en levant une erreur
+// explicite — quelle que soit la fonction appelante, présente ou future.
+// Les SELECT ne sont pas concernés (lire par email vide est sans danger).
+if (_tev && typeof _tev.from === 'function') {
+  const _tevFromOrig = _tev.from.bind(_tev);
+  _tev.from = function (table) {
+    const builder = _tevFromOrig(table);
+    ['update', 'delete', 'upsert'].forEach(function (m) {
+      const orig = builder[m];
+      if (typeof orig !== 'function') return;
+      builder[m] = function () {
+        const q = orig.apply(builder, arguments);
+        const eqOrig = q && q.eq;
+        if (typeof eqOrig === 'function') {
+          q.eq = function (col, val) {
+            if (col === 'email' && (val === undefined || val === null || String(val).trim() === '')) {
+              const msg = '[TEV garde-fou] ' + m + ' sur « ' + table + ' » avec un filtre email VIDE — requête bloquée (elle toucherait toutes les fiches sans email). Cibler par id à la place.';
+              console.error(msg);
+              throw new Error(msg);
+            }
+            return eqOrig.call(q, col, val);
+          };
+        }
+        const inOrig = q && q.in;
+        if (typeof inOrig === 'function') {
+          q.in = function (col, vals) {
+            if (col === 'email' && Array.isArray(vals) && vals.some(function (v) { return v === undefined || v === null || String(v).trim() === ''; })) {
+              const msg = '[TEV garde-fou] ' + m + ' sur « ' + table + ' » avec un email vide dans .in() — requête bloquée.';
+              console.error(msg);
+              throw new Error(msg);
+            }
+            return inOrig.call(q, col, vals);
+          };
+        }
+        return q;
+      };
+    });
+    return builder;
+  };
+}
+
 // ── Helper ─────────────────────────────────────────────────────
 function _fmtDateSb(val) {
   if (!val) return '';
