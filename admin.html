@@ -7337,6 +7337,57 @@ window.repOuvrirGmail = function() {
   }, 1000);
 };
 // ================================================================
+// NEWSLETTER — export des adresses de toutes les rubriques
+// ================================================================
+var NEWS_RUBRIQUES = [
+  {id:'essai-tango',  lbl:'Essai Tango',        icon:'💃', color:'#60b0ff', get:function(){ return (adminData.coursEssai||[]); }},
+  {id:'essai-yoga',   lbl:'Essai Yoga',         icon:'🧘', color:'#a78bfa', get:function(){ return (adminData.essaiYoga||[]); }},
+  {id:'eleves-tango', lbl:'Élèves Tango',       icon:'👥', color:'#4ade80', get:function(){ return (adminData.coursTango||[]).filter(function(e){ return e.statut==='inscrit'; }); }},
+  {id:'inscr-tango',  lbl:'Inscriptions Tango', icon:'📝', color:'#fbbf24', get:function(){ return (adminData.coursTango||[]).filter(function(e){ return e.statut==='demande'||e.statut==='attente_paiement'||e.statut==='attente'; }); }},
+  {id:'yoga',         lbl:'Yoga',               icon:'🌿', color:'#40d8c0', get:function(){ return (adminData.coursYoga||[]).filter(function(e){ return e.statut!=='supprimé'; }); }},
+  {id:'stages',       lbl:'Stages',             icon:'🎭', color:'#f472b6', get:function(){ return (adminData.inscriptionsStages||[]); }},
+  {id:'cours-part',   lbl:'Cours particuliers', icon:'🎯', color:'#c084fc', get:function(){ return (adminData.coursParticuliers||[]); }},
+  {id:'devis',        lbl:'Devis',              icon:'💼', color:'#26a69a', get:function(){ return (adminData.demandesDevis||[]); }}
+];
+function newsEmailsOf(id) {
+  var r = NEWS_RUBRIQUES.find(function(x){ return x.id===id; });
+  if (!r) return [];
+  var set = {};
+  r.get().forEach(function(e){ var em=((e&&e.email)||'').trim().toLowerCase(); if(em && em.indexOf('@')>0) set[em]=true; });
+  return Object.keys(set);
+}
+window.newsGetSelectedEmails = function() {
+  var set = {};
+  NEWS_RUBRIQUES.forEach(function(r){
+    var chk = gel('news-chk-'+r.id);
+    if (chk && chk.checked) newsEmailsOf(r.id).forEach(function(em){ set[em]=true; });
+  });
+  return Object.keys(set);
+};
+window.newsUpdateSelection = function() {
+  var n = newsGetSelectedEmails().length;
+  var el = gel('news-sel-count');
+  if (el) el.textContent = n ? n+' adresse'+(n>1?'s':'')+' unique'+(n>1?'s':'')+' sélectionnée'+(n>1?'s':'') : 'Aucune adresse sélectionnée';
+};
+window.newsToggleAll = function() {
+  var allChecked = NEWS_RUBRIQUES.every(function(r){ var c=gel('news-chk-'+r.id); return c && c.checked; });
+  NEWS_RUBRIQUES.forEach(function(r){ var c=gel('news-chk-'+r.id); if(c) c.checked = !allChecked; });
+  newsUpdateSelection();
+};
+window.newsCopier = function() {
+  var emails = newsGetSelectedEmails();
+  if (!emails.length) { afficherToast('⚠️ Sélectionnez au moins une rubrique'); return; }
+  var txt = emails.join(', ');
+  var done = function(){ afficherToast('✓ '+emails.length+' adresse'+(emails.length>1?'s':'')+' copiée'+(emails.length>1?'s':'')); };
+  try {
+    navigator.clipboard.writeText(txt).then(done, function(){
+      var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
+    });
+  } catch(e) {
+    var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
+  }
+};
+// ================================================================
 // RECHERCHE TRANSVERSALE
 // ================================================================
 function _tevSearchBar() {
@@ -7358,6 +7409,25 @@ function tevFilter(inp) {
 function renderRepertoire() {
   var sai = saisonActive();
   var h = '';
+  // ── Encadré Newsletter (toutes rubriques, toutes saisons) ──
+  h += '<div class="card" style="margin-bottom:20px;border:1px solid var(--gold);">'
+    +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:6px;">📰 Newsletter — export des adresses</div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:10px;">Cochez les rubriques puis copiez les adresses (dédoublonnées, toutes saisons confondues) pour les coller dans votre liste newsletter.</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
+  NEWS_RUBRIQUES.forEach(function(r) {
+    var n = newsEmailsOf(r.id).length;
+    h += '<label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer;padding:4px 10px;border:1px solid var(--border);border-radius:20px;background:var(--s2);">'
+      +'<input type="checkbox" id="news-chk-'+r.id+'" onchange="newsUpdateSelection()" style="cursor:pointer;accent-color:var(--gold);">'
+      +'<span style="color:'+r.color+';">'+r.icon+' '+r.lbl+'</span>'
+      +' <span style="color:var(--dim);">('+n+')</span>'
+      +'</label>';
+  });
+  h += '</div>'
+    +'<div id="news-sel-count" style="font-size:11px;color:var(--dim);margin-bottom:10px;">Aucune adresse sélectionnée</div>'
+    +'<div class="btn-row">'
+    +'<button class="btn btn-ghost" onclick="newsToggleAll()">☑︎ Tout sélectionner</button>'
+    +'<button class="btn btn-gold" onclick="newsCopier()">📋 Copier les adresses</button>'
+    +'</div></div>';
   // ── Section message de groupe ──
   h += '<div class="card" style="margin-bottom:20px;">'
     +'<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:12px;">✉️ Message de groupe</div>'
