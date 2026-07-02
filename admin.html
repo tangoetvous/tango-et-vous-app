@@ -5213,6 +5213,8 @@ var _pendingSoranoPayé = {}; // email → bool : paiement_sorano en attente de 
 var _vpPrefillIds = []; // IDs des inscriptions préchargées dans le formulaire Valider Paiement
 var _openElevesAcc = new Set();
 var _openEssaiAcc  = new Set();
+// État ouvert/fermé des accordéons de date/mois — survit aux re-rendus (polling 15s, clics)
+var _moisAccState  = {};
 var _openStagesAcc = new Set();
 var _openYogaAcc   = new Set();
 function demarrerRealtime() {
@@ -5844,7 +5846,7 @@ function _renderTabSiPasFormulaire() {
   if (tc && tc.querySelector('iframe')) return; // formulaire actif — on laisse tranquille
   if (currentTab === 'eleves-tango' && sousOngletEleves === 'inscrire') return; // saisie en cours
   if (currentTab === 'cours-tango' && (sousOngletCoursTango === 'valider_paiement' || sousOngletCoursTango === 'inscrire')) return; // formulaire VP ou inscrire en cours
-  if (currentTab === 'essai' && filtreEssai === 'pointage') return; // pointage actif — ne pas interrompre le scroll
+  if (currentTab === 'essai') return; // navigation accordéons/pointage — ne pas interrompre (données rafraîchies au prochain clic)
   if (currentTab === 'yoga' && (sousOngletYoga === 'essai' || sousOngletYoga === 'inscrire-eleve' || sousOngletYoga === 'inscrire-essai')) return; // formulaires yoga — ne pas interrompre la saisie
   // cours-tango listing : ne pas re-rendre si l'utilisateur a scrollé (il est en train de lire)
   if (currentTab === 'cours-tango'
@@ -8437,6 +8439,8 @@ function renderEssai() {
   }
   // Helper : rend un accordéon compatible toggleMoisAcc
   function renderAcc(id, hdrHtml, bodyHtml, isOpen) {
+    // L'état choisi par l'utilisateur prime sur l'état par défaut
+    if (Object.prototype.hasOwnProperty.call(_moisAccState, id)) isOpen = _moisAccState[id];
     return '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+id+'\')">'
       +hdrHtml+'<span class="mois-acc-arrow">'+(isOpen?'▼':'▶')+'</span></div>'
       +'<div id="'+id+'"'+(isOpen?'':' style="display:none;"')+'>'+bodyHtml+'</div>';
@@ -9100,6 +9104,7 @@ function toggleMoisAcc(id) {
   var isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : '';
   if (hdr) { var arrow = hdr.querySelector('.mois-acc-arrow'); if (arrow) arrow.textContent = isOpen ? '▶' : '▼'; }
+  _moisAccState[id] = !isOpen; // mémoriser pour survivre aux re-rendus
 }
 function envJ1(date, btn) {
   btn.disabled=true;
@@ -13337,7 +13342,7 @@ function renderYogaEssai() {
   Object.keys(parMois).sort().forEach(function(moisKey) {
     var d = new Date(moisKey+'-01T00:00:00');
     var accIdEy = 'acc-ey-'+moisKey;
-    var isOpenEy = (moisKey === currentMoisKeyYoga);
+    var isOpenEy = Object.prototype.hasOwnProperty.call(_moisAccState, accIdEy) ? _moisAccState[accIdEy] : (moisKey === currentMoisKeyYoga);
     h += '<div class="mois-acc-hdr" onclick="toggleMoisAcc(\''+accIdEy+'\')">'+MOIS_FR[d.getMonth()]+' '+d.getFullYear()+'<span class="mois-acc-arrow">'+(isOpenEy?'▼':'▶')+'</span></div>';
     h += '<div id="'+accIdEy+'"'+(isOpenEy?'':' style="display:none;"')+'>';
     parMois[moisKey].forEach(function(date) {
