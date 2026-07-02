@@ -7340,12 +7340,12 @@ window.repOuvrirGmail = function() {
 // NEWSLETTER — export des adresses de toutes les rubriques
 // ================================================================
 var NEWS_RUBRIQUES = [
-  {id:'essai-tango',  lbl:'Essai Tango',        icon:'💃', color:'#60b0ff', get:function(){ return (adminData.coursEssai||[]); }},
+  {id:'essai-tango',  lbl:'Essai Tango',        icon:'💃', color:'#60b0ff', get:function(){ return (adminData.essai||adminData.coursEssai||[]); }},
   {id:'essai-yoga',   lbl:'Essai Yoga',         icon:'🧘', color:'#a78bfa', get:function(){ return (adminData.essaiYoga||[]); }},
   {id:'eleves-tango', lbl:'Élèves Tango',       icon:'👥', color:'#4ade80', get:function(){ return (adminData.coursTango||[]).filter(function(e){ return e.statut==='inscrit'; }); }},
   {id:'inscr-tango',  lbl:'Inscriptions Tango', icon:'📝', color:'#fbbf24', get:function(){ return (adminData.coursTango||[]).filter(function(e){ return e.statut==='demande'||e.statut==='attente_paiement'||e.statut==='attente'; }); }},
   {id:'yoga',         lbl:'Yoga',               icon:'🌿', color:'#40d8c0', get:function(){ return (adminData.coursYoga||[]).filter(function(e){ return e.statut!=='supprimé'; }); }},
-  {id:'stages',       lbl:'Stages',             icon:'🎭', color:'#f472b6', get:function(){ return (adminData.inscriptionsStages||[]); }},
+  {id:'stages',       lbl:'Stages',             icon:'🎭', color:'#f472b6', get:function(){ var out=[]; Object.values(adminData.stages||{}).forEach(function(jour){ (jour.inscrits||[]).forEach(function(e){ out.push(e); }); }); return out.length?out:(adminData.inscriptionsStages||[]); }},
   {id:'cours-part',   lbl:'Cours particuliers', icon:'🎯', color:'#c084fc', get:function(){ return (adminData.coursParticuliers||[]); }},
   {id:'devis',        lbl:'Devis',              icon:'💼', color:'#26a69a', get:function(){ return (adminData.demandesDevis||[]); }}
 ];
