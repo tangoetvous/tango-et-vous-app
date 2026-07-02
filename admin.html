@@ -8625,6 +8625,7 @@ function renderEssai() {
         });
       }
       body += '<div class="btn-row" style="padding-bottom:14px;margin-top:10px;">'
+        +'<a href="javascript:void(0)" class="btn btn-ghost" style="font-size:11px;text-decoration:none;" onclick="essaiCopierEmails(\''+grp.date+'\',\''+grp.niveau+'\')">📋 Copier les emails validés</a>'
         +(toutPointe?'<button class="btn btn-ok" data-action="env-j1" data-date="'+grp.date+'">✉️ Emails J+1</button>':'<span style="font-size:11px;color:var(--dim);">Pointez tous les essais d&#39;abord.</span>')
         +'<span id="j1s-'+grp.date+'" style="font-size:11px;margin-left:8px;"></span>'
         +'</div>';
@@ -8815,6 +8816,9 @@ function renderEssai() {
               +'</div></div>';
           });
         }
+        body += '<div class="btn-row" style="padding-bottom:10px;margin-top:8px;">'
+          +'<a href="javascript:void(0)" class="btn btn-ghost" style="font-size:11px;text-decoration:none;" onclick="essaiCopierEmails(\''+date+'\',\''+niv+'\')">📋 Copier les emails validés</a>'
+          +'</div>';
       }
       var isPastDN = date < todayStr;
       var accIdDN = 'acc-ed-'+key.replace('|','-');
@@ -9685,12 +9689,10 @@ function imprimerStage() {
   _tevPrint('Pointage Stage · ' + (st.label || fmtDate(filtreStage)), [{ headers: ['Nom', 'Rôle', 'Créneaux', 'Paiement', 'Statut', '✓'], rows: rows }]);
 }
 
-window.stageCopierEmails = function() {
-  if (!filtreStage) return;
-  var st = (adminData.stages || {})[filtreStage];
-  if (!st) return;
+// Copie une liste de fiches : emails dédoublonnés + toast (helper commun stages/essais)
+function _copierEmailsFiches(fiches) {
   var set = {}, sansEmail = 0;
-  (st.inscrits || []).filter(function(i){ return !i.attente; }).forEach(function(i) {
+  (fiches || []).forEach(function(i) {
     var em = ((i && i.email) || '').trim().toLowerCase();
     if (em && em.indexOf('@') > 0) set[em] = true;
     else sansEmail++;
@@ -9707,6 +9709,27 @@ window.stageCopierEmails = function() {
     document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
   };
   try { navigator.clipboard.writeText(txt).then(done, fallback); } catch(e) { fallback(); }
+}
+
+window.stageCopierEmails = function() {
+  if (!filtreStage) return;
+  var st = (adminData.stages || {})[filtreStage];
+  if (!st) return;
+  _copierEmailsFiches((st.inscrits || []).filter(function(i){ return !i.attente; }));
+};
+
+// Essai tango : emails des essais confirmés d'une date+niveau
+window.essaiCopierEmails = function(date, niveau) {
+  _copierEmailsFiches((adminData.essai || []).filter(function(e) {
+    return e.date === date && e.niveau === niveau && e.statut === 'confirme';
+  }));
+};
+
+// Essai yoga : emails des essais confirmés d'une date
+window.essaiYogaCopierEmails = function(date) {
+  _copierEmailsFiches((adminData.essaiYoga || []).filter(function(e) {
+    return e.date === date && e.statut !== 'attente' && e.statut !== 'supprimé';
+  }));
 };
 
 function imprimerEssaiYoga() {
@@ -13279,6 +13302,7 @@ function renderYogaEssai() {
         +' <span style="font-weight:400;color:var(--dim);">Espace Sorano</span>'
         +(gratuit?' <span class="pill pill-ok" style="font-size:9px;">Gratuit</span>':' <span style="font-size:10px;color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')
         +(ins.length?' <span style="font-weight:400;color:var(--dim);font-size:10px;">'+ins.length+' inscrit'+(ins.length>1?'s':'')+'</span> <span style="font-weight:400;font-size:10px;">— ✓'+pres+' ✗'+abs+' ?'+rest+'</span>':'')
+        +(ins.length?' <a href="javascript:void(0)" class="btn btn-ghost" style="font-size:10px;padding:2px 8px;text-decoration:none;margin-left:6px;" onclick="essaiYogaCopierEmails(\''+date+'\')">📋 Emails</a>':'')
         +'</div>';
       if (!ins.length) {
         h += '<div style="font-size:11px;color:var(--dim);padding:4px 0 8px;">Aucune inscription pour cette date.</div>';
