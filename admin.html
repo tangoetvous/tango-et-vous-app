@@ -1483,18 +1483,30 @@ function sauverContact(btn) {
   btn.disabled=true; btn.textContent='⏳';
   var oldEmail=c.email||'';
   var fullNom=prenom.trim()+' '+nom.trim();
+  // ⚠️ Si l'email d'origine est VIDE (fiche partenaire créée sans email), on ne peut pas
+  // cibler par email : WHERE email='' toucherait TOUTES les fiches sans email (bug Karine
+  // Blum → Anna Wawrowska, 2026-07-02). On matche alors par nom complet (normalisé).
+  var origNomFull=(c.nom||'').trim();
+  function _normSC(s){ return (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+  function _matchOld(x){
+    if((x.email||'')!==oldEmail) return false;
+    if(oldEmail) return true;
+    var xFull=((x.prenom||'')+' '+(x.nom||'')).trim()||String(x.nom||'');
+    return _normSC(xFull)===_normSC(origNomFull);
+  }
   // Mettre à jour l'état local dans toutes les structures (demo ET réel)
   function updLocal(arr){ (arr||[]).forEach(function(x){
-    if(x.email===oldEmail){ x.email=newEmail; x.tel=tel; if(x.prenom!==undefined)x.prenom=prenom.trim(); if(x.nom!==undefined)x.nom=nom.trim(); }
-    if(x.emailPartenaire===oldEmail){ x.emailPartenaire=newEmail; }
+    if(_matchOld(x)){ x.email=newEmail; x.tel=tel; if(x.prenom!==undefined)x.prenom=prenom.trim(); if(x.nom!==undefined)x.nom=nom.trim(); }
+    if(oldEmail){ if(x.emailPartenaire===oldEmail) x.emailPartenaire=newEmail; }
+    else if(x.partenaire && _normSC(x.partenaire)===_normSC(origNomFull)){ x.emailPartenaire=newEmail; }
   });}
   updLocal(adminData.coursTango); updLocal(adminData.coursYoga); updLocal(adminData.cartes); updLocal(adminData.essai);
   Object.values(adminData.stages||{}).forEach(function(jour){ updLocal(jour.inscrits||[]); });
-  (adminData.cartes||[]).forEach(function(x){if(x.email===newEmail||x.email===oldEmail)x.nom=fullNom;});
+  (adminData.cartes||[]).forEach(function(x){if(x.email===newEmail||_matchOld(x))x.nom=fullNom;});
   _contactCtx.nom=fullNom; _contactCtx.tel=tel; _contactCtx.email=newEmail;
   if(_ecPhotoUrl!==null){
     _contactCtx.photo_url=_ecPhotoUrl;
-    (adminData.cartes||[]).forEach(function(x){if(x.email===oldEmail||x.email===newEmail)x.photo_url=_ecPhotoUrl;});
+    (adminData.cartes||[]).forEach(function(x){if(_matchOld(x)||x.email===newEmail)x.photo_url=_ecPhotoUrl;});
   }
   if(IS_DEMO){
     afficherToast('✓ Coordonnées mises à jour');
@@ -1505,13 +1517,30 @@ function sauverContact(btn) {
   var pr=prenom.trim(), no=nom.trim();
   var updatePayload={prenom:pr,nom:no,tel:tel,email:emailNew};
   if(_ecPhotoUrl!==null) updatePayload.photo_url=_ecPhotoUrl;
-  Promise.all([
-    Promise.resolve(TEV.client.from('inscriptions_cours').update({prenom:pr,nom:no,tel:tel,email:emailNew}).eq('email',emailOld)),
-    Promise.resolve(TEV.client.from('eleves').update(updatePayload).eq('email',emailOld)),
-    Promise.resolve(TEV.client.from('inscriptions_essai').update({prenom:pr,nom:no,tel:tel,email:emailNew}).eq('email',emailOld)),
-    Promise.resolve(TEV.client.from('inscriptions_stages').update({prenom:pr,nom:no,telephone:tel,email:emailNew}).eq('email',emailOld)),
-    Promise.resolve(TEV.client.from('cours_yoga').update({prenom:pr,nom:no,tel:tel,email:emailNew}).eq('email',emailOld)),
-  ])
+  var _dbUpdates;
+  if(emailOld){
+    _dbUpdates=[
+      Promise.resolve(TEV.client.from('inscriptions_cours').update({prenom:pr,nom:no,tel:tel,email:emailNew}).eq('email',emailOld)),
+      Promise.resolve(TEV.client.from('eleves').update(updatePayload).eq('email',emailOld)),
+      Promise.resolve(TEV.client.from('inscriptions_essai').update({prenom:pr,nom:no,tel:tel,email:emailNew}).eq('email',emailOld)),
+      Promise.resolve(TEV.client.from('inscriptions_stages').update({prenom:pr,nom:no,telephone:tel,email:emailNew}).eq('email',emailOld)),
+      Promise.resolve(TEV.client.from('cours_yoga').update({prenom:pr,nom:no,tel:tel,email:emailNew}).eq('email',emailOld)),
+    ];
+  } else {
+    // Email d'origine vide : JAMAIS de WHERE email='' (toucherait toutes les fiches sans
+    // email — bug Karine Blum 2026-07-02). On cible par ID les lignes de CETTE personne.
+    var _idNum=function(id){ return /^\d+$/.test(String(id)); };
+    var _idsCT=(adminData.coursTango||[]).filter(_matchOld).map(function(x){return x.id;}).filter(_idNum);
+    var _idsES=(adminData.essai||[]).filter(_matchOld).map(function(x){return x.id;}).filter(_idNum);
+    _dbUpdates=[
+      _idsCT.length?Promise.resolve(TEV.client.from('inscriptions_cours').update({prenom:pr,nom:no,tel:tel,email:emailNew}).in('id',_idsCT)):Promise.resolve({}),
+      Promise.resolve({}), // eleves : pas de fiche sans email (email UNIQUE requis)
+      _idsES.length?Promise.resolve(TEV.client.from('inscriptions_essai').update({prenom:pr,nom:no,tel:tel,email:emailNew}).in('id',_idsES)):Promise.resolve({}),
+      Promise.resolve({}), // stages : fiches locales sans id DB fiable — MAJ locale uniquement
+      Promise.resolve({}), // yoga : toujours créé avec email
+    ];
+  }
+  Promise.all(_dbUpdates)
     .then(function(res){
       var anyErr=res.find(function(r){return r&&r.error;});
       btn.disabled=false; btn.textContent='✓ Enregistrer';
@@ -1519,8 +1548,9 @@ function sauverContact(btn) {
         var msg=anyErr.error.message||anyErr.error.code||'Erreur DB';
         if(err){err.textContent=msg;err.style.display='block';} return;
       }
-      // Sync email dans Supabase Auth + email info élève (non-bloquant)
-      if(emailNew !== emailOld){
+      // Sync email dans Supabase Auth + email info élève (non-bloquant) — seulement si
+      // un ancien email existait (sinon aucun compte Auth à migrer)
+      if(emailOld && emailNew !== emailOld){
         TEV.client.auth.getSession().then(function(s){
           var jwt2 = s && s.data && s.data.session && s.data.session.access_token;
           if(!jwt2) return;
