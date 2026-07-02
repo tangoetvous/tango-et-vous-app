@@ -8076,7 +8076,7 @@ function validerChangementCours(id) {
   e.paiement=paiement;
   e.montant=montant;
   // Propager ville+niveau dans adminData.cartes pour que les cartes 10 reflètent le nouveau cours
-  var carteLocale=(adminData.cartes||[]).find(function(c){return c.email===e.email;});
+  var carteLocale=(e.email||'').trim()?(adminData.cartes||[]).find(function(c){return c.email===e.email;}):null;
   if(carteLocale){ carteLocale.ville=e.ville; carteLocale.niveau=e.niveau; }
   fermerContact();
   afficherToast('✓ '+e.prenom+' '+e.nom+' mis à jour');
@@ -8559,7 +8559,7 @@ function renderEssai() {
       var _dupSetConf=_dupEmails(conf);
       var _mkEssaiPtCard = function(e) {
         var rcls=e.role==='guideur'?'pill-guideur':'pill-guidee';
-        var ctEntry=(adminData.coursTango||[]).find(function(c){return c.email===e.email;});
+        var ctEntry=(e.email||'').trim()?(adminData.coursTango||[]).find(function(c){return c.email===e.email;}):null;
         var ctStatut=ctEntry?ctEntry.statut:null;
         var pastille='';
         if(ctStatut==='inscrit') pastille='<span class="pill pill-ok" style="font-size:8px;padding:1px 5px;">Inscrit</span>';
