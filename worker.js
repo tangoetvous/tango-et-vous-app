@@ -1167,7 +1167,7 @@ async function handleNotifyEssaiAction(request, env) {
           + '<li><strong>Esp\xe8ces</strong> — inscrivez-vous quand m\xeame en ligne en pr\xe9cisant \xe0 la fin du processus que vous r\xe9glez en esp\xe8ces.</li>'
           + '<li><strong>Ch\xe8que</strong> — nous pr\xe9f\xe9rons \xe9viter ce mode de paiement, mais si c&rsquo;est votre seule option, contactez-nous.</li>'
           + '</ul>'
-          + '<p style="margin:0;font-size:13px;color:#888;">⚠️ AssoConnect propose un pourboire de fa\xe7on insistante — vous n&rsquo;\xeates pas du tout oblig\xe9\xb7e de le payer. Notez <strong>0\xa0€</strong> \xe0 la place de la somme propos\xe9e.</p>'
+          + '<p style="margin:0;font-size:15px;font-weight:700;color:#c62828;">⚠️ AssoConnect propose un pourboire de fa\xe7on insistante — vous n&rsquo;\xeates pas du tout oblig\xe9\xb7e de le payer. Notez <strong>0\xa0€</strong> \xe0 la place de la somme propos\xe9e.</p>'
           + '</div></div>';
         const livretBtn = livretUrl ? `<p style="text-align:center;margin:0 0 22px;"><a href="${livretUrl}" style="display:inline-block;background:#fff;color:#1565c0;border:2px solid #1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">📖 T\xe9l\xe9charger le livret ${_esc(nivLabel(niveau))} ${_esc(villeLabel(ville))}</a></p>` : '';
 
@@ -1181,9 +1181,9 @@ async function handleNotifyEssaiAction(request, env) {
               <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">INSCRIPTION TANGO</div>
               ${coursBoxRows}
             </div>
-            ${soranoBlock}
             ${lienACBtn}
             ${quellesPrecisions}
+            ${soranoBlock}
             ${livretBtn}
             ${signEleve}
           </div>${footer}`,
@@ -5217,7 +5217,7 @@ async function handleNotifyInscriptionCours(request, env) {
     + '<li><strong>Esp\xe8ces</strong> — inscrivez-vous quand m\xeame en ligne en pr\xe9cisant \xe0 la fin du processus que vous r\xe9glez en esp\xe8ces.</li>'
     + '<li><strong>Ch\xe8que</strong> — nous pr\xe9f\xe9rons \xe9viter ce mode de paiement, mais si c&rsquo;est votre seule option, contactez-nous.</li>'
     + '</ul>'
-    + '<p style="margin:0;font-size:13px;color:#888;">⚠️ AssoConnect propose un pourboire de fa\xe7on insistante — vous n&rsquo;\xeates pas du tout oblig\xe9\xb7e de le payer. Notez <strong>0 &euro;</strong> \xe0 la place de la somme propos\xe9e.</p>'
+    + '<p style="margin:0;font-size:15px;font-weight:700;color:#c62828;">⚠️ AssoConnect propose un pourboire de fa\xe7on insistante — vous n&rsquo;\xeates pas du tout oblig\xe9\xb7e de le payer. Notez <strong>0 &euro;</strong> \xe0 la place de la somme propos\xe9e.</p>'
     + '</div></div>';
 
   // ── I01 élève — one email per course
@@ -5322,7 +5322,7 @@ async function handleNotifyInscriptionCours(request, env) {
             + '</div>'
           : '';
         const acNote = isCouple
-          ? 'Vos places seront r\xe9serv\xe9es une fois les inscriptions en ligne et les premiers paiements effectu\xe9s.'
+          ? 'Vos places seront r\xe9serv\xe9es une fois les inscriptions en ligne et le premier paiement effectu\xe9.'
           : 'Votre place sera r\xe9serv\xe9e une fois l\'inscription en ligne et le premier paiement effectu\xe9s.';
         const livretBtn = livretUrl
           ? '<div style="text-align:center;margin:0 0 22px;"><a href="' + _esc(livretUrl) + '" style="display:inline-block;background:#fff;color:#1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #1565c0;">📖 T\xe9l\xe9charger le livret ' + nivLabel(c.niveau) + ' ' + villeLabel(c.ville) + '</a></div>'
@@ -5343,12 +5343,13 @@ async function handleNotifyInscriptionCours(request, env) {
           + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Votre inscription</div>'
           + '<table style="width:100%;border-collapse:collapse;font-size:14px;">' + coursBoxRows + '</table>'
           + '</div>'
-          + coupleNote + soranoNote
+          + coupleNote
           + '<div style="text-align:center;margin:0 0 10px;">'
           + '<a href="' + _esc(lienAC) + '" style="display:inline-block;background:#D4AF37;color:#111;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">'
           + '🔗 INSCRIPTION AUX COURS DE TANGO ' + _esc(saison2) + '</a></div>'
           + '<p style="font-size:14px;color:#555;text-align:center;margin:0 0 24px;">' + acNote + '</p>'
           + quellesPrecisions
+          + soranoNote
           + livretBtn
           + signEleve + '</div>' + footer, 'Votre inscription tango est validee - finalisez votre dossier sur AssoConnect');
       }
@@ -7013,7 +7014,7 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
         <li><strong>Espèces</strong> — inscrivez-vous quand même en ligne en précisant que vous réglez en espèces.</li>
         <li><strong>Chèque</strong> — possible si nécessaire, contactez-nous.</li>
       </ul>
-      <p style="margin:0;font-size:13px;color:#888;">⚠️ Notez <strong>0 €</strong> quand AssoConnect vous propose un pourboire.</p>
+      <p style="margin:0;font-size:15px;font-weight:700;color:#c62828;">⚠️ AssoConnect propose un pourboire de façon insistante — vous n'êtes pas du tout obligé·e de le payer. Notez <strong>0 €</strong> à la place de la somme proposée.</p>
     </div>
   </div>`;
 
@@ -7032,10 +7033,10 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
       <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 14px;">Votre demande d'inscription est confirmée ! Un·e partenaire guideur·se vient de rejoindre votre cours — votre place est désormais réservée.</p>
       <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Pour finaliser votre inscription, il vous reste à procéder au paiement via AssoConnect ci-dessous.</p>
       ${coursBox}
-      ${soranoBlock}
       <div style="text-align:center;margin:0 0 10px;"><a href="${_esc(assoConnectUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">🔗 INSCRIPTION AUX COURS DE TANGO ${_esc(saison||'')}</a></div>
       <p style="font-size:12px;color:#888;text-align:center;margin:0 0 24px;">Votre place sera définitivement réservée une fois l\'inscription et le premier paiement effectués.</p>
       ${quelquesPrec}
+      ${soranoBlock}
       ${livretBtn}
       ${signI02}
     </div>${footer}`, "Votre inscription tango est validee - finalisez votre dossier sur AssoConnect");
