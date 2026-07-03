@@ -40,16 +40,16 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}body{font-family:Arial
 /* CHOIX BOUTONS */
 .choix-grid{display:grid;gap:12px;}
 .choix-grid.col2{grid-template-columns:1fr 1fr;}
-.choix-btn{background:#1a1a1a;border:2px solid #333;color:#fff;padding:20px 16px;border-radius:8px;cursor:pointer;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:8px;}
-.choix-btn:hover{border-color:#D4AF37;background:#1f1a00;}
+.choix-btn{background:#1a1a1a;border:2px solid #333;color:#fff;padding:20px 16px;border-radius:8px;cursor:pointer;text-align:center;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:8px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+@media (hover:hover){.choix-btn:hover{border-color:#D4AF37;background:#1f1a00;}}
 .choix-btn.selected{border-color:#D4AF37;background:#1f1a00;}
 .choix-btn .cb-icon{font-size:28px;}
 .choix-btn .cb-titre{font-size:15px;font-weight:bold;color:#D4AF37;}
 .choix-btn .cb-sub{font-size:12px;color:#888;line-height:1.4;}
 
 /* DATES */
-.date-item{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:14px 16px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:all .2s;}
-.date-item:hover{border-color:#D4AF37;background:#1f1a00;}
+.date-item{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:14px 16px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:all .2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+@media (hover:hover){.date-item:hover{border-color:#D4AF37;background:#1f1a00;}}
 .date-item.selected{border-color:#D4AF37;background:#1f1a00;}
 .date-item.complet-total{opacity:0.5;cursor:not-allowed;}
 .date-item .di-left .di-date{font-size:15px;font-weight:bold;color:#fff;}
@@ -100,10 +100,12 @@ select option{background:#1a1a1a;color:#fff;}
 .btn-nouvelle{display:block;margin:20px auto 0;background:transparent;color:#D4AF37;border:1px solid #D4AF37;padding:12px 24px;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer;letter-spacing:0.5px;transition:all .2s;}
 .btn-nouvelle:hover{background:#D4AF37;color:#000;}
 .btn-choix-groupe{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
-.btn-choix{flex:1;min-width:100px;background:#1e1500;border:2px solid #5a4200;color:#a07830;padding:14px 8px 12px;border-radius:10px;cursor:pointer;text-align:center;font-size:12px;font-weight:bold;letter-spacing:0.3px;transition:all .25s;line-height:1.4;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.btn-choix{flex:1;min-width:100px;background:#1e1500;border:2px solid #5a4200;color:#a07830;padding:14px 8px 12px;border-radius:10px;cursor:pointer;text-align:center;font-size:12px;font-weight:bold;letter-spacing:0.3px;transition:all .25s;line-height:1.4;display:flex;flex-direction:column;align-items:center;gap:8px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 .btn-choix svg{width:36px;height:36px;transition:all .25s;}
+@media (hover:hover){
 .btn-choix:hover{border-color:#D4AF37;color:#D4AF37;background:#251c00;box-shadow:0 0 12px rgba(212,175,55,0.15);}
 .btn-choix:hover svg{filter:drop-shadow(0 0 5px rgba(212,175,55,0.5));}
+}
 .btn-choix.selected{border-color:#D4AF37;background:#2a1f00;color:#D4AF37;box-shadow:0 0 0 2px rgba(212,175,55,0.4),0 0 16px rgba(212,175,55,0.15);}
 .btn-choix.selected svg{filter:drop-shadow(0 0 8px rgba(212,175,55,0.8));}
 /* Cadres dorés épais */
@@ -1209,6 +1211,25 @@ window.addEventListener('storage', function(e) {
   window.addEventListener('load',_tevH);
   window.addEventListener('resize',_tevH);
   new MutationObserver(function(){setTimeout(_tevH,60);}).observe(document.body,{subtree:true,childList:true,attributes:true});
+})();
+</script>
+<script>
+// Garde anti « clic pendant scroll » (iframe Wix : c'est la page parente qui scrolle,
+// iOS Safari peut alors délivrer un clic au bouton sous le doigt). Si le doigt a bougé
+// de plus de 12px entre le toucher et le relâchement, le clic est annulé.
+(function(){
+  var sx=0, sy=0, moved=false;
+  document.addEventListener('touchstart', function(e){
+    var t=e.touches && e.touches[0]; if(!t) return;
+    sx=t.clientX; sy=t.clientY; moved=false;
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    var t=e.touches && e.touches[0]; if(!t) return;
+    if(Math.abs(t.clientX-sx)>12 || Math.abs(t.clientY-sy)>12) moved=true;
+  }, {passive:true});
+  document.addEventListener('click', function(e){
+    if(moved){ e.stopPropagation(); e.preventDefault(); moved=false; }
+  }, true);
 })();
 </script>
 </body>
