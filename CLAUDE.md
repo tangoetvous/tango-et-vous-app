@@ -509,6 +509,33 @@ Dans `inscription-cours.html`, le bouton `💶 Évaluer mon tarif` (qui appelait
 
 ---
 
+## ⚠️ Règle technique — éviter le context overflow / autocompact thrashing
+
+`admin.html` (~15 000 lignes / ~930 KB) et `worker.js` (~8 500 lignes / ~580 KB) sont des fichiers monolithiques trop gros pour être lus entiers sans saturer le contexte. Idem pour `index.html` (~6 400 lignes / ~340 KB).
+
+**Pattern obligatoire** pour ces 3 fichiers :
+1. Toujours `grep` (via Bash) ou l'agent `Explore` d'abord pour repérer la zone concernée (numéros de ligne)
+2. Puis `Read` avec `offset` + `limit` (typiquement 50-200 lignes ciblées)
+3. **Ne jamais** faire `Read("admin.html")`, `Read("worker.js")` ou `Read("index.html")` sans bornes
+4. Pour des modifications, préférer `Edit` (qui ne renvoie que le diff appliqué) plutôt qu'un Read complet suivi d'un Write
+
+Les fichiers `preview-emails-*.html` (~70-130 KB chacun) suivent la même règle : `grep` + `Read` ciblé.
+
+**Quand la tâche nécessite plusieurs zones différentes d'un gros fichier dans la même session** : ne pas accumuler les Reads dans le contexte principal — déléguer à un sous-agent qui s'exécute dans son propre contexte isolé.
+
+| Sous-agent | Quand l'utiliser |
+|------------|------------------|
+| `Explore` | Recherche read-only sur plusieurs zones (ex: "où sont définies ces 5 fonctions ?", "trouve tous les endroits qui appellent X") |
+| `general-purpose` | Tâche multi-fichiers ou nécessitant des modifications ciblées sur plusieurs zones |
+
+Seul le **résultat résumé** du sous-agent revient dans le contexte principal (typiquement 200-1000 tokens), pas les fichiers lus. Exemple :
+- ❌ Mauvais : 5 × `Read("admin.html", offset=X, limit=200)` répartis dans la session → cumul ~5000-10 000 tokens
+- ✅ Bon : 1 × `Agent(subagent_type="Explore", prompt="Trouve dans admin.html les fonctions X/Y/Z, résume leur signature + lignes")` → ~500 tokens dans le contexte principal
+
+Règle d'or : **dès qu'une tâche demande de regarder 3+ zones d'un même gros fichier, déléguer à un sous-agent.**
+
+Si l'utilisateur signale "autocompact thrashing" ou un blocage de session, vérifier en priorité si des Reads massifs ont eu lieu — c'est généralement la cause, pas CLAUDE.md.
+
 ## Push notifications — VAPID + déduplication tokens
 
 ### Clés VAPID — configuration actuelle (2026-05-26)
@@ -1446,6 +1473,8 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - Durée de conservation : durée relation + 1 an
 
 ## À faire / en suspens
+> 📁 **Voir [`HISTORIQUE.md`](./HISTORIQUE.md)** pour les tâches accomplies, considérées résolues ou reportées (déplacées le 2026-05-27).
+
 - [ ] **Cartes N cours — plan validé le 2026-07-02, en 3 phases par risque croissant** (remplace l'ancien item "Cartes de 20 cours") :
   - **Phase 1 (risque faible)** : paramètre global `carte_nb_cours` (défaut 10) dans Paramètres + affichages dynamiques partout (taille carte = `utilises + restants`, invariant du modèle — remplacer les "10" cosmétiques en dur : espace élève, admin Cartes 10, emails C1/C2/CX/CP-E, renouvellement qui reset `restants=10` en dur à 3 endroits).
   - **Phase 2 (risque moyen)** : champ "nombre de cours" dans les modals Inscription directe + Valider Paiement, prérempli avec le paramètre. Au renouvellement : pouvoir changer le nb de cours, la durée, ou passer en complément forfait annuel (la fonction `passerEnForfait` existe déjà — l'intégrer comme option du modal Renouveler ; définir avec l'admin le devenir du solde restant).
@@ -1461,7 +1490,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] **Articles tango — Publications** : rédiger les articles tango à diffuser dans l'espace élève (onglet Publications) et les programmer. **Rythme : 1 article par semaine, début octobre → fin juin** (~39 articles par saison). À faire avec l'utilisateur : choix des sujets, rédaction, dates de publication.
 - [ ] **Renseigner les thèmes des stages** : compléter dans Paramètres les thèmes des stages à venir (saison courante) ET de la saison prochaine 2026-2027 — à faire avec l'utilisateur.
 - [ ] **Rappels emails automatiques cb3x** : relances automatiques aux échéances pour les paiements CB en plusieurs fois.
-- [ ] **Email automatique fin de saison yoga — cron 15 juin** : chaque 15 juin, envoyer à tous les élèves yoga de la saison courante (`cours_yoga WHERE statut='inscrit' AND saison=saisonCourante`) un email de fin de saison avec lien de ré-inscription à la saison suivante. Détails :
+- [x] **Email automatique fin de saison yoga — cron 15 juin** — ✅ FAIT (workflow `yoga-fin-saison.yml`, cron 15 juin 9h Paris) : chaque 15 juin, envoyer à tous les élèves yoga de la saison courante (`cours_yoga WHERE statut='inscrit' AND saison=saisonCourante`) un email de fin de saison avec lien de ré-inscription à la saison suivante. Détails :
   - **Déclencheur** : cron GitHub Actions `0 7 15 6 *` (7h UTC = 9h Paris) → `POST /api/cron/yoga-fin-saison`
   - **Destinataires** : tous les emails distincts dans `cours_yoga` avec `statut='inscrit'` et `saison=saisonCourante()` — utiliser `SUPABASE_SERVICE_KEY` pour bypasser la RLS
   - **Lien réinscription** : lu depuis `tev_liens_assoconnect` (table `parametres`) → clé de la saison suivante → champ `yoga`. Même clé que celle configurée dans Paramètres → Yoga → Liens AssoConnect → "Cours réguliers". Fallback : chaîne vide si non configuré (ne pas envoyer l'email sans lien valide).
@@ -1473,11 +1502,11 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - [ ] **Redirection `tangoetvous.fr` → `www.tangoetvous.com`** : à configurer dans Cloudflare (pas de code). Deux étapes : (1) DNS → ajouter enregistrement `A` `@` `192.0.2.1` en mode Proxied ☁️ ; (2) Rules → Redirect Rules → Dynamic redirect `concat("https://www.tangoetvous.com", http.request.uri.path)` status 301, condition hostname = `tangoetvous.fr`. Objectif : éviter la page blanche et concentrer l'autorité SEO sur le site Wix.
 - [ ] **Mettre à jour les actions GitHub vers Node.js 24** : ✅ `backup-csv.yml` et `keep-alive.yml` déjà en `@v5` (checkout, upload-artifact, action-send-mail). **Reste uniquement** `deploy.yml` → `actions/checkout@v4` → `@v5`. Sans urgence : Node 20 encore supporté plusieurs mois ; signal = warning jaune "Node.js 20 deprecated" dans un run Actions. Risque de casse quasi nul (checkout v5 = simple bump runtime ; si échec, l'étape `wrangler deploy` ne s'exécute pas → prod intacte). Test = push → run deploy.yml vert/rouge dans GitHub Actions.
 - [ ] **Playwright — tests E2E (septembre 2026)** : tests E2E sur `admin.html` en mode démo, ciblés sur les points fragiles (couples email partagé dans Cartes 10, `calcExpiration`). Playwright démarre/arrête le serveur local automatiquement, une seule commande `npm test`. Voir section "Playwright — tests E2E à implémenter" ci-dessus pour le catalogue complet des scénarios (groupes A–G).
-- [ ] **Stages → Pointage — bouton email groupé Gmail** : dans l'onglet Stages → Pointage, ajouter un bouton "✉️ Contacter les inscrits" qui ouvre un brouillon Gmail pré-rempli avec en destinataires tous les emails des participants ayant `type_confirmation='confirme'` (inscrits confirmés uniquement, pas les personnes en liste d'attente `type_confirmation='attente'`). Tous les destinataires en BCC pour préserver la confidentialité. Sujet pré-rempli : ex. "Stage Tango & Vous — [date]". Implémentation : même mécanisme que les boutons Gmail existants (ouverture `https://mail.google.com/mail/?view=cm&...` avec `bcc=email1,email2,...`).
+- [x] **Stages → Pointage — bouton email groupé Gmail** — ✅ Résolu autrement le 2026-07-02 : boutons « 📋 Copier les emails validés » par date dans Stages, Essai Tango et Essai Yoga (copie BCC-ready dédoublonnée). L'idée d'origine : dans l'onglet Stages → Pointage, ajouter un bouton "✉️ Contacter les inscrits" qui ouvre un brouillon Gmail pré-rempli avec en destinataires tous les emails des participants ayant `type_confirmation='confirme'` (inscrits confirmés uniquement, pas les personnes en liste d'attente `type_confirmation='attente'`). Tous les destinataires en BCC pour préserver la confidentialité. Sujet pré-rempli : ex. "Stage Tango & Vous — [date]". Implémentation : même mécanisme que les boutons Gmail existants (ouverture `https://mail.google.com/mail/?view=cm&...` avec `bcc=email1,email2,...`).
 - [ ] **Espace élève — thème clair** : l'interface de l'espace élève (`index.html`) est jugée trop sombre. Réaliser une refonte visuelle pour l'éclaircir : fond clair, textes sombres, palette moins chargée en noir. À définir avec l'utilisateur : garder le thème sombre basculable via un toggle (mode sombre/clair) ou passer intégralement en thème clair ? Implique de revoir les variables CSS (`:root`), les couleurs de fond des cartes/sections, et la lisibilité de tous les onglets.
 - [ ] **Mode d'emploi espace élève — compléments** : dans la rubrique Mode d'emploi (`index.html`), ajouter deux sections manquantes : (1) **Agrandir les écritures** — expliquer comment augmenter la taille du texte sur iPhone (Réglages → Accessibilité → Affichage et taille du texte) et sur Android (Réglages → Accessibilité → Taille de police), ainsi que le pinch-to-zoom sur la page si l'appli le permet ; (2) **Mon niveau** — présenter la nouvelle rubrique : auto-évaluation sur le vocabulaire et les notions du tango (débutant → avancé 2), comment cocher les éléments maîtrisés, comment interpréter l'estimation de niveau affichée, et le lien vers les vidéos pédagogiques associées.
 - [ ] **Budget prévisionnel — nouvelle rubrique admin** : créer un nouvel onglet "Budget" dans `admin.html` permettant de paramétrer et visualiser un budget prévisionnel de l'école (recettes et dépenses estimées vs réelles). Contenu et structure à définir avec l'utilisateur avant implémentation.
-- [ ] **Bandeau défilant sur l'accueil espace élève** : afficher un bandeau avec une phrase en défilement horizontal (ticker) au milieu de la page d'accueil de `index.html`. Le texte est paramétrable depuis Paramètres admin (nouvelle clé `tev_bandeau_accueil` dans la table `parametres` : `{ texte: '...', actif: true/false }`). Si `actif=false` ou clé absente → bandeau masqué. Implémentation : CSS `@keyframes` marquee ou `animation: scroll` sur un `<div>` fixe. Position : entre la carte "Prochain cours" et les onglets de navigation, ou en haut de l'accueil sous le header.
+- [x] **Bandeau défilant sur l'accueil espace élève** — ✅ FAIT (2026-07-01/02) : clé `tev_bandeau_accueil`, toggle + texte dans Paramètres → Fonctionnalités, marquee pleine largeur or/noir selon thème. Spec d'origine : afficher un bandeau avec une phrase en défilement horizontal (ticker) au milieu de la page d'accueil de `index.html`. Le texte est paramétrable depuis Paramètres admin (nouvelle clé `tev_bandeau_accueil` dans la table `parametres` : `{ texte: '...', actif: true/false }`). Si `actif=false` ou clé absente → bandeau masqué. Implémentation : CSS `@keyframes` marquee ou `animation: scroll` sur un `<div>` fixe. Position : entre la carte "Prochain cours" et les onglets de navigation, ou en haut de l'accueil sous le header.
 
 
 ## Keep-alive automatique — mis en place, rien à faire
