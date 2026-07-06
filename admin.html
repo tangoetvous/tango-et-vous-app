@@ -7897,10 +7897,21 @@ function retablirEleve(id) {
   if (!e) return;
   var nom = e.prenom + ' ' + e.nom;
   e.statut = 'inscrit';
+  // Réactiver la carte si elle avait été archivée avec la suppression (cascade)
+  var _hasEmailRet = (e.email||'').trim()!=='';
+  var carteEleve = _hasEmailRet ? (adminData.cartes||[]).find(function(c){ return c.email===e.email && c.statut==='supprimé'; }) : null;
+  var _restoreCarte = carteEleve && (e.type||'')!=='forfait';
+  var _newCarteStatut = '';
+  if (_restoreCarte) {
+    _newCarteStatut = (Number(carteEleve.utilises)>0) ? 'Active' : 'Nouvelle carte';
+    carteEleve.statut = _newCarteStatut;
+  }
   afficherToast('✓ '+nom+' rétabli·e');
   renderTab();
   if (!IS_DEMO) {
-    TEV.client.from('inscriptions_cours').update({statut: 'inscrit'}).eq('id', id)
+    var ops = [Promise.resolve(TEV.client.from('inscriptions_cours').update({statut: 'inscrit'}).eq('id', id))];
+    if (_restoreCarte) ops.push(Promise.resolve(TEV.client.from('eleves').update({carte_statut: _newCarteStatut}).eq('email', e.email)));
+    Promise.all(ops)
     .then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
   }
@@ -8250,7 +8261,7 @@ function supprimerEleve(id) {
   var h='<div class="modal-titre" style="color:#ff6b6b;">🗑 Supprimer l\'élève</div>'
     +'<div style="font-size:14px;font-weight:600;margin-bottom:8px;">'+e.prenom+' '+e.nom+'</div>'
     +'<div style="font-size:12px;color:var(--dim);margin-bottom:18px;">'+e.cours+'</div>'
-    +'<div style="font-size:12px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:10px;margin-bottom:16px;color:#ff6b6b;">L\'élève sera archivé·e et apparaîtra en grisé en bas de la liste.</div>'
+    +'<div style="font-size:12px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);border-radius:8px;padding:10px;margin-bottom:16px;color:#ff6b6b;">Seul ce cours ('+e.cours+') sera supprimé — ses autres cours éventuels sont conservés. L\'élève apparaîtra en grisé en bas de la liste.</div>'
     +'<div class="btn-row">'
     +'<button class="btn" style="flex:2;background:#ff6b6b;color:#fff;" onclick="confirmerSupprimerEleve(\''+id+'\')">🗑 Confirmer la suppression</button>'
     +'<button class="btn btn-ghost" data-action="fermer-contact">Annuler</button>'
@@ -8263,21 +8274,33 @@ function confirmerSupprimerEleve(id) {
   if(!e){fermerContact();return;}
   var nom=e.prenom+' '+e.nom, email=e.email;
   e.statut='supprimé';
-  // Supprimer aussi les cartes associées dans l'état local
-  (adminData.coursTango||[]).forEach(function(ct){
-    if(ct.email===email && ct.type&&ct.type.indexOf('carte')>=0 && ct.statut==='inscrit') ct.statut='supprimé';
+  // ⚠️ On ne supprime QUE ce cours. La carte (et ses lignes carte10 associées, renouvellements inclus)
+  // n'est archivée que si l'élève n'a PLUS AUCUN autre cours actif dans la saison.
+  var _saiSup=saisonActive();
+  var _hasEmailSup=(email||'').trim()!=='';
+  var _resteActif=_hasEmailSup && (adminData.coursTango||[]).some(function(ct){
+    return ct.email===email && String(ct.id)!==String(id) && ct.statut==='inscrit'
+      && !ct._isRenewalRow && (ct.saison||saisonCourante())===_saiSup;
   });
-  var carteEleve=(adminData.cartes||[]).find(function(c){ return c.email===email; });
-  if(carteEleve) carteEleve.statut='supprimé';
+  var carteEleve=null;
+  if(_hasEmailSup && !_resteActif){
+    (adminData.coursTango||[]).forEach(function(ct){
+      if(ct.email===email && ct.type&&ct.type.indexOf('carte')>=0 && ct.statut==='inscrit') ct.statut='supprimé';
+    });
+    carteEleve=(adminData.cartes||[]).find(function(c){ return c.email===email; });
+    if(carteEleve) carteEleve.statut='supprimé';
+  }
   fermerContact();
-  afficherToast('🗑 '+nom+' archivé·e');
+  afficherToast('🗑 '+nom+' archivé·e'+(_resteActif?' (ce cours uniquement — ses autres cours sont conservés)':''));
   renderTab();
   if (!IS_DEMO) {
     var ops=[
-      Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('id',id)),
-      Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('email',email).eq('type','carte10').eq('statut','inscrit'))
+      Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('id',id))
     ];
-    if(carteEleve) ops.push(Promise.resolve(TEV.client.from('eleves').update({carte_statut:'supprimé'}).eq('email',email)));
+    if(_hasEmailSup && !_resteActif){
+      ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('email',email).eq('type','carte10').eq('statut','inscrit')));
+      if(carteEleve) ops.push(Promise.resolve(TEV.client.from('eleves').update({carte_statut:'supprimé'}).eq('email',email)));
+    }
     Promise.all(ops).then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur suppression: '+((err&&err.message)||'')); });
   }
