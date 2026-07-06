@@ -466,6 +466,8 @@
       const tailleCarte = ((used || 0) + (remaining || 0)) || 10;
       var _numCarte = (carte.numero || 1);
       $('carte-section-title').textContent = 'Ma carte de ' + tailleCarte + ' cours' + (_numCarte > 1 ? ' — ' + _numCarte + 'ᵉ de la saison' : '');
+      var _valLbl = $('carte-validite-label');
+      if (_valLbl) { var _dmAff = (carte.dureeMois >= 1 && carte.dureeMois <= 24) ? carte.dureeMois : 3; _valLbl.textContent = 'Validité : ' + _dmAff + ' mois + vacances scolaires'; }
       const pct = Math.min(100, (used / tailleCarte) * 100);
       const circumference = 2 * Math.PI * 54; // r=54
       const dashoffset = circumference * (1 - pct / 100);
@@ -6559,7 +6561,7 @@ body.theme-light .bandeau-inner{color:#fde68a;}
                 </div>
               </div>
               <div class="meta-row" id="meta-row-validite" style="margin-top:4px;">
-                <span class="meta-key" style="font-size:11px;color:var(--text-faint)">Validité : 3 mois + vacances scolaires</span>
+                <span class="meta-key" style="font-size:11px;color:var(--text-faint)" id="carte-validite-label">Validité : 3 mois + vacances scolaires</span>
               </div>
             </div>
             <!-- Pastille paiement -->
