@@ -458,7 +458,8 @@
       const used = carte.coursUtilises;
       const remaining = carte.coursRestants;
       const tailleCarte = ((used || 0) + (remaining || 0)) || 10;
-      $('carte-section-title').textContent = 'Ma carte de ' + tailleCarte + ' cours';
+      var _numCarte = (carte.numero || 1);
+      $('carte-section-title').textContent = 'Ma carte de ' + tailleCarte + ' cours' + (_numCarte > 1 ? ' — ' + _numCarte + 'ᵉ de la saison' : '');
       const pct = Math.min(100, (used / tailleCarte) * 100);
       const circumference = 2 * Math.PI * 54; // r=54
       const dashoffset = circumference * (1 - pct / 100);
@@ -2802,7 +2803,7 @@
       }
       dots += '</div>';
       h += '<div style="margin-top:20px;margin-bottom:20px;">';
-      h += '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--text);margin-bottom:12px;text-align:center;">🎫 Ma carte de ' + tailleMini + ' cours</div>';
+      h += '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--text);margin-bottom:12px;text-align:center;">🎫 Ma carte de ' + tailleMini + ' cours' + ((carte.numero||1) > 1 ? ' — ' + (carte.numero||1) + 'ᵉ de la saison' : '') + '</div>';
       h += '<div style="background:var(--carte-suivi-bg,var(--surface2));border:2px solid var(--carte-suivi-border,var(--border));border-radius:16px;padding:20px 18px;">';
       h += '<div style="display:flex;align-items:center;gap:20px;">';
       h += '<div style="flex-shrink:0;position:relative;width:80px;height:80px;">'
@@ -5026,6 +5027,7 @@
       // Capturer le nombre de cours AVANT le reset
       const _prevUtil = eleveData.carte ? (eleveData.carte.coursUtilises || 0) : 0;
       await TEV.renouvelerCarte({ eleveId: eleveData.eleve.id, paye: false });
+      eleveData.carte.numero = (eleveData.carte.numero || 1) + 1;
       // Insérer une ligne isRenewal pour que l'historique soit correct
       const _inscOrig = (eleveData.inscriptionsTango || []).find(function(i){
         var _dd = i.donnees && typeof i.donnees === 'object' ? i.donnees : {};

@@ -183,6 +183,7 @@ async function tevGetEleve(email) {
       dateExpiration: _fmtDateSb(eleve.carte_expiration),
       statut:         eleve.carte_statut,
       paye:           eleve.carte_paye,
+      numero:         eleve.carte_num || 1,
     },
     presences: (presences || []).map(p => ({
       date:   _fmtDateSb(p.date),
@@ -261,6 +262,7 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
     };
     renouvAuto     = true;
     renouvOverflow = overflow;
+    _tevIncrCarteNum(eleveId);
   } else {
     carteUpdate = {
       carte_utilises: totalApres,
@@ -304,7 +306,17 @@ function _tevCarteNbCours() {
 // ================================================================
 // CARTE — renouvelerCarte
 // ================================================================
+async function _tevIncrCarteNum(eleveId) {
+  // Numéro de carte (1ère/2ème… de la saison). Fire-and-forget : ne bloque JAMAIS
+  // le renouvellement, même si la colonne carte_num n'existe pas encore en DB.
+  try {
+    const { data: e } = await _tev.from('eleves').select('carte_num').eq('id', eleveId).single();
+    await _tev.from('eleves').update({ carte_num: ((e && e.carte_num) || 1) + 1 }).eq('id', eleveId);
+  } catch (e) {}
+}
+
 async function tevRenouvelerCarte({ eleveId, paye }) {
+  _tevIncrCarteNum(eleveId);
   await _tev.from('eleves').update({
     carte_utilises:   0,
     carte_restants:   _tevCarteNbCours(),
@@ -383,6 +395,7 @@ async function tevGetAdminData() {
     expiration:      _fmtDateSb(e.carte_expiration),
     statut:          e.carte_statut,
     paye:            e.carte_paye,
+    carteNum:        e.carte_num || 1,
     datesCours:      (presences || [])
       .filter(p => p.eleve_id === e.id)
       .map(p => _fmtDateSb(p.date)),

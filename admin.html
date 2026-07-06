@@ -10053,10 +10053,10 @@ function renderCartesDetails(d) {
       _histSegs.forEach(function(seg){
         var _hu=seg.length, _hf=seg[seg.length-1]||'', _he=_hf?calcExpiration(_hf,c.ville||'paris'):'';
         var _hdots='<div style="display:flex;gap:3px;flex-wrap:wrap;margin:4px 0;">';
-        for(var j=0;j<10;j++){var _dj=seg[j]||null;_hdots+='<div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:14px;height:14px;border-radius:50%;background:'+(j<_hu?'rgba(212,175,55,0.4)':'var(--s2)')+';border:1px solid '+(j<_hu?'rgba(212,175,55,0.6)':'var(--border)')+';flex-shrink:0;"></div>'+(_dj?'<div style="font-size:9px;color:var(--dim);white-space:nowrap;">'+fmtDateCourt(_dj)+'</div>':'')+'</div>';}
+        for(var j=0;j<Math.max(_hu,10);j++){var _dj=seg[j]||null;_hdots+='<div style="display:flex;flex-direction:column;align-items:center;gap:2px;"><div style="width:14px;height:14px;border-radius:50%;background:'+(j<_hu?'rgba(212,175,55,0.4)':'var(--s2)')+';border:1px solid '+(j<_hu?'rgba(212,175,55,0.6)':'var(--border)')+';flex-shrink:0;"></div>'+(_dj?'<div style="font-size:9px;color:var(--dim);white-space:nowrap;">'+fmtDateCourt(_dj)+'</div>':'')+'</div>';}
         _hdots+='</div>';
         _histHtml+='<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:4px;">';
-        _histHtml+='<div style="font-size:10px;color:var(--text);"><strong>'+_hu+'/10 cours</strong>';
+        _histHtml+='<div style="font-size:10px;color:var(--text);"><strong>'+_hu+'/'+Math.max(_hu,10)+' cours</strong>';
         if(_hf) _histHtml+=' · Début '+fmtDate(_hf);
         if(_he) _histHtml+=' · Exp. '+fmtDate(_he);
         _histHtml+='</div>'+_hdots+'</div>';
@@ -10075,7 +10075,7 @@ function renderCartesDetails(d) {
       +(c.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report</span>':'')
       +payePill
       +'</div>'
-      +'<div class="point-sub" style="font-size:10px;">'+nbUtil+'/'+totalSlots+' cours · '+expTxt+'</div>'
+      +'<div class="point-sub" style="font-size:10px;">'+((c.carteNum||1)>1?'Carte n°'+(c.carteNum||1)+' de la saison · ':'')+nbUtil+'/'+totalSlots+' cours · '+expTxt+'</div>'
       +miniDots
       +_histHtml
       +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">'
@@ -10222,6 +10222,7 @@ _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:_carteNbAdm
   if(btn){btn.disabled=true;btn.textContent='⏳';}
   var _mont = Number(montant) || 0;
   TEV.renouvelerCarte({eleveId:id,paye:paye===true}).then(function(){
+    var _cn=(adminData.cartes||[]).find(function(x){return String(x.id)===String(id);}); if(_cn) _cn.carteNum=(_cn.carteNum||1)+1;
     var _carteObj = (adminData.cartes||[]).find(function(x){return x.id===id;});
     var _email = _carteObj ? (_carteObj.email||'') : '';
     var _orig = _email ? (adminData.coursTango||[]).find(function(x){
