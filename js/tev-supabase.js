@@ -184,6 +184,7 @@ async function tevGetEleve(email) {
       statut:         eleve.carte_statut,
       paye:           eleve.carte_paye,
       numero:         eleve.carte_num || 1,
+      dureeMois:      eleve.carte_duree_mois || null,
     },
     presences: (presences || []).map(p => ({
       date:   _fmtDateSb(p.date),
@@ -251,7 +252,8 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
 
   if (totalApres > tailleAncienne) {
     const overflow  = totalApres - tailleAncienne;
-    const nouvExp   = _calcExpirationSb(date, eleve.ville);
+    const dureeNouvelle = _tevCarteDureeMois();
+    const nouvExp   = _calcExpirationSb(date, eleve.ville, dureeNouvelle);
     carteUpdate = {
       carte_utilises:   overflow,
       carte_restants:   tailleNouvelle - overflow,
@@ -259,6 +261,7 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
       carte_expiration: nouvExp,
       carte_paye:       false,
       carte_statut:     'Active',
+      carte_duree_mois: dureeNouvelle,
     };
     renouvAuto     = true;
     renouvOverflow = overflow;
@@ -270,7 +273,7 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
     };
     if (!eleve.carte_date_achat && estPremierCours) {
       carteUpdate.carte_date_achat = date;
-      carteUpdate.carte_expiration = _calcExpirationSb(date, eleve.ville);
+      carteUpdate.carte_expiration = _calcExpirationSb(date, eleve.ville, eleve.carte_duree_mois);
       carteUpdate.carte_statut     = 'Active';
     }
   }
@@ -291,6 +294,18 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
 // Défaut 10. Le miroir localStorage est alimenté par l'admin (chargerParamsRemote)
 // et par l'espace élève (fetch au login).
 // ================================================================
+function _tevCarteDureeMois() {
+  try {
+    var v = localStorage.getItem('tev_carte_duree_mois');
+    if (v != null) {
+      var o = v; try { o = JSON.parse(v); } catch(e) {}
+      var n = parseInt((o && o.nb != null) ? o.nb : o, 10);
+      if (n >= 1 && n <= 24) return n;
+    }
+  } catch(e) {}
+  return 3;
+}
+
 function _tevCarteNbCours() {
   try {
     var v = localStorage.getItem('tev_carte_nb_cours');
@@ -315,15 +330,18 @@ async function _tevIncrCarteNum(eleveId) {
   } catch (e) {}
 }
 
-async function tevRenouvelerCarte({ eleveId, paye }) {
+async function tevRenouvelerCarte({ eleveId, paye, nbCours, dureeMois }) {
   _tevIncrCarteNum(eleveId);
+  const _nb = (parseInt(nbCours, 10) >= 1 && parseInt(nbCours, 10) <= 100) ? parseInt(nbCours, 10) : _tevCarteNbCours();
+  const _dm = (parseInt(dureeMois, 10) >= 1 && parseInt(dureeMois, 10) <= 24) ? parseInt(dureeMois, 10) : _tevCarteDureeMois();
   await _tev.from('eleves').update({
     carte_utilises:   0,
-    carte_restants:   _tevCarteNbCours(),
+    carte_restants:   _nb,
     carte_date_achat: null,
     carte_expiration: null,
     carte_statut:     'Nouvelle carte',
     carte_paye:       paye !== false,
+    carte_duree_mois: _dm,
   }).eq('id', eleveId);
   return { ok: true };
 }
@@ -396,6 +414,7 @@ async function tevGetAdminData() {
     statut:          e.carte_statut,
     paye:            e.carte_paye,
     carteNum:        e.carte_num || 1,
+    dureeMois:       e.carte_duree_mois || null,
     datesCours:      (presences || [])
       .filter(p => p.eleve_id === e.id)
       .map(p => _fmtDateSb(p.date)),
@@ -776,12 +795,14 @@ async function tevRefreshCoursDates() {
 // ================================================================
 // UTILITAIRES
 // ================================================================
-function _calcExpirationSb(dateStr, ville) {
+function _calcExpirationSb(dateStr, ville, dureeMois) {
   if (!dateStr) return null;
-  // T12:00:00 évite le glissement de -1 jour dû au décalage UTC/heure locale
+  // Fenêtre A paramétrable (durée de validité en mois, défaut 3) — B et C inchangés.
+  // ⚠️ Toute modification ici doit être répliquée À L'IDENTIQUE dans calcExpiration (admin.html).
+  let _dm = parseInt(dureeMois, 10); if (!(_dm >= 1 && _dm <= 24)) _dm = 3;
   const debut = new Date(dateStr + 'T12:00:00');
   const fin   = new Date(debut.getTime());
-  fin.setMonth(fin.getMonth() + 3);
+  fin.setMonth(fin.getMonth() + _dm);
 
   // Dates de cours depuis Paramètres (localStorage mis à jour depuis Supabase)
   let stored = {};
@@ -808,7 +829,7 @@ function _calcExpirationSb(dateStr, ville) {
       if (Math.abs(_closestDt - debut) <= 3 * 24 * 60 * 60 * 1000) {
         debut.setTime(_closestDt.getTime());
         fin.setTime(debut.getTime());
-        fin.setMonth(fin.getMonth() + 3);
+        fin.setMonth(fin.getMonth() + _dm);
       }
     }
   }

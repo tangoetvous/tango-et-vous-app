@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.json"/>
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=7"></script>
+<script src="js/tev-supabase.js?v=8"></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
   // ================================================================
@@ -306,6 +306,12 @@
           var v = res && res.data && res.data.valeur;
           var n = parseInt((v && v.nb != null) ? v.nb : v, 10);
           if (n >= 1 && n <= 100) { _carteNbCours = n; try { localStorage.setItem('tev_carte_nb_cours', String(n)); } catch(e) {} }
+        }).catch(function(){});
+      TEV.client.from('parametres').select('valeur').eq('cle','tev_carte_duree_mois').maybeSingle()
+        .then(function(res){
+          var v = res && res.data && res.data.valeur;
+          var n = parseInt((v && v.nb != null) ? v.nb : v, 10);
+          if (n >= 1 && n <= 24) { try { localStorage.setItem('tev_carte_duree_mois', String(n)); } catch(e) {} }
         }).catch(function(){});
       // Rafraîchir les dates de cours depuis Supabase (pour calcul expiration carte 10)
       tevRefreshCoursDates().catch(function(){});

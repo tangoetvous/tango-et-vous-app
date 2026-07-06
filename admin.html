@@ -305,6 +305,19 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
         </label>
       </div>
     </div>
+    <div style="margin:10px 0;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:8px;">Nouvelle carte</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;">Cours
+          <input type="number" id="modal-ren-nb" min="1" max="100" style="width:80px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:14px;"></label>
+        <label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;">Validité (mois)
+          <input type="number" id="modal-ren-duree" min="1" max="24" style="width:80px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:14px;"></label>
+      </div>
+    </div>
+    <div style="margin:12px 0;padding-top:10px;border-top:1px dashed var(--border);">
+      <button class="btn btn-ghost" onclick="renouvelerVersForfait()" style="width:100%;font-size:12px;">🔄 Passer en complément forfait annuel</button>
+      <div style="font-size:10px;color:var(--dim);margin-top:5px;line-height:1.5;">L'élève paie un complément sur AssoConnect pour passer au forfait ; le solde de cours restants n'est pas conservé. Lien de paiement à envoyer manuellement.</div>
+    </div>
     <div id="modal-ren-montant-row" style="display:none;margin:10px 0;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:8px;">Montant</div>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -543,7 +556,7 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
 
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=7"></script>
+<script src="js/tev-supabase.js?v=8"></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
 // ================================================================
@@ -654,12 +667,14 @@ var STAGES = [
   {date:'2027-06-19',label:'Sam. 19 Juin 2027',technique:true,nStages:2,themes:['À venir','À venir']}
 ];
 var MILONGAS = ['2026-04-05','2026-04-12','2026-05-03','2026-05-24','2026-06-07','2026-09-13','2026-09-27','2026-10-04','2026-10-25','2026-11-08','2026-11-22','2026-12-06','2026-12-20','2027-01-10','2027-01-24','2027-02-07','2027-02-28','2027-03-14','2027-03-28','2027-04-11','2027-04-25','2027-05-16','2027-05-30','2027-06-13'];
-function calcExpiration(datePremierCours, ville) {
+function calcExpiration(datePremierCours, ville, dureeMois) {
   if (!datePremierCours) return '';
-  // T12:00:00 évite le glissement de -1 jour dû au décalage UTC/heure locale
+  // Fenêtre A paramétrable (durée de validité en mois, défaut 3) — B et C inchangés.
+  // ⚠️ Toute modification ici doit être répliquée À L'IDENTIQUE dans _calcExpirationSb (tev-supabase.js).
+  var _dm = parseInt(dureeMois, 10); if (!(_dm >= 1 && _dm <= 24)) _dm = 3;
   var debut = new Date(datePremierCours + 'T12:00:00');
   var fin   = new Date(debut.getTime());
-  fin.setMonth(fin.getMonth() + 3);
+  fin.setMonth(fin.getMonth() + _dm);
 
   // Dates de cours depuis Paramètres (localStorage mis à jour depuis Supabase)
   var stored = {};
@@ -685,7 +700,7 @@ function calcExpiration(datePremierCours, ville) {
       if (Math.abs(_closestDt - debut) <= 3 * 24 * 60 * 60 * 1000) {
         debut = _closestDt;
         fin = new Date(debut.getTime());
-        fin.setMonth(fin.getMonth() + 3);
+        fin.setMonth(fin.getMonth() + _dm);
       }
     }
   }
@@ -1187,6 +1202,23 @@ function _carteNbAdmin() {
     if (v != null) { var o=v; try{o=JSON.parse(v);}catch(e){} var n=parseInt((o&&o.nb!=null)?o.nb:o,10); if(n>=1&&n<=100) return n; }
   } catch(e) {}
   return 10;
+}
+// Durée de validité (mois) des NOUVELLES cartes (clé tev_carte_duree_mois, défaut 3)
+function _carteDureeAdmin() {
+  try {
+    var v = localStorage.getItem('tev_carte_duree_mois');
+    if (v != null) { var o=v; try{o=JSON.parse(v);}catch(e){} var n=parseInt((o&&o.nb!=null)?o.nb:o,10); if(n>=1&&n<=24) return n; }
+  } catch(e) {}
+  return 3;
+}
+// Lecture des champs carte d'un formulaire (nb + durée), fallback paramètres
+function _carteFormVals(prefix) {
+  var nb = parseInt((gel(prefix+'-carte-nb')||{}).value, 10);
+  var dm = parseInt((gel(prefix+'-carte-duree')||{}).value, 10);
+  return {
+    nb: (nb >= 1 && nb <= 100) ? nb : _carteNbAdmin(),
+    duree: (dm >= 1 && dm <= 24) ? dm : _carteDureeAdmin()
+  };
 }
 // Taille de la carte EN COURS d'un objet carte (invariant utilises+restants, fallback report/10)
 function _carteTaille(c) {
@@ -2310,6 +2342,8 @@ var _renewModalCb = null;
 var _renewModalId = null;
 function ouvrirModalRenouveler(id, nom) {
   gel('modal-ren-nom').textContent = nom || '';
+  if (gel('modal-ren-nb')) gel('modal-ren-nb').value = _carteNbAdmin();
+  if (gel('modal-ren-duree')) gel('modal-ren-duree').value = _carteDureeAdmin();
   var radios = document.querySelectorAll('input[name="ren-paye"]');
   radios.forEach(function(r){ r.checked = r.value==='non'; });
   var montantRow = gel('modal-ren-montant-row');
@@ -2378,14 +2412,28 @@ function confirmerModalRenouveler() {
   var el = document.querySelector('input[name="ren-paye"]:checked');
   var paye = el ? el.value==='oui' : false;
   var nom = (gel('modal-ren-nom')||{}).textContent || '';
+  var nb = parseInt((gel('modal-ren-nb')||{}).value, 10);
+  var duree = parseInt((gel('modal-ren-duree')||{}).value, 10);
+  if (!(nb >= 1 && nb <= 100)) { afficherToast('⚠️ Nombre de cours invalide (1 à 100)'); return; }
+  if (!(duree >= 1 && duree <= 24)) { afficherToast('⚠️ Validité invalide (1 à 24 mois)'); return; }
   fermerModalRenouveler();
   if (!id) return;
   if (paye) {
     // Renouveler sans payer, puis ouvrir le modal paiement pour saisir les détails
-    renouvelerCarteAction(id, null, false, 0, function(){ ouvrirModalCartePaiement(id, nom); });
+    renouvelerCarteAction(id, null, false, 0, function(){ ouvrirModalCartePaiement(id, nom); }, nb, duree);
   } else {
-    renouvelerCarteAction(id, null, false, 0);
+    renouvelerCarteAction(id, null, false, 0, null, nb, duree);
   }
+}
+function renouvelerVersForfait() {
+  var id = _renewModalId;
+  var c = (adminData.cartes||[]).find(function(x){ return String(x.id)===String(id); });
+  if (!c || !(c.email||'').trim()) { afficherToast('⚠️ Fiche sans email — passage forfait impossible ici'); return; }
+  var nom = c.nom || '';
+  fermerModalRenouveler();
+  ouvrirModalConfirm('Passer ' + nom + ' en complément forfait annuel ?\n\nLe solde de cours restants ne sera pas conservé. Pensez à lui envoyer le lien de paiement AssoConnect du complément.', function(){
+    passerEnForfait(c.email, nom);
+  });
 }
 
 // Attacher les boutons des modals une seule fois
@@ -2621,7 +2669,7 @@ function traiterMsgInscription(msg, doRender) {
           adminData._dailyCounts[_dck] = (adminData._dailyCounts[_dck]||0) + Math.min(2, d.nbAdded);
         }
       }
-      if (!c.datePremierCours && d.date) { c.datePremierCours=d.date; c.expiration=calcExpiration(d.date,c.ville||'paris'); }
+      if (!c.datePremierCours && d.date) { c.datePremierCours=d.date; c.expiration=calcExpiration(d.date,c.ville||'paris',c.dureeMois); }
     }
     if (doRender) { renderTab(); return; }
   }
@@ -2636,7 +2684,7 @@ function traiterMsgInscription(msg, doRender) {
         // Renouvellement avec débordement : premier cours = date du débord
         cRenouv.datesCours=[d.date];
         cRenouv.datePremierCours=d.date;
-        cRenouv.expiration=calcExpiration(d.date,cRenouv.ville||'paris');
+        cRenouv.expiration=calcExpiration(d.date,cRenouv.ville||'paris',_carteDureeAdmin());
       } else {
         // Renouvellement manuel élève (0/10, pas encore de cours)
         cRenouv.datesCours=[];
@@ -3558,10 +3606,11 @@ function _renderFeaturesSection() {
     +'<button class="btn btn-ghost" data-action="save-bandeau-accueil" style="font-size:12px;">💾 Enregistrer</button>'
     +'</div>'
     +'<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;">'
-    +'<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">🎫 Nombre de cours des nouvelles cartes</div>'
-    +'<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">S\'applique aux cartes créées ou renouvelées à partir de maintenant (inscription, renouvellement admin ou élève). Les cartes en cours gardent leur taille. Défaut : 10.</div>'
-    +'<div style="display:flex;align-items:center;gap:8px;">'
-    +'<input type="number" id="carte-nb-cours-input" min="1" max="100" value="'+_carteNbAdmin()+'" style="'+iS+'width:90px;">'
+    +'<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">🎫 Nouvelles cartes de cours — valeurs par défaut</div>'
+    +'<div style="font-size:11px;color:var(--dim);margin-bottom:6px;">S\'appliquent aux cartes créées ou renouvelées à partir de maintenant (préremplies dans les formulaires, modifiables par élève). Les cartes en cours ne changent pas. Défauts : 10 cours / 3 mois.</div>'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+    +'<label style="font-size:11px;color:var(--dim);">Cours <input type="number" id="carte-nb-cours-input" min="1" max="100" value="'+_carteNbAdmin()+'" style="'+iS+'width:80px;margin-left:4px;"></label>'
+    +'<label style="font-size:11px;color:var(--dim);">Validité (mois) <input type="number" id="carte-duree-input" min="1" max="24" value="'+_carteDureeAdmin()+'" style="'+iS+'width:80px;margin-left:4px;"></label>'
     +'<button class="btn btn-ghost" data-action="save-carte-nb-cours" style="font-size:12px;">💾 Enregistrer</button>'
     +'</div></div>';
   h += '</div></div>';
@@ -7278,13 +7327,18 @@ function handleAction(action, btn) {
       break;
     case 'save-carte-nb-cours':
       (function() {
-        var inp = gel('carte-nb-cours-input');
+        var inp = gel('carte-nb-cours-input'), inpD = gel('carte-duree-input');
         if (!inp) return;
         var n = parseInt(inp.value, 10);
-        if (!(n >= 1 && n <= 100)) { afficherToast('⚠️ Valeur invalide (1 à 100)'); return; }
-        try { localStorage.setItem('tev_carte_nb_cours', String(n)); } catch(e) {}
-        if (!IS_DEMO) Promise.resolve(TEV.setParam('tev_carte_nb_cours', n)).catch(function(){});
-        afficherToast('✓ Nouvelles cartes : ' + n + ' cours');
+        var d = inpD ? parseInt(inpD.value, 10) : 3;
+        if (!(n >= 1 && n <= 100)) { afficherToast('⚠️ Nombre de cours invalide (1 à 100)'); return; }
+        if (!(d >= 1 && d <= 24)) { afficherToast('⚠️ Validité invalide (1 à 24 mois)'); return; }
+        try { localStorage.setItem('tev_carte_nb_cours', String(n)); localStorage.setItem('tev_carte_duree_mois', String(d)); } catch(e) {}
+        if (!IS_DEMO) {
+          Promise.resolve(TEV.setParam('tev_carte_nb_cours', n)).catch(function(){});
+          Promise.resolve(TEV.setParam('tev_carte_duree_mois', d)).catch(function(){});
+        }
+        afficherToast('✓ Nouvelles cartes : ' + n + ' cours · ' + d + ' mois');
       })();
       break;
     case 'save-bandeau-accueil':
@@ -9691,7 +9745,7 @@ function imprimerCartesPointage() {
     var rows = grps[k].map(function(c) {
       var nbUtil = c.utilises || 0;
       var totalSlots = _carteTaille(c);
-      var expAff = c.expiration || (c.datePremierCours ? calcExpiration(c.datePremierCours, c.ville||'paris') : '');
+      var expAff = c.expiration || (c.datePremierCours ? calcExpiration(c.datePremierCours, c.ville||'paris', c.dureeMois) : '');
       var exp = expAff ? new Date(expAff + 'T00:00:00') : null;
       var days = exp ? Math.ceil((exp - now) / 86400000) : null;
       var statut = nbUtil >= totalSlots ? 'À renouveler' : (days !== null && days < 0) ? 'Expirée' : (days !== null && days < 14) ? 'Expire bientôt' : 'Active';
@@ -9952,7 +10006,7 @@ function renderCartesPointage(d) {
     var nbUtil=c.utilises||0;
     var totalSlots=_carteTaille(c);
     var expAff=c.expiration;
-    if(!expAff&&c.datePremierCours)expAff=calcExpiration(c.datePremierCours,c.ville||'paris');
+    if(!expAff&&c.datePremierCours)expAff=calcExpiration(c.datePremierCours,c.ville||'paris',c.dureeMois);
     var exp=expAff?new Date(expAff+'T00:00:00'):null;
     var days=exp?Math.ceil((exp-now)/86400000):null;
     var fini=nbUtil>=totalSlots||(days!==null&&days<0);
@@ -9996,7 +10050,7 @@ function renderCartesDetails(d) {
     var nbUtil=c.utilises||0, datesCours=c.datesCours||[];
     var totalSlots=_carteTaille(c);
     var expAff=c.expiration;
-    if(!expAff&&c.datePremierCours)expAff=calcExpiration(c.datePremierCours,c.ville||'paris');
+    if(!expAff&&c.datePremierCours)expAff=calcExpiration(c.datePremierCours,c.ville||'paris',c.dureeMois);
     var exp=expAff?new Date(expAff+'T00:00:00'):null;
     var days=exp?Math.ceil((exp-now)/86400000):null;
     var fini=nbUtil>=totalSlots||(days!==null&&days<0);
@@ -10126,7 +10180,8 @@ function pointerCoursAction(id, date, nbCours, btn) {
         c.datesCours=[date];
         c.utilises=ov; c.restants=_tNouv-ov;
         c.datePremierCours=date;
-        c.expiration=calcExpiration(date,c.ville||'paris');
+        c.dureeMois=_carteDureeAdmin();
+        c.expiration=calcExpiration(date,c.ville||'paris',c.dureeMois);
         c.paye=false;
         try{localStorage.setItem('tev_nonpayee_'+c.email,'1');}catch(e){}
         _broadcastAdminSync('carteUpdate',{email:c.email,utilises:ov,restants:_tNouv-ov,datesCours:[date],datePremierCours:date,expiration:c.expiration,paye:false});
@@ -10134,7 +10189,7 @@ function pointerCoursAction(id, date, nbCours, btn) {
       } else {
         for(var i=0;i<aAjouter;i++)c.datesCours.push(date);
         c.utilises=totalApres; c.restants=Math.max(0,_tAnc-totalApres);
-        if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris');}
+        if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris',c.dureeMois);}
         if(estPremierCours)afficherToast('✉️ Email de bienvenue envoyé à '+(c.nom||c.email||''));
         _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:c.datePremierCours,expiration:c.expiration});
       }
@@ -10155,14 +10210,14 @@ function pointerCoursAction(id, date, nbCours, btn) {
         if(r&&r.renouvAuto){
           var ov=r.overflow||1; var _tNv=_carteNbAdmin();
           syncData={email:c.email,utilises:ov,restants:_tNv-ov,paye:false,
-            datePremierCours:date,expiration:calcExpiration(date,c.ville||'paris')};
+            datePremierCours:date,expiration:calcExpiration(date,c.ville||'paris',_carteDureeAdmin())};
           try{localStorage.setItem('tev_nonpayee_'+c.email,'1');}catch(e){}
           afficherToast('✉️ Carte terminée — redémarrée à '+ov+'/'+_tNv+' (non payée) pour '+(c.nom||c.email||''));
         } else {
           syncData={email:c.email,utilises:Math.min((((c.utilises||0)+(c.restants||0))||10),(c.utilises||0)+added),
             restants:Math.max(0,(c.restants||0)-added),
             datePremierCours:c.datePremierCours||date,
-            expiration:c.expiration||calcExpiration(c.datePremierCours||date,c.ville||'paris')};
+            expiration:c.expiration||calcExpiration(c.datePremierCours||date,c.ville||'paris',c.dureeMois)};
         }
         _broadcastAdminSync('carteUpdate',syncData);
         // Email + notif in-app élève — fire and forget
@@ -10202,7 +10257,7 @@ function pointerCoursAction(id, date, nbCours, btn) {
                 niveau: c.niveau||'',
                 saison: saisonActive(),
                 datePremierCours: date,
-                expiration: calcExpiration(date, c.ville||'paris'),
+                expiration: calcExpiration(date, c.ville||'paris', c.dureeMois),
                 utilises: syncData.utilises,
                 restants: syncData.restants,
               }),
@@ -10214,15 +10269,18 @@ function pointerCoursAction(id, date, nbCours, btn) {
     })
     .catch(function(e){if(btn)btn.disabled=false;});
 }
-function renouvelerCarteAction(id, btn, paye, montant, onDone) {
-  if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=_carteNbAdmin();c.datePremierCours='';c.expiration='';c.datesCours=[];c.paye=paye===true;
+function renouvelerCarteAction(id, btn, paye, montant, onDone, nbCours, dureeMois) {
+  var _rNb = (parseInt(nbCours,10) >= 1 && parseInt(nbCours,10) <= 100) ? parseInt(nbCours,10) : _carteNbAdmin();
+  var _rDm = (parseInt(dureeMois,10) >= 1 && parseInt(dureeMois,10) <= 24) ? parseInt(dureeMois,10) : _carteDureeAdmin();
+  if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=_rNb;c.dureeMois=_rDm;c.datePremierCours='';c.expiration='';c.datesCours=[];c.paye=paye===true;
 var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='inscrit';});
 if(cte){cte.statut=paye===true?'inscrit':'attente_paiement';}
-_broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:_carteNbAdmin(),datesCours:[],datePremierCours:'',expiration:''});}renderTab();if(onDone)onDone();return;}
+_broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:_rNb,datesCours:[],datePremierCours:'',expiration:''});}renderTab();if(onDone)onDone();return;}
   if(btn){btn.disabled=true;btn.textContent='⏳';}
   var _mont = Number(montant) || 0;
-  TEV.renouvelerCarte({eleveId:id,paye:paye===true}).then(function(){
-    var _cn=(adminData.cartes||[]).find(function(x){return String(x.id)===String(id);}); if(_cn) _cn.carteNum=(_cn.carteNum||1)+1;
+  TEV.renouvelerCarte({eleveId:id,paye:paye===true,nbCours:_rNb,dureeMois:_rDm}).then(function(){
+    var _cn=(adminData.cartes||[]).find(function(x){return String(x.id)===String(id);});
+    if(_cn){ _cn.carteNum=(_cn.carteNum||1)+1; _cn.utilises=0; _cn.restants=_rNb; _cn.dureeMois=_rDm; _cn.datePremierCours=''; _cn.expiration=''; }
     var _carteObj = (adminData.cartes||[]).find(function(x){return x.id===id;});
     var _email = _carteObj ? (_carteObj.email||'') : '';
     var _orig = _email ? (adminData.coursTango||[]).find(function(x){
@@ -10355,7 +10413,7 @@ function sauvegarderEditCarte() {
   c.datesCours = dates.slice().reverse().concat(_histDates);
   if(dates[0]) c.datePremierCours = dates[0];
   // Toujours recalculer l'expiration quand datePremierCours change
-  if(c.datePremierCours) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris');
+  if(c.datePremierCours) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris', c.dureeMois);
   // Un vrai report a toujours saisonOrigine non vide (mis par reporterCarteJs).
   // Si isReport=true mais saisonOrigine vide → donnees corrompues → remettre à zéro localement.
   var _isRealReport = !!(c._fromCoursTango && c.isReport && c.saisonOrigine);
@@ -14228,6 +14286,12 @@ function renderValiderPaiement() {
     +COURS_VALS.map(function(c){ return '<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="checkbox" name="vp-cours" value="'+c+'" onchange="vpUpdatePaieZone()" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> '+c+'</label>'; }).join('')
     +'</div></div>'
     +'<div id="vp-cours-paie-zone"></div>'
+    +'<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;">'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">🎫 Si formule carte — paramètres de la carte</div>'
+    +'<div style="display:flex;gap:14px;flex-wrap:wrap;">'
+    +'<label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;">Cours <input type="number" id="vp-carte-nb" min="1" max="100" value="'+_carteNbAdmin()+'" style="width:75px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:13px;"></label>'
+    +'<label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;">Validité (mois) <input type="number" id="vp-carte-duree" min="1" max="24" value="'+_carteDureeAdmin()+'" style="width:75px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:13px;"></label>'
+    +'</div></div>'
     +'<div class="box-err" id="vp-err"></div>'
     +'<div class="box-ok" id="vp-ok">✓ Paiement validé ! L\'élève est maintenant inscrit.</div>'
     +'<div class="btn-row"><button class="btn btn-gold" onclick="soumettreValiderPaiement()" style="flex:2;">✓ Valider le paiement → Inscrire</button>'
@@ -14365,6 +14429,7 @@ window.vpPrefill = function(id) {
 };
 
 window.soumettreValiderPaiement = function(force) {
+  var _cfv = _carteFormVals('vp');
   var err=gel('vp-err'), ok=gel('vp-ok');
   if(err)err.style.display='none'; if(ok)ok.style.display='none';
   try{
@@ -14427,7 +14492,7 @@ window.soumettreValiderPaiement = function(force) {
   var cours0=coursCoches[0],ville0=cours0.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris',niveau0=cours0.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   var niveauLbl0=niveau0==='debutant'?'Débutant':'Intermédiaire';
   if(anyMainCarte10&&!adminData.cartes.find(function(c){return c.email===email;})){
-    adminData.cartes.push({id:'C'+Date.now(),nom:prenom+' '+nom,prenom:prenom,niveau:niveauLbl0,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:_carteNbAdmin(),datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville0,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
+    adminData.cartes.push({id:'C'+Date.now(),nom:prenom+' '+nom,prenom:prenom,niveau:niveauLbl0,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:_cfv.nb,dureeMois:_cfv.duree,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville0,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
     recalcStats();
   }
   if(ok)ok.style.display='block';
@@ -14452,7 +14517,7 @@ window.soumettreValiderPaiement = function(force) {
         updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').insert({prenom:prenom,nom:nom,email:email,tel:tel,role:role,ville:ville,niveau:niveau,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:dateP?{datePremierPaiement:dateP}:{}})));
       }
     });
-    Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?_carteNbAdmin():0,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
+    Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?_cfv.nb:0,carte_duree_mois:anyMainCarte10?_cfv.duree:null,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     Promise.all(updates).then(function(){
       // I03 — inscription validée et payée (tous les cours cochés)
       var coursInfosVP = coursCoches.map(function(cours) {
@@ -14548,6 +14613,12 @@ function renderFormulaireInscriptionDirecteAdmin() {
     +COURS_VALS.map(function(c){ return '<label style="display:flex;align-items:center;gap:6px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text);margin-bottom:0;cursor:pointer;"><input type="checkbox" name="di-cours" value="'+c+'" onchange="diUpdatePaieZone()" style="width:auto;padding:0;flex-shrink:0;margin:0;"/> '+c+'</label>'; }).join('')
     +'</div></div>'
     +'<div id="di-cours-paie-zone"></div>'
+    +'<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;">'
+    +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px;">🎫 Si formule carte — paramètres de la carte</div>'
+    +'<div style="display:flex;gap:14px;flex-wrap:wrap;">'
+    +'<label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;">Cours <input type="number" id="di-carte-nb" min="1" max="100" value="'+_carteNbAdmin()+'" style="width:75px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:13px;"></label>'
+    +'<label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;">Validité (mois) <input type="number" id="di-carte-duree" min="1" max="24" value="'+_carteDureeAdmin()+'" style="width:75px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:13px;"></label>'
+    +'</div></div>'
     +'<div id="di-err" style="display:none;background:#1a0000;border-left:3px solid var(--danger);padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#ff6b6b;margin-bottom:10px;"></div>'
     +'<div id="di-ok"  style="display:none;background:#001a00;border-left:3px solid #4ade80;padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#4ade80;margin-bottom:10px;">✓ Élève inscrit·e !</div>'
     +'<button class="btn btn-gold" style="width:100%;" onclick="soumettreInscriptionDirecte()">✓ Inscrire</button>'
@@ -14639,6 +14710,7 @@ window.diUpdatePaieZone = function() {
   z.innerHTML = h;
 };
 window.soumettreInscriptionDirecte = function(force) {
+  var _cfv = _carteFormVals('di');
   var err = gel('di-err'), ok = gel('di-ok');
   if(err) err.style.display='none'; if(ok) ok.style.display='none';
   try {
@@ -14721,7 +14793,7 @@ window.soumettreInscriptionDirecte = function(force) {
   var niveau0=cours0.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   var niveauLbl0=niveau0==='debutant'?'Débutant':'Intermédiaire';
   if(anyMainCarte10&&!adminData.cartes.find(function(c){return c.email===email;})){
-    adminData.cartes.push({id:'C'+ts,nom:prenom+' '+nom,prenom:prenom,niveau:niveauLbl0,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:_carteNbAdmin(),datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville0,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
+    adminData.cartes.push({id:'C'+ts,nom:prenom+' '+nom,prenom:prenom,niveau:niveauLbl0,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:_cfv.nb,dureeMois:_cfv.duree,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville0,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
     recalcStats();
   }
   if(ok) ok.style.display='block';
@@ -14736,13 +14808,13 @@ window.soumettreInscriptionDirecte = function(force) {
     // Mettre à jour les champs carte sur la ligne eleves existante, ou créer si absente
     var _elvProm = Promise.resolve(TEV.client.from('eleves').update({
       carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',
-      carte_utilises:0, carte_restants:anyMainCarte10?_carteNbAdmin():0, carte_paye:true
+      carte_utilises:0, carte_restants:anyMainCarte10?_cfv.nb:0, carte_duree_mois:anyMainCarte10?_cfv.duree:null, carte_paye:true
     }).eq('email',email).select('id')).then(function(r){
       if (r && r.data && r.data.length) return; // ligne existante mise à jour
       return Promise.resolve(TEV.client.from('eleves').insert({
         prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,
         statut_eleve:'Actif',source:'inscription',saison:sai,
-        carte_utilises:0,carte_restants:anyMainCarte10?_carteNbAdmin():0,
+        carte_utilises:0,carte_restants:anyMainCarte10?_cfv.nb:0,carte_duree_mois:anyMainCarte10?_cfv.duree:null,
         carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true
       }));
     }).catch(function(){});
