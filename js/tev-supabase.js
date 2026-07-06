@@ -235,6 +235,10 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
   // Mettre à jour la carte
   const utilisesAvant = eleve.carte_utilises || 0;
   const totalApres    = utilisesAvant + aAjouter;
+  // Taille de la carte EN COURS = utilises + restants (invariant du modèle, fallback 10)
+  const tailleAncienne = (utilisesAvant + (eleve.carte_restants || 0)) || 10;
+  // Taille d'une NOUVELLE carte = paramètre global (Paramètres → Fonctionnalités)
+  const tailleNouvelle = _tevCarteNbCours();
   let renouvAuto = false, renouvOverflow = 0;
   let carteUpdate = {};
 
@@ -244,12 +248,12 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
   const _coursDatesVille = eleve.ville === 'vincennes' ? _storedDates.vincennes : _storedDates.paris;
   if (!_coursDatesVille || !_coursDatesVille.length) await tevRefreshCoursDates();
 
-  if (totalApres > 10) {
-    const overflow  = totalApres - 10;
+  if (totalApres > tailleAncienne) {
+    const overflow  = totalApres - tailleAncienne;
     const nouvExp   = _calcExpirationSb(date, eleve.ville);
     carteUpdate = {
       carte_utilises:   overflow,
-      carte_restants:   10 - overflow,
+      carte_restants:   tailleNouvelle - overflow,
       carte_date_achat: date,
       carte_expiration: nouvExp,
       carte_paye:       false,
@@ -281,12 +285,29 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
 }
 
 // ================================================================
+// CARTE — taille paramétrable (clé Supabase/localStorage tev_carte_nb_cours)
+// Défaut 10. Le miroir localStorage est alimenté par l'admin (chargerParamsRemote)
+// et par l'espace élève (fetch au login).
+// ================================================================
+function _tevCarteNbCours() {
+  try {
+    var v = localStorage.getItem('tev_carte_nb_cours');
+    if (v != null) {
+      var o = v; try { o = JSON.parse(v); } catch(e) {}
+      var n = parseInt((o && o.nb != null) ? o.nb : o, 10);
+      if (n >= 1 && n <= 100) return n;
+    }
+  } catch(e) {}
+  return 10;
+}
+
+// ================================================================
 // CARTE — renouvelerCarte
 // ================================================================
 async function tevRenouvelerCarte({ eleveId, paye }) {
   await _tev.from('eleves').update({
     carte_utilises:   0,
-    carte_restants:   10,
+    carte_restants:   _tevCarteNbCours(),
     carte_date_achat: null,
     carte_expiration: null,
     carte_statut:     'Nouvelle carte',

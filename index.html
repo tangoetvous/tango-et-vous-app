@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.json"/>
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=6"></script>
+<script src="js/tev-supabase.js?v=7"></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
   // ================================================================
@@ -87,6 +87,8 @@
   let _notifPollTimer = null;
   let _featMonNiveau = false; // flag Supabase tev_feature_mon_niveau.enabled — rubrique "Mon niveau · Test"
   let _bandeauAccueil = null; // { texte, actif } — bandeau défilant accueil
+  let _carteNbCours = 10;     // taille des nouvelles cartes de cours (param tev_carte_nb_cours)
+  try { var _cn0 = parseInt(localStorage.getItem('tev_carte_nb_cours'), 10); if (_cn0 >= 1 && _cn0 <= 100) _carteNbCours = _cn0; } catch(e) {}
 
   // ================================================================
   // HELPERS UI
@@ -298,6 +300,13 @@
           _bandeauAccueil = (res && res.data && res.data.valeur) ? res.data.valeur : null;
           if (currentTab === 'accueil') renderAccueil();
         }).catch(function(){});
+      // Taille des nouvelles cartes de cours (Paramètres → Fonctionnalités) — miroir localStorage pour tev-supabase.js
+      TEV.client.from('parametres').select('valeur').eq('cle','tev_carte_nb_cours').maybeSingle()
+        .then(function(res){
+          var v = res && res.data && res.data.valeur;
+          var n = parseInt((v && v.nb != null) ? v.nb : v, 10);
+          if (n >= 1 && n <= 100) { _carteNbCours = n; try { localStorage.setItem('tev_carte_nb_cours', String(n)); } catch(e) {} }
+        }).catch(function(){});
       // Rafraîchir les dates de cours depuis Supabase (pour calcul expiration carte 10)
       tevRefreshCoursDates().catch(function(){});
       // Absences déclarées par l'élève — localStorage d'abord, puis sync DB en arrière-plan
@@ -438,17 +447,19 @@
       photoInput.addEventListener('change', function(){ _uploadPhotoEleve(this); });
     }
 
-    // Forfait vs Carte 10 cours
+    // Forfait vs Carte de cours (taille paramétrable — invariant utilises+restants)
     const isForfait = carte.type === 'forfait';
     $('forfait-view').style.display = isForfait ? 'block' : 'none';
     $('carte10-view').style.display = isForfait ? 'none' : 'block';
-    $('carte-section-title').textContent = isForfait ? 'Mon inscription' : 'Ma carte de 10 cours';
+    if (isForfait) $('carte-section-title').textContent = 'Mon inscription';
 
     if (!isForfait) {
       // Carte — jauge circulaire
       const used = carte.coursUtilises;
       const remaining = carte.coursRestants;
-      const pct = Math.min(100, (used / 10) * 100);
+      const tailleCarte = ((used || 0) + (remaining || 0)) || 10;
+      $('carte-section-title').textContent = 'Ma carte de ' + tailleCarte + ' cours';
+      const pct = Math.min(100, (used / tailleCarte) * 100);
       const circumference = 2 * Math.PI * 54; // r=54
       const dashoffset = circumference * (1 - pct / 100);
       $('gauge-circle').style.strokeDasharray = circumference;
@@ -493,7 +504,7 @@
       // Barre de progression linéaire
       $('progress-bar-fill').style.width = pct + '%';
       $('progress-bar-fill').style.background = statusColor;
-      $('progress-label').textContent = `${used} cours utilisés sur 10`;
+      $('progress-label').textContent = `${used} cours utilisés sur ${tailleCarte}`;
 
       // URL AssoConnect dynamique
       const _renewUrlDash = (function(){
@@ -504,7 +515,7 @@
       if (btnRenDyn) btnRenDyn.href = _renewUrlDash;
 
       // État de la carte
-      const isExhausted = used >= 10;
+      const isExhausted = used >= tailleCarte;
       const isExpired   = days !== null && days < 0;
       const canStart    = isExhausted || isExpired;
       const isNonPaye   = carte.paye === false;
@@ -592,10 +603,11 @@
       _histSegs.forEach(function(seg){
         var _hu = seg.length, _hf = seg[seg.length - 1] || '', _hl = seg[0] || '';
         _h += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;">';
-        _h += '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">🎫 ' + _hu + '/10 cours utilisés</div>';
+        var _hTaille = Math.max(_hu, 10);
+        _h += '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">🎫 ' + _hu + '/' + _hTaille + ' cours utilisés</div>';
         if (_hf) _h += '<div style="font-size:12px;color:var(--text-dim);margin-bottom:6px;">Du ' + formatDate(_hf) + ' au ' + formatDate(_hl) + '</div>';
         var _hdots = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">';
-        for (var j = 0; j < 10; j++) {
+        for (var j = 0; j < _hTaille; j++) {
           var _dj = seg[j] || null;
           _hdots += '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">'
             + '<div style="width:16px;height:16px;border-radius:50%;background:' + (j < _hu ? 'rgba(212,175,55,0.5)' : 'var(--border)') + ';border:1px solid ' + (j < _hu ? 'rgba(212,175,55,0.7)' : 'var(--border)') + ';flex-shrink:0;"></div>'
@@ -2778,18 +2790,19 @@
     if (carte && carte.type === 'carte10' && (carte.coursUtilises != null || carte.coursRestants != null)) {
       const used      = Number(carte.coursUtilises) || 0;
       const remaining = Number(carte.coursRestants)  || 0;
-      const pct       = Math.min(100, (used / 10) * 100);
+      const tailleMini = (used + remaining) || 10;
+      const pct       = Math.min(100, (used / tailleMini) * 100);
       const sc = (carte.statut||'').includes('🔴') || (carte.statut||'').includes('⚫') ? '#c62828'
                : (carte.statut||'').includes('🟡') ? '#ff8800' : '#D4AF37';
       const circ = 2 * Math.PI * 34;
       const offset = circ * (1 - pct / 100);
       let dots = '<div style="display:flex;gap:5px;margin:12px 0 8px;">';
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < tailleMini; i++) {
         dots += '<div style="flex:1;height:6px;border-radius:3px;background:' + (i < used ? sc : 'var(--border)') + ';transition:background .3s;"></div>';
       }
       dots += '</div>';
       h += '<div style="margin-top:20px;margin-bottom:20px;">';
-      h += '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--text);margin-bottom:12px;text-align:center;">🎫 Ma carte de 10 cours</div>';
+      h += '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--text);margin-bottom:12px;text-align:center;">🎫 Ma carte de ' + tailleMini + ' cours</div>';
       h += '<div style="background:var(--carte-suivi-bg,var(--surface2));border:2px solid var(--carte-suivi-border,var(--border));border-radius:16px;padding:20px 18px;">';
       h += '<div style="display:flex;align-items:center;gap:20px;">';
       h += '<div style="flex-shrink:0;position:relative;width:80px;height:80px;">'
@@ -4732,7 +4745,7 @@
         if (d.expiration) eleveData.carte.dateExpiration = d.expiration;
         if (d.paye !== undefined) eleveData.carte.paye = d.paye;
       }
-      _showNotifDot('carte', '\uD83D\uDD14 Votre carte : ' + (d.utilises||0) + '/10 cours utilisés, ' + (d.restants||0) + ' restants');
+      _showNotifDot('carte', '\uD83D\uDD14 Votre carte : ' + (d.utilises||0) + '/' + (((d.utilises||0)+(d.restants||0))||10) + ' cours utilisés, ' + (d.restants||0) + ' restants');
       if (currentTab === 'carte') renderDashboard();
       if (currentTab === 'accueil') renderAccueil();
     }
@@ -4830,7 +4843,7 @@
       const msgEl = document.getElementById('self-pointer-msg');
       const okBtn = document.getElementById('btn-pointer-self-ok');
       document.getElementById('self-pointer-date').value = todayStr;
-      if (msgEl) { msgEl.textContent = 'Votre carte est épuisée (10/10). Cliquez sur « Renouveler sans payer pour l\'instant » avant de pointer.'; msgEl.style.display='block'; }
+      if (msgEl) { var _tEp = (((eleveData.carte&&eleveData.carte.coursUtilises)||0)+((eleveData.carte&&eleveData.carte.coursRestants)||0))||10; msgEl.textContent = 'Votre carte est épuisée (' + _tEp + '/' + _tEp + '). Cliquez sur « Renouveler sans payer pour l\'instant » avant de pointer.'; msgEl.style.display='block'; }
       if (okBtn) { okBtn.disabled = true; okBtn.textContent = '✓ Valider'; }
       document.getElementById('modal-pointer-self').style.display = 'flex';
       return;
@@ -4874,13 +4887,15 @@
         }
         const utilisesAvant = eleveData.carte.coursUtilises || 0;
         const totalApres = utilisesAvant + toAdd;
+        const _tailleAnc = (utilisesAvant + (eleveData.carte.coursRestants || 0)) || 10;
+        const _tailleNouv = (typeof _carteNbCours === 'number' && _carteNbCours >= 1) ? _carteNbCours : 10;
         for (let i=0; i<toAdd; i++)
           (eleveData.presences=eleveData.presences||[]).unshift({date,niveau:eleveData.eleve.niveau,note:'Pointage élève'});
-        if (totalApres > 10) {
-          // Overflow : même ligne réinitialisée à 1/10, non payée
-          const overflow = totalApres - 10;
+        if (totalApres > _tailleAnc) {
+          // Overflow : même ligne réinitialisée (nouvelle carte, taille paramétrée), non payée
+          const overflow = totalApres - _tailleAnc;
           eleveData.carte.coursUtilises = overflow;
-          eleveData.carte.coursRestants = 10 - overflow;
+          eleveData.carte.coursRestants = _tailleNouv - overflow;
           eleveData.carte.paye = false;
           eleveData.carte.dateAchat = '';
           eleveData.carte.dateExpiration = '';
@@ -4888,14 +4903,14 @@
           try {
             if (window.BroadcastChannel) {
               const bc = new BroadcastChannel('tev_inscriptions');
-              bc.postMessage({type:'cartePointage', data:{email:eleveData.eleve.email,date,nbAdded:overflow,utilises:overflow,restants:10-overflow,renouv:true,paye:false}});
+              bc.postMessage({type:'cartePointage', data:{email:eleveData.eleve.email,date,nbAdded:overflow,utilises:overflow,restants:_tailleNouv-overflow,renouv:true,paye:false}});
               bc.close();
             }
           } catch(e) {}
           fermerModalPointerSelf(); renderDashboard(); renderAccueil(); return;
         }
         eleveData.carte.coursUtilises = totalApres;
-        eleveData.carte.coursRestants = Math.max(0, 10 - totalApres);
+        eleveData.carte.coursRestants = Math.max(0, _tailleAnc - totalApres);
         // Notifier l'interface admin si ouverte dans le même navigateur
         try {
           if (window.BroadcastChannel) {
@@ -4957,7 +4972,7 @@
       } catch(e) {}
       // Si carte épuisée (10/10) sans renouvellement automatique
       try {
-        if (d2 && d2.carte && d2.carte.coursUtilises >= 10 && !data.renouvAuto) {
+        if (d2 && d2.carte && (d2.carte.coursRestants || 0) <= 0 && (d2.carte.coursUtilises || 0) > 0 && !data.renouvAuto) {
           fetch('/api/notify/carte-epuisee', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -4991,7 +5006,7 @@
           bc.postMessage({type:'cartePointage', data:{
             email: eleveData.eleve.email,
             date: new Date().toISOString().slice(0,10),
-            nbAdded: 0, utilises: 0, restants: 10,
+            nbAdded: 0, utilises: 0, restants: (typeof _carteNbCours === 'number' && _carteNbCours >= 1) ? _carteNbCours : 10,
             renouv: true, paye: false
           }});
           bc.close();
@@ -5001,7 +5016,7 @@
     try {
       if (IS_DEMO) {
         eleveData.carte.coursUtilises = 0;
-        eleveData.carte.coursRestants = 10;
+        eleveData.carte.coursRestants = (typeof _carteNbCours === 'number' && _carteNbCours >= 1) ? _carteNbCours : 10;
         eleveData.carte.paye = false;
         eleveData.carte.dateAchat = '';
         eleveData.carte.dateExpiration = '';
@@ -6480,7 +6495,7 @@ body.theme-light .bandeau-inner{color:#fde68a;}
 
       <!-- Carte -->
       <div class="section">
-        <div class="section-title" id="carte-section-title">Ma carte de 10 cours</div>
+        <div class="section-title" id="carte-section-title">Ma carte de cours</div>
 
         <!-- Forfait annuel -->
         <div id="forfait-view" style="display:none">
@@ -6819,7 +6834,7 @@ body.theme-light .bandeau-inner{color:#fde68a;}
 
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px;font-size:13px;color:var(--text);line-height:1.7;">
       <div style="font-weight:700;margin-bottom:6px;">📱 À quoi sert cette appli ?</div>
-      Cette application vous permet de <strong>pointer votre présence</strong> aux cours et de suivre votre carte de 10&nbsp;cours, de consulter les <strong>stages, milongas et publications</strong> de l'association, de vous inscrire aux cours particuliers, et d'<strong>échanger en message privé</strong> avec les autres élèves. Installez-la sur votre écran d'accueil pour y accéder directement depuis votre téléphone, sans passer par le navigateur.
+      Cette application vous permet de <strong>pointer votre présence</strong> aux cours et de suivre votre carte de cours, de consulter les <strong>stages, milongas et publications</strong> de l'association, de vous inscrire aux cours particuliers, et d'<strong>échanger en message privé</strong> avec les autres élèves. Installez-la sur votre écran d'accueil pour y accéder directement depuis votre téléphone, sans passer par le navigateur.
     </div>
 
     <div style="background:#0f1a0f;border:1px solid rgba(76,175,80,0.35);border-radius:12px;padding:14px 16px;margin-bottom:18px;font-size:13px;color:var(--text);line-height:1.7;">
@@ -6864,14 +6879,14 @@ body.theme-light .bandeau-inner{color:#fde68a;}
     <details class="aide-section">
       <summary><span class="aide-ico">💳</span>Forfait / Carte<span class="aide-arrow">▶</span></summary>
       <div class="aide-body">
-        <p>Cette rubrique affiche le suivi de votre <strong>carte de 10 cours</strong> ou de votre <strong>forfait annuel</strong>.</p>
+        <p>Cette rubrique affiche le suivi de votre <strong>carte de cours</strong> ou de votre <strong>forfait annuel</strong>.</p>
         <p><strong>Carte de 10 cours :</strong></p>
         <ul>
           <li>Une jauge circulaire indique le nombre de cours utilisés et ceux restants.</li>
           <li>La <strong>date d'expiration</strong> est calculée automatiquement depuis votre premier cours (environ 3 mois, vacances incluses).</li>
           <li>Un badge indique si votre carte est <strong>payée</strong> ou <strong>en attente de paiement</strong>.</li>
           <li>Bouton <strong>«&nbsp;✓ Je pointe ma présence&nbsp;»</strong> — à utiliser le jour du cours pour enregistrer votre présence et décompter un cours de votre carte.</li>
-          <li>Bouton <strong>«&nbsp;↻ Renouveler sans payer pour l'instant&nbsp;»</strong> — apparaît quand votre carte est à 10/10. Permet de continuer à venir tout en finalisant le paiement sur AssoConnect ultérieurement.</li>
+          <li>Bouton <strong>«&nbsp;↻ Renouveler sans payer pour l'instant&nbsp;»</strong> — apparaît quand votre carte est épuisée. Permet de continuer à venir tout en finalisant le paiement sur AssoConnect ultérieurement.</li>
         </ul>
         <p><strong>Forfait annuel :</strong> affiche le statut de votre inscription pour la saison en cours.</p>
         <div class="aide-tip">💡 Vous pouvez pointer jusqu'à 2 cours par jour si vous êtes inscrit·e à 2 cours différents.</div>

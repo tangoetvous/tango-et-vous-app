@@ -1871,6 +1871,7 @@ async function handleNotifyCartePointage(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
   const { email, prenom, nom, date, nbAdded, utilises, restants, source } = body;
+  const _tailleC = ((Number(utilises)||0) + (Number(restants)||0)) || 10;
   if (!email || !date) return jsonError(400, 'Paramètres manquants');
 
   const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -1923,7 +1924,7 @@ async function handleNotifyCartePointage(request, env) {
             <td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">+${nb} cours</td>
           </tr>
           <tr><td style="padding:4px 8px;color:#888;">Date</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${dateLabel}</td></tr>
-          ${utilises != null ? `<tr><td style="padding:4px 8px;color:#888;">Utilisés au total (carte)</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${utilises}/10</td></tr>` : ''}
+          ${utilises != null ? `<tr><td style="padding:4px 8px;color:#888;">Utilisés au total (carte)</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${utilises}/${_tailleC}</td></tr>` : ''}
           ${restants != null ? `<tr><td style="padding:4px 8px;color:#888;">Cours restants</td><td style="padding:4px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants}</td></tr>` : ''}
         </table>
       </div>
@@ -1941,7 +1942,7 @@ async function handleNotifyCartePointage(request, env) {
       body: JSON.stringify({
         sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
         to: [{ email: adminEmail }],
-        subject: `🃏 [Carte 10] ${nomAff} a pointé — ${nb} cours ce jour · ${Number(utilises)===10?'CARTE TERMINÉE ':''}${utilises!=null?utilises+'/10 total':'?/10'} · ${source==='qr'?'QR':'appli'}`,
+        subject: `🃏 [Carte 10] ${nomAff} a pointé — ${nb} cours ce jour · ${(Number(restants)===0&&Number(utilises)>0)?'CARTE TERMINÉE ':''}${utilises!=null?utilises+'/'+_tailleC+' total':'?'} · ${source==='qr'?'QR':'appli'}`,
         htmlContent: html,
       }),
     });
@@ -1968,6 +1969,7 @@ async function handleNotifyCartePonteeAdmin(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
   const { email, prenom, nom, date, nbAdded, utilises, restants, expiration } = body;
+  const _tailleC = ((Number(utilises)||0) + (Number(restants)||0)) || 10;
   if (!email || !date) return jsonError(400, 'Paramètres manquants');
 
   const MOIS_L = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -2096,11 +2098,11 @@ async function handleCronCartePonteeJ1(request, env) {
     <p style="font-size:15px;color:#333;margin:0 0 10px;">Bonjour ${prenomAff},</p>
     <p style="font-size:15px;color:#333;margin:0 0 20px;">Votre professeur a enregistré votre présence au cours du ${dateLabel}.</p>
     <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE CARTE DE 10 COURS</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE CARTE DE ${_tailleC} COURS</div>
       <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <tr style="background:#e8f5e9;"><td style="padding:6px 8px;font-weight:700;color:#2e7d32;">⬤ Cours pointés CE JOUR</td><td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">${nbAdded} cours</td></tr>
         <tr><td style="padding:4px 8px;color:#888;">Date du cours</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${dateLabel}</td></tr>
-        ${utilises != null ? `<tr><td style="padding:4px 8px;color:#888;">Utilisés au total (carte)</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${utilises}/10</td></tr>` : ''}
+        ${utilises != null ? `<tr><td style="padding:4px 8px;color:#888;">Utilisés au total (carte)</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${utilises}/${_tailleC}</td></tr>` : ''}
         ${restants != null ? `<tr><td style="padding:4px 8px;color:#888;">Cours restants</td><td style="padding:4px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants}</td></tr>` : ''}
         ${expirationRow}
       </table>
@@ -3049,13 +3051,14 @@ async function handleNotifyCarteEpuisee(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
   const { email, prenom, nom, utilises, restants } = body;
+  const _tailleC = ((Number(utilises)||0) + (Number(restants)||0)) || 10;
   if (!email) return jsonError(400, 'email manquant');
 
   const prenomAff = _esc(prenom || (nom || '').split(' ')[0] || '');
   const nomAff    = _esc(nom || email);
 
-  const notifMsgEleve = '💳 Votre carte de 10 cours est terminée — pensez à la renouveler';
-  const notifMsgAdmin = `💳 Carte terminée — ${nom || email} · 10/10 cours utilisés`;
+  const notifMsgEleve = `💳 Votre carte de ${_tailleC} cours est terminée — pensez à la renouveler`;
+  const notifMsgAdmin = `💳 Carte terminée — ${nom || email} · ${_tailleC}/${_tailleC} cours utilisés`;
 
   // Notif in-app élève
   try {
@@ -3085,18 +3088,18 @@ async function handleNotifyCarteEpuisee(request, env) {
   // Email élève
   const htmlEleve = wrap(`${headerEleve}
     <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
-      <span style="font-size:14px;font-weight:700;color:#e65100;">💳 Votre carte de 10 cours est terminée</span></div>
+      <span style="font-size:14px;font-weight:700;color:#e65100;">💳 Votre carte de ${_tailleC} cours est terminée</span></div>
     <div style="padding:28px 24px;">
       <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
       <p style="font-size:15px;color:#333;margin:0 0 20px;">Vous avez utilisé vos 10 cours. Pour continuer à venir danser, pensez à renouveler votre carte !</p>
       <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
-        <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">⚠️ Carte terminée — 10/10 cours utilisés</p>
+        <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">⚠️ Carte terminée — ${_tailleC}/${_tailleC} cours utilisés</p>
         <p style="font-size:13px;color:#444;margin:0;">Rendez-vous sur AssoConnect pour renouveler votre carte ou renouvelez directement depuis votre espace élève.</p>
       </div>
       <p style="text-align:center;margin:0 0 16px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">💳 Renouveler ma carte depuis l'espace élève →</a></p>
       <p style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#fff;border:2px solid #D4AF37;color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></p>
       ${signEleve}
-    </div>${footer}`, 'Votre carte de 10 cours est epuisee - renouvelez pour continuer a danser');
+    </div>${footer}`, 'Votre carte de cours est epuisee - renouvelez pour continuer a danser');
 
   // Email admin
   const htmlAdmin = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
@@ -3114,11 +3117,11 @@ async function handleNotifyCarteEpuisee(request, env) {
       <div style="background:#fffdf8;padding:14px 16px;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <tr style="background:#fff3e0;">
-            <td style="padding:6px 8px;font-weight:700;color:#c62828;">💳 10/10 cours utilisés</td>
+            <td style="padding:6px 8px;font-weight:700;color:#c62828;">💳 ${_tailleC}/${_tailleC} cours utilisés</td>
             <td style="padding:6px 8px;font-weight:700;color:#c62828;text-align:right;">Badge 💳</td>
           </tr>
           <tr><td style="padding:4px 8px;color:#888;">Statut</td><td style="padding:4px 8px;font-weight:700;color:#e65100;text-align:right;">Renouvellement en attente</td></tr>
-          ${utilises != null ? `<tr><td style="padding:4px 8px;color:#888;">Utilisés</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${utilises}/10</td></tr>` : ''}
+          ${utilises != null ? `<tr><td style="padding:4px 8px;color:#888;">Utilisés</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">${utilises}/${_tailleC}</td></tr>` : ''}
         </table>
       </div>
     </div>
@@ -3137,7 +3140,7 @@ async function handleNotifyCarteEpuisee(request, env) {
       if (r.ok) sent++; else console.error('[carte-epuisee] Brevo error', await r.text());
     } catch(e) { console.error('[carte-epuisee] fetch error', e); }
   };
-  await sendMail(String(email), '💳 Votre carte de 10 cours est terminée — Tango & Vous', htmlEleve);
+  await sendMail(String(email), `💳 Votre carte de ${_tailleC} cours est terminée — Tango & Vous`, htmlEleve);
   await sendMail(adminEmail, `💳 Carte terminée — ${nom || email}`, htmlAdmin);
 
   return corsResponse({ ok: true, sent, notified: true }, 200, {}, request);
@@ -3207,12 +3210,12 @@ async function handleCronCarteExpiree(request, env) {
     // Email élève (CX)
     const htmlEleve = wrap(`${headerEleve}
       <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
-        <span style="font-size:14px;font-weight:700;color:#e65100;">⏰ Votre carte de 10 cours a expiré</span></div>
+        <span style="font-size:14px;font-weight:700;color:#e65100;">⏰ Votre carte de cours a expiré</span></div>
       <div style="padding:28px 24px;">
         <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
           <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">Votre carte a expiré</p>
-          <p style="font-size:13px;color:#444;line-height:1.6;margin:0 0 8px;">Votre carte de 10 cours est arrivée à sa date de fin de validité le <strong>${dateLabel}</strong>.</p>
+          <p style="font-size:13px;color:#444;line-height:1.6;margin:0 0 8px;">Votre carte de cours est arrivée à sa date de fin de validité le <strong>${dateLabel}</strong>.</p>
           <p style="font-size:13px;color:#444;line-height:1.6;margin:0 0 8px;">Il vous reste <strong>${restants} cours</strong> non utilisé${restants > 1 ? 's' : ''} sur cette carte.</p>
           <p style="font-size:13px;color:#444;line-height:1.6;margin:0;">Si vous souhaitez continuer à danser, vous pouvez renouveler votre carte sur AssoConnect.</p>
         </div>
@@ -3220,7 +3223,7 @@ async function handleCronCarteExpiree(request, env) {
         <p style="text-align:center;margin:0 0 16px;"><a href="https://le-regard-se-pose.assoconnect.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Renouveler ma carte sur AssoConnect →</a></p>
         <p style="text-align:center;margin:0 0 28px;"><a href="mailto:tangoetvous@gmail.com" style="display:inline-block;background:#fff;color:#555;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;letter-spacing:0.5px;text-decoration:none;border:2px solid #999;">Nous contacter</a></p>
         ${signEleve}
-      </div>${footer}`, 'Votre carte de 10 cours a expire - renouvelez pour continuer a danser');
+      </div>${footer}`, 'Votre carte de cours a expire - renouvelez pour continuer a danser');
 
     try {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -3229,7 +3232,7 @@ async function handleCronCarteExpiree(request, env) {
         body: JSON.stringify({
           sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
           to: [{ email: String(e.email) }],
-          subject: `⏰ Votre carte de 10 cours a expiré — ${e.restants || 0} cours non utilisés · Tango & Vous`,
+          subject: `⏰ Votre carte de cours a expiré — ${e.restants || 0} cours non utilisés · Tango & Vous`,
           htmlContent: htmlEleve,
         }),
       });
@@ -3241,7 +3244,7 @@ async function handleCronCarteExpiree(request, env) {
       const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
       try {
         const tokens = await getFcmTokensForEmail(String(e.email), _svcKey);
-        if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `⏰ Votre carte de 10 cours a expiré — ${e.restants || 0} cours non utilisés` });
+        if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: `⏰ Votre carte de cours a expiré — ${e.restants || 0} cours non utilisés` });
       } catch(err) { console.error('[cron carte-expiree] push error', err); }
     }
   }
@@ -6644,7 +6647,7 @@ async function handleCronEspaceEleveActivation(request, env) {
     </div>`;
     const fonctions = `<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
       <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 8px;">Ce que vous pouvez faire depuis l'appli</p>
-      <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Pointer vos cours (carte de 10 cours)</p>
+      <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Pointer vos cours (carte de cours)</p>
       <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Suivre votre carte et les cours restants</p>
       <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Retrouver les milongas et les stages</p>
       <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">• Lire les publications de l'école</p>
@@ -6690,22 +6693,23 @@ async function handleNotifyCarteBienvenue(request, env) {
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   const { email, prenom, nom, utilises = 1, restants = 9, expiration, cours } = body;
+  const _tailleC = ((Number(utilises)||0) + (Number(restants)||0)) || 10;
   if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
   const prenomAff = _esc(prenom || '');
   const expiLabel = expiration ? fmtDate(expiration) : 'à calculer après le 1er cours';
   const carteBox  = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
-    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE DE 10 COURS</div>
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE DE ${_tailleC} COURS</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#1565c0;text-align:right;">${utilises}/10</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#1565c0;text-align:right;">${utilises}/${_tailleC}</td></tr>
       <tr><td style="padding:5px 8px;color:#888;">Cours restants</td><td style="padding:5px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants}</td></tr>
       <tr><td style="padding:5px 8px;color:#888;">Valide jusqu'au</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${expiLabel}</td></tr>
     </table>
   </div>`;
   const htmlEleve = wrap(`${headerEleve}
-    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue — votre carte de 10 cours est activée !</span></div>
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue — votre carte de ${_tailleC} cours est activée !</span></div>
     <div style="padding:28px 24px;">
       <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre premier cours a été enregistré. Votre carte de 10 cours est maintenant active.</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre premier cours a été enregistré. Votre carte de ${_tailleC} cours est maintenant active.</p>
       ${carteBox}
       <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
         <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 10px;">📱 Votre espace élève</p>
@@ -6715,7 +6719,7 @@ async function handleNotifyCarteBienvenue(request, env) {
       </div>
       <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
       ${signEleve}
-    </div>${footer}`, 'Bienvenue - votre premiere seance a ete enregistree sur votre carte de 10 cours');
+    </div>${footer}`, 'Bienvenue - votre premiere seance a ete enregistree sur votre carte de cours');
   try {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -6733,6 +6737,7 @@ async function handleNotifyCarteBienvenue(request, env) {
 async function handleNotifyCarteRenouvellement(request, env) {
   let body;
   try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const _tailleC = (Number(body && body.restants) > 0 ? Number(body.restants) : 10);
 
   const adminEmail  = 'tangoetvous@gmail.com';
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
@@ -6747,7 +6752,7 @@ async function handleNotifyCarteRenouvellement(request, env) {
   const carteBox   = `<div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
     <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #ffcc80;">🎫 NOUVELLE CARTE — PAIEMENT EN ATTENTE</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#e65100;text-align:right;">0/10</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#e65100;text-align:right;">0/${_tailleC}</td></tr>
       <tr><td style="padding:5px 8px;color:#888;">Statut paiement</td><td style="padding:5px 8px;font-weight:700;color:#e65100;text-align:right;">⚠️ Non payée</td></tr>
     </table>
   </div>`;
@@ -6756,11 +6761,11 @@ async function handleNotifyCarteRenouvellement(request, env) {
     <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Nouvelle carte créée — finalisez votre paiement</span></div>
     <div style="padding:28px 24px;">
       <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre carte de 10 cours a été renouvelée. Pour finaliser, veuillez régler votre nouvelle carte sur AssoConnect.</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre carte de ${_tailleC} cours a été renouvelée. Pour finaliser, veuillez régler votre nouvelle carte sur AssoConnect.</p>
       ${carteBox}
       <div style="text-align:center;margin:0 0 22px;"><a href="${_esc(String(liensAssoConnect))}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">💳 Renouveler ma carte sur AssoConnect →</a></div>
       ${signEleve}
-    </div>${footer}`, 'Nouvelle carte de 10 cours creee - pensez a finaliser votre paiement sur AssoConnect');
+    </div>${footer}`, 'Nouvelle carte de cours creee - pensez a finaliser votre paiement sur AssoConnect');
 
   // Notif in-app élève + panel admin
   try {
@@ -6778,7 +6783,7 @@ async function handleNotifyCarteRenouvellement(request, env) {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: isAdmin ? `Votre carte de 10 cours a été renouvelée — paiement à finaliser` : `Nouvelle carte ouverte — pensez à finaliser votre paiement`, htmlContent: htmlEleve }),
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: isAdmin ? `Votre carte de ${_tailleC} cours a été renouvelée — paiement à finaliser` : `Nouvelle carte ouverte — pensez à finaliser votre paiement`, htmlContent: htmlEleve }),
     });
   } catch(err) { console.error('[notify-carte-renouvellement] brevo error', err); }
 
@@ -6814,15 +6819,16 @@ async function handleNotifyCartePaiement(request, env) {
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   const { email, prenom, nom, montant, modePaiement, datePaiement, utilises = 0, restants = 10, expiration } = body;
+  const _tailleC = ((Number(utilises)||0) + (Number(restants)||0)) || 10;
   if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
   const prenomAff = _esc(prenom || '');
   const expiLabel = expiration ? fmtDate(expiration) : '';
   const carteBox  = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
-    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE DE 10 COURS</div>
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE DE ${_tailleC} COURS</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <tr style="background:#e8f5e9;"><td style="padding:6px 8px;font-weight:700;color:#2e7d32;">✓ Paiement enregistré</td><td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">${montant ? montant+'€' : ''} ${_esc(modePaiement||'')}</td></tr>
       ${datePaiement ? `<tr><td style="padding:5px 8px;color:#888;">Date</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${fmtDate(datePaiement)}</td></tr>` : ''}
-      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${utilises}/10</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${utilises}/${_tailleC}</td></tr>
       <tr><td style="padding:5px 8px;color:#888;">Cours restants</td><td style="padding:5px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants}</td></tr>
       ${expiLabel ? `<tr><td style="padding:5px 8px;color:#888;">Valide jusqu'au</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${expiLabel}</td></tr>` : ''}
     </table>
@@ -6841,11 +6847,11 @@ async function handleNotifyCartePaiement(request, env) {
     <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Paiement enregistré — votre carte est active</span></div>
     <div style="padding:28px 24px;">
       <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre carte de 10 cours est payée. Bon cours !</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre carte de ${_tailleC} cours est payée. Bon cours !</p>
       ${carteBox}
       <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
       ${signEleve}
-    </div>${footer}`, 'Votre paiement a ete enregistre - votre carte de 10 cours est active');
+    </div>${footer}`, 'Votre paiement a ete enregistre - votre carte de cours est active');
   try {
     await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -8634,7 +8640,7 @@ async function handleCronFinSaisonC4(request, env) {
         <span style="font-size:14px;font-weight:700;color:#1565c0;">📅 Fin de saison — vos cours non utilisés</span></div>
       <div style="padding:28px 24px;">
         <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Il vous reste <strong>${restants} cours</strong> sur votre carte de 10 cours de la saison en cours.</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Il vous reste <strong>${restants} cours</strong> sur votre carte de cours de la saison en cours.</p>
         <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Les pré-inscriptions pour la saison ${saiNext} sont ouvertes. Réglez simplement l'adhésion à notre association avant le 25 août ${anneeFin} sur AssoConnect pour reporter les cours de votre carte à la saison prochaine.</p>
         <div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 24px;text-align:center;">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;margin-bottom:10px;font-weight:700;">Votre carte</div>
