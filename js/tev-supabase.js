@@ -833,6 +833,18 @@ function _calcExpirationSb(dateStr, ville, dureeMois) {
         debut.setTime(_closestDt.getTime());
         fin.setTime(debut.getTime());
         fin.setMonth(fin.getMonth() + _dm);
+      } else {
+        // Aucun cours à ±3 jours (date en plein été/vacances) : recaler sur le PROCHAIN
+        // cours réel. Sinon la marche hebdomadaire est sur le mauvais jour de semaine et
+        // CHAQUE semaine compte comme vacances → expiration aberrante (+1 an).
+        const _debutIso = debut.toISOString().slice(0, 10);
+        let _next = null;
+        for (let _ni = 0; _ni < coursArr.length; _ni++) { if (coursArr[_ni] >= _debutIso) { _next = coursArr[_ni]; break; } }
+        if (_next) {
+          debut.setTime(new Date(_next + 'T12:00:00').getTime());
+          fin.setTime(debut.getTime());
+          fin.setMonth(fin.getMonth() + _dm);
+        }
       }
     }
   }

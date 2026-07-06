@@ -556,7 +556,7 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
 
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=9"></script>
+<script src="js/tev-supabase.js?v=10"></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
 // ================================================================
@@ -701,6 +701,18 @@ function calcExpiration(datePremierCours, ville, dureeMois) {
         debut = _closestDt;
         fin = new Date(debut.getTime());
         fin.setMonth(fin.getMonth() + _dm);
+      } else {
+        // Aucun cours à ±3 jours (date en plein été/vacances) : recaler sur le PROCHAIN
+        // cours réel. Sinon la marche hebdomadaire est sur le mauvais jour de semaine et
+        // CHAQUE semaine compte comme vacances → expiration aberrante (+1 an).
+        var _debutIso = debut.toISOString().slice(0, 10);
+        var _next = null;
+        for (var _ni = 0; _ni < coursArr.length; _ni++) { if (coursArr[_ni] >= _debutIso) { _next = coursArr[_ni]; break; } }
+        if (_next) {
+          debut = new Date(_next + 'T12:00:00');
+          fin = new Date(debut.getTime());
+          fin.setMonth(fin.getMonth() + _dm);
+        }
       }
     }
   }
