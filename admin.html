@@ -14056,8 +14056,35 @@ function ficheEleve(e, isDup) {
   return h;
 }
 
-function changerStatutCoursTango(id, statut, btn) {
+function changerStatutCoursTango(id, statut, btn, force) {
   btn.disabled=true;
+  // Garde quota : valider (→ attente_paiement) entre dans le comptage 22/23.
+  // Même logique que Valider Paiement / Inscription directe : avertir, laisser forcer.
+  if(statut==='attente_paiement' && !force){
+    var _e0=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
+    if(_e0){
+      var _aChk=[_e0];
+      if(_e0.emailPartenaire){
+        var _pt0=(adminData.coursTango||[]).find(function(x){return x.email===_e0.emailPartenaire&&(x.statut==='demande'||x.statut==='attente');});
+        if(_pt0)_aChk.push(_pt0);
+      }
+      var _warn=null;
+      _aChk.forEach(function(c){
+        if(_warn||!c.ville||!c.niveau)return;
+        var cap=capaciteCours(c.ville,c.niveau);
+        var n=c.role==='guideur'?cap.gui:cap.gde;
+        var mx=c.role==='guideur'?cap.maxGui:cap.maxGde;
+        if(n>=mx)_warn='⚠️ Quota atteint : '+n+'/'+mx+' '+(c.role==='guideur'?'guideurs':'guidées')
+          +' — '+(c.ville==='vincennes'?'Vincennes':'Paris')+' '+(c.niveau==='intermediaire'?'Intermédiaire':'Débutant')
+          +'.\n\nValider quand même ?';
+      });
+      if(_warn){
+        btn.disabled=false;
+        ouvrirModalConfirm(_warn,function(){ changerStatutCoursTango(id,statut,btn,true); });
+        return;
+      }
+    }
+  }
   if(IS_DEMO){
     var e=(adminData.coursTango||[]).find(function(x){return x.id===id;});
     if(e){
