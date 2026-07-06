@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.json"/>
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=8"></script>
+<script src="js/tev-supabase.js?v=9"></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
   // ================================================================
@@ -2758,7 +2758,15 @@
     // ── Bandeau d'accueil ───────────────────────────────
     // Construction des lignes de cours (multi-cours si disponible)
     var _sc = _saisonCourante();
-    var _inscrActives = (eleveData.inscriptionsTango || []).filter(function(i){ return i.statut === 'inscrit' && i.saison === _sc; });
+    var _inscrActives = (eleveData.inscriptionsTango || []).filter(function(i){
+      if (i.statut !== 'inscrit' || i.saison !== _sc) return false;
+      // Exclure les lignes de renouvellement de carte (isRenewal) : ce ne sont pas des cours distincts
+      var _d = i.donnees && typeof i.donnees === 'object' ? i.donnees : {};
+      try { if (typeof i.donnees === 'string' && i.donnees) _d = JSON.parse(i.donnees); } catch(e) {}
+      return !_d.isRenewal;
+    });
+    // Sécurité : dédoublonner par cours (ville+niveau)
+    (function(){ var _seen = {}; _inscrActives = _inscrActives.filter(function(i){ var k=(i.ville||'')+'|'+(i.niveau||''); if(_seen[k]) return false; _seen[k]=true; return true; }); })();
     function _coursLine(vill, niv) {
       var nL = (niv||'').toLowerCase().includes('interm') ? 'Intermédiaire' : 'Débutant';
       var vL = (vill||'').toLowerCase();

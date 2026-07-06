@@ -271,7 +271,10 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
       carte_utilises: totalApres,
       carte_restants: Math.max(0, (eleve.carte_restants || 0) - aAjouter),
     };
-    if (!eleve.carte_date_achat && estPremierCours) {
+    // Une carte sans date de départ (nouvelle OU renouvelée) démarre à ce pointage.
+    // ⚠️ Ne PAS conditionner à estPremierCours : après un renouvellement, l'élève a déjà
+    // des présences historiques → la nouvelle carte ne démarrait jamais (ni date ni expiration).
+    if (!eleve.carte_date_achat) {
       carteUpdate.carte_date_achat = date;
       carteUpdate.carte_expiration = _calcExpirationSb(date, eleve.ville, eleve.carte_duree_mois);
       carteUpdate.carte_statut     = 'Active';
