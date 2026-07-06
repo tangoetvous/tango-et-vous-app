@@ -378,10 +378,12 @@
             eleveData.soranoPayé = res.data.some(function(i){
               return i.saison === _scInsc && (i.ville||'').toLowerCase() === 'vincennes' && i.paiement_sorano === true;
             });
-            // Nombre de cours actifs (max pointages par jour : 1 si 1 cours, 2 si 2 cours)
+            // Nombre de cours actifs SUR CARTE (max pointages par jour : 1 si 1 cours, 2 si 2 cours)
+            // Les cours en forfait annuel ne consomment pas la carte → exclus du compteur (cas mixte forfait+carte)
             eleveData.nbCoursInscrits = res.data.filter(function(i) {
               if (i.statut !== 'inscrit') return false;
               if (i.saison !== _scInsc) return false;
+              if ((i.type || '') === 'forfait') return false;
               try { var d = i.donnees && (typeof i.donnees === 'string' ? JSON.parse(i.donnees) : i.donnees); if (d && d.isRenewal) return false; } catch(e){}
               return true;
             }).length || 1;

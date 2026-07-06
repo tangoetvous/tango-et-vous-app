@@ -2237,6 +2237,7 @@ function _maxParJour(email) {
     if (e.statut !== 'inscrit') return false;
     if (e.saison !== sai) return false;
     if (e._isRenewalRow) return false;
+    if ((e.type || '') === 'forfait') return false; // cours forfait = pas de pointage carte (cas mixte forfait+carte)
     return true;
   }).length;
   return nb >= 2 ? 2 : 1;
@@ -14503,8 +14504,16 @@ window.soumettreValiderPaiement = function(force) {
   });
   var cours0=coursCoches[0],ville0=cours0.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris',niveau0=cours0.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   var niveauLbl0=niveau0==='debutant'?'Débutant':'Intermédiaire';
+  // La carte est rattachée au 1er cours en formule carte (pas forcément le 1er coché — cas mixte forfait+carte)
+  var _carteCrsVP=(!vpShared&&anyMainCarte10)?(coursCoches.find(function(cours){
+    var ci=COURS_VALS_REF.indexOf(cours);
+    return ((document.querySelector('input[name="vp-formule-c-'+ci+'"]:checked')||{}).value||'carte10')==='carte10';
+  })||cours0):cours0;
+  var carteVilleVP=_carteCrsVP.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
+  var carteNiveauVP=_carteCrsVP.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
+  var carteNiveauLblVP=carteNiveauVP==='debutant'?'Débutant':'Intermédiaire';
   if(anyMainCarte10&&!adminData.cartes.find(function(c){return c.email===email;})){
-    adminData.cartes.push({id:'C'+Date.now(),nom:prenom+' '+nom,prenom:prenom,niveau:niveauLbl0,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:_cfv.nb,dureeMois:_cfv.duree,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville0,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
+    adminData.cartes.push({id:'C'+Date.now(),nom:prenom+' '+nom,prenom:prenom,niveau:carteNiveauLblVP,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:_cfv.nb,dureeMois:_cfv.duree,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:carteVilleVP,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
     recalcStats();
   }
   if(ok)ok.style.display='block';
@@ -14529,7 +14538,7 @@ window.soumettreValiderPaiement = function(force) {
         updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').insert({prenom:prenom,nom:nom,email:email,tel:tel,role:role,ville:ville,niveau:niveau,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:dateP?{datePremierPaiement:dateP}:{}})));
       }
     });
-    Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?_cfv.nb:0,carte_duree_mois:anyMainCarte10?_cfv.duree:null,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
+    Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:anyMainCarte10?carteNiveauVP:niveau0,ville:anyMainCarte10?carteVilleVP:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?_cfv.nb:0,carte_duree_mois:anyMainCarte10?_cfv.duree:null,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).catch(function(){});
     Promise.all(updates).then(function(){
       // I03 — inscription validée et payée (tous les cours cochés)
       var coursInfosVP = coursCoches.map(function(cours) {
@@ -14804,8 +14813,13 @@ window.soumettreInscriptionDirecte = function(force) {
   var cours0=coursCoches[0], ville0=cours0.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   var niveau0=cours0.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   var niveauLbl0=niveau0==='debutant'?'Débutant':'Intermédiaire';
+  // La carte est rattachée au 1er cours en formule carte (pas forcément le 1er coché — cas mixte forfait+carte)
+  var _carteRowDI = insRows.find(function(r){ return r.email===email && r.type==='carte10'; });
+  var carteVilleDI = _carteRowDI ? _carteRowDI.ville : ville0;
+  var carteNiveauDI = _carteRowDI ? _carteRowDI.niveau : niveau0;
+  var carteNiveauLblDI = carteNiveauDI==='debutant' ? 'Débutant' : 'Intermédiaire';
   if(anyMainCarte10&&!adminData.cartes.find(function(c){return c.email===email;})){
-    adminData.cartes.push({id:'C'+ts,nom:prenom+' '+nom,prenom:prenom,niveau:niveauLbl0,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:_cfv.nb,dureeMois:_cfv.duree,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:ville0,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
+    adminData.cartes.push({id:'C'+ts,nom:prenom+' '+nom,prenom:prenom,niveau:carteNiveauLblDI,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:_cfv.nb,dureeMois:_cfv.duree,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:carteVilleDI,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
     recalcStats();
   }
   if(ok) ok.style.display='block';
@@ -14818,13 +14832,15 @@ window.soumettreInscriptionDirecte = function(force) {
   };
   if(!IS_DEMO && insRows.length){
     // Mettre à jour les champs carte sur la ligne eleves existante, ou créer si absente
-    var _elvProm = Promise.resolve(TEV.client.from('eleves').update({
+    var _updElevesDI = {
       carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',
       carte_utilises:0, carte_restants:anyMainCarte10?_cfv.nb:0, carte_duree_mois:anyMainCarte10?_cfv.duree:null, carte_paye:true
-    }).eq('email',email).select('id')).then(function(r){
+    };
+    if(anyMainCarte10){ _updElevesDI.niveau=carteNiveauDI; _updElevesDI.ville=carteVilleDI; }
+    var _elvProm = Promise.resolve(TEV.client.from('eleves').update(_updElevesDI).eq('email',email).select('id')).then(function(r){
       if (r && r.data && r.data.length) return; // ligne existante mise à jour
       return Promise.resolve(TEV.client.from('eleves').insert({
-        prenom:prenom,nom:nom,email:email,tel:tel,niveau:niveau0,ville:ville0,
+        prenom:prenom,nom:nom,email:email,tel:tel,niveau:anyMainCarte10?carteNiveauDI:niveau0,ville:anyMainCarte10?carteVilleDI:ville0,
         statut_eleve:'Actif',source:'inscription',saison:sai,
         carte_utilises:0,carte_restants:anyMainCarte10?_cfv.nb:0,carte_duree_mois:anyMainCarte10?_cfv.duree:null,
         carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true
