@@ -527,6 +527,8 @@
       $('gauge-circle').style.strokeDasharray = circumference;
       $('gauge-circle').style.strokeDashoffset = dashoffset;
       $('gauge-used').textContent = used;
+      var _gul = $('gauge-used-label');
+      if (_gul) _gul.textContent = (Number(used) > 1 ? 'utilisés' : 'utilisé');
       $('gauge-remaining').textContent = remaining;
 
       // Couleur selon statut
@@ -566,7 +568,7 @@
       // Barre de progression linéaire
       $('progress-bar-fill').style.width = pct + '%';
       $('progress-bar-fill').style.background = statusColor;
-      $('progress-label').textContent = `${used} cours utilisés sur ${tailleCarte}`;
+      $('progress-label').textContent = `${used} cours ${used > 1 ? 'utilisés' : 'utilisé'} sur ${tailleCarte}`;
 
       // URL AssoConnect dynamique
       const _renewUrlDash = (function(){
@@ -2855,7 +2857,7 @@
         + '</svg>'
         + '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">'
         + '<span style="font-size:24px;font-weight:600;color:var(--gold);line-height:1;">' + used + '</span>'
-        + '<span style="font-size:10px;color:var(--text);letter-spacing:1px;">utilis\u00e9s</span>'
+        + '<span style="font-size:10px;color:var(--text);letter-spacing:1px;">' + (used > 1 ? 'utilis\u00e9s' : 'utilis\u00e9') + '</span>'
         + '</div></div>';
       hc += '<div style="flex:1;">'
         + '<div style="font-size:38px;font-weight:200;color:var(--text);line-height:1;">' + remaining + '</div>'
@@ -6584,7 +6586,7 @@ body.theme-light .bandeau-inner{color:#fde68a;}
                 </svg>
                 <div class="gauge-center">
                   <div class="gauge-num" id="gauge-used">—</div>
-                  <div class="gauge-label">utilisés</div>
+                  <div class="gauge-label" id="gauge-used-label">utilisés</div>
                 </div>
               </div>
               <div class="gauge-info">
