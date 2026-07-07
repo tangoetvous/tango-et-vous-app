@@ -6917,8 +6917,8 @@ async function handleNotifyJustificatifTarifReduit(request, env) {
   const prenomAff = _esc(prenom || '');
   const infoBox = `<div style="background:#f3effe;border:2px solid #a78bfa;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
     <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#7c3aed;font-weight:700;margin-bottom:10px;">🎓 Justificatif à transmettre</div>
-    <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 12px;">Vous bénéficiez du <strong>tarif réduit</strong> pour votre inscription (étudiant·e, moins de 26 ans, ou demandeur·euse d'emploi).</p>
-    <p style="font-size:14px;color:#333;line-height:1.6;margin:0;">Pour finaliser, merci de nous transmettre une pièce justificative (carte étudiante, attestation, justificatif d'âge…) par email à&nbsp;:</p>
+    <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 12px;">Vous bénéficiez du <strong>tarif réduit</strong> pour votre inscription.</p>
+    <p style="font-size:14px;color:#333;line-height:1.6;margin:0;">Pour finaliser, merci de nous transmettre une pièce justificative par email à&nbsp;:</p>
     <div style="text-align:center;margin:14px 0 4px;"><a href="mailto:${JUSTIF_EMAIL}" style="display:inline-block;background:#7c3aed;color:#fff;padding:11px 24px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">✉️ ${JUSTIF_EMAIL}</a></div>
   </div>`;
 
