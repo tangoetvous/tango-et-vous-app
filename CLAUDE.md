@@ -2472,17 +2472,19 @@ app.tangoetvous.fr
 | **C4** | Cron : lendemain du dernier cours Paris de juin | Élèves avec cours restants **ET carte non expirée** | Bandeau bleu 📅 · "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" · "Il vous suffit de régler l'adhésion à notre association pour l'instant." · lien AssoConnect pré-inscriptions · avertissement expiration fin août |
 | **C5** | Cron quotidien le 25 août | Élèves avec cours restants **ET carte non expirée**, non ré-inscrits | Bandeau orange ⚠️ Dernier rappel · "Ces cours expireront le 31 août si vous ne vous réinscrivez pas" · bouton AssoConnect |
 
-**⚠️ Règle permanente C4/C5 — TRIPLE condition de ciblage** (corrigé 2026-07-08) : les crons de proposition de report (`handleCronFinSaisonC4`/`C5`) ne doivent cibler que les cartes vérifiant **SIMULTANÉMENT** :
+**⚠️ Règle permanente C4/C5 — QUADRUPLE condition de ciblage** (corrigé 2026-07-08) : les crons de proposition de report (`handleCronFinSaisonC4`/`C5`) ne doivent cibler que les cartes vérifiant **SIMULTANÉMENT** :
 1. **Cours restants > 0** (`carte_restants=gt.0`)
 2. **Non expirée** (`or=(carte_expiration.gte.<aujourd'hui Paris>,carte_expiration.is.null)`) — ⚠️ `carte_statut IN (Active, Nouvelle carte)` NE garantit PAS la non-expiration (date séparée `carte_expiration`). `carte_expiration=null` (carte jamais démarrée) = non expirée → incluse.
-3. **Réellement dans « Cartes 10 → Pointage »** = a au moins une inscription active (`inscriptions_cours` statut=`inscrit`) dans la saison (helper `_emailsInscritsActifs`). ⚠️ Une carte supprimée peut laisser `eleves.carte_statut='Active'` désynchronisé → lire `eleves` seul inclut à tort des cartes supprimées. Le croisement avec les inscriptions actives reproduit `!_emailsSupprimés` de `_buildCartesData` (admin) : une carte dont TOUTES les inscriptions sont `supprimé` n'est plus dans le Pointage.
+3. **Réellement dans « Cartes 10 → Pointage »** = a au moins une inscription active (`inscriptions_cours` statut=`inscrit`) dans la saison (helper `_emailsInscritsActifs`). ⚠️ Une carte supprimée peut laisser `eleves.carte_statut='Active'` désynchronisé → lire `eleves` seul inclut à tort des cartes supprimées. Le croisement reproduit `!_emailsSupprimés` de `_buildCartesData` (admin).
+4. **Payée** (`carte_paye=is.true`) — exclut les cartes renouvelées sans payer. ⚠️ Strictement `true` : une carte legacy à `carte_paye=null` serait exclue (à surveiller — les cartes créées par l'app ont toujours `carte_paye=true`).
 
 Requête SQL de vérification (miroir exact de la logique worker) :
 ```sql
-SELECT e.email, e.prenom, e.carte_restants, e.carte_expiration, e.carte_statut
+SELECT e.email, e.prenom, e.carte_restants, e.carte_expiration, e.carte_statut, e.carte_paye
 FROM eleves e
 WHERE e.carte_restants > 0
   AND e.carte_statut IN ('Active','Nouvelle carte')
+  AND e.carte_paye = true
   AND e.saison = '2025-2026'
   AND (e.carte_expiration >= CURRENT_DATE OR e.carte_expiration IS NULL)
   AND EXISTS (SELECT 1 FROM inscriptions_cours i

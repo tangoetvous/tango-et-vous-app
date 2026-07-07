@@ -8737,7 +8737,7 @@ async function handleCronFinSaisonC4(request, env) {
   const _c4Off = now.getUTCMonth() >= 2 && now.getUTCMonth() <= 9 ? 2 : 1;
   const _c4Today = new Date(now.getTime() + _c4Off * 3600 * 1000).toISOString().slice(0, 10);
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&saison=eq.${encodeURIComponent(sai)}&or=(carte_expiration.gte.${_c4Today},carte_expiration.is.null)&select=email,prenom,nom,carte_restants,carte_statut,carte_expiration`,
+    `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&carte_paye=is.true&saison=eq.${encodeURIComponent(sai)}&or=(carte_expiration.gte.${_c4Today},carte_expiration.is.null)&select=email,prenom,nom,carte_restants,carte_statut,carte_expiration,carte_paye`,
     { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
   );
   if (!res.ok) {
@@ -8848,7 +8848,7 @@ async function handleCronFinSaisonC5(request, env) {
   const _c5Off = now.getUTCMonth() >= 2 && now.getUTCMonth() <= 9 ? 2 : 1;
   const _c5Today = new Date(now.getTime() + _c5Off * 3600 * 1000).toISOString().slice(0, 10);
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&saison=eq.${encodeURIComponent(sai)}&or=(carte_expiration.gte.${_c5Today},carte_expiration.is.null)&select=email,prenom,nom,carte_restants,carte_statut,carte_expiration`,
+    `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&carte_paye=is.true&saison=eq.${encodeURIComponent(sai)}&or=(carte_expiration.gte.${_c5Today},carte_expiration.is.null)&select=email,prenom,nom,carte_restants,carte_statut,carte_expiration,carte_paye`,
     { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
   );
   if (!res.ok) {
