@@ -16931,12 +16931,18 @@ function _comptaBlock(liste, titre, ctx) {
     h+='<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;">';
     h+='<div style="min-width:0;">';
     h+='<a href="javascript:void(0)" onclick="ouvrirComptaEdit(\''+e.id+'\',\''+ctx+'\')" style="color:var(--fg);font-size:13px;text-decoration:none;border-bottom:1px dashed var(--border);">'+(e.prenom||'')+' '+(e.nom||'')+'</a>';
-    if (isShared) h+='<span style="font-size:9px;color:var(--dim);margin-left:5px;">carte partagée</span>';
-    if (isRenew) h+='<span style="font-size:9px;color:var(--dim);margin-left:5px;">↻ renouvellement</span>';
-    if (isSup) h+='<span style="font-size:9px;color:var(--dim);margin-left:5px;">supprimé</span>';
-    if (e.donnees&&e.donnees.tarifReduit) h+='<span style="font-size:9px;color:#a78bfa;margin-left:5px;white-space:nowrap;">🎓 tarif réduit'+(e.donnees.justifRecu?' · justif ✓':' · <span style="color:#fb923c;">justif en attente</span>')+'</span>';
-    if (isNonPaye && isRenew) h+='<span style="font-size:9px;color:#fb923c;margin-left:5px;">non payée &nbsp;<a href="javascript:void(0)" onclick="_toggleRenewalPaye(\''+e.id+'\')" style="color:#4ade80;text-decoration:none;">✓ Réglé</a></span>';
-    else if (isNonPaye) h+='<span style="font-size:9px;color:#fb923c;margin-left:5px;">non payée</span>';
+    var _pillCss='display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:5px;white-space:nowrap;vertical-align:middle;';
+    if (isShared) h+='<span style="'+_pillCss+'background:var(--s3);color:var(--dim);">carte partagée</span>';
+    if (isRenew) h+='<span style="'+_pillCss+'background:rgba(96,176,255,.16);color:#60b0ff;">↻ renouvellement</span>';
+    if (isSup) h+='<span style="'+_pillCss+'background:rgba(248,113,113,.16);color:#f87171;">supprimé</span>';
+    if (e.donnees&&e.donnees.tarifReduit) {
+      h+='<span style="'+_pillCss+'background:rgba(167,139,250,.18);color:#a78bfa;">🎓 tarif réduit</span>';
+      h+=(e.donnees.justifRecu
+        ? '<span style="'+_pillCss+'background:rgba(74,222,128,.16);color:#4ade80;">justif ✓</span>'
+        : '<span style="'+_pillCss+'background:rgba(251,146,60,.18);color:#fb923c;">justif en attente</span>');
+    }
+    if (isNonPaye && isRenew) h+='<span style="'+_pillCss+'background:rgba(251,146,60,.18);color:#fb923c;">non payée &nbsp;<a href="javascript:void(0)" onclick="_toggleRenewalPaye(\''+e.id+'\')" style="color:#4ade80;text-decoration:none;">✓ Réglé</a></span>';
+    else if (isNonPaye) h+='<span style="'+_pillCss+'background:rgba(251,146,60,.18);color:#fb923c;">non payée</span>';
     if (!isShared&&dt&&!isX3) h+='<span style="font-size:10px;color:var(--dim);margin-left:6px;">· '+_fmtJour(dt)+'</span>';
     h+='</div>';
     h+='<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--s3);white-space:nowrap;">'+(isShared?'—':PAI_LBL[e.paiement]||e.paiement||'—')+'</span>';
