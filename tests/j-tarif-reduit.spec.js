@@ -97,6 +97,20 @@ test.describe('Groupe J — Tarif réduit (toggle + stockage)', () => {
     expect(r.sans).not.toContain('tarif réduit');
   });
 
+  test('J7 — bouton "Relancer justif" dans l\'accordéon si tarifReduit && !justifRecu && email', async ({ page }) => {
+    const r = await page.evaluate(() => {
+      var base = { id: 'ACC1', prenom: 'R', nom: 'T', email: 'r@t.fr', role: 'guideur', type: 'carte10' };
+      _openElevesAcc.add('ACC1'); // accordéon ouvert → boutons visibles
+      var enAttente = ficheEleveInscrit(Object.assign({}, base, { donnees: { tarifReduit: true } }), '', false, false);
+      var recu      = ficheEleveInscrit(Object.assign({}, base, { donnees: { tarifReduit: true, justifRecu: true } }), '', false, false);
+      var sansEmail = ficheEleveInscrit(Object.assign({}, base, { email: '', donnees: { tarifReduit: true } }), '', false, false);
+      return { enAttente: enAttente.includes('relancerJustif'), recu: recu.includes('relancerJustif'), sansEmail: sansEmail.includes('relancerJustif') };
+    });
+    expect(r.enAttente).toBe(true);    // justif en attente + email → bouton présent
+    expect(r.recu).toBe(false);        // justif reçu → pas de relance
+    expect(r.sansEmail).toBe(false);   // pas d'email → pas de relance
+  });
+
   test('J3 — VP avec tarif réduit coché → donnees.tarifReduit=true', async ({ page }) => {
     await page.evaluate(() => { currentTab = 'cours-tango'; sousOngletCoursTango = 'valider_paiement'; renderTab(); });
     await page.waitForSelector('#vp-tarif-reduit');

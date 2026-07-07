@@ -7977,9 +7977,21 @@ function ficheEleveInscrit(e, borderStyle, grise, isDup) {
     +(typeLbl?'<span class="pill pill-ok" style="font-size:8px;">'+typeLbl+'</span>':'')
     +(paiLbl?'<span class="pill" style="font-size:8px;background:var(--s3);color:var(--dim);">'+paiLbl+'</span>':'')
     +(e.email?'<a href="'+mailtoGmail(e.email,'Tango &amp; Vous')+'" target="_blank" class="btn-point btn-ghost" style="text-decoration:none;font-size:11px;">✉️</a>':'')
+    +((e.donnees&&e.donnees.tarifReduit&&!e.donnees.justifRecu&&(e.email||'').trim())?'<a href="javascript:void(0)" onclick="relancerJustif(\''+e.id+'\')" class="btn-point btn-ghost" title="Renvoyer la demande de justificatif tarif réduit" style="text-decoration:none;font-size:11px;color:#a78bfa;">🎓 Relancer justif</a>':'')
     +'<button class="btn-point btn-ghost" onclick="ouvrirChangementCours(\''+e.id+'\')" title="Changer de cours" style="font-size:11px;">✏️</button>'
     +'</div>':'')
     +'</div>';
+}
+// Relance manuelle de la demande de justificatif tarif réduit (envoie le même email que l'auto)
+function relancerJustif(id) {
+  var e=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
+  if(!e||!(e.email||'').trim()) return;
+  ouvrirModalConfirm('Renvoyer la demande de justificatif de tarif réduit à '+((e.prenom||'')+' '+(e.nom||'')).trim()+' ('+e.email+') ?', function(){
+    if(IS_DEMO){ afficherToast('✉️ (démo) Relance justificatif — '+e.prenom); return; }
+    Promise.resolve(fetch('/api/notify/justificatif-tarif-reduit', {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},body:JSON.stringify({email:e.email,prenom:e.prenom||'',nom:e.nom||''})}))
+    .then(function(){ afficherToast('✉️ Demande de justificatif renvoyée à '+(e.prenom||'')); })
+    .catch(function(){ afficherToast('⚠️ Erreur envoi'); });
+  });
 }
 // Pastille R (tarif réduit) — marquer le justificatif comme reçu (avec confirmation)
 function marquerJustifRecu(id) {
@@ -14645,6 +14657,7 @@ window.soumettreValiderPaiement = function(force) {
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
         body: JSON.stringify({email:email, prenom:prenom, nom:nom, tel:tel, saison:sai, coursInfos:coursInfosVP}),
       })).catch(function(){});
+      if(_vpReduit){ Promise.resolve(fetch('/api/notify/justificatif-tarif-reduit', {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},body:JSON.stringify({email:email,prenom:prenom,nom:nom})})).catch(function(){}); }
       chargerDonnees();
       setTimeout(function(){sousOngletEleves=ville0+'-'+(niveau0==='intermediaire'?'int':'deb');switchTab('eleves-tango');},1500);
     }).catch(function(ex){if(err){err.textContent='Erreur: '+((ex&&ex.message)||'Update échoué');err.style.display='block';}chargerDonnees();});
@@ -14956,6 +14969,7 @@ window.soumettreInscriptionDirecte = function(force) {
         headers: {'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
         body: JSON.stringify({email:email, prenom:prenom, nom:nom, tel:tel, saison:sai, coursInfos:coursInfosDI}),
       })).catch(function(){});
+      if(_diReduit){ Promise.resolve(fetch('/api/notify/justificatif-tarif-reduit', {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},body:JSON.stringify({email:email,prenom:prenom,nom:nom})})).catch(function(){}); }
       _gotoTab();
     });
   } else {

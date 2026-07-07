@@ -422,6 +422,13 @@ export default {
         return handleNotifyInscriptionCoursPaye(request, env);
       }
 
+      // POST /api/notify/justificatif-tarif-reduit — demande de justificatif tarif réduit (JWT admin)
+      if (pathname === '/api/notify/justificatif-tarif-reduit' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
+        return handleNotifyJustificatifTarifReduit(request, env);
+      }
+
       // POST /api/notify/email-change — admin modifie l'email d'un élève (JWT admin)
       if (pathname === '/api/notify/email-change' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
@@ -6887,6 +6894,50 @@ async function handleNotifyCartePaiement(request, env) {
       if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous', body: '✓ Paiement enregistré · Votre carte est active' });
     } catch(e) { console.error('[carte-paiement] push error', e); }
   }
+
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/justificatif-tarif-reduit — demande de justificatif tarif réduit
+// Envoyé (auto à la validation ou relance manuelle) à l'élève inscrit au tarif réduit.
+// ================================================================
+async function handleNotifyJustificatifTarifReduit(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const { email, prenom } = body;
+  if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: true, skipped: true }, 200, {}, request);
+
+  const JUSTIF_EMAIL = 'regardsepose@gmail.com';
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
+  const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  const prenomAff = _esc(prenom || '');
+  const infoBox = `<div style="background:#f3effe;border:2px solid #a78bfa;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#7c3aed;font-weight:700;margin-bottom:10px;">🎓 Justificatif à transmettre</div>
+    <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 12px;">Vous bénéficiez du <strong>tarif réduit</strong> pour votre inscription (étudiant·e, moins de 26 ans, ou demandeur·euse d'emploi).</p>
+    <p style="font-size:14px;color:#333;line-height:1.6;margin:0;">Pour finaliser, merci de nous transmettre une pièce justificative (carte étudiante, attestation, justificatif d'âge…) par email à&nbsp;:</p>
+    <div style="text-align:center;margin:14px 0 4px;"><a href="mailto:${JUSTIF_EMAIL}" style="display:inline-block;background:#7c3aed;color:#fff;padding:11px 24px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">✉️ ${JUSTIF_EMAIL}</a></div>
+  </div>`;
+
+  const htmlEleve = wrap(`${headerEleve}
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Merci pour votre inscription à nos cours de tango&nbsp;! Il ne manque qu'une petite formalité liée au tarif réduit.</p>
+      ${infoBox}
+      <p style="font-size:13px;color:#666;line-height:1.6;margin:0 0 8px;">Sans justificatif, nous serons amenés à appliquer le tarif plein. N'hésitez pas à nous contacter pour toute question.</p>
+      ${signEleve}
+    </div>${footer}`, 'Merci de nous transmettre votre justificatif de tarif réduit');
+
+  try {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(email) }], subject: `Votre justificatif de tarif réduit — Tango & Vous`, htmlContent: htmlEleve }),
+    });
+  } catch(err) { console.error('[notify-justif-tarif-reduit] brevo error', err); }
 
   return corsResponse({ ok: true }, 200, {}, request);
 }
