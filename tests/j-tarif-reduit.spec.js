@@ -80,6 +80,23 @@ test.describe('Groupe J — Tarif réduit (toggle + stockage)', () => {
     expect(flag).toBe(true);
   });
 
+  test('J6 — trace permanente dans Compta (justif en attente puis reçu)', async ({ page }) => {
+    const r = await page.evaluate(() => {
+      var mk = function (donnees) { return { id: 'C1', prenom: 'Co', nom: 'MPTA', email: 'c@t.fr', ville: 'paris', niveau: 'debutant', type: 'carte10', montant: 130, paiement: 'cb1x', statut: 'inscrit', donnees: donnees }; };
+      return {
+        enAttente: _comptaBlock([mk({ tarifReduit: true })], null, 'tango'),
+        recu:      _comptaBlock([mk({ tarifReduit: true, justifRecu: true })], null, 'tango'),
+        sans:      _comptaBlock([mk({})], null, 'tango'),
+      };
+    });
+    expect(r.enAttente).toContain('tarif réduit');
+    expect(r.enAttente).toContain('justif en attente');
+    expect(r.recu).toContain('tarif réduit');
+    expect(r.recu).toContain('justif ✓');
+    expect(r.recu).not.toContain('justif en attente');
+    expect(r.sans).not.toContain('tarif réduit');
+  });
+
   test('J3 — VP avec tarif réduit coché → donnees.tarifReduit=true', async ({ page }) => {
     await page.evaluate(() => { currentTab = 'cours-tango'; sousOngletCoursTango = 'valider_paiement'; renderTab(); });
     await page.waitForSelector('#vp-tarif-reduit');
