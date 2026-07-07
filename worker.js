@@ -8711,9 +8711,13 @@ async function handleCronFinSaisonC4(request, env) {
     }
   }
 
-  // Fetch élèves avec des cours restants et un statut de carte actif
+  // Fetch élèves avec des cours restants, carte active ET NON EXPIRÉE.
+  // "Non expirée" = carte_expiration >= aujourd'hui (heure Paris) OU null (carte jamais démarrée).
+  // ⚠️ carte_statut 'Active'/'Nouvelle carte' NE garantit PAS la non-expiration (date séparée).
+  const _c4Off = now.getUTCMonth() >= 2 && now.getUTCMonth() <= 9 ? 2 : 1;
+  const _c4Today = new Date(now.getTime() + _c4Off * 3600 * 1000).toISOString().slice(0, 10);
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&saison=eq.${encodeURIComponent(sai)}&select=email,prenom,nom,carte_restants,carte_statut`,
+    `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&saison=eq.${encodeURIComponent(sai)}&or=(carte_expiration.gte.${_c4Today},carte_expiration.is.null)&select=email,prenom,nom,carte_restants,carte_statut,carte_expiration`,
     { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
   );
   if (!res.ok) {
@@ -8816,8 +8820,11 @@ async function handleCronFinSaisonC5(request, env) {
     } else { console.error('[cron fin-saison-c5] Supabase params error', await pr.text()); }
   } catch(e) { console.error('[cron fin-saison-c5] fetch params error', e); }
 
+  // Cours restants, carte active ET NON EXPIRÉE (expiration >= aujourd'hui Paris OU null). Voir C4.
+  const _c5Off = now.getUTCMonth() >= 2 && now.getUTCMonth() <= 9 ? 2 : 1;
+  const _c5Today = new Date(now.getTime() + _c5Off * 3600 * 1000).toISOString().slice(0, 10);
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&saison=eq.${encodeURIComponent(sai)}&select=email,prenom,nom,carte_restants,carte_statut`,
+    `${SUPABASE_URL}/rest/v1/eleves?carte_restants=gt.0&carte_statut=in.(Active,Nouvelle carte)&saison=eq.${encodeURIComponent(sai)}&or=(carte_expiration.gte.${_c5Today},carte_expiration.is.null)&select=email,prenom,nom,carte_restants,carte_statut,carte_expiration`,
     { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
   );
   if (!res.ok) {
