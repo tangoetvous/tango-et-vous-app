@@ -1550,6 +1550,32 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
   ```
   → doit afficher **`code: 401`** (avant le fix : 200). Puis vérifier que la messagerie Annuaire élève→élève fonctionne toujours normalement (le vrai client envoie un vrai token dont l'email correspond à `de`).
 
+- [ ] **Correctif sécurité C1 — trigger anti-triche carte élève** (audit 2026-07-08 2ᵉ passe, à faire DEVANT UN ORDI avec test élève) : bloque les 2 abus financiers directs du finding C1 (`eleves_update` sans restriction de colonne, `schema.sql:75`) sans casser pointage/renouvellement élève ni admin. **Étape 1 — vérif préalable OBLIGATOIRE** : confirmer par grep dans worker.js qu'aucun flux admin n'écrit `carte_paye`/`statut_eleve` via la **service key** (`SUPABASE_SERVICE_KEY`) — si c'est le cas, `auth.email()` est null → `is_admin()=false` → le trigger le bloquerait. D'après l'analyse, l'admin agit via son JWT (pas la service key) pour les cartes, mais à confirmer avant exécution. **Étape 2 — SQL à exécuter dans Supabase SQL Editor** (relu, sûr sous réserve étape 1) :
+  ```sql
+  CREATE OR REPLACE FUNCTION public.protect_eleve_carte_fields()
+  RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+  BEGIN
+    IF is_admin() THEN RETURN NEW; END IF;                    -- admin : tout permis
+    IF NEW.carte_paye = true AND OLD.carte_paye IS DISTINCT FROM true THEN
+      RAISE EXCEPTION 'carte_paye : admin uniquement';        -- élève ne peut pas marquer sa carte payée
+    END IF;
+    IF NEW.statut_eleve IS DISTINCT FROM OLD.statut_eleve THEN
+      RAISE EXCEPTION 'statut_eleve : admin uniquement';       -- élève ne peut pas réactiver son compte
+    END IF;
+    RETURN NEW;
+  END;
+  $$;
+  DROP TRIGGER IF EXISTS trg_protect_eleve_carte ON public.eleves;
+  CREATE TRIGGER trg_protect_eleve_carte
+    BEFORE UPDATE ON public.eleves
+    FOR EACH ROW EXECUTE FUNCTION public.protect_eleve_carte_fields();
+  ```
+  **Étape 3 — test immédiat après exécution** : avec un élève test, vérifier qu'il peut toujours (a) pointer un cours (décrémente restants), (b) « renouveler sans payer » (carte_paye reste false). Et côté admin : marquer une carte payée + activer/désactiver un élève fonctionnent toujours. **Ce que ça NE ferme PAS** : l'élève peut encore gonfler `carte_restants` (cours gratuits sans marquer payé) — blindage complet = déplacer la mutation carte vers une fonction SECURITY DEFINER (refonte client+SQL, phase 2, risque moyen). Le trigger ferme « je marque ma carte payée » + « je réactive mon compte » = les 2 abus les plus nets. Versionner ce SQL dans `supabase/` une fois validé.
+
+- [ ] **Correctif sécurité C2 — pointer_cours_qr email arbitraire** (audit 2026-07-08 2ᵉ passe) : un anonyme avec la clé publique vide la carte de n'importe quel élève (`p_email` arbitraire, GRANT anon, pas de check). **⚠️ Pas de fix SQL simple** : le flux QR (`pointer.html`) + remplaçant (`remplacant.html`) sont ANONYMES → `p_email = auth.email()` casserait tout (`auth.email()` = null). Options : (A) **QR signé** — l'admin génère un QR portant un token HMAC(email+date), la RPC le vérifie (touche génération QR admin.html + pointer.html + la RPC `pointer_cours_qr`) ; (B) **risque accepté + rate-limiting Cloudflare** (vandalisme sans gain, exige de connaître les emails — défendable petite école). À décider à froid.
+
+- [ ] **Correctifs sécurité M1–M6 — RLS permissives (audit 2026-07-08 2ᵉ passe)** : restreindre SELECT/UPDATE/DELETE (garder INSERT public) sur `cours_yoga` (PII tel/montants), `notifications_eleve`, `fcm_tokens`, `milonga_presences` (`schema.sql:395`), `absences_jour`, et masquer l'email dans `get_remplacant_eleves`. Pattern : `USING (email = auth.email() OR is_admin())`. Priorité RGPD : M1 (yoga), M2 (get_remplacant_eleves emails), M3 (notifications_eleve). ⚠️ Vérifier d'abord la définition RÉELLE déployée (SQL non versionné) avant de générer les correctifs. C3 (`confirmer_annuler_essai` secret en paramètre) + routes `/api/notify/*` sans auth = risque accepté ou phase ultérieure.
+
 - [x] **Cartes N cours — plan validé le 2026-07-02, en 3 phases par risque croissant** — ✅ TERMINÉ ET VALIDÉ (2026-07-07) : les 3 phases sont en prod, testées par l'admin sur tous les cas (carte simple, mixte forfait+carte, carte commune 2 cours, renouvellement personnalisé, complément forfait avec montant, non-régression vrais élèves). Voir session 2026-07-07 en tête de fichier. Paramètres remis aux défauts 10 cours / 3 mois, élèves tests nettoyés en SQL. Détail des phases ci-dessous (historique) :
   - **✅ Phase 1 FAITE (2026-07-06)** : paramètre `tev_carte_nb_cours` (Paramètres → Fonctionnalités, défaut 10, miroir localStorage auto via chargerParamsRemote côté admin + fetch login côté élève). Taille affichée partout = `utilises + restants` (invariant, fallback 10) via `_carteTaille(c)`/`_carteNbAdmin()` (admin), `tailleCarte` (index), `_tevCarteNbCours()` (tev-supabase v=7). Renouvellements/créations lisent le paramètre ; seuil d'overflow = taille de l'ANCIENNE carte ; seuils "épuisée" basés sur `restants<=0` (plus jamais `>=10`). Emails worker : `_tailleC = utilises+restants||10` dans C1/C2/C-pay/CP-E/carte-pointée/carte-épuisée ; libellés "carte de 10 cours" → dynamiques ou génériques. Payloads admin corrigés (carte-epuisee envoie les vrais compteurs, carte-renouvellement envoie restants).
   - **Phase 1 (risque faible)** : paramètre global `carte_nb_cours` (défaut 10) dans Paramètres + affichages dynamiques partout (taille carte = `utilises + restants`, invariant du modèle — remplacer les "10" cosmétiques en dur : espace élève, admin Cartes 10, emails C1/C2/CX/CP-E, renouvellement qui reset `restants=10` en dur à 3 endroits).
