@@ -61,4 +61,22 @@ async function bootEleve(page) {
   await page.waitForFunction(() => typeof renderNotificationsPane === 'function' && !!document.getElementById('notifications-pane'));
 }
 
-module.exports = { bootDemo, bootPage, bootEleve, COURS_DATES };
+/**
+ * Charge un formulaire public (cours-essai, inscription-cours…) en mode SMOKE :
+ * - bloque toute requête externe (Turnstile, CDN, Supabase) pour un test hermétique et rapide
+ *   → on teste NOTRE HTML/JS, pas les CDN tiers (qui timeouteraient dans le sandbox)
+ * - capture les erreurs JS de la page (pageerror)
+ * Retourne le tableau des erreurs JS (doit être vide).
+ * ⚠️ Ne soumet JAMAIS le formulaire — les formulaires publics écrivent dans la VRAIE base Supabase.
+ */
+async function bootPublicForm(page, file) {
+  const errors = [];
+  page.on('pageerror', e => errors.push(String(e)));
+  await page.route('**/*', route =>
+    route.request().url().startsWith('http://127.0.0.1:8788/') ? route.continue() : route.abort());
+  await page.goto('/' + file, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(800);
+  return errors;
+}
+
+module.exports = { bootDemo, bootPage, bootEleve, bootPublicForm, COURS_DATES };
