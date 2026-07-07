@@ -1,5 +1,27 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-07-07 — Cartes N cours : cas mixte forfait+carte, fixes VP/suppression, complément forfait
+
+Tests utilisateur des phases 2+3 (cartes paramétrables) terminés et validés. Corrections apportées :
+
+### Cas mixte forfait+carte (élève 2 cours dont 1 seul en formule carte)
+- **Carte rattachée au bon cours** : dans `soumettreInscriptionDirecte` ET `soumettreValiderPaiement`, la ville/niveau de la carte (push local `adminData.cartes` + `eleves.ville/niveau` en DB) viennent du **1er cours en formule carte** (`_carteRowDI` / `_carteCrsVP`), plus jamais de `coursCoches[0]`. Fallback cours0 si aucune carte (ou carte10unique).
+- **Limite pointage journalière = nb de cours SUR CARTE** : les cours `type='forfait'` sont exclus du compteur dans `_maxParJour` (admin.html), `eleveData.nbCoursInscrits` (index.html) et `pointer_cours_qr` SQL (`AND type IS DISTINCT FROM 'forfait'` — ✅ exécuté). Un type vide/null compte comme carte (legacy).
+- **Labels boutons pointage admin** (Cartes 10 → Pointage + Détails) : « + Pointer ×2 » / pastilles « ✓ Pointé » respectent `_maxParJour(c.email)` au lieu d'un « max 2 » supposé.
+
+### Valider Paiement — bug fiche fantôme (emails partis, rien en base)
+- **`_vpPrefillIds` jamais reset** : le global gardait les IDs d'une sélection précédente du dropdown → la soumission faisait UPDATE la fiche d'une AUTRE personne au lieu d'INSERT. Fix : reset dans `renderValiderPaiement()` et quand la sélection est vidée, + garde `_vpRowMatches(row)` (email identique, ou nom normalisé si fiche sans email) avant d'utiliser un ID prérempli.
+- **Erreurs DB visibles** : chaque insert/update `inscriptions_cours` + upsert `eleves` affiche un toast en cas d'`error` ; **l'email I03 n'est envoyé que si toutes les écritures ont réussi**.
+
+### Suppression élève inscrit à 2 cours
+- `confirmerSupprimerEleve` : n'archive QUE le cours cliqué. La cascade (lignes carte10 du même email + `eleves.carte_statut='supprimé'`) ne s'applique que si l'élève n'a **plus aucun autre cours actif** de la saison (`_resteActif`). Garde email vide (fiches partenaires : cascade désactivée). Modale : « Seul ce cours (…) sera supprimé ».
+- `retablirEleve` : réactive aussi la carte (`carte_statut` → 'Active' si `utilises>0`, sinon 'Nouvelle carte') si elle avait été archivée par la cascade et que la fiche rétablie n'est pas un forfait.
+
+### Passer en complément forfait annuel (modal Renouveler)
+- **`passerEnForfait(email, nom, complement)`** : champ `modal-ren-complement` (« Complément réglé (€) ») dans la modal Renouveler, reset à l'ouverture. Le montant est **ajouté au `montant` de la 1ère inscription active non-isRenewal** (comptabilité) + trace `donnees.complementForfait` / `complementForfaitDate`. Ciblage DB par `.eq('id', …)` uniquement si id réel (pas `CT<timestamp>` local).
+- **⚠️ Règle : `carte_statut='Forfait'`** après conversion (local + DB) — jamais 'Active'/'Nouvelle carte', sinon l'espace élève continue d'afficher le suivi de carte (`isCarteActive` dans index.html). 'Forfait' est invisible dans `_buildCartesData` (admin) ET donne `carte.type='forfait'` côté élève.
+- Le bouton « 🔄 Forfait » des fiches Cartes 10 → Détails convertit toujours SANS montant (correction rapide) — le champ montant n'existe que dans la modal Renouveler.
+
 ## Session 2026-06-15 — « Mon niveau » : curriculum éditable + niveau Avancé 2
 
 ### ✅ Curriculum data-driven, commun à toutes les saisons
