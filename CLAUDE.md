@@ -2472,7 +2472,22 @@ app.tangoetvous.fr
 | **C4** | Cron : lendemain du dernier cours Paris de juin | Élèves avec cours restants **ET carte non expirée** | Bandeau bleu 📅 · "Il vous reste N cours — pré-inscrivez-vous avant le 25 août" · "Il vous suffit de régler l'adhésion à notre association pour l'instant." · lien AssoConnect pré-inscriptions · avertissement expiration fin août |
 | **C5** | Cron quotidien le 25 août | Élèves avec cours restants **ET carte non expirée**, non ré-inscrits | Bandeau orange ⚠️ Dernier rappel · "Ces cours expireront le 31 août si vous ne vous réinscrivez pas" · bouton AssoConnect |
 
-**⚠️ Règle permanente C4/C5 — double condition de ciblage** (corrigé 2026-07-08) : les crons de proposition de report (`handleCronFinSaisonC4`/`C5`) ne doivent cibler que les cartes vérifiant **SIMULTANÉMENT** : (1) cours restants > 0 (`carte_restants=gt.0`) ET (2) **non expirée** (`or=(carte_expiration.gte.<aujourd'hui Paris>,carte_expiration.is.null)`). ⚠️ `carte_statut IN (Active, Nouvelle carte)` NE garantit PAS la non-expiration — l'expiration est une date séparée (`carte_expiration`). Sans la condition (2), une carte avec cours restants mais expirée recevait l'email à tort. `carte_expiration=null` (carte jamais démarrée) = non expirée → incluse.
+**⚠️ Règle permanente C4/C5 — TRIPLE condition de ciblage** (corrigé 2026-07-08) : les crons de proposition de report (`handleCronFinSaisonC4`/`C5`) ne doivent cibler que les cartes vérifiant **SIMULTANÉMENT** :
+1. **Cours restants > 0** (`carte_restants=gt.0`)
+2. **Non expirée** (`or=(carte_expiration.gte.<aujourd'hui Paris>,carte_expiration.is.null)`) — ⚠️ `carte_statut IN (Active, Nouvelle carte)` NE garantit PAS la non-expiration (date séparée `carte_expiration`). `carte_expiration=null` (carte jamais démarrée) = non expirée → incluse.
+3. **Réellement dans « Cartes 10 → Pointage »** = a au moins une inscription active (`inscriptions_cours` statut=`inscrit`) dans la saison (helper `_emailsInscritsActifs`). ⚠️ Une carte supprimée peut laisser `eleves.carte_statut='Active'` désynchronisé → lire `eleves` seul inclut à tort des cartes supprimées. Le croisement avec les inscriptions actives reproduit `!_emailsSupprimés` de `_buildCartesData` (admin) : une carte dont TOUTES les inscriptions sont `supprimé` n'est plus dans le Pointage.
+
+Requête SQL de vérification (miroir exact de la logique worker) :
+```sql
+SELECT e.email, e.prenom, e.carte_restants, e.carte_expiration, e.carte_statut
+FROM eleves e
+WHERE e.carte_restants > 0
+  AND e.carte_statut IN ('Active','Nouvelle carte')
+  AND e.saison = '2025-2026'
+  AND (e.carte_expiration >= CURRENT_DATE OR e.carte_expiration IS NULL)
+  AND EXISTS (SELECT 1 FROM inscriptions_cours i
+              WHERE lower(i.email)=lower(e.email) AND i.saison='2025-2026' AND i.statut='inscrit');
+```
 | **C6** | Vendredi matin (Paris) / mardi matin (Vincennes) — cron | Élève carte10 absent 2 cours consécutifs | Ton "tu" (informel) · "Coucou [Prénom], on ne t'a pas vu·e aux 2 derniers cours. Tout va bien ?" · "Nous sommes là pour t'accompagner dès que tu reprends pour te partager ce qui a été vu dernièrement." · rappel cours préservés (N restants) · contact tel + email · Signature "Florencia & Jérémy" |
 | **C-pay** | Admin clique badge "⚠️ Non payée" ou "✓ Payée" sur une fiche dans Cartes 10 → Détails → valide "✓ Enregistrer" dans le modal paiement | Élève | Bandeau vert ✓ · carte-box (✓ Payée, montant depuis Paramètres, mode, date paiement, cours actifs, expiration depuis `datePremierCours`) · "Votre carte de 10 cours est payée. Bon cours !" · bouton espace élève · Push : "✓ Paiement enregistré · Votre carte est active" |
 | **C-report** | Admin clique "↩ Reporter" en fin de saison (crée ligne `isReport=true` saison suivante) | Élève | Bandeau vert ✓ · carte-box "Votre carte 2026-2027" (N cours reportés) · message "Votre carte vous attend à la rentrée de septembre" · Push : "↩ Votre carte reportée · N cours préservés pour 2026-2027" |

@@ -8653,6 +8653,26 @@ async function handleNotifyPublicationPubliee(request, env) {
 }
 
 // ================================================================
+// Emails ayant AU MOINS une inscription active (statut='inscrit') dans la saison.
+// = équivalent serveur de "!_emailsSupprimés" de _buildCartesData (admin) : une carte
+// dont TOUTES les inscriptions sont 'supprimé' N'EST PLUS dans Cartes 10 → Pointage.
+// Utilisé pour ne cibler (C4/C5) que les cartes réellement actives, même si
+// eleves.carte_statut est resté désynchronisé ('Active' alors que la carte est supprimée).
+async function _emailsInscritsActifs(svcKey, sai) {
+  const set = new Set();
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/inscriptions_cours?saison=eq.${encodeURIComponent(sai)}&statut=eq.inscrit&select=email`,
+      { headers: { 'apikey': svcKey, 'Authorization': `Bearer ${svcKey}` } }
+    );
+    if (r.ok) {
+      const rows = await r.json();
+      for (const row of rows) { const em = (row.email || '').trim().toLowerCase(); if (em) set.add(em); }
+    } else { console.error('[_emailsInscritsActifs] HTTP', r.status, await r.text().catch(() => '')); }
+  } catch(e) { console.error('[_emailsInscritsActifs] error', e); }
+  return set;
+}
+
 // POST /api/cron/fin-saison-c4 — rappel fin de saison (C4)
 // Déclenché le lendemain du dernier cours Paris de juin
 // Cron quotidien 20-30 juin — le handler vérifie si hier = dernier cours Paris de juin
@@ -8724,7 +8744,11 @@ async function handleCronFinSaisonC4(request, env) {
     console.error('[cron fin-saison-c4] Supabase eleves error', await res.text());
     return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
   }
-  const eleves = await res.json();
+  let eleves = await res.json();
+  // Ne garder que les cartes réellement dans "Cartes 10 → Pointage" : au moins une
+  // inscription active dans la saison (exclut les cartes supprimées à carte_statut désync).
+  const _c4Actifs = await _emailsInscritsActifs(svcKey, sai);
+  eleves = eleves.filter(e => _c4Actifs.has((e.email || '').trim().toLowerCase()));
 
   const adminEmail  = 'tangoetvous@gmail.com';
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
@@ -8831,7 +8855,10 @@ async function handleCronFinSaisonC5(request, env) {
     console.error('[cron fin-saison-c5] Supabase eleves error', await res.text());
     return corsResponse({ ok: false, error: 'Supabase query failed' }, 500, {}, request);
   }
-  const eleves = await res.json();
+  let eleves = await res.json();
+  // Cartes réellement dans "Cartes 10 → Pointage" : au moins une inscription active (voir C4).
+  const _c5Actifs = await _emailsInscritsActifs(svcKey, sai);
+  eleves = eleves.filter(e => _c5Actifs.has((e.email || '').trim().toLowerCase()));
 
   const adminEmail  = 'tangoetvous@gmail.com';
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
