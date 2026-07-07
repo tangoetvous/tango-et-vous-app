@@ -7961,7 +7961,9 @@ function ficheEleveInscrit(e, borderStyle, grise, isDup) {
   var _ao=_openElevesAcc.has(_ak);
   return '<div class="point-row" style="'+(borderStyle||'')+griseStyle+'flex-wrap:wrap;align-items:center;gap:5px;padding:8px 0;">'
     +'<div style="flex:1;min-width:160px;">'
-    +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+(isDup?_DUP_BADGE:'')+'</div>'
+    +'<div class="point-nom">'+nomCliquable(e.prenom+' '+e.nom,e.email||'',e.tel||'','ct')+(isDup?_DUP_BADGE:'')
+    +((e.donnees&&e.donnees.tarifReduit&&!e.donnees.justifRecu)?'<a href="javascript:void(0)" onclick="marquerJustifRecu(\''+e.id+'\')" title="Tarif r\u00e9duit \u2014 justificatif non re\u00e7u (cliquez quand re\u00e7u)" style="display:inline-block;background:#c62828;color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:4px;margin-left:5px;text-decoration:none;white-space:nowrap;vertical-align:middle;">R</a>':'')
+    +'</div>'
     +(e.partenaire?'<div class="point-sub">♥ '+e.partenaire+'</div>':'')
     +'</div>'
     +'<div style="display:flex;gap:4px;align-items:center;">'
@@ -7978,6 +7980,23 @@ function ficheEleveInscrit(e, borderStyle, grise, isDup) {
     +'<button class="btn-point btn-ghost" onclick="ouvrirChangementCours(\''+e.id+'\')" title="Changer de cours" style="font-size:11px;">✏️</button>'
     +'</div>':'')
     +'</div>';
+}
+// Pastille R (tarif réduit) — marquer le justificatif comme reçu (avec confirmation)
+function marquerJustifRecu(id) {
+  var e=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
+  if(!e) return;
+  ouvrirModalConfirm('Justificatif de tarif réduit reçu pour '+((e.prenom||'')+' '+(e.nom||'')).trim()+' ?\n\nLa pastille R disparaîtra.', function(){
+    var _d=Object.assign({}, e.donnees||{}, {justifRecu:true});
+    e.donnees=_d;
+    afficherToast('✓ Justificatif marqué reçu — '+((e.prenom||'')+' '+(e.nom||'')).trim());
+    renderTab();
+    // Persistance DB (id réel uniquement — les ids locaux 'CT…' n'existent pas encore en base)
+    if(!IS_DEMO && !/^CT/.test(String(id))){
+      Promise.resolve(TEV.client.from('inscriptions_cours').update({donnees:_d}).eq('id',id))
+      .then(function(res){ if(res&&res.error){afficherToast('⚠️ Erreur: '+(res.error.message||res.error.code||''));} chargerDonnees(); })
+      .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
+    }
+  });
 }
 function ouvrirModalLierPartenaire(id) {
   var e = (adminData.coursTango||[]).find(function(x){return x.id===id;});

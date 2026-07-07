@@ -55,6 +55,31 @@ test.describe('Groupe J — Tarif réduit (toggle + stockage)', () => {
     expect(r.tarifReduit).toBeUndefined();
   });
 
+  test('J4 — pastille R visible si tarifReduit && !justifRecu, masquée sinon', async ({ page }) => {
+    const r = await page.evaluate(() => {
+      var base = { id: 'INS999', prenom: 'R', nom: 'TEST', email: 'r@t.fr', role: 'guideur', type: 'carte10' };
+      return {
+        aReduireNonRecu: ficheEleveInscrit(Object.assign({}, base, { donnees: { tarifReduit: true } }), '', false, false),
+        aReduireRecu:    ficheEleveInscrit(Object.assign({}, base, { donnees: { tarifReduit: true, justifRecu: true } }), '', false, false),
+        sansReduire:     ficheEleveInscrit(Object.assign({}, base, { donnees: {} }), '', false, false),
+      };
+    });
+    expect(r.aReduireNonRecu).toContain('marquerJustifRecu');   // pastille présente
+    expect(r.aReduireRecu).not.toContain('marquerJustifRecu');  // justif reçu → masquée
+    expect(r.sansReduire).not.toContain('marquerJustifRecu');   // pas de tarif réduit → rien
+  });
+
+  test('J5 — marquerJustifRecu + confirmation → donnees.justifRecu=true', async ({ page }) => {
+    const flag = await page.evaluate(() => {
+      adminData.coursTango.push({ id: 'INS998', prenom: 'A', nom: 'B', email: 'ab@t.fr', statut: 'inscrit', donnees: { tarifReduit: true } });
+      marquerJustifRecu('INS998');       // ouvre la modale de confirmation
+      confirmerModalConfirm();           // valide
+      var e = adminData.coursTango.find(function (x) { return x.id === 'INS998'; });
+      return e.donnees.justifRecu;
+    });
+    expect(flag).toBe(true);
+  });
+
   test('J3 — VP avec tarif réduit coché → donnees.tarifReduit=true', async ({ page }) => {
     await page.evaluate(() => { currentTab = 'cours-tango'; sousOngletCoursTango = 'valider_paiement'; renderTab(); });
     await page.waitForSelector('#vp-tarif-reduit');
