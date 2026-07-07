@@ -9958,6 +9958,23 @@ window.newsletterCopierEmails = function() {
   _copierEmailsFiches(adminData.newsletter || []);
 };
 
+// Newsletter : supprime une adresse (toutes ses lignes, quelle que soit la source)
+window.supprimerNewsletterEmail = function(email) {
+  var em = (email||'').trim().toLowerCase();
+  if (!em) return;
+  ouvrirModalConfirm('Supprimer '+em+' de la newsletter ?', function(){
+    // Retrait optimiste local
+    adminData.newsletter = (adminData.newsletter||[]).filter(function(r){ return ((r.email||'').trim().toLowerCase()) !== em; });
+    afficherToast('🗑 '+em+' supprimé de la newsletter');
+    renderTab();
+    if (!IS_DEMO) {
+      Promise.resolve(TEV.client.from('newsletter_emails').delete().eq('email', em))
+      .then(function(res){ if(res&&res.error){afficherToast('⚠️ Erreur: '+(res.error.message||res.error.code||''));} chargerDonnees(); })
+      .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
+    }
+  });
+};
+
 // Essai tango : emails des essais confirmés d'une date+niveau
 window.essaiCopierEmails = function(date, niveau) {
   _copierEmailsFiches((adminData.essai || []).filter(function(e) {
@@ -14935,7 +14952,9 @@ window.soumettreInscriptionDirecte = function(force) {
   var carteVilleDI = _carteRowDI ? _carteRowDI.ville : ville0;
   var carteNiveauDI = _carteRowDI ? _carteRowDI.niveau : niveau0;
   var carteNiveauLblDI = carteNiveauDI==='debutant' ? 'Débutant' : 'Intermédiaire';
-  if(anyMainCarte10&&!adminData.cartes.find(function(c){return c.email===email;})){
+  // Push optimiste de la nouvelle carte SI aucune carte pour cette personne DANS CETTE SAISON
+  // (une carte d'une autre saison ne doit pas empêcher l'affichage de la nouvelle).
+  if(anyMainCarte10&&!adminData.cartes.find(function(c){return c.email===email && (c.saison||saisonCourante())===sai;})){
     adminData.cartes.push({id:'C'+ts,nom:prenom+' '+nom,prenom:prenom,niveau:carteNiveauLblDI,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:_cfv.nb,dureeMois:_cfv.duree,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:carteVilleDI,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
     recalcStats();
   }
@@ -14948,13 +14967,22 @@ window.soumettreInscriptionDirecte = function(force) {
     setTimeout(renderTab, 300);
   };
   if(!IS_DEMO && insRows.length){
+    // ⚠️ Si la personne a déjà une ligne eleves pour une AUTRE saison (carte d'une saison
+    // précédente), NE PAS l'écraser — sinon sa carte historique apparaît "renouvelée" (bug Vlad
+    // 2026-07-08). eleves n'a qu'UNE carte par email → la carte de la nouvelle saison est portée
+    // par l'inscriptions_cours et reconstruite par _buildCartesData dans la vue de sa saison.
+    var _elvAutreSaison = (adminData.cartes||[]).find(function(c){ return c.email===email && (c.saison||saisonCourante())!==sai; });
+    var _elvProm;
+    if (_elvAutreSaison) {
+      _elvProm = Promise.resolve(); // ligne eleves d'une autre saison préservée intacte
+    } else {
     // Mettre à jour les champs carte sur la ligne eleves existante, ou créer si absente
     var _updElevesDI = {
       carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',
       carte_utilises:0, carte_restants:anyMainCarte10?_cfv.nb:0, carte_duree_mois:anyMainCarte10?_cfv.duree:null, carte_paye:true
     };
     if(anyMainCarte10){ _updElevesDI.niveau=carteNiveauDI; _updElevesDI.ville=carteVilleDI; }
-    var _elvProm = Promise.resolve(TEV.client.from('eleves').update(_updElevesDI).eq('email',email).select('id')).then(function(r){
+    _elvProm = Promise.resolve(TEV.client.from('eleves').update(_updElevesDI).eq('email',email).select('id')).then(function(r){
       if (r && r.data && r.data.length) return; // ligne existante mise à jour
       return Promise.resolve(TEV.client.from('eleves').insert({
         prenom:prenom,nom:nom,email:email,tel:tel,niveau:anyMainCarte10?carteNiveauDI:niveau0,ville:anyMainCarte10?carteVilleDI:ville0,
@@ -14963,6 +14991,7 @@ window.soumettreInscriptionDirecte = function(force) {
         carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true
       }));
     }).catch(function(){});
+    }
     // inscriptions_cours INSERT — navigate to list after both ops complete
     TEV.client.from('inscriptions_cours').insert(insRows).then(function(r){
       if(r && r.error){
@@ -15267,6 +15296,7 @@ function renderEmailsNewsletter() {
       + '<span style="display:flex;gap:8px;align-items:center;flex-shrink:0;white-space:nowrap;">'
       + '<span style="font-size:10px;color:var(--dim);">'+(SRC_LBL[u.source]||u.source)+'</span>'
       + (dt?'<span style="font-size:10px;color:var(--dim);">'+dt+'</span>':'')
+      + '<a href="javascript:void(0)" onclick="supprimerNewsletterEmail(\''+escHtml(u.email).replace(/'/g,"\\'")+'\')" title="Supprimer cette adresse" style="text-decoration:none;font-size:13px;color:#e55;">🗑</a>'
       + '</span></div>';
   });
   h += '</div>';
