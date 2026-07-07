@@ -315,8 +315,10 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
       </div>
     </div>
     <div style="margin:12px 0;padding-top:10px;border-top:1px dashed var(--border);">
+      <label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;margin-bottom:8px;">Complément réglé (€)
+        <input type="number" id="modal-ren-complement" min="0" step="1" placeholder="ex: 325" style="width:90px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:14px;"></label>
       <button class="btn btn-ghost" onclick="renouvelerVersForfait()" style="width:100%;font-size:12px;">🔄 Passer en complément forfait annuel</button>
-      <div style="font-size:10px;color:var(--dim);margin-top:5px;line-height:1.5;">L'élève paie un complément sur AssoConnect pour passer au forfait ; le solde de cours restants n'est pas conservé. Lien de paiement à envoyer manuellement.</div>
+      <div style="font-size:10px;color:var(--dim);margin-top:5px;line-height:1.5;">À utiliser une fois le complément réglé sur AssoConnect — le montant saisi est ajouté à sa fiche (comptabilité). Le solde de cours restants n'est pas conservé.</div>
     </div>
     <div id="modal-ren-montant-row" style="display:none;margin:10px 0;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:8px;">Montant</div>
@@ -2357,6 +2359,7 @@ function ouvrirModalRenouveler(id, nom) {
   gel('modal-ren-nom').textContent = nom || '';
   if (gel('modal-ren-nb')) gel('modal-ren-nb').value = _carteNbAdmin();
   if (gel('modal-ren-duree')) gel('modal-ren-duree').value = _carteDureeAdmin();
+  if (gel('modal-ren-complement')) gel('modal-ren-complement').value = '';
   var radios = document.querySelectorAll('input[name="ren-paye"]');
   radios.forEach(function(r){ r.checked = r.value==='non'; });
   var montantRow = gel('modal-ren-montant-row');
@@ -2443,9 +2446,12 @@ function renouvelerVersForfait() {
   var c = (adminData.cartes||[]).find(function(x){ return String(x.id)===String(id); });
   if (!c || !(c.email||'').trim()) { afficherToast('⚠️ Fiche sans email — passage forfait impossible ici'); return; }
   var nom = c.nom || '';
+  var compl = parseFloat((gel('modal-ren-complement')||{}).value)||0;
   fermerModalRenouveler();
-  ouvrirModalConfirm('Passer ' + nom + ' en complément forfait annuel ?\n\nLe solde de cours restants ne sera pas conservé. Pensez à lui envoyer le lien de paiement AssoConnect du complément.', function(){
-    passerEnForfait(c.email, nom);
+  ouvrirModalConfirm('Passer ' + nom + ' en complément forfait annuel ?\n\n'
+    + (compl>0 ? 'Complément réglé : '+compl+' € — ajouté à sa fiche (comptabilité).' : '⚠️ Aucun montant de complément saisi — rien ne sera ajouté à la comptabilité.')
+    + '\n\nLe solde de cours restants ne sera pas conservé.', function(){
+    passerEnForfait(c.email, nom, compl);
   });
 }
 
@@ -9610,24 +9616,34 @@ function supprimerDefinitivementCarte(email, nom) {
     .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
   }
 }
-function passerEnForfait(email, nom) {
+function passerEnForfait(email, nom, complement) {
   var sai = saisonActive();
+  var _compl = parseFloat(complement)||0;
   // Mise à jour locale : changer type='forfait' pour les inscriptions_cours non-isRenewal
+  var _ctCompl = null; // 1ère inscription active non-renouvellement → reçoit le montant du complément
   (adminData.coursTango||[]).forEach(function(ct){
     if(ct.email===email && ct.statut==='inscrit'){
       var d = ct.donnees || {};
       if(typeof d === 'string'){ try{ d=JSON.parse(d); }catch(e){ d={}; } }
-      if(!d.isRenewal) ct.type='forfait';
+      if(!d.isRenewal){
+        ct.type='forfait';
+        if(!_ctCompl && (ct.saison||saisonCourante())===sai) _ctCompl = ct;
+      }
     }
   });
+  if(_compl>0 && _ctCompl){
+    _ctCompl.montant = (parseFloat(_ctCompl.montant)||0) + _compl;
+  }
   // Vider les champs carte sur l'objet eleves local (noms courts : statut, restants, utilises…)
   var carteEleve=(adminData.cartes||[]).find(function(c){ return c.email===email; });
   if(carteEleve){
     carteEleve.restants=0; carteEleve.utilises=0;
     carteEleve.datePremierCours=''; carteEleve.expiration='';
-    carteEleve.statut='Active'; // 'Nouvelle carte' ferait rester visible dans _buildCartesData
+    // 'Forfait' : invisible dans _buildCartesData (admin) ET carte.type='forfait' côté élève
+    // (jamais 'Active'/'Nouvelle carte' — l'espace élève afficherait encore le suivi de carte)
+    carteEleve.statut='Forfait';
   }
-  afficherToast('🔄 '+nom+' converti·e en forfait');
+  afficherToast('🔄 '+nom+' converti·e en forfait'+(_compl>0?' · complément '+_compl+' € enregistré':''));
   renderTab();
   if(!IS_DEMO){
     var ops = [
@@ -9640,9 +9656,19 @@ function passerEnForfait(email, nom) {
     ];
     // Réinitialiser les champs carte dans eleves (valeurs valides — colonnes NOT NULL)
     ops.push(Promise.resolve(TEV.client.from('eleves')
-      .update({carte_statut:'Active', carte_restants:0, carte_utilises:0,
+      .update({carte_statut:'Forfait', carte_restants:0, carte_utilises:0,
                carte_expiration:null, carte_date_achat:null, carte_paye:true})
       .eq('email', email)));
+    // Complément forfait : ajouté au montant de la 1ère inscription (comptabilité) + trace dans donnees
+    // (id réel DB uniquement — les ids locaux temporaires 'CT<timestamp>' ne sont pas ciblables)
+    if(_compl>0 && _ctCompl && _ctCompl.id && !/^CT\d/.test(String(_ctCompl.id))){
+      var _dC = _ctCompl.donnees || {};
+      if(typeof _dC === 'string'){ try{ _dC=JSON.parse(_dC); }catch(e){ _dC={}; } }
+      var _dMerged = Object.assign({}, _dC, { complementForfait: _compl, complementForfaitDate: today() });
+      ops.push(Promise.resolve(TEV.client.from('inscriptions_cours')
+        .update({montant: _ctCompl.montant, donnees: _dMerged})
+        .eq('id', _ctCompl.id)));
+    }
     Promise.all(ops).then(function(){ chargerDonnees(); }).catch(function(e){ afficherToast('⚠️ Erreur: '+((e&&e.message)||'')); });
   }
 }
