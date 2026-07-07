@@ -15300,7 +15300,7 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
       : (dv.client_nom || '');
     var dt = _dvDateFr(dv.date_emission || dv.created_at);
     var evtDate = dv.evt_date ? ' · 📅 ' + _dvDateFr(dv.evt_date) : '';
-    var evtLieu = dv.evt_lieu ? ' · 📍 ' + dv.evt_lieu : '';
+    var evtLieu = dv.evt_lieu ? ' · 📍 ' + escHtml(dv.evt_lieu) : '';
 
     // Lien public client
     var publicUrl = dv.public_token ? 'https://app.tangoetvous.fr/devis/p/' + dv.public_token : '';
@@ -15328,7 +15328,7 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
       +   '<span class="pill ' + st.cls + '" style="font-size:13px;">' + st.lbl + '</span>'
       + '</div>'
       + '<div class="card-sub">'
-      +   (dv.client_nom ? dv.client_nom : '') + (montant ? ' · ' + montant : '') + (dt ? ' · ' + dt : '')
+      +   (dv.client_nom ? escHtml(dv.client_nom) : '') + (montant ? ' · ' + montant : '') + (dt ? ' · ' + dt : '')
       + '</div>';
     if (dv.evt_date || dv.evt_lieu) {
       h += '<div style="font-size:14px;color:var(--dim);margin-top:2px;">' + evtDate.replace(' · ','') + evtLieu + '</div>';
@@ -15337,7 +15337,7 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
 
     // Prestations
     if (Array.isArray(dv.prestations) && dv.prestations.length) {
-      var presLabels = dv.prestations.map(function(p){ return p.intitule || '—'; }).join(' · ');
+      var presLabels = dv.prestations.map(function(p){ return escHtml(p.intitule || '—'); }).join(' · ');
       h += '<div style="font-size:14px;color:var(--dim);margin-top:6px;">' + presLabels + '</div>';
     }
 
@@ -15441,7 +15441,7 @@ function _renderCPListe(liste, STATUTS, STATUTS_OPTS) {
     var card = '<div class="card">';
     card += '<div class="card-top"><div>'
       + '<div class="card-nom">'+escHtml((cp.prenom||'')+' '+(cp.nom||''))+'</div>'
-      + '<div class="card-sub">'+(cp.email||'')+(cp.tel?' · '+cp.tel:'')+(dt?' · '+dt:'')+'</div>'
+      + '<div class="card-sub">'+escHtml(cp.email||'')+(cp.tel?' · '+escHtml(cp.tel):'')+(dt?' · '+dt:'')+'</div>'
       + '</div>';
     card += '<select class="input" style="width:auto;font-size:12px;padding:4px 8px;" data-action="statut-cp" data-id="'+cp.id+'">';
     STATUTS_OPTS.forEach(function(s){
@@ -15492,8 +15492,8 @@ function _renderCPListe(liste, STATUTS, STATUTS_OPTS) {
 
     card += '<div class="btn-row" style="margin-top:8px;">';
     if (cp.email) card += '<a href="'+mailtoGmail(cp.email,'Tango &amp; Vous')+'" target="_blank" class="btn btn-gold" style="text-decoration:none;font-size:12px;">✉️ Gmail</a>';
-    if (cp.tel)   card += '<a href="tel:'+cp.tel+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📞 Appel</a>';
-    if (cp.tel)   card += '<a href="sms:'+cp.tel+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">💬 SMS</a>';
+    if (cp.tel)   card += '<a href="tel:'+escHtml(cp.tel)+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">📞 Appel</a>';
+    if (cp.tel)   card += '<a href="sms:'+escHtml(cp.tel)+'" class="btn btn-ghost" style="text-decoration:none;font-size:12px;">💬 SMS</a>';
     card += '<button class="btn btn-ghost" data-action="toggle-cp-cal" data-id="'+cp.id+'" style="font-size:12px;">'+(calOpen?'▴ Fermer':'📅 Calendrier')+'</button>';
     card += '<button class="btn btn-ghost" data-action="supprimer-cp" data-id="'+cp.id+'" style="font-size:12px;color:#e55;margin-left:auto;">🗑️</button>';
     card += '</div></div>';

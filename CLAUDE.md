@@ -1088,6 +1088,23 @@ SELECT id, statut INTO v_partner_id, v_partner_statut FROM t WHERE ...;
 UPDATE t SET col = v_partner_statut WHERE id = v_partner_id;
 ```
 
+## Audit sécurité — 2026-07-08 (post-annuaire élève)
+
+Audit en lecture seule après mise en place de Playwright. 4 corrections appliquées (#1, #2, #4, #5), 2 durcissements laissés en suspens (#3, #6). Tests de non-régression : groupe H Playwright (`tests/h-security.spec.js`, 3 tests) + suite complète 24/24 verte.
+
+### Corrigés ✅
+- **#1 — `/api/eleve/message-prive` : route non authentifiée** (`worker.js` `handleEleveMessagePrive`). La route acceptait n'importe quel en-tête `Authorization` non vide → un tiers pouvait pousser notif in-app + push OS à n'importe quel élève en usurpant l'expéditeur. Fix : validation du JWT via `/auth/v1/user` + vérification que `de` (expéditeur) == email du token (comparaison en minuscules). Le client envoie `de` = email de session Supabase (même source que le JWT) → match garanti pour les appels légitimes. Route fire-and-forget same-origin : même un rejet ne bloque pas l'envoi du message (déjà inséré en base côté client). **Non couvert par Playwright** (pas de runtime worker) — vérif manuelle : `curl -s -o /dev/null -w "%{http_code}" -X POST https://app.tangoetvous.fr/api/eleve/message-prive -H "Authorization: Bearer faux" -H "Content-Type: application/json" -d '{"de":"x@y.fr","a":"z@w.fr"}'` doit renvoyer **401** (avant le fix : 200).
+- **#2 — XSS stockée espace élève** (`index.html` `renderNotificationsPane`, ligne ~4735). `n.message` (venant de `notifications_eleve`, avec champs user via #1 ou discussions) était inséré en innerHTML brut → `<img onerror>` exécuté chez la victime. Fix : échappement local `_escN()` (⚠️ `_esc` global n'existe PAS dans ce scope — il est défini 3× en `const` local dans d'autres fonctions ; ne jamais appeler `_esc` ici). Les messages sont toujours du texte (emoji + libellé), jamais du HTML volontaire → échappement 100 % sûr.
+- **#4 — XSS stockée admin, liste devis** (`admin.html` `renderListeDevis`). `client_nom`, `evt_lieu`, intitulés de prestations (issus du formulaire public `demande-devis.html`) insérés bruts → `escHtml()`. Champs serveur (numero, dates, montant) laissés intacts.
+- **#5 — XSS stockée admin, liste cours particuliers** (`admin.html` `_renderCPListe`/`cardCP`). `cp.email` / `cp.tel` (formulaire public) insérés bruts en contexte texte ET dans `href="tel:"`/`"sms:"` → `escHtml()` (neutralise le `"` de sortie d'attribut ; un vrai numéro ne contient jamais `"<>&`, zéro impact). `mailtoGmail()` déjà sûr (encodeURIComponent).
+
+### Risque résiduel accepté / à faire plus tard
+- **#3 — usurpation d'expéditeur discussions** (`handleNotifyDiscussion*Eleve`) : `_requireEleve(jwt)` valide que le token est un utilisateur Supabase mais **pas** que `auteurEmail`/`targetEmail` du body lui correspond. Un élève authentifié peut notifier n'importe quelle cible en usurpant `auteurNom`. Durcissement : faire retourner l'email par `_requireEleve` et comparer. Non fait (helper partagé, prudence requise).
+- **#6 — `/api/eleve/repertoire` sans contrôle de rôle** : tout compte Supabase authentifié (pas forcément élève) peut lister l'annuaire (nom + photo des `visible_repertoire=true`). Données non sensibles, opt-in → accepté.
+
+### Confirmé correctement protégé (ne pas re-signaler)
+Emails Brevo (tous champs via `_esc`), chat discussions admin (`escHtml`) et élève (`nameEsc`/`msgEsc`), bulles annuaire élève (`_repEsc`), cartes publications élève (`_esc`), notifications **admin** (`escHtml`), `_dvRow` (`escHtml`), endpoints `/api/debug/*` (admin requis), `handleRegisterToken` (email dérivé du JWT, pas du body). Secrets : seule la clé anon Supabase (publique par design) dans le client, aucune service key/clé Brevo/Firebase en dur.
+
 ## Audit sécurité — 2026-05-06
 
 ### Corrigés

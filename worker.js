@@ -543,7 +543,7 @@ export default {
       // POST /api/eleve/message-prive — notifie le destinataire d'un nouveau message privé (JWT élève requis)
       if (pathname === '/api/eleve/message-prive' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
-        return await handleEleveMessagePrive(request, env);
+        return await handleEleveMessagePrive(request, env, jwt);
       }
 
       try {
@@ -3904,14 +3904,33 @@ async function handleEleveRepertoire(request, env) {
 
 // POST /api/eleve/message-prive — push + notif in-app au destinataire d'un message privé Annuaire
 // ================================================================
-async function handleEleveMessagePrive(request, env) {
+async function handleEleveMessagePrive(request, env, jwt) {
   let de, deNom, a, extrait;
   try {
     ({ de, deNom, a, extrait } = await request.json());
   } catch(e) {
-    return jsonError(400, 'Body invalide', {}, request);
+    return jsonError(400, 'Body invalide');
   }
-  if (!de || !a) return jsonError(400, 'Champs manquants', {}, request);
+  if (!de || !a) return jsonError(400, 'Champs manquants');
+
+  // Sécurité : valider le JWT et vérifier que l'expéditeur (de) est bien le titulaire du token.
+  // Sans ça, la route accepte n'importe quel en-tête Authorization non vide → un tiers pourrait
+  // pousser notifs in-app + push OS à n'importe quel élève en usurpant l'expéditeur.
+  // Le client envoie de = email de la session Supabase (même source que le JWT) → match garanti pour les appels légitimes.
+  let authEmail = '';
+  try {
+    const vr = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${jwt}` },
+    });
+    if (!vr.ok) return jsonError(401, 'Token invalide');
+    const user = await vr.json();
+    authEmail = ((user && user.email) || '').toLowerCase().trim();
+  } catch(e) {
+    return jsonError(401, 'Auth requise');
+  }
+  if (!authEmail || authEmail !== (de || '').toLowerCase().trim()) {
+    return jsonError(403, 'Expéditeur non autorisé');
+  }
 
   const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const extrCourt = (extrait || '').slice(0, 80);

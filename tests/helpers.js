@@ -55,4 +55,10 @@ async function bootPage(page) {
   await page.waitForFunction(() => typeof calcExpiration === 'function');
 }
 
-module.exports = { bootDemo, bootPage, COURS_DATES };
+/** Charge index.html (espace élève) — pour tester le rendu côté élève (ex: panneau notifications). */
+async function bootEleve(page) {
+  await page.goto('/index.html');
+  await page.waitForFunction(() => typeof renderNotificationsPane === 'function' && !!document.getElementById('notifications-pane'));
+}
+
+module.exports = { bootDemo, bootPage, bootEleve, COURS_DATES };
