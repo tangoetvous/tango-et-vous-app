@@ -338,14 +338,22 @@ Section "Annuaire des élèves" dans `renderAccueil()` → `toggleRepertoire(val
 
 ---
 
-## Playwright — tests E2E à implémenter (prévu septembre 2026)
+## Playwright — infrastructure en place (2026-07-08) ✅
 
-### Contexte
+### État : 21 tests verts (`npm test`)
+- **Fichiers** : `playwright.config.js` (webServer auto sur port 8788), `tests/server.js` (serveur statique zéro dépendance), `tests/helpers.js` (calendrier contrôlé 2 saisons + `bootDemo`/`bootPage`), `tests/{a-calc-expiration,b-cartes-dedup,d-transfert-essai,f-polling-guards,g-inscription-vp}.spec.js`
+- **Principe** : `admin.html` chargé via serveur local → `demarrerDemoApp()` (mode démo, DEMO_DATA en mémoire, **zéro écriture Supabase**) → tests des fonctions réelles via `page.evaluate` + formulaires DOM réels (DI/VP)
+- **Calendrier contrôlé** (`tests/helpers.js`) : jeudis Paris / lundis Vincennes sur 2 saisons continues avec vacances retirées — les attentes des tests A sont calculées à la main ; toute modification de `calcExpiration` qui change ces résultats fera échouer les tests
+- **A6 = test de parité** `calcExpiration` (admin.html) ↔ `_calcExpirationSb` (tev-supabase.js) sur 10 cas — protège la règle « modifier les deux à l'identique »
+- **G1/G2 = régressions des bugs du 2026-07-07** (carte rattachée au mauvais cours, fiche fantôme _vpPrefillIds)
+- **⚠️ Piège email** : la validation DI/VP exige un TLD — utiliser `x@test.fr`, jamais `x@test`
+- **Déploiement** : `.assetsignore` exclut tests/, package*.json, playwright.config.js des assets Cloudflare (vérifier au 1er déploiement que ces URLs renvoient bien 404 sur app.tangoetvous.fr)
+- **Exécution** : `npm install` (une fois) puis `npm test` — local ou par Claude directement
+
+### Contexte d'origine
 - Framework : [Playwright](https://playwright.dev/) — gratuit, open source, maintenu par Microsoft
 - Exécution : **local uniquement** (`npm test`) — pas de CI GitHub Actions
-- Prérequis : Node.js installé (vérifier avec `node --version`)
 - Fichiers cibles : `admin.html` en **mode démo** (`IS_DEMO = true`) — pas de vraies données Supabase
-- Pour lancer l'implémentation : dire **"on fait Playwright"** — aucune autre question nécessaire
 
 ### Scénarios prioritaires (demandés par l'utilisateur)
 1. `calcExpiration` — cartes 10
@@ -1526,7 +1534,7 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
   - **Workflow** : `.github/workflows/yoga-fin-saison.yml` avec `workflow_dispatch` pour test manuel + cron annuel.
 - [ ] **Redirection `tangoetvous.fr` → `www.tangoetvous.com`** : à configurer dans Cloudflare (pas de code). Deux étapes : (1) DNS → ajouter enregistrement `A` `@` `192.0.2.1` en mode Proxied ☁️ ; (2) Rules → Redirect Rules → Dynamic redirect `concat("https://www.tangoetvous.com", http.request.uri.path)` status 301, condition hostname = `tangoetvous.fr`. Objectif : éviter la page blanche et concentrer l'autorité SEO sur le site Wix.
 - [ ] **Mettre à jour les actions GitHub vers Node.js 24** : ✅ `backup-csv.yml` et `keep-alive.yml` déjà en `@v5` (checkout, upload-artifact, action-send-mail). **Reste uniquement** `deploy.yml` → `actions/checkout@v4` → `@v5`. Sans urgence : Node 20 encore supporté plusieurs mois ; signal = warning jaune "Node.js 20 deprecated" dans un run Actions. Risque de casse quasi nul (checkout v5 = simple bump runtime ; si échec, l'étape `wrangler deploy` ne s'exécute pas → prod intacte). Test = push → run deploy.yml vert/rouge dans GitHub Actions.
-- [ ] **Playwright — tests E2E (septembre 2026)** : tests E2E sur `admin.html` en mode démo, ciblés sur les points fragiles (couples email partagé dans Cartes 10, `calcExpiration`). Playwright démarre/arrête le serveur local automatiquement, une seule commande `npm test`. Voir section "Playwright — tests E2E à implémenter" ci-dessus pour le catalogue complet des scénarios (groupes A–G).
+- [x] **Playwright — tests E2E** — ✅ SOCLE FAIT (2026-07-08, 21 tests verts) : infra complète + groupes A (7 tests calcExpiration dont parité admin↔tev-supabase et snap été), B (4 : dédup 2 cours, couple email partagé, isRenewal, _maxParJour mixte), D (3 : transfert essai guideur/guidée/partenaire sans email), E (1 : nbInscritsCours quotas), F (4 : gardes anti-polling), G (2 : DI mixte forfait+carte, VP _vpPrefillIds fantôme). Voir section « Playwright — infrastructure en place » ci-dessous. **Reste à couvrir si besoin** : groupe C (onglets Supprimés, UI), B4-UI (bouton 2 cours masqué dans la modale), F1-3 originaux (scénarios 20s temps réel), G2 original (changement de cours).
 - [x] **Stages → Pointage — bouton email groupé Gmail** — ✅ Résolu autrement le 2026-07-02 : boutons « 📋 Copier les emails validés » par date dans Stages, Essai Tango et Essai Yoga (copie BCC-ready dédoublonnée). L'idée d'origine : dans l'onglet Stages → Pointage, ajouter un bouton "✉️ Contacter les inscrits" qui ouvre un brouillon Gmail pré-rempli avec en destinataires tous les emails des participants ayant `type_confirmation='confirme'` (inscrits confirmés uniquement, pas les personnes en liste d'attente `type_confirmation='attente'`). Tous les destinataires en BCC pour préserver la confidentialité. Sujet pré-rempli : ex. "Stage Tango & Vous — [date]". Implémentation : même mécanisme que les boutons Gmail existants (ouverture `https://mail.google.com/mail/?view=cm&...` avec `bcc=email1,email2,...`).
 - [x] **Espace élève — thème clair** — ✅ FAIT (constaté 2026-07-07) : toggle 🌓 clair/sombre dans le menu de l'espace élève (`toggleTheme()`, classe `body.theme-light`, jeu complet de règles CSS `body.theme-light ...` dans index.html). Section « Thème clair / Thème obscur » ajoutée au Mode d'emploi.
 - [x] **Mode d'emploi espace élève — compléments** — ✅ FAIT (constaté 2026-07-07) : les sections « 🔎 Agrandir les écritures » (réglages iPhone + Android) et « 📊 Mon niveau » existent dans la rubrique Mode d'emploi (index.html, accordéons `<details>`), plus une section « 🌓 Thème clair / Thème obscur ».
