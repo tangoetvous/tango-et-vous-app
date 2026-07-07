@@ -1558,6 +1558,8 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 ## À faire / en suspens
 > 📁 **Voir [`HISTORIQUE.md`](./HISTORIQUE.md)** pour les tâches accomplies, considérées résolues ou reportées (déplacées le 2026-05-27).
 
+- [ ] **Tester en réel le fix "carte cross-saison" (bug Vlad)** avec un élève test : inscrire via Inscription directe une personne qui a DÉJÀ une carte 10 dans la saison N (avec des cours pris / expirée) pour la saison N+1 avec une nouvelle carte. Vérifier que (a) sa carte saison N reste intacte (cours pris + expiration inchangés) dans la vue saison N, et (b) sa carte saison N+1 apparaît fraîche (0/N) dans la vue saison N+1. Correctif fait le 2026-07-08 (garde `_elvAutreSaison` dans `soumettreInscriptionDirecte` + test Playwright groupe M) mais non vérifié sur la vraie base (le test Playwright est en mode démo, sans écriture Supabase). ⚠️ Vérifier aussi le même scénario via "Valider Paiement" (VP utilise `upsert ignoreDuplicates:true` → ne devrait pas écraser, mais à confirmer).
+
 - [ ] **Vérif manuelle du fix sécurité #1 en prod** (audit 2026-07-08) : confirmer que `/api/eleve/message-prive` rejette bien un faux token (le déploiement `4f28cd2` a réussi, correctif sûr par construction, mais non vérifiable depuis le sandbox Claude qui ne joint pas `app.tangoetvous.fr` directement). Depuis la console navigateur sur `app.tangoetvous.fr` :
   ```js
   fetch('/api/eleve/message-prive', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer faux_token'}, body: JSON.stringify({de:'a@b.fr', a:'c@d.fr'})}).then(r => console.log('code:', r.status));
