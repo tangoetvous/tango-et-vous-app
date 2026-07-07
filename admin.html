@@ -14356,6 +14356,7 @@ function renderValiderPaiement() {
     +'<label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;">Cours <input type="number" id="vp-carte-nb" min="1" max="100" value="'+_carteNbAdmin()+'" style="width:75px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:13px;"></label>'
     +'<label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;">Validité (mois) <input type="number" id="vp-carte-duree" min="1" max="24" value="'+_carteDureeAdmin()+'" style="width:75px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:13px;"></label>'
     +'</div></div>'
+    +'<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:10px;cursor:pointer;text-transform:none;letter-spacing:0;"><input type="checkbox" id="vp-tarif-reduit" style="width:auto;padding:0;margin:0;flex-shrink:0;"> 🎓 Tarif réduit <span style="color:var(--dim);font-size:11px;">(étudiant·e / −26 ans / demandeur·euse d\'emploi — sur justificatif)</span></label>'
     +'<div class="box-err" id="vp-err"></div>'
     +'<div class="box-ok" id="vp-ok">✓ Paiement validé ! L\'élève est maintenant inscrit.</div>'
     +'<div class="btn-row"><button class="btn btn-gold" onclick="soumettreValiderPaiement()" style="flex:2;">✓ Valider le paiement → Inscrire</button>'
@@ -14501,6 +14502,7 @@ window.soumettreValiderPaiement = function(force) {
   var nom=((gel('vp-nom')||{}).value||'').trim();
   var email=((gel('vp-email')||{}).value||'').trim().toLowerCase();
   var tel=((gel('vp-tel')||{}).value||'').trim();
+  var _vpReduit=!!((gel('vp-tarif-reduit')||{}).checked);
   var coursCoches=Array.from(document.querySelectorAll('input[name="vp-cours"]:checked')).map(function(cb){return cb.value;});
   var _vpF2=coursCoches.length>=2?((document.querySelector('input[name="vp-formule2"]:checked')||{}).value||'carte10forfait'):null;
   var forfait2Checked=_vpF2==='forfait2', carte10UniqueChecked=_vpF2==='carte10unique', vpShared=forfait2Checked||carte10UniqueChecked;
@@ -14552,8 +14554,8 @@ window.soumettreValiderPaiement = function(force) {
     var role=((document.querySelector('input[name="vp-role-'+ci+'"]:checked')||{}).value)||'guideur';
     var existing=adminData.coursTango.find(function(e){return e.email===email&&_coursDbToLbl(e)===cours&&e.statut!=='inscrit'&&e.statut!=='supprimé';});
     if(!existing&&idx<_vpPrefillIds.length){ existing=adminData.coursTango.find(function(e){return String(e.id)===String(_vpPrefillIds[idx])&&e.statut!=='inscrit'&&e.statut!=='supprimé';}); if(!_vpRowMatches(existing)) existing=null; }
-    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.role=role;existing.ville=ville;existing.niveau=niveau;existing.cours=cours;if(tel)existing.tel=tel;}
-    else{adminData.coursTango.push({id:'CT'+Date.now()+'v'+idx,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:_coursDbToLbl({ville:ville,niveau:niveau}),ville:ville,statut:'inscrit',type:formule,paiement:paie,montant:montant,dateInscription:today(),saison:sai});}
+    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.role=role;existing.ville=ville;existing.niveau=niveau;existing.cours=cours;if(tel)existing.tel=tel;if(_vpReduit)existing.donnees=Object.assign({},existing.donnees,{tarifReduit:true});}
+    else{adminData.coursTango.push({id:'CT'+Date.now()+'v'+idx,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:_coursDbToLbl({ville:ville,niveau:niveau}),ville:ville,statut:'inscrit',type:formule,paiement:paie,montant:montant,dateInscription:today(),saison:sai,donnees:_vpReduit?{tarifReduit:true}:{}});}
   });
   // Cartes 10
   var anyMainCarte10=carte10UniqueChecked||coursCoches.some(function(cours,idx){
@@ -14596,9 +14598,9 @@ window.soumettreValiderPaiement = function(force) {
         return r;
       };
       if(existing){
-        updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'inscrit',type:formule,paiement:paie,montant:montant,tel:tel,ville:ville,niveau:niveau,donnees:dateP?{datePremierPaiement:dateP}:{}}).eq('id',existing.id)).then(_vpChk));
+        updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'inscrit',type:formule,paiement:paie,montant:montant,tel:tel,ville:ville,niveau:niveau,donnees:Object.assign({}, existing.donnees||{}, dateP?{datePremierPaiement:dateP}:{}, _vpReduit?{tarifReduit:true}:{})}).eq('id',existing.id)).then(_vpChk));
       } else {
-        updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').insert({prenom:prenom,nom:nom,email:email,tel:tel,role:role,ville:ville,niveau:niveau,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:dateP?{datePremierPaiement:dateP}:{}})).then(_vpChk));
+        updates.push(Promise.resolve(TEV.client.from('inscriptions_cours').insert({prenom:prenom,nom:nom,email:email,tel:tel,role:role,ville:ville,niveau:niveau,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:Object.assign({}, dateP?{datePremierPaiement:dateP}:{}, _vpReduit?{tarifReduit:true}:{})})).then(_vpChk));
       }
     });
     Promise.resolve(TEV.client.from('eleves').upsert({prenom:prenom,nom:nom,email:email,tel:tel,niveau:anyMainCarte10?carteNiveauVP:niveau0,ville:anyMainCarte10?carteVilleVP:ville0,statut_eleve:'Actif',source:'inscription',saison:sai,carte_utilises:0,carte_restants:anyMainCarte10?_cfv.nb:0,carte_duree_mois:anyMainCarte10?_cfv.duree:null,carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',carte_paye:true},{onConflict:'email',ignoreDuplicates:true})).then(function(r){
@@ -14711,6 +14713,7 @@ function renderFormulaireInscriptionDirecteAdmin() {
     +'<label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;">Cours <input type="number" id="di-carte-nb" min="1" max="100" value="'+_carteNbAdmin()+'" style="width:75px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:13px;"></label>'
     +'<label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;">Validité (mois) <input type="number" id="di-carte-duree" min="1" max="24" value="'+_carteDureeAdmin()+'" style="width:75px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;font-size:13px;"></label>'
     +'</div></div>'
+    +'<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:10px;cursor:pointer;text-transform:none;letter-spacing:0;"><input type="checkbox" id="di-tarif-reduit" style="width:auto;padding:0;margin:0;flex-shrink:0;"> 🎓 Tarif réduit <span style="color:var(--dim);font-size:11px;">(étudiant·e / −26 ans / demandeur·euse d\'emploi — sur justificatif)</span></label>'
     +'<div id="di-err" style="display:none;background:#1a0000;border-left:3px solid var(--danger);padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#ff6b6b;margin-bottom:10px;"></div>'
     +'<div id="di-ok"  style="display:none;background:#001a00;border-left:3px solid #4ade80;padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#4ade80;margin-bottom:10px;">✓ Élève inscrit·e !</div>'
     +'<button class="btn btn-gold" style="width:100%;" onclick="soumettreInscriptionDirecte()">✓ Inscrire</button>'
@@ -14810,6 +14813,7 @@ window.soumettreInscriptionDirecte = function(force) {
   var nom     = ((gel('di-nom')||{}).value||'').trim();
   var email   = ((gel('di-email')||{}).value||'').trim().toLowerCase();
   var tel     = ((gel('di-tel')||{}).value||'').trim();
+  var _diReduit = !!((gel('di-tarif-reduit')||{}).checked);
   var coursCoches = Array.from(document.querySelectorAll('input[name="di-cours"]:checked')).map(function(cb){ return cb.value; });
   var _diF2 = coursCoches.length>=2 ? ((document.querySelector('input[name="di-formule2"]:checked')||{}).value||'carte10forfait') : null;
   var forfait2Checked = _diF2==='forfait2';
@@ -14875,9 +14879,10 @@ window.soumettreInscriptionDirecte = function(force) {
     var role = ((document.querySelector('input[name="di-role-'+ci+'"]:checked')||{}).value)||'guideur';
     var ts_c = ts+idx*2;
     var existing = adminData.coursTango.find(function(e){return e.email===email&&e.cours===cours&&(e.nom||'').toLowerCase()===(nom||'').toLowerCase();});
-    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.ville=ville;existing.niveau=niveau;if(tel)existing.tel=tel;if(dateP)existing.datePremierPaiement=dateP;}
-    else{adminData.coursTango.push({id:'CT'+ts_c,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',type:formule,paiement:paie,montant:montant,datePremierPaiement:dateP,dateInscription:today(),saison:sai});}
-    insRows.push({prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,ville:ville,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:dateP?{datePremierPaiement:dateP}:{}});
+    var _donneesDI = Object.assign({}, dateP?{datePremierPaiement:dateP}:{}, _diReduit?{tarifReduit:true}:{});
+    if(existing){existing.statut='inscrit';existing.type=formule;existing.paiement=paie;existing.montant=montant;existing.ville=ville;existing.niveau=niveau;if(tel)existing.tel=tel;if(dateP)existing.datePremierPaiement=dateP;existing.donnees=Object.assign({},existing.donnees,_donneesDI);}
+    else{adminData.coursTango.push({id:'CT'+ts_c,prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,cours:cours,ville:ville,statut:'inscrit',type:formule,paiement:paie,montant:montant,datePremierPaiement:dateP,dateInscription:today(),saison:sai,donnees:_donneesDI});}
+    insRows.push({prenom:prenom,nom:nom,email:email,tel:tel,role:role,niveau:niveau,ville:ville,cours:cours,type:formule,paiement:paie,montant:montant,statut:'inscrit',saison:sai,donnees:_donneesDI});
   });
   // Cartes 10
   var anyMainCarte10 = carte10UniqueChecked || insRows.some(function(r){ return r.email===email && r.type==='carte10'; });
