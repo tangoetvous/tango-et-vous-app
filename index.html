@@ -430,6 +430,33 @@
   // ================================================================
   // RENDER DASHBOARD
   // ================================================================
+  // Liste des cours actifs de la saison courante (dédoublonnés, hors renouvellements),
+  // avec métadonnées d'affichage — partagé entre l'accueil et l'onglet Forfait/Carte.
+  function _tevCoursActifs() {
+    var _sc2 = _saisonCourante();
+    var list = ((eleveData && eleveData.inscriptionsTango) || []).filter(function(i){
+      if (i.statut !== 'inscrit' || i.saison !== _sc2) return false;
+      var _d = i.donnees && typeof i.donnees === 'object' ? i.donnees : {};
+      try { if (typeof i.donnees === 'string' && i.donnees) _d = JSON.parse(i.donnees); } catch(e) {}
+      return !_d.isRenewal;
+    });
+    var _seen = {};
+    list = list.filter(function(i){ var k=(i.ville||'')+'|'+(i.niveau||''); if(_seen[k]) return false; _seen[k]=true; return true; });
+    list.sort(function(a,b){ if(a.ville!==b.ville) return a.ville==='paris'?-1:1; return (a.niveau||'').localeCompare(b.niveau||''); });
+    return list.map(function(i){
+      var niv=(i.niveau||'').toLowerCase(), vil=(i.ville||'').toLowerCase();
+      var vinc = vil==='vincennes';
+      var inter = niv.includes('interm');
+      return {
+        ville: vil, niveau: niv,
+        nom: (vinc?'Vincennes':'Paris')+' — '+(inter?'Intermédiaire':'Débutant'),
+        jour: vinc?'Lundi':'Jeudi',
+        heure: vinc?(inter?HV_INT:HV_DEB):(inter?HP_INT:HP_DEB),
+        isForfait: (i.type||'')==='forfait'
+      };
+    });
+  }
+
   function renderDashboard() {
     if (!eleveData) return;
     const { eleve, carte, presences } = eleveData;
@@ -460,6 +487,30 @@
     $('forfait-view').style.display = isForfait ? 'block' : 'none';
     $('carte10-view').style.display = isForfait ? 'none' : 'block';
     if (isForfait) $('carte-section-title').textContent = 'Mon inscription';
+
+    // Un encadré par cours de la saison (version compacte — le suivi carte reste ci-dessous)
+    (function(){
+      var _ceDash = $('cours-encadres-dash');
+      if (!_ceDash) return;
+      var _cl = _tevCoursActifs();
+      if (!_cl.length) { _ceDash.innerHTML = ''; return; }
+      var _tCarte = ((Number(carte.coursUtilises)||0) + (Number(carte.coursRestants)||0)) || 10;
+      var _nbCarteCrs = _cl.filter(function(c){ return !c.isForfait; }).length;
+      _ceDash.innerHTML = _cl.map(function(c){
+        var f;
+        if (c.isForfait) f = '✅ Forfait annuel';
+        else if (isForfait) f = '🎫 Carte de cours';
+        else f = '🎫 Carte de ' + _tCarte + ' cours' + (_nbCarteCrs >= 2 ? ' (commune à vos ' + _nbCarteCrs + ' cours)' : '') + ' — suivi ci-dessous';
+        return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;">'
+          + '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+          + '<div style="font-size:14px;font-weight:700;color:var(--gold);">💃 ' + c.nom + '</div>'
+          + '<div style="font-size:12px;color:var(--text-dim);">Les ' + c.jour + 's · ' + c.heure + '</div>'
+          + '</div>'
+          + '<div style="font-size:12px;color:var(--text);margin-top:4px;">' + f + '</div>'
+          + '</div>';
+      }).join('');
+      if (isForfait) $('forfait-view').style.display = 'none'; // les encadrés remplacent le badge générique
+    })();
 
     if (!isForfait) {
       // Carte — jauge circulaire
@@ -2760,59 +2811,32 @@
     var h = '';
 
     // ── Bandeau d'accueil ───────────────────────────────
-    // Construction des lignes de cours (multi-cours si disponible)
-    var _sc = _saisonCourante();
-    var _inscrActives = (eleveData.inscriptionsTango || []).filter(function(i){
-      if (i.statut !== 'inscrit' || i.saison !== _sc) return false;
-      // Exclure les lignes de renouvellement de carte (isRenewal) : ce ne sont pas des cours distincts
-      var _d = i.donnees && typeof i.donnees === 'object' ? i.donnees : {};
-      try { if (typeof i.donnees === 'string' && i.donnees) _d = JSON.parse(i.donnees); } catch(e) {}
-      return !_d.isRenewal;
-    });
-    // Sécurité : dédoublonner par cours (ville+niveau)
-    (function(){ var _seen = {}; _inscrActives = _inscrActives.filter(function(i){ var k=(i.ville||'')+'|'+(i.niveau||''); if(_seen[k]) return false; _seen[k]=true; return true; }); })();
-    function _coursLine(vill, niv) {
-      var nL = (niv||'').toLowerCase().includes('interm') ? 'Intermédiaire' : 'Débutant';
-      var vL = (vill||'').toLowerCase();
-      var jr = vL === 'vincennes' ? 'Lundi' : 'Jeudi';
-      var hr = vL === 'vincennes' ? ((niv||'').toLowerCase().includes('interm') ? HV_INT : HV_DEB) : ((niv||'').toLowerCase().includes('interm') ? HP_INT : HP_DEB);
-      return nL + ' à ' + cap(vL) + ' — les ' + jr + 's à ' + hr;
-    }
-    var _coursLines;
-    if (_inscrActives.length >= 2 && _inscrActives.every(function(i){ return i.niveau; })) {
-      var _sortedInscr = _inscrActives.slice().sort(function(a, b) {
-        if (a.ville !== b.ville) return a.ville === 'paris' ? -1 : 1;
-        return (a.niveau||'').localeCompare(b.niveau||'');
-      });
-      _coursLines = _sortedInscr.map(function(i){ return _coursLine(i.ville, i.niveau); });
-    } else {
-      _coursLines = [_coursLine(ville, niveau)];
-    }
-    var _coursIntro = _coursLines.length >= 2 ? 'Tes cours :' : 'Ton cours :';
-    var _coursBody = _coursLines.length >= 2
-      ? _coursLines.map(function(l){ return '<div style="margin-top:3px;">· ' + l + '</div>'; }).join('')
-      : ' ' + _coursLines[0];
+    // Un encadré par cours est affiché sous le hero — les noms de cours ne sont plus listés ici
+    var _coursActifs = _tevCoursActifs();
 
     h += '<div class="accueil-hero-wrap" style="background:var(--hero-grad);padding:18px var(--hero-side-pad,20px) 14px;text-align:center;position:relative;overflow:hidden;">'
       + '<span class="hero-sd hero-sd-l"><small class="hsd-d">◦</small>✦<small class="hsd-d">◦</small></span>'
       + '<span class="hero-sd hero-sd-r"><small class="hsd-d">◦</small>✦<small class="hsd-d">◦</small></span>'
       + '<div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(212,175,55,0.25) 0%,rgba(212,175,55,0.09) 70%,transparent 100%);pointer-events:none;"></div>'
       + '<div style="font-family:var(--font-display,serif);font-size:26px;font-weight:300;color:var(--gold);letter-spacing:1px;margin-bottom:4px;position:relative;">Bonjour ' + prenom + ' !</div>'
-      + '<div style="font-size:16px;color:var(--text);line-height:1.6;position:relative;">' + _coursIntro + _coursBody
-      + (yogaInscrit ? '<div style="margin-top:3px;"><span style="color:var(--text);font-size:16px;">' + ({yin:'\uD83C\uDF19 Yin Yoga \u00b7 Mardi '+HY_YIN, hatha:'\u2600\uFE0F Hatha Yoga \u00b7 Mardi '+HY_HTH, forfait:'\uD83C\uDF19\u2600\uFE0F Yin + Hatha Yoga \u00b7 Mardi '+HY_YIN}[yogaInscrit.cours] || '') + '</span></div>' : '')
-      + '</div>'
+      + (yogaInscrit ? '<div style="font-size:16px;color:var(--text);line-height:1.6;position:relative;"><span style="color:var(--text);font-size:16px;">' + ({yin:'\uD83C\uDF19 Yin Yoga \u00b7 Mardi '+HY_YIN, hatha:'\u2600\uFE0F Hatha Yoga \u00b7 Mardi '+HY_HTH, forfait:'\uD83C\uDF19\u2600\uFE0F Yin + Hatha Yoga \u00b7 Mardi '+HY_YIN}[yogaInscrit.cours] || '') + '</span></div>' : '')
       + '</div>';
 
     h += '<div style="padding:0 16px 28px;">';
 
-    // ── Carte de 10 cours (mini jauge SVG) ────────────────────
-    if (carte && carte.type === 'carte10' && (carte.coursUtilises != null || carte.coursRestants != null)) {
+    // ── Un encadré par cours + suivi de carte ────────────────────
+    var _hasCarteAcc = !!(carte && carte.type === 'carte10' && (carte.coursUtilises != null || carte.coursRestants != null));
+    var _carteCrsAcc = _coursActifs.filter(function(c){ return !c.isForfait; });
+    var _tailleAcc = ((Number(carte.coursUtilises)||0) + (Number(carte.coursRestants)||0)) || 10;
+
+    // Suivi complet de la carte (titre + jauge + points + expiration + pastille + boutons)
+    function _carteTrackingHtml(titreSuffix) {
       const used      = Number(carte.coursUtilises) || 0;
       const remaining = Number(carte.coursRestants)  || 0;
       const tailleMini = (used + remaining) || 10;
       const pct       = Math.min(100, (used / tailleMini) * 100);
-      const sc = (carte.statut||'').includes('🔴') || (carte.statut||'').includes('⚫') ? '#c62828'
-               : (carte.statut||'').includes('🟡') ? '#ff8800' : '#D4AF37';
+      const sc = (carte.statut||'').includes('\uD83D\uDD34') || (carte.statut||'').includes('\u26AB') ? '#c62828'
+               : (carte.statut||'').includes('\uD83D\uDFE1') ? '#ff8800' : '#D4AF37';
       const circ = 2 * Math.PI * 34;
       const offset = circ * (1 - pct / 100);
       let dots = '<div style="display:flex;gap:5px;margin:12px 0 8px;">';
@@ -2820,11 +2844,10 @@
         dots += '<div style="flex:1;height:6px;border-radius:3px;background:' + (i < used ? sc : 'var(--border)') + ';transition:background .3s;"></div>';
       }
       dots += '</div>';
-      h += '<div style="margin-top:20px;margin-bottom:20px;">';
-      h += '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--text);margin-bottom:12px;text-align:center;">🎫 Ma carte de ' + tailleMini + ' cours' + ((carte.numero||1) > 1 ? ' — ' + (carte.numero||1) + 'ᵉ de la saison' : '') + '</div>';
-      h += '<div style="background:var(--carte-suivi-bg,var(--surface2));border:2px solid var(--carte-suivi-border,var(--border));border-radius:16px;padding:20px 18px;">';
-      h += '<div style="display:flex;align-items:center;gap:20px;">';
-      h += '<div style="flex-shrink:0;position:relative;width:80px;height:80px;">'
+      var hc = '';
+      hc += '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--text);margin-bottom:12px;text-align:center;">\uD83C\uDFAB Ma carte de ' + tailleMini + ' cours' + ((carte.numero||1) > 1 ? ' \u2014 ' + (carte.numero||1) + '\u1D49 de la saison' : '') + (titreSuffix||'') + '</div>';
+      hc += '<div style="display:flex;align-items:center;gap:20px;">';
+      hc += '<div style="flex-shrink:0;position:relative;width:80px;height:80px;">'
         + '<svg width="80" height="80" viewBox="0 0 80 80" style="transform:rotate(-90deg);">'
         + '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" stroke-width="7"/>'
         + '<circle cx="40" cy="40" r="34" fill="none" stroke="' + sc + '" stroke-width="7" stroke-linecap="round"'
@@ -2832,23 +2855,22 @@
         + '</svg>'
         + '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">'
         + '<span style="font-size:24px;font-weight:600;color:var(--gold);line-height:1;">' + used + '</span>'
-        + '<span style="font-size:10px;color:var(--text);letter-spacing:1px;">utilisés</span>'
+        + '<span style="font-size:10px;color:var(--text);letter-spacing:1px;">utilis\u00e9s</span>'
         + '</div></div>';
-      h += '<div style="flex:1;">'
+      hc += '<div style="flex:1;">'
         + '<div style="font-size:38px;font-weight:200;color:var(--text);line-height:1;">' + remaining + '</div>'
         + '<div style="font-size:15px;color:var(--text);letter-spacing:1px;margin-bottom:10px;">cours restants</div>';
-      h += '</div></div>';
-      h += dots;
+      hc += '</div></div>';
+      hc += dots;
       if (carte.dateExpiration) {
         var _expBadgeDays = daysUntil(carte.dateExpiration);
         if (_expBadgeDays !== null && _expBadgeDays < 0) {
-          h += '<div style="text-align:center;margin:14px 0 6px;">'
-            + '<span style="display:inline-block;background:#c62828;color:#fff;border-radius:24px;padding:7px 24px;font-size:18px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;">⛔ Expirée</span>'
+          hc += '<div style="text-align:center;margin:14px 0 6px;">'
+            + '<span style="display:inline-block;background:#c62828;color:#fff;border-radius:24px;padding:7px 24px;font-size:18px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;">\u26D4 Expir\u00e9e</span>'
             + '</div>';
         }
-        h += '<div style="font-size:15px;color:var(--text);margin-top:4px;">Expiration : ' + formatDate(carte.dateExpiration) + '</div>';
+        hc += '<div style="font-size:15px;color:var(--text);margin-top:4px;">Expiration : ' + formatDate(carte.dateExpiration) + '</div>';
       }
-      h += '</div>';
       // Boutons pointer + renouveler
       const _renewUrl = (function(){
         var DEFAULTS = {'2025-2026':'https://le-regard-se-pose.assoconnect.com/collect/description/524239-j-renouvellement-de-carte-de-10-ou-20-cours-2025-2026','2026-2027':'https://le-regard-se-pose.assoconnect.com/collect/description/696013-j-renouvellement-de-carte-de-10-ou-20-cours-2026-2027'};
@@ -2857,76 +2879,99 @@
       const _daysExp = daysUntil(carte.dateExpiration);
       const _isExhAcc = remaining === 0;
       const _isExpAcc = _daysExp !== null && _daysExp < 0;
-      const _canStartAcc = _isExhAcc || _isExpAcc;
       const _isNonPayeAcc = carte.paye === false;
-      // Période pré-inscription (juillet–août de la fin de saison)
+      // P\u00e9riode pr\u00e9-inscription (juillet\u2013ao\u00fbt de la fin de saison)
       const _preinscEndYear = parseInt(_sai().split('-')[1]);
       const _nowMonth = new Date().getMonth() + 1;
       const _isPreinscPeriod = new Date().getFullYear() === _preinscEndYear && (_nowMonth === 7 || _nowMonth === 8);
       const _nextSaiStr = _preinscEndYear + '-' + (_preinscEndYear + 1);
       const _reportInfoBlock = remaining > 0 ? '<div style="margin-top:8px;background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.25);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text-dim);line-height:1.5;">'
-        + '💡 Il vous reste <strong style="color:var(--gold);">' + remaining + ' cours</strong> sur votre carte — en vous pré-inscrivant pour ' + _nextSaiStr + ', vous pourrez en bénéficier grâce au report de votre carte !'
+        + '\uD83D\uDCA1 Il vous reste <strong style="color:var(--gold);">' + remaining + ' cours</strong> sur votre carte \u2014 en vous pr\u00e9-inscrivant pour ' + _nextSaiStr + ', vous pourrez en b\u00e9n\u00e9ficier gr\u00e2ce au report de votre carte !'
         + '</div>' : '';
 
-      // Pastille paiement (visible dans tous les états)
+      // Pastille paiement (visible dans tous les \u00e9tats)
       if (carte.paye === true) {
-        h += '<div style="text-align:right;margin-bottom:6px;"><span style="display:inline-block;background:rgba(76,175,80,0.15);border:1px solid rgba(76,175,80,0.4);border-radius:20px;padding:3px 10px;font-size:11px;color:#81c784;font-weight:600;">✓ Payée</span></div>';
+        hc += '<div style="text-align:right;margin:8px 0 6px;"><span style="display:inline-block;background:rgba(76,175,80,0.15);border:1px solid rgba(76,175,80,0.4);border-radius:20px;padding:3px 10px;font-size:11px;color:#81c784;font-weight:600;">\u2713 Pay\u00e9e</span></div>';
       } else if (_isNonPayeAcc) {
-        h += '<div style="text-align:right;margin-bottom:6px;"><span style="display:inline-block;background:#1a0800;border:1px solid #e65100;border-radius:20px;padding:3px 10px;font-size:11px;color:#ffb74d;font-weight:600;">⚠️ Non payée</span></div>';
+        hc += '<div style="text-align:right;margin:8px 0 6px;"><span style="display:inline-block;background:#1a0800;border:1px solid #e65100;border-radius:20px;padding:3px 10px;font-size:11px;color:#ffb74d;font-weight:600;">\u26A0\uFE0F Non pay\u00e9e</span></div>';
       }
       if (_isExhAcc) {
-        // Carte épuisée (10/10) → "Renouveler" AU-DESSUS de "Je pointe"
-        h += '<button onclick="renewCarteSelf()" style="width:100%;background:rgba(255,255,255,0.08);color:var(--text,#fff);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin:12px 0 8px;font-family:inherit;letter-spacing:0.2px;">↻ Renouveler sans payer pour l\'instant</button>';
-        h += '<button onclick="ouvrirModalPointerSelf()" class="btn-je-pointe-cls" style="width:100%;background:var(--gold);color:#1a1a1a;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;margin:0 0 8px;font-family:inherit;">✓ Je pointe ma présence</button>';
+        // Carte \u00e9puis\u00e9e (10/10) \u2192 "Renouveler" AU-DESSUS de "Je pointe"
+        hc += '<button onclick="renewCarteSelf()" style="width:100%;background:rgba(255,255,255,0.08);color:var(--text,#fff);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin:12px 0 8px;font-family:inherit;letter-spacing:0.2px;">\u21BB Renouveler sans payer pour l\'instant</button>';
+        hc += '<button onclick="ouvrirModalPointerSelf()" class="btn-je-pointe-cls" style="width:100%;background:var(--gold);color:#1a1a1a;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;margin:0 0 8px;font-family:inherit;">\u2713 Je pointe ma pr\u00e9sence</button>';
         if (!_isPreinscPeriod) {
-          h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+          hc += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">\uD83D\uDD04 Renouveler ma carte sur AssoConnect</a>';
         }
       } else if (_isExpAcc) {
-        // Carte expirée (pas épuisée) → proposer une nouvelle, pas de pointage
-        h += '<button onclick="renewCarteSelf()" style="width:100%;background:rgba(255,255,255,0.08);color:var(--text,#fff);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin:12px 0 8px;font-family:inherit;letter-spacing:0.2px;">↻ Commencer une nouvelle carte sans payer pour l\'instant</button>';
+        // Carte expir\u00e9e (pas \u00e9puis\u00e9e) \u2192 proposer une nouvelle, pas de pointage
+        hc += '<button onclick="renewCarteSelf()" style="width:100%;background:rgba(255,255,255,0.08);color:var(--text,#fff);border:1px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px;font-size:13px;font-weight:600;cursor:pointer;margin:12px 0 8px;font-family:inherit;letter-spacing:0.2px;">\u21BB Commencer une nouvelle carte sans payer pour l\'instant</button>';
         if (_isPreinscPeriod) {
-          h += _reportInfoBlock;
+          hc += _reportInfoBlock;
         } else {
-          h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+          hc += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;border:1px solid rgba(212,175,55,0.45);border-radius:10px;padding:11px;font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;margin-bottom:4px;">\uD83D\uDD04 Renouveler ma carte sur AssoConnect</a>';
         }
       } else {
         // Carte en cours
         if (_isNonPayeAcc) {
-          h += '<div style="background:#1a0800;border:1px solid #e65100;border-radius:10px;padding:11px 14px;margin:10px 0 8px;font-size:12px;color:#ffb74d;line-height:1.5;">'
-            + '⚠️ Votre carte est renouvelée mais non payée, pour effectuer le paiement cliquez sur le bouton ci-dessous.'
+          hc += '<div style="background:#1a0800;border:1px solid #e65100;border-radius:10px;padding:11px 14px;margin:10px 0 8px;font-size:12px;color:#ffb74d;line-height:1.5;">'
+            + '\u26A0\uFE0F Votre carte est renouvel\u00e9e mais non pay\u00e9e, pour effectuer le paiement cliquez sur le bouton ci-dessous.'
             + '</div>';
         }
-        h += '<button onclick="ouvrirModalPointerSelf()" class="btn-je-pointe-cls" style="width:100%;background:var(--gold);color:#1a1a1a;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;margin:0 0 8px;font-family:inherit;">✓ Je pointe ma présence</button>';
+        hc += '<button onclick="ouvrirModalPointerSelf()" class="btn-je-pointe-cls" style="width:100%;background:var(--gold);color:#1a1a1a;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;letter-spacing:0.5px;cursor:pointer;margin:0 0 8px;font-family:inherit;">\u2713 Je pointe ma pr\u00e9sence</button>';
         if (_isPreinscPeriod) {
-          h += _reportInfoBlock;
+          hc += _reportInfoBlock;
         } else {
-          h += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;'
+          hc += '<a href="' + _renewUrl + '" target="_blank" style="display:block;text-align:center;'
             + (_isNonPayeAcc ? 'background:#e65100;color:#fff;font-weight:700;' : 'border:1px solid rgba(212,175,55,0.45);color:var(--gold);font-weight:600;')
-            + 'border-radius:10px;padding:11px;font-size:13px;text-decoration:none;margin-bottom:4px;">🔄 Renouveler ma carte sur AssoConnect</a>';
+            + 'border-radius:10px;padding:11px;font-size:13px;text-decoration:none;margin-bottom:4px;">\uD83D\uDD04 Renouveler ma carte sur AssoConnect</a>';
         }
       }
-      h += '</div>';
-      // Forfait(s) en complément d'une carte10 (ex: Paris carte10 + Vincennes forfait)
-      var _inscForfait = _inscrActives.filter(function(i){ return i.type === 'forfait'; });
-      _inscForfait.forEach(function(insc) {
-        var _vL = cap((insc.ville||'').toLowerCase());
-        h += '<div style="margin-top:12px;">'
-          + '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:14px 18px;">'
-          + '<div class="forfait-badge" style="margin:0;">✅ Forfait annuel — ' + _vL + ' actif</div></div></div>';
+      return hc;
+    }
+
+    function _coursBoxOpen(c) {
+      return '<div style="background:var(--carte-suivi-bg,var(--surface2));border:2px solid var(--carte-suivi-border,var(--border));border-radius:16px;padding:16px 18px;margin-bottom:14px;">'
+        + '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+        + '<div style="font-size:15px;font-weight:700;color:var(--gold);letter-spacing:0.5px;">\uD83D\uDC83 ' + c.nom + '</div>'
+        + '<div style="font-size:12px;color:var(--text-dim);">Les ' + c.jour + 's \u00b7 ' + c.heure + '</div>'
+        + '</div>';
+    }
+
+    if (_coursActifs.length) {
+      h += '<div style="margin-top:20px;margin-bottom:6px;">';
+      _coursActifs.forEach(function(c){
+        h += _coursBoxOpen(c);
+        if (c.isForfait) {
+          h += '<div class="forfait-badge" style="margin:10px 0 0;">\u2705 Forfait annuel actif</div>';
+        } else if (_hasCarteAcc && _carteCrsAcc.length === 1) {
+          // Une seule carte pour ce seul cours \u2192 suivi int\u00e9gr\u00e9 dans l\u2019encadr\u00e9 du cours
+          h += '<div style="border-top:1px dashed var(--border);margin-top:12px;padding-top:14px;">' + _carteTrackingHtml('') + '</div>';
+        } else if (_hasCarteAcc) {
+          // Carte commune \u00e0 plusieurs cours \u2192 mention + suivi unique dans l\u2019encadr\u00e9 d\u00e9di\u00e9 dessous
+          h += '<div style="font-size:13px;color:var(--text);margin-top:10px;">\uD83C\uDFAB Carte de ' + _tailleAcc + ' cours <span style="color:var(--text-dim);">\u2014 commune \u00e0 vos ' + _carteCrsAcc.length + ' cours, suivi ci-dessous</span></div>';
+        } else {
+          h += '<div style="font-size:13px;color:var(--text);margin-top:10px;">\uD83C\uDFAB Formule : carte de cours</div>';
+        }
+        h += '</div>';
       });
-    } else if (carte && carte.type === 'forfait') {
-      var _inscForfaitAll = _inscrActives.filter(function(i){ return i.type === 'forfait'; });
-      h += '<div style="margin-top:20px;margin-bottom:20px;">';
-      h += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:18px;">';
-      if (_inscForfaitAll.length >= 2) {
-        _inscForfaitAll.forEach(function(insc) {
-          var _vL = cap((insc.ville||'').toLowerCase());
-          h += '<div class="forfait-badge" style="margin:0 0 6px;">✅ Forfait annuel — ' + _vL + ' actif</div>';
-        });
-      } else {
-        h += '<div class="forfait-badge" style="margin:0;">✅ Forfait annuel actif</div>';
+      if (_hasCarteAcc && _carteCrsAcc.length !== 1) {
+        // Suivi de la carte (commune \u00e0 plusieurs cours, ou aucune ligne carte d\u00e9tect\u00e9e)
+        h += '<div style="background:var(--carte-suivi-bg,var(--surface2));border:2px solid var(--carte-suivi-border,var(--border));border-radius:16px;padding:18px;margin-bottom:14px;">'
+          + _carteTrackingHtml(_carteCrsAcc.length >= 2 ? ' \u2014 commune \u00e0 vos ' + _carteCrsAcc.length + ' cours' : '')
+          + '</div>';
       }
-      h += '</div></div>';
+      h += '</div>';
+    } else if (_hasCarteAcc) {
+      // Fallback (inscriptions non charg\u00e9es) : suivi de carte seul, comme avant
+      h += '<div style="margin-top:20px;margin-bottom:20px;">'
+        + '<div style="background:var(--carte-suivi-bg,var(--surface2));border:2px solid var(--carte-suivi-border,var(--border));border-radius:16px;padding:20px 18px;">'
+        + _carteTrackingHtml('')
+        + '</div></div>';
+    } else if (carte && carte.type === 'forfait') {
+      h += '<div style="margin-top:20px;margin-bottom:20px;">'
+        + '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:18px;">'
+        + '<div class="forfait-badge" style="margin:0;">\u2705 Forfait annuel actif</div>'
+        + '</div></div>';
     }
 
     // ── Rappel adhésion Sorano (Vincennes uniquement) ─────────────
@@ -6516,6 +6561,9 @@ body.theme-light .bandeau-inner{color:#fde68a;}
       <!-- Carte -->
       <div class="section">
         <div class="section-title" id="carte-section-title">Ma carte de cours</div>
+
+        <!-- Un encadré par cours de la saison (rempli par renderDashboard) -->
+        <div id="cours-encadres-dash"></div>
 
         <!-- Forfait annuel -->
         <div id="forfait-view" style="display:none">
