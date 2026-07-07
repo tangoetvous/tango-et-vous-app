@@ -1,5 +1,19 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-07-08 — Newsletter (collecte d'emails)
+
+Nouvelle fonctionnalité complète, testée (Playwright groupes K+L), **ajout automatique sans consentement** (choix admin — noter le point RGPD).
+
+- **Table Supabase `newsletter_emails`** (`supabase/newsletter_schema.sql`, VERSIONNÉ) : `id, created_at, email, source`. **RLS RGPD** : INSERT public (anon), **SELECT/DELETE réservés `is_admin()`** → les emails ne sont PAS lisibles avec la clé publique. Pas de contrainte UNIQUE (dédup à l'affichage) → aucun insert ne peut échouer. ⚠️ SQL à exécuter dans Supabase (non exécuté automatiquement).
+- **Helper central** `TEV.ajouterNewsletter(email, source)` (`tev-supabase.js`) : INSERT sans `.select()` (règle anon), garde email vide/invalide. Exposé dans `window.TEV`.
+- **Formulaire public** `newsletter.html` : un seul champ email, intégrable iframe Wix (postMessage hauteur, BroadcastChannel `newsletterInscription`, écran succès). URL : `https://app.tangoetvous.fr/newsletter.html`.
+- **Route worker** `POST /api/notify/newsletter` (sans auth, `handleNotifyNewsletter`) : ne fait QUE notifier l'admin (panel 🔔 + **push OS** via `getFcmTokensAdmin`+`sendFcmPush`). L'INSERT est côté client.
+- **Onglet admin `emails-newsletter`** (« 📧 Newsletter ») : `renderEmailsNewsletter()` — liste dédoublonnée par email (garde la + récente), source + date, bouton « 📋 Copier toutes les adresses » (`newsletterCopierEmails` → `_copierEmailsFiches`, BCC-ready). Chargé via `tevGetAdminData` (`newsletter`) + merge `chargerDonnees`.
+- **Branchement des 6 formulaires publics** : chacun ajoute l'email du soumissionnaire à la newsletter. 5 côté client (`TEV.ajouterNewsletter` juste après la construction du message d'inscription : cours-essai `cours-essai`, essai-yoga `essai-yoga`, inscription-cours `inscription-cours`, stages-pwa `stages`, cours-particuliers `cours-particuliers`) ; devis côté worker (`handleDemandeDevis` → `sbFetch('newsletter_emails'…)`, source `demande-devis`). Tous fire-and-forget, `source` distingue l'origine.
+- **Cache** : `tev-supabase.js` bumpé **?v=11** (fichier partagé modifié) dans les 8 HTML + newsletter.html.
+- ⚠️ **RGPD** : ajout automatique sans case de consentement (choix admin 2026-07-08). Si un jour opt-in requis → ajouter une case sur les formulaires et ne brancher `ajouterNewsletter` que si cochée.
+
+
 ## Session 2026-07-07 — Cartes N cours : cas mixte forfait+carte, fixes VP/suppression, complément forfait
 
 Tests utilisateur des phases 2+3 (cartes paramétrables) terminés et validés. Corrections apportées :

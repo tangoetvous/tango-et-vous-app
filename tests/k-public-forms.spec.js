@@ -15,6 +15,7 @@ const FORMS = [
   { file: 'stages-pwa.html',         titre: /stage/i },
   { file: 'cours-particuliers.html', titre: /particulier/i },
   { file: 'demande-devis.html',      titre: /devis/i },
+  { file: 'newsletter.html',         titre: /newsletter/i },
 ];
 
 test.describe('Groupe K — Formulaires publics (smoke)', () => {

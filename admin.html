@@ -550,6 +550,7 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
       <div class="admin-nav-row">
         <button class="tab-btn" data-tab="dashboard" style="color:#60a5fa"><span class="tab-icon">🏠</span><span class="tab-label">Dashboard</span></button>
         <button class="tab-btn" data-tab="compta" style="color:#34d399"><span class="tab-icon">💰</span><span class="tab-label">Compta</span></button>
+        <button class="tab-btn" data-tab="emails-newsletter" style="color:#38bdf8"><span class="tab-icon">📧</span><span class="tab-label">Newsletter</span></button>
       </div>
     </div>
   </div>
@@ -558,7 +559,7 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
 
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=10"></script>
+<script src="js/tev-supabase.js?v=11"></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
 // ================================================================
@@ -2668,6 +2669,7 @@ function traiterMsgInscription(msg, doRender) {
   if (msg.type === 'yogaEssaiInscription') _appliquerYogaEssaiInscription(msg.data);
   if (msg.type === 'yogaConfirmerPresence') _appliquerYogaConfirmPresence(msg.data);
   if (msg.type === 'coursParticulierInscription') { if(!IS_DEMO){chargerDonnees();return;} }
+  if (msg.type === 'newsletterInscription') { afficherToast('📧 Nouvelle inscription newsletter'); if(!IS_DEMO){chargerDonnees();return;} }
   if (msg.type === 'cartePointage') {
     var d = msg.data || {};
     var c = (adminData.cartes||[]).find(function(x){return x.email===d.email;});
@@ -2746,7 +2748,7 @@ window.addEventListener('message', function(ev) {
     }
     return;
   }
-  if (t !== 'stageInscription' && t !== 'coursInscription' && t !== 'essaiInscription' && t !== 'yogaEssaiInscription' && t !== 'yogaConfirmerPresence' && t !== 'coursParticulierInscription') return;
+  if (t !== 'stageInscription' && t !== 'coursInscription' && t !== 'essaiInscription' && t !== 'yogaEssaiInscription' && t !== 'yogaConfirmerPresence' && t !== 'coursParticulierInscription' && t !== 'newsletterInscription') return;
   traiterMsgInscription(ev.data, true);
 });
 
@@ -5655,6 +5657,7 @@ async function chargerDonnees() {
       demandesDevis:     d.demandesDevis     || adminData.demandesDevis || [],
       devisList:         d.devisList         || adminData.devisList || [],
       notifications:     d.notifications     || adminData.notifications || [],
+      newsletter:        d.newsletter        || adminData.newsletter || [],
     });
     if(!adminData.carteReports) adminData.carteReports=[];
     // Reconstruire _dailyCounts depuis les présences d'aujourd'hui (protège contre refresh et polling 15s)
@@ -5908,7 +5911,7 @@ function switchTab(tab) {
       'sorano':'🏛 Sorano','yoga':'🧘 Yoga','agenda':'📅 Agenda',
       'publications':'📝 Publications','whatsapp':'💬 WhatsApp','tarifs':'⚙️ Paramètres',
       'discussions':'🗨️ Discussions','devis':'📋 Devis','notifications':'🔔 Notifications',
-      'compta':'💰 Compta','dashboard':'🏠 Dashboard'
+      'compta':'💰 Compta','dashboard':'🏠 Dashboard','emails-newsletter':'📧 Newsletter'
     };
     _lbl.textContent = _LABELS[tab] || tab;
   }
@@ -5992,6 +5995,7 @@ function renderTab() {
     else if (currentTab==='devis')        html=renderDevis();
     else if (currentTab==='notifications') html=renderNotifications();
     else if (currentTab==='compta')        html=renderCompta();
+    else if (currentTab==='emails-newsletter') html=renderEmailsNewsletter();
     else if (currentTab==='dashboard')    html=renderDashboard();
     if(isSaisonPassee()){
       var banner='<div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--warn-text);display:flex;align-items:center;gap:8px;">🔒 Saison '+saisonActive()+' archivée — consultation uniquement</div>';
@@ -9947,6 +9951,11 @@ window.stageCopierEmails = function() {
   var st = (adminData.stages || {})[filtreStage];
   if (!st) return;
   _copierEmailsFiches((st.inscrits || []).filter(function(i){ return !i.attente; }));
+};
+
+// Newsletter : copie tous les emails collectés (dédoublonnés par _copierEmailsFiches)
+window.newsletterCopierEmails = function() {
+  _copierEmailsFiches(adminData.newsletter || []);
 };
 
 // Essai tango : emails des essais confirmés d'une date+niveau
@@ -15226,6 +15235,43 @@ function _renderResaSallesSection() {
   return h;
 }
 
+function renderEmailsNewsletter() {
+  var SRC_LBL = {
+    'newsletter':'📧 Newsletter','cours-essai':'🎯 Essai tango','essai-yoga':'🧘 Essai yoga',
+    'inscription-cours':'🎓 Inscription','stages':'💃 Stage','cours-particuliers':'🎵 Cours part.',
+    'demande-devis':'📋 Devis'
+  };
+  var liste = adminData.newsletter || [];
+  // Dédoublonnage par email (garde la 1ère occurrence = la plus récente, liste triée created_at desc)
+  var seen = {}, uniques = [];
+  liste.forEach(function(r){
+    var em = ((r && r.email) || '').trim().toLowerCase();
+    if (!em || em.indexOf('@') < 1) return;
+    if (seen[em]) return; seen[em] = true;
+    uniques.push({ email: em, source: r.source || 'newsletter', created_at: r.created_at });
+  });
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;">'
+    + '<h2 style="margin:0;font-size:16px;">📧 Emails newsletter</h2>'
+    + '<span style="font-size:12px;color:var(--dim);">'+uniques.length+' adresse'+(uniques.length>1?'s':'')+' unique'+(uniques.length>1?'s':'')+'</span>'
+    + '</div>';
+  if (!uniques.length) {
+    return h + '<div class="empty-state">Aucune adresse pour l\'instant. Les inscriptions à la newsletter et via les formulaires publics apparaîtront ici.</div>';
+  }
+  h += '<button class="btn btn-gold" onclick="newsletterCopierEmails()" style="width:100%;margin-bottom:6px;">📋 Copier toutes les adresses (pour ma liste de diffusion)</button>';
+  h += '<div style="font-size:11px;color:var(--dim);font-style:italic;margin-bottom:14px;">Adresses copiées séparées par des virgules — collez-les dans le champ destinataires de votre outil d\'emailing.</div>';
+  h += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">';
+  uniques.forEach(function(u, i){
+    var dt = u.created_at ? _fmtJour((u.created_at||'').slice(0,10)) : '';
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;'+(i%2?'background:var(--s2);':'')+'font-size:13px;">'
+      + '<span style="color:var(--text);word-break:break-all;">'+escHtml(u.email)+'</span>'
+      + '<span style="display:flex;gap:8px;align-items:center;flex-shrink:0;white-space:nowrap;">'
+      + '<span style="font-size:10px;color:var(--dim);">'+(SRC_LBL[u.source]||u.source)+'</span>'
+      + (dt?'<span style="font-size:10px;color:var(--dim);">'+dt+'</span>':'')
+      + '</span></div>';
+  });
+  h += '</div>';
+  return h;
+}
 function renderNotifications() {
   var notifs = adminData.notifications || [];
   var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;">'

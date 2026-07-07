@@ -241,7 +241,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}body { background: #11
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://qhngqzvvllktuwspojxc.supabase.co" crossorigin>
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=10"></script>
+<script src="js/tev-supabase.js?v=11"></script>
 <script>
   (function(){ try { if(window.self===window.top){ var s=document.createElement('script'); s.src='https://challenges.cloudflare.com/turnstile/v0/api.js'; s.async=true; s.defer=true; document.head.appendChild(s); } } catch(e){} })();
 </script>
@@ -1152,6 +1152,7 @@ async function soumettre(){
   if (IS_DEMO) {
     afficherConfirmation(data);
     var msgDemo = {type:'stageInscription', data:data};
+    try { if(window.TEV&&TEV.ajouterNewsletter) TEV.ajouterNewsletter((data&&data.email)||'', 'stages'); } catch(e){}
     var isIframeDemo = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
     if (isIframeDemo) {
       try { window.parent.postMessage(msgDemo, window.location.origin); } catch(e){}

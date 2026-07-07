@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Tango &amp; Vous — Newsletter</title>
+<link rel="preconnect" href="https://qhngqzvvllktuwspojxc.supabase.co" crossorigin/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600;700&display=swap"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#6e5100;--gold-dim:#a87e30;--bg:#faf8f4;--s2:#ffffff;
+  --border:#d5cec5;--text:#1a1a1a;--faint:#555;--danger:#c62828;
+  --font-d:'Cormorant Garamond',Georgia,serif;--font-b:'Montserrat',sans-serif;
+}
+html{background:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+body{font-family:var(--font-b);font-size:16px;color:var(--text);background:var(--bg);}
+.wrap{max-width:520px;margin:0 auto;}
+.hdr{background:#000;border-bottom:2px solid #D4AF37;padding:18px 24px 14px;text-align:center;}
+.hdr-logo{font-family:var(--font-d);font-size:22px;font-weight:300;letter-spacing:5px;color:#D4AF37;}
+.hdr-sub{font-size:10px;letter-spacing:3px;color:#e8e0c8;text-transform:uppercase;margin-top:4px;}
+.body{padding:26px 24px 30px;}
+.intro{font-size:15px;color:var(--faint);line-height:1.6;text-align:center;margin-bottom:20px;}
+.intro strong{color:var(--gold);}
+label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;letter-spacing:.3px;}
+input[type="email"]{
+  width:100%;font-size:16px;font-family:inherit;color:var(--text);
+  background:var(--s2);border:1.5px solid var(--border);border-radius:10px;
+  padding:13px 14px;outline:none;transition:border-color .2s;
+}
+input[type="email"]:focus{border-color:var(--gold-dim);}
+.btn{
+  width:100%;margin-top:16px;background:#D4AF37;color:#1a1a1a;border:none;
+  border-radius:10px;padding:14px;font-size:15px;font-weight:700;letter-spacing:.5px;
+  font-family:inherit;cursor:pointer;transition:opacity .2s;
+}
+.btn:disabled{opacity:.55;cursor:default;}
+.err{color:var(--danger);font-size:13px;margin-top:10px;min-height:16px;text-align:center;}
+.note{font-size:11px;color:#888;text-align:center;margin-top:14px;line-height:1.5;}
+/* Écran de succès */
+.success{display:none;text-align:center;padding:38px 24px;}
+.success-ico{font-size:44px;margin-bottom:12px;}
+.success-titre{font-family:var(--font-d);font-size:24px;color:var(--gold);margin-bottom:8px;}
+.success-txt{font-size:15px;color:var(--faint);line-height:1.6;margin-bottom:22px;}
+.btn-nouveau{background:none;border:1.5px solid var(--gold-dim);color:var(--gold);border-radius:10px;padding:11px 22px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="hdr-logo">TANGO &amp; VOUS</div>
+    <div class="hdr-sub">Newsletter</div>
+  </div>
+
+  <div class="body" id="form-zone">
+    <div class="intro">Recevez nos <strong>actualités</strong>, dates de cours, stages et milongas directement dans votre boîte mail.</div>
+    <label for="nl-email">Votre adresse email</label>
+    <input type="email" id="nl-email" placeholder="vous@exemple.fr" autocomplete="email" autocapitalize="none" inputmode="email"/>
+    <button class="btn" id="nl-btn" onclick="soumettre()">S'inscrire à la newsletter</button>
+    <div class="err" id="nl-err"></div>
+    <div class="note">Vos données ne sont jamais transmises à des tiers. Désinscription possible à tout moment.</div>
+  </div>
+
+  <div class="success" id="success">
+    <div class="success-ico">✅</div>
+    <div class="success-titre">Merci&nbsp;!</div>
+    <div class="success-txt">Votre inscription à la newsletter est bien enregistrée.<br/>À très bientôt&nbsp;!</div>
+    <button class="btn-nouveau" onclick="restart()">← Inscrire une autre adresse</button>
+  </div>
+</div>
+
+<script src="/js/supabase.min.js"></script>
+<script src="js/tev-supabase.js?v=11"></script>
+<script>
+  function $(id){ return document.getElementById(id); }
+  function showErr(m){ $('nl-err').textContent = m || ''; }
+
+  async function soumettre() {
+    var email = ($('nl-email').value || '').trim().toLowerCase();
+    showErr('');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('Merci d\'entrer une adresse email valide.'); return; }
+    var btn = $('nl-btn');
+    btn.disabled = true; btn.textContent = 'Enregistrement…';
+    try {
+      // 1) INSERT Supabase (avant toute notification — règle iframe détaché)
+      var res = await TEV.ajouterNewsletter(email, 'newsletter');
+      if (res && res.error) throw new Error((res.error.message) || 'Erreur');
+      // 2) Push admin (fire-and-forget)
+      try {
+        fetch('https://app.tangoetvous.fr/api/notify/newsletter', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email })
+        }).catch(function(){});
+      } catch(e){}
+      // 3) Notif admin temps réel — BroadcastChannel + localStorage + postMessage
+      var msg = { type: 'newsletterInscription', data: { email: email } };
+      try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
+      try { var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]'); pending.push(msg); localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending)); } catch(e){}
+      try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
+      // 4) Écran de succès
+      $('form-zone').style.display = 'none';
+      $('success').style.display = 'block';
+    } catch(e) {
+      showErr('Une erreur est survenue. Merci de réessayer.');
+      btn.disabled = false; btn.textContent = 'S\'inscrire à la newsletter';
+    }
+  }
+
+  function restart() {
+    $('nl-email').value = '';
+    showErr('');
+    var btn = $('nl-btn'); btn.disabled = false; btn.textContent = 'S\'inscrire à la newsletter';
+    $('success').style.display = 'none';
+    $('form-zone').style.display = 'block';
+    $('nl-email').focus();
+  }
+
+  // Entrée clavier = soumettre
+  document.addEventListener('DOMContentLoaded', function(){
+    var inp = $('nl-email');
+    if (inp) inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') soumettre(); });
+  });
+
+  // Hauteur d'iframe pour Wix
+  (function(){
+    function _tevH(){ var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight); try{ window.parent.postMessage({type:'tevHeight',height:h},'*'); }catch(e){} }
+    window.addEventListener('load',_tevH);
+    window.addEventListener('resize',_tevH);
+    new MutationObserver(function(){ setTimeout(_tevH,60); }).observe(document.body,{subtree:true,childList:true,attributes:true});
+  })();
+</script>
+</body>
+</html>

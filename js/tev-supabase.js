@@ -376,6 +376,7 @@ async function tevGetAdminData() {
     { data: demandesDevisRaw },
     { data: devisListRaw },
     { data: notificationsRaw },
+    { data: newsletterRaw },
   ] = await Promise.all([
     _tev.from('eleves').select('*').order('nom'),
     _tev.from('presences').select('*').order('date', { ascending: false }),
@@ -391,6 +392,7 @@ async function tevGetAdminData() {
     _tev.from('demandes_devis').select('*').order('created_at', { ascending: false }),
     _tev.from('devis').select('*').order('created_at', { ascending: false }),
     _tev.from('notifications').select('*').order('created_at', { ascending: false }).limit(100),
+    _tev.from('newsletter_emails').select('*').order('created_at', { ascending: false }),
   ]);
 
   // Construire le format attendu par admin.html (cartes)
@@ -489,6 +491,7 @@ async function tevGetAdminData() {
     demandesDevis:     demandesDevisRaw  || [],
     devisList:         devisListRaw      || [],
     notifications:     (notificationsRaw || []).map(n => ({ ...n, date: n.created_at })),
+    newsletter:        newsletterRaw     || [],
     stats: {
       total:     (eleves || []).length,
       actifs:    (eleves || []).filter(e => e.statut_eleve === 'Actif').length,
@@ -547,6 +550,19 @@ async function tevDesactiverEleve({ id, email, statut }) {
 // ================================================================
 // COURS PARTICULIERS
 // ================================================================
+// Ajoute un email à la newsletter (fire-and-forget côté appelant).
+// INSERT sans .select() (règle formulaires publics anon : pas de RETURNING → pas de 42501).
+// Garde email vide/invalide. La déduplication se fait à l'affichage admin.
+async function tevAjouterNewsletter(email, source) {
+  const em = (email || '').trim().toLowerCase();
+  if (!em || em.indexOf('@') < 1 || em.indexOf('.') < 0) return { ok: false, skipped: true };
+  try {
+    const { error } = await _tev.from('newsletter_emails').insert({ email: em, source: source || 'newsletter' });
+    if (error) return { ok: false, error };
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e }; }
+}
+
 async function tevReservationCP(body) {
   const { error } = await _tev.from('cours_particuliers').insert({
     eleve_id:    body.eleveId || '',
@@ -906,6 +922,7 @@ window.TEV = {
   getAdminData:    tevGetAdminData,
   // CP
   reservationCP:   tevReservationCP,
+  ajouterNewsletter: tevAjouterNewsletter,
   updateStatutCP:  tevUpdateStatutCP,
   // Stages
   inscriptionStage: tevInscriptionStage,

@@ -367,6 +367,11 @@ export default {
         return handleNotifyMilongaRsvp(request, env);
       }
 
+      // POST /api/notify/newsletter — inscription newsletter (push admin, sans auth)
+      if (pathname === '/api/notify/newsletter' && method === 'POST') {
+        return handleNotifyNewsletter(request, env);
+      }
+
       // POST /api/notify/discussion-nouvelle-eleve — élève crée une discussion (JWT élève requis)
       if (pathname === '/api/notify/discussion-nouvelle-eleve' && method === 'POST') {
         if (!jwt || !await _requireEleve(jwt)) return jsonError(401, 'Authentification requise');
@@ -624,6 +629,12 @@ async function handleDemandeDevis(request, env) {
   if (!insertRes.ok) {
     console.error('Supabase insert error:', await insertRes.text());
     return jsonError(500, 'Une erreur est survenue');
+  }
+
+  // ── Newsletter : ajouter l'email du demandeur (fire-and-forget)
+  if (row.email && row.email.indexOf('@') > 0) {
+    try { sbFetch('newsletter_emails', 'POST', { email: row.email, source: 'demande-devis' }, SUPABASE_ANON).catch(function(){}); }
+    catch(e) { console.error('[demandeDevis] newsletter insert error', e); }
   }
 
   // ── Emails D0a/D0b (admin) + D2 (demandeur)
@@ -8387,6 +8398,38 @@ async function handleNotifyMilongaRsvp(request, env) {
       body: `🎶 ${nomAff} · ${milNomAff} · ${dateAff}`,
     });
   } catch(e) { console.error('[milonga-rsvp] push error', e); }
+
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/newsletter — inscription newsletter → notif panel + push admin (sans auth)
+// L'INSERT dans newsletter_emails est fait côté client (TEV.ajouterNewsletter) ;
+// cette route ne fait QUE notifier l'admin.
+// ================================================================
+async function handleNotifyNewsletter(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+  const email = ((body && body.email) || '').trim().toLowerCase();
+  if (!email) return corsResponse({ ok: true, skipped: true }, 200, {}, request);
+
+  const notifMsg = `📧 Nouvelle inscription newsletter · ${email}`;
+
+  // ── Panel 🔔 admin
+  try {
+    const resN = await _insertNotification('newsletter', notifMsg, 'emails-newsletter');
+    if (!resN.ok) console.error('[newsletter] insertNotification HTTP', resN.status, await resN.text().catch(() => ''));
+  } catch(e) { console.error('[newsletter] insertNotification error', e); }
+
+  // ── Push OS admin
+  const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  try {
+    const tokens = await getFcmTokensAdmin(_svcKey);
+    if (tokens.length) await sendFcmPush(env, tokens, {
+      title: 'Tango & Vous — Admin',
+      body: `📧 Newsletter · ${email}`,
+    });
+  } catch(e) { console.error('[newsletter] push error', e); }
 
   return corsResponse({ ok: true }, 200, {}, request);
 }
