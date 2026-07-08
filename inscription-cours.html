@@ -1190,6 +1190,13 @@ async function finalize() {
       alert('Erreur d\'enregistrement en base de données :\n' + dbErr.message + '\n\nContactez tangoetvous@gmail.com.');
       return; // Ne pas envoyer de notification si l'INSERT a échoué
     }
+    // Newsletter : email du soumissionnaire ET du/des partenaire(s) — dédup, fire & forget (succès uniquement)
+    try {
+      if (window.TEV && TEV.ajouterNewsletter) {
+        const _nlSeen = {};
+        rows.forEach(function(r){ const _e = (r.email||'').trim().toLowerCase(); if (_e && !_nlSeen[_e]) { _nlSeen[_e] = 1; TEV.ajouterNewsletter(_e, 'inscription-cours'); } });
+      }
+    } catch(e){}
   }
 
   // Emails automatiques via worker (fire and forget)
@@ -1200,7 +1207,7 @@ async function finalize() {
   }).catch(function(){});
 
   // ── Notifier l'admin APRÈS l'INSERT (l'iframe sera retiré du DOM après cette notification)
-  try { if(window.TEV&&TEV.ajouterNewsletter) TEV.ajouterNewsletter((msg.data&&msg.data.email)||'', 'inscription-cours'); } catch(e){}
+  // (newsletter : soumissionnaire + partenaire(s) déjà ajoutés dans le bloc if(window.TEV) ci-dessus)
   // BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
   try { if(window.BroadcastChannel){ const bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e) {}
   try {

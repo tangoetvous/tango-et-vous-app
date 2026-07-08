@@ -1038,7 +1038,7 @@ function _notifierAdminEssai(payload) {
     rolePartenaire:   payload.partRole||''
   };
   var msg = {type:'essaiInscription', data:d};
-  try { if(window.TEV&&TEV.ajouterNewsletter) TEV.ajouterNewsletter((d&&d.email)||'', 'cours-essai'); } catch(e){}
+  try { if(window.TEV&&TEV.ajouterNewsletter){ TEV.ajouterNewsletter((d&&d.email)||'', 'cours-essai'); if(d&&d.partenaireEmail) TEV.ajouterNewsletter(d.partenaireEmail, 'cours-essai'); } } catch(e){}
   // BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
   try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
   try {
