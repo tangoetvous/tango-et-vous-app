@@ -14654,7 +14654,9 @@ window.soumettreValiderPaiement = function(force) {
   var carteVilleVP=_carteCrsVP.toLowerCase().indexOf('vincennes')>=0?'vincennes':'paris';
   var carteNiveauVP=_carteCrsVP.toLowerCase().indexOf('inter')>=0?'intermediaire':'debutant';
   var carteNiveauLblVP=carteNiveauVP==='debutant'?'Débutant':'Intermédiaire';
-  if(anyMainCarte10&&!adminData.cartes.find(function(c){return c.email===email;})){
+  // Push optimiste SI aucune carte pour cette personne DANS CETTE SAISON (carte d'une autre saison
+  // ne doit pas empêcher l'affichage de la nouvelle). VP n'écrase jamais eleves (upsert ignoreDuplicates).
+  if(anyMainCarte10&&!adminData.cartes.find(function(c){return c.email===email && (c.saison||saisonCourante())===sai;})){
     adminData.cartes.push({id:'C'+Date.now(),nom:prenom+' '+nom,prenom:prenom,niveau:carteNiveauLblVP,email:email,tel:tel,statutEleve:'Actif',utilises:0,restants:_cfv.nb,dureeMois:_cfv.duree,datePremierCours:'',expiration:'',statut:'Nouvelle carte',source:'inscription',ville:carteVilleVP,datesCours:[],partenaire:'',emailPartenaire:'',saison:sai});
     recalcStats();
   }
