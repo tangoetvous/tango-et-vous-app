@@ -262,6 +262,7 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
       carte_paye:       false,
       carte_statut:     'Active',
       carte_duree_mois: dureeNouvelle,
+      carte_exp_manuelle: false, // renouvellement auto (overflow) → retour au calcul auto
     };
     renouvAuto     = true;
     renouvOverflow = overflow;
@@ -345,6 +346,7 @@ async function tevRenouvelerCarte({ eleveId, paye, nbCours, dureeMois }) {
     carte_statut:     'Nouvelle carte',
     carte_paye:       paye !== false,
     carte_duree_mois: _dm,
+    carte_exp_manuelle: false, // renouvellement → retour au calcul auto de l'expiration
   }).eq('id', eleveId);
   return { ok: true };
 }
@@ -420,6 +422,7 @@ async function tevGetAdminData() {
     paye:            e.carte_paye,
     carteNum:        e.carte_num || 1,
     dureeMois:       e.carte_duree_mois || null,
+    expManuelle:     e.carte_exp_manuelle || false,
     datesCours:      (presences || [])
       .filter(p => p.eleve_id === e.id)
       .map(p => _fmtDateSb(p.date)),

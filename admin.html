@@ -270,6 +270,9 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
     <input type="number" id="modal-ec-utilises" min="0" max="10" class="modal-input" style="margin-top:6px;width:90px;" oninput="updateModalEcDates()"/>
     <div style="font-size:11px;color:var(--dim);margin-top:8px;">Dates de chaque cours <span style="font-style:italic;">(facultatif)</span> :</div>
     <div id="modal-ec-dates" style="margin-top:6px;display:flex;flex-direction:column;gap:6px;"></div>
+    <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-top:14px;display:block;">Date d'expiration</label>
+    <input type="date" id="modal-ec-expiration" class="modal-input" style="margin-top:6px;font-size:12px;padding:6px 8px;"/>
+    <div style="font-size:11px;color:var(--dim);margin-top:6px;line-height:1.5;">Laisser vide&nbsp;=&nbsp;<b>calcul automatique</b> <span id="modal-ec-exp-auto"></span>. Une date forcée reste fixe (elle sera recalculée automatiquement au prochain renouvellement).</div>
     <div class="modal-btns" style="margin-top:14px;">
       <button class="modal-cancel" id="modal-ec-cancel">Annuler</button>
       <button class="modal-ok" id="modal-ec-ok">✓ Sauvegarder</button>
@@ -9594,7 +9597,9 @@ function _buildCartesData() {
     var _fcUtil = isRep ? 0 : (donneesObj.utilises || 0);
     var _fcDates = isRep ? [] : (donneesObj.datesCours || []); // stockées ASC
     var _fcPremier = _fcDates.length ? _fcDates[0] : '';
-    var _fcExp = _fcPremier ? calcExpiration(_fcPremier, ct.ville||'paris') : '';
+    // Expiration : forcée manuellement (donnees.expManuelle) sinon calcul auto
+    var _fcExpManu = !isRep && !!donneesObj.expManuelle;
+    var _fcExp = _fcExpManu ? (donneesObj.expiration||'') : (_fcPremier ? calcExpiration(_fcPremier, ct.ville||'paris') : '');
     var newCarte = {
       id:ct.id, nom:ct.prenom+' '+ct.nom, niveau:ct.niveau,
       email:ct.email, statutEleve:'Actif',
@@ -9602,6 +9607,7 @@ function _buildCartesData() {
       datePremierCours:_fcPremier, expiration:_fcExp, statut:'Nouvelle carte',
       source:'inscription', ville:ct.ville, datesCours:_fcDates.slice().reverse(), partenaire:ct.partenaire||'', paye:true,
       _fromCoursTango: true,
+      expManuelle: _fcExpManu,
       isReport: isRep,
       classesReportees: isRep ? reportedRestants : 0,
       saisonOrigine: isRep ? (donneesObj.saisonOrigine || '') : ''
@@ -10416,7 +10422,7 @@ function pointerCoursAction(id, date, nbCours, btn) {
 function renouvelerCarteAction(id, btn, paye, montant, onDone, nbCours, dureeMois) {
   var _rNb = (parseInt(nbCours,10) >= 1 && parseInt(nbCours,10) <= 100) ? parseInt(nbCours,10) : _carteNbAdmin();
   var _rDm = (parseInt(dureeMois,10) >= 1 && parseInt(dureeMois,10) <= 24) ? parseInt(dureeMois,10) : _carteDureeAdmin();
-  if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=_rNb;c.dureeMois=_rDm;c.datePremierCours='';c.expiration='';c.datesCours=[];c.paye=paye===true;
+  if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=_rNb;c.dureeMois=_rDm;c.datePremierCours='';c.expiration='';c.expManuelle=false;c.datesCours=[];c.paye=paye===true;
 var cte=(adminData.coursTango||[]).find(function(x){return x.email===c.email&&x.type&&x.type.indexOf('carte')>=0&&x.statut==='inscrit';});
 if(cte){cte.statut=paye===true?'inscrit':'attente_paiement';}
 _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:_rNb,datesCours:[],datePremierCours:'',expiration:''});}renderTab();if(onDone)onDone();return;}
@@ -10424,7 +10430,7 @@ _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:_rNb,datesC
   var _mont = Number(montant) || 0;
   TEV.renouvelerCarte({eleveId:id,paye:paye===true,nbCours:_rNb,dureeMois:_rDm}).then(function(){
     var _cn=(adminData.cartes||[]).find(function(x){return String(x.id)===String(id);});
-    if(_cn){ _cn.carteNum=(_cn.carteNum||1)+1; _cn.utilises=0; _cn.restants=_rNb; _cn.dureeMois=_rDm; _cn.datePremierCours=''; _cn.expiration=''; }
+    if(_cn){ _cn.carteNum=(_cn.carteNum||1)+1; _cn.utilises=0; _cn.restants=_rNb; _cn.dureeMois=_rDm; _cn.datePremierCours=''; _cn.expiration=''; _cn.expManuelle=false; }
     var _carteObj = (adminData.cartes||[]).find(function(x){return x.id===id;});
     var _email = _carteObj ? (_carteObj.email||'') : '';
     var _orig = _email ? (adminData.coursTango||[]).find(function(x){
@@ -10496,7 +10502,38 @@ function ouvrirModalEditCarte(c) {
   var nbUtil = c.utilises || 0;
   gel('modal-ec-utilises').value = nbUtil;
   _renderModalEcDates(c.datesCours || [], nbUtil);
+  // Date d'expiration : préremplie si forcée manuellement, vide sinon (= calcul auto)
+  var _expManu = _carteExpManuelle(c);
+  gel('modal-ec-expiration').value = _expManu && c.expiration ? _isoDateInput(c.expiration) : '';
+  var _autoExp = c.datePremierCours ? calcExpiration(c.datePremierCours, c.ville||'paris', c.dureeMois) : '';
+  gel('modal-ec-exp-auto').textContent = _autoExp ? '(' + _fmtJJMM(_autoExp) + ')' : '';
   gel('modal-edit-carte').classList.add('vis');
+}
+// L'expiration est-elle forcée manuellement ? (eleves.carte_exp_manuelle OU donnees.expManuelle)
+function _carteExpManuelle(c) {
+  if (!c) return false;
+  if (c.expManuelle) return true;
+  if (c._fromCoursTango) {
+    var _ct = (adminData.coursTango||[]).find(function(x){ return String(x.id)===String(c.id); });
+    if (_ct) {
+      var _d = _ct.donnees && typeof _ct.donnees==='object' ? _ct.donnees : {};
+      try { if (typeof _ct.donnees==='string' && _ct.donnees) _d = JSON.parse(_ct.donnees); } catch(e){ _d={}; }
+      return !!_d.expManuelle;
+    }
+  }
+  return false;
+}
+// 'YYYY-MM-DD' ou 'DD/MM/YYYY' → 'YYYY-MM-DD' pour un input[type=date]
+function _isoDateInput(d) {
+  if (!d) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(d);
+  return m ? (m[3]+'-'+m[2]+'-'+m[1]) : '';
+}
+// 'YYYY-MM-DD' → 'DD/MM/YYYY' pour affichage
+function _fmtJJMM(d) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d||'');
+  return m ? (m[3]+'/'+m[2]+'/'+m[1]) : (d||'');
 }
 function fermerModalEditCarte() {
   gel('modal-edit-carte').classList.remove('vis');
@@ -10538,7 +10575,8 @@ function sauvegarderEditCarte() {
         utilises:_do.utilises||0,restants:Math.max(0,_carteNbAdmin()-(_do.utilises||0)),
         datesCours:(_do.datesCours||[]).slice().reverse(),
         datePremierCours:(_do.datesCours||[])[0]||'',
-        expiration:'',classesReportees:0,paye:true,statut:'Nouvelle carte'};
+        expiration:_do.expManuelle?(_do.expiration||''):'',expManuelle:!!_do.expManuelle,
+        classesReportees:0,paye:true,statut:'Nouvelle carte'};
     }
   }
   if(!c){fermerModalEditCarte();return;}
@@ -10556,8 +10594,16 @@ function sauvegarderEditCarte() {
   // Nouvelles dates (ASC→DESC) + historiques préservées (déjà DESC)
   c.datesCours = dates.slice().reverse().concat(_histDates);
   if(dates[0]) c.datePremierCours = dates[0];
-  // Toujours recalculer l'expiration quand datePremierCours change
-  if(c.datePremierCours) c.expiration = calcExpiration(c.datePremierCours, c.ville||'paris', c.dureeMois);
+  // Date d'expiration : forcée (collante) si le champ est rempli, sinon recalcul auto.
+  // Une date forcée reste fixe jusqu'au prochain renouvellement (qui remet expManuelle=false).
+  var _expManuInput = (gel('modal-ec-expiration').value||'').trim();
+  if(_expManuInput){
+    c.expiration = _expManuInput;
+    c.expManuelle = true;
+  } else {
+    c.expManuelle = false;
+    c.expiration = c.datePremierCours ? calcExpiration(c.datePremierCours, c.ville||'paris', c.dureeMois) : '';
+  }
   // Un vrai report a toujours saisonOrigine non vide (mis par reporterCarteJs).
   // Si isReport=true mais saisonOrigine vide → donnees corrompues → remettre à zéro localement.
   var _isRealReport = !!(c._fromCoursTango && c.isReport && c.saisonOrigine);
@@ -10571,9 +10617,9 @@ function sauvegarderEditCarte() {
     var _histDatesDB = _histDates.slice(); // dates des cartes précédentes à préserver
     var _nom = c.nom;
     var _niveau = c.niveau || '';
-    var _upd = {carte_utilises:n, carte_restants:Math.max(0,_tEc-n)};
+    var _upd = {carte_utilises:n, carte_restants:Math.max(0,_tEc-n), carte_exp_manuelle:!!c.expManuelle};
     if(dates[0]) _upd.carte_date_achat = dates[0];
-    if(c.expiration) _upd.carte_expiration = c.expiration;
+    _upd.carte_expiration = c.expiration || null;
     // Pour les cartes _fromCoursTango, résoudre le vrai eleves.id :
     // 1. Chercher une entrée eleves-based (!_fromCoursTango) en mémoire
     // 2. Sinon, SELECT par email en DB
@@ -10634,6 +10680,9 @@ function sauvegarderEditCarte() {
         delete _d.isReport; delete _d.reportedRestants; delete _d.saisonOrigine;
         _d.utilises = n;
         _d.datesCours = _dates; // ASC (triées) — relues dans _buildCartesData
+        // Date d'expiration forcée manuellement (collante) — sinon recalcul auto dans _buildCartesData
+        if(c.expManuelle){ _d.expManuelle = true; _d.expiration = c.expiration; }
+        else { delete _d.expManuelle; delete _d.expiration; }
         return Promise.resolve(TEV.client.from('inscriptions_cours').update({donnees:_d}).eq('id',c.id));
       })();
       Promise.all([_saveEleves,_saveCoursTango]).then(function(results){

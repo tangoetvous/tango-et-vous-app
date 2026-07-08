@@ -1,5 +1,17 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-07-08 — Cartes 10 : date d'expiration forcée manuellement
+
+Nouvelle possibilité pour l'admin : **saisir/forcer la date d'expiration** d'une carte directement dans la modale « ✏️ Modifier les cours » (Cartes 10 → Détails).
+
+- ⚠️ **SQL à exécuter dans Supabase AVANT le déploiement** (sinon la sauvegarde de la modale échoue avec « column carte_exp_manuelle does not exist ») : `ALTER TABLE eleves ADD COLUMN IF NOT EXISTS carte_exp_manuelle BOOLEAN DEFAULT false;` (versionné dans `supabase/carte_exp_manuelle.sql`).
+- **Champ ajouté** : `modal-ec-expiration` (input date) + hint « Laisser vide = calcul automatique (JJ/MM/AAAA) ». Vide = calcul auto (`calcExpiration`) ; date saisie = **forcée collante**.
+- **Collant (sticky)** : une date forcée persiste à la ré-édition (le champ est reprérempli). Le flag est stocké dans `eleves.carte_exp_manuelle` (cartes eleves) OU `donnees.expManuelle`+`donnees.expiration` (cartes reconstruites `_fromCoursTango`, ex. email partagé).
+- **Reset auto au renouvellement** (décision admin) : `tevRenouvelerCarte` (élève + admin), le renouvellement auto overflow (`tevPointerCours`) et `renouvelerCarteAction` (local DEMO + réel) remettent `carte_exp_manuelle=false` → retour au calcul automatique.
+- **Respect du flag** : `_buildCartesData` (admin) lit `donnees.expManuelle` pour les cartes `_fromCoursTango` (sinon recalcul auto) ; `sauvegarderEditCarte` ne recalcule QUE si le champ est vide ; les cartes eleves affichent `c.expiration` (forcée) via `c.expiration || calcExpiration(...)`.
+- `tev-supabase.js` : `expManuelle: e.carte_exp_manuelle` mappé dans les cartes admin (⚠️ fichier partagé — bumper `?v=` si besoin de casser le cache). Helpers admin ajoutés : `_carteExpManuelle(c)`, `_isoDateInput(d)`, `_fmtJJMM(d)`.
+- **Tests** : Playwright groupe N (`tests/n-carte-expiration-manuelle.spec.js`, 3 tests : forçage collant + prérempli, vidage→auto, renouvellement→reset).
+
 ## Session 2026-07-08 — Newsletter (collecte d'emails)
 
 Nouvelle fonctionnalité complète, testée (Playwright groupes K+L), **ajout automatique sans consentement** (choix admin — noter le point RGPD).
