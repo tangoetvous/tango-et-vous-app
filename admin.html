@@ -7935,25 +7935,41 @@ function supprimerDefinitivementEleve(id) {
   if (!e) return;
   var nom = (e.prenom||'')+' '+(e.nom||'');
   var email = e.email;
-  if (!confirm('Supprimer définitivement '+nom+' ? Cette action est irréversible.')) return;
+  var _saiDef = (e.saison||saisonActive());
+  if (!confirm('Supprimer définitivement '+nom+' de la saison '+_saiDef+' ? Cette action est irréversible.\n(Ses inscriptions d\'autres saisons sont conservées.)')) return;
   var _hasEmail = (email||'').trim() !== '';
-  // Retirer toutes les inscriptions de cet email (incluant les cartes10) + l'entrée cartes.
-  // ⚠️ Fiche SANS email : cibler uniquement CETTE ligne par id (jamais par email vide).
+  // ⚠️ Suppression définitive LIMITÉE À LA SAISON de la fiche (bug Brad Pitt 2026-07-08) :
+  // ne jamais supprimer par email seul (toutes saisons). La ligne eleves (une par email) n'est
+  // supprimée QUE s'il ne reste aucune inscription d'une autre saison. Si on la garde mais qu'elle
+  // portait la carte de la saison supprimée, on vide ses champs carte (pas de carte fantôme).
+  var _elvRowCarte = _hasEmail ? (adminData.cartes||[]).find(function(c){ return c.email===email && !c._fromCoursTango; }) : null;
+  var _elvRowSaison = _elvRowCarte ? (_elvRowCarte.saison||saisonCourante()) : null;
+  var _hasOtherSaison = _hasEmail && (
+    (adminData.coursTango||[]).some(function(x){ return x.email===email && (x.saison||saisonCourante())!==_saiDef; })
+    || (_elvRowSaison && _elvRowSaison!==_saiDef)
+  );
   if (_hasEmail) {
-    adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return x.email!==email; });
-    if (adminData.cartes) adminData.cartes = adminData.cartes.filter(function(c){ return c.email!==email; });
+    adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return !(x.email===email && (x.saison||saisonCourante())===_saiDef); });
+    if (adminData.cartes) adminData.cartes = adminData.cartes.filter(function(c){ return !(c.email===email && (c.saison||saisonCourante())===_saiDef); });
   } else {
     adminData.coursTango = (adminData.coursTango||[]).filter(function(x){ return String(x.id)!==String(id); });
   }
-  afficherToast('🗑 '+nom+' supprimé·e définitivement');
+  afficherToast('🗑 '+nom+' supprimé·e définitivement ('+_saiDef+')');
   renderTab();
   if (!IS_DEMO) {
-    var ops = _hasEmail ? [
-      Promise.resolve(TEV.client.from('inscriptions_cours').delete().eq('email', email)),
-      Promise.resolve(TEV.client.from('eleves').delete().eq('email', email))
-    ] : [
-      Promise.resolve(TEV.client.from('inscriptions_cours').delete().eq('id', id))
-    ];
+    var ops;
+    if (_hasEmail) {
+      ops = [Promise.resolve(TEV.client.from('inscriptions_cours').delete().eq('email', email).eq('saison', _saiDef))];
+      if (!_hasOtherSaison) {
+        ops.push(Promise.resolve(TEV.client.from('eleves').delete().eq('email', email)));
+      } else if (_elvRowSaison === _saiDef) {
+        // On garde la ligne eleves (autre saison existe) mais sa carte était celle de la saison
+        // supprimée → vider ses champs carte pour ne pas laisser une carte fantôme.
+        ops.push(Promise.resolve(TEV.client.from('eleves').update({carte_statut:'supprimé',carte_restants:0,carte_utilises:0,carte_expiration:null,carte_date_achat:null}).eq('email', email)));
+      }
+    } else {
+      ops = [Promise.resolve(TEV.client.from('inscriptions_cours').delete().eq('id', id))];
+    }
     Promise.all(ops)
     .then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });

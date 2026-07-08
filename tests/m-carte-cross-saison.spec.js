@@ -83,4 +83,27 @@ test.describe('Groupe M — DI cross-saison (carte préservée)', () => {
     expect(out.carte2627Statut).toBe('supprimé');  // saison N+1 archivée
     expect(out.cours2627Statut).toBe('supprimé');
   });
+
+  test('M3 — suppression DÉFINITIVE en saison N+1 conserve la fiche/carte de la saison N', async ({ page }) => {
+    page.on('dialog', d => d.accept()); // valider le confirm() de suppression définitive
+    const out = await page.evaluate(() => {
+      // Inscription 2025-2026 (saison N) — à préserver
+      adminData.coursTango.push({ id: 'BRADD-2526', prenom: 'Brad', nom: 'PITT', email: 'bradd@test.fr', role: 'guideur', niveau: 'intermediaire', ville: 'paris', cours: 'Paris — Jeudi — Intermédiaire', statut: 'inscrit', type: 'carte10', saison: '2025-2026' });
+      adminData.cartes.push({ id: 'C-BRADD-2526', nom: 'Brad PITT', prenom: 'Brad', email: 'bradd@test.fr', niveau: 'Intermédiaire', ville: 'paris', statutEleve: 'Actif', utilises: 4, restants: 6, expiration: '2026-02-20', statut: 'Active', source: 'inscription', datesCours: [], saison: '2025-2026', paye: true, _fromCoursTango: false });
+      // Inscription 2026-2027 (saison N+1) — à supprimer définitivement
+      adminData.coursTango.push({ id: 'BRADD-2627', prenom: 'Brad', nom: 'PITT', email: 'bradd@test.fr', role: 'guideur', niveau: 'intermediaire', ville: 'paris', cours: 'Paris — Jeudi — Intermédiaire', statut: 'supprimé', type: 'carte10', saison: '2026-2027' });
+      saisonVue = '2026-2027';
+      return null;
+    });
+    // La suppression définitive déclenche un confirm() (géré par le dialog handler)
+    await page.evaluate(() => supprimerDefinitivementEleve('BRADD-2627'));
+    const res = await page.evaluate(() => ({
+      cours2526Present: (adminData.coursTango || []).some(function (e) { return e.id === 'BRADD-2526'; }),
+      carte2526Present: (adminData.cartes || []).some(function (c) { return c.id === 'C-BRADD-2526'; }),
+      cours2627Present: (adminData.coursTango || []).some(function (e) { return e.id === 'BRADD-2627'; }),
+    }));
+    expect(res.cours2526Present).toBe(true);   // saison N conservée
+    expect(res.carte2526Present).toBe(true);
+    expect(res.cours2627Present).toBe(false);  // saison N+1 supprimée
+  });
 });
