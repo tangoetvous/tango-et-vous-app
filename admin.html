@@ -7907,9 +7907,10 @@ function retablirEleve(id) {
   if (!e) return;
   var nom = e.prenom + ' ' + e.nom;
   e.statut = 'inscrit';
-  // Réactiver la carte si elle avait été archivée avec la suppression (cascade)
+  // Réactiver la carte si elle avait été archivée avec la suppression (cascade) — SAISON de la fiche
+  var _saiRet = (e.saison||saisonCourante());
   var _hasEmailRet = (e.email||'').trim()!=='';
-  var carteEleve = _hasEmailRet ? (adminData.cartes||[]).find(function(c){ return c.email===e.email && c.statut==='supprimé'; }) : null;
+  var carteEleve = _hasEmailRet ? (adminData.cartes||[]).find(function(c){ return c.email===e.email && c.statut==='supprimé' && (c.saison||saisonCourante())===_saiRet; }) : null;
   var _restoreCarte = carteEleve && (e.type||'')!=='forfait';
   var _newCarteStatut = '';
   if (_restoreCarte) {
@@ -7919,8 +7920,11 @@ function retablirEleve(id) {
   afficherToast('✓ '+nom+' rétabli·e');
   renderTab();
   if (!IS_DEMO) {
+    // Rétablir aussi les lignes carte10 archivées de CETTE saison (cascade symétrique)
     var ops = [Promise.resolve(TEV.client.from('inscriptions_cours').update({statut: 'inscrit'}).eq('id', id))];
-    if (_restoreCarte) ops.push(Promise.resolve(TEV.client.from('eleves').update({carte_statut: _newCarteStatut}).eq('email', e.email)));
+    if (_hasEmailRet && _restoreCarte) ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'inscrit'}).eq('email',e.email).eq('type','carte10').eq('statut','supprimé').eq('saison',_saiRet)));
+    // eleves.carte_* rétabli UNIQUEMENT si la carte de cette saison est portée par la ligne eleves
+    if (_restoreCarte && !carteEleve._fromCoursTango) ops.push(Promise.resolve(TEV.client.from('eleves').update({carte_statut: _newCarteStatut}).eq('email', e.email)));
     Promise.all(ops)
     .then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur: '+((err&&err.message)||'')); });
@@ -8325,10 +8329,12 @@ function confirmerSupprimerEleve(id) {
   });
   var carteEleve=null;
   if(_hasEmailSup && !_resteActif){
+    // ⚠️ Cascade filtrée par saison : n'archive QUE les lignes carte de la saison supprimée
+    // (une carte d'une AUTRE saison doit rester intacte — bug Brad Pitt 2026-07-08).
     (adminData.coursTango||[]).forEach(function(ct){
-      if(ct.email===email && ct.type&&ct.type.indexOf('carte')>=0 && ct.statut==='inscrit') ct.statut='supprimé';
+      if(ct.email===email && ct.type&&ct.type.indexOf('carte')>=0 && ct.statut==='inscrit' && (ct.saison||saisonCourante())===_saiSup) ct.statut='supprimé';
     });
-    carteEleve=(adminData.cartes||[]).find(function(c){ return c.email===email; });
+    carteEleve=(adminData.cartes||[]).find(function(c){ return c.email===email && (c.saison||saisonCourante())===_saiSup; });
     if(carteEleve) carteEleve.statut='supprimé';
   }
   fermerContact();
@@ -8339,8 +8345,10 @@ function confirmerSupprimerEleve(id) {
       Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('id',id))
     ];
     if(_hasEmailSup && !_resteActif){
-      ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('email',email).eq('type','carte10').eq('statut','inscrit')));
-      if(carteEleve) ops.push(Promise.resolve(TEV.client.from('eleves').update({carte_statut:'supprimé'}).eq('email',email)));
+      ops.push(Promise.resolve(TEV.client.from('inscriptions_cours').update({statut:'supprimé'}).eq('email',email).eq('type','carte10').eq('statut','inscrit').eq('saison',_saiSup)));
+      // eleves.carte_* mis à supprimé UNIQUEMENT si la ligne eleves porte la carte de CETTE saison
+      // (carte non reconstruite depuis inscriptions_cours) — sinon on écraserait une autre saison.
+      if(carteEleve && !carteEleve._fromCoursTango) ops.push(Promise.resolve(TEV.client.from('eleves').update({carte_statut:'supprimé'}).eq('email',email)));
     }
     Promise.all(ops).then(function(){ chargerDonnees(); })
     .catch(function(err){ afficherToast('⚠️ Erreur suppression: '+((err&&err.message)||'')); });

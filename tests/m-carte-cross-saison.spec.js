@@ -63,4 +63,24 @@ test.describe('Groupe M — DI cross-saison (carte préservée)', () => {
     expect(out.nouvelleUtilises).toBe(0);
     expect(out.nouvelleRestants).toBe(10);
   });
+
+  test('M2 — supprimer le cours de la saison N+1 ne supprime PAS la carte de la saison N', async ({ page }) => {
+    const out = await page.evaluate(() => {
+      // Carte 2025-2026 (saison N) — active, à préserver
+      adminData.cartes.push({ id: 'C-BRAD-2526', nom: 'Brad PITT', prenom: 'Brad', email: 'brad@test.fr', niveau: 'Intermédiaire', ville: 'paris', statutEleve: 'Actif', utilises: 4, restants: 6, datePremierCours: '2025-11-20', expiration: '2026-02-20', statut: 'Active', source: 'inscription', datesCours: [], saison: '2025-2026', paye: true, _fromCoursTango: false });
+      // Cours + carte 2026-2027 (saison N+1) — reconstruite depuis inscriptions_cours
+      adminData.coursTango.push({ id: 'BRAD-2627', prenom: 'Brad', nom: 'PITT', email: 'brad@test.fr', tel: '', role: 'guideur', niveau: 'intermediaire', ville: 'paris', cours: 'Paris — Jeudi — Intermédiaire', statut: 'inscrit', type: 'carte10', saison: '2026-2027' });
+      adminData.cartes.push({ id: 'C-BRAD-2627', nom: 'Brad PITT', prenom: 'Brad', email: 'brad@test.fr', niveau: 'Intermédiaire', ville: 'paris', statutEleve: 'Actif', utilises: 0, restants: 10, datePremierCours: '', expiration: '', statut: 'Nouvelle carte', source: 'inscription', datesCours: [], saison: '2026-2027', paye: true, _fromCoursTango: true });
+      saisonVue = '2026-2027';
+      // Supprimer le cours 2026-2027
+      confirmerSupprimerEleve('BRAD-2627');
+      var c2526 = (adminData.cartes || []).find(function (c) { return c.id === 'C-BRAD-2526'; });
+      var c2627 = (adminData.cartes || []).find(function (c) { return c.id === 'C-BRAD-2627'; });
+      var cours2627 = (adminData.coursTango || []).find(function (e) { return e.id === 'BRAD-2627'; });
+      return { carte2526Statut: c2526 ? c2526.statut : null, carte2627Statut: c2627 ? c2627.statut : null, cours2627Statut: cours2627 ? cours2627.statut : null };
+    });
+    expect(out.carte2526Statut).toBe('Active');    // saison N INTACTE
+    expect(out.carte2627Statut).toBe('supprimé');  // saison N+1 archivée
+    expect(out.cours2627Statut).toBe('supprimé');
+  });
 });
