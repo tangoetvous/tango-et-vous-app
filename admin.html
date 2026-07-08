@@ -14001,6 +14001,8 @@ window.soumettreInscriptionDirecteYoga = function(force) {
     }
     dbOp.then(function(res){
       if (res && res.error) { if(err){err.textContent='Erreur DB : '+(res.error.message||res.error.code||'');err.style.display='block';} return; }
+      // Newsletter : email du soumissionnaire (succès uniquement) — fire & forget
+      try { if(window.TEV&&TEV.ajouterNewsletter) TEV.ajouterNewsletter(email, 'inscription-directe-yoga'); } catch(e){}
       chargerDonnees();
       fetch('/api/notify/yoga-inscription-validee', {
         method: 'POST',
@@ -14746,6 +14748,8 @@ window.soumettreValiderPaiement = function(force) {
         chargerDonnees();
         return;
       }
+      // Newsletter : email du soumissionnaire (succès uniquement) — fire & forget
+      try { if(window.TEV&&TEV.ajouterNewsletter) TEV.ajouterNewsletter(email, 'valider-paiement'); } catch(e){}
       // I03 — inscription validée et payée (tous les cours cochés)
       var coursInfosVP = coursCoches.map(function(cours) {
         var ci = COURS_VALS_REF.indexOf(cours);
@@ -15073,6 +15077,9 @@ window.soumettreInscriptionDirecte = function(force) {
       if(r && r.error){
         afficherToast('⚠️ Erreur INSERT: '+(r.error.message||r.error.code||JSON.stringify(r.error)));
         console.error('ins_dir inscriptions_cours:', r.error);
+      } else {
+        // Newsletter : email du soumissionnaire (succès uniquement) — fire & forget
+        try { if(window.TEV&&TEV.ajouterNewsletter) TEV.ajouterNewsletter(email, 'inscription-directe'); } catch(e){}
       }
       return _elvProm;
     }).then(function(){
