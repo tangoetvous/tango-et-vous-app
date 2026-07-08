@@ -1152,7 +1152,6 @@ async function soumettre(){
   if (IS_DEMO) {
     afficherConfirmation(data);
     var msgDemo = {type:'stageInscription', data:data};
-    try { if(window.TEV&&TEV.ajouterNewsletter) TEV.ajouterNewsletter((data&&data.email)||'', 'stages'); } catch(e){}
     var isIframeDemo = (function(){ try { return window.self !== window.top; } catch(e){ return true; } })();
     if (isIframeDemo) {
       try { window.parent.postMessage(msgDemo, window.location.origin); } catch(e){}
@@ -1203,6 +1202,8 @@ async function soumettre(){
     });
     var { error: insErr } = await TEV.client.from('inscriptions_stages').insert(rowsToInsert);
     if (insErr) { console.error('Insert error:', insErr); throw new Error(insErr.message || insErr.code || JSON.stringify(insErr)); }
+    // Newsletter : ajouter l'email du soumissionnaire — fire & forget (chemin réel, pas démo)
+    try { if(window.TEV&&TEV.ajouterNewsletter) TEV.ajouterNewsletter(data.email || '', 'stages'); } catch(e){}
     afficherConfirmation(Object.assign({}, data, {inscriptionsParDate: datesOK}));
     // Notifier admin — BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
     var msg = {type:'stageInscription', data:data};
