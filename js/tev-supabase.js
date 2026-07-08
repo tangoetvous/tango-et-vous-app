@@ -277,7 +277,9 @@ async function tevPointerCours({ eleveId, date, niveau, note, nbCours, maxParJou
     // des présences historiques → la nouvelle carte ne démarrait jamais (ni date ni expiration).
     if (!eleve.carte_date_achat) {
       carteUpdate.carte_date_achat = date;
-      carteUpdate.carte_expiration = _calcExpirationSb(date, eleve.ville, eleve.carte_duree_mois);
+      // Ne PAS écraser une date d'expiration forcée manuellement (carte_exp_manuelle).
+      // Le recalcul auto ne s'applique qu'aux cartes en calcul automatique.
+      if (!eleve.carte_exp_manuelle) carteUpdate.carte_expiration = _calcExpirationSb(date, eleve.ville, eleve.carte_duree_mois);
       carteUpdate.carte_statut     = 'Active';
     }
   }

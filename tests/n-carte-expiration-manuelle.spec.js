@@ -65,4 +65,24 @@ test.describe('Groupe N — Expiration manuelle des cartes', () => {
     expect(r.manu).toBe(false);
     expect(r.exp).toBe('');
   });
+
+  test('N4 — pointer le 1er cours ne réécrase PAS une date forcée', async ({ page }) => {
+    const r = await page.evaluate((id) => {
+      var c = adminData.cartes.find(function (x) { return x.id === id; });
+      // Carte fraîche (pas de premier cours) avec une date d'expiration forcée dans le futur
+      c.datePremierCours = ''; c.utilises = 0; c.restants = 10; c.datesCours = []; c.expiration = '';
+      ouvrirModalEditCarte(c);
+      gel('modal-ec-expiration').value = '2026-12-31';
+      sauvegarderEditCarte();
+      // Pointer le tout premier cours → NE doit PAS recalculer l'expiration
+      adminData._dailyCounts = {};
+      pointerCoursAction(id, '2026-05-14', 1);
+      var c2 = adminData.cartes.find(function (x) { return x.id === id; });
+      return { exp: c2.expiration, manu: c2.expManuelle, dpc: c2.datePremierCours, util: c2.utilises };
+    }, CARTE_ID);
+    expect(r.exp).toBe('2026-12-31');   // date forcée préservée
+    expect(r.manu).toBe(true);
+    expect(r.dpc).toBe('2026-05-14');   // le premier cours est bien enregistré
+    expect(r.util).toBe(1);
+  });
 });

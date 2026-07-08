@@ -562,7 +562,7 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
 
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=12"></script>
+<script src="js/tev-supabase.js?v=13"></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
 // ================================================================
@@ -10339,7 +10339,8 @@ function pointerCoursAction(id, date, nbCours, btn) {
       } else {
         for(var i=0;i<aAjouter;i++)c.datesCours.push(date);
         c.utilises=totalApres; c.restants=Math.max(0,_tAnc-totalApres);
-        if(!c.datePremierCours){c.datePremierCours=date;c.expiration=calcExpiration(date,c.ville||'paris',c.dureeMois);}
+        // Respecter une date d'expiration forcée manuellement (ne recalculer que si auto)
+        if(!c.datePremierCours){c.datePremierCours=date;if(!c.expManuelle)c.expiration=calcExpiration(date,c.ville||'paris',c.dureeMois);}
         if(estPremierCours)afficherToast('✉️ Email de bienvenue envoyé à '+(c.nom||c.email||''));
         _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:c.datePremierCours,expiration:c.expiration});
       }
