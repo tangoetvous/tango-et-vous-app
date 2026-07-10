@@ -7577,15 +7577,28 @@ async function handleVideoDownload(request, env) {
   const id = (u.searchParams.get('id') || '').trim();
   if (!/^[a-f0-9-]{16,}$/i.test(id)) return jsonError(400, 'Identifiant vidéo invalide');
   const base = (u.searchParams.get('nom') || 'video').replace(/[^a-zA-Z0-9._ -]/g, '').trim() || 'video';
-  // Essaie l'original (raw), puis les versions MP4 (MP4 fallback) de la meilleure à la plus basse.
-  const candidates = [
-    `https://${BUNNY_STREAM_HOST}/${id}/original`,
-    `https://${BUNNY_STREAM_HOST}/${id}/play_1080p.mp4`,
-    `https://${BUNNY_STREAM_HOST}/${id}/play_720p.mp4`,
-    `https://${BUNNY_STREAM_HOST}/${id}/play_480p.mp4`,
-    `https://${BUNNY_STREAM_HOST}/${id}/play_360p.mp4`,
-    `https://${BUNNY_STREAM_HOST}/${id}/play_240p.mp4`,
-  ];
+  const apiKey = env.BUNNY_STREAM_API_KEY;
+  // 1. État d'encodage + résolutions disponibles via l'API Bunny (clé côté serveur)
+  let info = null;
+  if (apiKey) {
+    try {
+      const ir = await fetch(`https://video.bunnycdn.com/library/${BUNNY_STREAM_LIBRARY_ID}/videos/${id}`, {
+        headers: { 'AccessKey': apiKey, 'Accept': 'application/json' }
+      });
+      if (ir.ok) info = await ir.json();
+    } catch(e) {}
+  }
+  // Statuts Bunny : 4 = Finished (MP4 fallback prêt). <4 = encore en cours ; 5/6 = erreur.
+  if (info && typeof info.status === 'number') {
+    if (info.status === 5 || info.status === 6) return jsonError(502, 'Vidéo en erreur côté hébergement');
+    if (info.status < 4) return jsonError(409, 'Vidéo encore en cours d\'encodage — réessayez dans une minute');
+  }
+  // 2. Candidats : original, puis MP4 par résolution disponible (la meilleure d'abord)
+  const order = ['1080p', '720p', '480p', '360p', '240p'];
+  let avail = [];
+  if (info && info.availableResolutions) avail = String(info.availableResolutions).split(',').map(s => s.trim());
+  const candidates = [`https://${BUNNY_STREAM_HOST}/${id}/original`];
+  order.forEach(res => { if (!avail.length || avail.indexOf(res) >= 0) candidates.push(`https://${BUNNY_STREAM_HOST}/${id}/play_${res}.mp4`); });
   for (const url of candidates) {
     let r;
     try { r = await fetch(url); } catch(e) { continue; }
@@ -7600,7 +7613,7 @@ async function handleVideoDownload(request, env) {
       });
     }
   }
-  return jsonError(502, 'Fichier indisponible (encodage en cours ?)');
+  return jsonError(502, 'Fichier téléchargeable indisponible (MP4 fallback pas encore prêt ?)');
 }
 
 // POST /api/videos/delete — { id } : supprime la vidéo côté Bunny (refuser une proposition / supprimer de la biblio).
