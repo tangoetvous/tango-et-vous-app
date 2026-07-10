@@ -2999,12 +2999,13 @@
 
   // Écran plein — s'affiche une fois par session sur l'accueil, tant que l'objectif n'est pas atteint.
   function _maybeShowNudge(){
-    if (_nudgeSessionShown) return;
-    if (_nudgeMasque()) return;
+    var force = (location.search || '').indexOf('nudge=1') >= 0;   // ?nudge=1 → forcer (test)
+    if (_nudgeSessionShown && !force) return;
+    if (!force && _nudgeMasque()) return;
     if ($('tev-nudge-full')) return;
     var installed = _isStandaloneApp();
     var pushOk = _pushDejaActive();
-    if (installed && pushOk) return;
+    if (installed && pushOk && !force) return;
     _nudgeSessionShown = true;
 
     var later = '<button onclick="_nudgePlusTard()" style="background:none;border:none;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;padding:10px;text-decoration:underline;margin-top:18px;">Plus tard</button>';
