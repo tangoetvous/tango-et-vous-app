@@ -570,6 +570,11 @@ export default {
         if (!jwt || !await _requireEleve(jwt)) return jsonError(401, 'Authentification requise');
         return await handleVideoCreate(request, env);
       }
+      // GET /api/videos/status?ids=id1,id2 — état d'encodage Bunny (4 = prêt). Tout utilisateur authentifié.
+      if (pathname === '/api/videos/status' && method === 'GET') {
+        if (!jwt || !await _requireEleve(jwt)) return jsonError(401, 'Authentification requise');
+        return await handleVideoStatus(request, env);
+      }
       // GET /api/videos/download?id=<guid> — URL de l'original (téléchargement), admin uniquement
       if (pathname === '/api/videos/download' && method === 'GET') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
@@ -7567,6 +7572,28 @@ async function handleVideoCreate(request, env) {
   const expiration = Date.now() + 3600 * 1000; // 1 h, en millisecondes
   const signature = await _sha256hex(BUNNY_STREAM_LIBRARY_ID + apiKey + expiration + guid);
   return corsResponse({ ok: true, videoId: guid, libraryId: BUNNY_STREAM_LIBRARY_ID, signature, expiration }, 200, {}, request);
+}
+
+// GET /api/videos/status?ids=id1,id2,… — renvoie l'état d'encodage Bunny de chaque vidéo.
+// { statuses: { "<id>": <n> } } où n = statut Bunny (4 = Finished/prêt, <4 = en cours, 5/6 = erreur).
+// Le client n'interroge que les vidéos récentes → très peu d'appels API. Clé API côté serveur uniquement.
+async function handleVideoStatus(request, env) {
+  const apiKey = env.BUNNY_STREAM_API_KEY;
+  if (!apiKey) return corsResponse({ statuses: {} }, 200, {}, request);
+  const u = new URL(request.url);
+  const raw = (u.searchParams.get('ids') || '').split(',')
+    .map(s => s.trim()).filter(s => /^[a-f0-9-]{16,}$/i.test(s));
+  const ids = [...new Set(raw)].slice(0, 12); // cap défensif
+  const statuses = {};
+  await Promise.all(ids.map(async id => {
+    try {
+      const r = await fetch(`https://video.bunnycdn.com/library/${BUNNY_STREAM_LIBRARY_ID}/videos/${id}`, {
+        headers: { 'AccessKey': apiKey, 'Accept': 'application/json' }
+      });
+      if (r.ok) { const j = await r.json(); if (j && typeof j.status === 'number') statuses[id] = j.status; }
+    } catch(e) {}
+  }));
+  return corsResponse({ statuses }, 200, {}, request);
 }
 
 // GET /api/videos/download?id=<guid>&nom=<titre> — streame l'original en TÉLÉCHARGEMENT (admin).

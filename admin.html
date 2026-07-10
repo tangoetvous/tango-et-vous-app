@@ -574,7 +574,7 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
 <script src="js/tev-supabase.js?v=13"></script>
 <!-- Vidéos des cours (Bunny Stream) : upload direct TUS + helper -->
 <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
-<script src="js/tev-videos.js?v=3" defer></script>
+<script src="js/tev-videos.js?v=4" defer></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
 // ================================================================
@@ -15386,6 +15386,8 @@ function renderVideos() {
   if (_admVidSub === 'valider') h += _vidAValider(sai);
   else if (_admVidSub === 'biblio') h += _vidBibliotheque(sai);
   else h += _vidPublierForm(sai);
+  // Badge « en cours d'encodage » sur les miniatures récentes (après pose du DOM)
+  setTimeout(function () { try { TEVVID.watchEncoding(); } catch (e) {} }, 0);
   return h;
 }
 
@@ -15400,9 +15402,10 @@ function _vidAValider(sai) {
   vids.forEach(function (v) {
     var vid = (v.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '');
     var dt = v.created_at ? _fmtJour((v.created_at || '').slice(0, 10)) : '';
+    var encAttr = (TEVVID.isRecent && TEVVID.isRecent(v)) ? ' data-tev-encoding="' + vid + '"' : '';
     h += '<div style="background:var(--surface2,#181818);border:1px solid var(--border);border-radius:13px;padding:11px;margin-bottom:11px;">'
       + '<div style="display:flex;gap:11px;align-items:center;">'
-      + '<a href="javascript:void(0)" onclick="_videoPlay(\'' + vid + '\')" style="width:96px;height:60px;border-radius:8px;flex-shrink:0;background:#000 center/cover no-repeat url(\'' + TEVVID.thumbUrl(v.bunny_video_id) + '\');display:flex;align-items:center;justify-content:center;"><span style="width:26px;height:26px;border-radius:50%;background:#0009;border:1.4px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;">▶</span></a>'
+      + '<a href="javascript:void(0)" onclick="_videoPlay(\'' + vid + '\')"' + encAttr + ' style="width:96px;height:60px;border-radius:8px;flex-shrink:0;background:#000 center/cover no-repeat url(\'' + TEVVID.thumbUrl(v.bunny_video_id) + '\');display:flex;align-items:center;justify-content:center;"><span style="width:26px;height:26px;border-radius:50%;background:#0009;border:1.4px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;">▶</span></a>'
       + '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--text);">' + escHtml(v.titre || 'Vidéo') + '</div>'
       + '<div style="font-size:11px;color:var(--dim);margin-top:5px;">👤 ' + escHtml(v.soumis_par_nom || v.soumis_par_email || 'un élève') + ' · <span style="color:var(--gold);">' + escHtml(_vidCoursLabel(v.ville, v.niveau)) + '</span> · ' + dt + '</div></div>'
       + '</div>'
@@ -15602,8 +15605,9 @@ function _vidBibliotheque(sai) {
     groups[k].forEach(function (v) {
       var dt = _fmtJour(v.date_cours || (v.created_at || '').slice(0, 10));
       var vid = (v.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '');
+      var encAttr = (TEVVID.isRecent && TEVVID.isRecent(v)) ? ' data-tev-encoding="' + vid + '"' : '';
       h += '<div class="point-row" style="display:flex;align-items:center;gap:10px;">'
-        + '<a href="javascript:void(0)" onclick="_videoPlay(\'' + vid + '\')" style="width:96px;height:60px;border-radius:8px;flex-shrink:0;background:#000 center/cover no-repeat url(\'' + TEVVID.thumbUrl(v.bunny_video_id) + '\');display:flex;align-items:center;justify-content:center;">'
+        + '<a href="javascript:void(0)" onclick="_videoPlay(\'' + vid + '\')"' + encAttr + ' style="width:96px;height:60px;border-radius:8px;flex-shrink:0;background:#000 center/cover no-repeat url(\'' + TEVVID.thumbUrl(v.bunny_video_id) + '\');display:flex;align-items:center;justify-content:center;">'
         + '<span style="width:28px;height:28px;border-radius:50%;background:#0009;border:1.4px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;">▶</span></a>'
         + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);">' + escHtml(v.titre || 'Vidéo') + '</div>'
         + '<div style="font-size:11px;color:var(--dim);">' + dt + '</div></div>'

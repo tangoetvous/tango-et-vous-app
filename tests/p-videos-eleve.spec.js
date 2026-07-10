@@ -94,4 +94,30 @@ test.describe('Groupe P — Vidéos des cours (élève)', () => {
     });
     expect(empty).toBe('');
   });
+
+  test('P7 — encodage : API TEVVID exposée + isRecent + watchEncoding sans crash', async ({ page }) => {
+    const r = await page.evaluate(() => {
+      const now = new Date().toISOString();
+      const old = '2025-01-01T00:00:00Z';
+      let threw = false;
+      try {
+        // aucun nœud marqué → doit retourner sans réseau ni erreur
+        window.TEVVID.watchEncoding();
+      } catch(e) { threw = true; }
+      return {
+        hasIsRecent: typeof window.TEVVID.isRecent === 'function',
+        hasStatuses: typeof window.TEVVID.statuses === 'function',
+        hasWatch: typeof window.TEVVID.watchEncoding === 'function',
+        recentTrue: window.TEVVID.isRecent({ created_at: now }),
+        recentFalse: window.TEVVID.isRecent({ created_at: old }),
+        threw,
+      };
+    });
+    expect(r.hasIsRecent).toBe(true);
+    expect(r.hasStatuses).toBe(true);
+    expect(r.hasWatch).toBe(true);
+    expect(r.recentTrue).toBe(true);
+    expect(r.recentFalse).toBe(false);
+    expect(r.threw).toBe(false);
+  });
 });

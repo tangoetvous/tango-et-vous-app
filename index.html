@@ -15,7 +15,7 @@
 <script src="js/tev-supabase.js?v=13"></script>
 <!-- Vidéos des cours (Bunny Stream) : upload direct TUS + helper -->
 <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
-<script src="js/tev-videos.js?v=3" defer></script>
+<script src="js/tev-videos.js?v=4" defer></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
   // ================================================================
@@ -1477,8 +1477,9 @@
     h += '<button onclick="_vidProposerE()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(180deg,var(--gold),#b8961e);color:#1a1408;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;">＋ Proposer une vidéo</button>';
     (_vidEleveCache.pending || []).forEach(function(p){
       var pvid = (p.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '');
+      var pEnc = (TEVVID.isRecent && TEVVID.isRecent(p)) ? ' data-tev-encoding="'+pvid+'"' : '';
       h += '<div style="display:flex;gap:12px;align-items:center;background:rgba(224,165,42,.10);border:1px solid rgba(224,165,42,.4);border-radius:12px;padding:10px;margin-top:12px;">'
-        + '<a href="javascript:void(0)" onclick="_vidPlayE(\''+pvid+'\')" style="width:96px;height:60px;border-radius:8px;flex-shrink:0;background:#000 center/cover no-repeat url(\''+TEVVID.thumbUrl(p.bunny_video_id)+'\');display:flex;align-items:center;justify-content:center;">'
+        + '<a href="javascript:void(0)" onclick="_vidPlayE(\''+pvid+'\')"'+pEnc+' style="width:96px;height:60px;border-radius:8px;flex-shrink:0;background:#000 center/cover no-repeat url(\''+TEVVID.thumbUrl(p.bunny_video_id)+'\');display:flex;align-items:center;justify-content:center;">'
         + '<span style="width:28px;height:28px;border-radius:50%;background:#0009;border:1.4px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;">▶</span></a>'
         + '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--text);line-height:1.3;">'+_vidEscE(p.titre)+'</div>'
         + '<div style="font-size:11.5px;color:#e0a52a;margin-top:4px;font-weight:600;">⏳ En attente de validation</div></div></div>';
@@ -1487,6 +1488,7 @@
       + '<input id="vid-eleve-q" type="search" placeholder="Rechercher un thème (ochos, sacadas…)" value="'+_vidEscE(_vidEleveQuery)+'" oninput="_vidFilterE(this.value)" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;color:var(--text);font-size:16px;outline:none;"/></div>';
     h += '</div><div id="vid-eleve-list">' + _vidListHtmlE(cours, _vidEleveQuery) + '</div>';
     pane.innerHTML = h;
+    try { TEVVID.watchEncoding(); } catch(e) {}
   }
 
   function _vidListHtmlE(cours, q) {
@@ -1518,8 +1520,9 @@
     const vid = (v.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '');
     const dt = v.date_cours ? _fmtJourVid(v.date_cours + 'T12:00:00') : (v.created_at ? _fmtJourVid(v.created_at) : '');
     const by = v.source === 'admin' ? 'par l\'équipe' : ('proposé par ' + _vidEscE(v.soumis_par_nom || 'un élève'));
+    const encAttr = (TEVVID.isRecent && TEVVID.isRecent(v)) ? ' data-tev-encoding="'+vid+'"' : '';
     return '<div style="display:flex;gap:12px;align-items:center;padding:8px 14px;">'
-      + '<a href="javascript:void(0)" onclick="_vidPlayE(\''+vid+'\')" style="width:112px;height:70px;border-radius:9px;flex-shrink:0;background:#000 center/cover no-repeat url(\''+TEVVID.thumbUrl(v.bunny_video_id)+'\');display:flex;align-items:center;justify-content:center;">'
+      + '<a href="javascript:void(0)" onclick="_vidPlayE(\''+vid+'\')"'+encAttr+' style="width:112px;height:70px;border-radius:9px;flex-shrink:0;background:#000 center/cover no-repeat url(\''+TEVVID.thumbUrl(v.bunny_video_id)+'\');display:flex;align-items:center;justify-content:center;">'
       + '<span style="width:32px;height:32px;border-radius:50%;background:#0009;border:1.5px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;">▶</span></a>'
       + '<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:600;color:var(--text);line-height:1.3;">'+_vidEscE(v.titre || 'Vidéo')+'</div>'
       + '<div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">'+dt+' · <span style="color:var(--gold);">'+by+'</span></div></div>'
@@ -1530,6 +1533,7 @@
     _vidEleveQuery = val;
     const l = $('vid-eleve-list');
     if (l) l.innerHTML = _vidListHtmlE(_tevCoursActifs(), val);
+    try { TEVVID.watchEncoding(); } catch(e) {}
   };
 
   // Lecteur (modale iframe Bunny — lecture seule)
@@ -4319,6 +4323,7 @@
     var vidJs = vid.replace(/'/g, "\\'");
     var thumb = TEVVID.thumbUrl(v.bunny_video_id);
     var nbAutres = uniq.length - 1;
+    var encAttr = (TEVVID.isRecent && TEVVID.isRecent(v)) ? ' data-tev-encoding="'+vid+'"' : '';
 
     var html = ''
       + '<div style="background:var(--surface2);border:1.5px solid rgba(212,175,55,0.5);border-radius:16px;padding:14px;margin:18px 0 6px;">'
@@ -4326,7 +4331,7 @@
       +     '<div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);font-weight:700;">' + titreLabel + '</div>'
       +     (fresh ? '<span style="font-size:10px;font-weight:800;letter-spacing:.5px;background:var(--gold);color:#1a1408;border-radius:20px;padding:2px 9px;">NOUVEAU</span>' : '')
       +   '</div>'
-      +   '<a href="javascript:void(0)" onclick="_vidPlayE(\'' + vidJs + '\')" style="display:block;position:relative;width:100%;aspect-ratio:16/9;border-radius:11px;overflow:hidden;background:#000 center/cover no-repeat url(\'' + thumb + '\');">'
+      +   '<a href="javascript:void(0)" onclick="_vidPlayE(\'' + vidJs + '\')"' + encAttr + ' style="display:block;position:relative;width:100%;aspect-ratio:16/9;border-radius:11px;overflow:hidden;background:#000 center/cover no-repeat url(\'' + thumb + '\');">'
       +     '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">'
       +       '<span style="width:54px;height:54px;border-radius:50%;background:rgba(0,0,0,0.55);border:2px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;padding-left:3px;">▶</span>'
       +     '</span>'
@@ -4338,6 +4343,7 @@
       +   '</button>'
       + '</div>';
     el.innerHTML = html;
+    try { TEVVID.watchEncoding(); } catch(e) {}
   }
 
   // Met à jour uniquement le bouton milonga dans la carte accueil (sans re-rendre tout)

@@ -95,6 +95,66 @@
     return { ok: true, videoId: cj.videoId };
   }
 
+  // ── État d'encodage Bunny (badge « en cours d'encodage ») ─────────────────
+  // Une vidéo fraîchement uploadée met un moment à être encodée : sa miniature
+  // reste une image figée et la lecture ne marche pas encore. On interroge le
+  // worker (statut Bunny, 4 = prêt) uniquement pour les vidéos récentes.
+  function isRecent(v) {
+    try { var t = new Date(v && v.created_at).getTime(); return !isNaN(t) && (Date.now() - t) < 24 * 3600 * 1000; }
+    catch (e) { return false; }
+  }
+  async function statuses(ids) {
+    if (!ids || !ids.length) return {};
+    var jwt = await _jwt();
+    if (!jwt) return {};
+    try {
+      var r = await fetch('/api/videos/status?ids=' + encodeURIComponent(ids.join(',')), {
+        headers: { 'Authorization': 'Bearer ' + jwt }
+      });
+      if (!r.ok) return {};
+      var j = await r.json();
+      return (j && j.statuses) ? j.statuses : {};
+    } catch (e) { return {}; }
+  }
+
+  function _encBadge(n, text) {
+    n.style.position = 'relative';
+    n.style.pointerEvents = 'none';                 // pas de lecture tant que non encodé
+    var b = n.querySelector('.tev-enc-badge');
+    if (!b) { b = document.createElement('div'); b.className = 'tev-enc-badge'; n.appendChild(b); }
+    b.textContent = text;
+    b.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;background:rgba(0,0,0,0.62);color:#fff;font-size:11.5px;font-weight:700;line-height:1.35;border-radius:inherit;z-index:2;';
+  }
+  function _encClear(n) {
+    var b = n.querySelector('.tev-enc-badge'); if (b && b.parentNode) b.parentNode.removeChild(b);
+    n.style.pointerEvents = '';
+    n.removeAttribute('data-tev-encoding');
+  }
+
+  var _watchTimer = null, _watchRounds = 0;
+  // Balaie le DOM pour les miniatures marquées data-tev-encoding, applique/retire le badge,
+  // et se relance tant qu'une vidéo est encore en cours (max ~4 min). Idempotent.
+  function watchEncoding() {
+    if (_watchTimer) { clearTimeout(_watchTimer); _watchTimer = null; }
+    var nodes = [].slice.call(document.querySelectorAll('[data-tev-encoding]'));
+    if (!nodes.length) { _watchRounds = 0; return; }
+    var ids = [];
+    nodes.forEach(function (n) { var id = n.getAttribute('data-tev-encoding'); if (id && ids.indexOf(id) < 0) ids.push(id); });
+    statuses(ids).then(function (map) {
+      var pending = false;
+      [].slice.call(document.querySelectorAll('[data-tev-encoding]')).forEach(function (n) {
+        var st = map[n.getAttribute('data-tev-encoding')];
+        if (st === 4) { _encClear(n); }                                   // prêt → miniature normale, cliquable
+        else if (st === 5 || st === 6) { _encBadge(n, '⚠️ Vidéo indisponible'); n.removeAttribute('data-tev-encoding'); }
+        else if (typeof st === 'number') { _encBadge(n, '⏳ Encodage en cours…'); pending = true; }
+        else { n.removeAttribute('data-tev-encoding'); }                  // inconnu/API muette → fail-open (pas de badge)
+      });
+      _watchRounds++;
+      if (pending && _watchRounds < 30) { _watchTimer = setTimeout(watchEncoding, 8000); }
+      else if (!pending) { _watchRounds = 0; }
+    });
+  }
+
   // Requêtes de lecture
   async function listApprouvees(ville, niveau, saison) {
     var q = window.TEV.client.from('videos_cours').select('*')
@@ -154,5 +214,8 @@
     listPubliees: listPubliees,
     approuver: approuver,
     supprimer: supprimer,
+    isRecent: isRecent,
+    statuses: statuses,
+    watchEncoding: watchEncoding,
   };
 })();
