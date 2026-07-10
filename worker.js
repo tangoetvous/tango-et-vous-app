@@ -7569,12 +7569,27 @@ async function handleVideoCreate(request, env) {
   return corsResponse({ ok: true, videoId: guid, libraryId: BUNNY_STREAM_LIBRARY_ID, signature, expiration }, 200, {}, request);
 }
 
-// GET /api/videos/download?id=<guid> — URL de l'original (admin uniquement).
-// Nécessite « Keep original files » activé sur la bibliothèque Bunny.
+// GET /api/videos/download?id=<guid>&nom=<titre> — streame l'original en TÉLÉCHARGEMENT (admin).
+// Nécessite « Keep original files » activé sur la bibliothèque Bunny. Le worker relaie le flux
+// avec Content-Disposition: attachment pour forcer un vrai téléchargement (et non une lecture).
 async function handleVideoDownload(request, env) {
-  const id = (new URL(request.url).searchParams.get('id') || '').trim();
+  const u = new URL(request.url);
+  const id = (u.searchParams.get('id') || '').trim();
   if (!/^[a-f0-9-]{16,}$/i.test(id)) return jsonError(400, 'Identifiant vidéo invalide');
-  return corsResponse({ ok: true, url: `https://${BUNNY_STREAM_HOST}/${id}/original` }, 200, {}, request);
+  const base = (u.searchParams.get('nom') || 'video').replace(/[^a-zA-Z0-9._ -]/g, '').trim() || 'video';
+  let upstream;
+  try {
+    upstream = await fetch(`https://${BUNNY_STREAM_HOST}/${id}/original`);
+  } catch(e) { console.error('[video-download]', e); return jsonError(502, 'Téléchargement impossible'); }
+  if (!upstream.ok) return jsonError(502, 'Original indisponible (encodage en cours, ou « Keep original files » désactivé)');
+  return new Response(upstream.body, {
+    status: 200,
+    headers: {
+      'Content-Type': upstream.headers.get('Content-Type') || 'video/mp4',
+      'Content-Disposition': `attachment; filename="${base}.mp4"`,
+      'Cache-Control': 'no-store',
+    },
+  });
 }
 
 // POST /api/videos/delete — { id } : supprime la vidéo côté Bunny (refuser une proposition / supprimer de la biblio).

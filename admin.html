@@ -15449,10 +15449,19 @@ function _videoSupprimerBiblio(id, bunnyId) {
 }
 
 function _videoTelecharger(bunnyId) {
-  fetch('/api/videos/download?id=' + encodeURIComponent(bunnyId), { headers: { 'Authorization': 'Bearer ' + _getJwt() } })
-    .then(function (r) { return r.json(); })
-    .then(function (j) { if (j && j.url) { window.open(j.url, '_blank'); } else { afficherToast('⚠️ Téléchargement indisponible'); } })
-    .catch(function () { afficherToast('⚠️ Téléchargement indisponible'); });
+  var all = (_admVid.aValider || []).concat(_admVid.publiees || []);
+  var v = all.find(function (x) { return (x.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '') === bunnyId; });
+  var nom = (v && v.titre) ? v.titre : 'video';
+  afficherToast('Téléchargement…');
+  fetch('/api/videos/download?id=' + encodeURIComponent(bunnyId) + '&nom=' + encodeURIComponent(nom), { headers: { 'Authorization': 'Bearer ' + _getJwt() } })
+    .then(function (r) { if (!r.ok) throw new Error('indispo'); return r.blob(); })
+    .then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url; a.download = nom.replace(/[^a-zA-Z0-9._ -]/g, '').trim() + '.mp4';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+    })
+    .catch(function () { afficherToast('⚠️ Téléchargement indisponible (encodage en cours ?)'); });
 }
 
 function _vidPublierForm(sai) {

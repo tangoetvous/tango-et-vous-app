@@ -1475,8 +1475,12 @@
     let h = '<div style="padding:14px 14px 2px;">';
     h += '<button onclick="_vidProposerE()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(180deg,var(--gold),#b8961e);color:#1a1408;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;">＋ Proposer une vidéo</button>';
     (_vidEleveCache.pending || []).forEach(function(p){
-      h += '<div style="display:flex;gap:9px;align-items:flex-start;background:rgba(224,165,42,.12);border:1px solid rgba(224,165,42,.4);border-radius:11px;padding:10px 12px;margin-top:12px;">'
-        + '<span style="font-size:14px;">⏳</span><div style="font-size:12.5px;line-height:1.5;color:var(--text);">Votre vidéo <b>« '+_vidEscE(p.titre)+' »</b> est en attente de validation. Elle sera visible dès qu\'elle sera approuvée.</div></div>';
+      var pvid = (p.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '');
+      h += '<div style="display:flex;gap:12px;align-items:center;background:rgba(224,165,42,.10);border:1px solid rgba(224,165,42,.4);border-radius:12px;padding:10px;margin-top:12px;">'
+        + '<a href="javascript:void(0)" onclick="_vidPlayE(\''+pvid+'\')" style="width:96px;height:60px;border-radius:8px;flex-shrink:0;background:#000 center/cover no-repeat url(\''+TEVVID.thumbUrl(p.bunny_video_id)+'\');display:flex;align-items:center;justify-content:center;">'
+        + '<span style="width:28px;height:28px;border-radius:50%;background:#0009;border:1.4px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;">▶</span></a>'
+        + '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--text);line-height:1.3;">'+_vidEscE(p.titre)+'</div>'
+        + '<div style="font-size:11.5px;color:#e0a52a;margin-top:4px;font-weight:600;">⏳ En attente de validation</div></div></div>';
     });
     h += '<div style="position:relative;margin:14px 0 2px;">'
       + '<input id="vid-eleve-q" type="search" placeholder="Rechercher un thème (ochos, sacadas…)" value="'+_vidEscE(_vidEleveQuery)+'" oninput="_vidFilterE(this.value)" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;color:var(--text);font-size:16px;outline:none;"/></div>';
