@@ -7599,9 +7599,13 @@ async function handleVideoDownload(request, env) {
   if (info && info.availableResolutions) avail = String(info.availableResolutions).split(',').map(s => s.trim());
   const candidates = [`https://${BUNNY_STREAM_HOST}/${id}/original`];
   order.forEach(res => { if (!avail.length || avail.indexOf(res) >= 0) candidates.push(`https://${BUNNY_STREAM_HOST}/${id}/play_${res}.mp4`); });
+  const diag = [];
   for (const url of candidates) {
     let r;
-    try { r = await fetch(url); } catch(e) { continue; }
+    try {
+      r = await fetch(url, { headers: { 'Referer': 'https://app.tangoetvous.fr/', 'User-Agent': 'TangoEtVousWorker/1.0' } });
+    } catch(e) { diag.push(url.split('/').pop() + ':err'); continue; }
+    diag.push(url.split('/').pop() + ':' + r.status);
     if (r && r.ok && r.body) {
       return new Response(r.body, {
         status: 200,
@@ -7613,7 +7617,7 @@ async function handleVideoDownload(request, env) {
       });
     }
   }
-  return jsonError(502, 'Fichier téléchargeable indisponible (MP4 fallback pas encore prêt ?)');
+  return jsonError(502, 'Indisponible — ' + diag.join(' '));
 }
 
 // POST /api/videos/delete — { id } : supprime la vidéo côté Bunny (refuser une proposition / supprimer de la biblio).
