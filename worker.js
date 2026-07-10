@@ -7607,14 +7607,14 @@ async function handleVideoDownload(request, env) {
     } catch(e) { diag.push(url.split('/').pop() + ':err'); continue; }
     diag.push(url.split('/').pop() + ':' + r.status);
     if (r && r.ok && r.body) {
-      return new Response(r.body, {
-        status: 200,
-        headers: {
-          'Content-Type': r.headers.get('Content-Type') || 'video/mp4',
-          'Content-Disposition': `attachment; filename="${base}.mp4"`,
-          'Cache-Control': 'no-store',
-        },
-      });
+      const dlHeaders = {
+        'Content-Type': r.headers.get('Content-Type') || 'video/mp4',
+        'Content-Disposition': `attachment; filename="${base}.mp4"`,
+        'Cache-Control': 'no-store',
+      };
+      const cl = r.headers.get('Content-Length');
+      if (cl) dlHeaders['Content-Length'] = cl;
+      return new Response(r.body, { status: 200, headers: dlHeaders });
     }
   }
   return jsonError(502, 'Indisponible — ' + diag.join(' '));
