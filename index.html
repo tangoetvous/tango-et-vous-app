@@ -2985,6 +2985,9 @@
   function _estIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent || ''); }
   function _nudgeMasque(){ try { var t = parseInt(localStorage.getItem('tev_nudge_dismiss')||'0',10); return !!t && (Date.now()-t) < 24*3600*1000; } catch(e){ return false; } }
   var _nudgeSessionShown = false;
+  // Capture ?nudge=1 dès le chargement (survit à la redirection du lien magique via localStorage).
+  try { var _nq = (location.search || ''); if (_nq.indexOf('nudge=1') >= 0) localStorage.setItem('tev_nudge_force', '1'); else if (_nq.indexOf('nudge=0') >= 0) localStorage.removeItem('tev_nudge_force'); } catch(e){}
+  function _nudgeForceTest(){ try { return localStorage.getItem('tev_nudge_force') === '1'; } catch(e){ return false; } }
   function _nudgeRemove(){ var ov = $('tev-nudge-full'); if (ov && ov.parentNode) ov.parentNode.removeChild(ov); }
   window._nudgePlusTard = function(){ try { localStorage.setItem('tev_nudge_dismiss', String(Date.now())); } catch(e){} _nudgeRemove(); };
   window._nudgeActiverPush = async function(){
@@ -2999,7 +3002,7 @@
 
   // Écran plein — s'affiche une fois par session sur l'accueil, tant que l'objectif n'est pas atteint.
   function _maybeShowNudge(){
-    var force = (location.search || '').indexOf('nudge=1') >= 0;   // ?nudge=1 → forcer (test)
+    var force = _nudgeForceTest();   // ?nudge=1 (persistant) → forcer l'affichage pour test
     if (_nudgeSessionShown && !force) return;
     if (!force && _nudgeMasque()) return;
     if ($('tev-nudge-full')) return;
@@ -3499,8 +3502,8 @@
 
     h += '</div>'; // padding
     pane.innerHTML = h;
+    try { _maybeShowNudge(); } catch(e) { console.error('[nudge]', e); }
     _renderAccMilList();
-    _maybeShowNudge();
   }
 
   // Modifier le téléphone depuis l'espace élève
