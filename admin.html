@@ -211,6 +211,14 @@ body.ct-light-page #tab-content .sub-tab.active{background:#fef08a;color:#713f12
 body.ct-light-page #tab-content .btn-ghost{background:#fff;color:#333;border-color:#888;}
 body.ct-light-page #tab-content input[type="search"]{background:#fff!important;color:#111!important;border-color:#888!important;}
 body.ct-light-page #tab-content .empty-state{color:#555;}
+/* Interrupteur (toggle) réutilisable */
+.tev-sw{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;}
+.tev-sw input{opacity:0;width:0;height:0;position:absolute;margin:0;}
+.tev-sw .tev-sw-t{position:absolute;inset:0;background:#5a5a5a;border-radius:24px;transition:background .2s;cursor:pointer;}
+.tev-sw .tev-sw-t::before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.4);}
+.tev-sw input:checked + .tev-sw-t{background:#d4af37;}
+.tev-sw input:checked + .tev-sw-t::before{transform:translateX(20px);}
+.tev-sw input:focus-visible + .tev-sw-t{outline:2px solid #d4af37;outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -15387,9 +15395,9 @@ function _vidPublierForm(sai) {
     + '<option value="vincennes|intermediaire">Vincennes — Intermédiaire</option>'
     + '</select></div>';
   h += '<div class="field"><label>Vidéo</label><input type="file" id="vid-file" accept="video/*" style="width:100%;"/></div>';
-  h += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:14px;cursor:pointer;">'
-    + '<input type="checkbox" id="vid-notif" checked style="width:auto;padding:0;margin:0;flex-shrink:0;"/>'
-    + '🔔 Notifier les élèves du cours (push + in-app)</label>';
+  h += '<div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;">'
+    + '<label class="tev-sw"><input type="checkbox" id="vid-notif" checked/><span class="tev-sw-t"></span></label>'
+    + '<span style="font-size:13px;color:var(--text);">🔔 Notifier les élèves du cours <span style="color:var(--dim);font-size:11px;">(push + in-app)</span></span></div>';
   h += '<div id="vid-progress" style="font-size:12px;color:var(--gold);margin-bottom:8px;min-height:16px;"></div>';
   h += '<button class="btn btn-gold" id="vid-publier-btn" style="width:100%;" onclick="_videoPublier()">Publier pour le cours</button>';
   h += '<div id="vid-msg" style="font-size:12px;margin-top:8px;"></div>';
