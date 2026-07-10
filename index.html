@@ -749,7 +749,8 @@
         notifications:'Notifications',
         aide:'Mode d\'emploi',
         repertoire:'Annuaire des élèves',
-        niveau:'Mon niveau · Test'
+        niveau:'Mon niveau · Test',
+        videos:'Vidéos des cours'
       };
       _navLbl.textContent = _TAB_LABELS[tab] || tab;
     }
@@ -792,6 +793,7 @@
     if (tab === 'sorano') renderSorano();
     if (tab === 'notifications') { renderNotificationsPane(); _markNotificationsRead(); }
     if (tab === 'repertoire') renderRepertoire();
+    if (tab === 'videos') renderVideosEleve();
     if (tab === 'niveau') renderNiveau();
     if (tab === 'aide') renderAide();
     if (tab !== 'actu') _actuStopPoll();
@@ -1421,6 +1423,188 @@
   // ================================================================
   function _repEsc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ================================================================
+  // VIDÉOS DES COURS — côté élève (Bunny Stream)
+  // ================================================================
+  let _vidEleveCache = null;   // { saison, videos:[], pending:[] }
+  let _vidEleveQuery = '';
+  let _vidEleveModal = null;
+
+  function _vidEscE(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function _vidCoursLblE(v,n){ return (v==='vincennes'?'Vincennes':'Paris')+' — '+(String(n).indexOf('interm')>=0?'Intermédiaire':'Débutant'); }
+  function _vidNivNorm(n){ return String(n).indexOf('interm')>=0 ? 'intermediaire' : 'debutant'; }
+  function _fmtJourVid(iso){ try { var d=new Date(iso); if(isNaN(d.getTime())) return ''; return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}); } catch(e){ return ''; } }
+
+  async function renderVideosEleve() {
+    const pane = $('videos-pane');
+    if (!pane) return;
+    const cours = (typeof _tevCoursActifs === 'function') ? _tevCoursActifs() : [];
+    if (!cours.length) {
+      pane.innerHTML = '<div style="padding:24px 18px;color:var(--text-dim);text-align:center;line-height:1.6;">Les vidéos de vos cours apparaîtront ici dès que votre inscription sera active.</div>';
+      return;
+    }
+    const sai = _saisonCourante();
+    if (!_vidEleveCache || _vidEleveCache.saison !== sai) {
+      pane.innerHTML = '<div style="padding:24px;color:var(--text-dim);text-align:center;">Chargement…</div>';
+      try {
+        let all = [];
+        for (const c of cours) {
+          const list = await TEVVID.listApprouvees(c.ville, _vidNivNorm(c.niveau), sai);
+          all = all.concat(list || []);
+        }
+        const myEmail = ((eleveData && eleveData.eleve && eleveData.eleve.email) || '').toLowerCase();
+        let pending = [];
+        try {
+          const { data } = await TEV.client.from('videos_cours').select('*')
+            .eq('statut','en_attente').eq('soumis_par_email', myEmail).order('created_at',{ascending:false});
+          pending = (data || []).filter(v => v.saison === sai);
+        } catch(e) {}
+        _vidEleveCache = { saison: sai, videos: all, pending: pending };
+      } catch(e) {
+        console.error('[videos élève]', e);
+        pane.innerHTML = '<div style="padding:24px;color:#ef5350;text-align:center;">Erreur de chargement. Réessayez plus tard.</div>';
+        return;
+      }
+    }
+    _vidRenderShellE(pane, cours);
+  }
+
+  function _vidRenderShellE(pane, cours) {
+    let h = '<div style="padding:14px 14px 2px;">';
+    h += '<button onclick="_vidProposerE()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(180deg,var(--gold),#b8961e);color:#1a1408;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;">＋ Proposer une vidéo</button>';
+    (_vidEleveCache.pending || []).forEach(function(p){
+      h += '<div style="display:flex;gap:9px;align-items:flex-start;background:rgba(224,165,42,.12);border:1px solid rgba(224,165,42,.4);border-radius:11px;padding:10px 12px;margin-top:12px;">'
+        + '<span style="font-size:14px;">⏳</span><div style="font-size:12.5px;line-height:1.5;color:var(--text);">Votre vidéo <b>« '+_vidEscE(p.titre)+' »</b> est en attente de validation. Elle sera visible dès qu\'elle sera approuvée.</div></div>';
+    });
+    h += '<div style="position:relative;margin:14px 0 2px;">'
+      + '<input id="vid-eleve-q" type="search" placeholder="Rechercher un thème (ochos, sacadas…)" value="'+_vidEscE(_vidEleveQuery)+'" oninput="_vidFilterE(this.value)" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;color:var(--text);font-size:16px;outline:none;"/></div>';
+    h += '</div><div id="vid-eleve-list">' + _vidListHtmlE(cours, _vidEleveQuery) + '</div>';
+    pane.innerHTML = h;
+  }
+
+  function _vidListHtmlE(cours, q) {
+    q = (q || '').trim().toLowerCase();
+    let vids = (_vidEleveCache.videos || []).slice();
+    if (q) vids = vids.filter(v => (v.titre || '').toLowerCase().indexOf(q) >= 0);
+    const seen = {}; vids = vids.filter(v => { if (seen[v.bunny_video_id]) return false; seen[v.bunny_video_id] = true; return true; });
+    if (!vids.length) {
+      return '<div style="padding:26px 16px;color:var(--text-dim);text-align:center;font-style:italic;">'
+        + (q ? 'Aucune vidéo ne correspond à votre recherche.' : 'Aucune vidéo pour le moment. Revenez bientôt !') + '</div>';
+    }
+    let h = '';
+    if (cours.length > 1) {
+      const groups = {}, order = [];
+      vids.forEach(function(v){ const k=_vidCoursLblE(v.ville,v.niveau); if(!groups[k]){groups[k]=[];order.push(k);} groups[k].push(v); });
+      order.forEach(function(k){
+        h += '<div style="font-family:Georgia,serif;font-style:italic;font-size:15px;color:var(--gold);padding:16px 16px 8px;">'+_vidEscE(k)+'</div>';
+        groups[k].forEach(function(v){ h += _vidCardE(v); });
+      });
+    } else {
+      h += '<div style="padding:8px 0 4px;">';
+      vids.forEach(function(v){ h += _vidCardE(v); });
+      h += '</div>';
+    }
+    return h;
+  }
+
+  function _vidCardE(v) {
+    const vid = (v.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '');
+    const dt = v.created_at ? _fmtJourVid(v.created_at) : '';
+    const by = v.source === 'admin' ? 'par l\'équipe' : ('proposé par ' + _vidEscE(v.soumis_par_nom || 'un élève'));
+    return '<div style="display:flex;gap:12px;align-items:center;padding:8px 14px;">'
+      + '<a href="javascript:void(0)" onclick="_vidPlayE(\''+vid+'\')" style="width:112px;height:70px;border-radius:9px;flex-shrink:0;background:#000 center/cover no-repeat url(\''+TEVVID.thumbUrl(v.bunny_video_id)+'\');display:flex;align-items:center;justify-content:center;">'
+      + '<span style="width:32px;height:32px;border-radius:50%;background:#0009;border:1.5px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;">▶</span></a>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:600;color:var(--text);line-height:1.3;">'+_vidEscE(v.titre || 'Vidéo')+'</div>'
+      + '<div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">'+dt+' · <span style="color:var(--gold);">'+by+'</span></div></div>'
+      + '</div>';
+  }
+
+  window._vidFilterE = function(val) {
+    _vidEleveQuery = val;
+    const l = $('vid-eleve-list');
+    if (l) l.innerHTML = _vidListHtmlE(_tevCoursActifs(), val);
+  };
+
+  // Lecteur (modale iframe Bunny — lecture seule)
+  window._vidPlayE = function(videoId) {
+    _vidCloseE();
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:#000d;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    ov.addEventListener('click', function(e){ if(e.target===ov) _vidCloseE(); });
+    var box = document.createElement('div'); box.style.cssText = 'width:100%;max-width:680px;';
+    box.innerHTML = '<div style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;">'
+      + '<iframe src="'+TEVVID.embedUrl(videoId)+'" style="width:100%;height:100%;border:0;" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe></div>'
+      + '<button style="width:100%;margin-top:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:11px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;">Fermer</button>';
+    box.querySelector('button').addEventListener('click', _vidCloseE);
+    ov.appendChild(box); document.body.appendChild(ov); _vidEleveModal = ov;
+  };
+  function _vidCloseE() { if (_vidEleveModal) { try { document.body.removeChild(_vidEleveModal); } catch(e){} _vidEleveModal = null; } }
+
+  // Proposer une vidéo
+  window._vidProposerE = function() {
+    var cours = _tevCoursActifs();
+    if (!cours.length) return;
+    _vidCloseE();
+    var coursOpts = cours.map(function(c){ return '<option value="'+c.ville+'|'+_vidNivNorm(c.niveau)+'">'+_vidEscE(c.nom)+'</option>'; }).join('');
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:#000d;z-index:99999;display:flex;align-items:flex-end;justify-content:center;';
+    ov.addEventListener('click', function(e){ if(e.target===ov) _vidCloseE(); });
+    var box = document.createElement('div');
+    box.style.cssText = 'width:100%;max-width:520px;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:20px 20px 0 0;padding:18px 18px 26px;max-height:88vh;overflow-y:auto;';
+    box.innerHTML = '<div style="width:38px;height:4px;border-radius:99px;background:#555;margin:0 auto 15px;"></div>'
+      + '<div style="font-family:Georgia,serif;font-size:20px;color:var(--text);margin-bottom:14px;">Proposer une vidéo</div>'
+      + '<label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:6px;">Titre / thème</label>'
+      + '<input id="vidp-titre" type="text" placeholder="Ex. Ochos avant &amp; arrière" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--text);font-size:16px;margin-bottom:12px;box-sizing:border-box;"/>'
+      + (cours.length > 1
+          ? '<label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:6px;">Cours</label><select id="vidp-cours" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--text);font-size:16px;margin-bottom:12px;box-sizing:border-box;">'+coursOpts+'</select>'
+          : '<input type="hidden" id="vidp-cours" value="'+cours[0].ville+'|'+_vidNivNorm(cours[0].niveau)+'"/>')
+      + '<label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:6px;">Vidéo</label>'
+      + '<input id="vidp-file" type="file" accept="video/*" style="width:100%;color:var(--text);font-size:14px;margin-bottom:12px;"/>'
+      + '<div id="vidp-prog" style="font-size:12px;color:var(--gold);min-height:16px;margin-bottom:8px;"></div>'
+      + '<button id="vidp-send" style="width:100%;background:linear-gradient(180deg,var(--gold),#b8961e);color:#1a1408;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;">Envoyer pour validation</button>'
+      + '<div id="vidp-msg" style="font-size:12px;color:#ef5350;margin-top:8px;"></div>'
+      + '<div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:10px;line-height:1.5;">Votre vidéo sera visible par votre cours une fois approuvée par l\'équipe.</div>';
+    box.querySelector('#vidp-send').addEventListener('click', _vidProposerSendE);
+    ov.appendChild(box); document.body.appendChild(ov); _vidEleveModal = ov;
+  };
+
+  async function _vidProposerSendE() {
+    var titre = (($('vidp-titre') || {}).value || '').trim();
+    var coursVal = ($('vidp-cours') || {}).value || '';
+    var fileEl = $('vidp-file'); var file = (fileEl && fileEl.files) ? fileEl.files[0] : null;
+    var msg = $('vidp-msg'); function say(t){ if (msg) msg.textContent = t || ''; }
+    if (!titre) { say('Indiquez un titre.'); return; }
+    if (!file) { say('Choisissez une vidéo.'); return; }
+    var parts = coursVal.split('|'), ville = parts[0], niveau = parts[1];
+    var el = (eleveData && eleveData.eleve) || {};
+    var nomAff = ((el.prenom || '') + ' ' + (el.nom || '')).trim() || el.email || '';
+    var btn = $('vidp-send'); if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
+    say('');
+    try {
+      await TEVVID.uploadVideo({
+        file: file, titre: titre, ville: ville, niveau: niveau, saison: _saisonCourante(),
+        source: 'eleve', statut: 'en_attente',
+        soumisParEmail: (el.email || '').toLowerCase(), soumisParNom: nomAff,
+        onProgress: function(p){ var pe = $('vidp-prog'); if (pe) pe.textContent = 'Envoi… ' + Math.round(p*100) + '%'; }
+      });
+      try {
+        var _s = await TEV.client.auth.getSession();
+        var _jwt = _s && _s.data && _s.data.session ? _s.data.session.access_token : '';
+        if (_jwt) fetch('/api/notify/video-a-valider', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _jwt },
+          body: JSON.stringify({ titre: titre, nom: nomAff, cours: _vidCoursLblE(ville, niveau) })
+        }).catch(function(){});
+      } catch(e) {}
+      _vidCloseE();
+      _vidEleveCache = null; // recharger → affiche la proposition « en attente »
+      renderVideosEleve();
+    } catch(e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Envoyer pour validation'; }
+      var pe = $('vidp-prog'); if (pe) pe.textContent = '';
+      say('Erreur : ' + ((e && e.message) || 'envoi impossible'));
+    }
   }
 
   async function renderRepertoire() {
@@ -2325,6 +2509,7 @@
     agenda:               {label:'Agenda',       color:'#60b0ff', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>'},
     'carte-lieux':        {label:'Plan',         color:'#2dd4bf', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>'},
     actu:                 {label:'Publications',  color:'#fbbf24', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z"/></svg>'},
+    videos:               {label:'Vidéos',        color:'#fb7185', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>'},
     avis:                 {label:'Avis',         color:'#e879f9', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>'},
     yoga:                 {label:'Yoga',         color:'#a78bfa', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm8 7H4v2h3.5l-1.43 7.16A1 1 0 0 0 7 19.5l.07.5h2.02l.3-1.5H14.6l.3 1.5h2.02l.07-.5a1 1 0 0 0-.07-.34L15.5 11H20V9z"/></svg>'},
     hypnose:              {label:'Hypnose',      color:'#38bdf8', svg:'<svg viewBox="0 0 24 24" fill="currentColor" width="26" height="26"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-12.5c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 5.5c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg>'},
@@ -2348,7 +2533,7 @@
     const rows = [
       ['accueil', 'aide', 'repertoire', ...(_featMonNiveau ? ['niveau'] : [])],
       ['carte', 'stages', 'cours-particuliers', 'milonga', ...(isPreinscPeriod ? ['preinscription'] : [])],
-      ['agenda', 'carte-lieux', 'actu', ...(hasVincennesNav ? ['sorano'] : [])],
+      ['agenda', 'carte-lieux', 'actu', 'videos', ...(hasVincennesNav ? ['sorano'] : [])],
       ['musique', 'chaussures', 'yoga', 'hypnose'],
       ['contact', 'whatsapp', 'discussions', 'avis'],
     ];
@@ -7321,6 +7506,7 @@ body.theme-light .bandeau-inner{color:#fde68a;}
 
   <!-- ── ONGLET RÉPERTOIRE ─────────────────────────────────── -->
   <div class="tab-pane" id="repertoire-pane"></div>
+  <div class="tab-pane" id="videos-pane"></div>
 
   <!-- ── ONGLET YOGA ───────────────────────────────────────── -->
   <div class="tab-pane" id="yoga-pane">
