@@ -2989,11 +2989,9 @@
   try {
     var _nq = (location.search || '');
     if (_nq.indexOf('nudge=1') >= 0) localStorage.setItem('tev_nudge_force', '1');
-    if (_nq.indexOf('nudge=debug') >= 0) localStorage.setItem('tev_nudge_debug', '1');
-    if (_nq.indexOf('nudge=off') >= 0) { localStorage.removeItem('tev_nudge_force'); localStorage.removeItem('tev_nudge_debug'); }
+    if (_nq.indexOf('nudge=off') >= 0) localStorage.removeItem('tev_nudge_force');
   } catch(e){}
   function _nudgeForceTest(){ try { return localStorage.getItem('tev_nudge_force') === '1'; } catch(e){ return false; } }
-  function _nudgeDebugOn(){ try { return localStorage.getItem('tev_nudge_debug') === '1'; } catch(e){ return false; } }
   function _nudgeRemove(){ var ov = $('tev-nudge-full'); if (ov && ov.parentNode) ov.parentNode.removeChild(ov); }
   window._nudgePlusTard = function(){ try { localStorage.setItem('tev_nudge_dismiss', String(Date.now())); } catch(e){} _nudgeRemove(); };
   window._nudgeActiverPush = async function(){
@@ -3009,13 +3007,6 @@
   // Écran plein — s'affiche une fois par session sur l'accueil, tant que l'objectif n'est pas atteint.
   function _maybeShowNudge(){
     var force = _nudgeForceTest();   // ?nudge=1 (persistant) → forcer l'affichage pour test
-    if (_nudgeDebugOn()) {
-      alert('NUDGE DIAGNOSTIC\n\n(fonction bien atteinte)\nforce=' + force
-        + '\nstandalone(installé)=' + _isStandaloneApp()
-        + '\npush=' + (('Notification' in window) ? Notification.permission : 'API absente')
-        + '\nmasqué(Plus tard)=' + _nudgeMasque()
-        + '\nnavigateur=' + (_estIOS() ? 'iOS' : 'autre'));
-    }
     if (_nudgeSessionShown && !force) return;
     if (!force && _nudgeMasque()) return;
     if ($('tev-nudge-full')) return;
@@ -3024,7 +3015,7 @@
     if (installed && pushOk && !force) return;
     _nudgeSessionShown = true;
 
-    var later = '<button onclick="_nudgePlusTard()" style="background:none;border:none;color:var(--text-dim);font-size:13px;font-weight:600;cursor:pointer;padding:10px;text-decoration:underline;margin-top:18px;">Plus tard</button>';
+    var later = '<button onclick="_nudgePlusTard()" style="background:none;border:none;color:var(--text-dim);font-size:16px;font-weight:600;cursor:pointer;padding:12px 16px;text-decoration:underline;margin-top:20px;">Plus tard</button>';
     var inner;
     if (!installed) {
       var steps = _estIOS()
