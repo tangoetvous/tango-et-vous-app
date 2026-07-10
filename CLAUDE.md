@@ -1,5 +1,41 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Budget prévisionnel (onglet Compta) — EN CONSTRUCTION (specs seulement, NE RIEN CODER)
+
+Nouvelle rubrique **dans Compta** (`admin.html`) : un **budget prévisionnel** = **recettes prévues** vs **dépenses prévues** (montants estimés, éventuellement vs réels plus tard). ⚠️ **Spécifications en cours de collecte — l'utilisateur précisera peu à peu. NE PAS commencer à coder tant qu'il ne le demande pas explicitement.**
+
+**Recettes prévues (5 postes)** :
+1. Cours de Tango
+2. Cours de Yoga
+3. Événements
+4. Séjours Tango
+5. Formations professionnelles
+
+**Dépenses prévues (16 postes)** :
+1. Cachets des spectacles (représentations **et** répétitions)
+2. Salaires des Cours
+3. Salles de Cours (Sorano Yoga, Sorano Tango, Espas Danse Tango)
+4. Box de rangement
+5. iCloud 2 To
+6. Publicité
+7. Assurance
+8. Site Wix
+9. Domaines web
+10. Téléphone
+11. Bunny Stream
+12. Primes de Salaire
+13. Thalie Santé au Travail
+14. AssoConnect
+15. Illicado
+16. Frais de formation Pro
+
+**Trésorerie / soldes à suivre** (l'admin doit pouvoir les renseigner) :
+- Solde du **compte en banque**
+- Solde du **compte AssoConnect**
+- Montant **à déposer en banque** (encaissements pas encore déposés)
+
+**À préciser plus tard avec l'utilisateur** (avant tout code) : périodicité (annuel/mensuel ?), lien avec les données existantes (remises_banque, chèques, montants d'inscriptions déjà en base ?), prévu vs réalisé, stockage (table Supabase dédiée ou clé `parametres` ?), UI (tableau éditable ? graphique ?).
+
 ## Session 2026-07-10 — Rubrique « Vidéos des cours » (Bunny Stream) — EN CONSTRUCTION
 
 Nouvelle fonctionnalité en cours : bibliothèque vidéos par cours (récaps/technique), avec **upload direct par les élèves + modération admin** avant visibilité. Objectif stratégique : donner une vraie raison d'aller sur l'app (contenu unique introuvable sur WhatsApp) → puis pousser install PWA + push. Maquette validée (fichiers scratchpad, thèmes clair+sombre).
