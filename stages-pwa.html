@@ -669,6 +669,8 @@ function buildDateEntry(st, globalHor, globalAdr) {
 }
 
 // ── Chargement des données depuis localStorage ──────────────────
+var MAX_DATES_STAGES = 3;   // n'afficher que les N prochaines dates de stage dans le formulaire
+
 function chargerDonnees() {
   var _now=new Date(), _isEte=(_now.getMonth()===6||_now.getMonth()===7); // juillet=6, août=7
   var _todayISO = _now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-'+String(_now.getDate()).padStart(2,'0');
@@ -704,7 +706,7 @@ function chargerDonnees() {
       try { var _leg=JSON.parse(localStorage.getItem('tev_dates_stages')||'null'); if(_leg&&_leg.stages) allSaved=_leg.stages; } catch(e){}
     }
     if(allSaved.length){
-      var stages=allSaved.filter(function(st){return st.date>=saiStart&&st.date<=saiEnd&&st.date>=_todayISO;}).sort(function(a,b){return a.date<b.date?-1:1;});
+      var stages=allSaved.filter(function(st){return st.date>=saiStart&&st.date<=saiEnd&&st.date>=_todayISO;}).sort(function(a,b){return a.date<b.date?-1:1;}).slice(0,MAX_DATES_STAGES);
       if(stages.length){
         // Charger les params de la saison du 1er stage si différente de `sai`
         var _fy=parseInt(stages[0].date.split('-')[0]), _fm=parseInt(stages[0].date.split('-')[1]);
@@ -721,6 +723,7 @@ function chargerDonnees() {
   // Fallback — applique aussi les paramètres globaux (horaires, adresse)
   DATES_STAGES=DATES_STAGES_RAW.filter(function(st){return st.date>=saiStart&&st.date<=saiEnd&&st.date>=_todayISO;})
     .sort(function(a,b){return a.date<b.date?-1:1;})
+    .slice(0,MAX_DATES_STAGES)
     .map(function(st){return buildDateEntry(st,globalHor,globalAdr);});
 }
 

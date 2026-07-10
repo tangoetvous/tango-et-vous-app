@@ -1904,6 +1904,8 @@ La saison du formulaire (`MODE`) détermine automatiquement quelle grille utilis
 
 ### `stages-pwa.html` — Inscription aux stages
 
+**Dates affichées limitées aux 3 prochaines (2026-07-10)** : constante `MAX_DATES_STAGES = 3` dans `chargerDonnees()`. Les dates futures de la saison (déjà filtrées `>= today` + triées croissant) sont `.slice(0, MAX_DATES_STAGES)` dans les DEUX chemins d'assignation de `DATES_STAGES` (localStorage par saison ~ligne 707, et fallback `DATES_STAGES_RAW` ~ligne 724). Pour changer le nombre affiché, modifier cette seule constante.
+
 **Quota de capacité : aucun** — les stages n'ont pas de limite de places dans le code. Il n'existe pas de `CAP_STAGES` ni de vérification du nombre d'inscrits avant l'inscription. Si un stage est "complet", l'admin gère manuellement (refus ou liste d'attente hors appli). Ne pas ajouter de quota sans discussion explicite.
 
 **Statut à l'inscription (table `inscriptions_stages`, champ `type_confirmation`) :**
