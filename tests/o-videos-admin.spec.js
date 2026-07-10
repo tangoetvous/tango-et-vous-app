@@ -72,4 +72,29 @@ test.describe('Groupe O — Vidéos des cours (admin)', () => {
     expect(r.supprimer).toBe(true);
     expect(r.dl).toBe(true);
   });
+
+  test('O6 — téléchargement natif : helpers définis + bouton « Enregistrer » + fermeture', async ({ page }) => {
+    const r = await page.evaluate(() => {
+      const defs = {
+        direct: typeof _vidDlDirect === 'function',
+        showBtn: typeof _vidDlShowSaveBtn === 'function',
+        save: typeof window._vidDlSave === 'function',
+        hide: typeof window._vidDlHide === 'function',
+      };
+      _vidDlShowSaveBtn();                               // ouvre le bandeau avec le bouton natif
+      const el = document.getElementById('vid-dl-banner');
+      const hasSaveBtn = !!(el && el.innerHTML.indexOf('_vidDlSave()') >= 0);
+      const hasText = !!(el && el.textContent.indexOf('Enregistrer') >= 0);
+      window._vidDlHide();                               // le referme
+      const gone = !document.getElementById('vid-dl-banner');
+      return Object.assign(defs, { hasSaveBtn, hasText, gone });
+    });
+    expect(r.direct).toBe(true);
+    expect(r.showBtn).toBe(true);
+    expect(r.save).toBe(true);
+    expect(r.hide).toBe(true);
+    expect(r.hasSaveBtn).toBe(true);
+    expect(r.hasText).toBe(true);
+    expect(r.gone).toBe(true);
+  });
 });

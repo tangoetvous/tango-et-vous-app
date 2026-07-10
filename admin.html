@@ -15492,14 +15492,60 @@ function _videoTelecharger(bunnyId) {
       return pump();
     })
     .then(function (blob) {
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a'); a.href = url; a.download = nom.replace(/[^a-zA-Z0-9._ -]/g, '').trim() + '.mp4';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
-      _vidDlBanner('✓ Téléchargé — dans Fichiers › Téléchargements', true);
+      var fname = nom.replace(/[^a-zA-Z0-9._ -]/g, '').trim() + '.mp4';
+      // iOS/iPadOS + Web Share niveau 2 → feuille de partage native (Enregistrer dans Fichiers / Photos).
+      // Nécessite un geste frais → on affiche un bouton à taper (le fetch a « consommé » le geste du 1er clic).
+      var isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      var canShareFile = false;
+      try {
+        var f = new File([blob], fname, { type: blob.type || 'video/mp4' });
+        canShareFile = !!(navigator.canShare && navigator.canShare({ files: [f] }));
+        if (canShareFile) { _vidDlFile = f; _vidDlFileName = fname; }
+      } catch (e) {}
+      if (isIOS && canShareFile) {
+        _vidDlShowSaveBtn();                         // 2ᵉ temps : tap → navigator.share (natif)
+      } else {
+        _vidDlDirect(blob, fname);                   // desktop / vieux iOS → téléchargement direct
+      }
     })
     .catch(function (e) { _vidDlBanner('⚠️ ' + ((e && e.message) || 'Téléchargement indisponible'), true); });
 }
+
+var _vidDlFile = null, _vidDlFileName = 'video.mp4';
+
+// Téléchargement direct classique (desktop, ou iOS sans Web Share fichiers)
+function _vidDlDirect(blob, fname) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+  _vidDlBanner('✓ Téléchargé — dans Fichiers › Téléchargements', true);
+}
+
+// Bandeau avec bouton « Enregistrer la vidéo » (geste frais → feuille de partage iOS native)
+function _vidDlShowSaveBtn() {
+  var el = document.getElementById('vid-dl-banner');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'vid-dl-banner';
+    el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#211d12;border:1px solid #4a3c1c;color:#e8d08a;font-size:13px;font-weight:600;padding:14px 18px;border-radius:12px;z-index:100000;box-shadow:0 12px 30px -10px #000;max-width:92%;text-align:center;';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = '<div style="margin-bottom:10px;">✓ Vidéo prête</div>'
+    + '<button onclick="_vidDlSave()" style="background:var(--gold,#D4AF37);color:#1a1408;border:none;border-radius:10px;padding:11px 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📥 Enregistrer la vidéo</button>'
+    + '<button onclick="_vidDlHide()" style="margin-left:8px;background:transparent;color:#b8a97c;border:1px solid #4a3c1c;border-radius:10px;padding:11px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Fermer</button>'
+    + '<div style="margin-top:9px;font-size:11px;color:#a89768;font-weight:400;">Choisissez « Enregistrer dans Fichiers » ou « Enregistrer la vidéo »</div>';
+}
+window._vidDlHide = function () { var el = document.getElementById('vid-dl-banner'); if (el && el.parentNode) el.parentNode.removeChild(el); };
+window._vidDlSave = function () {
+  if (!_vidDlFile) return;
+  navigator.share({ files: [_vidDlFile], title: _vidDlFileName })
+    .then(function () { _vidDlBanner('✓ Vidéo enregistrée', true); })
+    .catch(function (err) {
+      if (err && err.name === 'AbortError') { _vidDlHide(); return; }   // annulation utilisateur → silencieux
+      _vidDlDirect(_vidDlFile, _vidDlFileName);                          // repli : téléchargement direct
+    });
+};
 
 function _vidDlBanner(txt, autohide) {
   var el = document.getElementById('vid-dl-banner');
