@@ -7577,19 +7577,30 @@ async function handleVideoDownload(request, env) {
   const id = (u.searchParams.get('id') || '').trim();
   if (!/^[a-f0-9-]{16,}$/i.test(id)) return jsonError(400, 'Identifiant vidéo invalide');
   const base = (u.searchParams.get('nom') || 'video').replace(/[^a-zA-Z0-9._ -]/g, '').trim() || 'video';
-  let upstream;
-  try {
-    upstream = await fetch(`https://${BUNNY_STREAM_HOST}/${id}/original`);
-  } catch(e) { console.error('[video-download]', e); return jsonError(502, 'Téléchargement impossible'); }
-  if (!upstream.ok) return jsonError(502, 'Original indisponible (encodage en cours, ou « Keep original files » désactivé)');
-  return new Response(upstream.body, {
-    status: 200,
-    headers: {
-      'Content-Type': upstream.headers.get('Content-Type') || 'video/mp4',
-      'Content-Disposition': `attachment; filename="${base}.mp4"`,
-      'Cache-Control': 'no-store',
-    },
-  });
+  // Essaie l'original (raw), puis les versions MP4 (MP4 fallback) de la meilleure à la plus basse.
+  const candidates = [
+    `https://${BUNNY_STREAM_HOST}/${id}/original`,
+    `https://${BUNNY_STREAM_HOST}/${id}/play_1080p.mp4`,
+    `https://${BUNNY_STREAM_HOST}/${id}/play_720p.mp4`,
+    `https://${BUNNY_STREAM_HOST}/${id}/play_480p.mp4`,
+    `https://${BUNNY_STREAM_HOST}/${id}/play_360p.mp4`,
+    `https://${BUNNY_STREAM_HOST}/${id}/play_240p.mp4`,
+  ];
+  for (const url of candidates) {
+    let r;
+    try { r = await fetch(url); } catch(e) { continue; }
+    if (r && r.ok && r.body) {
+      return new Response(r.body, {
+        status: 200,
+        headers: {
+          'Content-Type': r.headers.get('Content-Type') || 'video/mp4',
+          'Content-Disposition': `attachment; filename="${base}.mp4"`,
+          'Cache-Control': 'no-store',
+        },
+      });
+    }
+  }
+  return jsonError(502, 'Fichier indisponible (encodage en cours ?)');
 }
 
 // POST /api/videos/delete — { id } : supprime la vidéo côté Bunny (refuser une proposition / supprimer de la biblio).
