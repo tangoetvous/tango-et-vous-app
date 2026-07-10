@@ -38,6 +38,11 @@
 const SUPABASE_URL  = 'https://qhngqzvvllktuwspojxc.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFobmdxenZ2bGxrdHV3c3BvanhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MjQ0NDYsImV4cCI6MjA5MjMwMDQ0Nn0.j-yMQryi3qoImIf6vyiqQ3SKzHeJoPsrJuP1YwaSyLs';
 
+// Bunny Stream — hébergement des vidéos de cours (non secret : ID + hostname publics).
+// La clé API vit UNIQUEMENT côté serveur : env.BUNNY_STREAM_API_KEY (secret Cloudflare).
+const BUNNY_STREAM_LIBRARY_ID = '701214';
+const BUNNY_STREAM_HOST       = 'vz-15dcd245-cc4.b-cdn.net';
+
 const CORS_ORIGINS = [
   'https://www.tangoetvous.com',
   'https://app.tangoetvous.fr',
@@ -556,6 +561,31 @@ export default {
       if (pathname === '/api/eleve/message-prive' && method === 'POST') {
         if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
         return await handleEleveMessagePrive(request, env, jwt);
+      }
+
+      // ===== Vidéos des cours (Bunny Stream) =====
+      // POST /api/videos/create — crée l'objet vidéo Bunny + renvoie la signature TUS (upload direct client)
+      // Tout utilisateur authentifié (élève OU admin). La clé API reste côté serveur.
+      if (pathname === '/api/videos/create' && method === 'POST') {
+        if (!jwt || !await _requireEleve(jwt)) return jsonError(401, 'Authentification requise');
+        return await handleVideoCreate(request, env);
+      }
+      // GET /api/videos/download?id=<guid> — URL de l'original (téléchargement), admin uniquement
+      if (pathname === '/api/videos/download' && method === 'GET') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
+        return await handleVideoDownload(request, env);
+      }
+      // POST /api/notify/video-a-valider — un élève propose une vidéo → notifie l'admin (panel 🔔 + push)
+      if (pathname === '/api/notify/video-a-valider' && method === 'POST') {
+        if (!jwt || !await _requireEleve(jwt)) return jsonError(401, 'Authentification requise');
+        return await handleNotifyVideoAValider(request, env);
+      }
+      // POST /api/notify/video-publiee — admin approuve/publie → notifie les élèves du cours (in-app + push)
+      if (pathname === '/api/notify/video-publiee' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
+        return await handleNotifyVideoPubliee(request, env);
       }
 
       try {
@@ -7495,6 +7525,92 @@ async function handleNotifyInscriptionCoursModifiee(request, env) {
     });
   } catch(err) { console.error('[notify-inscription-cours-modifiee] error', err); }
   return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// VIDÉOS DES COURS (Bunny Stream)
+// ================================================================
+async function _sha256hex(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// POST /api/videos/create — { titre } → crée l'objet vidéo Bunny + signature TUS pour l'upload direct.
+// La clé API (env.BUNNY_STREAM_API_KEY) ne quitte jamais le serveur.
+async function handleVideoCreate(request, env) {
+  const apiKey = env.BUNNY_STREAM_API_KEY;
+  if (!apiKey) return jsonError(500, 'Hébergement vidéo non configuré');
+  let titre;
+  try { ({ titre } = await request.json()); } catch(e) { return jsonError(400, 'Body invalide'); }
+  titre = (titre || '').toString().trim().slice(0, 200) || 'Vidéo';
+  let guid = '';
+  try {
+    const r = await fetch(`https://video.bunnycdn.com/library/${BUNNY_STREAM_LIBRARY_ID}/videos`, {
+      method: 'POST',
+      headers: { 'AccessKey': apiKey, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ title: titre }),
+    });
+    if (!r.ok) { console.error('[video-create] bunny HTTP', r.status, await r.text().catch(() => '')); return jsonError(502, 'Création de la vidéo échouée'); }
+    const j = await r.json();
+    guid = j && j.guid ? j.guid : '';
+  } catch(e) { console.error('[video-create] error', e); return jsonError(502, 'Création de la vidéo échouée'); }
+  if (!guid) return jsonError(502, 'Réponse hébergement invalide');
+  // Signature TUS : SHA256(libraryId + apiKey + expiration + videoId) — l'upload direct client la présente.
+  const expiration = Math.floor(Date.now() / 1000) + 3600; // 1 h
+  const signature = await _sha256hex(BUNNY_STREAM_LIBRARY_ID + apiKey + expiration + guid);
+  return corsResponse({ ok: true, videoId: guid, libraryId: BUNNY_STREAM_LIBRARY_ID, signature, expiration }, 200, {}, request);
+}
+
+// GET /api/videos/download?id=<guid> — URL de l'original (admin uniquement).
+// Nécessite « Keep original files » activé sur la bibliothèque Bunny.
+async function handleVideoDownload(request, env) {
+  const id = (new URL(request.url).searchParams.get('id') || '').trim();
+  if (!/^[a-f0-9-]{16,}$/i.test(id)) return jsonError(400, 'Identifiant vidéo invalide');
+  return corsResponse({ ok: true, url: `https://${BUNNY_STREAM_HOST}/${id}/original` }, 200, {}, request);
+}
+
+// POST /api/notify/video-a-valider — { titre, nom, cours } : un élève propose une vidéo → alerte admin.
+async function handleNotifyVideoAValider(request, env) {
+  let titre = '', nom = '', cours = '';
+  try { ({ titre = '', nom = '', cours = '' } = await request.json()); } catch(e) { return jsonError(400, 'Body invalide'); }
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const msg = `🎬 Vidéo à valider — ${nom || 'un élève'}${cours ? ' · ' + cours : ''}${titre ? ' · « ' + titre + ' »' : ''}`;
+  try { await _insertNotification('video_a_valider', msg, 'videos'); } catch(e) { console.error('[video-a-valider] notif', e); }
+  try {
+    const tokens = await getFcmTokensAdmin(svcKey);
+    if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: msg, link: 'https://app.tangoetvous.fr/admin.html' });
+  } catch(e) { console.error('[video-a-valider] push', e); }
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// POST /api/notify/video-publiee — { titre, ville, niveau, saison } : admin publie → alerte les élèves du cours.
+async function handleNotifyVideoPubliee(request, env) {
+  let titre = '', ville = '', niveau = '', saison = '';
+  try { ({ titre = '', ville = '', niveau = '', saison = '' } = await request.json()); } catch(e) { return jsonError(400, 'Body invalide'); }
+  const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+  const groupe = (ville === 'vincennes' ? 'vincennes' : 'paris') + '-' + (niveau === 'intermediaire' ? 'intermediaires' : 'debutants');
+  const body = `🎥 Nouvelle vidéo dans ton cours : « ${titre || '' } »`;
+  let emails = [];
+  try { emails = await _getEmailsByGroupes([groupe], saison, svcKey); } catch(e) { console.error('[video-publiee] emails', e); }
+  emails = [...new Set((emails || []).map(e => String(e).toLowerCase().trim()).filter(Boolean))];
+  if (emails.length) {
+    // Notif in-app élève (batch) — RLS allow_all sur notifications_eleve → clé anon OK
+    try {
+      const rows = emails.map(email => ({ email, type: 'video', message: body, lu: false }));
+      await fetch(`${SUPABASE_URL}/rest/v1/notifications_eleve`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify(rows),
+      });
+    } catch(e) { console.error('[video-publiee] notif_eleve', e); }
+    // Push OS — une seule lecture de fcm_tokens (évite N subrequêtes Cloudflare)
+    try {
+      const tMap = await _buildTokenMap(svcKey);
+      const tokenList = [...new Set(emails.flatMap(e => tMap.get(e) || []).filter(Boolean))];
+      if (tokenList.length) await sendFcmPush(env, tokenList, { title: 'Tango & Vous', body });
+    } catch(e) { console.error('[video-publiee] push', e); }
+  }
+  return corsResponse({ ok: true, notified: emails.length }, 200, {}, request);
 }
 
 // ── Helper : vérifier si le JWT est admin (via is_admin() RPC) ──

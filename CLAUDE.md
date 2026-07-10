@@ -1,5 +1,15 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-07-10 — Rubrique « Vidéos des cours » (Bunny Stream) — EN CONSTRUCTION
+
+Nouvelle fonctionnalité en cours : bibliothèque vidéos par cours (récaps/technique), avec **upload direct par les élèves + modération admin** avant visibilité. Objectif stratégique : donner une vraie raison d'aller sur l'app (contenu unique introuvable sur WhatsApp) → puis pousser install PWA + push. Maquette validée (fichiers scratchpad, thèmes clair+sombre).
+
+- **Hébergement** : **Bunny Stream** (pas Cloudinary — vidéos iPhone ~240 Mo dépassent la limite 100 Mo du Cloudinary gratuit ; Bunny = pay-as-you-go ~1-2 $/mois, upload direct, pas d'engagement). Library ID **`701214`**, CDN host **`vz-15dcd245-cc4.b-cdn.net`** (non secrets, en dur dans worker.js). Clé API = secret Cloudflare **`BUNNY_STREAM_API_KEY`** (à poser). Réplication : Frankfurt (Main) + London (1 replica Europe). Activer **« Keep original files »** pour le téléchargement admin de l'original.
+- **Table Supabase** `videos_cours` (`supabase/videos_cours_schema.sql`, VERSIONNÉ, à exécuter) : métadonnées seules (titre, ville, niveau, saison, `bunny_video_id`, `statut` en_attente/approuvee/refusee, `source` eleve/admin, `soumis_par_email/nom`). RLS verrouillée : élève ne peut INSÉRER qu'**en son nom + en_attente** (pas d'auto-approbation), SELECT = approuvées + sa propre proposition + admin, UPDATE/DELETE = admin.
+- **Backbone worker (FAIT ce jour, non-bloquant tant que le secret manque)** : `POST /api/videos/create` (auth élève/admin → crée l'objet Bunny + **signature TUS** pour upload direct client, clé API jamais exposée) ; `GET /api/videos/download?id=` (admin → URL de l'original) ; `POST /api/notify/video-a-valider` (élève propose → alerte admin panel 🔔 + push) ; `POST /api/notify/video-publiee` (admin publie → notif in-app + push aux élèves du cours via `_getEmailsByGroupes` + `_buildTokenMap`). Helper `_sha256hex`. Constantes `BUNNY_STREAM_LIBRARY_ID`/`BUNNY_STREAM_HOST` près de SUPABASE_URL.
+- **Décisions produit** : n'importe quel élève peut proposer (modération = filet) ; crédit « proposé par [Prénom N.] » gardé ; tri par date + recherche par thème ; lecteur **lecture seule** côté élève (embed Bunny, dissuasif pas verrou 100 %), **téléchargement original réservé admin** ; **refuser supprime aussi la vidéo côté Bunny** (pas de stockage inutile). Message de valeur **universel** (pas « pointe ta présence » → caduque pour les forfaits).
+- **RESTE À FAIRE** : (1) upload TUS + rubrique élève (index.html) — CSP à ouvrir pour `video.bunnycdn.com` (connect/upload) + `iframe.mediadelivery.net` (frame-src) + tus-js-client ; (2) file modération + publier + bibliothèque (admin.html) ; (3) suppression Bunny à l'action « refuser/supprimer » (worker : `DELETE https://video.bunnycdn.com/library/701214/videos/{id}` avec AccessKey) ; (4) tests Playwright (logique de rendu en démo).
+
 ## Session 2026-07-08 — Cartes 10 : date d'expiration forcée manuellement
 
 Nouvelle possibilité pour l'admin : **saisir/forcer la date d'expiration** d'une carte directement dans la modale « ✏️ Modifier les cours » (Cartes 10 → Détails).
