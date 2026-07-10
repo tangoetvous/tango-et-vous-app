@@ -15420,12 +15420,17 @@ async function _videoPublier() {
   _admVidBusy = true;
   var btn = gel('vid-publier-btn'); if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
   say('');
+  // Diagnostic : capter une éventuelle violation CSP pendant l'upload (pour trancher CSP vs CORS à l'écran)
+  var _cspBlock = null;
+  var _onCSP = function (ev) { try { if ((ev.blockedURI || '').indexOf('bunny') >= 0 || (ev.violatedDirective || '').indexOf('connect') >= 0) _cspBlock = (ev.violatedDirective || '') + ' ← ' + (ev.blockedURI || ''); } catch (e) {} };
+  document.addEventListener('securitypolicyviolation', _onCSP);
   try {
     await TEVVID.uploadVideo({
       file: file, titre: titre, ville: ville, niveau: niveau, saison: saisonActive(),
       source: 'admin', statut: 'approuvee',
       onProgress: function (p) { var pe = gel('vid-progress'); if (pe) pe.textContent = 'Envoi… ' + Math.round(p * 100) + '%'; }
     });
+    document.removeEventListener('securitypolicyviolation', _onCSP);
     if (notifier) {
       try {
         fetch('/api/notify/video-publiee', {
@@ -15441,9 +15446,10 @@ async function _videoPublier() {
     renderTab();
   } catch (e) {
     _admVidBusy = false;
+    document.removeEventListener('securitypolicyviolation', _onCSP);
     if (btn) { btn.disabled = false; btn.textContent = 'Publier pour le cours'; }
     var pe = gel('vid-progress'); if (pe) pe.textContent = '';
-    say('Erreur : ' + ((e && e.message) || 'envoi impossible'));
+    say('Erreur : ' + ((e && e.message) || 'envoi impossible') + (_cspBlock ? '  ⟶ CSP BLOQUE : ' + _cspBlock : '  ⟶ aucun blocage CSP (donc CORS/Bunny)'));
   }
 }
 
