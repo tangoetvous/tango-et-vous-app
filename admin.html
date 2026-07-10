@@ -554,6 +554,7 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
         <button class="tab-btn" data-tab="dashboard" style="color:#60a5fa"><span class="tab-icon">🏠</span><span class="tab-label">Dashboard</span></button>
         <button class="tab-btn" data-tab="compta" style="color:#34d399"><span class="tab-icon">💰</span><span class="tab-label">Compta</span></button>
         <button class="tab-btn" data-tab="emails-newsletter" style="color:#38bdf8"><span class="tab-icon">📧</span><span class="tab-label">Newsletter</span></button>
+        <button class="tab-btn" data-tab="videos" style="color:#fb7185"><span class="tab-icon">🎥</span><span class="tab-label">Vidéos</span></button>
       </div>
     </div>
   </div>
@@ -5917,7 +5918,8 @@ function switchTab(tab) {
       'sorano':'🏛 Sorano','yoga':'🧘 Yoga','agenda':'📅 Agenda',
       'publications':'📝 Publications','whatsapp':'💬 WhatsApp','tarifs':'⚙️ Paramètres',
       'discussions':'🗨️ Discussions','devis':'📋 Devis','notifications':'🔔 Notifications',
-      'compta':'💰 Compta','dashboard':'🏠 Dashboard','emails-newsletter':'📧 Newsletter'
+      'compta':'💰 Compta','dashboard':'🏠 Dashboard','emails-newsletter':'📧 Newsletter',
+      'videos':'🎥 Vidéos des cours'
     };
     _lbl.textContent = _LABELS[tab] || tab;
   }
@@ -5953,6 +5955,7 @@ function _renderTabSiPasFormulaire() {
       && (window.scrollY || document.documentElement.scrollTop || 0) > 100) return;
   if (currentTab === 'publications' && gel('pub-ed') && gel('pub-ed').innerHTML.trim()) return; // formulaire pub ouvert — ne pas écraser
   if (currentTab === 'notifications') return; // ne pas interrompre la lecture des notifs
+  if (currentTab === 'videos') return; // ne pas interrompre un upload / la saisie du formulaire vidéo
   if (currentTab === 'agenda') return; // ne pas interrompre la navigation entre les mois
   if (currentTab === 'parametres' && (_nivCurrExpanded || _nivVidExpanded)) return; // éditeur Mon niveau ouvert — ne pas écraser les saisies
   if (_editCarteId !== null) return; // modal ✏️ Modifier carte ouverte
@@ -6002,6 +6005,7 @@ function renderTab() {
     else if (currentTab==='notifications') html=renderNotifications();
     else if (currentTab==='compta')        html=renderCompta();
     else if (currentTab==='emails-newsletter') html=renderEmailsNewsletter();
+    else if (currentTab==='videos')       html=renderVideos();
     else if (currentTab==='dashboard')    html=renderDashboard();
     if(isSaisonPassee()){
       var banner='<div style="background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--warn-text);display:flex;align-items:center;gap:8px;">🔒 Saison '+saisonActive()+' archivée — consultation uniquement</div>';
@@ -15349,6 +15353,144 @@ function _renderResaSallesSection() {
     +'</div></div>';
   return h;
 }
+
+// ================================================================
+// VIDÉOS DES COURS (Bunny Stream) — côté admin
+// ================================================================
+var _admVid = { publiees: [], aValider: [], loadedSaison: null };
+var _admVidSub = 'publier';   // 'publier' | 'biblio'
+var _admVidBusy = false;
+
+function _vidCoursLabel(ville, niveau) {
+  return (ville === 'vincennes' ? 'Vincennes' : 'Paris') + ' — ' + (niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant');
+}
+function _vidSub(s) { _admVidSub = s; renderTab(); }
+
+function renderVideos() {
+  var sai = saisonActive();
+  if (!IS_DEMO && _admVid.loadedSaison !== sai) _chargerVideosAdmin();
+  var h = '<div style="display:flex;gap:6px;margin-bottom:16px;">'
+    + '<button class="btn ' + (_admVidSub === 'publier' ? 'btn-gold' : 'btn-ghost') + '" style="flex:1;" onclick="_vidSub(\'publier\')">🎬 Publier</button>'
+    + '<button class="btn ' + (_admVidSub === 'biblio' ? 'btn-gold' : 'btn-ghost') + '" style="flex:1;" onclick="_vidSub(\'biblio\')">📚 Bibliothèque</button>'
+    + '</div>';
+  h += (_admVidSub === 'biblio') ? _vidBibliotheque(sai) : _vidPublierForm(sai);
+  return h;
+}
+
+function _vidPublierForm(sai) {
+  var h = '<div style="font-size:12px;color:var(--dim);margin-bottom:14px;">Publiez une vidéo directement pour un cours — elle sera visible par les élèves de ce cours (qui recevront une notification) et vous la retrouverez dans la Bibliothèque.</div>';
+  h += '<div class="field"><label>Titre / thème</label><input type="text" id="vid-titre" placeholder="Ex. Giros — dissociation du buste" style="width:100%;"/></div>';
+  h += '<div class="field"><label>Cours destinataire</label><select id="vid-cours" style="width:100%;">'
+    + '<option value="paris|debutant">Paris — Débutant</option>'
+    + '<option value="paris|intermediaire">Paris — Intermédiaire</option>'
+    + '<option value="vincennes|debutant">Vincennes — Débutant</option>'
+    + '<option value="vincennes|intermediaire">Vincennes — Intermédiaire</option>'
+    + '</select></div>';
+  h += '<div class="field"><label>Vidéo</label><input type="file" id="vid-file" accept="video/*" style="width:100%;"/></div>';
+  h += '<div id="vid-progress" style="font-size:12px;color:var(--gold);margin-bottom:8px;min-height:16px;"></div>';
+  h += '<button class="btn btn-gold" id="vid-publier-btn" style="width:100%;" onclick="_videoPublier()">Publier pour le cours</button>';
+  h += '<div id="vid-msg" style="font-size:12px;margin-top:8px;"></div>';
+  return h;
+}
+
+async function _videoPublier() {
+  var titre = ((gel('vid-titre') && gel('vid-titre').value) || '').trim();
+  var coursVal = (gel('vid-cours') && gel('vid-cours').value) || 'paris|debutant';
+  var fileEl = gel('vid-file');
+  var file = (fileEl && fileEl.files) ? fileEl.files[0] : null;
+  var msg = gel('vid-msg');
+  function say(t, c) { if (msg) { msg.textContent = t || ''; msg.style.color = c || 'var(--err-text)'; } }
+  if (!titre) { say('Indiquez un titre.'); return; }
+  if (!file) { say('Choisissez une vidéo.'); return; }
+  var parts = coursVal.split('|'), ville = parts[0], niveau = parts[1];
+  if (IS_DEMO) { afficherToast('Démo — publication simulée'); return; }
+  if (_admVidBusy) return;
+  _admVidBusy = true;
+  var btn = gel('vid-publier-btn'); if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
+  say('');
+  try {
+    await TEVVID.uploadVideo({
+      file: file, titre: titre, ville: ville, niveau: niveau, saison: saisonActive(),
+      source: 'admin', statut: 'approuvee',
+      onProgress: function (p) { var pe = gel('vid-progress'); if (pe) pe.textContent = 'Envoi… ' + Math.round(p * 100) + '%'; }
+    });
+    try {
+      fetch('/api/notify/video-publiee', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+        body: JSON.stringify({ titre: titre, ville: ville, niveau: niveau, saison: saisonActive() })
+      }).catch(function () {});
+    } catch (e) {}
+    afficherToast('✓ Vidéo publiée pour ' + _vidCoursLabel(ville, niveau));
+    _admVid.loadedSaison = null; // force le rechargement de la biblio
+    _admVidSub = 'biblio';
+    _admVidBusy = false;
+    renderTab();
+  } catch (e) {
+    _admVidBusy = false;
+    if (btn) { btn.disabled = false; btn.textContent = 'Publier pour le cours'; }
+    var pe = gel('vid-progress'); if (pe) pe.textContent = '';
+    say('Erreur : ' + ((e && e.message) || 'envoi impossible'));
+  }
+}
+
+async function _chargerVideosAdmin() {
+  var sai = saisonActive();
+  _admVid.loadedSaison = sai; // évite les rechargements en boucle
+  try {
+    _admVid.publiees = (await TEVVID.listPubliees(sai)) || [];
+    _admVid.aValider = (await TEVVID.listAValider(sai)) || [];
+  } catch (e) { console.error('[videos] chargement', e); }
+  // Re-render uniquement si on regarde la biblio (ne pas perturber le formulaire Publier)
+  if (currentTab === 'videos' && _admVidSub === 'biblio') renderTab();
+}
+
+function _vidBibliotheque(sai) {
+  if (IS_DEMO) return '<div class="empty-state">Bibliothèque vidéos — indisponible en démo.</div>';
+  if (_admVid.loadedSaison !== sai) return '<div class="empty-state">Chargement…</div>';
+  var vids = _admVid.publiees || [];
+  if (!vids.length) return '<div class="empty-state">Aucune vidéo publiée pour la saison ' + escHtml(sai) + '.</div>';
+  var groups = {}, order = [];
+  vids.forEach(function (v) {
+    var k = _vidCoursLabel(v.ville, v.niveau);
+    if (!groups[k]) { groups[k] = []; order.push(k); }
+    groups[k].push(v);
+  });
+  order.sort();
+  var h = '';
+  order.forEach(function (k) {
+    h += '<div class="section-hdr" style="margin-top:10px;">' + escHtml(k) + ' <span style="color:var(--dim);font-weight:400;">· ' + groups[k].length + '</span></div>';
+    groups[k].forEach(function (v) {
+      var dt = v.created_at ? _fmtJour((v.created_at || '').slice(0, 10)) : '';
+      var vid = (v.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '');
+      h += '<div class="point-row" style="display:flex;align-items:center;gap:10px;">'
+        + '<a href="javascript:void(0)" onclick="_videoPlay(\'' + vid + '\')" style="width:96px;height:60px;border-radius:8px;flex-shrink:0;background:#000 center/cover no-repeat url(\'' + TEVVID.thumbUrl(v.bunny_video_id) + '\');display:flex;align-items:center;justify-content:center;">'
+        + '<span style="width:28px;height:28px;border-radius:50%;background:#0009;border:1.4px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;">▶</span></a>'
+        + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);">' + escHtml(v.titre || 'Vidéo') + '</div>'
+        + '<div style="font-size:11px;color:var(--dim);">' + dt + '</div></div>'
+        + '</div>';
+    });
+  });
+  return h;
+}
+
+// Lecteur — modale dynamique, iframe Bunny (lecture seule)
+var _vidModalEl = null;
+function _videoPlay(videoId) {
+  _videoClose();
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:#000d;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  ov.addEventListener('click', function (e) { if (e.target === ov) _videoClose(); });
+  var box = document.createElement('div');
+  box.style.cssText = 'width:100%;max-width:680px;';
+  box.innerHTML = '<div style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;">'
+    + '<iframe src="' + TEVVID.embedUrl(videoId) + '" style="width:100%;height:100%;border:0;" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe></div>'
+    + '<button class="btn btn-ghost" style="width:100%;margin-top:10px;">Fermer</button>';
+  box.querySelector('button').addEventListener('click', _videoClose);
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+  _vidModalEl = ov;
+}
+function _videoClose() { if (_vidModalEl) { try { document.body.removeChild(_vidModalEl); } catch (e) {} _vidModalEl = null; } }
 
 function renderEmailsNewsletter() {
   var SRC_LBL = {
