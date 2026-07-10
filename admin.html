@@ -15418,16 +15418,34 @@ function _vidAValider(sai) {
 function _videoApprouver(id) {
   var v = (_admVid.aValider || []).find(function (x) { return String(x.id) === String(id); });
   if (!v) return;
-  TEVVID.approuver(id).then(function () {
-    try {
-      fetch('/api/notify/video-publiee', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
-        body: JSON.stringify({ titre: v.titre, ville: v.ville, niveau: _vidNivN(v.niveau), saison: v.saison })
-      }).catch(function () {});
-    } catch (e) {}
-    afficherToast('✓ Vidéo approuvée — élèves du cours notifiés');
-    _admVid.loadedSaison = null; _chargerVideosAdmin();
-  }).catch(function (e) { afficherToast('⚠️ ' + ((e && e.message) || 'Erreur')); });
+  _videoClose();
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:#000d;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.addEventListener('click', function (e) { if (e.target === ov) ov.remove(); });
+  var box = document.createElement('div');
+  box.style.cssText = 'width:100%;max-width:420px;background:var(--surface,#111);border:1px solid var(--border);border-radius:16px;padding:20px;';
+  box.innerHTML = '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;">Approuver cette vidéo ?</div>'
+    + '<div style="font-size:12.5px;color:var(--dim);margin-bottom:16px;">« ' + escHtml(v.titre || 'Vidéo') + ' » — ' + escHtml(_vidCoursLabel(v.ville, v.niveau)) + '</div>'
+    + '<div style="display:flex;align-items:center;gap:11px;margin-bottom:18px;"><label class="tev-sw"><input type="checkbox" id="vid-approve-notif" checked/><span class="tev-sw-t"></span></label><span style="font-size:13px;color:var(--text);">🔔 Notifier les élèves du cours</span></div>'
+    + '<div style="display:flex;gap:8px;"><button class="btn btn-ghost" id="vid-approve-cancel" style="flex:1;">Annuler</button><button class="btn btn-ok" id="vid-approve-ok" style="flex:1;">✓ Approuver</button></div>';
+  ov.appendChild(box); document.body.appendChild(ov);
+  box.querySelector('#vid-approve-cancel').addEventListener('click', function () { ov.remove(); });
+  box.querySelector('#vid-approve-ok').addEventListener('click', function () {
+    var notif = box.querySelector('#vid-approve-notif').checked;
+    ov.remove();
+    TEVVID.approuver(id).then(function () {
+      if (notif) {
+        try {
+          fetch('/api/notify/video-publiee', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+            body: JSON.stringify({ titre: v.titre, ville: v.ville, niveau: _vidNivN(v.niveau), saison: v.saison })
+          }).catch(function () {});
+        } catch (e) {}
+      }
+      afficherToast('✓ Vidéo approuvée' + (notif ? ' — élèves notifiés' : ' (sans notification)'));
+      _admVid.loadedSaison = null; _chargerVideosAdmin();
+    }).catch(function (e) { afficherToast('⚠️ ' + ((e && e.message) || 'Erreur')); });
+  });
 }
 
 function _videoRefuser(id, bunnyId) {
