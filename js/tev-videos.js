@@ -86,6 +86,7 @@
       source: opts.source || 'eleve',
       soumis_par_email: opts.soumisParEmail || null,
       soumis_par_nom: opts.soumisParNom || null,
+      date_cours: opts.dateCours || null,
     };
     if (row.statut === 'approuvee') row.approuvee_at = new Date().toISOString();
     var ins = await window.TEV.client.from('videos_cours').insert(row);

@@ -574,7 +574,7 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
 <script src="js/tev-supabase.js?v=13"></script>
 <!-- Vidéos des cours (Bunny Stream) : upload direct TUS + helper -->
 <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
-<script src="js/tev-videos.js?v=2" defer></script>
+<script src="js/tev-videos.js?v=3" defer></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
 // ================================================================
@@ -15518,6 +15518,7 @@ function _vidPublierForm(sai) {
     + '<option value="vincennes|debutant">Vincennes — Débutant</option>'
     + '<option value="vincennes|intermediaire">Vincennes — Intermédiaire</option>'
     + '</select></div>';
+  h += '<div class="field"><label>Date du cours <span style="text-transform:none;color:var(--dim);font-size:10px;">(facultatif)</span></label><input type="date" id="vid-date" style="width:100%;"/></div>';
   h += '<div class="field"><label>Vidéo</label><input type="file" id="vid-file" accept="video/*" style="width:100%;"/></div>';
   h += '<div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;">'
     + '<label class="tev-sw"><input type="checkbox" id="vid-notif" checked/><span class="tev-sw-t"></span></label>'
@@ -15538,6 +15539,7 @@ async function _videoPublier() {
   if (!titre) { say('Indiquez un titre.'); return; }
   if (!file) { say('Choisissez une vidéo.'); return; }
   var parts = coursVal.split('|'), ville = parts[0], niveau = parts[1];
+  var dateCours = (gel('vid-date') && gel('vid-date').value) || null;
   var notifier = gel('vid-notif') ? gel('vid-notif').checked : true;
   if (IS_DEMO) { afficherToast('Démo — publication simulée'); return; }
   if (_admVidBusy) return;
@@ -15547,7 +15549,7 @@ async function _videoPublier() {
   try {
     await TEVVID.uploadVideo({
       file: file, titre: titre, ville: ville, niveau: niveau, saison: saisonActive(),
-      source: 'admin', statut: 'approuvee',
+      source: 'admin', statut: 'approuvee', dateCours: dateCours,
       onProgress: function (p) { var pe = gel('vid-progress'); if (pe) pe.textContent = 'Envoi… ' + Math.round(p * 100) + '%'; }
     });
     if (notifier) {
@@ -15598,7 +15600,7 @@ function _vidBibliotheque(sai) {
   order.forEach(function (k) {
     h += '<div class="section-hdr" style="margin-top:10px;">' + escHtml(k) + ' <span style="color:var(--dim);font-weight:400;">· ' + groups[k].length + '</span></div>';
     groups[k].forEach(function (v) {
-      var dt = v.created_at ? _fmtJour((v.created_at || '').slice(0, 10)) : '';
+      var dt = _fmtJour(v.date_cours || (v.created_at || '').slice(0, 10));
       var vid = (v.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '');
       h += '<div class="point-row" style="display:flex;align-items:center;gap:10px;">'
         + '<a href="javascript:void(0)" onclick="_videoPlay(\'' + vid + '\')" style="width:96px;height:60px;border-radius:8px;flex-shrink:0;background:#000 center/cover no-repeat url(\'' + TEVVID.thumbUrl(v.bunny_video_id) + '\');display:flex;align-items:center;justify-content:center;">'
