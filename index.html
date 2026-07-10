@@ -2972,6 +2972,47 @@
     var _n = new Date(); var _m = _n.getMonth() + 1; var _y = _n.getFullYear();
     return _m >= 9 ? (_y + '-' + (_y + 1)) : ((_y - 1) + '-' + _y);
   }
+  // ================================================================
+  // Nudge : installation de la PWA + activation des notifications
+  // Entonnoir : pas installé → guide d'install ; installé sans push → activer ;
+  // les deux faits → rien. Fermable (« Plus tard », masqué 2 jours). Additif.
+  // ================================================================
+  function _isStandaloneApp(){ try { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; } catch(e){ return false; } }
+  function _pushDejaActive(){ return ('Notification' in window) && Notification.permission === 'granted'; }
+  function _estIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent || ''); }
+  function _nudgeMasque(){ try { var t = parseInt(localStorage.getItem('tev_nudge_dismiss')||'0',10); return !!t && (Date.now()-t) < 2*24*3600*1000; } catch(e){ return false; } }
+  window._nudgePlusTard = function(){ try { localStorage.setItem('tev_nudge_dismiss', String(Date.now())); } catch(e){} renderAccueil(); };
+  window._nudgeActiverPush = async function(){
+    try {
+      if (typeof activerPushEleve === 'function') { await activerPushEleve(); }
+      else if ('Notification' in window) { await Notification.requestPermission(); await _registerFcmToken(); }
+    } catch(e){}
+    renderAccueil();
+  };
+  function _installNudgeHtml(){
+    if (_nudgeMasque()) return '';
+    var installed = _isStandaloneApp();
+    var pushOk = _pushDejaActive();
+    if (installed && pushOk) return '';
+    var card = 'background:linear-gradient(180deg,rgba(212,175,55,.14),rgba(212,175,55,.05));border:1px solid var(--gold);border-radius:14px;padding:15px 16px;margin:0 0 18px;';
+    var later = '<button onclick="_nudgePlusTard()" style="background:none;border:none;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;padding:6px 2px;text-decoration:underline;">Plus tard</button>';
+    if (!installed) {
+      var steps = _estIOS()
+        ? 'Dans Safari : appuie sur <b>Partager</b> <span style="font-size:15px;">⬆️</span> (barre du bas), puis <b>« Sur l\'écran d\'accueil »</b>.'
+        : 'Menu <b>⋮</b> (en haut à droite) → <b>« Installer l\'application »</b> (ou « Ajouter à l\'écran d\'accueil »).';
+      return '<div style="'+card+'">'
+        + '<div style="font-family:var(--font-display,serif);font-size:18px;color:var(--gold);margin-bottom:5px;">📲 Installe l\'appli Tango &amp; Vous</div>'
+        + '<div style="font-size:13px;color:var(--text);line-height:1.55;margin-bottom:10px;">Retrouve les <b>vidéos de tes cours</b>, tes dates et toutes les infos — à portée de main.</div>'
+        + '<div style="font-size:12.5px;color:var(--text);line-height:1.6;background:rgba(0,0,0,.15);border-radius:9px;padding:9px 11px;margin-bottom:8px;">'+steps+'</div>'
+        + '<div style="text-align:right;">'+later+'</div></div>';
+    }
+    return '<div style="'+card+'">'
+      + '<div style="font-family:var(--font-display,serif);font-size:18px;color:var(--gold);margin-bottom:5px;">🔔 Active les notifications</div>'
+      + '<div style="font-size:13px;color:var(--text);line-height:1.55;margin-bottom:12px;">Sois prévenu·e dès qu\'une <b>nouvelle vidéo de ton cours</b> est en ligne, ou en cas de changement de dernière minute.</div>'
+      + '<button onclick="_nudgeActiverPush()" style="width:100%;background:linear-gradient(180deg,var(--gold),#b8961e);color:#1a1408;border:none;border-radius:11px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:6px;">Activer les notifications</button>'
+      + '<div style="text-align:right;">'+later+'</div></div>';
+  }
+
   function renderAccueil() {
     const pane = $('accueil-pane');
     if (!pane || !eleveData) return;
@@ -3017,6 +3058,7 @@
       + '</div>';
 
     h += '<div style="padding:0 16px 28px;">';
+    h += _installNudgeHtml();
 
     // ── Un encadré par cours + suivi de carte ────────────────────
     var _hasCarteAcc = !!(carte && carte.type === 'carte10' && (carte.coursUtilises != null || carte.coursRestants != null));

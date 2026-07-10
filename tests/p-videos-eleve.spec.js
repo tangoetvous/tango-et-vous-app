@@ -42,4 +42,14 @@ test.describe('Groupe P — Vidéos des cours (élève)', () => {
     });
     expect(ok).toBe(true);
   });
+
+  test('P4 — nudge install/push : handlers globaux + « Plus tard » enregistre le report', async ({ page }) => {
+    const r = await page.evaluate(() => {
+      const before = typeof window._nudgePlusTard === 'function' && typeof window._nudgeActiverPush === 'function';
+      try { window._nudgePlusTard(); } catch(e) {}          // appelle renderAccueil (early-return) + pose le flag
+      return { before, hasFlag: !!localStorage.getItem('tev_nudge_dismiss') };
+    });
+    expect(r.before).toBe(true);
+    expect(r.hasFlag).toBe(true);
+  });
 });
