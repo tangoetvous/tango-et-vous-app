@@ -1431,6 +1431,7 @@
   let _vidEleveCache = null;   // { saison, videos:[], pending:[] }
   let _vidEleveQuery = '';
   let _vidEleveModal = null;
+  let _vidRecapCache = null;   // { saison, videos:[] } — pour le récap accueil (indépendant du cache onglet)
 
   function _vidEscE(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function _vidCoursLblE(v,n){ return (v==='vincennes'?'Vincennes':'Paris')+' — '+(String(n).indexOf('interm')>=0?'Intermédiaire':'Débutant'); }
@@ -3087,6 +3088,9 @@
 
     h += '<div style="padding:0 16px 28px;">';
 
+    // ── Récap vidéo épinglé (rempli en asynchrone par _renderAccRecapVideo) ──
+    h += '<div id="acc-recap-video"></div>';
+
     // ── Un encadré par cours + suivi de carte ────────────────────
     var _hasCarteAcc = !!(carte && carte.type === 'carte10' && (carte.coursUtilises != null || carte.coursRestants != null));
     var _carteCrsAcc = _coursActifs.filter(function(c){ return !c.isForfait; });
@@ -3508,6 +3512,7 @@
     pane.innerHTML = h;
     try { _maybeShowNudge(); } catch(e) { console.error('[nudge]', e); }
     _renderAccMilList();
+    try { _renderAccRecapVideo(); } catch(e) { console.error('[recap-video]', e); }
   }
 
   // Modifier le téléphone depuis l'espace élève
@@ -4258,6 +4263,81 @@
          + '</div>';
     });
     el.innerHTML = h;
+  }
+
+  // ── Récap vidéo épinglé sur l'accueil : met en avant la dernière vidéo du cours de l'élève ──
+  async function _renderAccRecapVideo() {
+    var el = document.getElementById('acc-recap-video');
+    if (!el) return;
+    if (typeof TEVVID === 'undefined' || !TEVVID) { el.innerHTML = ''; return; }
+    var cours = (typeof _tevCoursActifs === 'function') ? _tevCoursActifs() : [];
+    if (!cours.length) { el.innerHTML = ''; return; }
+    var sai = _saisonCourante();
+
+    // Réutilise le cache de l'onglet Vidéos si dispo, sinon un cache dédié, sinon fetch léger (approuvées seules)
+    var vids = null;
+    if (_vidEleveCache && _vidEleveCache.saison === sai) vids = _vidEleveCache.videos || [];
+    else if (_vidRecapCache && _vidRecapCache.saison === sai) vids = _vidRecapCache.videos || [];
+    else {
+      try {
+        var all = [];
+        for (var i = 0; i < cours.length; i++) {
+          var list = await TEVVID.listApprouvees(cours[i].ville, _vidNivNorm(cours[i].niveau), sai);
+          all = all.concat(list || []);
+        }
+        _vidRecapCache = { saison: sai, videos: all };
+        vids = all;
+      } catch(e) { console.error('[recap-video] fetch', e); el.innerHTML = ''; return; }
+    }
+    if (!vids || !vids.length) { el.innerHTML = ''; return; }
+
+    // Déduplique + choisit la plus récente (date_cours si présente, sinon created_at)
+    var seen = {}, uniq = [];
+    vids.forEach(function(v){ if (v && v.bunny_video_id && !seen[v.bunny_video_id]) { seen[v.bunny_video_id] = true; uniq.push(v); } });
+    function _key(v){ return v.date_cours ? v.date_cours : ((v.created_at || '').slice(0,10)); }
+    uniq.sort(function(a,b){
+      var ka = _key(a), kb = _key(b);
+      if (ka !== kb) return kb.localeCompare(ka);
+      return String(b.created_at||'').localeCompare(String(a.created_at||''));
+    });
+    var v = uniq[0];
+    if (!v) { el.innerHTML = ''; return; }
+
+    var vid = (v.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '');
+    var effDate = _key(v);
+    var dtLbl = v.date_cours ? _fmtJourVid(v.date_cours + 'T12:00:00') : (v.created_at ? _fmtJourVid(v.created_at) : '');
+    var by = v.source === 'admin' ? 'par l\'équipe' : ('proposé par ' + _vidEscE(v.soumis_par_nom || 'un élève'));
+
+    // Fraîcheur : « Récap de la semaine » si ≤ 10 jours, sinon « La dernière vidéo »
+    var fresh = false;
+    try {
+      var d = new Date(effDate + 'T12:00:00');
+      if (!isNaN(d.getTime())) fresh = ((Date.now() - d.getTime()) / 86400000) <= 10;
+    } catch(e) {}
+    var titreLabel = fresh ? '🎥 Récap de la semaine' : '🎥 La dernière vidéo de ton cours';
+
+    var vidJs = vid.replace(/'/g, "\\'");
+    var thumb = TEVVID.thumbUrl(v.bunny_video_id);
+    var nbAutres = uniq.length - 1;
+
+    var html = ''
+      + '<div style="background:var(--surface2);border:1.5px solid rgba(212,175,55,0.5);border-radius:16px;padding:14px;margin:18px 0 6px;">'
+      +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;">'
+      +     '<div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);font-weight:700;">' + titreLabel + '</div>'
+      +     (fresh ? '<span style="font-size:10px;font-weight:800;letter-spacing:.5px;background:var(--gold);color:#1a1408;border-radius:20px;padding:2px 9px;">NOUVEAU</span>' : '')
+      +   '</div>'
+      +   '<a href="javascript:void(0)" onclick="_vidPlayE(\'' + vidJs + '\')" style="display:block;position:relative;width:100%;aspect-ratio:16/9;border-radius:11px;overflow:hidden;background:#000 center/cover no-repeat url(\'' + thumb + '\');">'
+      +     '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">'
+      +       '<span style="width:54px;height:54px;border-radius:50%;background:rgba(0,0,0,0.55);border:2px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;padding-left:3px;">▶</span>'
+      +     '</span>'
+      +   '</a>'
+      +   '<div style="margin-top:11px;font-size:15px;font-weight:700;color:var(--text);line-height:1.3;">' + _vidEscE(v.titre || 'Vidéo') + '</div>'
+      +   '<div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">' + dtLbl + ' · <span style="color:var(--gold);">' + by + '</span></div>'
+      +   '<button onclick="switchTab(\'videos\')" style="width:100%;margin-top:12px;background:transparent;border:1px solid rgba(212,175,55,0.45);color:var(--gold);border-radius:10px;padding:11px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">'
+      +     (nbAutres > 0 ? '🎥 Voir toutes les vidéos (' + (nbAutres + 1) + ') →' : '🎥 Voir la rubrique vidéos →')
+      +   '</button>'
+      + '</div>';
+    el.innerHTML = html;
   }
 
   // Met à jour uniquement le bouton milonga dans la carte accueil (sans re-rendre tout)

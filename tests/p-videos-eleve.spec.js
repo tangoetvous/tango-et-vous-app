@@ -52,4 +52,46 @@ test.describe('Groupe P — Vidéos des cours (élève)', () => {
     expect(r.before).toBe(true);
     expect(r.hasFlag).toBe(true);
   });
+
+  test('P5 — récap vidéo accueil : injecte la dernière vidéo + boutons (lecture / voir tout)', async ({ page }) => {
+    const r = await page.evaluate(async () => {
+      // Stubs des dépendances (réseau + contexte élève) — le récap est le code testé
+      window._tevCoursActifs = () => ([{ ville:'paris', niveau:'debutant', nom:'Paris — Débutant', isForfait:false }]);
+      window._saisonCourante = () => '2025-2026';
+      const today = new Date().toISOString().slice(0,10);
+      window.TEVVID.listApprouvees = async () => ([
+        { bunny_video_id:'aaaa1111-bbbb-2222-cccc-333344445555', titre:'Ochos avant', ville:'paris', niveau:'debutant', source:'admin', date_cours: today },
+        { bunny_video_id:'bbbb2222-cccc-3333-dddd-444455556666', titre:'Vieux giro', ville:'paris', niveau:'debutant', source:'admin', date_cours:'2025-10-01' },
+      ]);
+      const host = document.createElement('div'); host.id = 'acc-recap-video'; document.body.appendChild(host);
+      await window._renderAccRecapVideo();
+      const html = host.innerHTML;
+      return {
+        isFn: typeof window._renderAccRecapVideo === 'function',
+        showsLatest: html.indexOf('Ochos avant') >= 0,     // la plus récente (aujourd'hui)
+        notOld: html.indexOf('Vieux giro') < 0,             // pas l'ancienne
+        hasPlay: html.indexOf('_vidPlayE') >= 0,
+        hasSeeAll: html.indexOf("switchTab('videos')") >= 0,
+        countAll: html.indexOf('(2)') >= 0,                 // 1 mise en avant + 1 autre
+      };
+    });
+    expect(r.isFn).toBe(true);
+    expect(r.showsLatest).toBe(true);
+    expect(r.notOld).toBe(true);
+    expect(r.hasPlay).toBe(true);
+    expect(r.hasSeeAll).toBe(true);
+    expect(r.countAll).toBe(true);
+  });
+
+  test('P6 — récap vidéo : aucune vidéo → placeholder vide (pas de carte fantôme)', async ({ page }) => {
+    const empty = await page.evaluate(async () => {
+      window._tevCoursActifs = () => ([{ ville:'paris', niveau:'debutant', nom:'Paris — Débutant', isForfait:false }]);
+      window._saisonCourante = () => '2025-2026';
+      window.TEVVID.listApprouvees = async () => ([]);
+      const host = document.createElement('div'); host.id = 'acc-recap-video'; document.body.appendChild(host);
+      await window._renderAccRecapVideo();
+      return host.innerHTML;
+    });
+    expect(empty).toBe('');
+  });
 });
