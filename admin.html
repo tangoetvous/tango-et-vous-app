@@ -15387,6 +15387,9 @@ function _vidPublierForm(sai) {
     + '<option value="vincennes|intermediaire">Vincennes — Intermédiaire</option>'
     + '</select></div>';
   h += '<div class="field"><label>Vidéo</label><input type="file" id="vid-file" accept="video/*" style="width:100%;"/></div>';
+  h += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:14px;cursor:pointer;">'
+    + '<input type="checkbox" id="vid-notif" checked style="width:auto;padding:0;margin:0;flex-shrink:0;"/>'
+    + '🔔 Notifier les élèves du cours (push + in-app)</label>';
   h += '<div id="vid-progress" style="font-size:12px;color:var(--gold);margin-bottom:8px;min-height:16px;"></div>';
   h += '<button class="btn btn-gold" id="vid-publier-btn" style="width:100%;" onclick="_videoPublier()">Publier pour le cours</button>';
   h += '<div id="vid-msg" style="font-size:12px;margin-top:8px;"></div>';
@@ -15403,6 +15406,7 @@ async function _videoPublier() {
   if (!titre) { say('Indiquez un titre.'); return; }
   if (!file) { say('Choisissez une vidéo.'); return; }
   var parts = coursVal.split('|'), ville = parts[0], niveau = parts[1];
+  var notifier = gel('vid-notif') ? gel('vid-notif').checked : true;
   if (IS_DEMO) { afficherToast('Démo — publication simulée'); return; }
   if (_admVidBusy) return;
   _admVidBusy = true;
@@ -15414,13 +15418,15 @@ async function _videoPublier() {
       source: 'admin', statut: 'approuvee',
       onProgress: function (p) { var pe = gel('vid-progress'); if (pe) pe.textContent = 'Envoi… ' + Math.round(p * 100) + '%'; }
     });
-    try {
-      fetch('/api/notify/video-publiee', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
-        body: JSON.stringify({ titre: titre, ville: ville, niveau: niveau, saison: saisonActive() })
-      }).catch(function () {});
-    } catch (e) {}
-    afficherToast('✓ Vidéo publiée pour ' + _vidCoursLabel(ville, niveau));
+    if (notifier) {
+      try {
+        fetch('/api/notify/video-publiee', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+          body: JSON.stringify({ titre: titre, ville: ville, niveau: niveau, saison: saisonActive() })
+        }).catch(function () {});
+      } catch (e) {}
+    }
+    afficherToast('✓ Vidéo publiée' + (notifier ? ' — élèves notifiés' : ' (sans notification)'));
     _admVid.loadedSaison = null; // force le rechargement de la biblio
     _admVidSub = 'biblio';
     _admVidBusy = false;
