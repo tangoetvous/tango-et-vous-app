@@ -118,6 +118,30 @@
     return (r && r.data) ? r.data : [];
   }
 
+  // Modération admin
+  async function approuver(id) {
+    var r = await window.TEV.client.from('videos_cours')
+      .update({ statut: 'approuvee', approuvee_at: new Date().toISOString() }).eq('id', id);
+    if (r && r.error) throw new Error(r.error.message || 'Approbation impossible');
+    return true;
+  }
+  // Refuser / supprimer : efface la vidéo côté Bunny PUIS la ligne Supabase.
+  async function supprimer(id, bunnyVideoId) {
+    if (bunnyVideoId) {
+      try {
+        var s = await window.TEV.client.auth.getSession();
+        var jwt = (s && s.data && s.data.session) ? s.data.session.access_token : '';
+        if (jwt) await fetch('/api/videos/delete', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
+          body: JSON.stringify({ id: bunnyVideoId })
+        }).catch(function () {});
+      } catch (e) {}
+    }
+    var r = await window.TEV.client.from('videos_cours').delete().eq('id', id);
+    if (r && r.error) throw new Error(r.error.message || 'Suppression impossible');
+    return true;
+  }
+
   window.TEVVID = {
     LIBRARY_ID: LIBRARY_ID,
     HOST: HOST,
@@ -127,5 +151,7 @@
     listApprouvees: listApprouvees,
     listAValider: listAValider,
     listPubliees: listPubliees,
+    approuver: approuver,
+    supprimer: supprimer,
   };
 })();

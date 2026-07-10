@@ -587,6 +587,12 @@ export default {
         if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
         return await handleNotifyVideoPubliee(request, env);
       }
+      // POST /api/videos/delete — supprime la vidéo côté Bunny (admin) ; la ligne Supabase est effacée côté client
+      if (pathname === '/api/videos/delete' && method === 'POST') {
+        if (!jwt) return jsonError(401, 'Token manquant — session expirée ?');
+        if (!await _requireAdmin(jwt)) return jsonError(403, 'Accès refusé — non administrateur');
+        return await handleVideoDelete(request, env);
+      }
 
       try {
         return await env.ASSETS.fetch(request);
@@ -7569,6 +7575,24 @@ async function handleVideoDownload(request, env) {
   const id = (new URL(request.url).searchParams.get('id') || '').trim();
   if (!/^[a-f0-9-]{16,}$/i.test(id)) return jsonError(400, 'Identifiant vidéo invalide');
   return corsResponse({ ok: true, url: `https://${BUNNY_STREAM_HOST}/${id}/original` }, 200, {}, request);
+}
+
+// POST /api/videos/delete — { id } : supprime la vidéo côté Bunny (refuser une proposition / supprimer de la biblio).
+async function handleVideoDelete(request, env) {
+  const apiKey = env.BUNNY_STREAM_API_KEY;
+  if (!apiKey) return jsonError(500, 'Hébergement vidéo non configuré');
+  let id;
+  try { ({ id } = await request.json()); } catch(e) { return jsonError(400, 'Body invalide'); }
+  id = (id || '').toString().trim();
+  if (!/^[a-f0-9-]{16,}$/i.test(id)) return jsonError(400, 'Identifiant vidéo invalide');
+  try {
+    const r = await fetch(`https://video.bunnycdn.com/library/${BUNNY_STREAM_LIBRARY_ID}/videos/${id}`, {
+      method: 'DELETE',
+      headers: { 'AccessKey': apiKey, 'Accept': 'application/json' },
+    });
+    if (!r.ok && r.status !== 404) { console.error('[video-delete] bunny HTTP', r.status, await r.text().catch(() => '')); return jsonError(502, 'Suppression Bunny échouée'); }
+  } catch(e) { console.error('[video-delete] error', e); return jsonError(502, 'Suppression Bunny échouée'); }
+  return corsResponse({ ok: true }, 200, {}, request);
 }
 
 // POST /api/notify/video-a-valider — { titre, nom, cours } : un élève propose une vidéo → alerte admin.

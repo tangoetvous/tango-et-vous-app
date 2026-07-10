@@ -574,7 +574,7 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
 <script src="js/tev-supabase.js?v=13"></script>
 <!-- Vidéos des cours (Bunny Stream) : upload direct TUS + helper -->
 <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
-<script src="js/tev-videos.js?v=1" defer></script>
+<script src="js/tev-videos.js?v=2" defer></script>
 <!-- Push: native Web Push Protocol (no Firebase SDK needed) -->
 <script>
 // ================================================================
@@ -15377,12 +15377,82 @@ function _vidSub(s) { _admVidSub = s; renderTab(); }
 function renderVideos() {
   var sai = saisonActive();
   if (!IS_DEMO && _admVid.loadedSaison !== sai) _chargerVideosAdmin();
+  var nbAV = (_admVid.aValider || []).length;
   var h = '<div style="display:flex;gap:6px;margin-bottom:16px;">'
-    + '<button class="btn ' + (_admVidSub === 'publier' ? 'btn-gold' : 'btn-ghost') + '" style="flex:1;" onclick="_vidSub(\'publier\')">🎬 Publier</button>'
-    + '<button class="btn ' + (_admVidSub === 'biblio' ? 'btn-gold' : 'btn-ghost') + '" style="flex:1;" onclick="_vidSub(\'biblio\')">📚 Bibliothèque</button>'
+    + '<button class="btn ' + (_admVidSub === 'valider' ? 'btn-gold' : 'btn-ghost') + '" style="flex:1;font-size:12px;" onclick="_vidSub(\'valider\')">📋 À valider' + (nbAV ? ' <span style="background:#e53935;color:#fff;border-radius:999px;font-size:10px;padding:1px 6px;">' + nbAV + '</span>' : '') + '</button>'
+    + '<button class="btn ' + (_admVidSub === 'publier' ? 'btn-gold' : 'btn-ghost') + '" style="flex:1;font-size:12px;" onclick="_vidSub(\'publier\')">🎬 Publier</button>'
+    + '<button class="btn ' + (_admVidSub === 'biblio' ? 'btn-gold' : 'btn-ghost') + '" style="flex:1;font-size:12px;" onclick="_vidSub(\'biblio\')">📚 Biblio</button>'
     + '</div>';
-  h += (_admVidSub === 'biblio') ? _vidBibliotheque(sai) : _vidPublierForm(sai);
+  if (_admVidSub === 'valider') h += _vidAValider(sai);
+  else if (_admVidSub === 'biblio') h += _vidBibliotheque(sai);
+  else h += _vidPublierForm(sai);
   return h;
+}
+
+function _vidNivN(n) { return String(n).indexOf('interm') >= 0 ? 'intermediaire' : 'debutant'; }
+
+function _vidAValider(sai) {
+  if (IS_DEMO) return '<div class="empty-state">File de modération — indisponible en démo.</div>';
+  if (_admVid.loadedSaison !== sai) return '<div class="empty-state">Chargement…</div>';
+  var vids = _admVid.aValider || [];
+  if (!vids.length) return '<div class="empty-state">✓ Aucune vidéo à valider pour la saison ' + escHtml(sai) + '.</div>';
+  var h = '<div style="font-size:11px;color:var(--dim);margin-bottom:10px;font-style:italic;">Refuser une vidéo la supprime aussi de l\'hébergement (Bunny).</div>';
+  vids.forEach(function (v) {
+    var vid = (v.bunny_video_id || '').replace(/[^a-zA-Z0-9-]/g, '');
+    var dt = v.created_at ? _fmtJour((v.created_at || '').slice(0, 10)) : '';
+    h += '<div style="background:var(--surface2,#181818);border:1px solid var(--border);border-radius:13px;padding:11px;margin-bottom:11px;">'
+      + '<div style="display:flex;gap:11px;align-items:center;">'
+      + '<a href="javascript:void(0)" onclick="_videoPlay(\'' + vid + '\')" style="width:96px;height:60px;border-radius:8px;flex-shrink:0;background:#000 center/cover no-repeat url(\'' + TEVVID.thumbUrl(v.bunny_video_id) + '\');display:flex;align-items:center;justify-content:center;"><span style="width:26px;height:26px;border-radius:50%;background:#0009;border:1.4px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;">▶</span></a>'
+      + '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:600;color:var(--text);">' + escHtml(v.titre || 'Vidéo') + '</div>'
+      + '<div style="font-size:11px;color:var(--dim);margin-top:5px;">👤 ' + escHtml(v.soumis_par_nom || v.soumis_par_email || 'un élève') + ' · <span style="color:var(--gold);">' + escHtml(_vidCoursLabel(v.ville, v.niveau)) + '</span> · ' + dt + '</div></div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px;">'
+      + '<a href="javascript:void(0)" class="btn btn-ghost" style="padding:9px 5px;font-size:12px;text-align:center;" onclick="_videoTelecharger(\'' + vid + '\')">⬇ Original</a>'
+      + '<a href="javascript:void(0)" class="btn btn-ok" style="padding:9px 5px;font-size:12px;text-align:center;" onclick="_videoApprouver(\'' + v.id + '\')">✓ Approuver</a>'
+      + '<a href="javascript:void(0)" class="btn btn-err" style="padding:9px 5px;font-size:12px;text-align:center;" onclick="_videoRefuser(\'' + v.id + '\',\'' + vid + '\')">✗ Refuser</a>'
+      + '</div></div>';
+  });
+  return h;
+}
+
+function _videoApprouver(id) {
+  var v = (_admVid.aValider || []).find(function (x) { return String(x.id) === String(id); });
+  if (!v) return;
+  TEVVID.approuver(id).then(function () {
+    try {
+      fetch('/api/notify/video-publiee', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _getJwt() },
+        body: JSON.stringify({ titre: v.titre, ville: v.ville, niveau: _vidNivN(v.niveau), saison: v.saison })
+      }).catch(function () {});
+    } catch (e) {}
+    afficherToast('✓ Vidéo approuvée — élèves du cours notifiés');
+    _admVid.loadedSaison = null; _chargerVideosAdmin();
+  }).catch(function (e) { afficherToast('⚠️ ' + ((e && e.message) || 'Erreur')); });
+}
+
+function _videoRefuser(id, bunnyId) {
+  ouvrirModalConfirm('Refuser cette vidéo ? Elle sera supprimée définitivement (y compris de l\'hébergement).', function () {
+    TEVVID.supprimer(id, bunnyId).then(function () {
+      afficherToast('Vidéo refusée et supprimée');
+      _admVid.loadedSaison = null; _chargerVideosAdmin();
+    }).catch(function (e) { afficherToast('⚠️ ' + ((e && e.message) || 'Erreur')); });
+  });
+}
+
+function _videoSupprimerBiblio(id, bunnyId) {
+  ouvrirModalConfirm('Supprimer cette vidéo ? Elle disparaîtra pour les élèves et sera effacée de l\'hébergement.', function () {
+    TEVVID.supprimer(id, bunnyId).then(function () {
+      afficherToast('Vidéo supprimée');
+      _admVid.loadedSaison = null; _chargerVideosAdmin();
+    }).catch(function (e) { afficherToast('⚠️ ' + ((e && e.message) || 'Erreur')); });
+  });
+}
+
+function _videoTelecharger(bunnyId) {
+  fetch('/api/videos/download?id=' + encodeURIComponent(bunnyId), { headers: { 'Authorization': 'Bearer ' + _getJwt() } })
+    .then(function (r) { return r.json(); })
+    .then(function (j) { if (j && j.url) { window.open(j.url, '_blank'); } else { afficherToast('⚠️ Téléchargement indisponible'); } })
+    .catch(function () { afficherToast('⚠️ Téléchargement indisponible'); });
 }
 
 function _vidPublierForm(sai) {
@@ -15454,8 +15524,8 @@ async function _chargerVideosAdmin() {
     _admVid.publiees = (await TEVVID.listPubliees(sai)) || [];
     _admVid.aValider = (await TEVVID.listAValider(sai)) || [];
   } catch (e) { console.error('[videos] chargement', e); }
-  // Re-render uniquement si on regarde la biblio (ne pas perturber le formulaire Publier)
-  if (currentTab === 'videos' && _admVidSub === 'biblio') renderTab();
+  // Re-render pour les vues liste (À valider / Biblio) — jamais sur Publier (ne pas perturber la saisie)
+  if (currentTab === 'videos' && _admVidSub !== 'publier') renderTab();
 }
 
 function _vidBibliotheque(sai) {
@@ -15481,6 +15551,7 @@ function _vidBibliotheque(sai) {
         + '<span style="width:28px;height:28px;border-radius:50%;background:#0009;border:1.4px solid #fff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;">▶</span></a>'
         + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);">' + escHtml(v.titre || 'Vidéo') + '</div>'
         + '<div style="font-size:11px;color:var(--dim);">' + dt + '</div></div>'
+        + '<a href="javascript:void(0)" onclick="_videoSupprimerBiblio(\'' + v.id + '\',\'' + vid + '\')" style="color:#b08a8a;font-size:16px;padding:4px 6px;flex-shrink:0;" title="Supprimer">🗑</a>'
         + '</div>';
     });
   });

@@ -57,4 +57,19 @@ test.describe('Groupe O — Vidéos des cours (admin)', () => {
     });
     expect(msg).toMatch(/vidéo|fichier/i);
   });
+
+  test('O5 — sous-onglet « À valider » (démo) + fonctions de modération définies', async ({ page }) => {
+    await page.evaluate(() => { _admVidSub = 'valider'; switchTab('videos'); });
+    await page.waitForFunction(() => gel('tab-content').innerHTML.indexOf('modération') >= 0);
+    const r = await page.evaluate(() => ({
+      approuver: typeof _videoApprouver === 'function',
+      refuser: typeof _videoRefuser === 'function',
+      supprimer: typeof _videoSupprimerBiblio === 'function',
+      dl: typeof _videoTelecharger === 'function',
+    }));
+    expect(r.approuver).toBe(true);
+    expect(r.refuser).toBe(true);
+    expect(r.supprimer).toBe(true);
+    expect(r.dl).toBe(true);
+  });
 });
