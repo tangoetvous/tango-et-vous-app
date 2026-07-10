@@ -7617,7 +7617,8 @@ async function handleVideoDownload(request, env) {
       return new Response(r.body, { status: 200, headers: dlHeaders });
     }
   }
-  return jsonError(502, 'Indisponible — ' + diag.join(' '));
+  console.error('[video-download] aucune source disponible —', diag.join(' '));
+  return jsonError(502, 'Fichier téléchargeable indisponible (réessayez dans un instant)');
 }
 
 // POST /api/videos/delete — { id } : supprime la vidéo côté Bunny (refuser une proposition / supprimer de la biblio).
