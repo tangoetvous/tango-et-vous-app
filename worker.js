@@ -7556,7 +7556,9 @@ async function handleVideoCreate(request, env) {
   } catch(e) { console.error('[video-create] error', e); return jsonError(502, 'Création de la vidéo échouée'); }
   if (!guid) return jsonError(502, 'Réponse hébergement invalide');
   // Signature TUS : SHA256(libraryId + apiKey + expiration + videoId) — l'upload direct client la présente.
-  const expiration = Math.floor(Date.now() / 1000) + 3600; // 1 h
+  // ⚠️ Bunny attend AuthorizationExpire en MILLISECONDES (Date.now()). En secondes, Bunny le lit
+  // comme ~1970 → signature « expirée » → 401 sans en-tête CORS → le navigateur voit « response code: n/a ».
+  const expiration = Date.now() + 3600 * 1000; // 1 h, en millisecondes
   const signature = await _sha256hex(BUNNY_STREAM_LIBRARY_ID + apiKey + expiration + guid);
   return corsResponse({ ok: true, videoId: guid, libraryId: BUNNY_STREAM_LIBRARY_ID, signature, expiration }, 200, {}, request);
 }
