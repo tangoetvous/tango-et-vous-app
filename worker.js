@@ -2138,6 +2138,7 @@ async function handleCronCartePonteeJ1(request, env) {
     const utilises = last.utilises;
     const restants = last.restants;
     const expiration = last.expiration;
+    const _tailleC = ((Number(utilises)||0) + (Number(restants)||0)) || 10;
 
     const prenomAff = _esc(prenom || (nom || '').split(' ')[0] || '');
     const dateLabel = date ? fmtDate(date) : '';
