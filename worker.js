@@ -1214,7 +1214,7 @@ async function handleNotifyEssaiAction(request, env) {
         coursBoxRows += `<div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="background:${rColor};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${rLabel}</span><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Valid\xe9\xb7e</span></div>`;
 
         const soranoBlock = isVincennes ? `<div style="background:#fff9e6;border:1px solid #f0c040;border-radius:8px;padding:16px 18px;margin:0 0 20px;"><p style="font-size:13px;font-weight:700;color:#795500;margin:0 0 8px;">🏛 Adh\xe9sion \xe0 l'Espace Sorano</p><p style="font-size:13px;color:#555;line-height:1.6;margin:0;">Votre cours a lieu \xe0 l'Espace Sorano \xe0 Vincennes. Une adh\xe9sion \xe0 cet espace culturel est n\xe9cessaire pour participer. Nous vous contacterons prochainement avec les informations pour la r\xe9gler.</p></div>` : '';
-        const lienACBtn = `<p style="text-align:center;margin:0 0 12px;"><a href="${lienAC}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire sur AssoConnect →</a></p><p style="font-size:12px;color:#888;text-align:center;margin:0 0 22px;">Votre place sera r\xe9serv\xe9e une fois l\'inscription en ligne et le premier paiement effectu\xe9s.</p>`;
+        const lienACBtn = `<p style="text-align:center;margin:0 0 12px;"><a href="${lienAC}" style="display:inline-block;background:#D4AF37;color:#111;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">🔗 INSCRIPTION AUX COURS DE TANGO ${_esc(saison)} via AssoConnect</a></p><div style="background:#fff0f0;border:2px solid #c62828;border-radius:8px;padding:14px 16px;margin:0 0 20px;"><p style="margin:0;font-size:15px;font-weight:700;color:#c62828;line-height:1.6;">⚠️ AssoConnect propose un pourboire de façon insistante — vous n'êtes pas du tout obligé·e de le payer. Au moment du paiement, ce montant est <strong>pré-rempli</strong> : <strong>remplacez-le par 0 €</strong>.</p></div><p style="font-size:12px;color:#888;text-align:center;margin:0 0 22px;">Votre place sera r\xe9serv\xe9e une fois l\'inscription en ligne et le premier paiement effectu\xe9s.</p>`;
         const quellesPrecisions = '<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
           + '<div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#B8962E;font-weight:700;margin-bottom:14px;">Quelques pr\xe9cisions pour votre inscription</div>'
           + '<div style="font-size:14px;color:#333;line-height:1.9;">'
@@ -1226,7 +1226,6 @@ async function handleNotifyEssaiAction(request, env) {
           + '<li><strong>Esp\xe8ces</strong> — inscrivez-vous quand m\xeame en ligne en pr\xe9cisant \xe0 la fin du processus que vous r\xe9glez en esp\xe8ces.</li>'
           + '<li><strong>Ch\xe8que</strong> — nous pr\xe9f\xe9rons \xe9viter ce mode de paiement, mais si c&rsquo;est votre seule option, contactez-nous.</li>'
           + '</ul>'
-          + '<p style="margin:0;font-size:15px;font-weight:700;color:#c62828;">⚠️ AssoConnect propose un pourboire de fa\xe7on insistante — vous n&rsquo;\xeates pas du tout oblig\xe9\xb7e de le payer. Notez <strong>0\xa0€</strong> \xe0 la place de la somme propos\xe9e.</p>'
           + '</div></div>';
         const livretBtn = livretUrl ? `<p style="text-align:center;margin:0 0 22px;"><a href="${livretUrl}" style="display:inline-block;background:#fff;color:#1565c0;border:2px solid #1565c0;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">📖 T\xe9l\xe9charger le livret ${_esc(nivLabel(niveau))} ${_esc(villeLabel(ville))}</a></p>` : '';
 
@@ -5299,7 +5298,6 @@ async function handleNotifyInscriptionCours(request, env) {
     + '<li><strong>Esp\xe8ces</strong> — inscrivez-vous quand m\xeame en ligne en pr\xe9cisant \xe0 la fin du processus que vous r\xe9glez en esp\xe8ces.</li>'
     + '<li><strong>Ch\xe8que</strong> — nous pr\xe9f\xe9rons \xe9viter ce mode de paiement, mais si c&rsquo;est votre seule option, contactez-nous.</li>'
     + '</ul>'
-    + '<p style="margin:0;font-size:15px;font-weight:700;color:#c62828;">⚠️ AssoConnect propose un pourboire de fa\xe7on insistante — vous n&rsquo;\xeates pas du tout oblig\xe9\xb7e de le payer. Notez <strong>0 &euro;</strong> \xe0 la place de la somme propos\xe9e.</p>'
     + '</div></div>';
 
   // ── I01 élève — one email per course
@@ -5428,7 +5426,8 @@ async function handleNotifyInscriptionCours(request, env) {
           + coupleNote
           + '<div style="text-align:center;margin:0 0 10px;">'
           + '<a href="' + _esc(lienAC) + '" style="display:inline-block;background:#D4AF37;color:#111;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">'
-          + '🔗 INSCRIPTION AUX COURS DE TANGO ' + _esc(saison2) + '</a></div>'
+          + '🔗 INSCRIPTION AUX COURS DE TANGO ' + _esc(saison2) + ' via AssoConnect</a></div>'
+          + '<div style="background:#fff0f0;border:2px solid #c62828;border-radius:8px;padding:14px 16px;margin:0 0 20px;"><p style="margin:0;font-size:15px;font-weight:700;color:#c62828;line-height:1.6;">⚠️ AssoConnect propose un pourboire de façon insistante — vous n\'êtes pas du tout obligé·e de le payer. Au moment du paiement, ce montant est <strong>pré-rempli</strong> : <strong>remplacez-le par 0 €</strong>.</p></div>'
           + '<p style="font-size:14px;color:#555;text-align:center;margin:0 0 24px;">' + acNote + '</p>'
           + quellesPrecisions
           + soranoNote
@@ -7143,7 +7142,6 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
         <li><strong>Espèces</strong> — inscrivez-vous quand même en ligne en précisant que vous réglez en espèces.</li>
         <li><strong>Chèque</strong> — possible si nécessaire, contactez-nous.</li>
       </ul>
-      <p style="margin:0;font-size:15px;font-weight:700;color:#c62828;">⚠️ AssoConnect propose un pourboire de façon insistante — vous n'êtes pas du tout obligé·e de le payer. Notez <strong>0 €</strong> à la place de la somme proposée.</p>
     </div>
   </div>`;
 
@@ -7162,7 +7160,8 @@ async function handleNotifyInscriptionCoursValidee(request, env) {
       <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 14px;">Votre demande d'inscription est confirmée ! Un·e partenaire guideur·se vient de rejoindre votre cours — votre place est désormais réservée.</p>
       <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Pour finaliser votre inscription, il vous reste à procéder au paiement via AssoConnect ci-dessous.</p>
       ${coursBox}
-      <div style="text-align:center;margin:0 0 10px;"><a href="${_esc(assoConnectUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">🔗 INSCRIPTION AUX COURS DE TANGO ${_esc(saison||'')}</a></div>
+      <div style="text-align:center;margin:0 0 10px;"><a href="${_esc(assoConnectUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:15px 32px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">🔗 INSCRIPTION AUX COURS DE TANGO ${_esc(saison||'')} via AssoConnect</a></div>
+      <div style="background:#fff0f0;border:2px solid #c62828;border-radius:8px;padding:14px 16px;margin:0 0 20px;"><p style="margin:0;font-size:15px;font-weight:700;color:#c62828;line-height:1.6;">⚠️ AssoConnect propose un pourboire de façon insistante — vous n'êtes pas du tout obligé·e de le payer. Au moment du paiement, ce montant est <strong>pré-rempli</strong> : <strong>remplacez-le par 0 €</strong>.</p></div>
       <p style="font-size:12px;color:#888;text-align:center;margin:0 0 24px;">Votre place sera définitivement réservée une fois l\'inscription et le premier paiement effectués.</p>
       ${quelquesPrec}
       ${soranoBlock}
