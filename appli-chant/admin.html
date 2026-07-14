@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Studio de Chant — Espace professeure (maquette)</title>
+<style>
+  :root {
+    --bg: #faf6f1; --card: #ffffff; --ink: #2d2233; --sub: #6f6278;
+    --accent: #8e3b5f; --accent-soft: #f6e7ee; --gold: #b8860b;
+    --ok: #2e7d32; --ok-soft: #e5f3e6; --warn: #c05612; --warn-soft: #fdeee2;
+    --line: #e8ded4; --danger: #b3261e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 60px; }
+  header { background: linear-gradient(135deg, #3c1e30, #8e3b5f); color: #fff; padding: 22px 18px 16px; }
+  header h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 600; letter-spacing: .5px; }
+  header .sub { font-size: 13px; opacity: .85; margin-top: 3px; }
+  .demo-badge { display: inline-block; background: #b8860b; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 8px; vertical-align: middle; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { flex: 1; text-align: center; padding: 10px 6px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--sub); cursor: pointer; position: relative; }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .badge-dot { position: absolute; top: -6px; right: -4px; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; line-height: 18px; border-radius: 9px; padding: 0 4px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(60,30,48,.06); }
+  .el-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .el-nom { font-size: 17px; font-weight: 700; }
+  .el-email { font-size: 12px; color: var(--sub); margin-top: 2px; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px; }
+  .pill-carte { background: var(--accent-soft); color: var(--accent); }
+  .pill-unite { background: #ece7f5; color: #5b3d8e; }
+  .pill-fin { background: var(--warn-soft); color: var(--warn); }
+  .pill-push { background: var(--ok-soft); color: var(--ok); }
+  .pill-nopush { background: #eee; color: #888; }
+  .carte-suivi { margin-top: 12px; }
+  .jauge { height: 8px; background: #efe8e0; border-radius: 4px; overflow: hidden; margin: 6px 0 10px; }
+  .jauge > div { height: 100%; background: linear-gradient(90deg, var(--accent), #c26a92); border-radius: 4px; transition: width .3s; }
+  .points { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pt { width: 34px; text-align: center; }
+  .pt .dot { width: 16px; height: 16px; border-radius: 50%; margin: 0 auto 2px; border: 2px solid var(--line); background: #fff; }
+  .pt.done .dot { background: var(--accent); border-color: var(--accent); }
+  .pt .d { font-size: 9px; color: var(--sub); white-space: nowrap; }
+  .carte-meta { font-size: 13px; color: var(--sub); margin-top: 8px; }
+  .carte-meta b { color: var(--ink); }
+  .btn { display: inline-block; border: none; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-main { background: var(--accent); color: #fff; }
+  .btn-ok { background: var(--ok); color: #fff; }
+  .btn-ghost { background: #fff; color: var(--accent); border: 1.5px solid var(--accent); }
+  .btn-grey { background: #f0ebe4; color: var(--sub); }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .exos { margin-top: 14px; border-top: 1px dashed var(--line); padding-top: 12px; }
+  .exos-titre { font-size: 12px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 8px; }
+  .exo { background: #fbf8f4; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .exo-titre { font-weight: 700; font-size: 14px; }
+  .exo-consigne { font-size: 13px; color: var(--sub); margin-top: 3px; line-height: 1.45; }
+  .exo-meta { font-size: 12px; color: var(--sub); margin-top: 6px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .exo-meta .fait { color: var(--ok); font-weight: 600; }
+  audio { width: 100%; height: 34px; margin-top: 8px; }
+  .cours-unite { margin-top: 10px; }
+  .cu-ligne { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  .cu-ligne:last-child { border-bottom: none; }
+  .notif { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; font-size: 14px; }
+  .notif.nonlu { background: var(--ok-soft); }
+  .notif .nd { font-size: 12px; color: var(--sub); margin-top: 3px; }
+  .empty { text-align: center; color: var(--sub); font-size: 14px; padding: 30px 10px; }
+  /* Modal */
+  .modal-bg { position: fixed; inset: 0; background: rgba(45,34,51,.45); display: none; align-items: flex-end; justify-content: center; z-index: 50; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; border-radius: 18px 18px 0 0; padding: 20px 18px 28px; width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; }
+  .modal h3 { font-family: Georgia, serif; font-size: 18px; margin-bottom: 14px; color: var(--accent); }
+  .field { margin-bottom: 13px; }
+  .field label { display: block; font-size: 12px; font-weight: 700; color: var(--sub); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .5px; }
+  .field input[type=text], .field input[type=email], .field input[type=date], .field input[type=number], .field textarea, .field select {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; font-size: 16px; background: #fff; color: var(--ink);
+  }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .toggle-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fbf8f4; border: 1px solid var(--line); border-radius: 10px; }
+  .toggle-row input[type=checkbox] { width: auto; flex-shrink: 0; transform: scale(1.3); accent-color: var(--accent); }
+  .toggle-row .tl { font-size: 13px; }
+  .toggle-row .tl b { display: block; font-size: 14px; }
+  .radio-grp { display: flex; gap: 8px; }
+  .radio-grp label { flex: 1; text-align: center; padding: 10px; border: 1.5px solid var(--line); border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .radio-grp input { display: none; }
+  .radio-grp input:checked + span { color: var(--accent); }
+  .radio-grp label.sel { border-color: var(--accent); background: var(--accent-soft); }
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 12px; font-size: 14px; display: none; z-index: 99; max-width: 90vw; text-align: center; }
+  .reset-link { text-align: center; margin-top: 24px; }
+  .reset-link a { color: var(--sub); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎼 Studio de Chant <span class="demo-badge">MAQUETTE</span></h1>
+  <div class="sub">Espace professeure — gestion des élèves, cartes &amp; exercices</div>
+</header>
+
+<div class="wrap">
+  <div class="tabs">
+    <div class="tab active" data-tab="eleves" onclick="switchTab('eleves')">👥 Élèves</div>
+    <div class="tab" data-tab="notifs" onclick="switchTab('notifs')">🔔 Notifications<span class="badge-dot" id="notif-badge" style="display:none"></span></div>
+  </div>
+  <div id="content"></div>
+  <div class="reset-link"><a href="javascript:void(0)" onclick="resetDemo()">↺ Réinitialiser les données de démo</a> · <a href="index.html">→ Voir l'espace élève</a></div>
+</div>
+
+<!-- Modal générique -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)fermerModal()">
+  <div class="modal" id="modal-inner"></div>
+</div>
+<div id="toast"></div>
+
+<script src="demo-data.js"></script>
+<script>
+var S = CHANT.load();
+var currentTab = 'eleves';
+var esc = CHANT.esc;
+
+function persist() { CHANT.save(S); render(); }
+
+function switchTab(t) {
+  currentTab = t;
+  if (t === 'notifs') { S.profNotifications.forEach(function(n){ n.lu = true; }); CHANT.save(S); }
+  render();
+}
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toast._to);
+  toast._to = setTimeout(function(){ t.style.display = 'none'; }, 3200);
+}
+
+function resetDemo() {
+  if (!confirm('Réinitialiser toutes les données de démo ?')) return;
+  S = CHANT.reset(); render();
+}
+
+/* ============ RENDER ============ */
+function render() {
+  document.querySelectorAll('.tab').forEach(function(el){
+    el.classList.toggle('active', el.dataset.tab === currentTab);
+  });
+  var nb = S.profNotifications.filter(function(n){ return !n.lu; }).length;
+  var badge = document.getElementById('notif-badge');
+  badge.style.display = nb ? 'inline-block' : 'none';
+  badge.textContent = nb;
+  var c = document.getElementById('content');
+  c.innerHTML = currentTab === 'eleves' ? renderEleves() : renderNotifs();
+  chargerAudios(c);
+}
+
+function renderEleves() {
+  var h = '<div style="text-align:right;margin-bottom:12px;"><button class="btn btn-main" onclick="ouvrirModalEleve()">➕ Nouvel élève</button></div>';
+  if (!S.eleves.length) return h + '<div class="empty">Aucun élève pour l’instant.</div>';
+  S.eleves.forEach(function(el){ h += carteEleve(el); });
+  return h;
+}
+
+function carteEleve(el) {
+  var r = CHANT.restants(el);
+  var fini = el.formule === 'carte' && r === 0;
+  var h = '<div class="card">';
+  h += '<div class="el-head"><div>'
+     + '<div class="el-nom">' + esc(el.prenom) + ' ' + esc(el.nom) + '</div>'
+     + '<div class="el-email">' + esc(el.email) + '</div></div>'
+     + '<div style="text-align:right">'
+     + (el.formule === 'carte'
+        ? '<span class="pill pill-carte">Carte ' + el.carteTotal + ' cours</span>'
+        : '<span class="pill pill-unite">À l’unité</span>')
+     + '<br><span class="pill ' + (el.pushActif ? 'pill-push' : 'pill-nopush') + '" style="margin-top:4px">' + (el.pushActif ? '📲 push actif' : 'push inactif') + '</span>'
+     + '</div></div>';
+
+  if (el.formule === 'carte') {
+    var used = el.pointages.length;
+    h += '<div class="carte-suivi">';
+    h += '<div class="jauge"><div style="width:' + (el.carteTotal ? Math.min(100, used / el.carteTotal * 100) : 0) + '%"></div></div>';
+    h += '<div class="points">';
+    for (var i = 0; i < el.carteTotal; i++) {
+      var d = el.pointages[i];
+      h += '<div class="pt' + (d ? ' done' : '') + '"><div class="dot"></div><div class="d">' + (d ? CHANT.fmtDateCourt(d) : '·') + '</div></div>';
+    }
+    h += '</div>';
+    h += '<div class="carte-meta"><b>' + used + '</b> / ' + el.carteTotal + ' cours pointés — '
+       + (fini ? '<span class="pill pill-fin">carte terminée</span>' : '<b>' + r + '</b> restant' + (r > 1 ? 's' : '')) + '</div>';
+    h += '</div>';
+    h += '<div class="btn-row">';
+    if (!fini) h += '<button class="btn btn-ok" onclick="ouvrirModalPointer(\'' + el.id + '\')">✓ Pointer un cours</button>';
+    else h += '<button class="btn btn-main" onclick="ouvrirModalRenouveler(\'' + el.id + '\')">↻ Renouveler la carte</button>';
+  } else {
+    h += '<div class="cours-unite">';
+    if (el.coursUnite.length) {
+      el.coursUnite.slice().sort(function(a,b){ return a.date < b.date ? 1 : -1; }).forEach(function(cu, idx){
+        h += '<div class="cu-ligne"><span>🎵 ' + CHANT.fmtDate(cu.date) + '</span>'
+           + '<span>' + (cu.paye ? '<span class="pill pill-push">✓ payé</span>' : '<span class="pill pill-fin">à régler</span>')
+           + ' <a href="javascript:void(0)" onclick="togglePayeUnite(\'' + el.id + '\',\'' + cu.date + '\')" style="font-size:12px;color:var(--accent)">changer</a></span></div>';
+      });
+    } else h += '<div class="carte-meta">Aucun cours enregistré.</div>';
+    h += '</div>';
+    h += '<div class="btn-row"><button class="btn btn-ok" onclick="ouvrirModalCoursUnite(\'' + el.id + '\')">✓ Ajouter un cours</button>';
+  }
+  h += '<button class="btn btn-ghost" onclick="ouvrirModalExo(\'' + el.id + '\')">🎼 Ajouter un exercice</button>'
+     + '<button class="btn btn-grey" onclick="ouvrirModalEleve(\'' + el.id + '\')">✏️ Modifier</button></div>';
+
+  if (el.exercices.length) {
+    h += '<div class="exos"><div class="exos-titre">🎼 Exercices en cours (' + el.exercices.length + ')</div>';
+    el.exercices.forEach(function(x){
+      h += '<div class="exo"><div class="exo-titre">' + esc(x.titre) + '</div>'
+         + '<div class="exo-consigne">' + esc(x.consigne) + '</div>';
+      if (x.hasAudio) h += '<audio controls preload="none" data-audio-id="' + x.id + '"></audio>';
+      else if (x.audioName) h += '<div class="exo-meta">🎹 ' + esc(x.audioName) + ' <i style="color:#aaa">(fichier non chargé dans la démo)</i></div>';
+      h += '<div class="exo-meta">'
+         + '<span>' + (x.notifyProf ? '🔔 vous êtes prévenue quand c’est fait' : '🔕 pas de notification') + '</span>'
+         + '<span class="fait">' + (x.faits.length ? '✅ fait ' + x.faits.length + ' fois — dernier : ' + CHANT.fmtDate(x.faits[x.faits.length - 1]) : 'pas encore fait') + '</span>'
+         + '<a href="javascript:void(0)" onclick="supprimerExo(\'' + el.id + '\',\'' + x.id + '\')" style="color:var(--danger);font-size:12px">🗑 retirer</a>'
+         + '</div></div>';
+    });
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function renderNotifs() {
+  if (!S.profNotifications.length) return '<div class="empty">Aucune notification.<br><span style="font-size:12px">Quand un élève marque un exercice « fait » (et que la notification est activée sur cet exercice), l’alerte apparaît ici — et en push sur votre téléphone dans la vraie app.</span></div>';
+  var h = '';
+  S.profNotifications.slice().sort(function(a,b){ return a.date < b.date ? 1 : -1; }).forEach(function(n){
+    h += '<div class="notif' + (n.lu ? '' : ' nonlu') + '">' + esc(n.message) + '<div class="nd">' + CHANT.fmtDate(n.date) + '</div></div>';
+  });
+  return h;
+}
+
+function chargerAudios(root) {
+  root.querySelectorAll('audio[data-audio-id]').forEach(function(a){
+    CHANT.audioGet(a.dataset.audioId).then(function(blob){
+      if (blob) a.src = URL.createObjectURL(blob);
+    });
+  });
+}
+
+/* ============ MODALS ============ */
+function ouvrirModal(html) {
+  document.getElementById('modal-inner').innerHTML = html;
+  document.getElementById('modal-bg').classList.add('open');
+}
+function fermerModal() { document.getElementById('modal-bg').classList.remove('open'); }
+function elById(id) { return S.eleves.find(function(e){ return e.id === id; }); }
+
+/* --- Pointer un cours (carte) --- */
+function ouvrirModalPointer(id) {
+  var el = elById(id);
+  ouvrirModal(
+    '<h3>✓ Pointer un cours — ' + esc(el.prenom) + '</h3>'
+    + '<div class="field"><label>Date du cours</label><input type="date" id="m-date" value="' + CHANT.todayISO() + '"></div>'
+    + '<div class="carte-meta" style="margin-bottom:14px">Après ce pointage : <b>' + (CHANT.restants(el) - 1) + '</b> cours restant(s) sur ' + el.carteTotal + '.</div>'
+    + '<div class="btn-row"><button class="btn btn-ok" onclick="pointerCours(\'' + id + '\')">✓ Valider le pointage</button>'
+    + '<button class="btn btn-grey" onclick="fermerModal()">Annuler</button></div>'
+  );
+}
+function pointerCours(id) {
+  var el = elById(id);
+  var date = document.getElementById('m-date').value || CHANT.todayISO();
+  el.pointages.push(date);
+  el.pointages.sort();
+  var r = CHANT.restants(el);
+  var msg = r === 0
+    ? '🎵 Cours du ' + CHANT.fmtDate(date) + ' pointé — votre carte est terminée (' + el.carteTotal + '/' + el.carteTotal + ').'
+    : '🎵 Cours du ' + CHANT.fmtDate(date) + ' pointé — il vous reste ' + r + ' cours sur votre carte.';
+  el.notifications.unshift({ date: date, message: msg, lu: false });
+  fermerModal(); persist();
+  toast(el.pushActif ? '✓ Cours pointé — 📲 push envoyé à ' + el.prenom + ' (simulé)' : '✓ Cours pointé — notification in-app (push non activé)');
+}
+
+/* --- Renouveler la carte --- */
+function ouvrirModalRenouveler(id) {
+  var el = elById(id);
+  ouvrirModal(
+    '<h3>↻ Renouveler la carte — ' + esc(el.prenom) + '</h3>'
+    + '<div class="field"><label>Nombre de cours sur la nouvelle carte</label><input type="number" id="m-nb" value="' + (el.carteTotal || 10) + '" min="1" max="50"></div>'
+    + '<div class="btn-row"><button class="btn btn-main" onclick="renouvelerCarte(\'' + id + '\')">↻ Créer la nouvelle carte</button>'
+    + '<button class="btn btn-grey" onclick="fermerModal()">Annuler</button></div>'
+  );
+}
+function renouvelerCarte(id) {
+  var el = elById(id);
+  var nb = parseInt(document.getElementById('m-nb').value, 10) || 10;
+  el.carteTotal = nb; el.pointages = [];
+  el.notifications.unshift({ date: CHANT.todayISO(), message: '🎫 Nouvelle carte de ' + nb + ' cours activée !', lu: false });
+  fermerModal(); persist(); toast('↻ Nouvelle carte de ' + nb + ' cours créée pour ' + el.prenom);
+}
+
+/* --- Cours à l'unité --- */
+function ouvrirModalCoursUnite(id) {
+  var el = elById(id);
+  ouvrirModal(
+    '<h3>✓ Ajouter un cours — ' + esc(el.prenom) + '</h3>'
+    + '<div class="field"><label>Date du cours</label><input type="date" id="m-date" value="' + CHANT.todayISO() + '"></div>'
+    + '<div class="toggle-row"><input type="checkbox" id="m-paye" checked><div class="tl"><b>Cours payé</b>Décocher si le règlement est en attente</div></div>'
+    + '<div class="btn-row" style="margin-top:14px"><button class="btn btn-ok" onclick="ajouterCoursUnite(\'' + id + '\')">✓ Enregistrer</button>'
+    + '<button class="btn btn-grey" onclick="fermerModal()">Annuler</button></div>'
+  );
+}
+function ajouterCoursUnite(id) {
+  var el = elById(id);
+  var date = document.getElementById('m-date').value || CHANT.todayISO();
+  var paye = document.getElementById('m-paye').checked;
+  el.coursUnite.push({ date: date, paye: paye });
+  el.notifications.unshift({ date: date, message: '🎵 Votre cours du ' + CHANT.fmtDate(date) + ' est enregistré' + (paye ? ' (payé ✓).' : ' — règlement à prévoir.'), lu: false });
+  fermerModal(); persist();
+  toast(el.pushActif ? '✓ Cours enregistré — 📲 push envoyé (simulé)' : '✓ Cours enregistré');
+}
+function togglePayeUnite(id, date) {
+  var el = elById(id);
+  var cu = el.coursUnite.find(function(c){ return c.date === date; });
+  if (cu) { cu.paye = !cu.paye; persist(); }
+}
+
+/* --- Fiche élève (création / édition) --- */
+function ouvrirModalEleve(id) {
+  var el = id ? elById(id) : null;
+  var f = el ? el.formule : 'carte';
+  ouvrirModal(
+    '<h3>' + (el ? '✏️ Modifier ' + esc(el.prenom) : '➕ Nouvel élève') + '</h3>'
+    + '<div class="field"><label>Prénom</label><input type="text" id="m-prenom" value="' + (el ? esc(el.prenom) : '') + '"></div>'
+    + '<div class="field"><label>Nom</label><input type="text" id="m-nom" value="' + (el ? esc(el.nom) : '') + '"></div>'
+    + '<div class="field"><label>Email</label><input type="email" id="m-email" value="' + (el ? esc(el.email) : '') + '"><div style="font-size:11px;color:var(--sub);margin-top:3px">Dans la vraie app : l’élève se connecte avec cet email (lien magique, sans mot de passe).</div></div>'
+    + '<div class="field"><label>Formule</label><div class="radio-grp">'
+    + '<label class="' + (f === 'carte' ? 'sel' : '') + '" onclick="selFormule(this,\'carte\')"><input type="radio" name="m-f" value="carte"' + (f === 'carte' ? ' checked' : '') + '><span>🎫 Carte de cours</span></label>'
+    + '<label class="' + (f === 'unite' ? 'sel' : '') + '" onclick="selFormule(this,\'unite\')"><input type="radio" name="m-f" value="unite"' + (f === 'unite' ? ' checked' : '') + '><span>🎵 À l’unité</span></label>'
+    + '</div></div>'
+    + '<div class="field" id="m-nb-wrap" style="' + (f === 'carte' ? '' : 'display:none') + '"><label>Nombre de cours sur la carte</label><input type="number" id="m-nb" value="' + (el && el.carteTotal ? el.carteTotal : 10) + '" min="1" max="50"></div>'
+    + '<div class="btn-row"><button class="btn btn-main" onclick="sauverEleve(' + (el ? '\'' + el.id + '\'' : 'null') + ')">💾 Enregistrer</button>'
+    + '<button class="btn btn-grey" onclick="fermerModal()">Annuler</button>'
+    + (el ? '<button class="btn" style="background:#fbe9e7;color:var(--danger);margin-left:auto" onclick="supprimerEleve(\'' + el.id + '\')">🗑 Supprimer</button>' : '')
+    + '</div>'
+  );
+}
+function selFormule(lbl, f) {
+  lbl.parentElement.querySelectorAll('label').forEach(function(l){ l.classList.remove('sel'); });
+  lbl.classList.add('sel');
+  lbl.querySelector('input').checked = true;
+  document.getElementById('m-nb-wrap').style.display = f === 'carte' ? '' : 'none';
+}
+function sauverEleve(id) {
+  var prenom = document.getElementById('m-prenom').value.trim();
+  var nom = document.getElementById('m-nom').value.trim();
+  var email = document.getElementById('m-email').value.trim();
+  var formule = document.querySelector('input[name=m-f]:checked').value;
+  var nb = parseInt(document.getElementById('m-nb').value, 10) || 10;
+  if (!prenom || !nom) { alert('Prénom et nom requis'); return; }
+  if (id) {
+    var el = elById(id);
+    el.prenom = prenom; el.nom = nom; el.email = email;
+    el.formule = formule; if (formule === 'carte') el.carteTotal = nb;
+  } else {
+    S.eleves.push({ id: CHANT.uid(), prenom: prenom, nom: nom, email: email,
+      formule: formule, carteTotal: formule === 'carte' ? nb : 0, pushActif: false,
+      pointages: [], coursUnite: [], exercices: [], notifications: [] });
+  }
+  fermerModal(); persist(); toast('💾 Fiche enregistrée');
+}
+function supprimerEleve(id) {
+  if (!confirm('Supprimer cet élève et toutes ses données ?')) return;
+  S.eleves = S.eleves.filter(function(e){ return e.id !== id; });
+  fermerModal(); persist();
+}
+
+/* --- Exercices --- */
+function ouvrirModalExo(elId) {
+  var el = elById(elId);
+  ouvrirModal(
+    '<h3>🎼 Nouvel exercice pour ' + esc(el.prenom) + '</h3>'
+    + '<div class="field"><label>Titre</label><input type="text" id="m-titre" placeholder="Ex : Vocalises en tierces"></div>'
+    + '<div class="field"><label>Consigne</label><textarea id="m-consigne" placeholder="Ce que l’élève doit travailler, combien de temps, à quoi faire attention…"></textarea></div>'
+    + '<div class="field"><label>Enregistrement piano (audio)</label><input type="file" id="m-audio" accept="audio/*" style="font-size:14px"><div style="font-size:11px;color:var(--sub);margin-top:3px">Dans la vraie app : enregistré depuis le téléphone ou importé, hébergé en ligne.</div></div>'
+    + '<div class="toggle-row"><input type="checkbox" id="m-notify" checked><div class="tl"><b>M’avertir quand l’élève a fait l’exercice</b>Notification push + alerte dans l’onglet 🔔</div></div>'
+    + '<div class="btn-row" style="margin-top:14px"><button class="btn btn-main" onclick="sauverExo(\'' + elId + '\')">🎼 Ajouter l’exercice</button>'
+    + '<button class="btn btn-grey" onclick="fermerModal()">Annuler</button></div>'
+  );
+}
+function sauverExo(elId) {
+  var el = elById(elId);
+  var titre = document.getElementById('m-titre').value.trim();
+  var consigne = document.getElementById('m-consigne').value.trim();
+  var notify = document.getElementById('m-notify').checked;
+  var file = document.getElementById('m-audio').files[0] || null;
+  if (!titre) { alert('Titre requis'); return; }
+  var exo = { id: CHANT.uid(), titre: titre, consigne: consigne,
+    audioName: file ? file.name : '', hasAudio: !!file,
+    notifyProf: notify, creeLe: CHANT.todayISO(), faits: [] };
+  var done = function() {
+    el.exercices.push(exo);
+    el.notifications.unshift({ date: CHANT.todayISO(), message: '🎼 Nouvel exercice : « ' + titre + ' »', lu: false });
+    fermerModal(); persist();
+    toast(el.pushActif ? '🎼 Exercice ajouté — 📲 push envoyé à ' + el.prenom + ' (simulé)' : '🎼 Exercice ajouté');
+  };
+  if (file) CHANT.audioSave(exo.id, file).then(done, function(){ exo.hasAudio = false; done(); });
+  else done();
+}
+function supprimerExo(elId, exoId) {
+  if (!confirm('Retirer cet exercice ?')) return;
+  var el = elById(elId);
+  el.exercices = el.exercices.filter(function(x){ return x.id !== exoId; });
+  CHANT.audioDelete(exoId);
+  persist();
+}
+
+/* sync live si l'onglet élève modifie les données */
+CHANT.onChange(function(){ S = CHANT.load(); render(); });
+render();
+</script>
+</body>
+</html>

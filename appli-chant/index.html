@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Studio de Chant — Mon espace (maquette)</title>
+<style>
+  :root {
+    --bg: #faf6f1; --card: #ffffff; --ink: #2d2233; --sub: #6f6278;
+    --accent: #8e3b5f; --accent-soft: #f6e7ee; --gold: #b8860b;
+    --ok: #2e7d32; --ok-soft: #e5f3e6; --warn: #c05612; --warn-soft: #fdeee2;
+    --line: #e8ded4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 60px; }
+  header { background: linear-gradient(135deg, #3c1e30, #8e3b5f); color: #fff; padding: 20px 18px 16px; }
+  header h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 21px; font-weight: 600; }
+  .demo-badge { display: inline-block; background: #b8860b; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 8px; vertical-align: middle; }
+  .head-row { display: flex; justify-content: space-between; align-items: center; }
+  .bell { position: relative; font-size: 22px; cursor: pointer; background: none; border: none; color: #fff; }
+  .bell .badge-dot { position: absolute; top: -5px; right: -8px; background: #ffca28; color: #3c1e30; font-size: 11px; font-weight: 700; min-width: 17px; height: 17px; line-height: 17px; border-radius: 9px; padding: 0 4px; }
+  .switcher { background: rgba(255,255,255,.14); border-radius: 10px; padding: 8px 12px; margin-top: 12px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .switcher select { background: #fff; color: var(--ink); border: none; border-radius: 8px; padding: 6px 10px; font-size: 14px; font-weight: 600; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .hello { font-family: Georgia, serif; font-size: 24px; margin: 8px 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(60,30,48,.06); }
+  .card h2 { font-size: 12px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px; }
+  .jauge { height: 10px; background: #efe8e0; border-radius: 5px; overflow: hidden; margin: 8px 0 12px; }
+  .jauge > div { height: 100%; background: linear-gradient(90deg, var(--accent), #c26a92); border-radius: 5px; transition: width .3s; }
+  .points { display: flex; flex-wrap: wrap; gap: 7px; }
+  .pt { width: 38px; text-align: center; }
+  .pt .dot { width: 18px; height: 18px; border-radius: 50%; margin: 0 auto 2px; border: 2px solid var(--line); background: #fff; }
+  .pt.done .dot { background: var(--accent); border-color: var(--accent); }
+  .pt .d { font-size: 9px; color: var(--sub); white-space: nowrap; }
+  .carte-big { font-size: 15px; margin-top: 10px; }
+  .carte-big b { font-size: 22px; color: var(--accent); }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 10px; }
+  .pill-ok { background: var(--ok-soft); color: var(--ok); }
+  .pill-warn { background: var(--warn-soft); color: var(--warn); }
+  .cu-ligne { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  .cu-ligne:last-child { border-bottom: none; }
+  .exo { background: #fbf8f4; border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  .exo-titre { font-weight: 700; font-size: 16px; font-family: Georgia, serif; }
+  .exo-consigne { font-size: 14px; color: var(--ink); margin-top: 6px; line-height: 1.5; }
+  audio { width: 100%; height: 36px; margin-top: 10px; }
+  .exo-noaudio { font-size: 12px; color: var(--sub); margin-top: 8px; font-style: italic; }
+  .exo-faits { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .fait-chip { background: var(--ok-soft); color: var(--ok); font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 9px; }
+  .btn-fait { display: block; width: 100%; margin-top: 12px; border: none; border-radius: 12px; padding: 13px; font-size: 15px; font-weight: 700; cursor: pointer; background: var(--ok); color: #fff; }
+  .btn-fait.deja { background: #efe8e0; color: var(--sub); cursor: default; }
+  .exo-notify-note { font-size: 11px; color: var(--sub); text-align: center; margin-top: 6px; }
+  .notif-pane { display: none; }
+  .notif-pane.open { display: block; }
+  .notif { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; font-size: 14px; }
+  .notif.nonlu { background: var(--accent-soft); }
+  .notif .nd { font-size: 12px; color: var(--sub); margin-top: 3px; }
+  .empty { text-align: center; color: var(--sub); font-size: 14px; padding: 26px 10px; }
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 12px; font-size: 14px; display: none; z-index: 99; max-width: 90vw; text-align: center; }
+  .foot-link { text-align: center; margin-top: 20px; }
+  .foot-link a { color: var(--sub); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <h1>🎶 Studio de Chant <span class="demo-badge">MAQUETTE</span></h1>
+    <button class="bell" onclick="toggleNotifs()">🔔<span class="badge-dot" id="notif-badge" style="display:none"></span></button>
+  </div>
+  <div class="switcher">
+    👁 Démo — voir l’espace de :
+    <select id="eleve-select" onchange="changerEleve(this.value)"></select>
+  </div>
+  <div style="font-size:11px;opacity:.75;margin-top:6px">Dans la vraie app, chaque élève se connecte avec son email (lien magique) et ne voit que son propre espace.</div>
+</header>
+
+<div class="wrap">
+  <div class="notif-pane" id="notif-pane"></div>
+  <div id="content"></div>
+  <div class="foot-link"><a href="admin.html">→ Voir l’espace professeure</a></div>
+</div>
+<div id="toast"></div>
+
+<script src="demo-data.js"></script>
+<script>
+var S = CHANT.load();
+var esc = CHANT.esc;
+var currentId = localStorage.getItem('chant_demo_eleve') || (S.eleves[0] && S.eleves[0].id);
+var notifsOpen = false;
+
+function eleve() {
+  return S.eleves.find(function(e){ return e.id === currentId; }) || S.eleves[0];
+}
+function persist() { CHANT.save(S); render(); }
+function changerEleve(id) {
+  currentId = id; localStorage.setItem('chant_demo_eleve', id);
+  notifsOpen = false; render();
+}
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toast._to);
+  toast._to = setTimeout(function(){ t.style.display = 'none'; }, 3200);
+}
+function toggleNotifs() {
+  notifsOpen = !notifsOpen;
+  if (notifsOpen) { eleve().notifications.forEach(function(n){ n.lu = true; }); CHANT.save(S); }
+  render();
+}
+
+function render() {
+  var el = eleve();
+  if (!el) { document.getElementById('content').innerHTML = '<div class="empty">Aucun élève en démo.</div>'; return; }
+  currentId = el.id;
+
+  // sélecteur démo
+  var sel = document.getElementById('eleve-select');
+  sel.innerHTML = S.eleves.map(function(e){
+    return '<option value="' + e.id + '"' + (e.id === el.id ? ' selected' : '') + '>' + esc(e.prenom) + ' ' + esc(e.nom) + '</option>';
+  }).join('');
+
+  // cloche
+  var nb = el.notifications.filter(function(n){ return !n.lu; }).length;
+  var badge = document.getElementById('notif-badge');
+  badge.style.display = nb ? 'inline-block' : 'none';
+  badge.textContent = nb;
+
+  // panneau notifications
+  var np = document.getElementById('notif-pane');
+  np.className = 'notif-pane' + (notifsOpen ? ' open' : '');
+  np.innerHTML = notifsOpen ? renderNotifs(el) : '';
+
+  var h = '<div class="hello">Bonjour ' + esc(el.prenom) + ' 🎶</div>';
+  h += renderCarte(el);
+  h += renderExos(el);
+  document.getElementById('content').innerHTML = h;
+  chargerAudios(document.getElementById('content'));
+}
+
+function renderNotifs(el) {
+  var h = '<div class="card"><h2>🔔 Mes notifications</h2>';
+  if (!el.notifications.length) h += '<div class="empty">Aucune notification.</div>';
+  else el.notifications.forEach(function(n){
+    h += '<div class="notif' + (n.lu ? '' : ' nonlu') + '">' + esc(n.message) + '<div class="nd">' + CHANT.fmtDate(n.date) + '</div></div>';
+  });
+  return h + '</div>';
+}
+
+function renderCarte(el) {
+  var h = '<div class="card">';
+  if (el.formule === 'carte') {
+    var used = el.pointages.length;
+    var r = CHANT.restants(el);
+    h += '<h2>🎫 Ma carte de ' + el.carteTotal + ' cours</h2>';
+    h += '<div class="jauge"><div style="width:' + (el.carteTotal ? Math.min(100, used / el.carteTotal * 100) : 0) + '%"></div></div>';
+    h += '<div class="points">';
+    for (var i = 0; i < el.carteTotal; i++) {
+      var d = el.pointages[i];
+      h += '<div class="pt' + (d ? ' done' : '') + '"><div class="dot"></div><div class="d">' + (d ? CHANT.fmtDateCourt(d) : '·') + '</div></div>';
+    }
+    h += '</div>';
+    if (r === 0) h += '<div class="carte-big">Carte terminée (' + used + '/' + el.carteTotal + ') — <span class="pill pill-warn">à renouveler avec votre professeure</span></div>';
+    else h += '<div class="carte-big">Il vous reste <b>' + r + '</b> cours sur ' + el.carteTotal + '</div>';
+    if (used) h += '<div style="font-size:12px;color:var(--sub);margin-top:8px">Dernier cours pointé : ' + CHANT.fmtDate(el.pointages[used - 1]) + '</div>';
+  } else {
+    h += '<h2>🎵 Mes cours à l’unité</h2>';
+    if (el.coursUnite.length) {
+      el.coursUnite.slice().sort(function(a,b){ return a.date < b.date ? 1 : -1; }).forEach(function(cu){
+        h += '<div class="cu-ligne"><span>🎵 ' + CHANT.fmtDate(cu.date) + '</span>'
+           + (cu.paye ? '<span class="pill pill-ok">✓ payé</span>' : '<span class="pill pill-warn">à régler</span>') + '</div>';
+      });
+      h += '<div style="font-size:13px;color:var(--sub);margin-top:10px">' + el.coursUnite.length + ' cours suivi' + (el.coursUnite.length > 1 ? 's' : '') + ' cette saison</div>';
+    } else h += '<div class="empty">Aucun cours pour l’instant.</div>';
+  }
+  return h + '</div>';
+}
+
+function renderExos(el) {
+  var h = '<div class="card"><h2>🎼 Mes exercices</h2>';
+  if (!el.exercices.length) return h + '<div class="empty">Aucun exercice pour l’instant.<br><span style="font-size:12px">Votre professeure vous en ajoutera après votre prochain cours.</span></div></div>';
+  el.exercices.slice().reverse().forEach(function(x){
+    var today = CHANT.todayISO();
+    var faitAujourdhui = x.faits.indexOf(today) >= 0;
+    h += '<div class="exo">'
+       + '<div class="exo-titre">' + esc(x.titre) + '</div>'
+       + '<div class="exo-consigne">' + esc(x.consigne) + '</div>';
+    if (x.hasAudio) h += '<audio controls preload="none" data-audio-id="' + x.id + '"></audio>';
+    else if (x.audioName) h += '<div class="exo-noaudio">🎹 ' + esc(x.audioName) + ' — l’enregistrement piano apparaîtra ici dans la vraie app.</div>';
+    if (x.faits.length) {
+      h += '<div class="exo-faits">' + x.faits.slice(-8).map(function(d){
+        return '<span class="fait-chip">✓ ' + CHANT.fmtDateCourt(d) + '</span>';
+      }).join('') + (x.faits.length > 8 ? '<span class="fait-chip">+' + (x.faits.length - 8) + '</span>' : '') + '</div>';
+    }
+    h += faitAujourdhui
+       ? '<button class="btn-fait deja">✓ Fait aujourd’hui — bravo !</button>'
+       : '<button class="btn-fait" onclick="marquerFait(\'' + x.id + '\')">✓ J’ai fait cet exercice aujourd’hui</button>';
+    h += '<div class="exo-notify-note">' + (x.notifyProf ? 'Votre professeure est prévenue quand vous validez.' : 'Exercice en autonomie — pas de notification envoyée.') + '</div>';
+    h += '</div>';
+  });
+  return h + '</div>';
+}
+
+function marquerFait(exoId) {
+  var el = eleve();
+  var x = el.exercices.find(function(e){ return e.id === exoId; });
+  if (!x) return;
+  var today = CHANT.todayISO();
+  if (x.faits.indexOf(today) >= 0) return;
+  x.faits.push(today);
+  if (x.notifyProf) {
+    S.profNotifications.unshift({
+      date: today,
+      message: '✅ ' + el.prenom + ' ' + el.nom + ' a fait l’exercice « ' + x.titre + ' »',
+      lu: false
+    });
+    toast('✓ Bravo ! 📲 Votre professeure est prévenue (simulé)');
+  } else {
+    toast('✓ Bravo, exercice noté !');
+  }
+  persist();
+}
+
+function chargerAudios(root) {
+  root.querySelectorAll('audio[data-audio-id]').forEach(function(a){
+    CHANT.audioGet(a.dataset.audioId).then(function(blob){
+      if (blob) a.src = URL.createObjectURL(blob);
+    });
+  });
+}
+
+/* sync live : un pointage fait dans l'onglet prof apparaît ici */
+CHANT.onChange(function(){ S = CHANT.load(); render(); });
+render();
+</script>
+</body>
+</html>
