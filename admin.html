@@ -553,15 +553,18 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
         <button class="tab-btn" data-tab="devis" style="color:#fde68a"><span class="tab-icon">📋</span><span class="tab-label">Devis</span></button>
       </div>
       <div class="admin-nav-row">
+        <button class="tab-btn" data-tab="contact" style="color:#fca5a5"><span class="tab-icon">📨</span><span class="tab-label">Contact</span></button>
         <button class="tab-btn" data-tab="yoga" style="color:#a78bfa"><span class="tab-icon">🧘</span><span class="tab-label">Yoga</span></button>
         <button class="tab-btn" data-tab="publications" style="color:#fbbf24"><span class="tab-icon">📝</span><span class="tab-label">Publications</span></button>
         <button class="tab-btn" data-tab="whatsapp" style="color:#25d366"><span class="tab-icon">💬</span><span class="tab-label">WhatsApp</span></button>
-        <button class="tab-btn" data-tab="discussions" style="color:#e879f9"><span class="tab-icon">🗨️</span><span class="tab-label">Discussions</span></button>
       </div>
       <div class="admin-nav-row">
+        <button class="tab-btn" data-tab="discussions" style="color:#e879f9"><span class="tab-icon">🗨️</span><span class="tab-label">Discussions</span></button>
         <button class="tab-btn" data-tab="dashboard" style="color:#60a5fa"><span class="tab-icon">🏠</span><span class="tab-label">Dashboard</span></button>
         <button class="tab-btn" data-tab="compta" style="color:#34d399"><span class="tab-icon">💰</span><span class="tab-label">Compta</span></button>
         <button class="tab-btn" data-tab="emails-newsletter" style="color:#38bdf8"><span class="tab-icon">📧</span><span class="tab-label">Newsletter</span></button>
+      </div>
+      <div class="admin-nav-row">
         <button class="tab-btn" data-tab="videos" style="color:#fb7185"><span class="tab-icon">🎥</span><span class="tab-label">Vidéos</span></button>
       </div>
     </div>
@@ -2684,6 +2687,7 @@ function traiterMsgInscription(msg, doRender) {
   if (msg.type === 'yogaEssaiInscription') _appliquerYogaEssaiInscription(msg.data);
   if (msg.type === 'yogaConfirmerPresence') _appliquerYogaConfirmPresence(msg.data);
   if (msg.type === 'coursParticulierInscription') { if(!IS_DEMO){chargerDonnees();return;} }
+  if (msg.type === 'contactMessage') { afficherToast('📨 Nouveau message de contact'); if(!IS_DEMO){ _chargerContactForce(); } }
   if (msg.type === 'newsletterInscription') { afficherToast('📧 Nouvelle inscription newsletter'); if(!IS_DEMO){chargerDonnees();return;} }
   if (msg.type === 'cartePointage') {
     var d = msg.data || {};
@@ -5355,6 +5359,7 @@ function demarrerRealtime() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_essai' },     _onInsert)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_essai_yoga' },_onInsert)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cours_particuliers' },     _onInsert)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages_contact' }, function(){ if(!IS_DEMO){ afficherToast('📨 Nouveau message de contact'); _chargerContactForce(); } })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'inscriptions_cours' },     _onInsert)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cours_yoga' },             _onInsert)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'milonga_presences' }, _onMilongaPresence)
@@ -5927,7 +5932,7 @@ function switchTab(tab) {
       'publications':'📝 Publications','whatsapp':'💬 WhatsApp','tarifs':'⚙️ Paramètres',
       'discussions':'🗨️ Discussions','devis':'📋 Devis','notifications':'🔔 Notifications',
       'compta':'💰 Compta','dashboard':'🏠 Dashboard','emails-newsletter':'📧 Newsletter',
-      'videos':'🎥 Vidéos des cours'
+      'videos':'🎥 Vidéos des cours','contact':'📨 Contact'
     };
     _lbl.textContent = _LABELS[tab] || tab;
   }
@@ -6009,6 +6014,7 @@ function renderTab() {
     else if (currentTab==='discussions')  html=renderDiscussions();
     else if (currentTab==='resa-salles')  html=renderResaSalles();
     else if (currentTab==='cours-particuliers') html=renderCoursParticuliers();
+    else if (currentTab==='contact')      html=renderContact();
     else if (currentTab==='devis')        html=renderDevis();
     else if (currentTab==='notifications') html=renderNotifications();
     else if (currentTab==='compta')        html=renderCompta();
@@ -15895,6 +15901,86 @@ function renderListeDevis(devisList, demandes, STATUT_DEVIS) {
 // ================================================================
 // COURS PARTICULIERS
 // ================================================================
+// ===== Contact — messages du formulaire public (contact.html) =====
+var _contactMsgs = null, _contactLoaded = false, _contactLoading = false;
+
+function _fmtDateHeure(iso) {
+  try { var d = new Date(iso); if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + ' à ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  } catch(e) { return ''; }
+}
+
+function _chargerContact() {
+  if (_contactLoading || IS_DEMO) return;
+  _contactLoading = true;
+  TEV.client.from('messages_contact').select('*').order('created_at', { ascending: false }).then(function (res) {
+    _contactLoading = false; _contactLoaded = true;
+    _contactMsgs = (res && res.data) ? res.data : [];
+    if (currentTab === 'contact') renderTab();
+  }, function () { _contactLoading = false; _contactLoaded = true; _contactMsgs = []; if (currentTab === 'contact') renderTab(); });
+}
+window._chargerContactForce = function () { _contactLoaded = false; _contactMsgs = null; if (currentTab === 'contact') renderTab(); };
+
+function renderContact() {
+  if (IS_DEMO) return '<div class="empty-state">Messages de contact — indisponibles en démo.</div>';
+  if (!_contactLoaded) { _chargerContact(); return '<div class="empty-state">Chargement…</div>'; }
+  var msgs = _contactMsgs || [];
+  var nb = msgs.filter(function (m) { return m.statut !== 'traite'; }).length;
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;">'
+    + '<div style="font-size:13px;color:var(--dim);">' + msgs.length + ' message' + (msgs.length > 1 ? 's' : '')
+    + (nb ? ' · <span style="color:#e53935;font-weight:700;">' + nb + ' nouveau' + (nb > 1 ? 'x' : '') + '</span>' : '') + '</div>'
+    + '<button class="btn btn-ghost" style="font-size:12px;" onclick="_chargerContactForce()">↻ Rafraîchir</button>'
+    + '</div>';
+  if (!msgs.length) return h + '<div class="empty-state">Aucun message pour le moment.</div>';
+  msgs.forEach(function (m) { h += _contactCard(m); });
+  return h;
+}
+
+function _contactCard(m) {
+  var nouveau = m.statut !== 'traite';
+  var nom = escHtml(((m.prenom || '') + ' ' + (m.nom || '')).trim() || 'Contact');
+  var email = escHtml(m.email || '');
+  var tel = escHtml(m.tel || '');
+  var telFmt = (m.tel || '').replace(/\s/g, '');
+  var msg = escHtml(m.message || '').replace(/\n/g, '<br/>');
+  var dt = _fmtDateHeure(m.created_at);
+  var gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(m.email || '') + '&su=' + encodeURIComponent('Re: votre message — Tango & Vous');
+  return '<div style="background:var(--surface2,#181818);border:1px solid var(--border);border-left:4px solid ' + (nouveau ? '#e53935' : '#3a3a3a') + ';border-radius:12px;padding:14px 16px;margin-bottom:12px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+    + '<div style="font-size:15px;font-weight:700;color:var(--text);">' + nom + (nouveau ? ' <span style="background:#e53935;color:#fff;font-size:10px;font-weight:700;border-radius:20px;padding:2px 8px;vertical-align:middle;">NOUVEAU</span>' : '') + '</div>'
+    + '<div style="font-size:11px;color:var(--dim);">' + dt + '</div>'
+    + '</div>'
+    + '<div style="font-size:12px;color:var(--dim);margin-top:3px;">' + email + (tel ? ' · ' + tel : '') + '</div>'
+    + '<div style="background:var(--surface,#111);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin:11px 0;font-size:14px;color:var(--text);line-height:1.6;">' + (msg || '<em style="color:var(--dim);">(vide)</em>') + '</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+    + '<a href="' + gmailUrl + '" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:8px 12px;">✉️ Répondre</a>'
+    + (telFmt ? '<a href="tel:' + escHtml(telFmt) + '" class="btn btn-ghost" style="font-size:12px;padding:8px 12px;">📞 Appeler</a>' : '')
+    + '<a href="javascript:void(0)" class="btn ' + (nouveau ? 'btn-ok' : 'btn-ghost') + '" style="font-size:12px;padding:8px 12px;" onclick="_contactToggleStatut(\'' + m.id + '\',' + (nouveau ? 'true' : 'false') + ')">' + (nouveau ? '✓ Marquer traité' : '↩ Rouvrir') + '</a>'
+    + '<a href="javascript:void(0)" class="btn btn-ghost" style="font-size:12px;padding:8px 12px;color:#b08a8a;" onclick="_contactSupprimer(\'' + m.id + '\')">🗑</a>'
+    + '</div>'
+    + '</div>';
+}
+
+window._contactToggleStatut = function (id, wasNew) {
+  var newStatut = wasNew ? 'traite' : 'nouveau';
+  var m = (_contactMsgs || []).find(function (x) { return String(x.id) === String(id); });
+  if (m) { m.statut = newStatut; m.lu = true; }
+  if (currentTab === 'contact') renderTab();
+  TEV.client.from('messages_contact').update({ statut: newStatut, lu: true }).eq('id', id).then(function (res) {
+    if (res && res.error) afficherToast('Erreur mise à jour');
+  }, function () { afficherToast('Erreur mise à jour'); });
+};
+
+window._contactSupprimer = function (id) {
+  ouvrirModalConfirm('Supprimer définitivement ce message de contact ?', function () {
+    _contactMsgs = (_contactMsgs || []).filter(function (x) { return String(x.id) !== String(id); });
+    if (currentTab === 'contact') renderTab();
+    TEV.client.from('messages_contact').delete().eq('id', id).then(function (res) {
+      if (res && res.error) afficherToast('Erreur suppression');
+    }, function () { afficherToast('Erreur suppression'); });
+  });
+};
+
 function renderCoursParticuliers() {
   // ── Mode formulaire en iframe (menu conservé)
   if (_cpFormOuvert) {

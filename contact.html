@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Tango &amp; Vous — Contact</title>
+<link rel="preconnect" href="https://qhngqzvvllktuwspojxc.supabase.co" crossorigin/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;600;700&display=swap"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --accent:#8b1a2b;--accent-dim:#a83345;--gold:#6e5100;--bg:#faf8f4;--s2:#ffffff;
+  --border:#d8cfc6;--text:#1a1a1a;--faint:#555;--danger:#c62828;
+  --font-d:'Cormorant Garamond',Georgia,serif;--font-b:'Montserrat',sans-serif;
+}
+html{background:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+body{font-family:var(--font-b);font-size:16px;color:var(--text);background:var(--bg);}
+.wrap{max-width:540px;margin:0 auto;}
+.hdr{background:#000;border-bottom:2px solid #D4AF37;padding:20px 24px 16px;text-align:center;}
+.hdr-logo{font-family:var(--font-d);font-size:22px;font-weight:300;letter-spacing:5px;color:#D4AF37;}
+.hdr-title{font-family:var(--font-d);font-size:30px;font-weight:400;color:#fff;margin-top:2px;}
+.hdr-coords{font-size:12px;color:#e8e0c8;margin-top:8px;line-height:1.6;}
+.hdr-coords a{color:#e8e0c8;text-decoration:none;}
+.body{padding:24px 24px 30px;}
+.intro{font-size:14px;color:var(--faint);line-height:1.6;text-align:center;margin-bottom:22px;}
+.field{margin-bottom:15px;}
+.row2{display:flex;gap:12px;}
+.row2 .field{flex:1;margin-bottom:15px;}
+label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;letter-spacing:.3px;}
+label .req{color:var(--accent);}
+input,textarea{
+  width:100%;font-size:16px;font-family:inherit;color:var(--text);
+  background:var(--s2);border:1.5px solid var(--border);border-radius:9px;
+  padding:12px 13px;outline:none;transition:border-color .2s;
+}
+textarea{min-height:130px;resize:vertical;line-height:1.5;}
+input:focus,textarea:focus{border-color:var(--accent-dim);}
+.btn{
+  width:100%;margin-top:8px;background:var(--accent);color:#fff;border:none;
+  border-radius:9px;padding:15px;font-size:15px;font-weight:700;letter-spacing:.8px;
+  text-transform:uppercase;font-family:inherit;cursor:pointer;transition:opacity .2s;
+}
+.btn:disabled{opacity:.55;cursor:default;}
+.err{color:var(--danger);font-size:13px;margin-top:10px;min-height:16px;text-align:center;}
+.note{font-size:12px;color:#777;text-align:center;margin-top:14px;line-height:1.6;}
+.note a{color:var(--gold);}
+/* honeypot anti-bot (invisible) */
+.hp{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;}
+/* Écran de succès */
+.success{display:none;text-align:center;padding:40px 24px;}
+.success-ico{font-size:46px;margin-bottom:14px;}
+.success-titre{font-family:var(--font-d);font-size:26px;color:var(--accent);margin-bottom:10px;}
+.success-txt{font-size:15px;color:var(--accent-dim);line-height:1.7;margin-bottom:24px;font-weight:600;}
+.btn-nouveau{background:none;border:1.5px solid var(--accent-dim);color:var(--accent);border-radius:9px;padding:11px 22px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="hdr-logo">TANGO &amp; VOUS</div>
+    <div class="hdr-title">Contact</div>
+    <div class="hdr-coords"><a href="mailto:tangoetvous@gmail.com">tangoetvous@gmail.com</a> &nbsp;·&nbsp; Tél : +33 6 61 72 79 98</div>
+  </div>
+
+  <div class="body" id="form-zone">
+    <div class="intro">Une question, une remarque&nbsp;? Écrivez-nous, nous vous répondons rapidement.</div>
+
+    <div class="row2">
+      <div class="field">
+        <label for="c-prenom">Prénom <span class="req">*</span></label>
+        <input type="text" id="c-prenom" autocomplete="given-name" placeholder="Prénom"/>
+      </div>
+      <div class="field">
+        <label for="c-nom">Nom <span class="req">*</span></label>
+        <input type="text" id="c-nom" autocomplete="family-name" placeholder="Nom"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="c-email">Email <span class="req">*</span></label>
+      <input type="email" id="c-email" autocomplete="email" autocapitalize="none" inputmode="email" placeholder="vous@exemple.fr"/>
+    </div>
+
+    <div class="field">
+      <label for="c-tel">Téléphone</label>
+      <input type="tel" id="c-tel" autocomplete="tel" inputmode="tel" placeholder="Facultatif"/>
+    </div>
+
+    <div class="field">
+      <label for="c-message">Message <span class="req">*</span></label>
+      <textarea id="c-message" placeholder="Votre message…"></textarea>
+    </div>
+
+    <!-- honeypot : les bots remplissent ce champ, pas les humains -->
+    <div class="hp" aria-hidden="true"><label>Ne pas remplir<input type="text" id="c-website" tabindex="-1" autocomplete="off"/></label></div>
+
+    <button class="btn" id="c-btn" onclick="soumettre()">Envoyer</button>
+    <div class="err" id="c-err"></div>
+    <div class="note">En nous écrivant, vous acceptez notre <a href="https://app.tangoetvous.fr/confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>.</div>
+  </div>
+
+  <div class="success" id="success">
+    <div class="success-ico">✅</div>
+    <div class="success-titre">Merci&nbsp;!</div>
+    <div class="success-txt">Votre message a bien été envoyé.<br/>Nous reviendrons vers vous rapidement&nbsp;!</div>
+    <button class="btn-nouveau" onclick="restart()">← Envoyer un autre message</button>
+  </div>
+</div>
+
+<script src="/js/supabase.min.js"></script>
+<script src="js/tev-supabase.js?v=13"></script>
+<script>
+  function $(id){ return document.getElementById(id); }
+  function showErr(m){ $('c-err').textContent = m || ''; }
+  var _reEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  async function soumettre() {
+    var prenom  = ($('c-prenom').value  || '').trim();
+    var nom     = ($('c-nom').value     || '').trim();
+    var email   = ($('c-email').value   || '').trim().toLowerCase();
+    var tel     = ($('c-tel').value     || '').trim();
+    var message = ($('c-message').value || '').trim();
+    var trap    = ($('c-website').value || '').trim();  // honeypot
+    showErr('');
+
+    // Bot détecté → on simule un succès sans rien envoyer
+    if (trap) { $('form-zone').style.display='none'; $('success').style.display='block'; return; }
+
+    if (!prenom) { showErr('Merci d\'indiquer votre prénom.'); $('c-prenom').focus(); return; }
+    if (!nom)    { showErr('Merci d\'indiquer votre nom.'); $('c-nom').focus(); return; }
+    if (!_reEmail.test(email)) { showErr('Merci d\'entrer une adresse email valide.'); $('c-email').focus(); return; }
+    if (!message) { showErr('Merci d\'écrire votre message.'); $('c-message').focus(); return; }
+
+    var btn = $('c-btn');
+    btn.disabled = true; btn.textContent = 'Envoi…';
+    try {
+      // 1) INSERT Supabase — SANS .select() (règle RLS iframe Wix : pas de RETURNING)
+      var ins = await TEV.client.from('messages_contact').insert({
+        prenom: prenom, nom: nom, email: email, tel: tel, message: message, source: 'wix'
+      });
+      if (ins && ins.error) throw new Error(ins.error.message || 'Erreur');
+
+      // 2) Notifications worker (email admin + push admin + email confirmation élève) — fire-and-forget
+      try {
+        fetch('https://app.tangoetvous.fr/api/notify/contact', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prenom: prenom, nom: nom, email: email, tel: tel, message: message })
+        }).catch(function(){});
+      } catch(e){}
+
+      // 3) Newsletter (l'expéditeur accepte d'être recontacté) — fire-and-forget
+      try { if (TEV.ajouterNewsletter) TEV.ajouterNewsletter(email, 'contact'); } catch(e){}
+
+      // 4) Notif admin temps réel — BroadcastChannel + localStorage + postMessage (INSERT déjà fait avant)
+      var msg = { type: 'contactMessage', data: { prenom: prenom, nom: nom, email: email } };
+      try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
+      try { var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions')||'[]'); pending.push(msg); localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending)); } catch(e){}
+      try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
+
+      // 5) Écran de succès
+      $('form-zone').style.display = 'none';
+      $('success').style.display = 'block';
+      try { window.parent.postMessage({type:'tevHeight',height:document.body.scrollHeight},'*'); } catch(e){}
+    } catch(e) {
+      showErr('Une erreur est survenue. Merci de réessayer.');
+      btn.disabled = false; btn.textContent = 'Envoyer';
+    }
+  }
+
+  function restart() {
+    ['c-prenom','c-nom','c-email','c-tel','c-message','c-website'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
+    showErr('');
+    var btn = $('c-btn'); btn.disabled = false; btn.textContent = 'Envoyer';
+    $('success').style.display = 'none';
+    $('form-zone').style.display = 'block';
+    $('c-prenom').focus();
+  }
+
+  // Hauteur d'iframe pour Wix
+  (function(){
+    function _tevH(){ var h=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight); try{ window.parent.postMessage({type:'tevHeight',height:h},'*'); }catch(e){} }
+    window.addEventListener('load',_tevH);
+    window.addEventListener('resize',_tevH);
+    new MutationObserver(function(){ setTimeout(_tevH,60); }).observe(document.body,{subtree:true,childList:true,attributes:true});
+  })();
+</script>
+</body>
+</html>

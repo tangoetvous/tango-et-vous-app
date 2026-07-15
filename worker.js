@@ -367,6 +367,11 @@ export default {
         return handleNotifyCoursParticulier(request, env);
       }
 
+      // POST /api/notify/contact — nouveau message du formulaire de contact (sans auth)
+      if (pathname === '/api/notify/contact' && method === 'POST') {
+        return handleNotifyContact(request, env);
+      }
+
       // POST /api/notify/milonga-rsvp — élève clique "Je pense venir" (sans auth)
       if (pathname === '/api/notify/milonga-rsvp' && method === 'POST') {
         return handleNotifyMilongaRsvp(request, env);
@@ -8571,6 +8576,96 @@ async function handleNotifyCoursParticulier(request, env) {
       const tokens = await getFcmTokensAdmin(_svcKey);
       if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `🎯 Cours particulier — ${nomAff}${urgBadge}` });
     } catch(e) { console.error('[cours-particulier] push error', e); }
+  }
+
+  return corsResponse({ ok: true }, 200, {}, request);
+}
+
+// ================================================================
+// POST /api/notify/contact — formulaire public "Contact" (contact.html)
+// Email admin + push admin + notif panel + email de confirmation à l'expéditeur.
+// Body: { prenom, nom, email, tel, message }
+// ================================================================
+async function handleNotifyContact(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'JSON invalide'); }
+
+  const { prenom, nom, email, tel, message } = body;
+  const nomAff    = _esc((prenom||'')+' '+(nom||'')).trim() || 'Contact';
+  const prenomAff = _esc(prenom || '');
+  const adminEmail  = 'tangoetvous@gmail.com';
+  const telFmt      = (tel||'').replace(/\s/g,'');
+  const msgHtml     = _esc(String(message||'')).replace(/\n/g,'<br/>');
+
+  const headerAdmin = `<div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouveau message de contact</div></div>`;
+  const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;
+  const footer      = `<div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a></div>`;
+  const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous</span></p>`;
+  const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
+
+  // Notif panel admin (via fonction SECURITY DEFINER — pas d'email requis)
+  try {
+    await _insertNotification('contact', `📨 Message de contact — ${nomAff} · ⏳ À traiter`, 'contact');
+  } catch(err) { console.error('[notify-contact] notif error', err); }
+
+  if (!env.BREVO_API_KEY) return corsResponse({ ok: true, notified: true }, 200, {}, request);
+
+  async function sendMail(to, subj, html) {
+    try {
+      await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' }, to: [{ email: String(to) }], subject: subj, htmlContent: html }),
+      });
+    } catch(err) { console.error('[notify-contact] sendMail error', err); }
+  }
+
+  // Bloc message partagé (admin + confirmation élève)
+  const msgBox = `<div style="background:#f9f9f9;border:1px solid #e5e5e5;border-radius:10px;padding:16px 20px;margin:0 0 20px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#B8962E;font-weight:700;margin-bottom:10px;">Message</div>
+    <div style="font-size:14px;color:#222;line-height:1.7;">${msgHtml || '<em style="color:#999;">(vide)</em>'}</div>
+  </div>`;
+
+  // ── Email admin ──
+  const htmlAdmin = wrap(`${headerAdmin}
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:18px;">
+        <div style="background:#D4AF37;padding:10px 16px;">
+          <div style="font-size:18px;font-weight:700;color:#111;">${nomAff}</div>
+          <div style="font-size:12px;color:#333;margin-top:2px;">${_esc(email||'')}${tel ? ' · '+_esc(tel) : ''}</div>
+        </div>
+      </div>
+      ${msgBox}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="mailto:${_esc(email||'')}" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Répondre</a>
+        ${telFmt ? `<a href="tel:${_esc(telFmt)}" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>` : ''}
+        ${telFmt ? `<a href="sms:${_esc(telFmt)}" style="background:#388e3c;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>` : ''}
+        <a href="https://app.tangoetvous.fr/admin.html#contact" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
+      </div>
+    </div>${footer}`);
+  await sendMail(adminEmail, `[Contact] ${nomAff}`, htmlAdmin);
+
+  // ── Email de confirmation à l'expéditeur (avec récap de son message) ──
+  if (email) {
+    const htmlEleve = wrap(`${headerEleve}
+      <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre message a bien été reçu</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 18px;">Bonjour ${prenomAff || ''},</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Merci de nous avoir écrit&nbsp;! Nous avons bien reçu votre message et <strong>nous reviendrons vers vous prochainement</strong>. Voici le récapitulatif de votre envoi&nbsp;:</p>
+        ${msgBox}
+        <p style="font-size:13px;color:#555;text-align:center;margin:0 0 22px;">Pour toute urgence, vous pouvez aussi nous écrire à <a href="mailto:${adminEmail}" style="color:#B8962E;">${adminEmail}</a>.</p>
+        ${signEleve}
+      </div>${footer}`, 'Votre message a bien ete recu - nous revenons vers vous prochainement');
+    await sendMail(String(email), `Votre message a bien été reçu — Tango & Vous`, htmlEleve);
+  }
+
+  // ── Push FCM admin ──
+  if (env.FIREBASE_SERVICE_ACCOUNT) {
+    const _svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
+    try {
+      const tokens = await getFcmTokensAdmin(_svcKey);
+      if (tokens.length) await sendFcmPush(env, tokens, { title: 'Tango & Vous — Admin', body: `📨 Message de contact — ${nomAff}` });
+    } catch(e) { console.error('[notify-contact] push error', e); }
   }
 
   return corsResponse({ ok: true }, 200, {}, request);

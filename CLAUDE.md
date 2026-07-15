@@ -1,5 +1,17 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-07-13 — Formulaire de contact (public → admin)
+
+Nouvelle fonctionnalité complète, calquée sur le patron **cours particuliers** (formulaire public → onglet admin → notifications). Chargement **à la demande** (pattern vidéos), **aucune modif de `tev-supabase.js`**.
+
+- **Formulaire public `contact.html`** (intégrable iframe Wix) : champs **Prénom\***, **Nom\*** (séparés), **Email\***, **Téléphone** (facultatif), **Message\***. Thème clair (header noir/or + accent bordeaux `#8b1a2b`). Honeypot anti-bot (`#c-website`, invisible → succès factice si rempli). INSERT direct `TEV.client.from('messages_contact').insert(...)` **SANS `.select()`** (règle RLS iframe Wix). Puis fetch `/api/notify/contact` + `TEV.ajouterNewsletter(email,'contact')` + BroadcastChannel `contactMessage` + postMessage hauteur. Pas de Turnstile (comme newsletter ; skip en iframe de toute façon).
+- **Table Supabase `messages_contact`** (`supabase/messages_contact_schema.sql`, **À EXÉCUTER**) : `id, created_at, prenom, nom, email, tel, message, source, statut (nouveau|traite), lu`. RLS : **SELECT/UPDATE/DELETE = `is_admin()` uniquement** (messages privés), **INSERT public** (anon). GRANT anon+authenticated. Ajoutée à `supabase_realtime`.
+- **Worker** : route `POST /api/notify/contact` (sans auth) → `handleNotifyContact` : notif panel 🔔 (`_insertNotification('contact', …, 'contact')`) + **email admin** (`tangoetvous@gmail.com`) + **email de confirmation à l'expéditeur avec récap de son message** + **push admin** (`getFcmTokensAdmin`+`sendFcmPush`). Sender Brevo `contact@tangoetvous.fr`.
+- **Onglet admin « 📨 Contact »** (`renderContact`, `_contactCard`) : chargement à la demande (`_chargerContact` via `TEV.client.from('messages_contact')`, state `_contactMsgs`/`_contactLoaded`), liste triée récente d'abord, badge NOUVEAU (statut≠traite, bordure rouge), boutons ✉️ Répondre (Gmail compose), 📞 Appeler, ✓ Marquer traité / ↩ Rouvrir (`_contactToggleStatut`), 🗑 (`_contactSupprimer` + `ouvrirModalConfirm`). **XSS** : tout le contenu public échappé via `escHtml`. Câblage : `_LABELS['contact']`, dispatch `doRender()`, garde realtime (`postgres_changes` INSERT `messages_contact` → `_chargerContactForce`), dispatch BroadcastChannel `contactMessage`.
+- **Menu admin réorganisé** : Contact placé juste après Devis (rangées passées de 6 à 7, 4 boutons/rangée, Vidéos seule sur la dernière). L'ordre des onglets = ordre des `<button class="tab-btn">` dans le HTML (admin.html ~549-570), pas un tableau JS.
+- **Tests** : groupe Q (`tests/q-contact.spec.js`, 4 tests : champs séparés, validation, honeypot, onglet admin + menu).
+- **⚠️ Restant à faire par l'admin** : (1) exécuter `messages_contact_schema.sql` dans Supabase ; (2) coller l'iframe `https://app.tangoetvous.fr/contact.html` sur Wix. Le numéro de tél affiché dans le header (`+33 6 61 72 79 98`) vient de la capture — à corriger si besoin.
+
 ## Budget prévisionnel (onglet Compta) — EN CONSTRUCTION (specs seulement, NE RIEN CODER)
 
 Nouvelle rubrique **dans Compta** (`admin.html`) : un **budget prévisionnel** = **recettes prévues** vs **dépenses prévues** (montants estimés, éventuellement vs réels plus tard). ⚠️ **Spécifications en cours de collecte — l'utilisateur précisera peu à peu. NE PAS commencer à coder tant qu'il ne le demande pas explicitement.**
