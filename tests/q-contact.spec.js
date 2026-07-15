@@ -61,6 +61,24 @@ test.describe('Groupe Q — Contact', () => {
     expect(r.formHidden).toBe(true);
   });
 
+  test('Q3b — validation : téléphone vide → message d\'erreur (obligatoire)', async ({ page }) => {
+    await bootPublicForm(page, 'contact.html');
+    const r = await page.evaluate(async () => {
+      document.getElementById('c-prenom').value = 'Marie';
+      document.getElementById('c-nom').value = 'Test';
+      document.getElementById('c-email').value = 'a@b.fr';
+      document.getElementById('c-message').value = 'Bonjour';
+      // téléphone laissé vide → doit bloquer
+      await window.soumettre();
+      return {
+        err: document.getElementById('c-err').textContent || '',
+        formVisible: document.getElementById('form-zone').style.display !== 'none',
+      };
+    });
+    expect(r.err).toMatch(/téléphone/i);
+    expect(r.formVisible).toBe(true);
+  });
+
   test('Q4 — admin : onglet Contact rend + helpers définis + label + bouton menu', async ({ page }) => {
     await bootDemo(page);
     const r = await page.evaluate(async () => {
