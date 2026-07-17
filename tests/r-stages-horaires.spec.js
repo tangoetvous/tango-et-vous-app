@@ -45,4 +45,64 @@ test.describe('Groupe R — Stages horaires par saison', () => {
     expect(res.s2).toBe('13h–14h');
     expect(res.adr).toBe('Lieu Test');
   });
+
+  test('R2 — appareil vierge : synchro Supabase (mockée) → horaires admin affichés', async ({ page }) => {
+    // Chaîne COMPLÈTE sur localStorage vide : la synchro DOMContentLoaded doit
+    // récupérer dates + params des 2 saisons depuis Supabase (mock avec les
+    // données réelles de prod du 2026-07-17), puis chargerDonnees doit afficher
+    // les horaires ADMIN — pas les défauts codés (14h–15h…).
+    const REAL_DATES = {
+      saison: '2026-2027',
+      stages: [
+        { date: '2026-09-19', label: 'Sam. 19 Sep 2026', technique: true, nStages: 2, themes: ['', ''] },
+        { date: '2026-10-03', label: 'Sam. 3 Oct 2026', technique: true, nStages: 2, themes: ['', ''] },
+        { date: '2026-11-07', label: 'Sam. 7 Nov 2026', technique: true, nStages: 2, themes: ['', ''] },
+      ],
+    };
+    const REAL_PARAMS = {
+      horaires: {
+        s1_deb: '15h30', s1_fin: '17h', s2_deb: '17h', s2_fin: '18h30',
+        s3_deb: '12h', s3_fin: '13h30', s4_deb: '10h30', s4_fin: '12h',
+        tech_deb: '14h30', tech_fin: '15h30',
+      },
+    };
+    await page.route('**/*', route => {
+      const u = route.request().url();
+      if (u.includes('127.0.0.1:8788') || u.includes('localhost:8788')) return route.continue();
+      if (u.includes('supabase.co/rest/v1/parametres')) {
+        let body = null;
+        if (u.includes('tev_dates_stages_2026-2027')) body = { valeur: REAL_DATES };
+        else if (u.includes('tev_params_stages_2026-2027')) body = { valeur: REAL_PARAMS };
+        if (body) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+        // clé absente → PostgREST .single() 0 ligne
+        return route.fulfill({ status: 406, contentType: 'application/json', body: JSON.stringify({ code: 'PGRST116', message: '0 rows' }) });
+      }
+      return route.abort();
+    });
+    const errors = [];
+    page.on('pageerror', e => errors.push(String(e)));
+    await page.goto('/stages-pwa.html', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(2500); // laisser la synchro async se terminer
+
+    const res = await page.evaluate(() => {
+      const d = (typeof DATES_STAGES !== 'undefined' && DATES_STAGES[0]) || null;
+      const ls = {
+        dates: !!localStorage.getItem('tev_dates_stages_2026-2027'),
+        params: !!localStorage.getItem('tev_params_stages_2026-2027'),
+      };
+      if (!d) return { ls, count: 0 };
+      const map = {};
+      d.stages.forEach(s => { map[s.type] = s.horaire; });
+      return { ls, count: DATES_STAGES.length, first: d.date, tech: map.technique, s1: map.stage1, s2: map.stage2 };
+    });
+
+    expect(errors).toEqual([]);
+    expect(res.ls.dates).toBe(true);   // synchro dates OK
+    expect(res.ls.params).toBe(true);  // synchro params OK
+    expect(res.count).toBe(3);
+    expect(res.first).toBe('2026-09-19');
+    expect(res.tech).toBe('14h30–15h30');
+    expect(res.s1).toBe('15h30–17h');
+    expect(res.s2).toBe('17h–18h30');
+  });
 });
