@@ -1397,12 +1397,20 @@ function _scrollHint() {
 document.addEventListener('DOMContentLoaded', async function(){
   var _sh = document.getElementById('scroll-hint-2');
   if (_sh) _sh.innerHTML = _scrollHint();
-  // Sync silencieux depuis Supabase (parametres.SELECT autorisé à anon)
+  // Sync silencieux depuis Supabase — saison courante ET suivante.
+  // Les dates admin sont stockées PAR SAISON ; en été on affiche les deux,
+  // donc il faut resynchroniser les deux clés (sinon la saison suivante
+  // reste figée sur le cache local de l'appareil → dates manquantes).
   try {
     var _sai = saisonCourante();
-    var _remote = await TEV.getParam('tev_dates_stages_' + _sai);
-    if (_remote && _remote.stages && _remote.stages.length) {
-      try { localStorage.setItem('tev_dates_stages_' + _sai, JSON.stringify(_remote)); } catch(e){}
+    var _saiSuiv = (parseInt(_sai.slice(0,4))+1) + '-' + (parseInt(_sai.slice(5))+1);
+    var _saisons = [_sai, _saiSuiv];
+    for (var _si=0; _si<_saisons.length; _si++) {
+      var _s = _saisons[_si];
+      var _remote = await TEV.getParam('tev_dates_stages_' + _s);
+      if (_remote && _remote.stages && _remote.stages.length) {
+        try { localStorage.setItem('tev_dates_stages_' + _s, JSON.stringify(_remote)); } catch(e){}
+      }
     }
   } catch(e){}
   chargerDonnees();
