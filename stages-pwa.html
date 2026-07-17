@@ -1407,9 +1407,15 @@ document.addEventListener('DOMContentLoaded', async function(){
     var _saisons = [_sai, _saiSuiv];
     for (var _si=0; _si<_saisons.length; _si++) {
       var _s = _saisons[_si];
+      // Dates des stages
       var _remote = await TEV.getParam('tev_dates_stages_' + _s);
       if (_remote && _remote.stages && _remote.stages.length) {
         try { localStorage.setItem('tev_dates_stages_' + _s, JSON.stringify(_remote)); } catch(e){}
+      }
+      // Paramètres de la saison (horaires plats tech_deb/s1_deb…, tarifs, adresse)
+      var _rparams = await TEV.getParam('tev_params_stages_' + _s);
+      if (_rparams && typeof _rparams === 'object' && Object.keys(_rparams).length) {
+        try { localStorage.setItem('tev_params_stages_' + _s, JSON.stringify(_rparams)); } catch(e){}
       }
     }
   } catch(e){}
