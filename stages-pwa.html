@@ -740,17 +740,22 @@ function chargerDonnees() {
 // ── Rendu dynamique du bloc tarifs ─────────────────────────────
 function renderTarifsBloc() {
   var t=TARIFS_STAGES;
-  var lines=[];
-  lines.push('<div class="tarif-ligne"><span>Technique 1h</span><span class="prix">'+(t.stage_technique||20)+' €</span></div>');
-  lines.push('<div class="tarif-ligne"><span>1 Stage</span><span class="prix">'+(t.stage_1||25)+' €</span></div>');
-  lines.push('<div class="tarif-ligne"><span>2 Stages</span><span class="prix">'+(t.stage_2||45)+' €</span></div>');
-  if(t.stage_3) lines.push('<div class="tarif-ligne"><span>3 Stages</span><span class="prix">'+t.stage_3+' €</span></div>');
-  if(t.stage_4) lines.push('<div class="tarif-ligne"><span>4 Stages</span><span class="prix">'+t.stage_4+' €</span></div>');
-  lines.push('<div class="tarif-ligne"><span>2 Stages + Technique</span><span class="prix">'+(t.stage_2_tech||60)+' €</span></div>');
-  if(t.stage_3_tech) lines.push('<div class="tarif-ligne"><span>3 Stages + Technique</span><span class="prix">'+t.stage_3_tech+' €</span></div>');
-  if(t.stage_4_tech) lines.push('<div class="tarif-ligne"><span>4 Stages + Technique</span><span class="prix">'+t.stage_4_tech+' €</span></div>');
+  // Colonne 1 : les tarifs les plus demandés (toujours affichés)
+  var col1=[];
+  col1.push('<div class="tarif-ligne"><span>Technique 1h</span><span class="prix">'+(t.stage_technique||20)+' €</span></div>');
+  col1.push('<div class="tarif-ligne"><span>1 Stage</span><span class="prix">'+(t.stage_1||25)+' €</span></div>');
+  col1.push('<div class="tarif-ligne"><span>2 Stages</span><span class="prix">'+(t.stage_2||45)+' €</span></div>');
+  col1.push('<div class="tarif-ligne"><span>2 Stages + Tech.</span><span class="prix">'+(t.stage_2_tech||60)+' €</span></div>');
+  // Colonne 2 : autres formules (affichées seulement si le tarif existe)
+  var col2=[];
+  if(t.stage_3) col2.push('<div class="tarif-ligne"><span>3 Stages</span><span class="prix">'+t.stage_3+' €</span></div>');
+  if(t.stage_4) col2.push('<div class="tarif-ligne"><span>4 Stages</span><span class="prix">'+t.stage_4+' €</span></div>');
+  if(t.stage_3_tech) col2.push('<div class="tarif-ligne"><span>3 Stages + Tech.</span><span class="prix">'+t.stage_3_tech+' €</span></div>');
+  if(t.stage_4_tech) col2.push('<div class="tarif-ligne"><span>4 Stages + Tech.</span><span class="prix">'+t.stage_4_tech+' €</span></div>');
+  var col2Html = col2.length ? '<div class="tarifs-col autres"><div class="tarifs-sous">Autres formules</div>'+col2.join('')+'</div>' : '';
+  var grid = '<div class="tarifs-2col"><div class="tarifs-col"><div class="tarifs-sous">★ Les plus demandés</div>'+col1.join('')+'</div>'+col2Html+'</div>';
   var el=document.getElementById('tarifs-bloc-content');
-  if(el) el.innerHTML='<div class="tarifs-titre">Tarifs par personne</div><div class="tarifs-grid">'+lines.join('')+'</div><div class="paiement-note">💵 Le paiement s\'effectue sur place le jour du stage.</div><div style="margin-top:10px;font-size:12px;color:#7a6030;font-style:italic;line-height:1.5;">Ces tarifs peuvent varier pour les Stages sp\u00e9ciaux et pour les cours avant les milongas.</div>';
+  if(el) el.innerHTML='<div class="tarifs-titre">Tarifs par personne</div>'+grid+'<div class="paiement-note">💵 Le paiement s\'effectue sur place le jour du stage.</div><div style="margin-top:10px;font-size:12px;color:#7a6030;font-style:italic;line-height:1.5;">Ces tarifs peuvent varier pour les Stages sp\u00e9ciaux et pour les cours avant les milongas.</div>';
 }
 
 // ── Préremplissage coordonnées ──────────────────────────────────
