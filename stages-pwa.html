@@ -718,13 +718,26 @@ function chargerDonnees() {
     if(allSaved.length){
       var stages=allSaved.filter(function(st){return st.date>=saiStart&&st.date<=saiEnd&&st.date>=_todayISO;}).sort(function(a,b){return a.date<b.date?-1:1;}).slice(0,MAX_DATES_STAGES);
       if(stages.length){
-        // Charger les params de la saison du 1er stage si différente de `sai`
-        var _fy=parseInt(stages[0].date.split('-')[0]), _fm=parseInt(stages[0].date.split('-')[1]);
-        var sSai=(_fm>=9?_fy:(_fy-1))+'-'+(_fm>=9?(_fy+1):_fy);
-        if(sSai!==sai){
-          try{ var ph=localStorage.getItem('tev_params_stages_'+sSai); if(ph){ var pph=JSON.parse(ph); globalHor=pph.horaires||globalHor; globalAdr=pph.adresse||globalAdr; if(pph.tarifs&&Object.keys(pph.tarifs).length) TARIFS_STAGES=Object.assign({},TARIFS_STAGES_DEFAUT,pph.tarifs); } }catch(e){}
+        // ⚠️ En été la liste peut mélanger 2 saisons (ex. 1er août = 2025-2026,
+        // 19 sept = 2026-2027). CHAQUE stage doit utiliser les horaires/adresse
+        // de SA saison — pas ceux de la saison du 1er stage de la liste.
+        function _saisonDe(d){ var y=parseInt(d.split('-')[0]), m=parseInt(d.split('-')[1]); return (m>=9?y:(y-1))+'-'+(m>=9?(y+1):y); }
+        var _paramsCache={};
+        _paramsCache[sai]={hor:globalHor, adr:globalAdr};
+        function _paramsDe(s2){
+          if(!_paramsCache[s2]){
+            var o={hor:globalHor, adr:globalAdr};   // repli : params saison courante
+            try{ var ph2=localStorage.getItem('tev_params_stages_'+s2); if(ph2){ var pp2=JSON.parse(ph2); o={hor:pp2.horaires||globalHor, adr:pp2.adresse||globalAdr}; } }catch(e){}
+            _paramsCache[s2]=o;
+          }
+          return _paramsCache[s2];
         }
-        DATES_STAGES=stages.map(function(st){return buildDateEntry(st,globalHor,globalAdr);});
+        // Tarifs affichés/calculés : saison du 1er stage (comportement historique)
+        var sSai=_saisonDe(stages[0].date);
+        if(sSai!==sai){
+          try{ var ph=localStorage.getItem('tev_params_stages_'+sSai); if(ph){ var pph=JSON.parse(ph); if(pph.tarifs&&Object.keys(pph.tarifs).length) TARIFS_STAGES=Object.assign({},TARIFS_STAGES_DEFAUT,pph.tarifs); } }catch(e){}
+        }
+        DATES_STAGES=stages.map(function(st){ var o=_paramsDe(_saisonDe(st.date)); return buildDateEntry(st,o.hor,o.adr); });
         return;
       }
     }
