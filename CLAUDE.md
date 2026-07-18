@@ -1641,6 +1641,16 @@ Si une colonne a une contrainte NOT NULL, utiliser `{}` (objet vide) plutôt que
 - Droits des personnes : email `tangoetvous@gmail.com`, délai 1 mois
 - Durée de conservation : durée relation + 1 an
 
+## SEO site Wix (www.tangoetvous.com) — actions 2026-07-15/18
+
+Contexte : panique « 2ᵉ page Google » sur « cours de tango paris » → diagnostiquée comme **géolocalisation** (l'utilisateur testait depuis l'Italie ; GSC France = position moyenne 9,1, page 1, CTR 5,2 %). Période Google très volatile (core updates mai-juil 2026). **Source de vérité = GSC Performances filtré France**, jamais une recherche manuelle depuis l'étranger.
+
+- **Page `/cours-tango-paris`** (2026-07-15) : titre onglet → « Cours de Tango Argentin à Paris | Florencia & Jérémy » ; meta description réécrite (mot-clé en tête + CTA « Réservez votre cours d'essai ! »). H1 déjà parfait (« Cours de Tango à Paris »). Indexation redemandée dans GSC.
+- **Cannibalisation « entreprise » RÉSOLUE** (2026-07-18) : deux pages quasi identiques `/groupes-et-ce` (« Du Tango pour votre Entreprise », menu Événementiel) et `/groupes-et-comite-d-entreprise` (« Groupes et CE », menu École). GSC : `/groupes-et-ce` gagnante → page « Groupes et CE » **supprimée** + **redirection 301** `/groupes-et-comite-d-entreprise` → `/groupes-et-ce` + facturation Wix Vidéo vérifiée (l'appli Wix Vidéo Premium était hébergée sur la page supprimée). Consolidation visible dans GSC sous 2-6 semaines.
+- **Stratégie actée** : UN seul site (jamais découper par activité — l'autorité du domaine se cumule) ; accueil = ombrelle « cours » (c'est l'accueil qui ranke sur « cours de tango paris ») ; requêtes événementiel (« animation tango mariage »…) = affaire de la page `/evenementiel` (pas encore optimisée) ; pyramide accueil → pages Paris/Vincennes. Suggestion H1 accueil « Tango & Vous — Cours de Tango Argentin à Paris & Vincennes » ou a minima H2 « Cours de Tango à Paris et Vincennes » (au 2026-07-18 : pas encore appliqué, l'utilisateur hésite à cause de l'équilibre cours/événementiel).
+- **Fiches Google Business** : 3 fiches (Paris tango, Vincennes tango, Yoga). Levier n°1 = avis clients (nombre + fraîcheur + réponses). Relier chaque fiche à sa page dédiée.
+- **RDV de contrôle : mi-août 2026** — GSC Performances, requête « cours de tango paris », France : comparer position (réf. 9,1) et CTR (réf. 5,2 %).
+
 ## À faire / en suspens
 > 📁 **Voir [`HISTORIQUE.md`](./HISTORIQUE.md)** pour les tâches accomplies, considérées résolues ou reportées (déplacées le 2026-05-27).
 
