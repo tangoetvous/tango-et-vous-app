@@ -1,5 +1,15 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-07-23 — Essai Tango : nouvel ordre d'affichage (ÉTAPE 1/2 : « Par date » FAITE)
+
+Nouvel ordre demandé pour les listes de chaque cours dans Essai Tango (« Par date » ET « Pointage » ET l'impression 🖨) :
+**1.** couples validés · **2.** solos validés en alternance guideur/guidée · **3.** couples non validés · **4.** guideurs solos non validés · **5.** guidées solos non validées. Solos triés dans chaque file : **expérience croissante** (vide=0 → 1er cours → … → 2+ → milonga en dernier) puis **date d'inscription**. Décisions : rôle `double` (legacy) = côté guideur ; couple à statuts mixtes (impossible par construction, vérifié `valGuideeEssai`) → repli « non validé » ; **Pointage** : bloc Élèves ★ inscrits placé APRÈS les solos validés et AVANT les attentes (3bis = élèves ★ absents du jour juste après), Supprimés restent tout en bas ; l'onglet Liste d'attente et son bouton ⬆ Expérience NE changent PAS.
+
+- **✅ FAIT — « Par date »** : helpers globaux `_essaiCmpInscription` / `_essaiCmpExp` / `_essaiOrdonnerGroupes(groups, estAttente)` (admin.html, juste après `_expRank` ~5765) + branchement dans la vue dates (l'appel `_groupCouples(ins).forEach` → `_essaiOrdonnerGroupes(_groupCouples(ins), …).forEach`). **Aucune mutation de la liste source** (risque n°1) ; départage `created_at` puis `id` → ordre stable au polling 15s (risque n°3). À l'intérieur d'un encadré couple, la guidée s'affiche AVANT le guideur (effet du tri global historique par rôle — comportement conservé volontairement).
+- **Tests groupe S** (`tests/s-essai-ordre.spec.js`, 4 tests) : S1 ordre des 5 catégories + alternance + vide=0 ; S2 non-mutation + stabilité ; S3 ordre DOM réel + supprimés en bas ; S4 boutons ciblés par id après ré-ordre. ⚠️ `renderTab()` est ASYNCHRONE (spinner puis `setTimeout(doRender, 40)`) → tout test qui lit le DOM après `renderTab()` doit `waitForFunction` sur les `.point-row`.
+- **⏳ RESTE À FAIRE — ÉTAPE 2 : « Pointage » + impression** : réutiliser `_essaiOrdonnerGroupes` dans la vue pointage (bloc `_groupCouples(conf)` ~8811 pour les validés, section attente ~8821 à re-répartir en catégories 3/4/5) + déplacer le bloc Élèves ★ (~8847) AVANT les attentes + `imprimerEssaiTango` (~9930 : ordonner `g.conf` et `g.att`, Élèves ★ entre les deux).
+- Note formulaire : `cours-essai.html` champ expérience `#niv-eleve` **required** (5 valeurs, pas de milonga) — mais la fiche PARTENAIRE est créée avec `niveau_eleve:''` (sans impact : les partenaires sont dans des couples).
+
 ## Session 2026-07-13 — Formulaire de contact (public → admin)
 
 Nouvelle fonctionnalité complète, calquée sur le patron **cours particuliers** (formulaire public → onglet admin → notifications). Chargement **à la demande** (pattern vidéos), **aucune modif de `tev-supabase.js`**.

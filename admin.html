@@ -5763,6 +5763,47 @@ function _expRank(val) {
   return ranks[key] || 0;
 }
 
+// ── Ordre d'affichage Essai Tango (Par date / Pointage / Impression) ──
+// Départage déterministe : date d'inscription (created_at) puis id — un ordre
+// identique à chaque re-rendu (polling 15s), jamais de liste qui "saute".
+function _essaiCmpInscription(a, b) {
+  var ca = a.created_at || '', cb = b.created_at || '';
+  if (ca !== cb) return ca < cb ? -1 : 1;
+  return (Number(a.id) || 0) - (Number(b.id) || 0);
+}
+// Solos : expérience croissante (vide=0 en premier, milonga en dernier), puis inscription
+function _essaiCmpExp(a, b) {
+  var ra = _expRank(a.niveau_eleve), rb = _expRank(b.niveau_eleve);
+  if (ra !== rb) return ra - rb;
+  return _essaiCmpInscription(a, b);
+}
+// Réordonne les groupes issus de _groupCouples() (ne mute PAS la liste source) :
+// 1. couples validés · 2. solos validés alternés guideur/guidée
+// 3. couples non validés · 4. guideurs solos non validés · 5. guidées solos non validées
+// estAttente(e) → true si la personne attend la validation admin.
+function _essaiOrdonnerGroupes(groups, estAttente) {
+  var cVal = [], cAtt = [], gVal = [], dVal = [], gAtt = [], dAtt = [];
+  groups.forEach(function (g) {
+    if (g.type === 'couple') {
+      // Couple à statuts mixtes (impossible par construction) → repli "non validé"
+      var att = estAttente(g.persons[0]) || estAttente(g.persons[1]);
+      (att ? cAtt : cVal).push(g);
+    } else {
+      var isGui = g.person.role !== 'guidee'; // 'double' (legacy) = côté guideur
+      if (estAttente(g.person)) (isGui ? gAtt : dAtt).push(g);
+      else (isGui ? gVal : dVal).push(g);
+    }
+  });
+  var repC = function (g) { return _essaiCmpInscription(g.persons[0], g.persons[1]) <= 0 ? g.persons[0] : g.persons[1]; };
+  var cmpC = function (a, b) { return _essaiCmpInscription(repC(a), repC(b)); };
+  var cmpS = function (a, b) { return _essaiCmpExp(a.person, b.person); };
+  cVal.sort(cmpC); cAtt.sort(cmpC);
+  gVal.sort(cmpS); dVal.sort(cmpS); gAtt.sort(cmpS); dAtt.sort(cmpS);
+  var alt = [], n = Math.max(gVal.length, dVal.length);
+  for (var i = 0; i < n; i++) { if (gVal[i]) alt.push(gVal[i]); if (dVal[i]) alt.push(dVal[i]); }
+  return cVal.concat(alt, cAtt, gAtt, dAtt);
+}
+
 // Synchro inscriptions stages → localStorage pour index.html (par email)
 function syncStageInscritsToLocal() {
   try {
@@ -9052,7 +9093,7 @@ function renderEssai() {
             +'</div>':'')
             +'</div>';
         };
-        _groupCouples(ins).forEach(function(g){
+        _essaiOrdonnerGroupes(_groupCouples(ins), function(e){ return estVraimentAttente(e, ins); }).forEach(function(g){
           if(g.type==='couple'){
             body+=_coupleWrap(_mkEssaiDateCard(g.persons[0])+_mkEssaiDateCard(g.persons[1]));
           } else {
