@@ -49,6 +49,13 @@ const ATTENDU = ['Julien', 'Claire', 'Lucas', 'Emma', 'Paul', 'Anna', 'Marc', 'R
 // AVANT le guideur à l'intérieur de chaque couple (comportement historique conservé).
 const ATTENDU_DOM = ['Claire', 'Julien', 'Emma', 'Lucas', 'Paul', 'Anna', 'Marc', 'Rosa', 'Sam', 'Zoe', 'Nina', 'Igor', 'Yves', 'Sofia', 'Ines'];
 
+// Élèves réguliers pour la vue Pointage (Élèves ★). Vic est marqué absent du jour.
+const ELEVES = [
+  { id: 901, prenom: 'Ted', nom: 'STAR', email: 'ted@test.fr', role: 'guideur', ville: 'paris', niveau: 'debutant', statut: 'inscrit', saison: '2025-2026' },
+  { id: 902, prenom: 'Uma', nom: 'STARE', email: 'uma@test.fr', role: 'guidee', ville: 'paris', niveau: 'debutant', statut: 'inscrit', saison: '2025-2026' },
+  { id: 903, prenom: 'Vic', nom: 'STARR', email: 'vic@test.fr', role: 'guideur', ville: 'paris', niveau: 'debutant', statut: 'inscrit', saison: '2025-2026' },
+];
+
 test.describe('Groupe S — Essai Tango : ordre Par date', () => {
 
   test('S1 — _essaiOrdonnerGroupes : 5 catégories, alternance, exp croissante, vide=0', async ({ page }) => {
@@ -130,5 +137,53 @@ test.describe('Groupe S — Essai Tango : ordre Par date', () => {
     });
     expect(attrs).toBeTruthy();
     expect(attrs.acc).toBe('ed_702'); // le bouton de SA ligne cible bien l'id 702, pas une position
+  });
+
+  test('S5 — vue Pointage : validés → Élèves ★ → ★ absents → attentes → supprimés', async ({ page }) => {
+    await bootDemo(page);
+    await page.evaluate(([fix, elv]) => {
+      adminData.essai = fix.slice();
+      adminData.coursTango = elv.slice();
+      adminData.absencesJour = [{ date: '2026-06-11', email: 'vic@test.fr' }];
+      currentTab = 'essai';
+      filtreEssai = 'pointage';
+      renderTab(); // rendu ASYNCHRONE
+    }, [FIX, ELEVES]);
+    await page.waitForFunction(() => document.querySelectorAll('#tab-content .point-row').length >= 19);
+    const noms = await page.$$eval('#tab-content .point-row .point-nom', els =>
+      els.map(e => e.textContent.trim().split(' ')[0]));
+    expect(noms).toEqual([
+      // 1. couples validés (guidée affichée avant le guideur — tri global historique)
+      'Claire', 'Julien', 'Emma', 'Lucas',
+      // 2. solos validés alternés (exp croissante puis inscription)
+      'Paul', 'Anna', 'Marc', 'Rosa', 'Sam', 'Zoe',
+      // 3. Élèves ★ présents (alternance guideur/guidée conservée)
+      'Ted', 'Uma',
+      // 3bis. Élèves ★ absents du jour
+      'Vic',
+      // 4-5-6. attentes : couple, puis guideurs, puis guidées (exp croissante)
+      'Nina', 'Igor', 'Yves', 'Sofia', 'Ines',
+      // Supprimés tout en bas
+      'Sup',
+    ]);
+  });
+
+  test('S6 — impression 🖨 : même ordre, Élèves ★ entre validés et attentes, sans supprimés', async ({ page }) => {
+    await bootDemo(page);
+    const rows = await page.evaluate(([fix, elv]) => {
+      adminData.essai = fix.slice();
+      adminData.coursTango = elv.slice();
+      adminData.absencesJour = [{ date: '2026-06-11', email: 'vic@test.fr' }];
+      let captured = null;
+      window._tevPrint = function (titre, sections) { captured = sections; };
+      imprimerEssaiTango();
+      return captured ? captured[0].rows.map(function (r) { return [r[0].split(' ')[0], r[3]]; }) : null;
+    }, [FIX, ELEVES]);
+    expect(rows).toEqual([
+      ['Julien', 'Essai'], ['Claire', 'Essai'], ['Lucas', 'Essai'], ['Emma', 'Essai'],
+      ['Paul', 'Essai'], ['Anna', 'Essai'], ['Marc', 'Essai'], ['Rosa', 'Essai'], ['Sam', 'Essai'], ['Zoe', 'Essai'],
+      ['Ted', 'Élève ★'], ['Uma', 'Élève ★'],
+      ['Igor', 'Attente'], ['Nina', 'Attente'], ['Yves', 'Attente'], ['Sofia', 'Attente'], ['Ines', 'Attente'],
+    ]);
   });
 });
