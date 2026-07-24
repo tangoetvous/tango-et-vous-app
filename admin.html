@@ -13695,14 +13695,19 @@ function renderYogaEssai() {
   var COURS_ORDER = {yin:0, hatha:1, forfait:2};
   var todayStr = today();
   var currentMoisKeyYoga = todayStr.slice(0,7);
-  var allDates = {};
-  (COURS_YOGA||[]).filter(function(d){ return d>=todayStr && dateAppartientSaison(d,sai); })
-    .forEach(function(d){ allDates[d]=true; });
+  // Uniquement les dates ayant AU MOINS UN inscrit, du jour et à venir (max 20).
+  // Les dates vides n'apparaissent plus ; les dates passées et leurs pointages
+  // restent consultables dans 📋 Historique.
   var parDate = {};
   liste.forEach(function(e){ if(!parDate[e.date])parDate[e.date]=[]; parDate[e.date].push(e); });
-  Object.keys(parDate).forEach(function(d){ allDates[d]=true; });
-  var sortedDates = Object.keys(allDates).sort().slice(0,20);
-  if (!sortedDates.length) return h+'<div class="empty-state">Aucun cours de yoga prévu.</div>';
+  var sortedDates = Object.keys(parDate).filter(function(d){ return d>=todayStr; }).sort().slice(0,20);
+  if (!sortedDates.length) return h+'<div class="empty-state">Aucune inscription d&#39;essai yoga à venir. Les dates passées sont consultables dans 📋 Historique.</div>';
+  // Horaires yin/hatha depuis Paramètres → Yoga → Horaires (repli sur les défauts)
+  var _yHor = Object.assign({}, DEFAULTS_HORAIRES.yoga);
+  try {
+    var _pYogH = JSON.parse(localStorage.getItem('tev_params_yoga_'+sai)||'{}');
+    Object.assign(_yHor, _pYogH.horaires||{});
+  } catch(e){}
   var parMois = {};
   sortedDates.forEach(function(date){
     var moisKey = date.slice(0,7);
@@ -13721,8 +13726,8 @@ function renderYogaEssai() {
       var pres = ins.filter(function(e){ return e.present===true; }).length;
       var abs  = ins.filter(function(e){ return e.present===false; }).length;
       var rest = ins.length - pres - abs;
-      h += '<div class="section-hdr" style="margin-top:8px;">'+fmtDate(date)
-        +' <span style="font-weight:400;color:var(--dim);">Espace Sorano</span>'
+      h += '<div class="section-hdr" style="margin-top:8px;font-size:16px;">'+fmtDate(date)
+        +' <span style="font-weight:400;color:var(--dim);font-size:12px;">Espace Sorano</span>'
         +(gratuit?' <span class="pill pill-ok" style="font-size:9px;">Gratuit</span>':' <span style="font-size:10px;color:var(--dim);">'+TARIFS.yoga_essai+'€</span>')
         +(ins.length?' <span style="font-weight:400;color:var(--dim);font-size:10px;">'+ins.length+' inscrit'+(ins.length>1?'s':'')+'</span> <span style="font-weight:400;font-size:10px;">— ✓'+pres+' ✗'+abs+' ?'+rest+'</span>':'')
         +(ins.length?' <a href="javascript:void(0)" class="btn btn-ghost" style="font-size:10px;padding:2px 8px;text-decoration:none;margin-left:6px;" onclick="essaiYogaCopierEmails(\''+date+'\')">📋 Emails</a>':'')
@@ -13758,20 +13763,20 @@ function renderYogaEssai() {
           +'</div>':'')
           +'</div>';
       }
-      var subHdrStyle = 'font-size:11px;font-weight:700;color:#a78bfa;padding:8px 0 4px;margin-top:4px;border-top:1px solid rgba(167,139,250,0.2);';
+      var subHdrStyle = 'font-size:14px;font-weight:700;color:#a78bfa;padding:8px 0 4px;margin-top:4px;border-top:1px solid rgba(167,139,250,0.2);';
       var yin     = ins.filter(function(e){ return e.cours==='yin'||e.cours==='forfait'; });
       var hatha   = ins.filter(function(e){ return e.cours==='hatha'||e.cours==='forfait'; });
       var yinPres = yin.filter(function(e){ return e.present===true; }).length;
       var yinAbs  = yin.filter(function(e){ return e.present===false; }).length;
       var hPres   = hatha.filter(function(e){ return e.present===true; }).length;
       var hAbs    = hatha.filter(function(e){ return e.present===false; }).length;
-      h += '<div style="'+subHdrStyle+'">🌙 Yin Yoga 10h30'
+      h += '<div style="'+subHdrStyle+'">🌙 Yin Yoga '+(_yHor.yin||'')
         +' <span style="font-weight:400;color:var(--dim);">'+yin.length+' inscrit'+(yin.length>1?'s':'')+'</span>'
         +' <span style="font-weight:400;">— ✓'+yinPres+' ✗'+yinAbs+' ?'+(yin.length-yinPres-yinAbs)+'</span>'
         +' &nbsp;'+capBadgeYogaDate('yin',date)
         +'</div>';
       yin.forEach(function(e){ h += rowYoga(e); });
-      h += '<div style="'+subHdrStyle+'margin-top:10px;">☀️ Hatha Yoga 11h30'
+      h += '<div style="'+subHdrStyle+'margin-top:10px;">☀️ Hatha Yoga '+(_yHor.hatha||'')
         +' <span style="font-weight:400;color:var(--dim);">'+hatha.length+' inscrit'+(hatha.length>1?'s':'')+'</span>'
         +' <span style="font-weight:400;">— ✓'+hPres+' ✗'+hAbs+' ?'+(hatha.length-hPres-hAbs)+'</span>'
         +' &nbsp;'+capBadgeYogaDate('hatha',date)
