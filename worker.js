@@ -8032,10 +8032,26 @@ async function handleCronRappelStageJ3(request, env) {
     fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_params_stages_${_s4Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyS4}` } }),
     fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=eq.tev_dates_stages_${_s4Sai}&select=valeur`, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyS4}` } }),
   ]);
-  const _s4GlobalAdr = _s4ParRes.ok ? (((await _s4ParRes.json())[0]||{}).valeur?.adresse||{}) : {};
+  const _s4ParVal    = _s4ParRes.ok ? (((await _s4ParRes.json())[0]||{}).valeur||{}) : {};
+  const _s4GlobalAdr = _s4ParVal.adresse  || {};
+  const _s4GlobalHor = _s4ParVal.horaires || {};
   const _s4DatesArr  = _s4DtRes.ok  ? (((await _s4DtRes.json())[0]||{}).valeur?.stages||[])    : [];
   const _s4StEntry   = _s4DatesArr.find(function(s){ return s.date===targetDate; }) || {};
   const _s4Adr       = (_s4StEntry.adresse && (_s4StEntry.adresse.nom||_s4StEntry.adresse.rue)) ? _s4StEntry.adresse : _s4GlobalAdr;
+  // Horaires ACTUELS depuis les paramètres (override par date prioritaire), comme
+  // pour l'adresse ci-dessus → un horaire personnalisé après l'inscription est
+  // bien répercuté dans le rappel. Repli sur l'horaire gravé si params absents.
+  const _s4HorMerged = Object.assign({}, _s4GlobalHor, _s4StEntry.horaires || {});
+  const _S4_HORKEY   = { technique:'tech', stage1:'s1', stage2:'s2', stage3:'s3', stage4:'s4' };
+  function _s4SlotHoraire(sl) {
+    const k = _S4_HORKEY[sl.type];
+    if (k) {
+      const d = _s4HorMerged[k+'_deb'], f = _s4HorMerged[k+'_fin'];
+      if (d && f) return d + '–' + f;
+      if (d) return d;
+    }
+    return sl.horaire || sl.horaire_debut || '';
+  }
   const _s4LieuSection = (_s4Adr.nom||_s4Adr.rue) ? `<div style="border-top:1px solid #e8d5a0;padding:12px 18px 8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;">${_s4Adr.nom?`<strong>${_esc(_s4Adr.nom)}</strong><br/>`:''}${_s4Adr.rue?`${_esc(_s4Adr.rue)}<br/>`:''}${_s4Adr.transport?`<span style="font-size:12px;color:#666;">${_esc(_s4Adr.transport)}</span>`:''}</div></div>` : '';
 
   // Dual query: new format (stage_date set) + old format (stage_date IS NULL, dates in donnees)
@@ -8079,7 +8095,9 @@ async function handleCronRappelStageJ3(request, env) {
     const prenomAff = _esc(e.prenom || '');
     const dateLabel = fmtDate(targetDate);
     const donnees   = typeof e.donnees === 'string' ? JSON.parse(e.donnees||'{}') : (e.donnees||{});
-    const slots     = donnees.stagesDetail || [];
+    // Horaire recalculé depuis les paramètres (override par date) au lieu de la
+    // valeur gravée à l'inscription → affichage ET sujet utilisent l'horaire actuel.
+    const slots     = (donnees.stagesDetail || []).map(function(sl){ return Object.assign({}, sl, { horaire: _s4SlotHoraire(sl) }); });
     let slotsHtml   = '';
     for (const sl of slots) {
       slotsHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire||sl.horaire_debut||'')}</span> — ${_esc(sl.theme||sl.type||'')}</div>`;
