@@ -11059,8 +11059,8 @@ function renderStages() {
   var _nStages=_stEntry.nStages||2;
   var _avecTech=_stEntry.technique!==false;
 
-  // Charger les horaires depuis les Paramètres
-  var _hor=_loadParam('stages',saiStage,'horaires');
+  // Horaires depuis les Paramètres + override par date personnalisé (st.horaires prioritaire)
+  var _hor=Object.assign({}, _loadParam('stages',saiStage,'horaires'), _stRawEntry.horaires||{});
   var _def=DEFAULTS_HORAIRES.stages||{};
   function _hv(k){return (_hor[k]||_def[k]||'');}
   var _slotHoraire={
@@ -11772,7 +11772,9 @@ function sauverSlotsStage(date, idx) {
     // S-edit — email + push + notif
     if (person && person.email) {
       var _saiSm = (function(iso){ var yr=parseInt(iso.slice(0,4)),mo=parseInt(iso.slice(5,7)); return mo>=9?(yr+'-'+(yr+1)):((yr-1)+'-'+yr); })(date);
-      var _horSm = _loadParam('stages', _saiSm, 'horaires');
+      var _stSm = (STAGES||[]).find(function(s){ return s.date===date; }) || {};
+      // Horaires de saison + override par date personnalisé (st.horaires prioritaire)
+      var _horSm = Object.assign({}, _loadParam('stages', _saiSm, 'horaires'), _stSm.horaires||{});
       var _defSm = DEFAULTS_HORAIRES.stages || {};
       function _hvSm(k){ return (_horSm[k]||_defSm[k]||''); }
       var _slotMapSm = {
@@ -11782,7 +11784,6 @@ function sauverSlotsStage(date, idx) {
         stage3: {deb:_hvSm('s3_deb'), fin:_hvSm('s3_fin')},
         stage4: {deb:_hvSm('s4_deb'), fin:_hvSm('s4_fin')},
       };
-      var _stSm = (STAGES||[]).find(function(s){ return s.date===date; }) || {};
       var _themesSm = _stSm.themes || [];
       function _mapSlotSm(slotId) {
         var hh = _slotMapSm[slotId] || {deb:'', fin:''};
@@ -11917,7 +11918,9 @@ function valAttStage(date, nom, btn) {
     // S3 — admin valide inscription stage attente → confirme
     if (st && st.email) {
       var _saiS3 = (function(iso){ var yr=parseInt(iso.slice(0,4)),mo=parseInt(iso.slice(5,7)); return mo>=9?(yr+'-'+(yr+1)):((yr-1)+'-'+yr); })(date);
-      var _horS3 = _loadParam('stages', _saiS3, 'horaires');
+      var _stS3 = (STAGES||[]).find(function(s){ return s.date===date; }) || {};
+      // Horaires de saison + override par date personnalisé (st.horaires prioritaire)
+      var _horS3 = Object.assign({}, _loadParam('stages', _saiS3, 'horaires'), _stS3.horaires||{});
       var _defS3 = DEFAULTS_HORAIRES.stages || {};
       function _hvS3(k){ return (_horS3[k]||_defS3[k]||''); }
       var _slotDebFinS3 = {
@@ -11927,7 +11930,6 @@ function valAttStage(date, nom, btn) {
         stage3: {deb:_hvS3('s3_deb'), fin:_hvS3('s3_fin')},
         stage4: {deb:_hvS3('s4_deb'), fin:_hvS3('s4_fin')},
       };
-      var _stS3 = (STAGES||[]).find(function(s){ return s.date===date; }) || {};
       var _themesS3 = _stS3.themes || [];
       var _mappedSlotsS3 = (st.slots||[]).map(function(slotId) {
         var hh = _slotDebFinS3[slotId] || {deb:'', fin:''};

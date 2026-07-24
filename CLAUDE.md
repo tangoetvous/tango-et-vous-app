@@ -1,5 +1,13 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-07-24 — Stages : horaires personnalisés par date ignorés côté admin (✅ CORRIGÉ)
+
+Bug signalé (capture) : une date de stage aux horaires personnalisés (ex. 1er août 2026) affichait dans la vue Stages le bandeau « 14H–15H » (= horaire de saison/défaut) au lieu de l'horaire perso de la date ; **les emails S-edit et S3 partaient aussi avec l'horaire par défaut**. Cause : 3 endroits d'`admin.html` lisaient `_loadParam('stages',sai,'horaires')` (horaires de SAISON) **sans fusionner l'override par date `st.horaires`**. Fix = `Object.assign({}, _loadParam(...), st.horaires||{})` (override par date prioritaire), pattern déjà correct ailleurs (agenda ~12130, email stage-annule ~12864, formulaire public `stages-pwa.html buildSlots` L667).
+- **3 corrections** : (1) `renderStages` bandeau vue Stages (~L11063, via `_stRawEntry.horaires`) ; (2) email **S-edit** `stage-modifie` (~L11775, `_stSm` remonté avant `_horSm`) ; (3) email **S3** `stage-valide` (~L11920, `_stS3` remonté avant `_horS3`).
+- **Non concernés** (déjà corrects) : inscription directe admin (iframe `stages-pwa.html` → `buildSlots` fusionne déjà) ; email S-cancel (`stage-annule` L11704 passe l'id du créneau, pas un horaire — quirk séparé, hors sujet) ; le worker (`buildStageBox`) affiche fidèlement l'horaire reçu dans la charge utile → corriger la charge utile côté client suffit.
+- ⚠️ Les emails partent avec l'horaire **gravé à l'envoi** depuis les params courants (avec override par date) — pas de re-lecture worker. Un changement d'horaire APRÈS envoi n'est pas répercuté (comportement voulu, cf. règle « baked à l'inscription »).
+- **Test groupe U** (`tests/u-stage-horaires-perso.spec.js`, U1) : bandeau affiche l'horaire perso de la date, pas celui de saison. Emails S-edit/S3 non testables en runtime (pas de worker) mais même pattern de fusion prouvé. Suite : 83/83.
+
 ## Session 2026-07-24 — Yoga → Essai Yoga : vue épurée (✅ FAIT)
 
 `renderYogaEssai` (admin.html) — 4 changements demandés par l'admin :
