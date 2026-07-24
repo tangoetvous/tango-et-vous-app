@@ -1,18 +1,27 @@
 // Groupe T — Yoga → Essai Yoga : vue filtrée (2026-07-24)
 // 1. Seules les dates avec AU MOINS UN inscrit apparaissent (plus de dates vides)
-// 2. Seules les dates du jour et à venir (le passé = onglet 📋 Historique), max 20
+// 2. Fenêtre passée de 7 jours (pointage ✓/✗ possible les jours qui suivent),
+//    au-delà → onglet 📋 Historique. Max 20 dates.
 // 3. Horaires yin/hatha des sous-titres lus depuis tev_params_yoga_<sai>.horaires
 //    (plus de « 10h30 » / « 11h30 » codés en dur)
 const { test, expect } = require('@playwright/test');
 const { bootDemo } = require('./helpers');
 
-// Saison active en démo = 2025-2026 (sept 2025 → août 2026). Aujourd'hui : juillet 2026.
+// Dates dynamiques (relatives à aujourd'hui) — ⚠️ fragilité connue : autour du
+// 1er septembre, une date à J+5 peut basculer sur la saison suivante et être
+// filtrée par dateAppartientSaison ; relancer hors de cette fenêtre si échec.
+function iso(offsetJours) {
+  const d = new Date(); d.setDate(d.getDate() + offsetJours);
+  return d.toISOString().slice(0, 10);
+}
 const ESSAIS = [
-  // Date PASSÉE avec inscrit → ne doit PLUS apparaître (Historique)
-  { id: 1, prenom: 'Pia', nom: 'PASSEE', email: 'pia@test.fr', date: '2026-07-01', cours: 'yin', statut: 'confirme' },
-  // Date FUTURE avec inscrits → affichée
-  { id: 2, prenom: 'Fab', nom: 'FUTUR', email: 'fab@test.fr', date: '2026-08-04', cours: 'yin', statut: 'confirme' },
-  { id: 3, prenom: 'Gus', nom: 'FORFAIT', email: 'gus@test.fr', date: '2026-08-04', cours: 'forfait', statut: 'confirme' },
+  // Passé LOINTAIN (>7 jours) → ne doit plus apparaître (Historique)
+  { id: 1, prenom: 'Pia', nom: 'PASSEE', email: 'pia@test.fr', date: iso(-20), cours: 'yin', statut: 'confirme' },
+  // Passé RÉCENT (≤7 jours) → visible, pointable dans les jours qui suivent
+  { id: 4, prenom: 'Rex', nom: 'RECENT', email: 'rex@test.fr', date: iso(-3), cours: 'yin', statut: 'confirme' },
+  // FUTUR avec inscrits → affiché
+  { id: 2, prenom: 'Fab', nom: 'FUTUR', email: 'fab@test.fr', date: iso(5), cours: 'yin', statut: 'confirme' },
+  { id: 3, prenom: 'Gus', nom: 'FORFAIT', email: 'gus@test.fr', date: iso(5), cours: 'forfait', statut: 'confirme' },
 ];
 
 async function bootYogaEssai(page, horaires) {
@@ -32,23 +41,21 @@ async function bootYogaEssai(page, horaires) {
 
 test.describe('Groupe T — Yoga Essai : dates filtrées + horaires params', () => {
 
-  test('T1 — seules les dates futures AVEC inscrits apparaissent ; passé et dates vides exclus', async ({ page }) => {
+  test('T1 — dates avec inscrits seulement ; fenêtre passée 7j ; vieux passé exclu', async ({ page }) => {
     await bootYogaEssai(page);
     const res = await page.evaluate(() => {
       const txt = document.getElementById('tab-content').textContent;
       return {
         futur: txt.indexOf('Fab') >= 0 && txt.indexOf('Gus') >= 0,
-        passe: txt.indexOf('Pia') >= 0,
+        recent: txt.indexOf('Rex') >= 0,
+        vieuxPasse: txt.indexOf('Pia') >= 0,
         vide: txt.indexOf('Aucune inscription pour cette date') >= 0,
-        moisAout: txt.indexOf('Août 2026') >= 0,
-        moisJuillet: txt.indexOf('Juillet 2026') >= 0,
       };
     });
-    expect(res.futur).toBe(true);        // la date du 4 août (2 inscrits) est affichée
-    expect(res.passe).toBe(false);       // le 1er juillet (passé) a disparu → Historique
+    expect(res.futur).toBe(true);        // date future avec inscrits affichée
+    expect(res.recent).toBe(true);       // date d'il y a 3 jours : encore pointable
+    expect(res.vieuxPasse).toBe(false);  // date d'il y a 20 jours → Historique
     expect(res.vide).toBe(false);        // plus aucune ligne « Aucune inscription… »
-    expect(res.moisAout).toBe(true);     // accordéon du mois avec inscrits présent
-    expect(res.moisJuillet).toBe(false); // mois sans date affichable → pas d'accordéon
   });
 
   test('T2 — horaires yin/hatha lus depuis Paramètres (plus de 10h30/11h30 en dur)', async ({ page }) => {

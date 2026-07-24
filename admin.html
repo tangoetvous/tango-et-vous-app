@@ -13695,12 +13695,14 @@ function renderYogaEssai() {
   var COURS_ORDER = {yin:0, hatha:1, forfait:2};
   var todayStr = today();
   var currentMoisKeyYoga = todayStr.slice(0,7);
-  // Uniquement les dates ayant AU MOINS UN inscrit, du jour et à venir (max 20).
-  // Les dates vides n'apparaissent plus ; les dates passées et leurs pointages
-  // restent consultables dans 📋 Historique.
+  // Uniquement les dates ayant AU MOINS UN inscrit (max 20) : les dates vides
+  // n'apparaissent plus. Fenêtre passée de 7 jours pour pouvoir pointer ✓/✗
+  // dans les jours qui suivent le cours ; au-delà → 📋 Historique.
+  var _dl = new Date(todayStr+'T12:00:00'); _dl.setDate(_dl.getDate()-7);
+  var dateLimiteYg = _dl.toISOString().slice(0,10);
   var parDate = {};
   liste.forEach(function(e){ if(!parDate[e.date])parDate[e.date]=[]; parDate[e.date].push(e); });
-  var sortedDates = Object.keys(parDate).filter(function(d){ return d>=todayStr; }).sort().slice(0,20);
+  var sortedDates = Object.keys(parDate).filter(function(d){ return d>=dateLimiteYg; }).sort().slice(0,20);
   if (!sortedDates.length) return h+'<div class="empty-state">Aucune inscription d&#39;essai yoga à venir. Les dates passées sont consultables dans 📋 Historique.</div>';
   // Horaires yin/hatha depuis Paramètres → Yoga → Horaires (repli sur les défauts)
   var _yHor = Object.assign({}, DEFAULTS_HORAIRES.yoga);

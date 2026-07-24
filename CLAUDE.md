@@ -4,7 +4,7 @@
 
 `renderYogaEssai` (admin.html) — 4 changements demandés par l'admin :
 1. **Seules les dates avec AU MOINS UN inscrit** sont affichées (avant : toutes les dates futures du calendrier yoga apparaissaient avec « Aucune inscription pour cette date »). Un mois sans date affichable n'a plus d'accordéon du tout.
-2. **Seules les dates du jour et à venir** (le passé = onglet 📋 Historique). Résout au passage l'éviction : le plafond `slice(0,20)` ne compte plus que du futur. ⚠️ Conséquence assumée : le pointage ✓/✗ d'une date passée n'est plus possible depuis cette vue dès le lendemain (Historique = lecture) — pointer le jour même.
+2. **Fenêtre passée de 7 jours** (correction demandée le jour même : « il faut absolument pouvoir pointer dans les jours qui suivent ») : les dates de J-7 à aujourd'hui avec inscrits restent visibles et pointables ✓/✗ ; au-delà → onglet 📋 Historique. Résout aussi l'éviction : le plafond `slice(0,20)` ne compte plus le vieux passé.
 3. **Texte agrandi** : date `section-hdr` 16px, sous-titres Yin/Hatha 11px → 14px.
 4. **Horaires yin/hatha des sous-titres lus depuis `tev_params_yoga_<sai>.horaires`** (repli `DEFAULTS_HORAIRES.yoga`) — avant : « 10h30 »/« 11h30 » codés en dur. ⚠️ Il RESTE des horaires yoga en dur ailleurs (non demandés) : `COURS_YOGA_LBL` (~13659), `COURS_YOGA_LBL2` dans `imprimerYogaEleves` (~10175).
 - **Tests groupe T** (`tests/t-yoga-essai-vue.spec.js`, 3 tests) : T1 filtrage dates (futures avec inscrits seulement, pas d'accordéon vide) ; T2 horaires depuis params ; T3 repli défauts. Suite complète : 82/82.
