@@ -1,5 +1,17 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-07-24 — Newsletter : repère « déjà copié dans ma liste de diffusion » (✅ FAIT)
+
+Avant : un seul bouton « Copier toutes les adresses » → impossible de savoir ce qui avait déjà été versé dans l'outil d'emailing externe. Désormais l'admin peut **marquer** qu'un lot a bien été ajouté, puis choisir **toutes** les adresses ou **seulement les nouvelles depuis la dernière copie**.
+
+- **Stockage** : clé plate **`tev_newsletter_export`** = `{date: ISO, nb: N}` dans la table `parametres` (via `TEV.setParam`, miroir localStorage automatique par `chargerParamsRemote` → repère **partagé entre appareils**). ⚠️ **Aucune migration SQL, aucune policy RLS modifiée** — `newsletter_emails` reste en INSERT public / SELECT+DELETE admin (pas d'UPDATE).
+- **Confirmation explicite (choix admin)** : copier ne marque PAS. `newsletterCopierEmails(mode)` pose `_nlPendingCopie={nb,mode,at}` → bandeau doré « Sont-elles bien ajoutées à votre liste ? » → `newsletterMarquerCopie()` (pose le repère) ou `newsletterPlusTard()` (rien). ⚠️ L'horodatage retenu est celui de **la copie** (`at`), pas de la confirmation : une adresse arrivée entre les deux ne doit pas être marquée copiée.
+- **« Nouvelle » = PREMIÈRE collecte postérieure au repère** (`_nlUniques()` garde `firstTs` = min des `created_at` de l'email) : une personne qui remplit à nouveau un formulaire ne ressort PAS comme nouvelle. L'affichage de la date par ligne reste la collecte la plus récente (comportement historique).
+- ⚠️ **Comparaison par `Date.parse`, jamais par chaîne** : Supabase renvoie `…+00:00` et `new Date().toISOString()` donne `…Z` → la comparaison textuelle serait fausse.
+- **UI** : sans repère → un seul bouton (tout est nouveau, deux boutons feraient la même chose) ; avec repère → « 📋 Copier les N nouvelles » (doré, principal) + « 📋 Copier toutes (total) » (ghost) ; pastille **NOUVEAU** par ligne (seulement si un repère existe) ; lien discret `↺ Réinitialiser` (`newsletterResetExport`, avec `ouvrirModalConfirm`).
+- **Garde anti-polling ajoutée** : `if (currentTab === 'emails-newsletter' && _nlPendingCopie) return;` dans `_renderTabSiPasFormulaire` — sans elle le rafraîchissement 15 s efface le bandeau de confirmation.
+- **Tests groupe V** (`tests/v-newsletter-export.spec.js`, 5 tests) : V1 sans repère (1 bouton, 0 pastille) ; V2 copier ne marque pas + « Plus tard » + « Oui » pose le repère ; V3 ré-inscription non comptée comme nouvelle ; V4 copie ciblée + survie au polling ; V5 réinitialisation. Suite complète : 88/88.
+
 ## Session 2026-07-24 — Stages : horaires personnalisés par date ignorés côté admin (✅ CORRIGÉ)
 
 Bug signalé (capture) : une date de stage aux horaires personnalisés (ex. 1er août 2026) affichait dans la vue Stages le bandeau « 14H–15H » (= horaire de saison/défaut) au lieu de l'horaire perso de la date ; **les emails S-edit et S3 partaient aussi avec l'horaire par défaut**. Cause : 3 endroits d'`admin.html` lisaient `_loadParam('stages',sai,'horaires')` (horaires de SAISON) **sans fusionner l'override par date `st.horaires`**. Fix = `Object.assign({}, _loadParam(...), st.horaires||{})` (override par date prioritaire), pattern déjà correct ailleurs (agenda ~12130, email stage-annule ~12864, formulaire public `stages-pwa.html buildSlots` L667).

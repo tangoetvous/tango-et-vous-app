@@ -6009,6 +6009,7 @@ function _renderTabSiPasFormulaire() {
       && (window.scrollY || document.documentElement.scrollTop || 0) > 100) return;
   if (currentTab === 'publications' && gel('pub-ed') && gel('pub-ed').innerHTML.trim()) return; // formulaire pub ouvert — ne pas écraser
   if (currentTab === 'notifications') return; // ne pas interrompre la lecture des notifs
+  if (currentTab === 'emails-newsletter' && _nlPendingCopie) return; // bandeau « marquer comme copiées » affiché
   if (currentTab === 'videos') return; // ne pas interrompre un upload / la saisie du formulaire vidéo
   if (currentTab === 'agenda') return; // ne pas interrompre la navigation entre les mois
   if (currentTab === 'parametres' && (_nivCurrExpanded || _nivVidExpanded)) return; // éditeur Mon niveau ouvert — ne pas écraser les saisies
@@ -10062,9 +10063,72 @@ window.stageCopierEmails = function() {
   _copierEmailsFiches((st.inscrits || []).filter(function(i){ return !i.attente; }));
 };
 
-// Newsletter : copie tous les emails collectés (dédoublonnés par _copierEmailsFiches)
-window.newsletterCopierEmails = function() {
-  _copierEmailsFiches(adminData.newsletter || []);
+// ── Newsletter : repère « dernière copie vers ma liste de diffusion » ──────
+// Stocké dans la table parametres (clé plate tev_newsletter_export) → partagé
+// entre appareils ; chargerParamsRemote le mirroir en localStorage au démarrage.
+// Tant que l'admin n'a pas confirmé « oui, ajoutées à ma liste », rien n'est marqué.
+var _nlPendingCopie = null; // {nb, mode, at} — bandeau de confirmation affiché
+function _nlExportInfo() {
+  try { var v = JSON.parse(localStorage.getItem('tev_newsletter_export')||'null'); return (v && v.date) ? v : null; }
+  catch(e) { return null; }
+}
+function _nlSetExport(val) {
+  try {
+    if (val) localStorage.setItem('tev_newsletter_export', JSON.stringify(val));
+    else localStorage.removeItem('tev_newsletter_export');
+  } catch(e){}
+  if (!IS_DEMO) Promise.resolve(TEV.setParam('tev_newsletter_export', val || {})).catch(function(){});
+}
+// Adresses dédoublonnées + repérage des nouvelles depuis la dernière copie.
+// La date retenue par adresse est celle de sa PREMIÈRE collecte : quelqu'un qui
+// remplit à nouveau un formulaire ne doit pas ressortir comme « nouveau ».
+// Comparaison par timestamp (Date.parse) et non par chaîne : les formats ISO de
+// Supabase (+00:00) et de new Date().toISOString() (Z) ne se comparent pas en texte.
+function _nlUniques() {
+  var exp = _nlExportInfo();
+  var expTs = exp ? Date.parse(exp.date) : 0;
+  var byMail = {}, uniques = [];
+  (adminData.newsletter || []).forEach(function(r){
+    var em = ((r && r.email) || '').trim().toLowerCase();
+    if (!em || em.indexOf('@') < 1) return;
+    var ts = r.created_at ? Date.parse(r.created_at) : 0;
+    var u = byMail[em];
+    if (u) { if (ts && (!u.firstTs || ts < u.firstTs)) u.firstTs = ts; return; }
+    // liste triée created_at DESC → created_at = collecte la plus récente (affichage)
+    u = { email: em, source: r.source || 'newsletter', created_at: r.created_at, firstTs: ts };
+    byMail[em] = u; uniques.push(u);
+  });
+  uniques.forEach(function(u){ u.nouvelle = !expTs || !u.firstTs || u.firstTs > expTs; });
+  return { uniques: uniques, nouvelles: uniques.filter(function(u){ return u.nouvelle; }), exp: exp, expTs: expTs };
+}
+
+// Newsletter : copie toutes les adresses, ou seulement les nouvelles depuis la dernière copie
+window.newsletterCopierEmails = function(mode) {
+  var d = _nlUniques();
+  var fiches = (mode === 'nouvelles') ? d.nouvelles : d.uniques;
+  if (!fiches.length) { afficherToast('⚠️ Aucune adresse à copier'); return; }
+  _copierEmailsFiches(fiches);
+  // Horodatage pris au moment de la COPIE (pas de la confirmation) : une adresse
+  // arrivée entre les deux ne doit pas être marquée comme déjà copiée.
+  _nlPendingCopie = { nb: fiches.length, mode: (mode === 'nouvelles' ? 'nouvelles' : 'toutes'), at: new Date().toISOString() };
+  renderTab();
+};
+window.newsletterMarquerCopie = function() {
+  var p = _nlPendingCopie;
+  if (!p) return;
+  _nlSetExport({ date: p.at, nb: p.nb });
+  _nlPendingCopie = null;
+  afficherToast('✓ '+p.nb+' adresse'+(p.nb>1?'s':'')+' marquée'+(p.nb>1?'s':'')+' comme ajoutée'+(p.nb>1?'s':'')+' à votre liste');
+  renderTab();
+};
+window.newsletterPlusTard = function() { _nlPendingCopie = null; renderTab(); };
+window.newsletterResetExport = function() {
+  ouvrirModalConfirm('Réinitialiser le repère ? Toutes les adresses seront à nouveau considérées comme non copiées.', function(){
+    _nlSetExport(null);
+    _nlPendingCopie = null;
+    afficherToast('↺ Repère réinitialisé');
+    renderTab();
+  });
 };
 
 // Newsletter : supprime une adresse (toutes ses lignes, quelle que soit la source)
@@ -15763,23 +15827,49 @@ function renderEmailsNewsletter() {
     'inscription-cours':'🎓 Inscription','stages':'💃 Stage','cours-particuliers':'🎵 Cours part.',
     'demande-devis':'📋 Devis'
   };
-  var liste = adminData.newsletter || [];
-  // Dédoublonnage par email (garde la 1ère occurrence = la plus récente, liste triée created_at desc)
-  var seen = {}, uniques = [];
-  liste.forEach(function(r){
-    var em = ((r && r.email) || '').trim().toLowerCase();
-    if (!em || em.indexOf('@') < 1) return;
-    if (seen[em]) return; seen[em] = true;
-    uniques.push({ email: em, source: r.source || 'newsletter', created_at: r.created_at });
-  });
-  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;">'
+  var _nl = _nlUniques();
+  var uniques = _nl.uniques, nouvelles = _nl.nouvelles, exp = _nl.exp;
+  var h = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap;">'
     + '<h2 style="margin:0;font-size:16px;">📧 Emails newsletter</h2>'
     + '<span style="font-size:12px;color:var(--dim);">'+uniques.length+' adresse'+(uniques.length>1?'s':'')+' unique'+(uniques.length>1?'s':'')+'</span>'
     + '</div>';
   if (!uniques.length) {
     return h + '<div class="empty-state">Aucune adresse pour l\'instant. Les inscriptions à la newsletter et via les formulaires publics apparaîtront ici.</div>';
   }
-  h += '<button class="btn btn-gold" onclick="newsletterCopierEmails()" style="width:100%;margin-bottom:6px;">📋 Copier toutes les adresses (pour ma liste de diffusion)</button>';
+  // ── Ligne d'état : dernière copie vers la liste de diffusion ──
+  if (exp) {
+    h += '<div style="font-size:12px;color:var(--dim);margin-bottom:12px;line-height:1.6;">'
+      + '📤 Dernière copie : <strong style="color:var(--text);">'+_fmtJour((exp.date||'').slice(0,10))+'</strong>'
+      + (exp.nb ? ' ('+exp.nb+' adresse'+(exp.nb>1?'s':'')+')' : '')
+      + (nouvelles.length
+          ? ' · <strong style="color:var(--gold);">'+nouvelles.length+' nouvelle'+(nouvelles.length>1?'s':'')+' depuis</strong>'
+          : ' · aucune nouvelle adresse depuis')
+      + ' &nbsp;<a href="javascript:void(0)" onclick="newsletterResetExport()" title="Tout reconsidérer comme non copié" style="font-size:11px;color:var(--dim);">↺ Réinitialiser</a>'
+      + '</div>';
+  } else {
+    h += '<div style="font-size:12px;color:var(--dim);margin-bottom:12px;line-height:1.6;">'
+      + '📤 Aucune copie enregistrée pour l\'instant — toutes les adresses sont à ajouter à votre liste de diffusion.</div>';
+  }
+  // ── Bandeau de confirmation après une copie ──
+  if (_nlPendingCopie) {
+    var _pn = _nlPendingCopie.nb;
+    h += '<div style="background:rgba(212,175,55,0.12);border:1px solid var(--gold);border-radius:8px;padding:12px 14px;margin-bottom:12px;">'
+      + '<div style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:10px;">📋 <strong>'+_pn+' adresse'+(_pn>1?'s':'')+'</strong> copiée'+(_pn>1?'s':'')+' dans le presse-papier.<br>Sont-elles bien ajoutées à votre liste de diffusion ?</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+      + '<button class="btn btn-gold" style="font-size:12px;padding:6px 14px;" onclick="newsletterMarquerCopie()">✓ Oui, marquer comme copiées</button>'
+      + '<button class="btn btn-ghost" style="font-size:12px;padding:6px 14px;" onclick="newsletterPlusTard()">Plus tard</button>'
+      + '</div></div>';
+  }
+  // ── Boutons de copie ──
+  if (!exp) {
+    // Première copie : toutes les adresses sont nouvelles → un seul bouton
+    h += '<button class="btn btn-gold" onclick="newsletterCopierEmails(\'toutes\')" style="width:100%;margin-bottom:6px;">📋 Copier toutes les adresses ('+uniques.length+')</button>';
+  } else {
+    if (nouvelles.length) {
+      h += '<button class="btn btn-gold" onclick="newsletterCopierEmails(\'nouvelles\')" style="width:100%;margin-bottom:6px;">📋 Copier les '+nouvelles.length+' nouvelle'+(nouvelles.length>1?'s':'')+' adresse'+(nouvelles.length>1?'s':'')+'</button>';
+    }
+    h += '<button class="btn btn-ghost" onclick="newsletterCopierEmails(\'toutes\')" style="width:100%;margin-bottom:6px;font-size:12px;">📋 Copier toutes les adresses ('+uniques.length+')</button>';
+  }
   h += '<div style="font-size:11px;color:var(--dim);font-style:italic;margin-bottom:14px;">Adresses copiées séparées par des virgules — collez-les dans le champ destinataires de votre outil d\'emailing.</div>';
   h += '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">';
   uniques.forEach(function(u, i){
@@ -15787,6 +15877,7 @@ function renderEmailsNewsletter() {
     h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;'+(i%2?'background:var(--s2);':'')+'font-size:13px;">'
       + '<span style="color:var(--text);word-break:break-all;">'+escHtml(u.email)+'</span>'
       + '<span style="display:flex;gap:8px;align-items:center;flex-shrink:0;white-space:nowrap;">'
+      + (exp && u.nouvelle ? '<span style="font-size:9px;font-weight:700;background:#1b5e20;color:#a5d6a7;border:1px solid #a5d6a7;border-radius:20px;padding:1px 6px;">NOUVEAU</span>' : '')
       + '<span style="font-size:10px;color:var(--dim);">'+(SRC_LBL[u.source]||u.source)+'</span>'
       + (dt?'<span style="font-size:10px;color:var(--dim);">'+dt+'</span>':'')
       + '<a href="javascript:void(0)" onclick="supprimerNewsletterEmail(\''+escHtml(u.email).replace(/'/g,"\\'")+'\')" title="Supprimer cette adresse" style="text-decoration:none;font-size:13px;color:#e55;">🗑</a>'
