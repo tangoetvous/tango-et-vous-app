@@ -5577,6 +5577,7 @@ async function chargerDonnees() {
               prenom: donnees.partenairePrenom || '', nom: donnees.partenaireNom || '',
               email: ins.partenaire_email || '', tel: donnees.partenaireTel || '',
               role: _normRole(donnees.rolePartenaire || ''),
+              niveau: ins.niveau || '', // le formulaire ne demande qu'un niveau (celui de l'inscripteur)
               slots: slotsP, present: null, montant: di.prixPartenaire || 0, attente: false,
               partenaire: ins.prenom + ' ' + ins.nom, emailPartenaire: ins.email
             });
@@ -11093,6 +11094,22 @@ function _coupleWrap(inner) {
 function _coeurSep() {
   return '<div style="text-align:center;color:#c0392b;font-size:13px;line-height:1.4;">♥</div>';
 }
+// Pastille de niveau sur les fiches stage : D (Débutant) · I (Intermédiaire) · A (Avancé).
+// Le formulaire public impose ces 3 valeurs ; repli tolérant sur la 1re lettre (accents
+// retirés) pour d'éventuelles données anciennes. Niveau absent → aucune pastille.
+function _stNiveauBadge(niv) {
+  var s = (niv || '').trim();
+  if (!s) return '';
+  var k = (s.normalize ? s.normalize('NFD').replace(/[̀-ͯ]/g, '') : s).charAt(0).toUpperCase();
+  var MAP = {
+    D: { l:'D', css:'background:rgba(74,222,128,.15);color:#4ade80;border:1px solid rgba(74,222,128,.45)' },
+    I: { l:'I', css:'background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.45)' },
+    A: { l:'A', css:'background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.45)' }
+  };
+  var m = MAP[k];
+  if (!m) return '';
+  return '<span title="'+escHtml(s)+'" style="display:inline-block;font-size:9px;font-weight:800;line-height:1;padding:3px 6px;border-radius:10px;'+m.css+'">'+m.l+'</span>';
+}
 function renderStages() {
   var saiStage=saisonActive();
   var stages=adminData.stages||{};
@@ -11191,6 +11208,7 @@ function renderStages() {
       return '<div class="card'+(i.attente?' hl-warn':'')+'" style="'+_cardStyle+'" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top" style="margin-bottom:0;">'
         +'<div style="flex:1;min-width:0;">'
         +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
+        +_stNiveauBadge(i.niveau)
         +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span>'+statPill+'</div>'
         +'</div>'
         +'<div style="display:flex;gap:4px;flex-shrink:0;align-items:center;">'
@@ -11257,8 +11275,9 @@ function renderStages() {
         var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
         var stpConfBadge = i.presenceConfirmee ? ' <span class="pill pill-ok" style="font-size:8px;">👍</span>' : '';
         return '<div class="point-row" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;"><div class="point-nom" style="display:flex;align-items:center;gap:6px;">'+i.prenom+' '+i.nom
+          +_stNiveauBadge(i.niveau)
           +' <span class="pill '+rcls+'" style="font-size:8px;">'+i.role+'</span>'+stpConfBadge+'</div>'
-          +'<div class="point-sub">'+(i.niveau?i.niveau+' · ':'')+''+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
+          +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
           +'<div style="display:flex;gap:6px;">'
           +'<button class="btn-point btn-pres'+(i.present===true?' on':'')+'" data-action="pointer-stage-pres" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✓</button>'
           +'<button class="btn-point btn-abs'+(i.present===false?' on':'')+'" data-action="pointer-stage-abs" data-date="'+filtreStage+'" data-idx="'+origIdx+'">✗</button>'
@@ -11282,25 +11301,13 @@ function renderStages() {
       +'<div class="stat"><div class="stat-n">'+att2.filter(function(i){return i.role==='guideur';}).length+'</div><div class="stat-l">Guideurs</div></div>'
       +'<div class="stat"><div class="stat-n">'+att2.filter(function(i){return i.role==='guidee';}).length+'</div><div class="stat-l">Guidées</div></div>'
       +'</div>';
-    var _niveauRank={'Débutant':0,'Intermédiaire':1,'Avancé':2};
-    var _niveauColor={
-      'Débutant':  'background:rgba(74,222,128,.15);color:#4ade80',
-      'Intermédiaire':'background:rgba(251,191,36,.15);color:#fbbf24',
-      'Avancé':    'background:rgba(248,113,113,.15);color:#f87171'
-    };
-    function _niveauBadge(niv){
-      if(!niv) return '';
-      return '<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;'
-        +(_niveauColor[niv]||'background:rgba(148,163,184,.15);color:#94a3b8')+'">'
-        +niv+'</span>';
-    }
     function _attStageCard(i){
       var rcls=i.role==='guideur'?'pill-guideur':'pill-guidee';
       return '<div class="card hl-warn" data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div class="card-top">'
         +'<div><div class="card-nom nom-clickable" data-action="open-contact" data-nom="'+(i.prenom+' '+i.nom).replace(/"/g,'&quot;')+'" data-email="'+(i.email||'')+'" data-tel="'+(i.tel||'')+'" data-ctx="stage">'+i.prenom+' '+i.nom+'</div>'
         +'<div class="card-sub">'+(i.slots||[]).map(slotLabel).join(', ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div></div>'
         +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
-        +_niveauBadge(i.niveau)
+        +_stNiveauBadge(i.niveau)
         +'<span class="pill '+rcls+'" style="font-size:9px;">'+i.role+'</span>'
         +'</div></div>'
         +'<div class="btn-row">'
@@ -11367,6 +11374,7 @@ function renderStages() {
       h+='<div class="point-row">'
         +'<div style="flex:1;min-width:0;">'
         +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+i.prenom+' '+i.nom
+        +_stNiveauBadge(i.niveau)
         +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span></div>'
         +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+(i.partenaire?' · avec '+i.partenaire:'')+'</div>'
         +'</div>'
@@ -11393,6 +11401,7 @@ function renderStages() {
     var rowConfBadge = i.presenceConfirmee ? ' <span class="pill pill-ok" style="font-size:8px;">👍</span>' : '';
     return '<div class="point-row"'+(noMargin?' style="margin-bottom:0;"':'')+' data-snom="'+(i.nom+' '+i.prenom).toLowerCase().replace(/"/g,'&quot;')+'"><div style="flex:1;min-width:0;">'
       +'<div class="point-nom" style="display:flex;align-items:center;gap:5px;">'+nomCliquable(i.prenom+' '+i.nom,i.email||'',i.tel||'','stage')
+      +_stNiveauBadge(i.niveau)
       +' <span class="pill '+rcls+'" style="font-size:8px;padding:1px 6px;">'+i.role+'</span>'+rowConfBadge+'</div>'
       +'<div class="point-sub">'+(i.slots||[]).map(slotLabel).join(' · ')+' · '+(i.montant||0)+'€'+(i.partenaire?'<span style="color:#c0392b;"> ♥ '+i.partenaire+'</span>':'')+'</div></div>'
       +'<div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">'

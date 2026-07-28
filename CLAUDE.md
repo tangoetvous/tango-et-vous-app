@@ -1,5 +1,16 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-07-24 — Stages : pastille de niveau D / I / A sur les fiches (✅ FAIT)
+
+Le formulaire `stages-pwa.html` demande le niveau (**Débutant / Intermédiaire / Avancé**, champ obligatoire, `#niveauGroup` L403-407) → colonne `inscriptions_stages.niveau` → déjà transporté dans `adminData.stages[date].inscrits[].niveau` (mapping admin.html ~L5542 nouveau format, ~L5565 ancien format). **Aucune donnée à collecter, aucune migration** — le champ était juste sous-exploité à l'affichage.
+
+- **Helper global `_stNiveauBadge(niv)`** (admin.html, juste avant `renderStages`) : pastille compacte **D** (vert `#4ade80`) / **I** (orange `#fbbf24`) / **A** (rouge `#f87171`), nom complet en `title=`. Repli tolérant sur la 1ʳᵉ lettre après suppression des accents (NFD) ; niveau vide ou valeur hors D/I/A → **chaîne vide** (aucune pastille, pas de plantage).
+- **Posée sur les 5 rendus de `renderStages`** : `_cardTous` (📋 Tous), `_stPRow` (✓ Pointage), `_attStageCard` (⏳ Attente), la ligne d'attente par créneau, et `_rowSlot` (inscrits par créneau).
+- **Remplacements** : l'ancien helper local `_niveauBadge`/`_niveauColor` (mot entier, vue Attente) est supprimé au profit du helper global ; le niveau en **texte** dans la sous-ligne du Pointage est retiré (redondant avec la pastille). ⚠️ **Le regroupement par niveau de la vue Attente est CONSERVÉ** (titres de section « DÉBUTANT / INTERMÉDIAIRE / AVANCÉ / Niveau non renseigné », ~L11317) — ne pas le confondre avec un libellé de fiche.
+- **Trou comblé** : les fiches PARTENAIRE de l'ancien format ne transportaient pas `niveau` (~L5578) → ajouté.
+- ⚠️ **Quirk métier connu (non corrigé, hors périmètre)** : le formulaire ne demande **qu'un seul niveau**, celui de l'inscripteur, et l'applique aussi à la ligne du partenaire (`stages-pwa.html` L1224 `niveau: data.niveau`). Dans un couple, les deux portent donc la même pastille même si leurs niveaux réels diffèrent. Corriger demanderait d'ajouter une question « niveau du partenaire » au formulaire public.
+- **Tests groupe W** (`tests/w-stage-niveau-badge.spec.js`, 5 tests) : W1 helper (lettres, infobulle, couleurs, vide/nul/inconnu) ; W2 vue Tous ; W3 Pointage (pastille + mot retiré du détail) ; W4 Attente (pastille sur la fiche, titres de groupe conservés) ; W5 vue par créneau. Suite complète : 93/93.
+
 ## Session 2026-07-24 — Newsletter : repère « déjà copié dans ma liste de diffusion » (✅ FAIT)
 
 Avant : un seul bouton « Copier toutes les adresses » → impossible de savoir ce qui avait déjà été versé dans l'outil d'emailing externe. Désormais l'admin peut **marquer** qu'un lot a bien été ajouté, puis choisir **toutes** les adresses ou **seulement les nouvelles depuis la dernière copie**.
