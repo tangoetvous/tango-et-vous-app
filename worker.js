@@ -8052,13 +8052,38 @@ async function handleCronRappelStageJ3(request, env) {
     }
     return sl.horaire || sl.horaire_debut || '';
   }
+  // Thème du créneau : gravé à l'inscription, sinon relu dans les params de la date
+  // (themes[0..3] = stage1..stage4, cf. buildSlots de stages-pwa.html)
+  const _s4Themes = _s4StEntry.themes || [];
+  const _S4_THIDX = { stage1:0, stage2:1, stage3:2, stage4:3 };
+  function _s4SlotTheme(sl) {
+    if (sl.theme) return sl.theme;
+    if (sl.type === 'technique') return 'Technique Leader & Follower';
+    const i = _S4_THIDX[sl.type];
+    return (i != null && _s4Themes[i]) ? _s4Themes[i] : (sl.type || '');
+  }
+  // Créneaux de la personne pour CETTE date. ⚠️ `donnees` du nouveau format est la
+  // charge utile complète du formulaire : les créneaux sont dans
+  // donnees.inscriptionsParDate[].stagesDetail, PAS dans donnees.stagesDetail.
+  // Les fiches partenaire du nouveau format ont `donnees` vide → repli sur les types
+  // gravés dans stage_nom (ex. "technique|stage1"), même lecture que l'admin.
+  function _s4Slots(e, donnees) {
+    const parDate = donnees.inscriptionsParDate;
+    if (Array.isArray(parDate)) {
+      const entry = parDate.find(function(d){ return d.date === targetDate; });
+      if (entry && (entry.stagesDetail || []).length) return entry.stagesDetail;
+    }
+    if ((donnees.stagesDetail || []).length) return donnees.stagesDetail;
+    return String(e.stage_nom || '').split('|').map(function(s){ return s.trim(); }).filter(Boolean)
+      .map(function(s){ const m = s.match(/(technique|stage\d+)$/); return { type: m ? m[1] : s }; });
+  }
   const _s4LieuSection = (_s4Adr.nom||_s4Adr.rue) ? `<div style="border-top:1px solid #e8d5a0;padding:12px 18px 8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;">${_s4Adr.nom?`<strong>${_esc(_s4Adr.nom)}</strong><br/>`:''}${_s4Adr.rue?`${_esc(_s4Adr.rue)}<br/>`:''}${_s4Adr.transport?`<span style="font-size:12px;color:#666;">${_esc(_s4Adr.transport)}</span>`:''}</div></div>` : '';
 
   // Dual query: new format (stage_date set) + old format (stage_date IS NULL, dates in donnees)
   const [resNew, resOld] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=eq.${targetDate}&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees`,
+    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=eq.${targetDate}&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees,stage_nom`,
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyS4}` } }),
-    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=is.null&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees`,
+    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=is.null&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees,stage_nom`,
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyS4}` } }),
   ]);
   if (!resNew.ok) return corsResponse({ ok: false, error: 'Supabase query failed (new)' }, 500, {}, request);
@@ -8097,10 +8122,10 @@ async function handleCronRappelStageJ3(request, env) {
     const donnees   = typeof e.donnees === 'string' ? JSON.parse(e.donnees||'{}') : (e.donnees||{});
     // Horaire recalculé depuis les paramètres (override par date) au lieu de la
     // valeur gravée à l'inscription → affichage ET sujet utilisent l'horaire actuel.
-    const slots     = (donnees.stagesDetail || []).map(function(sl){ return Object.assign({}, sl, { horaire: _s4SlotHoraire(sl) }); });
+    const slots     = _s4Slots(e, donnees).map(function(sl){ return Object.assign({}, sl, { horaire: _s4SlotHoraire(sl), theme: _s4SlotTheme(sl) }); });
     let slotsHtml   = '';
     for (const sl of slots) {
-      slotsHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire||sl.horaire_debut||'')}</span> — ${_esc(sl.theme||sl.type||'')}</div>`;
+      slotsHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire||'')}</span> — ${_esc(sl.theme||'')}</div>`;
     }
     const stageBox = `<div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
       <div style="background:#B8962E;padding:12px 18px;">
@@ -8124,8 +8149,11 @@ async function handleCronRappelStageJ3(request, env) {
         </div>
         ${signEleve}
       </div>${footer}`, 'Rappel - votre stage a lieu dans 3 jours - confirmez votre presence');
-    const hdeb4 = slots[0]?.horaire || slots[0]?.horaire_debut || '';
-    const hfin4 = (slots[slots.length-1]||{}).horaire || (slots[slots.length-1]||{}).horaire_fin || '';
+    // Plage globale : début du 1er créneau → fin du dernier (les horaires sont « Xh–Yh »)
+    const _s4Bornes = slots.map(function(s){ return String(s.horaire||'').split('–'); }).filter(function(p){ return p[0]; });
+    const _s4Prem = _s4Bornes[0] || [], _s4Der = _s4Bornes[_s4Bornes.length-1] || [];
+    const hdeb4 = _s4Prem[0] || '';
+    const hfin4 = _s4Der[1] || _s4Der[0] || '';
     const horaireLabel4 = (hdeb4 && hfin4 && hdeb4 !== hfin4) ? `${hdeb4}–${hfin4}` : hdeb4;
     const s4Subj = `Stage Tango & Vous — ${dateLabel}${horaireLabel4 ? ' · ' + horaireLabel4 : ''} — Rappel dans 3 jours`;
     try {
