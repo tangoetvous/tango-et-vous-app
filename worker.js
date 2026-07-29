@@ -8086,7 +8086,13 @@ async function handleCronRappelStageJ3(request, env) {
     return String(e.stage_nom || '').split('|').map(function(s){ return s.trim(); }).filter(Boolean)
       .map(function(s){ const m = s.match(/(technique|stage\d+)$/); return { type: m ? m[1] : s }; });
   }
-  const _s4LieuSection = (_s4Adr.nom||_s4Adr.rue) ? `<div style="border-top:1px solid #e8d5a0;padding:12px 18px 8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;">${_s4Adr.nom?`<strong>${_esc(_s4Adr.nom)}</strong><br/>`:''}${_s4Adr.rue?`${_esc(_s4Adr.rue)}<br/>`:''}${_s4Adr.transport?`<span style="font-size:12px;color:#666;">${_esc(_s4Adr.transport)}</span>`:''}</div></div>` : '';
+  // ⚠️ Encadré IDENTIQUE à celui de l'email de confirmation S1 (`buildStageBox`,
+  // ~L7783) : même mise en page, même bloc lieu, même total, même mention de
+  // l'appoint. Toute évolution de l'un doit être répercutée sur l'autre.
+  const _s4LieuSection = (_s4Adr.nom||_s4Adr.rue) ? `<div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;">${_s4Adr.nom ? `<strong>${_esc(_s4Adr.nom)}</strong><br/>` : ''}${_s4Adr.rue ? `${_esc(_s4Adr.rue)}<br/>` : ''}${_s4Adr.transport ? `<span style="font-size:12px;color:#777;">${_esc(_s4Adr.transport)}</span>` : ''}</div>
+      </div>` : '';
 
   // Dual query: new format (stage_date set) + old format (stage_date IS NULL, dates in donnees)
   const [resNew, resOld] = await Promise.all([
@@ -8146,10 +8152,9 @@ async function handleCronRappelStageJ3(request, env) {
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
         <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ${dateLabel}</div>
       </div>
-      <div style="padding:12px 18px;">${slotsHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}${_s4Tarif ? `<div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">${_s4Tarif}€</div>` : ''}</div>
-      ${_s4Tarif ? `<div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : ${_s4Tarif}€</div>
-      <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>` : ''}
-      ${_s4LieuSection}
+      <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;">${slotsHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}${_s4Tarif ? `<div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">${_s4Tarif}€</div>` : ''}</div>${_s4LieuSection}</div>
+      ${_s4Tarif ? `<div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : ${_s4Tarif}€</div>` : ''}
+      <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
     </div>`;
     const _s4Token = (await _calHmac(String(e.email) + ':' + targetDate, env.HMAC_SECRET || SUPABASE_ANON)).slice(0, 32);
     const _s4ConfirmUrl = `https://app.tangoetvous.fr/api/stages/confirmer?email=${encodeURIComponent(String(e.email))}&date=${targetDate}&token=${_s4Token}`;
