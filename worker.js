@@ -8052,6 +8052,15 @@ async function handleCronRappelStageJ3(request, env) {
     }
     return sl.horaire || sl.horaire_debut || '';
   }
+  // « 14h30 » → 870 (minutes) pour trier les créneaux dans l'ordre chronologique.
+  // ⚠️ Indispensable : les créneaux sont construits dans un ordre FIXE (technique,
+  // stage1, stage2…) qui suppose la technique en premier. Une date aux horaires
+  // personnalisés peut la placer au milieu (1/08/2026 : Initiation 14h, Technique
+  // 15h30, Séquence 16h30) → sans tri, l'email et le sujet sont dans le désordre.
+  function _s4Min(h) {
+    const m = String(h || '').match(/(\d+)\s*h\s*(\d*)/i);
+    return m ? (parseInt(m[1], 10) * 60 + (m[2] ? parseInt(m[2], 10) : 0)) : 1e9;
+  }
   // Thème du créneau : gravé à l'inscription, sinon relu dans les params de la date
   // (themes[0..3] = stage1..stage4, cf. buildSlots de stages-pwa.html)
   const _s4Themes = _s4StEntry.themes || [];
@@ -8122,7 +8131,9 @@ async function handleCronRappelStageJ3(request, env) {
     const donnees   = typeof e.donnees === 'string' ? JSON.parse(e.donnees||'{}') : (e.donnees||{});
     // Horaire recalculé depuis les paramètres (override par date) au lieu de la
     // valeur gravée à l'inscription → affichage ET sujet utilisent l'horaire actuel.
-    const slots     = _s4Slots(e, donnees).map(function(sl){ return Object.assign({}, sl, { horaire: _s4SlotHoraire(sl), theme: _s4SlotTheme(sl) }); });
+    const slots     = _s4Slots(e, donnees)
+      .map(function(sl){ return Object.assign({}, sl, { horaire: _s4SlotHoraire(sl), theme: _s4SlotTheme(sl) }); })
+      .sort(function(a, b){ return _s4Min(a.horaire) - _s4Min(b.horaire); });
     let slotsHtml   = '';
     for (const sl of slots) {
       slotsHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire||'')}</span> — ${_esc(sl.theme||'')}</div>`;
