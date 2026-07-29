@@ -8090,9 +8090,9 @@ async function handleCronRappelStageJ3(request, env) {
 
   // Dual query: new format (stage_date set) + old format (stage_date IS NULL, dates in donnees)
   const [resNew, resOld] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=eq.${targetDate}&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees,stage_nom`,
+    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=eq.${targetDate}&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees,stage_nom,total_inscrit`,
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyS4}` } }),
-    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=is.null&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees,stage_nom`,
+    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?stage_date=is.null&type_confirmation=eq.confirme&select=email,prenom,nom,role,donnees,stage_nom,total_inscrit`,
       { headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${_svcKeyS4}` } }),
   ]);
   if (!resNew.ok) return corsResponse({ ok: false, error: 'Supabase query failed (new)' }, 500, {}, request);
@@ -8134,6 +8134,9 @@ async function handleCronRappelStageJ3(request, env) {
     const slots     = _s4Slots(e, donnees)
       .map(function(sl){ return Object.assign({}, sl, { horaire: _s4SlotHoraire(sl), theme: _s4SlotTheme(sl) }); })
       .sort(function(a, b){ return _s4Min(a.horaire) - _s4Min(b.horaire); });
+    // Montant dû par CETTE personne pour CETTE date : colonne total_inscrit
+    // (posée à l'inscription, recalculée par l'admin s'il modifie les créneaux).
+    const _s4Tarif  = Number(e.total_inscrit) || 0;
     let slotsHtml   = '';
     for (const sl of slots) {
       slotsHtml += `<div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">${_esc(sl.horaire||'')}</span> — ${_esc(sl.theme||'')}</div>`;
@@ -8143,7 +8146,9 @@ async function handleCronRappelStageJ3(request, env) {
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
         <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 ${dateLabel}</div>
       </div>
-      <div style="padding:12px 18px;">${slotsHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}</div>
+      <div style="padding:12px 18px;">${slotsHtml || '<div style="font-size:13px;color:#444;">Stage Tango &amp; Vous</div>'}${_s4Tarif ? `<div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">${_s4Tarif}€</div>` : ''}</div>
+      ${_s4Tarif ? `<div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : ${_s4Tarif}€</div>
+      <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>` : ''}
       ${_s4LieuSection}
     </div>`;
     const _s4Token = (await _calHmac(String(e.email) + ':' + targetDate, env.HMAC_SECRET || SUPABASE_ANON)).slice(0, 32);
