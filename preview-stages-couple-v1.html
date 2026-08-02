@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview — Stages : distinguer « Vos stages » / « Stages du partenaire »</title>
+<style>
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+body { background:#111; color:#fff; font-family:Arial, sans-serif; font-size:15px; line-height:1.6; margin:0; }
+
+/* ── Chrome de la page de preview (pas dans le formulaire réel) ── */
+.pv-head { background:#000; border-bottom:3px solid #D4AF37; padding:22px 24px; text-align:center; }
+.pv-head h1 { font-family:Georgia,serif; font-size:20px; font-weight:300; letter-spacing:5px; color:#D4AF37; margin:0; }
+.pv-head p { font-size:12px; color:#888; margin:8px 0 0; }
+.pv-nav { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; padding:14px 16px; background:#0a0a0a; position:sticky; top:0; z-index:10; border-bottom:1px solid #222; }
+.pv-nav a { color:#D4AF37; text-decoration:none; font-size:12px; border:1px solid #3a2f00; padding:6px 14px; border-radius:20px; }
+.pv-nav a:hover { background:#1f1a00; }
+.pv-section { max-width:620px; margin:0 auto; padding:8px 0 50px; }
+.pv-titre { font-size:13px; letter-spacing:2px; text-transform:uppercase; color:#fff; background:#252525; padding:10px 24px; margin:34px 0 0; border-left:4px solid #666; }
+.pv-titre.apres { border-left-color:#4ade80; }
+.pv-com { font-size:13px; color:#9a9a9a; padding:12px 24px 0; line-height:1.7; }
+.pv-com b { color:#c8a84a; }
+.pv-cadre { border:1px dashed #333; margin:14px 16px 0; border-radius:10px; }
+
+/* ── Styles RÉELS copiés de stages-pwa.html ── */
+.etape { padding:16px 24px 30px; }
+.section-label { display:flex; align-items:center; gap:10px; margin:28px 0 14px; font-size:11px; letter-spacing:2.5px; text-transform:uppercase; font-weight:bold; color:#D4AF37; }
+.section-label::after { content:''; flex:1; height:1px; background:#2a2000; }
+.required { color:#D4AF37; }
+.note-stages { font-size:15px; color:#c8a84a; margin-bottom:14px; line-height:1.5; }
+.accordion { display:flex; flex-direction:column; gap:6px; }
+.accordion-item { border:2px solid #333; border-radius:8px; overflow:hidden; }
+.accordion-item.has-selection { border-color:#D4AF37; }
+.accordion-header { display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:#1a1a1a; }
+.accordion-item.has-selection .accordion-header { background:#1f1a00; }
+.accordion-header-left { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.accordion-date { font-size:17px; font-weight:bold; color:#D4AF37; }
+.accordion-badge { background:#D4AF37; color:#000; font-size:13px; font-weight:bold; padding:2px 8px; border-radius:20px; }
+.etape2-nav { display:flex; align-items:center; gap:14px; margin-bottom:6px; }
+.btn-retour { background:none; border:1px solid #3a2f00; color:#a08050; padding:6px 14px; border-radius:20px; font-size:13px; }
+
+/* ══ PROPOSITION a + b + c ══ */
+/* (a) en-tête plus grand et lisible, prénom mis en avant */
+.zone-hdr { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:bold; color:#D4AF37; margin:0 0 4px; letter-spacing:.3px; }
+.zone-hdr .qui { color:#fff; }
+.zone-hdr .req { color:#D4AF37; font-size:15px; }
+.zone-part .zone-hdr { color:#c792ea; }
+.zone-part .zone-hdr .qui { color:#fff; }
+.zone-part .zone-hdr .req { color:#c792ea; }
+/* (b) chaque personne dans son propre encadré */
+.zone { border:2px solid #3a2f00; border-radius:12px; background:#161616; padding:16px 16px 18px; margin-top:16px; }
+.zone-part { border-color:#4a3a63; background:#17151c; }
+/* (c) phrase d'explication, une seule fois */
+.zone-expl { font-size:13.5px; color:#c8a84a; background:#1f1a00; border-left:3px solid #D4AF37; border-radius:0 6px 6px 0; padding:10px 14px; margin:0 0 16px; line-height:1.55; }
+.zone-part .zone-expl { color:#cbb6e8; background:#1d1727; border-left-color:#c792ea; }
+</style>
+</head>
+<body>
+
+<div class="pv-head">
+  <h1>TANGO &amp; VOUS</h1>
+  <p>Preview — étape 2 du formulaire de stages · distinguer les deux personnes d'un couple</p>
+</div>
+
+<div class="pv-nav">
+  <a href="#avant">① Avant (actuel)</a>
+  <a href="#apres">② Après (a + b + c)</a>
+  <a href="#solo">③ Cas d'une personne seule</a>
+</div>
+
+<div class="pv-section">
+
+  <!-- ─────────── AVANT ─────────── -->
+  <div class="pv-titre" id="avant">① Avant — ce que voit l'élève aujourd'hui</div>
+  <div class="pv-com">
+    Les deux titres ont exactement le même style : <b>11 px, majuscules, doré, très espacé</b>, suivis d'un simple trait.
+    Rien ne sépare visuellement les deux zones — d'où la difficulté à comprendre que chacun choisit ses propres stages.
+  </div>
+  <div class="pv-cadre"><div class="etape">
+
+    <div class="etape2-nav">
+      <button class="btn-retour">← Retour</button>
+      <span style="font-size:13px;color:#7a6030;">Jérémy BRAITBART — Guideur(se) — Intermédiaire</span>
+    </div>
+
+    <div class="section-label">Vos stages <span class="required">*</span></div>
+    <p class="note-stages">Cliquez sur une date pour voir les stages proposés. Vous pouvez sélectionner des stages sur plusieurs dates.</p>
+    <div class="accordion">
+      <div class="accordion-item has-selection"><div class="accordion-header">
+        <div class="accordion-header-left"><span class="accordion-date">Sam. 1 Août 2026</span></div>
+        <span class="accordion-badge">2</span>
+      </div></div>
+      <div class="accordion-item"><div class="accordion-header">
+        <div class="accordion-header-left"><span class="accordion-date">Sam. 19 Sep. 2026</span></div>
+      </div></div>
+    </div>
+
+    <div class="section-label" style="margin-top:32px;">Stages de <strong style="color:#D4AF37">Florencia GARCIA</strong> <span class="required">*</span></div>
+    <p class="note-stages">Votre partenaire peut s'inscrire aux mêmes stages ou à des stages différents.</p>
+    <div class="accordion">
+      <div class="accordion-item has-selection"><div class="accordion-header">
+        <div class="accordion-header-left"><span class="accordion-date">Sam. 1 Août 2026</span></div>
+        <span class="accordion-badge">1</span>
+      </div></div>
+      <div class="accordion-item"><div class="accordion-header">
+        <div class="accordion-header-left"><span class="accordion-date">Sam. 19 Sep. 2026</span></div>
+      </div></div>
+    </div>
+
+  </div></div>
+
+  <!-- ─────────── APRÈS ─────────── -->
+  <div class="pv-titre apres" id="apres">② Après — proposition a + b + c</div>
+  <div class="pv-com">
+    <b>(a)</b> en-têtes passés de 11 à 16 px, sans majuscules forcées, avec le prénom en blanc bien lisible ·
+    <b>(b)</b> chaque personne dans son propre encadré, celui du partenaire en violet ·
+    <b>(c)</b> une phrase d'explication en tête de chaque zone.
+  </div>
+  <div class="pv-cadre"><div class="etape">
+
+    <div class="etape2-nav">
+      <button class="btn-retour">← Retour</button>
+      <span style="font-size:13px;color:#7a6030;">Jérémy BRAITBART — Guideur(se) — Intermédiaire</span>
+    </div>
+
+    <div class="zone">
+      <div class="zone-hdr">🕺 Vos stages — <span class="qui">Jérémy</span> <span class="req">*</span></div>
+      <div class="zone-expl">Chacun choisit ses propres stages — vos sélections peuvent être différentes de celles de votre partenaire.</div>
+      <p class="note-stages">Cliquez sur une date pour voir les stages proposés. Vous pouvez sélectionner des stages sur plusieurs dates.</p>
+      <div class="accordion">
+        <div class="accordion-item has-selection"><div class="accordion-header">
+          <div class="accordion-header-left"><span class="accordion-date">Sam. 1 Août 2026</span></div>
+          <span class="accordion-badge">2</span>
+        </div></div>
+        <div class="accordion-item"><div class="accordion-header">
+          <div class="accordion-header-left"><span class="accordion-date">Sam. 19 Sep. 2026</span></div>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="zone zone-part">
+      <div class="zone-hdr">💃 Les stages de <span class="qui">Florencia</span> <span class="req">*</span></div>
+      <div class="zone-expl">À remplir même si Florencia choisit exactement les mêmes stages que vous.</div>
+      <div class="accordion">
+        <div class="accordion-item has-selection"><div class="accordion-header">
+          <div class="accordion-header-left"><span class="accordion-date">Sam. 1 Août 2026</span></div>
+          <span class="accordion-badge">1</span>
+        </div></div>
+        <div class="accordion-item"><div class="accordion-header">
+          <div class="accordion-header-left"><span class="accordion-date">Sam. 19 Sep. 2026</span></div>
+        </div></div>
+      </div>
+    </div>
+
+  </div></div>
+
+  <!-- ─────────── SOLO ─────────── -->
+  <div class="pv-titre apres" id="solo">③ Personne seule — aucun changement gênant</div>
+  <div class="pv-com">
+    Sans partenaire, il n'y a qu'une zone : l'encadré reste discret et la phrase d'explication disparaît
+    (elle n'a de sens qu'en couple). L'écran reste aussi simple qu'aujourd'hui.
+  </div>
+  <div class="pv-cadre"><div class="etape">
+
+    <div class="etape2-nav">
+      <button class="btn-retour">← Retour</button>
+      <span style="font-size:13px;color:#7a6030;">Jérémy BRAITBART — Guideur(se) — Intermédiaire</span>
+    </div>
+
+    <div class="zone">
+      <div class="zone-hdr">🕺 Vos stages <span class="req">*</span></div>
+      <p class="note-stages">Cliquez sur une date pour voir les stages proposés. Vous pouvez sélectionner des stages sur plusieurs dates.</p>
+      <div class="accordion">
+        <div class="accordion-item has-selection"><div class="accordion-header">
+          <div class="accordion-header-left"><span class="accordion-date">Sam. 1 Août 2026</span></div>
+          <span class="accordion-badge">2</span>
+        </div></div>
+        <div class="accordion-item"><div class="accordion-header">
+          <div class="accordion-header-left"><span class="accordion-date">Sam. 19 Sep. 2026</span></div>
+        </div></div>
+      </div>
+    </div>
+
+  </div></div>
+
+  <div class="pv-com" style="margin-top:36px;border-top:1px solid #222;padding-top:20px;">
+    <b>Note</b> — maquette statique : les accordéons ne s'ouvrent pas, les styles sont copiés à l'identique
+    du formulaire réel (fond, dorés, encadrés de dates). Seules changent les zones et leurs en-têtes.
+  </div>
+
+</div>
+</body>
+</html>
