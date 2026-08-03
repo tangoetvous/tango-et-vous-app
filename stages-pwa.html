@@ -55,6 +55,24 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}body { background: #11
 .section-label { display: flex; align-items: center; gap: 10px; margin: 28px 0 14px; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; font-weight: bold; color: #D4AF37; }
 .section-label::after { content: ''; flex: 1; height: 1px; background: #2a2000; }
 
+/* ZONES DE SÉLECTION DES STAGES (inscrit / partenaire) */
+.zone { border: 2px solid #3a2f00; border-radius: 12px; background: #161616; padding: 16px 16px 18px; margin-top: 16px; }
+.zone-part { border-color: #4a3a63; background: #17151c; }
+.zone-hdr { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: bold; color: #D4AF37; margin: 0 0 10px; letter-spacing: .3px; flex-wrap: wrap; }
+.zone-hdr .qui { color: #fff; }
+.zone-part .zone-hdr { color: #c792ea; }
+.zone-part .zone-hdr .qui { color: #fff; }
+.zone-part .zone-hdr .required { color: #c792ea; }
+.zone-expl { font-size: 13.5px; color: #c8a84a; background: #1f1a00; border-left: 3px solid #D4AF37; border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 0 0 14px; line-height: 1.55; }
+.zone-part .zone-expl { color: #cbb6e8; background: #1d1727; border-left-color: #c792ea; }
+/* Case « stages différents » */
+.diff-box { display: flex; align-items: flex-start; gap: 11px; margin-top: 16px; padding: 13px 15px; background: #141414; border: 1px solid #333; border-radius: 9px; cursor: pointer; user-select: none; }
+.diff-box.on { border-color: #c792ea; background: #1a1622; }
+.diff-case { width: 21px; height: 21px; border: 2px solid #6a5a2a; border-radius: 5px; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: #111; }
+.diff-box.on .diff-case { background: #c792ea; border-color: #c792ea; }
+.diff-txt { font-size: 14px; color: #ddd; line-height: 1.45; }
+.diff-txt small { display: block; font-size: 12px; color: #8a8a8a; margin-top: 2px; }
+
 /* CHAMPS */
 .champs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 500px) { .champs-grid { grid-template-columns: 1fr; } }
@@ -569,15 +587,25 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}body { background: #11
   </div>
 
   <!-- Stages inscrit -->
-  <div class="section-label" id="label-stages-inscrit">Vos stages <span class="required">*</span></div>
-  <p class="note-stages">Cliquez sur une date pour voir les stages proposés. Vous pouvez sélectionner des stages sur plusieurs dates.</p>
-  <div class="accordion" id="accordionInscrit"></div>
-  <div class="err-msg" id="err-stages">Veuillez sélectionner au moins un stage.</div>
+  <div class="zone" id="zone-inscrit">
+    <div class="zone-hdr" id="label-stages-inscrit">🕺 Vos stages <span class="required">*</span></div>
+    <div class="zone-expl" id="expl-stages-communs" style="display:none">Vous participez tous les deux aux mêmes stages. Si ce n'est pas le cas cocher la case sous la liste des dates de Stages</div>
+    <p class="note-stages">Cliquez sur une date pour voir les stages proposés. Vous pouvez sélectionner des stages sur plusieurs dates.</p>
+    <div class="accordion" id="accordionInscrit"></div>
+    <div class="err-msg" id="err-stages">Veuillez sélectionner au moins un stage.</div>
+
+    <!-- Case : les deux ne font pas les mêmes stages (couple uniquement) -->
+    <div class="diff-box" id="diff-box" style="display:none" onclick="toggleStagesDifferents()">
+      <div class="diff-case" id="diff-case"></div>
+      <div class="diff-txt"><span id="diff-label">Mon partenaire ne fait pas les mêmes stages que moi</span>
+        <small id="diff-sub">Cochez pour choisir séparément les stages de chacun.</small></div>
+    </div>
+  </div>
 
   <!-- Stages partenaire -->
-  <div id="bloc-stages-partenaire" style="display:none">
-    <div class="section-label" style="margin-top:32px" id="label-stages-partenaire">Stages de votre partenaire <span class="required">*</span></div>
-    <p class="note-stages">Votre partenaire peut s'inscrire aux mêmes stages ou à des stages différents.</p>
+  <div class="zone zone-part" id="bloc-stages-partenaire" style="display:none">
+    <div class="zone-hdr" id="label-stages-partenaire">💃 Les stages de votre partenaire <span class="required">*</span></div>
+    <div class="zone-expl">Sélection de départ recopiée depuis la vôtre — modifiez ce qui diffère.</div>
     <div class="accordion" id="accordionPartenaire"></div>
     <div class="err-msg" id="err-stages-part">Veuillez sélectionner au moins un stage pour votre partenaire.</div>
   </div>
@@ -811,6 +839,7 @@ function autoResizeIframe() {
 const state = {
   stagesInscrit:    new Map(),
   stagesPartenaire: new Map(),
+  stagesDifferents: false,   // décoché = le couple fait les MÊMES stages (cas courant)
   role:null, situation:null, niveau:null
 };
 
@@ -911,6 +940,11 @@ function construireAccordeon(containerId, groupe) {
           '<span class="stage-row-type '+(TYPE_CLASS[s.type]||'type-stage1')+'">'+(TYPE_LABEL[s.type]||s.type)+'</span>'+
         '</div>';
 
+      // Restaurer l'état sélectionné (l'accordéon est reconstruit quand la
+      // sélection du partenaire est recopiée depuis celle de l'inscripteur)
+      var mapInit = groupe==='inscrit' ? state.stagesInscrit : state.stagesPartenaire;
+      if (mapInit.has(s.id)) row.classList.add('selected');
+
       if (!isPast) {
         row.addEventListener('click', function(){
           var map = groupe==='inscrit' ? state.stagesInscrit : state.stagesPartenaire;
@@ -920,6 +954,8 @@ function construireAccordeon(containerId, groupe) {
             map.set(s.id, Object.assign({}, s, {dateLabel:dateInfo.label, date:dateInfo.date}));
             row.classList.add('selected');
           }
+          // Mode « mêmes stages » : le partenaire suit la sélection de l'inscripteur
+          if (groupe==='inscrit' && state.situation==='avec-partenaire' && !state.stagesDifferents) _syncStagesPartenaire();
           majBadge(groupe, dateInfo.date);
           var count=0; map.forEach(function(v){ if(v.date===dateInfo.date) count++; });
           item.classList.toggle('has-selection', count>0);
@@ -947,8 +983,72 @@ function construireAccordeon(containerId, groupe) {
     item.appendChild(header);
     item.appendChild(body);
     container.appendChild(item);
+
+    // Reconstruction : rétablir le badge et la bordure dorée si des stages
+    // de cette date sont déjà sélectionnés (cas de la recopie inscrit→partenaire)
+    var mapEtat = groupe==='inscrit' ? state.stagesInscrit : state.stagesPartenaire;
+    var nbSel = 0; mapEtat.forEach(function(v){ if(v.date===dateInfo.date) nbSel++; });
+    if (nbSel > 0) { item.classList.add('has-selection', 'open'); majBadge(groupe, dateInfo.date); }
   });
 }
+
+// ── Couple : mêmes stages (défaut) ou stages différents ──────────
+// Le modèle de données ne change pas : le partenaire a TOUJOURS sa propre
+// sélection. Quand la case est décochée, elle est simplement recopiée depuis
+// celle de l'inscripteur → tout l'aval (récap, prix, insert, emails) est inchangé.
+function _syncStagesPartenaire() {
+  state.stagesPartenaire.clear();
+  state.stagesInscrit.forEach(function(v, k){ state.stagesPartenaire.set(k, Object.assign({}, v)); });
+}
+function _prenomPartenaire() {
+  var p = (document.getElementById('partenaire-prenom')||{value:''}).value.trim();
+  return p || 'votre partenaire';
+}
+// Met à jour libellés, visibilité des zones et état de la case
+function majZonesCouple() {
+  var avecPart = state.situation === 'avec-partenaire';
+  var diff     = avecPart && state.stagesDifferents;
+  var moi      = (document.getElementById('prenom')||{value:''}).value.trim();
+  var lui      = _prenomPartenaire();
+  var elBox    = document.getElementById('diff-box');
+  var elCase   = document.getElementById('diff-case');
+  var elExpl   = document.getElementById('expl-stages-communs');
+  var elHdrI   = document.getElementById('label-stages-inscrit');
+  var elHdrP   = document.getElementById('label-stages-partenaire');
+  var elBlocP  = document.getElementById('bloc-stages-partenaire');
+
+  if (elBox)  { elBox.style.display = avecPart ? 'flex' : 'none'; elBox.classList.toggle('on', diff); }
+  if (elCase) elCase.textContent = diff ? '✓' : '';
+  var elLbl = document.getElementById('diff-label');
+  if (elLbl) elLbl.textContent = lui + ' ne fait pas les mêmes stages que moi';
+  var elSub = document.getElementById('diff-sub');
+  if (elSub) elSub.textContent = diff
+    ? 'Décochez pour revenir à une sélection commune.'
+    : 'Cochez pour choisir séparément les stages de chacun.';
+  if (elExpl) elExpl.style.display = (avecPart && !diff) ? 'block' : 'none';
+
+  if (elHdrI) {
+    elHdrI.innerHTML = (avecPart && !diff)
+      ? '🕺💃 Vos stages — <span class="qui">' + _echapper(moi || 'Vous') + ' &amp; ' + _echapper(lui) + '</span> <span class="required">*</span>'
+      : '🕺 Vos stages' + (avecPart && moi ? ' — <span class="qui">' + _echapper(moi) + '</span>' : '') + ' <span class="required">*</span>';
+  }
+  if (elHdrP) elHdrP.innerHTML = '💃 Les stages de <span class="qui">' + _echapper(lui) + '</span> <span class="required">*</span>';
+  if (elBlocP) elBlocP.style.display = diff ? 'block' : 'none';
+}
+function _echapper(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+window.toggleStagesDifferents = function() {
+  state.stagesDifferents = !state.stagesDifferents;
+  // Dans les deux sens on repart de la sélection de l'inscripteur :
+  // décoché → elle fait foi ; coché → elle sert de point de départ à modifier.
+  _syncStagesPartenaire();
+  majZonesCouple();
+  construireAccordeon('accordionPartenaire','partenaire');
+  affErr('err-stages-part', false);
+  majRecaps();
+  autoResizeIframe();
+};
 
 function majBadge(groupe, date) {
   var map = groupe==='inscrit' ? state.stagesInscrit : state.stagesPartenaire;
@@ -1072,7 +1172,11 @@ function validerEtape2(){
   var ok=true;
   if(state.stagesInscrit.size===0){ affErr('err-stages', true); ok=false; } else { affErr('err-stages', false); }
   if(state.situation==='avec-partenaire'){
-    if(state.stagesPartenaire.size===0){ affErr('err-stages-part', true); ok=false; } else { affErr('err-stages-part', false); }
+    // Sécurité : en mode « mêmes stages », la sélection du partenaire est
+    // toujours recopiée avant validation (jamais vide si l'inscripteur a choisi)
+    if(!state.stagesDifferents) _syncStagesPartenaire();
+    if(state.stagesDifferents && state.stagesPartenaire.size===0){ affErr('err-stages-part', true); ok=false; }
+    else { affErr('err-stages-part', false); }
   }
   document.getElementById('err-global-2').classList.toggle('visible', !ok);
   return ok;
@@ -1087,17 +1191,9 @@ function allerEtape2(){
   var nom    = document.getElementById('nom').value.trim();
   document.getElementById('recap-identite').textContent = prenom+' '+nom+' — '+state.role+' — '+state.niveau;
 
-  // Afficher ou masquer l'accordéon partenaire
-  var blocPart = document.getElementById('bloc-stages-partenaire');
-  blocPart.style.display = state.situation==='avec-partenaire' ? 'block' : 'none';
-
-  // Mettre à jour les libellés
-  var pPrenom = document.getElementById('partenaire-prenom').value.trim();
-  var pNom    = document.getElementById('partenaire-nom').value.trim();
-  if(state.situation==='avec-partenaire' && pPrenom){
-    document.getElementById('label-stages-partenaire').innerHTML =
-      'Stages de <strong style="color:#D4AF37">'+pPrenom+' '+pNom+'</strong> <span class="required">*</span>';
-  }
+  // Zones de sélection : en-têtes personnalisés avec les prénoms, case à cocher
+  // « stages différents » (couple seulement) et visibilité du bloc partenaire
+  majZonesCouple();
 
   // Indicateurs
   document.getElementById('ind-1').classList.remove('active'); document.getElementById('ind-1').classList.add('done');
@@ -1374,7 +1470,7 @@ function afficherConfirmation(data){
 function recommencer(){
   document.getElementById('bloc-confirmation').classList.remove('visible');
   document.getElementById('form') && (document.getElementById('form').reset());
-  state.stagesInscrit.clear(); state.stagesPartenaire.clear();
+  state.stagesInscrit.clear(); state.stagesPartenaire.clear(); state.stagesDifferents=false;
   state.role=null; state.situation=null; state.niveau=null;
   document.querySelectorAll('.radio-item.selected, .illu-item.selected').forEach(function(el){ el.classList.remove('selected'); });
   document.querySelectorAll('.stage-row.selected').forEach(function(el){ el.classList.remove('selected'); });
@@ -1384,6 +1480,9 @@ function recommencer(){
   document.getElementById('recaps-container').innerHTML='';
   document.getElementById('bloc-partenaire').classList.remove('visible');
   document.getElementById('bloc-stages-partenaire').style.display='none';
+  var _dbx=document.getElementById('diff-box'); if(_dbx){ _dbx.classList.remove('on'); _dbx.style.display='none'; }
+  var _dcs=document.getElementById('diff-case'); if(_dcs) _dcs.textContent='';
+  var _dex=document.getElementById('expl-stages-communs'); if(_dex) _dex.style.display='none';
   document.getElementById('btnSubmit').disabled=false;
   document.getElementById('btnSubmit').textContent="Je m'inscris";
   document.querySelectorAll('input,textarea').forEach(function(el){ el.value=''; el.classList.remove('invalid'); });

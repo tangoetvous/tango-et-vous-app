@@ -1,5 +1,20 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-03 — Stages : couple « mêmes stages » par défaut (✅ FAIT)
+
+Avant : en couple, l'étape 2 affichait **toujours deux blocs** au style identique (`section-label` 11 px), et il fallait re-sélectionner les stages du partenaire même quand c'étaient les mêmes → confusion signalée par l'admin. Idée retenue (proposée par l'admin) : **un seul encadré par défaut**, case à cocher pour le cas minoritaire.
+
+- **Modèle de données INCHANGÉ** — c'est la clé du faible risque : `state.stagesPartenaire` existe toujours et est **recopié** depuis `state.stagesInscrit` (`_syncStagesPartenaire()`) quand la case est décochée. Tout l'aval (récap par jour, prix par personne, INSERT `inscriptions_stages`, emails S0/S1/S4, affichage admin) est **totalement intact**.
+- **Nouveau `state.stagesDifferents`** (défaut `false`). `toggleStagesDifferents()` recopie dans les deux sens (décoché → la sélection de l'inscripteur fait foi ; coché → elle sert de point de départ modifiable), reconstruit l'accordéon partenaire et rafraîchit les récaps.
+- **Recopie déclenchée à 2 endroits** (ceinture + bretelles) : à chaque clic de créneau côté inscripteur, ET dans `validerEtape2()` avant validation → une fiche partenaire ne peut pas partir vide en base.
+- **`construireAccordeon` restaure désormais l'état sélectionné** (classe `.selected`, badge, bordure dorée, accordéon ouvert) — nécessaire pour que la recopie soit visible ; idempotent quand rien n'est sélectionné.
+- **UI** : helpers `majZonesCouple()` + `_prenomPartenaire()` + `_echapper()`. En-têtes 16 px avec **les vrais prénoms** (« 🕺💃 Vos stages — Jérémy & Florencia » / « 🕺 Vos stages — Jérémy » + « 💃 Les stages de Florencia »), zones encadrées (`.zone` dorée / `.zone-part` violette), phrase d'explication (`.zone-expl`), case `.diff-box`. Personne seule → aucun de ces éléments (écran inchangé).
+- **Validation** : en mode « mêmes stages », `err-stages-part` n'est plus jamais exigée (la sélection est recopiée).
+- **Maquette de décision** : `preview-stages-couple-v1.html` (4 cas : avant, défaut, case cochée, personne seule).
+- **Tests groupe X** (`tests/x-stages-couple.spec.js`, 6 tests) : X1 solo ; X2 défaut + recopie ; X3 cochage (2ᵉ encadré + copie visible) ; X4 indépendance ; X5 décochage/re-synchro ; X6 validation. Suite complète : **99/99**.
+- ⚠️ **PIÈGE TEST découvert** : bloquer le réseau (`route.abort()`) sur `stages-pwa.html` **fige l'initialisation** — le `DOMContentLoaded` `await TEV.getParam(...)` ne se résout jamais, donc `chargerDonnees()` et la construction des accordéons ne s'exécutent PAS. Il faut **mocker** Supabase (`route.fulfill` 406 PGRST116) au lieu de l'avorter, ou appeler `chargerDonnees()` manuellement dans `page.evaluate`.
+- ⚠️ **Groupe R rendu dynamique** : R1/R2/R3 utilisaient des dates FIGÉES (1ᵉʳ août 2026…) ; le 3 août, R3 a échoué parce que sa date était devenue passée et donc filtrée par le formulaire (3 prochaines dates seulement). Fixtures désormais relatives à aujourd'hui (`isoPlus(n)` + `saisonDe()`), et R3 se `skip` proprement hors bascule de saison. **Règle : ne jamais figer de dates futures dans un test de ce formulaire.**
+
 ## Session 2026-07-24 — Stages : pastille de niveau D / I / A sur les fiches (✅ FAIT)
 
 Le formulaire `stages-pwa.html` demande le niveau (**Débutant / Intermédiaire / Avancé**, champ obligatoire, `#niveauGroup` L403-407) → colonne `inscriptions_stages.niveau` → déjà transporté dans `adminData.stages[date].inscrits[].niveau` (mapping admin.html ~L5542 nouveau format, ~L5565 ancien format). **Aucune donnée à collecter, aucune migration** — le champ était juste sous-exploité à l'affichage.
