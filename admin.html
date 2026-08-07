@@ -9037,7 +9037,11 @@ function renderEssai() {
       var supprimesEd=insAll.filter(function(e){return e.statut==='supprimé';});
       var ins=insAll.filter(function(e){return e.statut!=='supprimé';});
       var guiConf=ins.filter(function(e){return (e.role==='guideur'||e.role==='double')&&e.statut==='confirme';});
-      var gde=ins.filter(function(e){return e.role==='guidee';}).length;
+      // ⚠️ Les DEUX compteurs ne comptent que les personnes VALIDÉES (statut
+      // 'confirme'), comme la vue Liste d'attente (~L8728). Compter aussi les
+      // personnes en attente rendrait le cours « COMPLET » alors que la salle
+      // est presque vide (ex. 3 sept. 2026 : 23/23 dont 18 en attente = 5 réelles).
+      var gde=ins.filter(function(e){return e.role==='guidee'&&e.statut==='confirme';}).length;
       var attVrai=ins.filter(function(e){return estVraimentAttente(e,ins);}).length;
       var nivLbl=niv==='debutant'?'Débutant':'Intermédiaire';
       var elevesGuiEd=countElevesInscrits(date,niv,'guideur');

@@ -1,5 +1,14 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-07 — Essai Tango : « COMPLET » affiché à tort (✅ CORRIGÉ)
+
+Bug signalé (capture) : le cours du **jeu. 3 sept. 2026 — Débutant Paris** affichait **👩 23/23 · COMPLET** alors que **18 des 23 guidées étaient en liste d'attente** → seulement **5 confirmées** face à 5 guideurs, salle quasi vide.
+
+- **Cause** : dans `renderEssai` vue « Par date », les deux compteurs ne comptaient pas la même chose — `guiConf` filtrait `statut==='confirme'` mais `gde` (~L9040) comptait **toutes** les guidées, attente incluse. Le quota `totalGde>=23` était donc atteint par la file d'attente. La vue **Liste d'attente** (~L8728 `gdeConf`) et le **Pointage** filtraient déjà correctement — seule la vue « Par date » était touchée.
+- **Fix** : `gde` filtre désormais `&& e.statut==='confirme'`. **Règle métier confirmée par l'admin : les compteurs de capacité ne comptent QUE les personnes validées (automatiquement ou par l'admin) ; il peut y avoir un nombre illimité de personnes en attente sans que le compteur bouge.** L'indicateur `⏳ N att.` reste affiché à côté et n'entre pas dans le quota.
+- **Tests groupe Y** (`tests/y-essai-capacite.spec.js`, 2 tests) : Y1 = 5 confirmées + 18 en attente → « 5/23 », pas de COMPLET, « 18 att. » toujours visible ; Y2 = 23 confirmées → COMPLET fonctionne toujours. ⚠️ Ces tests posent `saisonVue='2026-2027'` (une date de sept. 2026 appartient à la saison suivante, sinon `dateAppartientSaison` la filtre et la vue est vide) et n'appliquent le scénario qu'en **septembre-novembre**, seuls mois où les limites existent (`noLimitsTango`). Suite complète : **101/101**.
+- ⚠️ **Conteneur réinitialisé ce jour** : `node_modules` disparu (relancer `npm install` avant les tests) et arbre de travail re-cloné — tout le travail était heureusement poussé sur `origin/claude/dance-school-app-RTqb5`.
+
 ## Session 2026-08-03 — Stages : couple « mêmes stages » par défaut (✅ FAIT)
 
 Avant : en couple, l'étape 2 affichait **toujours deux blocs** au style identique (`section-label` 11 px), et il fallait re-sélectionner les stages du partenaire même quand c'étaient les mêmes → confusion signalée par l'admin. Idée retenue (proposée par l'admin) : **un seul encadré par défaut**, case à cocher pour le cas minoritaire.
