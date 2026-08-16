@@ -122,7 +122,10 @@ export default {
       }
 
       // GET /calendar/{slug}.ics — flux iCalendar public (sans token)
-      const CAL_SLUGS = ['paris-debutant','paris-intermediaire','vincennes-debutant','vincennes-intermediaire','stages','milongas','yoga-yin','yoga-hatha'];
+      // ⚠️ Doit rester synchronisé avec _CAL_FEEDS (admin.html) ET les branches de
+      // handlePublicICS : un slug absent d'ici ne matche pas la route, part vers les
+      // assets statiques → 404 → « échec de l'abonnement » côté Calendrier iOS.
+      const CAL_SLUGS = ['paris-debutant','paris-intermediaire','vincennes-debutant','vincennes-intermediaire','stages','milongas','yoga-yin','yoga-hatha','demos'];
       const pubCalM = pathname.match(/^\/calendar\/([a-z-]+)\.ics$/);
       if (pubCalM && CAL_SLUGS.includes(pubCalM[1]) && method === 'GET') {
         return handlePublicICS(pubCalM[1]);

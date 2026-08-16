@@ -1,5 +1,14 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-07 — Agenda : abonnement iOS « Démonstrations » en échec (✅ CORRIGÉ)
+
+Bug signalé : Agenda → Abonnements → bouton **📅 iOS** de l'agenda **Démonstrations** ouvrait bien Calendrier sur iPhone mais finissait par « échec ». Les 8 autres agendas fonctionnaient.
+
+- **Cause** : l'allowlist de la route `worker.js` (~L125 `CAL_SLUGS`) contenait 8 slugs mais **pas `'demos'`**. `/calendar/demos.ics` ne matchait donc pas la route, partait vers les assets statiques → **404** → Calendrier iOS affiche un échec. Le reste était pourtant complet : `_CAL_FEEDS` (admin.html ~L12346) proposait bien le bouton, `CAL_NAMES` (~L2952) avait le libellé, et `handlePublicICS` avait sa **branche `slug === 'demos'`** fonctionnelle (~L3055, fusionne `tev_demos_<saison>` des 2 saisons, événements à 20h, durée 2h).
+- **Fix** : ajout de `'demos'` à `CAL_SLUGS` (une ligne).
+- 📌 **RÈGLE : trois listes à garder synchronisées** pour tout nouveau flux calendrier — `_CAL_FEEDS` (admin.html, le bouton), `CAL_SLUGS` (worker.js, l'autorisation de route) et `CAL_NAMES` + la branche `slug === '…'` de `handlePublicICS` (worker.js, la génération). Un oubli dans `CAL_SLUGS` est **silencieux côté serveur** et ne se voit qu'à l'abonnement.
+- Vérification : script de contrôle croisé des 3 listes → 9/9 flux cohérents. Non testable par Playwright (pas de runtime worker) ; `node --check` OK.
+
 ## Session 2026-08-07 — Essai Tango : « COMPLET » affiché à tort (✅ CORRIGÉ)
 
 Bug signalé (capture) : le cours du **jeu. 3 sept. 2026 — Débutant Paris** affichait **👩 23/23 · COMPLET** alors que **18 des 23 guidées étaient en liste d'attente** → seulement **5 confirmées** face à 5 guideurs, salle quasi vide.
