@@ -5747,11 +5747,13 @@ async function handleCronEssaiRappelJ7(request, env) {
     if (pr.ok) { const rows = await pr.json(); for (const row of rows) { try { paramsRaw[row.cle] = typeof row.valeur === 'string' ? JSON.parse(row.valeur) : row.valeur; } catch { paramsRaw[row.cle] = row.valeur; } } }
   } catch(err) { console.error('[cron-essai-rappel-j7] params error', err); }
 
+  // ⚠️ Déclaré HORS de la boucle : la notification admin de fin de handler s'en sert
+  // aussi (même correctif que les rappels J-3 des stages et de l'essai yoga).
+  const dateLabel = fmtDate(targetDate);
   let sent = 0;
   for (const e of inscrits) {
     if (!e.email || !env.BREVO_API_KEY) continue;
     const prenomAff   = _esc(e.prenom || '');
-    const dateLabel   = fmtDate(targetDate);
     const niveauLabel = e.niveau === 'debutant' ? 'Débutant' : 'Intermédiaire';
     const villeLabel  = e.ville === 'paris' ? 'Paris' : 'Vincennes';
 

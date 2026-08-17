@@ -96,7 +96,10 @@
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien · inscriptions_essai WHERE date_essai = today+7 AND statut='confirme' AND type='tango'</span></div>
   <div class="field"><span class="label">Destinataire :</span> <span class="var">e.email</span> <span class="src">(depuis inscriptions_essai)</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>Votre cours d'essai tango a lieu ${jour} — confirmez votre présence</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>Rappel — votre cours d'essai tango a lieu dans 7 jours</code>
+    <span class="note">⚠️ Corrigé le 2026-08-17 : la notice reprenait le sujet d'E6 (« … a lieu ${jour} — confirmez votre présence »), qui n'est pas celui du rappel.</span></div>
+  <div class="field"><span class="label">Notif admin :</span> <code>notifications</code> — « 📅 ${N} rappel(s) J-7 envoyé(s) pour l'essai tango du ${dateLabel} · → Essai Tango »</div>
+  <div class="field"><span class="note">⚠️ Correctif 2026-08-17 : ce récapitulatif <b>ne remontait jamais</b> dans le panel 🔔 — la variable de date était déclarée dans la boucle des inscrits, l'erreur étant avalée par son try/catch. Les emails, eux, partaient normalement. Même cause que pour les rappels J-3 des stages et de l'essai yoga.</span></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Rappel essai tango dans 7 jours - confirmez votre presence en un clic"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Bleu 🗓 "Rappel — votre cours d'essai a lieu dans 7 jours !"</div>
   <div class="field"><span class="label">Cours box :</span> Date · Cours · <span class="src">horaires depuis tev_params_${ville}_${saison}</span> · Lieu</div>
@@ -135,10 +138,16 @@
 <h2>E-mod — Modification par l'admin</h2>
 <div class="route">POST /api/notify/essai-action (JWT admin) avec action='edit-essai'</div>
 <div class="block">
-  <div class="field"><span class="label">Body :</span> <span class="var">{ action:'edit-essai', essai:{}, newDate, newVille, newNiveau }</span></div>
+  <div class="field"><span class="note">⚠️ <b>Jamais déclenché aujourd'hui</b> (constaté le 2026-08-17) : <code>validerEditEssai</code> (admin.html) enregistre la modification en base <b>sans appeler cette route</b>. L'email est écrit et fonctionnel, il ne manque que l'appel. L'équivalent yoga (<code>validerEditEssaiYoga</code> → Y-mod) est, lui, bien branché.</span></div>
+  <div class="field"><span class="label">Body :</span> <code>{ action:'edit-essai', prenom, nom, email, tel, oldDate, oldVille, oldNiveau, newDate, newVille, newNiveau, partPrenom?, partNom?, partEmail? }</code></div>
+  <div class="field"><span class="label">Destinataires :</span> vous (récapitulatif) + l'élève ; le partenaire reçoit le sien si son adresse est renseignée <b>et différente</b>.</div>
+  <div class="field"><span class="label">Sujet admin :</span> <code>📋 Essai modifié — ${nom} · ${nouvelle date}</code></div>
+  <div class="field"><span class="label">Sujet élève :</span> <code>📋 Votre cours d'essai tango a été modifié — ${nouvelle date}</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre cours d'essai tango a ete reprogramme - nouveaux details ci-dessous"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Bleu 📋 "Votre cours d'essai a été modifié"</div>
-  <div class="field"><span class="label">Cours box :</span> Ancienne date <span style="text-decoration:line-through;color:#c62828">barrée rouge</span> · Nouvelle date en vert</div>
-  <div class="field"><span class="label">Bouton :</span> ✕ Annuler</div>
+  <div class="field"><span class="label">Encadré :</span> ancienne combinaison <s>ville — niveau · date</s> barrée en gris, puis la nouvelle en vert précédée d'une flèche.</div>
+  <div class="field"><span class="label">Ni horaire, ni adresse, ni livret :</span> l'encadré ne reprend que ville, niveau et date — le handler ne relit pas les Paramètres pour cet email.</div>
+  <div class="field"><span class="label">Bouton :</span> aucun (contrairement à ce que décrivait l'ancienne notice, il n'y a pas de bouton « ✕ Annuler »).</div>
 </div>
 
 <h2>E-J1a — Lendemain du cours, élève présent</h2>
