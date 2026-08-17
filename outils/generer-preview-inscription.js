@@ -11,7 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { executer } = require('./_banc-emails.js');
+const { executer, blocNotifs, CSS_NOTIFS } = require('./_banc-emails.js');
 
 const RACINE = path.join(__dirname, '..');
 const S = '2026-2027';
@@ -122,6 +122,7 @@ body { margin:0; padding:0; background:#f5f5f5; font-family:Arial,sans-serif; }
 .pv-mail { max-width:600px; margin:10px auto 0; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.12); }
 .pv-fin { max-width:660px; margin:40px auto 0; background:#fff; padding:18px 20px; font-size:13px; color:#444; line-height:1.8; border-top:3px solid #D4AF37; }
 .pv-fin b { color:#8B6914; }
+${CSS_NOTIFS}
 </style>
 </head>
 <body>
@@ -132,9 +133,12 @@ body { margin:0; padding:0; background:#f5f5f5; font-family:Arial,sans-serif; }
 </div>
 <div class="pv-gen">✅ Page <b>générée automatiquement</b> en exécutant les handlers de <code>worker.js</code> (Supabase et Brevo simulés) —
 ce que vous voyez est exactement ce que reçoivent les destinataires.<br>Régénérer avec <code>node outils/generer-preview-inscription.js</code></div>
-<div class="pv-nav">${nav}</div>
+<div class="pv-nav">${nav}<a href="#notifs">🔔 Notifications</a></div>
 
 ${sections}
+
+<div class="pv-titre" id="notifs" style="border-left-color:#5c9dc2;">Notifications — toast, panel 🔔 et push OS</div>
+${blocNotifs('notifs-inscription.html')}
 
 <div class="pv-fin">
   <p><b>Ce qui détermine la variante</b> — tout se joue dans le même handler <code>handleNotifyInscriptionCours</code> :</p>

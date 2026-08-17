@@ -11,7 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { executer } = require('./_banc-emails.js');
+const { executer, blocNotifs, CSS_NOTIFS } = require('./_banc-emails.js');
 
 const RACINE = path.join(__dirname, '..');
 
@@ -185,6 +185,7 @@ body { margin:0; padding:0; background:#f5f5f5; font-family:Arial,sans-serif; }
 table.tbl { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
 table.tbl th { text-align:left; padding:8px; background:#eee; }
 table.tbl td { padding:8px; border-top:1px solid #ddd; vertical-align:top; }
+${CSS_NOTIFS}
 </style>
 </head>
 <body>
@@ -195,9 +196,12 @@ table.tbl td { padding:8px; border-top:1px solid #ddd; vertical-align:top; }
 </div>
 <div class="pv-gen">✅ Page <b>générée automatiquement</b> en exécutant les handlers de <code>worker.js</code> (Supabase et Brevo simulés) —
 ce que vous voyez est exactement ce que reçoivent les destinataires.<br>Régénérer avec <code>node outils/generer-preview-stages.js</code></div>
-<div class="pv-nav">${nav}</div>
+<div class="pv-nav">${nav}<a href="#notifs">🔔 Notifications</a></div>
 
 ${sections}
+
+<div class="pv-titre" id="notifs" style="border-left-color:#5c9dc2;">Notifications — toast, panel 🔔 et push OS</div>
+${blocNotifs('notifs-stages.html')}
 
 <div class="pv-fin">
   <p><b>Dates d'exemple</b> — volontairement relatives à aujourd'hui, car le choix entre S1 et S1b (et entre S3 et S3b)
