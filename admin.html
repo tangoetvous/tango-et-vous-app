@@ -10741,7 +10741,10 @@ _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:_rNb,datesC
           prenom: _carteObjN ? (_carteObjN.prenom||'') : '',
           restants: _carteNbAdmin(),
           source: 'admin',
-          liensAssoConnect: '#',
+          // Lien réel du bouton « Renouveler ma carte sur AssoConnect » de l'email.
+          // ⚠️ Valait '#' jusqu'au 2026-08-17 : le bouton ne menait nulle part alors
+          // que l'email demande justement de régler. Repli sur le défaut de la saison.
+          liensAssoConnect: getAssoConnectLien('renouv') || '#',
         }),
       })).catch(function(){});
     }
