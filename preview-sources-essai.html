@@ -124,7 +124,7 @@
 <h2>E15 / E15b — Admin valide attente → confirmé</h2>
 <div class="route">POST /api/notify/essai-valide (JWT admin)</div>
 <div class="block">
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, dateEssai, role, partPrenom?, partNom?, emailPartage?, daysUntil, livretUrl?, id }</span></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, dateEssai, role, partPrenom?, partNom?, emailPartage?, daysUntil, livretUrl?, id }</span><div class="note">⚠️ Champs <b>partPrenom, partNom, emailPartage</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17).</div></div>
   <div class="field"><span class="label">E15b :</span> <span class="cond">si emailPartage=true → salutation "Prénom &amp; Prénom", sinon E15 normal</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>✓ Bonne nouvelle — votre cours d'essai du ${dateLabel} est confirmé !</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Essai tango confirme - nous vous attendons avec impatience sur la piste"</span></div>
@@ -243,7 +243,7 @@
   <div class="field"><span class="label">Body envoyé :</span> <span class="var">{ email, prenom, nom, date_essai, ville, niveau }</span> (capturé avant soft-delete depuis adminData.essai)</div>
   <div class="field"><span class="label">Destinataire :</span> <span class="var">body.email</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>Votre cours d'essai du ${dateLabel} — modification de votre inscription — Tango & Vous</code></div>
-  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription au cours essai tango a ete modifiee par notre equipe"</span></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription au cours d'essai tango a ete annulee par notre equipe"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange/jaune `#fff8e1` / `#e65100` · "📋 Votre inscription a été modifiée"</div>
   <div class="field"><span class="label">Intro :</span> "Nous vous informons que votre inscription au cours d'essai ci-dessous a été modifiée par notre équipe. Si vous avez des questions, n'hésitez pas à nous contacter."</div>
   <div class="field"><span class="label">Cours box :</span> Identique aux emails E-cancel/E-report (même variables, même fetch Supabase dans le handler)</div>

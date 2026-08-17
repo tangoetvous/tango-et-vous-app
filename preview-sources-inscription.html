@@ -27,7 +27,7 @@
   <div class="field"><span class="label">Destinataire :</span> <span class="var">tangoetvous@gmail.com</span></div>
   <div class="field"><span class="label">Header admin :</span> Fond #111 · bordure or · "Nouvelle inscription [tango/preinscription]"</div>
   <div class="field"><span class="label">Sujet :</span> <code>[Inscription tango] ${prenom nom} — ${Ville} ${Niveau} · ${Rôle} · ${statut}</code></div>
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, tel, role, ville, niveau, saison, statut, partenaire?, emailPartenaire?, pPrenom?, pNom?, pRole?, venue?, type }</span></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, tel, role, ville, niveau, saison, statut, partenaire?, emailPartenaire?, pPrenom?, pNom?, pRole?, venue?, type }</span><div class="note">⚠️ Champs <b>statut, emailPartenaire, type</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17).</div></div>
   <div class="field"><span class="label">Encadré or (solo) :</span> Nom/email/tel · Rôle (badge couleur) · Cours · Statut</div>
   <div class="field"><span class="label">Encadré or (couple) :</span> <span class="cond">isCoupleAdmin = c.venue === 'avec-part' &amp;&amp; !!c.pPrenom</span><br/>
     → Bandeau violet <code>#6a1b9a</code> "👫 COUPLE" (pill blanche)<br/>
@@ -110,7 +110,7 @@
 <h2>I04 — Admin modifie le cours d'un élève inscrit</h2>
 <div class="route">POST /api/notify/inscription-cours-modifiee (JWT admin)</div>
 <div class="block">
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ancienCours, nouveauCours }</span></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ancienCours, nouveauCours }</span><div class="note">⚠️ Champs <b>nom</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17).</div></div>
   <div class="field"><span class="label">Sujet :</span> <code>Votre inscription au tango a été modifiée — Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription a ete modifiee - retrouvez les nouveaux details ci-dessous"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Bleu 📋</div>

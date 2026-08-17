@@ -30,7 +30,7 @@
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, role, cours, ville, niveau, saison }</span></div>
   <div class="field"><span class="label">Destinataires :</span> <span class="var">body.email</span> + notification admin <span class="var">tangoetvous@gmail.com</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>Votre demande d'inscription au tango est enregistrée — Tango &amp; Vous</code></div>
-  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre demande d inscription tango est bien enregistree - confirmation en cours"</span></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription au tango est validee - prochaine etape AssoConnect"<div class="note">⚠️ T1-dem et T1-val partagent le MÊME préheader — un seul <code>wrap()</code> dans le code, seul le sujet diffère</div></span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Votre demande d'inscription est enregistrée"</div>
   <div class="field"><span class="label">Cours-box :</span> Cours · Saison · Rôle (badge couleur) · Statut "⏳ En attente de validation"</div>
   <div class="field"><span class="label">Encadré :</span> "Nous veillons à maintenir l'équilibre guideurs/guidées, vous recevrez une confirmation dès que votre inscription sera validée."</div>
@@ -42,7 +42,7 @@
 <div class="route">POST /api/notify/essai-action (JWT admin) — action='transfer-demande' | 'transfer-valide'</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin clique "Validé·e" sur une fiche essai tango → statut='attente_paiement'</span></div>
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, role, cours, ville, niveau, saison, partenaire?, assoConnectUrl?, livretUrl? }</span></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, role, cours, ville, niveau, saison, partenaire?, assoConnectUrl?, livretUrl? }</span><div class="note">⚠️ Champs <b>assoConnectUrl</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17).</div></div>
   <div class="field"><span class="label">Sujet :</span> <code>✓ Votre inscription au tango est validée — procédez à votre inscription sur AssoConnect</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription au tango est validee - prochaine etape AssoConnect"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre inscription au tango est validée — finalisez votre inscription"</div>
@@ -117,7 +117,7 @@
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien 9h Paris · eleves WHERE carte_expiration=aujourd'hui AND carte_restants&gt;0</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>⏰ Votre carte de cours a expiré — ${restants} cours non utilisés · Tango &amp; Vous</code></div>
-  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre carte de 10 cours a expire - renouvelez pour continuer a danser"</span></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre carte de cours a expire - renouvelez pour continuer a danser"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⏰ "Votre carte de 10 cours a expiré"</div>
   <div class="field"><span class="label">Encadré :</span> Titre "Votre carte a expiré" · carte_restants cours non utilisés · date fin de validité · "Si vous souhaitez continuer à danser, vous pouvez renouveler votre carte sur AssoConnect."</div>
   <div class="field"><span class="label">Message :</span> "Pour toute question n'hésitez pas à nous contacter."</div>
