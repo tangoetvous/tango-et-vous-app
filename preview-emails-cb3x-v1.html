@@ -1,214 +1,120 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Preview emails — Relances CB 3× · Tango &amp; Vous</title>
+<title>TANGO &amp; VOUS</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:Arial,sans-serif;background:#1a1a1a;color:#eee;}
-  h1{text-align:center;color:#D4AF37;padding:32px 0 8px;font-size:22px;letter-spacing:2px;}
-  .subtitle{text-align:center;color:#888;font-size:13px;margin-bottom:32px;}
-  nav{background:#111;border-bottom:2px solid #D4AF37;padding:12px 24px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;position:sticky;top:0;z-index:100;}
-  nav a{color:#D4AF37;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:1px;padding:6px 14px;border:1px solid #D4AF37;border-radius:20px;}
-  nav a:hover{background:#D4AF37;color:#111;}
-  .section{max-width:700px;margin:0 auto 60px;padding:0 16px;}
-  .section-title{font-size:18px;font-weight:700;color:#D4AF37;border-left:4px solid #D4AF37;padding-left:14px;margin:48px 0 6px;}
-  .section-desc{font-size:13px;color:#aaa;margin-bottom:20px;padding-left:18px;line-height:1.7;}
-  .email-label{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#888;margin:24px 0 8px;}
-  .email-wrap{border:1px solid #444;border-radius:4px;overflow:hidden;}
-  .badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin:0 4px;}
-  .badge-eleve{background:#1565c0;color:#fff;}
-  .email-subj{font-size:11px;color:#ccc;background:#252525;border:1px solid #333;border-radius:4px;padding:6px 12px;margin:0 0 8px;font-family:monospace;}
-  .trigger{background:#252525;border:1px solid #444;border-radius:6px;padding:10px 14px;max-width:700px;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
-  .trigger-icon{font-size:16px;}
-  .trigger-text{font-size:12px;color:#ccc;line-height:1.5;}
-  .trigger-text strong{color:#fff;}
-  hr{border:none;border-top:1px solid #333;margin:40px 0;}
-  .note{background:#1a2a1a;border:1px solid #2e7d32;border-radius:6px;padding:10px 14px;font-size:12px;color:#a5d6a7;margin-bottom:20px;line-height:1.6;}
+body { margin:0; padding:0; background:#f5f5f5; font-family:Arial,sans-serif; }
+.pv-head { background:#111; border-bottom:3px solid #1565c0; padding:22px 24px; text-align:center; }
+.pv-head h1 { font-family:Georgia,serif; font-size:20px; font-weight:300; letter-spacing:5px; color:#1565c0; margin:0; }
+.pv-head p { font-size:12px; color:#888; margin:8px 0 0; }
+.pv-gen { background:#0d2b0d; color:#a5d6a7; font-size:12px; text-align:center; padding:9px 16px; border-bottom:1px solid #1b5e20; line-height:1.6; }
+.pv-gen code { color:#fff; }
+.pv-nav { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; padding:12px 16px; background:#0a0a0a; position:sticky; top:0; z-index:10; }
+.pv-nav a { color:#1565c0; text-decoration:none; font-size:11px; border:1px solid #333; padding:5px 12px; border-radius:20px; }
+.pv-titre { max-width:660px; margin:38px auto 0; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:#fff; background:#333; padding:10px 20px; border-left:4px solid #1565c0; }
+.pv-com { max-width:660px; margin:0 auto; font-size:13px; color:#555; padding:12px 20px; line-height:1.7; background:#fff; }
+.pv-h { display:block; margin-top:6px; color:#666; font-size:12px; }
+.pv-dest { max-width:660px; margin:16px auto 0; font-size:12px; color:#333; background:#eceff1; padding:7px 16px; border-radius:6px 6px 0 0; font-weight:700; }
+.pv-sujet { max-width:660px; margin:0 auto; font-size:13px; background:#f7f7f7; border-left:4px solid #1565c0; padding:10px 16px; color:#222; }
+.pv-mail { max-width:600px; margin:10px auto 0; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.12); }
+.pv-fin { max-width:660px; margin:40px auto 0; background:#fff; padding:18px 20px; font-size:13px; color:#444; line-height:1.8; border-top:3px solid #1565c0; }
+table.tbl { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+table.tbl th { text-align:left; padding:8px; background:#eee; }
+table.tbl td { padding:8px; border-top:1px solid #ddd; vertical-align:top; }
+
+.pv-notifs { max-width:660px; margin:0 auto; background:#141414; color:#ddd; padding:24px 20px 6px; }
+.pv-notifs .email-block { margin-bottom:44px; }
+.pv-notifs .email-label { color:#888; font-size:11px; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; padding-left:4px; }
+.pv-notifs .email-label strong { color:#D4AF37; }
+.pv-notifs .email-label em { color:#aaa; font-style:normal; font-size:10px; }
+.pv-notifs .push-mockup { background:#fff; border-radius:14px; box-shadow:0 4px 24px rgba(0,0,0,.35); padding:14px 16px; max-width:360px; display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+.pv-notifs .push-mockup-icon { width:36px; height:36px; border-radius:8px; background:#111; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.pv-notifs .push-mockup-body { flex:1; }
+.pv-notifs .push-mockup-app { font-size:11px; font-weight:700; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
+.pv-notifs .push-mockup-title { font-size:13px; font-weight:700; color:#111; margin-bottom:2px; }
+.pv-notifs .push-mockup-text { font-size:12px; color:#444; line-height:1.4; }
+.pv-notifs .push-mockup-time { font-size:11px; color:#999; margin-top:4px; }
+.pv-main { max-width:660px; margin:34px auto 0; font-size:13px; background:#fff3e0; border:1px solid #ffe0b2; border-left:4px solid #e65100; padding:12px 18px; color:#5d4037; line-height:1.6; }
+
 </style>
 </head>
 <body>
 
-<h1>EMAILS — RELANCES CB 3×</h1>
-<p class="subtitle">preview-emails-cb3x-v1.html · Tango &amp; Vous · 2026-05-20</p>
-
-<nav>
-  <a href="#echeance2">💳 2ème échéance (J+2 mois)</a>
-  <a href="#echeance3">💳 3ème échéance (J+4 mois)</a>
-</nav>
-
-
-<!-- ================================================================ -->
-<!-- CONTEXTE                                                          -->
-<!-- ================================================================ -->
-<div class="section">
-  <div class="section-title" style="margin-top:40px;">Contexte</div>
-  <div class="section-desc">
-    Ces emails sont envoyés automatiquement aux élèves ayant choisi le paiement <strong>CB 3×</strong>
-    lors de leur inscription (<code>paiement='cb3x'</code> dans <code>inscriptions_cours</code>).<br><br>
-    <strong>Déclencheur</strong> : cron GitHub Actions quotidien (9h Paris) → <code>POST /api/cron/relance-cb3x</code>.<br>
-    <strong>Données requises</strong> : <code>donnees.datePremierPaiement</code> (date du 1er paiement,
-    renseignée lors de la validation du paiement dans l'admin).<br><br>
-    <strong>Anti-doublon</strong> : après envoi, le flag <code>relance_cb3x_2_sent: true</code>
-    (ou <code>_3_sent</code>) est écrit dans <code>donnees</code> — un seul email par échéance, même si le
-    cron tourne plusieurs jours après la date cible.
-  </div>
-
-  <div class="trigger">
-    <div class="trigger-icon">💳</div>
-    <div class="trigger-text">
-      <strong>2ème échéance</strong> — envoyé dès que <code>today ≥ datePremierPaiement + 2 mois</code>
-      et <code>relance_cb3x_2_sent</code> absent de <code>donnees</code>
-    </div>
-  </div>
-  <div class="trigger">
-    <div class="trigger-icon">💳</div>
-    <div class="trigger-text">
-      <strong>3ème échéance</strong> — envoyé dès que <code>today ≥ datePremierPaiement + 4 mois</code>
-      et <code>relance_cb3x_3_sent</code> absent de <code>donnees</code>
-    </div>
-  </div>
-
-  <div class="note" style="margin-top:16px;">
-    💡 <strong>Exemple :</strong> 1er paiement le 15 octobre 2025 →
-    2ème rappel envoyé le 15 décembre 2025 · 3ème rappel envoyé le 15 février 2026.
-  </div>
+<div class="pv-head">
+  <h1>TANGO &amp; VOUS</h1>
+  <p>Preview — rappels des échéances CB 3×</p>
 </div>
+<div class="pv-gen">✅ Page <b>générée automatiquement</b> en exécutant les handlers de <code>worker.js</code> (Supabase et Brevo simulés) —
+ce que vous voyez est exactement ce que reçoivent les destinataires.<br>Régénérer avec <code>node outils/generer-preview-cb3x.js</code></div>
+<div class="pv-nav"><a href="#echeance2">Rappel</a><a href="#echeance3">Rappel</a></div>
 
-
-<!-- ================================================================ -->
-<!-- 2ÈME ÉCHÉANCE (J+2 MOIS)                                         -->
-<!-- ================================================================ -->
-<div class="section" id="echeance2">
-  <div class="section-title">💳 2ème échéance (J+2 mois)</div>
-  <div class="section-desc">
-    Envoyé à l'élève le jour où <code>datePremierPaiement + 2 mois</code> est atteint.<br>
-    Exemple ci-dessous : 1er paiement le 15 octobre 2025, rappel le 15 décembre 2025.
-  </div>
-
-  <div class="email-subj">Objet : 💳 Rappel — 2ème prélèvement CB · Cours de tango Paris Débutants</div>
-  <div class="email-label"><span class="badge badge-eleve">Élève</span></div>
-  <div class="email-wrap">
-    <div style="background:#fff;">
-      <!-- Header -->
-      <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-        <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-        <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-      </div>
-      <!-- Bandeau bleu -->
+<div class="pv-titre" id="echeance2">Rappel — 2ᵉ prélèvement (2 mois après le premier)</div>
+<div class="pv-com">Cron quotidien. Prévient que le deuxième des trois prélèvements va être débité, en rappelant la date. Un marqueur en base évite tout second envoi. <span class="pv-h">Handler : <code>handleCronRelanceCb3x</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email DESTINATAIRE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 💳 Rappel — 2ème prélèvement CB · Cours de tango Paris Débutants</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Rappel - une echeance de paiement CB est due pour votre inscription tango&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
       <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
-        <span style="font-size:14px;font-weight:700;color:#1565c0;">💳 Rappel — 2ème échéance de paiement CB</span>
-      </div>
-      <!-- Corps -->
+        <span style="font-size:14px;font-weight:700;color:#1565c0;">💳 Rappel — 2ème échéance de paiement CB</span></div>
       <div style="padding:28px 24px;">
-        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Sophie,</p>
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
         <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">Votre inscription aux cours de tango <strong>Paris Débutants</strong> a été réglée en 3 fois par CB. Le <strong>2ème prélèvement</strong> (sur 3) va prochainement être effectué sur votre carte bancaire.</p>
-
-        <!-- Boîte bleue info paiement -->
         <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE PAIEMENT CB 3×</div>
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
             <tr><td style="padding:5px 0;color:#555;">Cours</td><td style="padding:5px 0;font-weight:700;color:#222;text-align:right;">Paris Débutants</td></tr>
             <tr><td style="padding:5px 0;color:#555;">Prélèvement</td><td style="padding:5px 0;font-weight:700;color:#222;text-align:right;">2ème sur 3</td></tr>
-            <tr><td style="padding:5px 0;color:#555;">Date du prélèvement</td><td style="padding:5px 0;font-weight:700;color:#1565c0;text-align:right;">Lundi 15 décembre 2025</td></tr>
+            <tr><td style="padding:5px 0;color:#555;">Date du prélèvement</td><td style="padding:5px 0;font-weight:700;color:#1565c0;text-align:right;">Lundi 17 août 2026</td></tr>
           </table>
         </div>
-
-        <!-- Encadré orange -->
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
           <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">✓ Vérifiez votre carte bancaire</p>
           <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 10px;">Assurez-vous que votre carte bancaire n'est pas expirée ou opposée avant la date du prélèvement. Si vous avez changé de carte ou souhaitez modifier votre moyen de paiement, rendez-vous sur AssoConnect.</p>
           <p style="font-size:12px;color:#888;margin:0;">Si votre carte est toujours valide, aucune action n'est nécessaire — le prélèvement se fera automatiquement.</p>
         </div>
-
-        <!-- Bouton AssoConnect -->
-        <p style="text-align:center;margin:0 0 14px;">
-          <a href="https://app.assoconnect.com/login" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Mettre à jour mon moyen de paiement →</a>
-        </p>
-
+        <p style="text-align:center;margin:0 0 14px;"><a href="https://app.assoconnect.com/login" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Mettre à jour mon moyen de paiement →</a></p>
         <p style="font-size:13px;color:#888;text-align:center;margin:0 0 22px;">Une question ? <a href="mailto:tangoetvous@gmail.com" style="color:#D4AF37;">tangoetvous@gmail.com</a> · 07 73 27 59 06</p>
-
-        <!-- Signature -->
-        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-        <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-        <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-      </div>
-      <!-- Footer -->
-      <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-        <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-        <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<!-- ================================================================ -->
-<!-- 3ÈME ÉCHÉANCE (J+4 MOIS)                                         -->
-<!-- ================================================================ -->
-<div class="section" id="echeance3">
-  <div class="section-title">💳 3ème échéance (J+4 mois)</div>
-  <div class="section-desc">
-    Envoyé à l'élève le jour où <code>datePremierPaiement + 4 mois</code> est atteint.<br>
-    Exemple ci-dessous : 1er paiement le 15 octobre 2025, rappel le 15 février 2026.
-  </div>
-
-  <div class="email-subj">Objet : 💳 Rappel — 3ème prélèvement CB · Cours de tango Paris Débutants</div>
-  <div class="email-label"><span class="badge badge-eleve">Élève</span></div>
-  <div class="email-wrap">
-    <div style="background:#fff;">
-      <!-- Header -->
-      <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-        <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-        <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-      </div>
-      <!-- Bandeau bleu -->
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="echeance3">Rappel — 3ᵉ et dernier prélèvement (4 mois après le premier)</div>
+<div class="pv-com">Même gabarit, avec la mention qu'il s'agit du dernier prélèvement. Une fiche dont les deux échéances sont dues reçoit les deux rappels. <span class="pv-h">Handler : <code>handleCronRelanceCb3x</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email DESTINATAIRE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 💳 Rappel — 3ème prélèvement CB · Cours de tango Paris Débutants</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Rappel - une echeance de paiement CB est due pour votre inscription tango&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
       <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
-        <span style="font-size:14px;font-weight:700;color:#1565c0;">💳 Rappel — 3ème échéance de paiement CB</span>
-      </div>
-      <!-- Corps -->
+        <span style="font-size:14px;font-weight:700;color:#1565c0;">💳 Rappel — 3ème échéance de paiement CB</span></div>
       <div style="padding:28px 24px;">
-        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Sophie,</p>
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
         <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 20px;">Votre inscription aux cours de tango <strong>Paris Débutants</strong> a été réglée en 3 fois par CB. Le <strong>3ème prélèvement</strong> (sur 3) va prochainement être effectué sur votre carte bancaire.</p>
-
-        <!-- Boîte bleue info paiement -->
         <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE PAIEMENT CB 3×</div>
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
             <tr><td style="padding:5px 0;color:#555;">Cours</td><td style="padding:5px 0;font-weight:700;color:#222;text-align:right;">Paris Débutants</td></tr>
             <tr><td style="padding:5px 0;color:#555;">Prélèvement</td><td style="padding:5px 0;font-weight:700;color:#222;text-align:right;">3ème sur 3 — dernier</td></tr>
-            <tr><td style="padding:5px 0;color:#555;">Date du prélèvement</td><td style="padding:5px 0;font-weight:700;color:#1565c0;text-align:right;">Dimanche 15 février 2026</td></tr>
+            <tr><td style="padding:5px 0;color:#555;">Date du prélèvement</td><td style="padding:5px 0;font-weight:700;color:#1565c0;text-align:right;">Lundi 17 août 2026</td></tr>
           </table>
         </div>
-
-        <!-- Encadré orange -->
         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
           <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">✓ Vérifiez votre carte bancaire</p>
           <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 10px;">Assurez-vous que votre carte bancaire n'est pas expirée ou opposée avant la date du prélèvement. Si vous avez changé de carte ou souhaitez modifier votre moyen de paiement, rendez-vous sur AssoConnect.</p>
           <p style="font-size:12px;color:#888;margin:0;">Si votre carte est toujours valide, aucune action n'est nécessaire — le prélèvement se fera automatiquement. Il s'agit du <strong>dernier prélèvement</strong> — votre inscription sera entièrement réglée.</p>
         </div>
-
-        <!-- Bouton AssoConnect -->
-        <p style="text-align:center;margin:0 0 14px;">
-          <a href="https://app.assoconnect.com/login" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Mettre à jour mon moyen de paiement →</a>
-        </p>
-
+        <p style="text-align:center;margin:0 0 14px;"><a href="https://app.assoconnect.com/login" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Mettre à jour mon moyen de paiement →</a></p>
         <p style="font-size:13px;color:#888;text-align:center;margin:0 0 22px;">Une question ? <a href="mailto:tangoetvous@gmail.com" style="color:#D4AF37;">tangoetvous@gmail.com</a> · 07 73 27 59 06</p>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div>
 
-        <!-- Signature -->
-        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-        <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-        <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-      </div>
-      <!-- Footer -->
-      <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-        <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-        <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-      </div>
-    </div>
-  </div>
-</div>
+
+
+
+
+<div class="pv-fin"><table class="tbl">
+    <tr><th>Ce qui déclenche l'envoi</th><th>Règle appliquée par le code</th></tr>
+    <tr><td><b>Ciblage</b></td><td><code>inscriptions_cours</code> WHERE <code>paiement = 'cb3x'</code> ET <code>statut = 'inscrit'</code></td></tr>
+    <tr><td><b>2ᵉ échéance</b></td><td>aujourd'hui ≥ premier paiement + 2 mois, et le marqueur <code>relance_cb3x_2_sent</code> est absent</td></tr>
+    <tr><td><b>3ᵉ échéance</b></td><td>aujourd'hui ≥ premier paiement + 4 mois, et le marqueur <code>relance_cb3x_3_sent</code> est absent</td></tr>
+    <tr><td><b>Anti-doublon</b></td><td>chaque envoi réussi pose son marqueur dans <code>donnees</code> — contrairement à la relance d'inscription du 22 août, où l'absence de marqueur est un choix assumé.</td></tr>
+    <tr><td><b>Sans date de premier paiement</b></td><td>la fiche est ignorée : aucune échéance ne peut être calculée.</td></tr>
+  </table>
+  <p style="margin-top:14px;">Aucune notification ni push : ces rappels sont purement informatifs, le prélèvement étant automatique côté AssoConnect.</p><p style="margin-top:14px;">2 emails produits pour cette page.</p></div>
 
 </body>
 </html>
