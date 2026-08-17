@@ -1,5 +1,18 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-17 — Previews régénérées DEPUIS le code, famille par famille (🚧 EN COURS)
+
+Application de la règle permanente « une maquette engage le code » : les pages `preview-emails-*.html` cessent d'être des maquettes écrites à la main pour devenir des **pages générées en exécutant réellement les handlers de `worker.js`**.
+
+- **Banc d'essai commun `outils/_banc-emails.js`** — extrait un handler par équilibrage d'accolades, l'instancie via `new Function`, et l'exécute avec un `fetch` **entièrement simulé** : Brevo capturé (`{to, subject, html}`), Supabase servant les clés `parametres` fournies, et — depuis cette session — **d'autres tables** via `params.__tables = [{ match:'<fragment d’URL>', rows:[…] }]` (nécessaire pour rejouer les crons qui lisent `inscriptions_stages`). Stubs : `_insertNotification`, `getFcmTokensAdmin`, `sendFcmPush`, `_calHmac`, `_buildTokenMap` (→ `new Map()`). ⚠️ `outils/` est dans `.assetsignore` : jamais servi en production.
+- **Générateurs** : `outils/generer-preview-relance.js` (extraction de gabarits), `outils/generer-preview-inscription.js` (**12 cas / 27 emails**), `outils/generer-preview-stages.js` (**11 cas / 22 emails**). Chaque page porte un bandeau vert indiquant qu'elle est générée et la commande pour la régénérer.
+- ⚠️ **Jamais de date figée dans un générateur** : le choix S1/S1b (et S3/S3b) dépend du délai réel jusqu'au stage → dates construites en `jour(+20)/(+2)/(+3)`. Même règle que pour les tests Playwright.
+- **Inscription — 3 variantes ajoutées** (elles existaient dans le code, pas dans les cas de test) : duo à **Vincennes** (bandeau duo **et** encadré Sorano), **duo mis en liste d'attente** (les deux partenaires reçoivent la version attente), **deux cours aux statuts différents** (quota évalué cours par cours → un email validé + un email attente).
+- 📌 **« I17 — pré-inscription » n'existe pas dans le code** : `inscription-cours.html` connaît son `MODE` mais ne le transmet pas à `/api/notify/inscription-cours`. En mai-août, c'est exactement I01 avec la saison suivante.
+- 🐛 **Bug trouvé par le banc d'essai (corrigé)** : dans `handleCronRappelStageJ3` (S4) et `handleCronEssaiYogaRappelJ3` (Y3), `const dateLabel` était déclaré **dans la boucle** des inscrits alors que la notification admin de fin de handler l'utilise → `ReferenceError` avalée par son `try/catch` → **aucun récapitulatif « N rappels envoyés » ne remontait dans le panel 🔔** (les emails, eux, partaient bien). Déclaration hoistée avant la boucle dans les deux crons. **Intérêt démontré de la méthode : exécuter le handler révèle ce qu'une relecture ne voit pas.**
+- **Reste à régénérer** : Cartes, Essai tango, Yoga, Cours particuliers, Devis, CB 3×, À-valider.
+- **Ensuite seulement** (décision admin en attente) : les **27 champs transmis mais jamais lus** par les handlers, repérés lors de l'audit des pages sources, seront soumis à l'admin une fois les previews à jour.
+
 ## Session 2026-08-17 — Export des contacts vers l'app Contacts (vCard) (✅ FAIT)
 
 Besoin admin : récupérer prénom/nom/téléphone/email des élèves dans l'app **Contacts de l'iPhone**, en quelques clics, sans passer par un ordinateur.
