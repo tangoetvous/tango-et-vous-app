@@ -8579,6 +8579,27 @@ async function handleNotifyCoursParticulier(request, env) {
   const nomAff    = _esc((prenom||'')+' '+(nom||'')).trim();
   const prenomAff = _esc(prenom || '');
 
+  // ── Libellés lisibles ────────────────────────────────────────────────────
+  // Le formulaire transmet des identifiants (« jeremy », « 1an », « passer-cap »).
+  // Sans ces tables, les deux emails affichaient ces codes tels quels — illisibles
+  // pour la personne qui reçoit son accusé de réception. Valeur inconnue → on
+  // garde la valeur brute plutôt que de perdre l'information.
+  const CP_PROFS = { florencia: 'Florencia Garcia', jeremy: 'Jérémy Braitbart', 'les-deux': 'Florencia & Jérémy' };
+  const CP_NIVEAUX = {
+    debutant: 'Débutant·e — jamais dansé', quelques: 'Quelques cours',
+    '1an': '1 an — bases acquises', '2ans': '2 ans de cours',
+    plus: 'Plus de 2 ans', milonga: 'Sort régulièrement en milonga',
+  };
+  const CP_OBJECTIFS = {
+    decouverte: '🌱 Découverte du tango', 'passer-cap': '🎯 Passer un cap',
+    accordage: '💑 Accordage de couple', sequence: '🔄 Travail sur une séquence',
+    scene: '🎭 Tango de scène', choregraphie: '💍 Chorégraphie', autre: '✨ Autre objectif',
+  };
+  const profAff    = CP_PROFS[prof] || prof || '';
+  const niveauAff  = CP_NIVEAUX[niveauEleve] || niveauEleve || '';
+  const objectifsAff = String(objectifs || '').split(',').map(s => s.trim()).filter(Boolean)
+    .map(o => CP_OBJECTIFS[o] || o).join(', ');
+
   // Notif panel admin
   const urgBadge = urgence === 'haute' ? ' · Urgence haute' : '';
   try {
@@ -8615,11 +8636,11 @@ async function handleNotifyCoursParticulier(request, env) {
         </div>
         <div style="background:#fffdf8;padding:0;">
           <table style="width:100%;border-collapse:collapse;">
-            ${row('Professeur', prof)}
+            ${row('Professeur', profAff)}
             ${row('Durée', duree)}
-            ${row('Niveau', niveauEleve)}
+            ${row('Niveau', niveauAff)}
             ${row('Lieu', lieu)}
-            ${row('Objectifs', objectifs)}
+            ${row('Objectifs', objectifsAff)}
             ${row('Disponibilités', dispoTexte)}
             ${row('Remarques', remarque)}
           </table>
@@ -8632,7 +8653,9 @@ async function handleNotifyCoursParticulier(request, env) {
         <a href="https://app.tangoetvous.fr/admin.html#cours-particuliers" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
       </div>
     </div>${footer}`);
-  const profShortCP = prof === 'florencia' ? 'Florencia' : prof === 'jeremy' ? 'Braitbart' : prof === 'les-deux' ? 'Florencia ou Braitbart' : _esc(String(prof||''));
+  // Prénoms des deux côtés — l'objet mélangeait « Florencia » (prénom) et
+  // « Braitbart » (nom de famille) selon le professeur demandé.
+  const profShortCP = prof === 'florencia' ? 'Florencia' : prof === 'jeremy' ? 'Jérémy' : prof === 'les-deux' ? 'Florencia ou Jérémy' : _esc(String(prof||''));
   await sendMail(adminEmail, `[Cours particulier] ${nomAff}${urgence === 'haute' ? ' — urgence haute' : ''} — ${profShortCP} demandé`, htmlAdmin);
 
   // CP1 — élève (accusé réception)
@@ -8640,11 +8663,11 @@ async function handleNotifyCoursParticulier(request, env) {
     const cpBox = `<div style="background:#ede7f6;border:2px solid #7b1fa2;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#7b1fa2;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #ce93d8;">VOTRE DEMANDE</div>
       <table style="width:100%;border-collapse:collapse;">
-        ${row('Professeur', prof)}
+        ${row('Professeur', profAff)}
         ${row('Durée', duree)}
-        ${row('Niveau', niveauEleve)}
+        ${row('Niveau', niveauAff)}
         ${row('Lieu', lieu)}
-        ${row('Objectifs', objectifs)}
+        ${row('Objectifs', objectifsAff)}
         ${row('Disponibilités', dispoTexte)}
         ${row('Remarques', remarque)}
       </table>

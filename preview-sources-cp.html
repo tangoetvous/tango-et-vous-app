@@ -26,7 +26,7 @@
 <div class="route">POST /api/notify/cours-particulier (sans auth)</div>
 <div class="block">
   <div class="field"><span class="label">Destinataire :</span> <span class="var">tangoetvous@gmail.com</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>[Cours particulier] ${nom}${ · urgence}</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>[Cours particulier] ${nom}${ — urgence haute} — ${prénom du professeur} demandé</code></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ prenom, nom, email, tel, prof, duree, niveauEleve, lieu, lieuDetail, objectifs, dispoTexte, urgence, remarque, source }</span><div class="note">⚠️ Champs <b>lieuDetail, source</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17).</div></div>
   <div class="field"><span class="label">Encadré or :</span> Nom/email/tel · Badge prof (Florencia/Jérémy/Les deux) · Badge urgence rouge si haute</div>
   <div class="field"><span class="label">Table détails :</span> Durée · Niveau · Lieu · Objectifs (labels joints par ', ') · Disponibilités (multilignes) · Remarques (si non vide)</div>
@@ -51,6 +51,7 @@
 
 <h2>Valeurs réelles des champs — CP0/CP1</h2>
 <div class="block">
+  <div class="field"><span class="note">✅ Depuis le 2026-08-17, ces correspondances sont <b>appliquées par le worker</b> : les emails affichent le libellé, plus l'identifiant. Jusque-là ils montraient les codes bruts (<code>jeremy</code>, <code>1an</code>, <code>passer-cap</code>) dans les deux emails. Une valeur hors liste reste affichée telle quelle.</span></div>
   <div class="field"><span class="label">prof :</span> <span class="var">'florencia'</span> → "Florencia Garcia" · <span class="var">'jeremy'</span> → "Jérémy Braitbart" · <span class="var">'les-deux'</span> → "Florencia &amp; Jérémy"</div>
   <div class="field"><span class="label">duree :</span> <span class="var">'1 heure'</span> | <span class="var">'1h30'</span> | <span class="var">'2 heures'</span></div>
   <div class="field"><span class="label">lieu :</span> <span class="var">'nation'</span> → "Nation — Paris" · <span class="var">'gambetta'</span> → "Gambetta — Paris" · <span class="var">'vincennes'</span> → "Vincennes / Montreuil / Fontenay" · <span class="var">'domicile'</span> → "À domicile (CP)" · <span class="var">'vos-locaux'</span> → "Dans vos locaux (CP)"</div>

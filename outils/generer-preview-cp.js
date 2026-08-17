@@ -34,19 +34,10 @@ construirePage({
               objectifs: 'decouverte', niveauEleve: 'debutant',
               dispoTexte: 'Dates proposées : les week-ends de mars', remarque: '', urgence: '' } },
   ],
-  absentsTitre: 'Écarts constatés dans le code',
-  absentsOnglet: 'Écarts',
-  absents: `<table class="tbl">
-    <tr><th>Constat</th><th>Détail</th></tr>
-    <tr><td><b>⚠️ Codes bruts au lieu des libellés</b></td>
-        <td>Dans les <b>deux</b> emails, le tableau affiche les valeurs techniques du formulaire : <code>jeremy</code> au lieu de « Jérémy BRAITBART », <code>1an</code> au lieu de « 1 an — bases acquises », <code>passer-cap, choregraphie</code> au lieu de « 🎯 Passer un cap, 💍 Chorégraphie ». La correspondance existe pourtant, écrite noir sur blanc dans la documentation du projet. Lisible pour vous qui connaissez les codes ; beaucoup moins pour la personne qui reçoit son accusé de réception. <b>À corriger si vous le souhaitez</b> — c'est un changement d'affichage seulement.</td></tr>
-    <tr><td><b>Nom du professeur dans l'objet</b></td>
-        <td>« Braitbart demandé » (nom de famille) face à « Florencia demandé » (prénom) : les deux ne suivent pas la même convention.</td></tr>
-  </table>`,
   fin: `<table class="tbl">
     <tr><th>Point de vigilance</th><th>Détail</th></tr>
     <tr><td><b>Pas de push côté demandeur</b></td><td>Les personnes qui demandent un cours particulier ne sont pas forcément élèves et n'ont pas l'appli : elles reçoivent l'email, rien d'autre.</td></tr>
-    <tr><td><b>Objectifs</b></td><td>transmis sous forme d'identifiants joints par des virgules (<code>passer-cap, choregraphie</code>) — c'est ce que le formulaire envoie, et l'email les affiche tels quels.</td></tr>
+    <tr><td><b>Libellés</b></td><td>le formulaire transmet des identifiants (<code>jeremy</code>, <code>1an</code>, <code>passer-cap</code>) ; depuis le 2026-08-17 les deux emails les traduisent en clair (« Jérémy Braitbart », « 1 an — bases acquises », « 🎯 Passer un cap »). Une valeur inconnue est affichée telle quelle plutôt que perdue.</td></tr>
     <tr><td><b>Disponibilités</b></td><td>texte multiligne construit par le formulaire (Jours / Horaires / Dates proposées / Autres), repris à l'identique.</td></tr>
   </table>`,
 }).catch(e => { console.error('❌ Échec :', e.stack || e.message); process.exit(1); });
