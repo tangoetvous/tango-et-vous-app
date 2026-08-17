@@ -2,14 +2,28 @@
 // Par défaut la case est décochée → un seul encadré, la sélection de l'inscripteur
 // est recopiée pour le partenaire. Cochée → second encadré, sélections indépendantes.
 // ⚠️ Ne soumet JAMAIS le formulaire (écriture réelle en base) — on teste l'état interne.
+//
+// ⚠️ Dates RELATIVES à aujourd'hui : le formulaire n'affiche que les prochaines dates,
+// donc une fixture figée finit par tomber dans le passé et plus aucun accordéon n'est
+// construit (panne constatée le 2026-08-17 avec des dates du 1er et 8 août).
 const { test, expect } = require('@playwright/test');
 
-// Dates de stage contrôlées (2 dates suffisent, 3 créneaux chacune)
+function isoPlus(jours) {
+  const d = new Date(); d.setDate(d.getDate() + jours);
+  return d.toISOString().slice(0, 10);
+}
+function saisonDe(iso) {
+  const y = parseInt(iso.slice(0, 4)), m = parseInt(iso.slice(5, 7));
+  return (m >= 9 ? y : y - 1) + '-' + (m >= 9 ? y + 1 : y);
+}
+// Deux dates proches, dans la même saison (2 dates suffisent, 3 créneaux chacune)
+const D1 = isoPlus(14), D2 = isoPlus(21);
+const SAISON = saisonDe(D1);
 const DATES = {
-  saison: '2025-2026',
+  saison: SAISON,
   stages: [
-    { date: '2026-08-01', label: 'Sam. 1 Août 2026', technique: true, nStages: 2, themes: ['Initiation', 'Séquence complexe'] },
-    { date: '2026-08-08', label: 'Sam. 8 Août 2026', technique: true, nStages: 2, themes: ['Ganchos', 'Sacadas'] },
+    { date: D1, label: 'Stage ' + D1, technique: true, nStages: 2, themes: ['Initiation', 'Séquence complexe'] },
+    { date: D2, label: 'Stage ' + D2, technique: true, nStages: 2, themes: ['Ganchos', 'Sacadas'] },
   ],
 };
 const PARAMS = { horaires: { tech_deb:'15h30', tech_fin:'16h30', s1_deb:'14h', s1_fin:'15h30', s2_deb:'16h30', s2_fin:'18h' } };
@@ -17,10 +31,10 @@ const PARAMS = { horaires: { tech_deb:'15h30', tech_fin:'16h30', s1_deb:'14h', s
 async function bootForm(page) {
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
-  await page.addInitScript(([d, p]) => {
-    localStorage.setItem('tev_dates_stages_2025-2026', JSON.stringify(d));
-    localStorage.setItem('tev_params_stages_2025-2026', JSON.stringify(p));
-  }, [DATES, PARAMS]);
+  await page.addInitScript(([d, p, sai]) => {
+    localStorage.setItem('tev_dates_stages_' + sai, JSON.stringify(d));
+    localStorage.setItem('tev_params_stages_' + sai, JSON.stringify(p));
+  }, [DATES, PARAMS, SAISON]);
   // ⚠️ Ne PAS bloquer Supabase : le formulaire attend la réponse de la synchro
   // au DOMContentLoaded ; une requête avortée fige l'initialisation (accordéons
   // jamais construits). On répond « 0 ligne » → repli immédiat sur localStorage.

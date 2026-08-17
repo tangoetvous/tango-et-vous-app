@@ -1,5 +1,18 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-17 — Relance « finalisez votre inscription » avant la rentrée (✅ EN PROD)
+
+Trou identifié avec l'admin : une personne dont l'inscription est **validée mais non réglée** (statut `attente_paiement`) recevait I01 (ou I02) **une seule fois**, puis plus rien — elle restait indéfiniment dans Inscriptions Tango → Att. Paiement. Aucun des 14 crons existants ne la ciblait (C4/C5 visent les **cartes payées** avec cours restants, pas les inscriptions en attente de règlement).
+
+- **Nouveau cron** `handleCronRelanceInscription` (worker.js, route `POST /api/cron/relance-inscription`, secret `X-Cron-Secret`) + workflow `.github/workflows/relance-inscription.yml` — **cron `0 8 22 8 *` (22 août 10h Paris)** + `workflow_dispatch` avec entrée `saison` facultative.
+- **Ciblage** : `inscriptions_cours?statut=eq.attente_paiement&saison=eq.<saison à venir>`. ⚠️ Les statuts `demande` (Att. Valid.) sont **exclus** — ces personnes ne peuvent pas encore payer. Fiches sans email ignorées (comptées dans `sansEmail`).
+- ⚠️ **PAS de marqueur anti-doublon — choix explicite de l'admin** : une personne qui règle est basculée dans « Élèves Tango » (statut `inscrit`) et sort donc de la cible. Rejouer la tâche = 2ᵉ relance sûre, n'atteignant que ceux qui n'ont toujours pas payé. Ne pas « corriger » ça en ajoutant un flag.
+- **Corps repris à l'identique de I02** (`handleNotifyInscriptionCoursValidee`) : encadré bleu du cours, bouton AssoConnect, encadré rouge du pourboire 0 €, « Quelques précisions », bloc Sorano si Vincennes, bouton livret, signature. **Seuls diffèrent** : bandeau bleu 17 px, intro 16,5 px, et (couple uniquement) un **encadré violet 16 px** rappelant que chacun doit s'inscrire séparément avec une adresse email différente.
+- **Variante couple** détectée sur `f.partenaire` non vide → bandeau « Vos places en duo vous attendent », intro mentionnant le prénom du partenaire, encadré violet. Chaque partenaire reçoit **son propre** email.
+- **Données relues côté serveur** (le cron ne reçoit rien du client) : lien AssoConnect (`tev_liens_assoconnect[saison].cours`), horaires/adresse/livret (`tev_params_<ville>_<saison>`), prochain cours (`tev_cours_dates`), lien Sorano (`_getSoranoLien`).
+- **Maquette validée** : `preview-relance-inscription-v1.html` (solo, couple, tableau de ciblage).
+- ⚠️ **Fixtures de test à dates figées — 2ᵉ occurrence** : le groupe X (stages couple) utilisait le 1er/8 août ; le 17 août ces dates étaient passées, le formulaire ne construisait plus aucun accordéon et les 6 tests échouaient. Rendues relatives (`isoPlus(14)/(21)` + `saisonDe()`), comme le groupe R l'avait été le 3 août. **Règle : jamais de date future figée dans un test de `stages-pwa.html`.** Suite complète : **101/101**.
+
 ## Session 2026-08-07 — Agenda : abonnement iOS « Démonstrations » en échec (✅ CORRIGÉ)
 
 Bug signalé : Agenda → Abonnements → bouton **📅 iOS** de l'agenda **Démonstrations** ouvrait bien Calendrier sur iPhone mais finissait par « échec ». Les 8 autres agendas fonctionnaient.

@@ -1,0 +1,42 @@
+name: Rentrée — relance inscriptions en attente de paiement
+
+# Rappelle aux personnes dont l'inscription est VALIDÉE mais non réglée
+# (statut « Att. Paiement ») qu'il leur reste à finaliser sur AssoConnect.
+# Les statuts « Att. Valid. » sont exclus : elles ne peuvent pas encore payer.
+# Pas de marqueur anti-doublon : une personne qui règle passe dans « Élèves
+# Tango » et sort de la cible → relancer la tâche à la main est sans risque.
+
+on:
+  schedule:
+    # 22 août à 8h UTC (10h Paris, heure d'été)
+    - cron: '0 8 22 8 *'
+  workflow_dispatch:
+    inputs:
+      saison:
+        description: 'Saison ciblée AAAA-AAAA (défaut : la saison à venir)'
+        required: false
+
+jobs:
+  relance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer les relances (inscriptions en attente de paiement)
+        run: |
+          if [ -n "${{ github.event.inputs.saison }}" ]; then
+            PAYLOAD="{\"saison\":\"${{ github.event.inputs.saison }}\"}"
+          else
+            PAYLOAD="{}"
+          fi
+          echo "Charge utile : $PAYLOAD"
+          response=$(curl -s -o /tmp/body.txt -w "%{http_code}" -X POST \
+            https://app.tangoetvous.fr/api/cron/relance-inscription \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+          cat /tmp/body.txt
+          echo ""
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "::error::Échec de l'envoi (HTTP $response)"
+            exit 1
+          fi
