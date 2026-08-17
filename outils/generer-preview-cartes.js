@@ -74,6 +74,11 @@ const CAS = [
     note: "Envoyé quand vous cliquez « ↩ Reporter » en fin de saison : les cours restants sont préservés pour la rentrée.",
     body: { ...base, restants: 4, saisonSuivante: '2026-2027' } },
 
+  { id: 'cpa', titre: "CP-A — L'élève a pointé lui-même (récapitulatif admin)",
+    handler: 'handleNotifyCartePointage',
+    note: "Part vers votre boîte quand l'élève pointe <b>lui-même</b>, depuis son espace ou en scannant le QR code. Le sujet indique le canal (QR ou appli) et signale une carte terminée. ⚠️ Quand c'est <b>vous</b> qui pointez, aucun email admin n'est envoyé — voir le tableau en bas de page.",
+    body: { ...base, date: AUJ, nbAdded: 1, utilises: 6, restants: 4, source: 'qr' } },
+
   { id: 'cpe', titre: 'CP-E — Récapitulatif élève, le lendemain matin',
     handler: 'handleCronCartePonteeJ1',
     note: "Cron du matin : regroupe tous les pointages de la veille pour une même personne en un seul email. Les données sont relues dans les notifications en attente, pas recalculées.",
@@ -194,8 +199,8 @@ ${sections}
 <div class="pv-com">
   <table class="tbl">
     <tr><th>Ancienne section</th><th>Réalité dans le code</th></tr>
-    <tr><td><b>CP-A</b> — « récap admin au pointage »</td>
-        <td>Ce n'est <b>pas un email</b> : au pointage, le worker pose seulement la notification in-app de l'élève, met CP-E en file pour le lendemain matin, et envoie un push. Rien n'arrive dans votre boîte.</td></tr>
+    <tr><td><b>Récap admin quand c'est <i>vous</i> qui pointez</b></td>
+        <td>Il n'existe pas. Deux routes distinctes selon qui pointe : l'élève lui-même → <code>carte-pointage</code> → <b>CP-A dans votre boîte</b> (ci-dessus) ; vous depuis l'admin → <code>carte-pointee-admin</code> → <b>aucun email admin</b>, seulement la notification in-app de l'élève, la mise en file de CP-E et un push. C'est cohérent : vous savez déjà que vous venez de pointer.</td></tr>
   </table>
 </div>
 

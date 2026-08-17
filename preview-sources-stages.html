@@ -114,13 +114,23 @@
 <h2>S4 — Rappel J-3 (cron)</h2>
 <div class="route">POST /api/cron/rappel-stage-j3 (X-Cron-Secret)</div>
 <div class="block">
-  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien · inscriptions_stages WHERE stage_date=today+3 AND type_confirmation='confirme'</span></div>
-  <div class="field"><span class="label">Source :</span> <span class="src">donnees.stagesDetail[i].horaire + .theme</span> (baked à l'inscription — pas les params courants)</div>
-  <div class="field"><span class="label">Sujet :</span> <code>Stage Tango &amp; Vous — ${dateLabel}${ · ${horaire}} — Rappel dans 3 jours</code></div>
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien · <code>inscriptions_stages</code> WHERE stage_date = aujourd'hui+3 ET type_confirmation='confirme'</span> — la date peut être forcée par le body (<code>{"date":"AAAA-MM-JJ"}</code>) lors d'un déclenchement manuel.</div>
+  <div class="field"><span class="label">Double requête :</span> nouveau format (<code>stage_date</code> renseignée) + ancien format (<code>stage_date IS NULL</code>, dates dans <code>donnees.inscriptionsParDate</code>), fusionnés et dédoublonnés par email.</div>
+  <div class="field"><span class="label">Créneaux — résolveur à 3 niveaux :</span> (1) l'entrée de <code>donnees.inscriptionsParDate</code> correspondant à la date, (2) <code>donnees.stagesDetail</code> (ancien format), (3) repli sur les types gravés dans <code>stage_nom</code> (« technique|stage1 »). ⚠️ Les fiches <b>partenaire</b> du nouveau format ont <code>donnees</code> vide — sans le niveau 3 elles n'auraient aucun créneau.</div>
+  <div class="field"><span class="label">Horaires :</span> <b>relus dans les Paramètres</b> — <span class="src">tev_params_stages_${saison}.horaires</span> fusionnés avec l'<b>override de la date</b> (<code>tev_dates_stages_${saison}.stages[].horaires</code>, prioritaire). Repli sur l'horaire gravé à l'inscription si les params sont absents. ⚠️ Contrairement aux autres emails de stage, un changement d'horaire tardif est donc bien répercuté — c'est voulu, l'élève doit lire l'horaire réel du jour J.</div>
+  <div class="field"><span class="label">Thèmes :</span> gravés à l'inscription, sinon relus dans <code>themes[0..3]</code> de la date (= stage1..stage4) ; « Technique Leader &amp; Follower » pour la technique.</div>
+  <div class="field"><span class="label">Tri :</span> créneaux remis dans l'<b>ordre chronologique</b> (conversion « 14h30 » → minutes). Indispensable : ils sont construits dans un ordre fixe qui suppose la technique en premier, ce qu'une date personnalisée peut contredire.</div>
+  <div class="field"><span class="label">Montant :</span> colonne <code>total_inscrit</code> de la fiche — propre à chaque personne, partenaire inclus.</div>
+  <div class="field"><span class="label">Adresse :</span> <span class="src">adresse de la date</span> si renseignée, sinon celle de la saison.</div>
+  <div class="field"><span class="label">Sujet :</span> <code>Stage Tango &amp; Vous — ${dateLabel}${ · ${horaire}} — Rappel dans 3 jours</code> — la plage horaire va du début du 1<sup>er</sup> créneau à la fin du dernier, après tri.</div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Rappel - votre stage a lieu dans 3 jours - confirmez votre presence"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Bleu 🗓 "Rappel — votre stage a lieu dans 3 jours !"</div>
+  <div class="field"><span class="label">Encadré du stage :</span> <b>identique à celui de S1</b> (<code>buildStageBox</code>) — même mise en page, même bloc Lieu, même bandeau « Total à régler sur place », même mention de l'appoint. 📌 Toute évolution de l'un doit être répercutée dans l'autre.</div>
   <div class="field"><span class="label">Bouton 👍 :</span> Vert "Je confirme ma présence" → <code>/api/stages/confirmer?email=&amp;date=&amp;token=&lt;hmac32&gt;</code></div>
-  <div class="field"><span class="label">Encadré orange :</span> "Merci de confirmer votre présence. Si vous devez annuler merci de nous prévenir, même au dernier moment."</div>
+  <div class="field"><span class="label">Encadré orange :</span> "Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidés."</div>
+  <div class="field"><span class="label">Push OS élève :</span> "📅 Votre stage a lieu dans 3 jours — ${dateLabel}"</div>
+  <div class="field"><span class="label">Notif admin :</span> <code>notifications</code> — "📅 ${N} rappel(s) J-3 envoyé(s) pour le stage du ${dateLabel} · → Stages"</div>
+  <div class="field"><span class="note">⚠️ Correctif 2026-08-17 : ce récapitulatif <b>ne remontait jamais</b> dans le panel 🔔 — la variable de date était déclarée dans la boucle des inscrits, l'erreur étant avalée par son try/catch. Les emails, eux, partaient normalement.</span></div>
 </div>
 
 <h2>Action élève via email — confirmer présence stage (RPC SECURITY DEFINER)</h2>

@@ -49,7 +49,7 @@ table.tbl td { padding:8px; border-top:1px solid #ddd; vertical-align:top; }
 </div>
 <div class="pv-gen">✅ Page <b>générée automatiquement</b> en exécutant les handlers de <code>worker.js</code> (Supabase et Brevo simulés) —
 ce que vous voyez est exactement ce que reçoivent les destinataires.<br>Régénérer avec <code>node outils/generer-preview-cartes.js</code></div>
-<div class="pv-nav"><a href="#c1">C1</a><a href="#c2b">C2b</a><a href="#c2">C2</a><a href="#c3">C3</a><a href="#cpay">C-pay</a><a href="#cepuisee">CX-épuisée</a><a href="#creport">C-report</a><a href="#cpe">CP-E</a><a href="#cx">CX</a><a href="#c4">C4</a><a href="#c5">C5</a><a href="#c6">C6</a><a href="#p1">P1</a><a href="#absents">Emails absents</a><a href="#notifs">🔔 Notifications</a></div>
+<div class="pv-nav"><a href="#c1">C1</a><a href="#c2b">C2b</a><a href="#c2">C2</a><a href="#c3">C3</a><a href="#cpay">C-pay</a><a href="#cepuisee">CX-épuisée</a><a href="#creport">C-report</a><a href="#cpa">CP-A</a><a href="#cpe">CP-E</a><a href="#cx">CX</a><a href="#c4">C4</a><a href="#c5">C5</a><a href="#c6">C6</a><a href="#p1">P1</a><a href="#absents">Emails absents</a><a href="#notifs">🔔 Notifications</a></div>
 
 <div class="pv-titre" id="c1">C1 — Bienvenue au premier pointage de la saison</div>
 <div class="pv-com">Envoyé une seule fois, quand vous pointez le tout premier cours d'une carte. Présente le suivi de la carte et l'espace élève. <span class="pv-h">Handler : <code>handleNotifyCarteBienvenue</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
@@ -208,7 +208,40 @@ ce que vous voyez est exactement ce que reçoivent les destinataires.<br>Régén
   </div>
       <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
       <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="cpe">CP-E — Récapitulatif élève, le lendemain matin</div>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="cpa">CP-A — L'élève a pointé lui-même (récapitulatif admin)</div>
+<div class="pv-com">Part vers votre boîte quand l'élève pointe <b>lui-même</b>, depuis son espace ou en scannant le QR code. Le sujet indique le canal (QR ou appli) et signale une carte terminée. ⚠️ Quand c'est <b>vous</b> qui pointez, aucun email admin n'est envoyé — voir le tableau en bas de page. <span class="pv-h">Handler : <code>handleNotifyCartePointage</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📥 Email ADMIN → <code>tangoetvous@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 🃏 [Carte 10] MARTIN a pointé — 1 cours ce jour · 6/10 total · QR</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;background:#fff;">
+  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
+    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>
+    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Pointage carte de 10</div>
+  </div>
+  <div style="padding:24px;">
+    <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;">
+          <div style="font-size:18px;font-weight:700;color:#111;">MARTIN</div>
+          <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr</div>
+        </div>
+        <span style="background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;">QR code</span>
+      </div>
+      <div style="background:#fffdf8;padding:14px 16px;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tr style="background:#e8f5e9;">
+            <td style="padding:6px 8px;font-weight:700;color:#2e7d32;">⬤ Cours pointés CE JOUR</td>
+            <td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">+1 cours</td>
+          </tr>
+          <tr><td style="padding:4px 8px;color:#888;">Date</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">Lundi 17 août 2026</td></tr>
+          <tr><td style="padding:4px 8px;color:#888;">Utilisés au total (carte)</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">6/10</td></tr>
+          <tr><td style="padding:4px 8px;color:#888;">Cours restants</td><td style="padding:4px 8px;font-weight:700;color:#2e7d32;text-align:right;">4</td></tr>
+        </table>
+      </div>
+    </div>
+    <p style="text-align:center;margin:0;"><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#D4AF37;color:#111;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Ouvrir l'admin → Cartes 10</a></p>
+  </div>
+</div>
+</body></html></div><div class="pv-titre" id="cpe">CP-E — Récapitulatif élève, le lendemain matin</div>
 <div class="pv-com">Cron du matin : regroupe tous les pointages de la veille pour une même personne en un seul email. Les données sont relues dans les notifications en attente, pas recalculées. <span class="pv-h">Handler : <code>handleCronCartePonteeJ1</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
 <div class="pv-sujet"><strong>Objet :</strong> ✓ Présence enregistrée le Lundi 17 août 2026 — Carte Tango &amp; Vous</div>
 <div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre presence au cours a ete enregistree - retrouvez le recap de votre carte ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div><div style="max-width:600px;margin:0 auto;background:#fff;">
@@ -335,8 +368,8 @@ ce que vous voyez est exactement ce que reçoivent les destinataires.<br>Régén
 <div class="pv-com">
   <table class="tbl">
     <tr><th>Ancienne section</th><th>Réalité dans le code</th></tr>
-    <tr><td><b>CP-A</b> — « récap admin au pointage »</td>
-        <td>Ce n'est <b>pas un email</b> : au pointage, le worker pose seulement la notification in-app de l'élève, met CP-E en file pour le lendemain matin, et envoie un push. Rien n'arrive dans votre boîte.</td></tr>
+    <tr><td><b>Récap admin quand c'est <i>vous</i> qui pointez</b></td>
+        <td>Il n'existe pas. Deux routes distinctes selon qui pointe : l'élève lui-même → <code>carte-pointage</code> → <b>CP-A dans votre boîte</b> (ci-dessus) ; vous depuis l'admin → <code>carte-pointee-admin</code> → <b>aucun email admin</b>, seulement la notification in-app de l'élève, la mise en file de CP-E et un push. C'est cohérent : vous savez déjà que vous venez de pointer.</td></tr>
   </table>
 </div>
 
@@ -485,7 +518,7 @@ Elles sont donc à vérifier manuellement en cas de changement.</div>
   <p><b>Taille de la carte</b> — jamais écrite en dur : partout <code>utilisés + restants</code>, avec 10 comme filet.
      Une carte de 20 cours affiche donc « /20 » sans modification de code.</p>
   <p><b>Dates d'exemple</b> — relatives à aujourd'hui (2026-08-17), pour que les crons se comportent comme en vrai.
-     14 emails produits pour cette page.</p>
+     15 emails produits pour cette page.</p>
 </div>
 
 </body>

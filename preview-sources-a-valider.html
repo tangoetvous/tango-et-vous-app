@@ -90,7 +90,8 @@
 <h2>CP-A — Carte pointée (notification admin immédiate)</h2>
 <div class="route">POST /api/notify/carte-pointage (sans auth)</div>
 <div class="block">
-  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin pointe depuis Cartes 10 ou QR code (fire and forget)</span></div>
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">L'ÉLÈVE pointe lui-même</span> — depuis son espace (<code>index.html</code>) ou en scannant le QR code (<code>pointer.html</code>), en fire and forget.</div>
+  <div class="field"><span class="note">⚠️ Ne pas confondre avec <code>POST /api/notify/carte-pointee-admin</code> (<code>handleNotifyCartePonteeAdmin</code>), déclenché quand c'est l'ADMIN qui pointe : celui-là <b>n'envoie aucun email admin</b> — il pose la notif in-app de l'élève, met CP-E en file pour le lendemain matin et envoie un push à l'élève.</span></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, date, nbAdded, utilises, restants, source ('app'|'qr'|'admin') }</span></div>
   <div class="field"><span class="label">Destinataire :</span> tangoetvous@gmail.com</div>
   <div class="field"><span class="label">Sujet :</span> <code>🃏 [Carte 10] ${nom} a pointé — ${nb} cours ce jour · ${état carte}</code></div>
@@ -116,7 +117,8 @@
 <div class="route">POST /api/cron/carte-expiree (X-Cron-Secret)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien 9h Paris · eleves WHERE carte_expiration=aujourd'hui AND carte_restants&gt;0</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>⏰ Votre carte de cours a expiré — ${restants} cours non utilisés · Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>⏰ Votre carte de cours a expiré — ${restants} cours non utilisé(s) · Tango &amp; Vous</code>
+    <span class="note">⚠️ Correctif 2026-08-17 : le sujet lisait un champ inexistant (<code>e.restants</code> au lieu de <code>carte_restants</code>) et annonçait donc <b>toujours « 0 cours non utilisés »</b>, alors que le corps du message affichait le bon nombre. Accord du pluriel ajouté au passage.</span></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre carte de cours a expire - renouvelez pour continuer a danser"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⏰ "Votre carte de 10 cours a expiré"</div>
   <div class="field"><span class="label">Encadré :</span> Titre "Votre carte a expiré" · carte_restants cours non utilisés · date fin de validité · "Si vous souhaitez continuer à danser, vous pouvez renouveler votre carte sur AssoConnect."</div>

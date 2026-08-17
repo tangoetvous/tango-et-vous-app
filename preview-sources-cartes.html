@@ -35,38 +35,45 @@
   <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — "🎉 Votre carte de 10 cours est activée — 1 cours utilisé / 9 restants"</div>
 </div>
 
-<h2>C2 — Renouvellement sans payer (élève ou admin)</h2>
-<div class="route">POST /api/notify/carte-renouvellement (JWT admin)</div>
+<h2>C2 / C2b — Renouvellement sans payer</h2>
+<div class="route">POST /api/notify/carte-renouvellement (sans auth)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheurs :</span></div>
   <ul style="margin:4px 0 8px 20px;font-size:12px;">
-    <li><span class="cond">C2</span> — Élève clique "↻ Renouveler sans payer pour l'instant" dans espace élève</li>
-    <li><span class="cond">C2b</span> — Admin clique "Non payé" dans le modal Renouveler (Cartes 10 → Détails)</li>
+    <li><span class="cond">C2</span> — l'élève clique « ↻ Renouveler sans payer pour l'instant » dans son espace (<code>index.html renewCarteSelf</code>). <b>Branché le 2026-08-17</b> : jusque-là aucun appel n'était fait, donc ni email ni notification.</li>
+    <li><span class="cond">C2b</span> — l'admin renouvelle en choisissant « Non payé » (Cartes → Détails → ↻ Renouveler)</li>
+    <li>⚠️ <b>Jamais envoyé</b> quand l'admin choisit « Payé » : la modale de paiement enchaîne et c'est <b>C3</b> qui part (drapeau <code>sansEmailRenouv</code>, admin.html).</li>
   </ul>
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, source? ('eleve'|'admin') }</span><div class="note">⚠️ Champs <b>nom, ville, niveau, saison</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17).</div></div>
-  <div class="field"><span class="label">Sujet :</span> <code>Nouvelle carte ouverte — pensez à finaliser votre paiement <i>(déclenché par l'admin : « Votre carte de ${taille} cours a été renouvelée — paiement à finaliser »)</i></code></div>
-  <div class="field"><span class="label">Preheader :</span> <span class="var">"Nouvelle carte de cours creee - pensez a finaliser votre paiement sur AssoConnect sur AssoConnect"</span> <span class="note">(identique pour C2b)</span></div>
-  <div class="field"><span class="label">Bandeau :</span> Orange ⚠️ "Nouvelle carte créée — paiement en attente"</div>
-  <div class="field"><span class="label">Carte-box :</span> Cours · Saison · Badge "⚠️ Non payée" · 0/10 cours utilisés · 10 restants</div>
-  <div class="field"><span class="label">Bouton AssoConnect :</span> Or → <span class="src">tev_liens_assoconnect[saison].renouv</span></div>
-  <div class="field"><span class="label">Notif admin :</span> <code>notifications</code> — "↻ Carte renouvelée sans payer — Prénom NOM · badge ⚠️ → Cartes 10"</div>
-  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — "⚠️ Nouvelle carte créée — pensez à finaliser votre paiement"</div>
-  <div class="field"><span class="label">Push OS élève :</span> "⚠️ Nouvelle carte créée — pensez à finaliser votre paiement"</div>
+  <div class="field"><span class="label">Body :</span> <code>{ email, prenom, restants, source ('eleve'|'admin'), liensAssoConnect }</code></div>
+  <div class="field"><span class="label">⚠️ restants</span> = <b>taille de la NOUVELLE carte</b>, pas un solde : le worker en fait <code>_tailleC = restants &gt; 0 ? restants : 10</code>.</div>
+  <div class="field"><span class="label">Sujet :</span> C2 « Nouvelle carte ouverte — pensez à finaliser votre paiement » · C2b « Votre carte de ${taille} cours a été renouvelée — paiement à finaliser »</div>
+  <div class="field"><span class="label">Preheader :</span> "Nouvelle carte de cours creee - pensez a finaliser votre paiement sur AssoConnect" (identique dans les deux cas)</div>
+  <div class="field"><span class="label">Bandeau :</span> Orange ⚠️ « Nouvelle carte créée — finalisez votre paiement »</div>
+  <div class="field"><span class="label">Carte-box :</span> deux lignes seulement — « Cours utilisés 0/${taille} » et « Statut paiement ⚠️ Non payée ». <b>Ni cours, ni saison</b> : le worker ne les reçoit pas.</div>
+  <div class="field"><span class="label">Bouton AssoConnect :</span> Or → valeur reçue dans <code>liensAssoConnect</code>. Côté élève : <code>_lienRenouvAC()</code> lit <span class="src">tev_liens_assoconnect[saison].renouv</span> avec repli sur le défaut de la saison. ⚠️ Côté admin, la valeur envoyée est aujourd'hui <code>'#'</code> — le bouton de C2b ne mène nulle part.</div>
+  <div class="field"><span class="label">Notif admin :</span> <code>notifications</code> — « ↻ Carte renouvelée [par l'admin ]sans payer — Prénom · ⚠️ Paiement en attente » → Cartes</div>
+  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — « ⚠️ Nouvelle carte créée — pensez à finaliser votre paiement »</div>
+  <div class="field"><span class="label">Push OS élève :</span> « ⚠️ Nouvelle carte créée — pensez à finaliser votre paiement »</div>
 </div>
 
-<h2>C-pay — Paiement carte enregistré par l'admin</h2>
+<h2>C-pay / C3 — Paiement de la carte enregistré</h2>
 <div class="route">POST /api/notify/carte-paiement (JWT admin)</div>
 <div class="block">
-  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin valide "✓ Enregistrer le paiement" dans le modal paiement (Cartes 10 → Détails)</span></div>
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, montant, paiement, datePaiement, utilises, restants, datePremierCours, expiration? }</span><div class="note">⚠️ Champs <b>ville, niveau, saison, datePremierCours</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17).</div></div>
-  <div class="field"><span class="label">Sujet :</span> <code>Votre paiement a bien été enregistré — Tango &amp; Vous</code></div>
-  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre paiement a ete enregistre - votre carte de 10 cours est active"</span></div>
-  <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre paiement est enregistré — carte active !"</div>
-  <div class="field"><span class="label">Carte-box :</span> Cours · Saison · Badge "✓ Payée" · Montant · Mode paiement · Date paiement · <span class="src">Expiration depuis datePremierCours (calcExpiration côté serveur)</span></div>
-  <div class="field"><span class="label">Bouton :</span> Or "Accéder à mon espace élève →" → app.tangoetvous.fr</div>
-  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — "✓ Paiement enregistré · Votre carte est active"</div>
-  <div class="field"><span class="label">Push OS élève :</span> "✓ Paiement enregistré · Votre carte est active"</div>
-  <div class="field"><span class="note">⚠️ Expiration calculée depuis datePremierCours, jamais depuis la date de paiement</span></div>
+  <div class="field"><span class="label">Déclencheurs :</span></div>
+  <ul style="margin:4px 0 8px 20px;font-size:12px;">
+    <li><span class="cond">C-pay</span> — l'admin bascule la pastille « ⚠️ Non payée » d'une carte existante, puis valide le montant</li>
+    <li><span class="cond">C3</span> — parcours « ↻ Renouveler → <b>Payé</b> → ✓ Enregistrer le paiement ». <b>Mis en place le 2026-08-17</b> : auparavant ce parcours n'envoyait pas de confirmation, mais C2b, qui réclamait un règlement à quelqu'un en train de payer.</li>
+  </ul>
+  <div class="field"><span class="label">Body :</span> <code>{ email, prenom, nom, montant, modePaiement, datePaiement, utilises, restants, expiration, renouvellement? }</code></div>
+  <div class="field"><span class="label">Condition C3 :</span> <code>renouvellement === true</code> — posé par admin.html quand la modale de paiement a été ouverte à la suite d'un renouvellement. Absent → C-pay strictement inchangé.</div>
+  <div class="field"><span class="label">Sujet :</span> C-pay « Votre paiement a bien été enregistré — Tango &amp; Vous » · C3 « Votre carte de ${taille} cours a été renouvelée — Tango &amp; Vous »</div>
+  <div class="field"><span class="label">Preheader :</span> C-pay "Votre paiement a ete enregistre - votre carte de cours est active" · C3 "Votre carte de cours a ete renouvelee - le reglement est enregistre"</div>
+  <div class="field"><span class="label">Bandeau :</span> Vert — C-pay « ✓ Paiement enregistré — votre carte est active » · C3 « ✓ Votre carte a été renouvelée »</div>
+  <div class="field"><span class="label">Carte-box :</span> titre « VOTRE CARTE DE ${taille} COURS » (C3 : « NOUVELLE CARTE DE ${taille} COURS »), puis Paiement enregistré (montant + mode) · Date · Cours utilisés · Cours restants · Valide jusqu'au. <b>Ni cours, ni saison</b> : non transmis.</div>
+  <div class="field"><span class="label">⚠️ Expiration</span> : <b>reçue dans le body</b> (<code>expiration</code>), calculée côté admin depuis le premier cours pointé — le worker ne la recalcule pas. Ligne masquée si le champ est vide (cas d'une carte fraîchement renouvelée, jamais pointée).</div>
+  <div class="field"><span class="label">Bouton :</span> Or « Accéder à mon espace élève → » → app.tangoetvous.fr</div>
+  <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — « ✓ Paiement enregistré · Votre carte est active » (C3 : « ↻ Nouvelle carte active · Paiement enregistré »)</div>
+  <div class="field"><span class="label">Push OS élève :</span> même texte que la notif in-app</div>
 </div>
 
 <h2>C-report — Carte reportée en fin de saison</h2>
@@ -88,7 +95,7 @@
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 8h UTC 20-30 juin · handler vérifie si hier = dernière date Paris de juin dans tev_cours_dates.paris · sinon {skipped:true}</span></div>
   <div class="field"><span class="label">Force :</span> <span class="cond">body {"force":true} → bypass la vérification de date (via workflow_dispatch)</span></div>
-  <div class="field"><span class="label">Filtre élèves :</span> <span class="src">eleves WHERE carte_statut IN ('Active','Nouvelle carte') AND carte_restants &gt; 0</span></div>
+  <div class="field"><span class="label">Filtre élèves :</span> <b>quadruple condition</b> — <code>carte_restants &gt; 0</code> ET <code>carte_statut IN ('Active','Nouvelle carte')</code> ET <code>carte_paye = true</code> ET carte non expirée (<code>carte_expiration &gt;= aujourd'hui</code>, ou nulle), puis croisement avec <code>_emailsInscritsActifs()</code> — au moins une inscription <code>statut='inscrit'</code> dans la saison. ⚠️ Ce croisement exclut les cartes supprimées dont <code>carte_statut</code> serait resté désynchronisé.</div>
   <div class="field"><span class="label">Sujet :</span> <code>📅 Il vous reste ${restants} cours — reportez votre carte sur la saison ${saiNext}</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Il vous reste des cours sur votre carte - pre-inscrivez-vous pour la saison prochaine"</span></div>
   <div class="field"><span class="label">saiNext :</span> <span class="var">sai = mo>=9 ? yr+'-'+(yr+1) : (yr-1)+'-'+yr ; saiNext = une saison plus tard</span> — jamais hardcodé</div>
@@ -96,13 +103,14 @@
   <div class="field"><span class="label">Bouton :</span> "Reportez votre carte → Réglez votre adhésion de la saison prochaine" · href = <span class="src">tev_liens_assoconnect[saiNext].cours</span> (Paramètres → Tango Paris → Liens AssoConnect → "Inscription tango (formulaire cours)")</div>
   <div class="field"><span class="label">Notif élève :</span> <code>notifications_eleve</code> — <span class="var">"📅 Il vous reste ${restants} cours — reportez votre carte sur la saison ${saiNext}"</span></div>
   <div class="field"><span class="label">Push OS élève :</span> <span class="var">"📅 Il vous reste ${restants} cours — reportez-les sur la saison ${saiNext}"</span></div>
+  <div class="field"><span class="note">⚠️ Correctif 2026-08-17 : ce push ne partait <b>jamais</b> — le handler utilisait une table de jetons FCM qu'il ne déclarait pas, l'erreur étant avalée par son try/catch. L'email, lui, partait normalement.</span></div>
   <div class="field"><span class="note">⚠️ Toutes les années et saisons dynamiques — jamais hardcodées</span></div>
 </div>
 
 <h2>C5 — Dernier rappel 25 août</h2>
 <div class="route">POST /api/cron/fin-saison-c5 (X-Cron-Secret)</div>
 <div class="block">
-  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 8h UTC le 25 août · eleves WHERE carte_statut IN ('Active','Nouvelle carte') AND carte_restants &gt; 0</span></div>
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 8h UTC le 25 août</span> · <b>même quadruple ciblage que C4</b> (cours restants, statut, carte payée, carte non expirée, croisée avec les inscriptions actives de la saison)</div>
   <div class="field"><span class="label">Sujet :</span> <code>⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Dernier rappel - vos cours non utilises expirent le 31 aout - reagissez maintenant"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⚠️ · <span class="var">"⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}"</span></div>
