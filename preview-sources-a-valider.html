@@ -135,5 +135,13 @@
   <div class="field"><span class="label">Notifications élève :</span> SR2 → INSERT <code>notifications_eleve</code> type='sorano_paye'</div>
   <div class="field"><span class="label">AssoConnect URL :</span> <span class="src">tev_liens_assoconnect[saison].cours</span> (T1-val) — lu depuis Supabase, jamais hardcodé</div>
 </div>
+
+<h2>Changements de dates — ce qui n'envoie PAS d'email</h2>
+<div class="block">
+  <div class="field"><span class="note">📌 Constaté le 2026-08-17. Les anciennes maquettes présentaient cinq emails de changement de calendrier (Paris, Vincennes, Stages, La Dolce Vita, Colectivo). <b>Aucun n'existe.</b></span></div>
+  <div class="field"><span class="label">Ce qui se passe réellement :</span> modifier ces dates insère une ligne dans <code>notifications_eleve</code> pour chaque élève concerné — « 🗓 Nouvelle date… », « 🎶 Milonga … annulée » — visible dans le panneau 🔔 de l'espace élève. <b>Aucun email n'est envoyé, aucun push non plus.</b></div>
+  <div class="field"><span class="label">Seule exception :</span> le <b>yoga</b>, qui poste sur <code>/api/notify/yoga-date</code> et envoie un vrai email (documenté dans la preview Yoga).</div>
+  <div class="field"><span class="label">Où c'est décidé :</span> <code>admin.html</code>, la fonction de notification de changement de dates — la branche <code>type === 'yoga'</code> sort avant l'insertion générique.</div>
+</div>
 </body>
 </html>

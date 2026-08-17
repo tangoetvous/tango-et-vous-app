@@ -1,0 +1,86 @@
+<!-- ================================================================ -->
+<div class="section" id="notifs">
+  <div class="section-title">🔔 Notifications in-app — récapitulatif complet</div>
+  <div class="section-desc">
+    Table <code>notifications_eleve</code> (espace élève) et <code>notifications</code> (panel admin 🔔).<br>
+    Toutes les notifications implémentées ou à implémenter, avec couleurs et déclencheurs.
+  </div>
+
+  <!-- PANEL ÉLÈVE -->
+  <div class="email-label">Panel 🔔 espace élève — mockup</div>
+  <div class="notif-panel">
+    <div style="background:#1a1a1a;padding:12px 16px;border-bottom:1px solid #222;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:14px;font-weight:700;color:#f0f0f0;letter-spacing:1px;">🔔 Notifications</span>
+      <span style="background:#e53935;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:2px 7px;">7</span>
+    </div>
+    <div class="ni green"><div class="ni-msg">✓ Votre cours du <strong>mercredi 20 mai</strong> a été pointé — <strong>7/10</strong> utilisés, 3 restants</div><div class="ni-time">Aujourd'hui · 10h15</div></div>
+    <div class="ni orange"><div class="ni-msg">💳 Votre carte de 10 cours est terminée — pensez à la renouveler</div><div class="ni-time">Il y a 3 jours</div></div>
+    <div class="ni" style="border-left:4px solid #ffcc02;background:#1f1200;"><div class="ni-msg">⏰ Votre carte de 10 cours a expiré — <strong>3 cours</strong> non utilisés</div><div class="ni-time">Le 18 mai</div></div>
+    <div class="ni purple"><div class="ni-msg">💬 Nouvelle discussion : <strong>Reprise de septembre 2026</strong></div><div class="ni-time">Le 15 mai</div></div>
+    <div class="ni purple"><div class="ni-msg">💬 Nouveau message de <strong>Florencia</strong> dans <em>Reprise de septembre 2026</em></div><div class="ni-time">Le 16 mai</div></div>
+    <div class="ni yellow"><div class="ni-msg">⏳ Rappel : votre adhésion à l'Espace Sorano n'est pas encore réglée</div><div class="ni-time">Le 10 mai</div></div>
+    <div class="ni green"><div class="ni-msg">✓ Votre adhésion Sorano a été enregistrée pour cette saison</div><div class="ni-time">Le 5 mai</div></div>
+    <div class="ni grey"><div class="ni-msg">📅 Nouveau cours de tango Paris le Jeudi 4 juin 2026</div><div class="ni-time">Le 2 mai · Lu ✓</div></div>
+  </div>
+
+  <!-- TABLE ÉLÈVE -->
+  <div class="email-label" style="margin-top:32px;">Tableau — toutes les notifications élève implémentées</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12px;background:#111;border:1px solid #333;border-radius:8px;overflow:hidden;">
+    <thead><tr style="background:#1a1a1a;">
+      <th style="padding:8px 12px;text-align:left;color:#D4AF37;border-bottom:1px solid #333;">Type DB</th>
+      <th style="padding:8px 12px;text-align:left;color:#D4AF37;border-bottom:1px solid #333;">Message in-app</th>
+      <th style="padding:8px 12px;text-align:left;color:#D4AF37;border-bottom:1px solid #333;">Déclencheur</th>
+    </tr></thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#4caf50;font-weight:700;">carte_pointee</td><td style="padding:8px 12px;color:#ccc;">✓ Votre cours du [date] a été pointé — [N]/10, [M] restants</td><td style="padding:8px 12px;color:#888;">Admin pointe via Cartes 10 ou Pointage</td></tr>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#ff9800;font-weight:700;">carte_epuisee</td><td style="padding:8px 12px;color:#ccc;">💳 Votre carte est terminée — pensez à la renouveler</td><td style="padding:8px 12px;color:#888;">10/10 atteints (app, QR, admin) · renouvAuto=false</td></tr>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#ffcc02;font-weight:700;">carte_expiree</td><td style="padding:8px 12px;color:#ccc;">⏰ Votre carte a expiré — [N] cours non utilisés</td><td style="padding:8px 12px;color:#888;">Cron 9h · carte_expiration = aujourd'hui · restants &gt; 0</td></tr>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#ce93d8;font-weight:700;">discussion_nouvelle</td><td style="padding:8px 12px;color:#ccc;">💬 Nouvelle discussion : [titre]</td><td style="padding:8px 12px;color:#888;">Admin crée une discussion adressée au groupe de l'élève</td></tr>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#ce93d8;font-weight:700;">discussion_message</td><td style="padding:8px 12px;color:#ccc;">💬 Nouveau message de [admin] dans [titre]</td><td style="padding:8px 12px;color:#888;">Admin envoie un message dans une discussion du groupe</td></tr>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#e8c84a;font-weight:700;">sorano_relance</td><td style="padding:8px 12px;color:#ccc;">⏳ Rappel : votre adhésion Sorano n'est pas encore réglée</td><td style="padding:8px 12px;color:#888;">Admin clique ✉️ Relance dans Sorano</td></tr>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#4caf50;font-weight:700;">sorano_regle</td><td style="padding:8px 12px;color:#ccc;">✓ Votre adhésion Sorano a été enregistrée pour cette saison</td><td style="padding:8px 12px;color:#888;">Admin clique ✓ Marquer réglé dans Sorano</td></tr>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#4caf50;font-weight:700;">date_ajoutee</td><td style="padding:8px 12px;color:#ccc;">📅 Nouveau cours de tango [ville] le [jour date]</td><td style="padding:8px 12px;color:#888;">Admin ajoute une date dans Paramètres → Dates (Paris/Vincennes/Stages/Milongas)</td></tr>
+      <tr><td style="padding:8px 12px;color:#e8c84a;font-weight:700;">date_supprimee</td><td style="padding:8px 12px;color:#ccc;">⚠️ Cours de tango [ville] annulé le [jour date]</td><td style="padding:8px 12px;color:#888;">Admin supprime une date dans Paramètres → Dates</td></tr>
+    </tbody>
+  </table>
+
+  <!-- PANEL ADMIN -->
+  <div class="email-label" style="margin-top:40px;">Panel 🔔 admin — nouveaux types (mockup)</div>
+  <div class="notif-panel">
+    <div style="background:#1a1a1a;padding:12px 16px;border-bottom:1px solid #222;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:14px;font-weight:700;color:#f0f0f0;letter-spacing:1px;">🔔 Notifications</span>
+      <span style="background:#e53935;color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:2px 7px;">6</span>
+    </div>
+    <div class="ni gold"><div class="ni-msg">🃏 Carte pointée — Felipe DIAZ · 20 mai · 7/10 · <span style="color:#7ab4ff;">📱 appli élève</span></div><div class="ni-time">Aujourd'hui · 10h15 · → Cartes 10</div></div>
+    <div class="ni gold"><div class="ni-msg">🃏 Carte pointée — Aïcha FOFANA · 20 mai · 10/10 <span style="color:#e65100;">terminée</span> · <span style="color:#ce93d8;">📷 QR</span></div><div class="ni-time">Aujourd'hui · 10h17 · → Cartes 10</div></div>
+    <div class="ni orange"><div class="ni-msg">💳 Carte terminée — Aïcha FOFANA · Paris Débutants · 10/10 · Email élève envoyé</div><div class="ni-time">Aujourd'hui · 10h17 · → Cartes 10</div></div>
+    <div class="ni" style="border-left:4px solid #ffcc02;background:#1f1800;"><div class="ni-msg">⏰ Carte expirée — Sophie MARTIN · 3 cours non utilisés · Email envoyé</div><div class="ni-time">Aujourd'hui · 09:02 (cron) · → Cartes 10</div></div>
+    <div class="ni purple"><div class="ni-msg">💬 Discussion créée — <strong style="color:#ce93d8;">Reprise de septembre 2026</strong> · Paris Déb + Paris Int · 42 élèves notifiés</div><div class="ni-time">Le 15 mai · → Discussions</div></div>
+    <div class="ni purple"><div class="ni-msg">💬 Message envoyé — <em style="color:#ce93d8;">Reprise de septembre 2026</em> · 42 élèves notifiés</div><div class="ni-time">Le 16 mai · → Discussions</div></div>
+  </div>
+
+  <!-- TABLE ADMIN -->
+  <div class="email-label" style="margin-top:28px;">Tableau — types de notifications admin (nouveaux)</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12px;background:#111;border:1px solid #333;border-radius:8px;overflow:hidden;">
+    <thead><tr style="background:#1a1a1a;">
+      <th style="padding:8px 12px;text-align:left;color:#D4AF37;border-bottom:1px solid #333;">Type DB</th>
+      <th style="padding:8px 12px;text-align:left;color:#D4AF37;border-bottom:1px solid #333;">Couleur</th>
+      <th style="padding:8px 12px;text-align:left;color:#D4AF37;border-bottom:1px solid #333;">Message</th>
+      <th style="padding:8px 12px;text-align:left;color:#D4AF37;border-bottom:1px solid #333;">Route / source</th>
+    </tr></thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#D4AF37;font-weight:700;">carte_pointage</td><td style="padding:8px 12px;color:#D4AF37;">● or</td><td style="padding:8px 12px;color:#ccc;">🃏 Carte pointée — [nom] · [date] · [N]/10 · [source]</td><td style="padding:8px 12px;color:#888;">/api/notify/carte-pointage</td></tr>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#ff9800;font-weight:700;">carte_epuisee</td><td style="padding:8px 12px;color:#ff9800;">● orange</td><td style="padding:8px 12px;color:#ccc;">💳 Carte terminée — [nom] · 10/10 · Email envoyé</td><td style="padding:8px 12px;color:#888;">/api/notify/carte-epuisee</td></tr>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#ffcc02;font-weight:700;">carte_expiree</td><td style="padding:8px 12px;color:#ffcc02;">● jaune</td><td style="padding:8px 12px;color:#ccc;">⏰ Carte expirée — [nom] · [N] cours non utilisés · Email envoyé</td><td style="padding:8px 12px;color:#888;">/api/cron/carte-expiree</td></tr>
+      <tr style="border-bottom:1px solid #222;"><td style="padding:8px 12px;color:#ce93d8;font-weight:700;">discussion_nouvelle</td><td style="padding:8px 12px;color:#ce93d8;">● violet</td><td style="padding:8px 12px;color:#ccc;">💬 Discussion créée — [titre] · [groupes] · [N] élèves notifiés</td><td style="padding:8px 12px;color:#888;">/api/notify/discussion-nouvelle</td></tr>
+      <tr><td style="padding:8px 12px;color:#ce93d8;font-weight:700;">discussion_message</td><td style="padding:8px 12px;color:#ce93d8;">● violet</td><td style="padding:8px 12px;color:#ccc;">💬 Message envoyé — [titre] · [N] élèves notifiés</td><td style="padding:8px 12px;color:#888;">/api/notify/discussion-message</td></tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:16px;font-size:12px;color:#555;font-style:italic;padding-left:4px;">
+    💡 À discuter : faut-il ajouter des notifs in-app pour les transferts essai → inscription ? Et un email pour les dates tango (comme pour yoga) ?
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- DATES TANGO PARIS                                                 -->

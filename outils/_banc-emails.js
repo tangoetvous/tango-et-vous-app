@@ -24,7 +24,7 @@ function corpsFonction(nom, src = SRC) {
  * @param {object} params   { 'tev_cours_dates': {...}, … } servis par le faux Supabase
  * @returns {Promise<Array<{to,subject,html}>>}
  */
-async function executer(nom, body, params = {}, aides = []) {
+async function executer(nom, body, params = {}, aides = [], opts = {}) {
   const envoyes = [];
 
   const fauxFetch = async (url, opts = {}) => {
@@ -41,6 +41,10 @@ async function executer(nom, body, params = {}, aides = []) {
     }
     // ── Supabase : sert les paramètres fournis ──
     if (u.includes('supabase.co') || u.includes('/rest/v1/')) {
+      // Appels RPC : réponse fournie par params.__rpc
+      if (u.includes('/rest/v1/rpc/')) {
+        return { ok: true, status: 200, json: async () => (params.__rpc || {}), text: async () => '' };
+      }
       const m = u.match(/cle=eq\.([^&]+)/);
       if (m) {
         const cle = decodeURIComponent(m[1]);
@@ -107,7 +111,15 @@ async function executer(nom, body, params = {}, aides = []) {
     url: 'https://app.tangoetvous.fr/',
   };
   const env = { BREVO_API_KEY: 'cle-brevo-factice', SUPABASE_SERVICE_KEY: 'cle-service-factice', HMAC_SECRET: 'secret', CRON_SECRET: 's' };
-  await handler(request, env);
+  // Signature non standard (handlers appelés avec url et action) : opts.args liste
+  // les arguments, les chaînes 'request', 'url' et 'env' étant résolues ici.
+  if (opts.args) {
+    const url = new URL(opts.urlStr || 'https://app.tangoetvous.fr/?id=1&token=x');
+    const resolus = opts.args.map(a => a === 'request' ? request : a === 'url' ? url : a === 'env' ? env : a);
+    await handler(...resolus);
+  } else {
+    await handler(request, env);
+  }
   return envoyes;
 }
 
@@ -166,7 +178,7 @@ async function construirePage(o) {
   let sections = '', nav = '', total = 0;
   for (const c of o.cas) {
     const params = c.tables ? { ...o.params, __tables: c.tables } : o.params;
-    const mails = await executer(c.handler, c.body, params, c.aides || []);
+    const mails = await executer(c.handler, c.body, params, c.aides || [], { args: c.args, urlStr: c.urlStr });
     total += mails.length;
     nav += `<a href="#${c.id}">${ech(c.titre.split('—')[0].trim())}</a>`;
     sections += `<div class="pv-titre" id="${c.id}">${ech(c.titre)}</div>
