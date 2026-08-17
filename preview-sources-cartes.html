@@ -26,7 +26,7 @@
 <div class="route">POST /api/notify/carte-bienvenue (JWT admin)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Premier pointage sur la carte de la saison (depuis Cartes 10 ou QR code)</span></div>
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, utilises, restants, datePremierCours, expiration? }</span><div class="note">⚠️ Champs <b>ville, niveau, saison, datePremierCours</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17).</div></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saison, utilises, restants, datePremierCours, expiration? }</span><div class="note">⚠️ Champs <b>ville, niveau, saison, datePremierCours</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17). ⚠️ Symétriquement, le handler attend un champ <code>cours</code> que <b>personne n'envoie</b> : l'email de bienvenue ne nomme donc jamais le cours concerné.</div></div>
   <div class="field"><span class="label">Sujet :</span> <code>Bienvenue dans votre cours de tango — Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Bienvenue - votre premiere seance a ete enregistree sur votre carte de 10 cours"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Bienvenue — votre carte de 10 cours est activée !"</div>
@@ -80,7 +80,7 @@
 <div class="route">POST /api/notify/carte-report (JWT admin)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin clique "↩ Reporter" en fin de saison (crée ligne isReport=true saison suivante)</span></div>
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saisonSuivante, coursReportes }</span><div class="note">⚠️ Champs <b>nom, ville, niveau, coursReportes</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17).</div></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, saisonSuivante, coursReportes }</span><div class="note">✅ <b>Vérifié le 2026-08-17</b> : la charge utile réelle est <code>{ email, prenom, restants, saisonSuivante }</code> — nom, ville, niveau et coursReportes ne sont pas transmis. (Annotation précédente erronée.)</div></div>
   <div class="field"><span class="label">Sujet :</span> <code>Votre carte a été reportée pour la saison ${saisonSuivante} — Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre carte a ete reportee - vos cours sont preserves pour la prochaine saison"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre carte est reportée pour la saison prochaine !"</div>

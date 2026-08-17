@@ -127,7 +127,7 @@
 <h2>E15 / E15b — Admin valide attente → confirmé</h2>
 <div class="route">POST /api/notify/essai-valide (JWT admin)</div>
 <div class="block">
-  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, dateEssai, role, partPrenom?, partNom?, emailPartage?, daysUntil, livretUrl?, id }</span><div class="note">⚠️ Champs <b>partPrenom, partNom, emailPartage</b> : transmis dans la charge utile mais <b>jamais lus par le worker</b> — ils n'apparaissent donc pas dans l'email (vérifié dans le code le 2026-08-17).</div></div>
+  <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ville, niveau, dateEssai, role, partPrenom?, partNom?, emailPartage?, daysUntil, livretUrl?, id }</span><div class="note">✅ <b>Vérifié le 2026-08-17</b> : la charge utile réelle est <code>{ email, prenom, nom, tel, role, ville, niveau, dateEssai, partenaire, id }</code> — partPrenom, partNom et emailPartage ne sont pas transmis ; le partenaire fait l'objet d'un appel distinct. (Annotation précédente erronée.)</div></div>
   <div class="field"><span class="label">E15b :</span> <span class="cond">si emailPartage=true → salutation "Prénom &amp; Prénom", sinon E15 normal</span></div>
   <div class="field"><span class="label">Sujet :</span> <code>✓ Bonne nouvelle — votre cours d'essai du ${dateLabel} est confirmé !</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Essai tango confirme - nous vous attendons avec impatience sur la piste"</span></div>
