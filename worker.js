@@ -6148,11 +6148,13 @@ async function handleCronEssaiYogaRappelJ3(request, env) {
     if (pr.ok) { const rows = await pr.json(); for (const row of rows) { try { paramsRaw[row.cle] = typeof row.valeur === 'string' ? JSON.parse(row.valeur) : row.valeur; } catch { paramsRaw[row.cle] = row.valeur; } } }
   } catch(err) { console.error('[cron-essai-yoga-rappel-j3] params error', err); }
 
+  // ⚠️ Déclaré HORS de la boucle : la notification admin de fin de handler s'en sert
+  // aussi (même correctif que le rappel J-3 des stages).
+  const dateLabel = fmtDate(targetDate);
   let sent = 0;
   for (const e of inscrits) {
     if (!e.email || !env.BREVO_API_KEY) continue;
     const prenomAff = _esc(e.prenom || '');
-    const dateLabel = fmtDate(targetDate);
     const coursLabel = e.cours === 'yin' ? 'Yin Yoga' : e.cours === 'hatha' ? 'Hatha Yoga' : 'Yin + Hatha Yoga';
 
     const mI = parseInt(targetDate.slice(5,7)), yr = targetDate.slice(0,4);
@@ -8140,11 +8142,14 @@ async function handleCronRappelStageJ3(request, env) {
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
   const _s4TokenMap = await _buildTokenMap(env.SUPABASE_SERVICE_KEY || SUPABASE_ANON);
+  // ⚠️ Déclaré HORS de la boucle : la notification admin de fin de handler s'en sert
+  // aussi. Tant qu'il était local à la boucle, ce message levait une ReferenceError
+  // avalée par son try/catch → aucun récapitulatif ne remontait dans le panel 🔔.
+  const dateLabel = fmtDate(targetDate);
   let sent = 0;
   for (const e of inscrits) {
     if (!e.email || !env.BREVO_API_KEY) continue;
     const prenomAff = _esc(e.prenom || '');
-    const dateLabel = fmtDate(targetDate);
     const donnees   = typeof e.donnees === 'string' ? JSON.parse(e.donnees||'{}') : (e.donnees||{});
     // Horaire recalculé depuis les paramètres (override par date) au lieu de la
     // valeur gravée à l'inscription → affichage ET sujet utilisent l'horaire actuel.

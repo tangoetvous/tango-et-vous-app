@@ -1,1250 +1,679 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Preview emails — Stages · S0/S1/S2/S3/S4/S-admin/S-cancel</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview — Emails Stages</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
-.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;position:sticky;top:0;background:#1e1e1e;padding:12px 0;z-index:10;border-bottom:1px solid #444;}
-.nav a{color:#D4AF37;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-decoration:none;padding:7px 12px;border:1px solid #D4AF37;border-radius:6px;}
-.nav a:hover{background:#D4AF37;color:#000;}
-.email-block{margin-bottom:56px;}
-.email-label{color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-left:4px;}
-.email-label strong{color:#D4AF37;}
-.email-label em{color:#aaa;font-style:normal;font-size:10px;}
-.email-subj{color:#ccc;font-size:12px;margin-bottom:12px;padding-left:4px;}
-.email-subj span{color:#fff;font-weight:700;}
-.email-wrap{max-width:600px;}
-/* badges rôle */
-.badge-gui{display:inline-block;background:#1565c0;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-gde{display:inline-block;background:#c2185b;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-val{display:inline-block;background:#2e7d32;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-att{display:inline-block;background:#e65100;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-/* Boîte stage — fond ambre/or clair, bordure or foncé */
-.stage-box{background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;}
-.stage-box-header{background:#B8962E;padding:12px 18px;}
-.stage-box-header-title{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;}
-.stage-box-header-date{font-size:17px;font-weight:700;color:#fff;margin-top:4px;}
-.stage-box-body{padding:16px 18px;}
-.stage-section{padding:10px 0;border-bottom:1px solid rgba(184,150,46,0.25);}
-.stage-section:last-child{border-bottom:none;padding-bottom:0;}
-.stage-section-name{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#B8962E;font-weight:700;margin-bottom:8px;}
-.stage-slot{font-size:14px;color:#333;line-height:1.9;padding-left:12px;}
-.stage-slot-horaire{font-weight:700;color:#111;}
-.stage-slot-type{font-size:11px;color:#888;font-style:italic;}
-.stage-price{font-size:15px;font-weight:700;color:#B8962E;margin-top:8px;}
-.stage-total{background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;text-align:right;}
-.note-paiement{font-size:12px;color:#7a6020;font-style:italic;margin-top:6px;}
-/* Push OS mockup */
-.push-mockup{background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.35);padding:14px 16px;max-width:360px;display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
-.push-mockup-icon{width:36px;height:36px;border-radius:8px;background:#111;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
-.push-mockup-body{flex:1;}
-.push-mockup-app{font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
-.push-mockup-title{font-size:13px;font-weight:700;color:#111;margin-bottom:2px;}
-.push-mockup-text{font-size:12px;color:#444;line-height:1.4;}
-.push-mockup-time{font-size:11px;color:#999;margin-top:4px;}
-
-.email-pre{color:#7ecbf7;font-size:11px;letter-spacing:1.5px;margin-bottom:12px;padding-left:4px;}
-.email-pre span{color:#fff;font-weight:600;}
+body { margin:0; padding:0; background:#f5f5f5; font-family:Arial,sans-serif; }
+.pv-head { background:#111; border-bottom:3px solid #D4AF37; padding:22px 24px; text-align:center; }
+.pv-head h1 { font-family:Georgia,serif; font-size:20px; font-weight:300; letter-spacing:5px; color:#D4AF37; margin:0; }
+.pv-head p { font-size:12px; color:#888; margin:8px 0 0; }
+.pv-gen { background:#0d2b0d; color:#a5d6a7; font-size:12px; text-align:center; padding:9px 16px; border-bottom:1px solid #1b5e20; line-height:1.6; }
+.pv-gen code { color:#fff; }
+.pv-nav { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; padding:12px 16px; background:#0a0a0a; position:sticky; top:0; z-index:10; }
+.pv-nav a { color:#D4AF37; text-decoration:none; font-size:11px; border:1px solid #3a2f00; padding:5px 12px; border-radius:20px; }
+.pv-titre { max-width:660px; margin:38px auto 0; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:#fff; background:#333; padding:10px 20px; border-left:4px solid #B8962E; }
+.pv-com { max-width:660px; margin:0 auto; font-size:13px; color:#555; padding:12px 20px; line-height:1.7; background:#fff; }
+.pv-h { display:block; margin-top:6px; color:#8B6914; font-size:12px; }
+.pv-dest { max-width:660px; margin:16px auto 0; font-size:12px; color:#333; background:#eceff1; padding:7px 16px; border-radius:6px 6px 0 0; font-weight:700; }
+.pv-sujet { max-width:660px; margin:0 auto; font-size:13px; background:#fdf7e6; border-left:4px solid #B8962E; padding:10px 16px; color:#3a2f00; }
+.pv-mail { max-width:600px; margin:10px auto 0; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.12); }
+.pv-fin { max-width:660px; margin:40px auto 0; background:#fff; padding:18px 20px; font-size:13px; color:#444; line-height:1.8; border-top:3px solid #D4AF37; }
+.pv-fin b { color:#8B6914; }
+table.tbl { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+table.tbl th { text-align:left; padding:8px; background:#eee; }
+table.tbl td { padding:8px; border-top:1px solid #ddd; vertical-align:top; }
 </style>
 </head>
 <body>
 
-<div class="nav">
-  <a href="#s0">S0 Admin solo</a>
-  <a href="#s0-att">S0 Admin en attente</a>
-  <a href="#s0-couple">S0 Admin couple slots ≠</a>
-  <a href="#notifs-admin">Notifs admin</a>
-  <a href="#notifs-eleve">Notifs élève</a>
-  <a href="#push-os">Push OS</a>
-  <a href="#s1">S1 Solo &gt;3j</a>
-  <a href="#s1b">S1b Solo ≤3j (👍)</a>
-  <a href="#s1c">S1c Couple emails distincts</a>
-  <a href="#s1d">S1d Couple email partagé</a>
-  <a href="#s2">S2 Attente parité</a>
-  <a href="#s3">S3 Validé depuis att. &gt;3j</a>
-  <a href="#s3b">S3b Validé depuis att. ≤3j</a>
-  <a href="#s4">S4 Rappel J-3 (👍)</a>
-  <a href="#s-admin">S-admin Inscrit par admin</a>
-  <a href="#s-cancel">S-cancel Annulation (admin)</a>
+<div class="pv-head">
+  <h1>TANGO &amp; VOUS</h1>
+  <p>Preview — emails des stages</p>
 </div>
+<div class="pv-gen">✅ Page <b>générée automatiquement</b> en exécutant les handlers de <code>worker.js</code> (Supabase et Brevo simulés) —
+ce que vous voyez est exactement ce que reçoivent les destinataires.<br>Régénérer avec <code>node outils/generer-preview-stages.js</code></div>
+<div class="pv-nav"><a href="#s1">S0 + S1</a><a href="#s1b">S1b</a><a href="#s2">S2</a><a href="#s1couple">S1</a><a href="#s1partage">S1</a><a href="#s1multi">S1</a><a href="#s3">S3</a><a href="#s3b">S3b</a><a href="#s4">S4</a><a href="#scancel">S-cancel</a><a href="#sedit">S-edit</a></div>
 
-<!-- ═══════════════════════════════════════════════
-     S0 — Récap admin · Solo confirmé
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s0">
-<div class="email-label"><strong>S0</strong> — Récap admin · Solo confirmé &nbsp;|&nbsp; <em>Reçu par tangoetvous@gmail.com à chaque inscription</em></div>
-<div class="email-subj">Objet : <span>[Stage tango] Thomas DUPONT — sam. 11 avril — Guideur·se — ✓ confirmé</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;color:#222;border:1px solid #ddd;border-radius:6px;overflow:hidden;">
-  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
-    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage</div>
-  </div>
-  <div style="padding:24px;">
-    <!-- Encadré principal -->
-    <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-      <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
-        <div style="flex:1;">
-          <div style="font-size:18px;font-weight:700;color:#111;">Thomas DUPONT</div>
-          <div style="font-size:12px;color:#333;margin-top:2px;">thomas.dupont@gmail.com &nbsp;·&nbsp; 06 11 22 33 44</div>
-        </div>
-        <span class="badge-gui">Guideur·se</span>
-      </div>
-      <div style="background:#fffdf8;padding:14px 16px;">
-        <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:10px;">📅 Samedi 11 avril 2026</div>
-        <!-- Slots -->
-        <div style="font-size:13px;color:#444;line-height:2;">
-          ▸ <strong>14h–15h</strong> — Technique : dissociation et jeu de corps <span style="font-size:11px;color:#888;">(Technique)</span><br/>
-          ▸ <strong>15h–16h30</strong> — Connexion guideur/guidée : écoute et improvisation <span style="font-size:11px;color:#888;">(Stage 1)</span>
-        </div>
-        <div style="font-size:13px;font-weight:700;color:#B8962E;margin-top:8px;">💰 45 € — 2 stages <em style="font-size:11px;font-weight:400;color:#777;">(depuis tev_params_stages_&lt;sai&gt;.tarifs)</em></div>
-        <div style="font-size:12px;color:#555;margin-top:6px;">📍 Centre Kim Kan — 64 rue Orfila, Paris 20e <em style="color:#888;">(depuis tev_params_stages_&lt;sai&gt;.adresse)</em></div>
-      </div>
-    </div>
-    <!-- Statut -->
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:10px 14px;background:#f5f5f5;border-radius:6px;">
-      <span class="badge-val">✓ Confirmé</span>
-      <span style="font-size:12px;color:#555;">Email envoyé : <strong>S1</strong> (confirmation &gt;3 jours)</span>
-    </div>
-    <!-- Infos complémentaires -->
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
-      <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 6px;color:#888;width:36%;">Situation</td><td style="padding:8px 6px;color:#222;font-weight:600;">Seul·e</td></tr>
-      <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 6px;color:#888;">Niveau déclaré</td><td style="padding:8px 6px;color:#222;font-weight:600;">Débutant·e</td></tr>
-      <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 6px;color:#888;">Délai avant le stage</td><td style="padding:8px 6px;color:#222;font-weight:600;">18 jours → rappel J-3 prévu</td></tr>
-      <tr><td style="padding:8px 6px;color:#888;">Remarques</td><td style="padding:8px 6px;color:#777;font-style:italic;">—</td></tr>
-    </table>
-    <!-- Boutons -->
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-      <a href="tel:0611223344" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
-      <a href="https://mail.google.com/mail/?view=cm&amp;to=thomas.dupont@gmail.com" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email Gmail</a>
-      <a href="sms:0611223344" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
-      <a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l'admin →</a>
-    </div>
-  </div>
-  <div style="background:#f5f5f5;padding:10px 24px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;">
-    Tango &amp; Vous · tangoetvous@gmail.com · 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S0 — Récap admin · Solo en attente
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s0-att">
-<div class="email-label"><strong>S0</strong> — variante en attente &nbsp;|&nbsp; <em>Guidée seule · parité en cours</em></div>
-<div class="email-subj">Objet : <span>[Stage tango] Sophie MARTIN — sam. 11 avril — Guidée — ⏳ liste d'attente</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;color:#222;border:1px solid #ddd;border-radius:6px;overflow:hidden;">
-  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
-    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage</div>
-  </div>
-  <div style="padding:24px;">
-    <div style="border:2px solid #e65100;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-      <div style="background:#e65100;padding:10px 16px;display:flex;align-items:center;gap:12px;">
-        <div style="flex:1;">
-          <div style="font-size:18px;font-weight:700;color:#fff;">Sophie MARTIN</div>
-          <div style="font-size:12px;color:#ffe0cc;margin-top:2px;">sophie.martin@gmail.com &nbsp;·&nbsp; 06 98 76 54 32</div>
-        </div>
-        <span class="badge-gde">Guidée</span>
-      </div>
-      <div style="background:#fff8f5;padding:14px 16px;">
-        <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:10px;">📅 Samedi 11 avril 2026</div>
-        <div style="font-size:13px;color:#444;line-height:2;">
-          ▸ <strong>14h–15h</strong> — Technique : dissociation et jeu de corps <span style="font-size:11px;color:#888;">(Technique)</span><br/>
-          ▸ <strong>15h–16h30</strong> — Connexion guideur/guidée : écoute et improvisation <span style="font-size:11px;color:#888;">(Stage 1)</span>
-        </div>
-        <div style="font-size:13px;font-weight:700;color:#B8962E;margin-top:8px;">💰 45 €</div>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:10px 14px;background:#fff3e0;border-radius:6px;border:1px solid #ffe0b2;">
-      <span class="badge-att">⏳ En attente</span>
-      <span style="font-size:12px;color:#555;">Email envoyé : <strong>S2</strong> (liste d'attente parité)</span>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-      <a href="tel:0698765432" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
-      <a href="https://mail.google.com/mail/?view=cm&amp;to=sophie.martin@gmail.com" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email Gmail</a>
-      <a href="sms:0698765432" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
-      <a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l'admin →</a>
-    </div>
-  </div>
-  <div style="background:#f5f5f5;padding:10px 24px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;">
-    Tango &amp; Vous · tangoetvous@gmail.com · 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S0 — Récap admin · Couple avec slots différents
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s0-couple">
-<div class="email-label"><strong>S0</strong> — variante couple (slots différents) &nbsp;|&nbsp; <em>2 lignes DB → 2 emails S0 côté admin. Ici : email reçu pour la ligne de Thomas</em></div>
-<div class="email-subj">Objet : <span>[Stage tango] Thomas DUPONT — sam. 11 avril — Guideur·se avec partenaire — ✓ confirmé</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;color:#222;border:1px solid #ddd;border-radius:6px;overflow:hidden;">
-  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
-    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage — couple</div>
-  </div>
-  <div style="padding:24px;">
-    <!-- Thomas -->
-    <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:16px;">
-      <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
-        <div style="flex:1;">
-          <div style="font-size:18px;font-weight:700;color:#111;">Thomas DUPONT</div>
-          <div style="font-size:12px;color:#333;margin-top:2px;">thomas.dupont@gmail.com &nbsp;·&nbsp; 06 11 22 33 44</div>
-        </div>
-        <span class="badge-gui">Guideur·se</span>
-      </div>
-      <div style="background:#fffdf8;padding:14px 16px;">
-        <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:10px;">📅 Samedi 11 avril 2026</div>
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#B8962E;font-weight:700;margin-bottom:6px;">Ses stages :</div>
-        <div style="font-size:13px;color:#444;line-height:2;">
-          ▸ <strong>14h–15h</strong> — Technique : dissociation et jeu de corps <span style="font-size:11px;color:#888;">(Technique)</span><br/>
-          ▸ <strong>15h–16h30</strong> — Connexion guideur/guidée : écoute et improvisation <span style="font-size:11px;color:#888;">(Stage 1)</span>
-        </div>
-        <div style="font-size:13px;font-weight:700;color:#B8962E;margin-top:8px;">💰 45 €</div>
-      </div>
-    </div>
-    <!-- Marie (partenaire — slots différents) -->
-    <div style="border:2px solid #c2185b;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-      <div style="background:#c2185b;padding:10px 16px;display:flex;align-items:center;gap:12px;">
-        <div style="flex:1;">
-          <div style="font-size:16px;font-weight:700;color:#fff;">Marie BERNARD — partenaire</div>
-          <div style="font-size:12px;color:#fce4ec;margin-top:2px;">marie.bernard@gmail.com &nbsp;·&nbsp; 06 55 44 33 22</div>
-        </div>
-        <span class="badge-gde">Guidée</span>
-      </div>
-      <div style="background:#fff8fa;padding:14px 16px;">
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#c2185b;font-weight:700;margin-bottom:6px;">Ses stages (différents de Thomas) :</div>
-        <div style="font-size:13px;color:#444;line-height:2;">
-          ▸ <strong>15h–16h30</strong> — Connexion guideur/guidée : écoute et improvisation <span style="font-size:11px;color:#888;">(Stage 1)</span><br/>
-          ▸ <strong>16h30–18h</strong> — Musicalement vôtre : interpréter les nuances <span style="font-size:11px;color:#888;">(Stage 2)</span>
-        </div>
-        <div style="font-size:13px;font-weight:700;color:#c2185b;margin-top:8px;">💰 45 €</div>
-      </div>
-    </div>
-    <div style="background:#f9f9f9;border:1px solid #eee;border-radius:6px;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#555;">
-      💰 Total couple sur place : <strong style="color:#111;">90 €</strong>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:10px 14px;background:#f5f5f5;border-radius:6px;">
-      <span class="badge-val">✓ Tous les deux confirmés</span>
-      <span style="font-size:12px;color:#555;">Emails envoyés : <strong>S1</strong> ×2 (un par personne)</span>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-      <a href="tel:0611223344" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Thomas</a>
-      <a href="tel:0655443322" style="display:inline-block;background:#c2185b;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Marie</a>
-      <a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l'admin →</a>
-    </div>
-  </div>
-  <div style="background:#f5f5f5;padding:10px 24px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;">
-    Tango &amp; Vous · tangoetvous@gmail.com · 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S1 — Confirmation >3j · Solo · Guideur·se
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s1">
-<div class="email-label"><strong>S1</strong> — Confirmation &gt;3j · Solo &nbsp;|&nbsp; <em>type_confirmation='confirme' · &gt;3 jours avant la date · mention rappel J-3</em></div>
-<div class="email-subj">Objet : <span>Stage Tango &amp; Vous — Samedi 11 avril · 14h–16h30</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre inscription au stage est confirmee - retrouvez les details ci-dessous"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau vert -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Thomas</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au stage de tango est confirmée. Nous avons hâte de vous retrouver sur la piste ! Voici le récapitulatif de votre journée.</p>
-
-    <!-- Stage box -->
-    <div class="stage-box">
-      <div class="stage-box-header">
-        <div class="stage-box-header-title">Votre stage</div>
-        <div class="stage-box-header-date">📅 Samedi 11 avril 2026</div>
-      </div>
-      <div class="stage-box-body">
-        <!-- Inscrit -->
-        <div class="stage-section">
-          <div class="stage-section-name">
-            Thomas DUPONT &nbsp;<span class="badge-gui" style="font-size:11px;padding:2px 10px;">Guideur·se</span>
+<div class="pv-titre" id="s1">S0 + S1 — Inscription confirmée (plus de 3 jours avant)</div>
+<div class="pv-com">Cas courant depuis le formulaire public. L'admin reçoit S0, l'élève reçoit S1 avec la mention du rappel J-3 à venir. <span class="pv-h">Handler : <code>handleNotifyInscriptionStage</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📥 Email ADMIN → <code>tangoetvous@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Stage tango] Camille MARTIN — dim. 6 septembre — ✓ confirmé</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage</div></div>
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678 · <strong>Total : 45€</strong></div>
+            
           </div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">14h–15h</span> — Technique : dissociation et jeu de corps
-            <span class="stage-slot-type">(Technique)</span><br/>
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span>
-          </div>
-          <div class="stage-price">45 € <span style="font-size:12px;font-weight:400;color:#7a6020;">— 2 stages</span></div>
-        </div>
-        <!-- Lieu -->
-        <div class="stage-section">
-          <div class="stage-section-name">Lieu</div>
-          <div style="font-size:14px;color:#333;line-height:1.8;">
-            <strong>Centre Kim Kan</strong><br/>
-            64 rue Orfila, Paris 20e<br/>
-            <span style="font-size:12px;color:#777;">M° Gambetta (L3)</span><br/>
-            <a href="https://maps.google.com/?q=64+rue+Orfila+Paris+20" style="color:#B8962E;font-size:12px;">🗺 Voir sur Google Maps</a>
-          </div>
+          <span style="display:inline-block;background:#2e7d32;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">✓ Confirmé·e</span>
         </div>
       </div>
-      <!-- Total + note paiement -->
-      <div class="stage-total">Total à régler sur place : 45 €</div>
-      <div style="background:#fffdf5;padding:10px 18px;">
-        <p class="note-paiement">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
-      </div>
-    </div>
-
-    <!-- Rappel J-3 à venir -->
-    <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
-      <p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S1b — Confirmation ≤3j · Solo · avec bouton 👍
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s1b">
-<div class="email-label"><strong>S1b</strong> — Confirmation ≤3j · Solo &nbsp;|&nbsp; <em>Inscription dans les 3 jours avant le stage → bouton 👍 immédiat, pas de mention rappel</em></div>
-<div class="email-subj">Objet : <span>Stage Tango &amp; Vous — Samedi 11 avril · 14h–16h30</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre stage a lieu dans 3 jours - confirmez votre presence ci-dessous"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Thomas</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au stage de tango est confirmée. Nous vous attendons dans moins de 3 jours — à très bientôt !</p>
-
-    <!-- Stage box -->
-    <div class="stage-box">
-      <div class="stage-box-header">
-        <div class="stage-box-header-title">Votre stage</div>
-        <div class="stage-box-header-date">📅 Samedi 11 avril 2026</div>
-      </div>
-      <div class="stage-box-body">
-        <div class="stage-section">
-          <div class="stage-section-name">Thomas DUPONT &nbsp;<span class="badge-gui" style="font-size:11px;padding:2px 10px;">Guideur·se</span></div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">14h–15h</span> — Technique : dissociation et jeu de corps
-            <span class="stage-slot-type">(Technique)</span><br/>
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span>
-          </div>
-          <div class="stage-price">45 €</div>
+      <div style="background:#f5f0e8;border-left:4px solid #B8962E;padding:10px 16px;margin:0 0 14px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:700;color:#333;">Camille MARTIN&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">Guideur(se)</span></div>
+    </div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
         </div>
-        <div class="stage-section">
-          <div class="stage-section-name">Lieu</div>
-          <div style="font-size:14px;color:#333;line-height:1.8;">
-            <strong>Centre Kim Kan</strong><br/>
-            64 rue Orfila, Paris 20e<br/>
-            <span style="font-size:12px;color:#777;">M° Gambetta (L3)</span>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+      
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+        <a href="tel:0612345678" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        <a href="mailto:camille@test.fr" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
+        <a href="sms:0612345678" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
+      </div>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Dimanche 6 septembre 2026 · 14h–16h30</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre inscription au stage est confirmee - retrouvez les details ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div><div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span></div>
+          <div style="padding:30px 28px;">
+            <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+            <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au stage de tango est confirmée. Nous avons hâte de vous retrouver sur la piste ! Voici le récapitulatif.</p>
+            <div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
+        </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+            
+            <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;"><p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p></div>
+            <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+          </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="s1b">S1b — Inscription confirmée (moins de 3 jours avant)</div>
+<div class="pv-com">Le rappel J-3 ne partira plus : le bouton « 👍 Je confirme ma présence » est donc placé directement dans l'email de confirmation. <span class="pv-h">Handler : <code>handleNotifyInscriptionStage</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📥 Email ADMIN → <code>tangoetvous@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Stage tango] Camille MARTIN — mer. 19 août — ✓ confirmé</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage</div></div>
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678 · <strong>Total : 45€</strong></div>
+            
           </div>
+          <span style="display:inline-block;background:#2e7d32;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">✓ Confirmé·e</span>
         </div>
       </div>
-      <div class="stage-total">Total à régler sur place : 45 €</div>
-      <div style="background:#fffdf5;padding:10px 18px;">
-        <p class="note-paiement">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
-      </div>
-    </div>
-
-    <!-- Bouton 👍 confirmer présence -->
-    <div style="text-align:center;margin:0 0 16px;">
-      <a href="https://app.tangoetvous.fr/api/stages/confirmer?email=...&date=...&token=..." style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a>
-    </div>
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidés.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S1c — Couple emails distincts
-     Exemple : perspective de Marie (guidée) — Thomas est le guideur inscrit principal
-     Marie a DES SLOTS DIFFÉRENTS de Thomas
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s1c">
-<div class="email-label"><strong>S1c</strong> — Couple · emails distincts · slots différents &nbsp;|&nbsp; <em>Marie reçoit ses stages + les stages de Thomas (en section séparée) — via <code>buildEleveStagesBlock()</code></em></div>
-<div class="email-subj">Objet : <span>🎭 Votre inscription au stage du samedi 11 avril — Tango &amp; Vous</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre inscription au stage est confirmee - retrouvez les details ci-dessous"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au stage de tango avec Thomas est confirmée. Voici le récapitulatif pour vous deux.</p>
-
-    <!-- Stage box — deux sections (buildEleveStagesBlock) -->
-    <div class="stage-box">
-      <div class="stage-box-header">
-        <div class="stage-box-header-title">Stage</div>
-        <div class="stage-box-header-date">📅 Samedi 11 avril 2026</div>
-      </div>
-      <div class="stage-box-body">
-        <!-- Label "Vos stages — Marie" -->
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #e8d5a0;">Vos stages — Marie BERNARD</div>
-        <div class="stage-section">
-          <div class="stage-section-name">Marie BERNARD &nbsp;<span class="badge-gde" style="font-size:11px;padding:2px 10px;">Guidée</span></div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span><br/>
-            <span class="stage-slot-horaire">16h30–18h</span> — Musicalement vôtre : interpréter les nuances
-            <span class="stage-slot-type">(Stage 2)</span>
-          </div>
-          <div class="stage-price">45 € <span style="font-size:12px;font-weight:400;color:#7a6020;">— 2 stages</span></div>
+      <div style="background:#f5f0e8;border-left:4px solid #B8962E;padding:10px 16px;margin:0 0 14px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:700;color:#333;">Camille MARTIN&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">Guideur(se)</span></div>
+    </div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Mercredi 19 août 2026</div>
         </div>
-        <!-- Label "Stages de votre partenaire — Thomas" -->
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#6a1b9a;font-weight:700;margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid #e8d5a0;">Stages de votre partenaire — Thomas DUPONT</div>
-        <div class="stage-section">
-          <div class="stage-section-name">Thomas DUPONT &nbsp;<span class="badge-gui" style="font-size:11px;padding:2px 10px;">Guideur·se</span></div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">14h–15h</span> — Technique : dissociation et jeu de corps
-            <span class="stage-slot-type">(Technique)</span><br/>
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span>
-          </div>
-          <div class="stage-price">45 €</div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+      
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+        <a href="tel:0612345678" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        <a href="mailto:camille@test.fr" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
+        <a href="sms:0612345678" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
+      </div>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Mercredi 19 août 2026 · 14h–16h30</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre stage a lieu dans 3 jours - confirmez votre presence ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div><div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span></div>
+          <div style="padding:30px 28px;">
+            <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+            <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au stage de tango est confirmée. Nous vous attendons dans moins de 3 jours — à très bientôt !</p>
+            <div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Mercredi 19 août 2026</div>
         </div>
-        <div class="stage-section">
-          <div class="stage-section-name">Lieu</div>
-          <div style="font-size:14px;color:#333;line-height:1.8;">
-            <strong>Centre Kim Kan</strong><br/>
-            64 rue Orfila, Paris 20e<br/>
-            <span style="font-size:12px;color:#777;">M° Gambetta (L3)</span>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+            <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr/api/stages/confirmer?email=camille%40test.fr&date=2026-08-19&token=jetonfactice00000000000000000000" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>
+            
+            <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+          </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="s2">S2 — Guidée seule, mise en attente (parité)</div>
+<div class="pv-com">Une guidée sans partenaire part en attente le temps d'équilibrer guideurs et guidées. Aucune capacité maximale n'entre en jeu : les stages n'ont pas de quota de places. <span class="pv-h">Handler : <code>handleNotifyInscriptionStage</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📥 Email ADMIN → <code>tangoetvous@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Stage tango] Alex DUPONT — dim. 6 septembre — ⏳ liste d'attente</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage</div></div>
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:700;color:#111;">Alex DUPONT</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">alex@test.fr · 0612345678 · <strong>Total : 45€</strong></div>
+            
           </div>
+          <span style="display:inline-block;background:#e65100;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">⏳ Attente</span>
         </div>
       </div>
-      <div class="stage-total">Votre part à régler sur place : 45 €</div>
-      <div style="background:#fffdf5;padding:10px 18px;">
-        <p class="note-paiement">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
-      </div>
-    </div>
-
-    <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
-      <p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S1d — Couple email partagé (un seul email, slots différents affichés)
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s1d">
-<div class="email-label"><strong>S1d</strong> — Couple · email partagé &nbsp;|&nbsp; <em>Un seul email envoyé · chaque section affiche ses propres slots</em></div>
-<div class="email-subj">Objet : <span>Stage Tango &amp; Vous — Samedi 11 avril · 14h–18h</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre inscription au stage est confirmee - retrouvez les details ci-dessous"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Vos inscriptions au stage sont confirmées !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Thomas &amp; Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Vos inscriptions au stage de tango sont confirmées. Voici le récapitulatif pour chacun·e.</p>
-
-    <!-- Stage box — deux sections -->
-    <div class="stage-box">
-      <div class="stage-box-header">
-        <div class="stage-box-header-title">Votre stage</div>
-        <div class="stage-box-header-date">📅 Samedi 11 avril 2026</div>
-      </div>
-      <div class="stage-box-body">
-        <!-- Thomas -->
-        <div class="stage-section">
-          <div class="stage-section-name">Thomas DUPONT &nbsp;<span class="badge-gui" style="font-size:11px;padding:2px 10px;">Guideur·se</span></div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">14h–15h</span> — Technique : dissociation et jeu de corps
-            <span class="stage-slot-type">(Technique)</span><br/>
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span>
-          </div>
-          <div class="stage-price">45 €</div>
+      <div style="background:#f5f0e8;border-left:4px solid #B8962E;padding:10px 16px;margin:0 0 14px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:700;color:#333;">Alex DUPONT&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">Guidé(e)</span></div>
+    </div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
         </div>
-        <!-- Marie — slots différents -->
-        <div class="stage-section">
-          <div class="stage-section-name">Marie BERNARD &nbsp;<span class="badge-gde" style="font-size:11px;padding:2px 10px;">Guidée</span></div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span><br/>
-            <span class="stage-slot-horaire">16h30–18h</span> — Musicalement vôtre : interpréter les nuances
-            <span class="stage-slot-type">(Stage 2)</span>
-          </div>
-          <div class="stage-price">45 €</div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+      
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+        <a href="tel:0612345678" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        <a href="mailto:alex@test.fr" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
+        <a href="sms:0612345678" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
+      </div>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>alex@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Demande reçue · Dimanche 6 septembre 2026</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre demande de stage est enregistree - confirmation en fonction de la parite guideurs/guidees&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+          <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Votre demande d'inscription est bien reçue</span></div>
+          <div style="padding:30px 28px;">
+            <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Alex</strong>,</p>
+            <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons bien enregistré votre demande pour le stage de tango. <strong>Vous êtes pour l'instant en liste d'attente.</strong> Voici le récapitulatif de votre demande.</p>
+            <div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
         </div>
-        <!-- Lieu -->
-        <div class="stage-section">
-          <div class="stage-section-name">Lieu</div>
-          <div style="font-size:14px;color:#333;line-height:1.8;">
-            <strong>Centre Kim Kan</strong><br/>
-            64 rue Orfila, Paris 20e<br/>
-            <span style="font-size:12px;color:#777;">M° Gambetta (L3)</span>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+            <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
+              <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">🔄 En attente de confirmation</p>
+              <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous veillons à avoir autant de guideurs·ses que de guidé·e·s dans chaque stage. Votre inscription sera confirmée selon l'équilibre des inscrits. Nous vous recontacterons rapidement !<br/><br/>Si vous souhaitez nous contacter : <a href="mailto:tangoetvous@gmail.com" style="color:#e65100;">tangoetvous@gmail.com</a> · 07 73 27 59 06</p>
+            </div>
+            <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous vous contacterons dès que votre place est confirmée.<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+          </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="s1couple">S1 — Couple, deux adresses email</div>
+<div class="pv-com">Chacun reçoit son propre email et n'y voit QUE ses créneaux — dans un couple les stages choisis peuvent différer. <span class="pv-h">Handler : <code>handleNotifyInscriptionStage</code> · 3 email(s) envoyé(s).</span></div><div class="pv-dest">📥 Email ADMIN → <code>tangoetvous@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Stage tango] Camille MARTIN &amp; Alex MARTIN — dim. 6 septembre — ✓ confirmé</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage</div></div>
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN &amp; Alex MARTIN</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678 · <strong>Total : 70€</strong></div>
+            <div style="font-size:12px;color:#555;margin-top:4px;">Partenaire : Alex MARTIN · <a href="mailto:alex@test.fr" style="color:#6a1b9a;">alex@test.fr</a></div>
           </div>
+          <span style="display:inline-block;background:#2e7d32;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">✓ Confirmé·e</span>
         </div>
       </div>
-      <div class="stage-total">Total à régler sur place : 90 €</div>
-      <div style="background:#fffdf5;padding:10px 18px;">
-        <p class="note-paiement">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
-      </div>
-    </div>
-
-    <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
-      <p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S2 — En attente · Guidée seule
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s2">
-<div class="email-label"><strong>S2</strong> — Liste d'attente parité &nbsp;|&nbsp; <em>type_confirmation='attente' · guidée seule uniquement</em></div>
-<div class="email-subj">Objet : <span>Stage Tango &amp; Vous — Demande reçue · Samedi 11 avril</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre demande de stage est enregistree - confirmation en fonction de la parite guideurs/guidees"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau orange -->
-  <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
-    <span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Votre demande d'inscription est bien reçue</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Sophie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons bien enregistré votre demande pour le stage de tango. <strong>Vous êtes pour l'instant en liste d'attente.</strong> Voici le récapitulatif de votre demande.</p>
-
-    <!-- Stage box -->
-    <div class="stage-box">
-      <div class="stage-box-header">
-        <div class="stage-box-header-title">Votre demande de stage</div>
-        <div class="stage-box-header-date">📅 Samedi 11 avril 2026</div>
-      </div>
-      <div class="stage-box-body">
-        <div class="stage-section">
-          <div class="stage-section-name">Sophie MARTIN &nbsp;<span class="badge-gde" style="font-size:11px;padding:2px 10px;">Guidée</span></div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">14h–15h</span> — Technique : dissociation et jeu de corps
-            <span class="stage-slot-type">(Technique)</span><br/>
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span>
-          </div>
-          <div class="stage-price">45 €</div>
+      <div style="background:#f5f0e8;border-left:4px solid #B8962E;padding:10px 16px;margin:0 0 14px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:700;color:#333;">Camille MARTIN&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">Guideur(se)</span></div>
+    </div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
         </div>
-        <div class="stage-section">
-          <div class="stage-section-name">Lieu</div>
-          <div style="font-size:14px;color:#333;line-height:1.8;">
-            <strong>Centre Kim Kan</strong><br/>
-            64 rue Orfila, Paris 20e<br/>
-            <span style="font-size:12px;color:#777;">M° Gambetta (L3)</span>
-          </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+      <div style="margin-top:10px;"></div><div style="background:#f3e8ff;border-left:4px solid #B8962E;padding:10px 16px;margin:0 0 14px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:700;color:#333;">Alex MARTIN&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">Guidé(e)</span></div>
+    </div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
         </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">25€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 25€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
       </div>
-      <div style="background:#fffdf5;padding:10px 18px;">
-        <p class="note-paiement">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+        <a href="tel:0612345678" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        <a href="mailto:camille@test.fr" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
+        <a href="sms:0612345678" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
       </div>
-    </div>
-
-    <!-- Encadré explication parité -->
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
-      <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">🔄 En attente de confirmation</p>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous veillons à avoir autant de guideurs·ses que de guidé·e·s dans chaque stage. Votre inscription sera confirmée selon l'équilibre des inscrits. Nous vous recontacterons rapidement !<br/><br/>
-      Si vous souhaitez nous contacter : <a href="mailto:tangoetvous@gmail.com" style="color:#e65100;">tangoetvous@gmail.com</a> · 07 73 27 59 06</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous vous contacterons dès que votre place est confirmée.<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S3 — Validé·e depuis attente · >3j · sans bouton 👍 encore
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s3">
-<div class="email-label"><strong>S3</strong> — Validé·e depuis liste d'attente · &gt;3j &nbsp;|&nbsp; <em>Admin passe type_confirmation='confirme' · mention rappel J-3</em></div>
-<div class="email-subj">Objet : <span>Stage Tango &amp; Vous — Samedi 11 avril · 14h–16h30 — Bonne nouvelle !</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Bonne nouvelle - votre place au stage est confirmee"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bonne nouvelle — votre stage est confirmé !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Sophie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Suite à l'évolution des inscriptions, votre place est confirmée pour le stage de tango. Nous vous attendons avec plaisir !</p>
-
-    <!-- Stage box -->
-    <div class="stage-box">
-      <div class="stage-box-header">
-        <div class="stage-box-header-title">Votre stage</div>
-        <div class="stage-box-header-date">📅 Samedi 11 avril 2026</div>
-      </div>
-      <div class="stage-box-body">
-        <div class="stage-section">
-          <div class="stage-section-name">Sophie MARTIN &nbsp;<span class="badge-gde" style="font-size:11px;padding:2px 10px;">Guidée</span></div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">14h–15h</span> — Technique : dissociation et jeu de corps
-            <span class="stage-slot-type">(Technique)</span><br/>
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span>
-          </div>
-          <div class="stage-price">45 €</div>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Dimanche 6 septembre 2026 · 14h–16h30</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre inscription au stage est confirmee - retrouvez les details ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div><div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span></div>
+          <div style="padding:30px 28px;">
+            <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+            <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au stage de tango est confirmée. Nous avons hâte de vous retrouver sur la piste ! Voici le récapitulatif.</p>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #e8d5a0;">Vos stages — Camille MARTIN</div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
         </div>
-        <div class="stage-section">
-          <div class="stage-section-name">Lieu</div>
-          <div style="font-size:14px;color:#333;line-height:1.8;">
-            <strong>Centre Kim Kan</strong><br/>
-            64 rue Orfila, Paris 20e<br/>
-            <span style="font-size:12px;color:#777;">M° Gambetta (L3)</span>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#6a1b9a;font-weight:700;margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid #e8d5a0;">Stages de votre partenaire — Alex MARTIN</div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
+        </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">25€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 25€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+            
+            <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;"><p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p></div>
+            <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+          </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>alex@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Dimanche 6 septembre 2026 · 15h–16h30</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre inscription au stage est confirmee - retrouvez les details ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div><div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span></div>
+          <div style="padding:30px 28px;">
+            <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Alex</strong>,</p>
+            <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au stage de tango est confirmée. Nous avons hâte de vous retrouver sur la piste ! Voici le récapitulatif.</p>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #e8d5a0;">Vos stages — Alex MARTIN</div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
+        </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">25€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 25€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#6a1b9a;font-weight:700;margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid #e8d5a0;">Stages de votre partenaire — Camille MARTIN</div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
+        </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+            
+            <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;"><p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p></div>
+            <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+          </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="s1partage">S1 — Couple, une seule adresse email</div>
+<div class="pv-com">Un seul email est envoyé, avec une section par personne et le total de chacun. <span class="pv-h">Handler : <code>handleNotifyInscriptionStage</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📥 Email ADMIN → <code>tangoetvous@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Stage tango] Camille MARTIN &amp; Alex MARTIN — dim. 6 septembre — ✓ confirmé</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage</div></div>
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN &amp; Alex MARTIN</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678 · <strong>Total : 70€</strong></div>
+            <div style="font-size:12px;color:#555;margin-top:4px;">Partenaire : Alex MARTIN · <a href="mailto:camille@test.fr" style="color:#6a1b9a;">camille@test.fr</a></div>
           </div>
+          <span style="display:inline-block;background:#2e7d32;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">✓ Confirmé·e</span>
         </div>
       </div>
-      <div class="stage-total">Total à régler sur place : 45 €</div>
-      <div style="background:#fffdf5;padding:10px 18px;">
-        <p class="note-paiement">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
-      </div>
-    </div>
-
-    <!-- Rappel à venir -->
-    <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
-      <p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S3b — Validé·e depuis attente · ≤3j · bouton 👍 direct
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s3b">
-<div class="email-label"><strong>S3b</strong> — Validé·e depuis liste d'attente · ≤3j &nbsp;|&nbsp; <em>bouton 👍 directement, pas de mention rappel</em></div>
-<div class="email-subj">Objet : <span>Stage Tango &amp; Vous — Samedi 11 avril · 14h–16h30 — Bonne nouvelle !</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Bonne nouvelle - votre place au stage est confirmee"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bonne nouvelle — votre stage est confirmé !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Sophie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Suite à l'évolution des inscriptions, votre place est confirmée. Le stage a lieu dans moins de 3 jours — nous vous attendons !</p>
-
-    <!-- Stage box -->
-    <div class="stage-box">
-      <div class="stage-box-header">
-        <div class="stage-box-header-title">Votre stage</div>
-        <div class="stage-box-header-date">📅 Samedi 11 avril 2026</div>
-      </div>
-      <div class="stage-box-body">
-        <div class="stage-section">
-          <div class="stage-section-name">Sophie MARTIN &nbsp;<span class="badge-gde" style="font-size:11px;padding:2px 10px;">Guidée</span></div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">14h–15h</span> — Technique : dissociation et jeu de corps
-            <span class="stage-slot-type">(Technique)</span><br/>
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span>
-          </div>
-          <div class="stage-price">45 €</div>
+      <div style="background:#f5f0e8;border-left:4px solid #B8962E;padding:10px 16px;margin:0 0 14px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:700;color:#333;">Camille MARTIN&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">Guideur(se)</span></div>
+    </div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
         </div>
-        <div class="stage-section">
-          <div class="stage-section-name">Lieu</div>
-          <div style="font-size:14px;color:#333;line-height:1.8;">
-            <strong>Centre Kim Kan</strong><br/>
-            64 rue Orfila, Paris 20e<br/>
-            <span style="font-size:12px;color:#777;">M° Gambetta (L3)</span>
-          </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+      <div style="margin-top:10px;"></div><div style="background:#f3e8ff;border-left:4px solid #B8962E;padding:10px 16px;margin:0 0 14px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:700;color:#333;">Alex MARTIN&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">Guidé(e)</span></div>
+    </div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
         </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">25€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 25€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
       </div>
-      <div class="stage-total">Total à régler sur place : 45 €</div>
-      <div style="background:#fffdf5;padding:10px 18px;">
-        <p class="note-paiement">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+        <a href="tel:0612345678" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        <a href="mailto:camille@test.fr" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
+        <a href="sms:0612345678" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
       </div>
-    </div>
-
-    <!-- Bouton 👍 -->
-    <div style="text-align:center;margin:0 0 16px;">
-      <a href="https://app.tangoetvous.fr/api/stages/confirmer?email=...&date=...&token=..." style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a>
-    </div>
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidés.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S4 — Rappel J-3 · bouton 👍 + texte parité
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s4">
-<div class="email-label"><strong>S4</strong> — Rappel J-3 &nbsp;|&nbsp; <em>Cron quotidien · tous les inscrits confirmés dont le stage est dans 3 jours · bouton 👍 + texte parité</em></div>
-<div class="email-subj">Objet : <span>Stage Tango &amp; Vous — Samedi 11 avril · 14h–16h30 — Rappel dans 3 jours</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Rappel - votre stage a lieu dans 3 jours - confirmez votre presence"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau bleu rappel -->
-  <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
-    <span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre stage a lieu dans 3 jours !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Thomas</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Dans 3 jours, rendez-vous pour votre stage de tango ! Voici tous les détails pour préparer votre journée.</p>
-
-    <!-- Stage box complète avec slots -->
-    <div class="stage-box">
-      <div class="stage-box-header">
-        <div class="stage-box-header-title">Votre stage</div>
-        <div class="stage-box-header-date">📅 Samedi 11 avril 2026</div>
-      </div>
-      <div class="stage-box-body">
-        <div class="stage-section">
-          <div class="stage-section-name">Thomas DUPONT &nbsp;<span class="badge-gui" style="font-size:11px;padding:2px 10px;">Guideur·se</span></div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">14h–15h</span> — Technique : dissociation et jeu de corps
-            <span class="stage-slot-type">(Technique)</span><br/>
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span>
-          </div>
-          <div class="stage-price">45 €</div>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Dimanche 6 septembre 2026 · 14h–16h30</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre inscription au stage est confirmee - retrouvez les details ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div><div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span></div>
+          <div style="padding:30px 28px;">
+            <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+            <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au stage de tango est confirmée. Nous avons hâte de vous retrouver sur la piste ! Voici le récapitulatif.</p>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid #e8d5a0;">Vos stages — Camille MARTIN</div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
         </div>
-        <div class="stage-section">
-          <div class="stage-section-name">Lieu</div>
-          <div style="font-size:14px;color:#333;line-height:1.8;">
-            <strong>Centre Kim Kan</strong><br/>
-            64 rue Orfila, Paris 20e<br/>
-            <span style="font-size:12px;color:#777;">M° Gambetta (L3)</span><br/>
-            <a href="https://maps.google.com/?q=64+rue+Orfila+Paris+20" style="color:#B8962E;font-size:12px;">🗺 Voir sur Google Maps</a>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#6a1b9a;font-weight:700;margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid #e8d5a0;">Stages de votre partenaire — Alex MARTIN</div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
+        </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">25€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 25€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+            
+            <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;"><p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p></div>
+            <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+          </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="s1multi">S1 — Inscription à deux dates</div>
+<div class="pv-com">Une personne inscrite à plusieurs dates reçoit UN email par date — chacun avec ses propres créneaux et son propre total. <span class="pv-h">Handler : <code>handleNotifyInscriptionStage</code> · 4 email(s) envoyé(s).</span></div><div class="pv-dest">📥 Email ADMIN → <code>tangoetvous@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Stage tango] Camille MARTIN — dim. 6 septembre — ✓ confirmé</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage</div></div>
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678 · <strong>Total : 45€</strong></div>
+            
           </div>
+          <span style="display:inline-block;background:#2e7d32;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">✓ Confirmé·e</span>
         </div>
       </div>
-      <div class="stage-total">Total à régler sur place : 45 €</div>
-      <div style="background:#fffdf5;padding:10px 18px;">
-        <p class="note-paiement">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
-      </div>
-    </div>
-
-    <!-- Bouton 👍 confirmer présence -->
-    <div style="text-align:center;margin:0 0 16px;">
-      <a href="https://app.tangoetvous.fr/api/stages/confirmer?email=...&date=...&token=..." style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a>
-    </div>
-
-    <!-- Encadré texte parité -->
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidés.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     NOTIFICATIONS ADMIN — Panel 🔔 + Toast
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="notifs-admin">
-<div class="email-label"><strong>Notifications admin</strong> — Panel 🔔 (table <code>notifications</code>) + Toast &nbsp;|&nbsp; <em>Déclencheur : BroadcastChannel message.type==='stageInscription'</em></div>
-
-<!-- Toast -->
-<div style="margin-bottom:24px;">
-  <div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Toast (bas d'écran · 3s · toujours le même)</div>
-  <div style="display:inline-flex;align-items:center;gap:10px;background:#1e1e1e;border:1px solid #444;border-radius:10px;padding:12px 18px;box-shadow:0 4px 16px rgba(0,0,0,.5);">
-    <span style="font-size:18px;">🎭</span>
-    <span style="font-size:13px;color:#f0f0f0;font-weight:600;">Nouvelle inscription stage : Thomas DUPONT</span>
-  </div>
-</div>
-
-<!-- Panel 🔔 -->
-<div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Panel 🔔 — onglet Notifications (table <code>notifications</code>)</div>
-<div style="max-width:480px;background:#1a1a1a;border-radius:12px;padding:16px;border:1px solid #333;">
-  <div style="font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #2a2a2a;">Notifications récentes</div>
-
-  <!-- N-vert : Solo guideur confirmé -->
-  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
-    <div style="font-size:20px;flex-shrink:0;">🟢</div>
-    <div>
-      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Inscription stage — Thomas DUPONT</div>
-      <div style="font-size:12px;color:#ccc;">Sam. 11 avril 2026 · <strong style="color:#7ab4ff;">Guideur·se</strong> · Seul·e · 2 stages</div>
-      <div style="font-size:11px;color:#4caf50;margin-top:5px;font-weight:700;">✓ Confirmé·e · Email S1 envoyé</div>
-      <div style="font-size:11px;color:#666;margin-top:3px;">à l'instant · → Stages</div>
-    </div>
-  </div>
-
-  <!-- N-vert : Couple emails distincts, slots différents -->
-  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
-    <div style="font-size:20px;flex-shrink:0;">🟢</div>
-    <div>
-      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Inscription stage — Thomas &amp; Marie DUPONT</div>
-      <div style="font-size:12px;color:#ccc;">Sam. 11 avril 2026 · <strong style="color:#ce93d8;">En couple</strong> · Emails distincts · Slots différents</div>
-      <div style="font-size:11px;color:#4caf50;margin-top:5px;font-weight:700;">✓ Tous les deux confirmés · Emails S1 ×2</div>
-      <div style="font-size:11px;color:#666;margin-top:3px;">il y a 3 min · → Stages</div>
-    </div>
-  </div>
-
-  <!-- N-vert : Couple email partagé -->
-  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
-    <div style="font-size:20px;flex-shrink:0;">🟢</div>
-    <div>
-      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Inscription stage — Thomas &amp; Marie DUPONT</div>
-      <div style="font-size:12px;color:#ccc;">Sam. 11 avril 2026 · <strong style="color:#ce93d8;">En couple</strong> · Email partagé</div>
-      <div style="font-size:11px;color:#4caf50;margin-top:5px;font-weight:700;">✓ Tous les deux confirmés · Email S1d ×1</div>
-      <div style="font-size:11px;color:#666;margin-top:3px;">il y a 8 min · → Stages</div>
-    </div>
-  </div>
-
-  <!-- N-vert : Plusieurs dates -->
-  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
-    <div style="font-size:20px;flex-shrink:0;">🟢</div>
-    <div>
-      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Inscription stage — Thomas DUPONT</div>
-      <div style="font-size:12px;color:#ccc;"><strong style="color:#7ab4ff;">Guideur·se</strong> · 3 dates : 11 avr. · 10 mai · 14 juin</div>
-      <div style="font-size:11px;color:#4caf50;margin-top:5px;font-weight:700;">✓ Confirmé·e · Emails S1 ×3</div>
-      <div style="font-size:11px;color:#666;margin-top:3px;">il y a 15 min · → Stages</div>
-    </div>
-  </div>
-
-  <!-- N-vert : Présence confirmée via 👍 (S4) -->
-  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f2a0f;border-radius:8px;border-left:3px solid #66bb6a;margin-bottom:10px;">
-    <div style="font-size:20px;flex-shrink:0;">👍</div>
-    <div>
-      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Présence confirmée — Thomas DUPONT</div>
-      <div style="font-size:12px;color:#ccc;">Stage sam. 11 avril · <strong style="color:#7ab4ff;">Guideur·se</strong></div>
-      <div style="font-size:11px;color:#66bb6a;margin-top:5px;font-weight:700;">👍 Confirmé via email S4 (rappel J-3)</div>
-      <div style="font-size:11px;color:#666;margin-top:3px;">il y a 2h · → Stages (badge 👍 sur la fiche)</div>
-    </div>
-  </div>
-
-  <!-- N-jaune : Guidée seule en attente -->
-  <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#1f1800;border-radius:8px;border-left:3px solid #e8c84a;">
-    <div style="font-size:20px;flex-shrink:0;">🟡</div>
-    <div>
-      <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">Demande stage — Sophie MARTIN</div>
-      <div style="font-size:12px;color:#ccc;">Sam. 11 avril 2026 · <strong style="color:#f48fb1;">Guidée</strong> · Seule · 2 stages</div>
-      <div style="font-size:11px;color:#e8c84a;margin-top:5px;font-weight:700;">⏳ En attente — parité guideurs/guidées · Email S2 envoyé</div>
-      <div style="font-size:11px;color:#666;margin-top:3px;">il y a 22 min · → Stages → Att. Validation</div>
-    </div>
-  </div>
-
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     NOTIFICATIONS ÉLÈVE — Panel 🔔 dans index.html (notifications_eleve)
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="notifs-eleve">
-<div class="email-label"><strong>Notifications élève</strong> — Panel 🔔 dans l'espace élève (table <code>notifications_eleve</code>) &nbsp;|&nbsp; <em>Icône 🔔 header · badge rouge si non lu</em></div>
-
-<div style="max-width:400px;background:#1a1a1a;border-radius:12px;padding:16px;border:1px solid #333;">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #2a2a2a;">
-    <div style="font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase;">Mes notifications</div>
-    <span style="background:#ef5350;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">3</span>
-  </div>
-
-  <!-- S1 — Confirmation inscription -->
-  <div style="padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
-    <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">🎭 Stage confirmé</div>
-    <div style="font-size:12px;color:#ccc;line-height:1.5;">Votre inscription au stage du <strong>samedi 11 avril</strong> est confirmée.</div>
-    <div style="font-size:11px;color:#666;margin-top:6px;">à l'instant · non lu</div>
-  </div>
-
-  <!-- S3 — Validé depuis attente -->
-  <div style="padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;margin-bottom:10px;">
-    <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">🎭 Bonne nouvelle !</div>
-    <div style="font-size:12px;color:#ccc;line-height:1.5;">Votre place au stage du <strong>samedi 10 mai</strong> est confirmée suite à l'évolution des inscriptions.</div>
-    <div style="font-size:11px;color:#666;margin-top:6px;">il y a 2 jours · non lu</div>
-  </div>
-
-  <!-- S4 — Rappel J-3 -->
-  <div style="padding:12px;background:#0d1a2e;border-radius:8px;border-left:3px solid #1565c0;margin-bottom:10px;">
-    <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">📅 Rappel — dans 3 jours</div>
-    <div style="font-size:12px;color:#ccc;line-height:1.5;">Votre stage a lieu dans 3 jours — <strong>samedi 11 avril · 14h–16h30</strong>.</div>
-    <div style="font-size:11px;color:#666;margin-top:6px;">il y a 4h · non lu</div>
-  </div>
-
-  <!-- Notification lue (grisée) -->
-  <div style="padding:12px;background:#111;border-radius:8px;border-left:3px solid #333;">
-    <div style="font-size:13px;font-weight:700;color:#888;margin-bottom:4px;">🎭 Stage confirmé</div>
-    <div style="font-size:12px;color:#666;line-height:1.5;">Votre inscription au stage du <strong style="color:#777;">samedi 14 juin</strong> est confirmée.</div>
-    <div style="font-size:11px;color:#555;margin-top:6px;">il y a 3 semaines · lu</div>
-  </div>
-
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     PUSH OS — Mockup bulle navigateur
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="push-os">
-<div class="email-label"><strong>Push OS</strong> — Bulle navigateur (visible même onglet fermé) &nbsp;|&nbsp; <em>Nécessite VAPID key + fcm_tokens + Edge Function — à implémenter</em></div>
-
-<div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Côté admin — nouvelle inscription</div>
-<div class="push-mockup">
-  <div class="push-mockup-icon">🎭</div>
-  <div class="push-mockup-body">
-    <div class="push-mockup-app">Tango &amp; Vous — Admin</div>
-    <div class="push-mockup-title">Inscription stage — Thomas DUPONT</div>
-    <div class="push-mockup-text">Samedi 11 avril · Guideur·se · ✓ Confirmé·e</div>
-    <div class="push-mockup-time">à l'instant · app.tangoetvous.fr</div>
-  </div>
-</div>
-
-<div class="push-mockup">
-  <div class="push-mockup-icon">🎭</div>
-  <div class="push-mockup-body">
-    <div class="push-mockup-app">Tango &amp; Vous — Admin</div>
-    <div class="push-mockup-title">Demande stage — Sophie MARTIN</div>
-    <div class="push-mockup-text">Samedi 11 avril · Guidée · ⏳ Att. validation</div>
-    <div class="push-mockup-time">à l'instant · app.tangoetvous.fr</div>
-  </div>
-</div>
-
-<div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:20px;">Côté élève — confirmation inscription (S1)</div>
-<div class="push-mockup">
-  <div class="push-mockup-icon">🎭</div>
-  <div class="push-mockup-body">
-    <div class="push-mockup-app">Tango &amp; Vous</div>
-    <div class="push-mockup-title">Votre stage du samedi 11 avril est confirmé !</div>
-    <div class="push-mockup-text">Un récapitulatif vous a été envoyé par email.</div>
-    <div class="push-mockup-time">à l'instant · app.tangoetvous.fr</div>
-  </div>
-</div>
-
-<div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:20px;">Côté élève — validé·e depuis liste d'attente (S3)</div>
-<div class="push-mockup">
-  <div class="push-mockup-icon">🎭</div>
-  <div class="push-mockup-body">
-    <div class="push-mockup-app">Tango &amp; Vous</div>
-    <div class="push-mockup-title">Bonne nouvelle — stage du 11 avril confirmé !</div>
-    <div class="push-mockup-text">Votre place est confirmée suite à l'évolution des inscriptions.</div>
-    <div class="push-mockup-time">à l'instant · app.tangoetvous.fr</div>
-  </div>
-</div>
-
-<div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:20px;">Côté élève — rappel J-3 (S4 · envoyé en même temps que l'email)</div>
-<div class="push-mockup">
-  <div class="push-mockup-icon">📅</div>
-  <div class="push-mockup-body">
-    <div class="push-mockup-app">Tango &amp; Vous</div>
-    <div class="push-mockup-title">Votre stage a lieu dans 3 jours</div>
-    <div class="push-mockup-text">Samedi 11 avril · 14h–16h30 · Centre Kim Kan</div>
-    <div class="push-mockup-time">cron J-3 · app.tangoetvous.fr</div>
-  </div>
-</div>
-
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S-admin — Admin inscrit directement à un stage
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s-admin">
-<div class="email-label"><strong>S-admin</strong> — Admin inscrit directement depuis l'interface &nbsp;|&nbsp; <em>Déclenché quand l'admin crée une inscription stage manuellement (onglet Stages → Inscrire). Pas de template distinct.</em></div>
-<div class="email-subj">Objet : <span>Stage Tango &amp; Vous — Sam. 11 Avril · 14h–16h30</span></div>
-
-<div style="background:#1e2a1e;border-left:3px solid #4caf50;padding:10px 14px;font-size:12px;color:#aaa;margin-bottom:16px;border-radius:4px;">
-  ✓ Même template que S1 (&gt;3j) ou S1b (≤3j) — déclenché aussi quand l'admin inscrit directement depuis l'interface admin (onglet Stages). Pas de template distinct. La seule différence est la phrase d'intro : "Votre inscription a été enregistrée par l'équipe Tango &amp; Vous." au lieu de "Votre inscription au stage de tango est confirmée."
-</div>
-
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau vert -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Thomas</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription a été enregistrée par l'équipe Tango &amp; Vous. Voici le récapitulatif de votre journée.</p>
-
-    <!-- Stage box -->
-    <div class="stage-box">
-      <div class="stage-box-header">
-        <div class="stage-box-header-title">Votre stage</div>
-        <div class="stage-box-header-date">📅 Samedi 11 avril 2026</div>
-      </div>
-      <div class="stage-box-body">
-        <div class="stage-section">
-          <div class="stage-section-name">
-            Thomas DUPONT &nbsp;<span class="badge-gui" style="font-size:11px;padding:2px 10px;">Guideur·se</span>
-          </div>
-          <div class="stage-slot">
-            <span class="stage-slot-horaire">14h–15h</span> — Technique : dissociation et jeu de corps
-            <span class="stage-slot-type">(Technique)</span><br/>
-            <span class="stage-slot-horaire">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-            <span class="stage-slot-type">(Stage 1)</span>
-          </div>
-          <div class="stage-price">45 € <span style="font-size:12px;font-weight:400;color:#7a6020;">— 2 stages</span></div>
+      <div style="background:#f5f0e8;border-left:4px solid #B8962E;padding:10px 16px;margin:0 0 14px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:700;color:#333;">Camille MARTIN&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">Guideur(se)</span></div>
+    </div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
         </div>
-        <!-- Lieu -->
-        <div class="stage-section">
-          <div class="stage-section-name">Lieu</div>
-          <div style="font-size:14px;color:#333;line-height:1.8;">
-            <strong>Centre Kim Kan</strong><br/>
-            64 rue Orfila, Paris 20e<br/>
-            <span style="font-size:12px;color:#777;">M° Gambetta (L3)</span><br/>
-            <a href="https://maps.google.com/?q=64+rue+Orfila+Paris+20" style="color:#B8962E;font-size:12px;">🗺 Voir sur Google Maps</a>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+      
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+        <a href="tel:0612345678" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        <a href="mailto:camille@test.fr" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
+        <a href="sms:0612345678" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
+      </div>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📥 Email ADMIN → <code>tangoetvous@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Stage tango] Camille MARTIN — mer. 19 août — ✓ confirmé</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription stage</div></div>
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678 · <strong>Total : 25€</strong></div>
+            
           </div>
+          <span style="display:inline-block;background:#2e7d32;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">✓ Confirmé·e</span>
         </div>
       </div>
-      <!-- Total + note paiement -->
-      <div class="stage-total">Total à régler sur place : 45 €</div>
-      <div style="background:#fffdf5;padding:10px 18px;">
-        <p class="note-paiement">Le règlement se fait sur place. Merci de prévoir l'appoint.</p>
-      </div>
-    </div>
-
-    <!-- Rappel J-3 à venir (>3j) -->
-    <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
-      <p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-
-<!-- Notification admin -->
-<div style="margin-top:28px;">
-  <div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Notification admin — Panel 🔔</div>
-  <div style="max-width:480px;background:#1a1a1a;border-radius:12px;padding:16px;border:1px solid #333;">
-    <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#0f1f0f;border-radius:8px;border-left:3px solid #4caf50;">
-      <div style="font-size:20px;flex-shrink:0;">🟢</div>
-      <div>
-        <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">🎭 Inscription stage créée (admin) — Thomas DUPONT</div>
-        <div style="font-size:12px;color:#ccc;">Sam. 11 avril 2026 · <strong style="color:#7ab4ff;">Guideur·se</strong> · 2 stages</div>
-        <div style="font-size:11px;color:#4caf50;margin-top:5px;font-weight:700;">✓ Confirmé · Email S1 envoyé</div>
-        <div style="font-size:11px;color:#666;margin-top:3px;">à l'instant · → Stages</div>
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     S-cancel — Admin annule une inscription stage
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="s-cancel">
-<div class="email-label"><strong>S-cancel</strong> — Admin annule une inscription stage &nbsp;|&nbsp; <em>Déclenché quand l'admin clique "✕ Annuler" sur une inscription stage (créneau spécifique ou toute la journée)</em></div>
-<div class="email-subj">Objet : <span>Votre inscription au stage a été annulée — Tango &amp; Vous</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre inscription au stage a ete annulee - retrouvez les prochains stages ci-dessous"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau orange annulation -->
-  <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
-    <span style="font-size:14px;font-weight:700;color:#e65100;">✕ Votre inscription au stage a été annulée</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Thomas</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons annulé votre inscription au stage ci-dessous. Nous sommes désolés pour ce contretemps.</p>
-
-    <!-- Stage box en style "annulé" — header rouge -->
-    <div class="stage-box" style="border-color:#c62828;">
-      <div class="stage-box-header" style="background:#c62828;">
-        <div class="stage-box-header-title">STAGE ANNULÉ</div>
-        <div class="stage-box-header-date">📅 Samedi 11 avril 2026</div>
-      </div>
-      <div class="stage-box-body">
-        <div class="stage-section">
-          <div class="stage-section-name" style="color:#c62828;">
-            Thomas DUPONT &nbsp;<span class="badge-gui" style="font-size:11px;padding:2px 10px;">Guideur·se</span>
-          </div>
-          <!-- Slots barrés -->
-          <div class="stage-slot" style="color:#aaa;">
-            <span style="text-decoration:line-through;">
-              <span class="stage-slot-horaire" style="color:#aaa;font-weight:400;">14h–15h</span> — Technique : dissociation et jeu de corps
-              <span class="stage-slot-type">(Technique)</span>
-            </span><br/>
-            <span style="text-decoration:line-through;">
-              <span class="stage-slot-horaire" style="color:#aaa;font-weight:400;">15h–16h30</span> — Connexion guideur/guidée : écoute et improvisation
-              <span class="stage-slot-type">(Stage 1)</span>
-            </span>
-          </div>
-
+      <div style="background:#f5f0e8;border-left:4px solid #B8962E;padding:10px 16px;margin:0 0 14px;border-radius:0 6px 6px 0;">
+      <div style="font-size:14px;font-weight:700;color:#333;">Camille MARTIN&nbsp;<span style="display:inline-block;background:#1565c0;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;">Guideur(se)</span></div>
+    </div><div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Mercredi 19 août 2026</div>
         </div>
-        <!-- Lieu -->
-        <div class="stage-section">
-          <div class="stage-section-name" style="color:#c62828;">Lieu</div>
-          <div style="font-size:14px;color:#aaa;line-height:1.8;">
-            <strong>Centre Kim Kan</strong><br/>
-            64 rue Orfila, Paris 20e
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">16h30–18h</span> — Séquence en abrazo fermé</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">25€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 25€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+      
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+        <a href="tel:0612345678" style="background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+        <a href="mailto:camille@test.fr" style="background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Gmail</a>
+        <a href="sms:0612345678" style="background:#43a047;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        <a href="https://app.tangoetvous.fr/admin.html#stages" style="background:#D4AF37;color:#111;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Ouvrir l'admin</a>
+      </div>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Dimanche 6 septembre 2026 · 14h–16h30</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre inscription au stage est confirmee - retrouvez les details ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div><div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span></div>
+          <div style="padding:30px 28px;">
+            <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+            <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au stage de tango est confirmée. Nous avons hâte de vous retrouver sur la piste ! Voici le récapitulatif.</p>
+            <div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
+        </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+            
+            <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;"><p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p></div>
+            <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+          </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Mercredi 19 août 2026 · 16h30–18h</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre stage a lieu dans 3 jours - confirmez votre presence ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div><div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre inscription au stage est confirmée !</span></div>
+          <div style="padding:30px 28px;">
+            <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+            <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au stage de tango est confirmée. Nous vous attendons dans moins de 3 jours — à très bientôt !</p>
+            <div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+        <div style="background:#B8962E;padding:12px 18px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+          <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Mercredi 19 août 2026</div>
+        </div>
+        <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">16h30–18h</span> — Séquence en abrazo fermé</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">25€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+        <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 25€</div>
+        <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      </div>
+            <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr/api/stages/confirmer?email=camille%40test.fr&date=2026-08-19&token=jetonfactice00000000000000000000" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>
+            
+            <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+          </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="s3">S3 — Admin valide une personne en attente (plus de 3 jours avant)</div>
+<div class="pv-com">Envoyé quand vous confirmez une inscription qui était en attente. Mentionne le rappel J-3 à venir. <span class="pv-h">Handler : <code>handleNotifyStageValide</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Dimanche 6 septembre 2026 · 14h–16h30 — Bonne nouvelle !</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Bonne nouvelle - votre place au stage est confirmee&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bonne nouvelle — votre stage est confirmé !</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Suite à l'évolution des inscriptions, votre place est confirmée pour le stage de tango. Nous vous attendons avec plaisir !</p>
+      <div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 18px;">
+      <div style="background:#B8962E;padding:12px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
+      </div>
+      <div style="padding:12px 18px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div>
+      <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+      <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      <div style="border-top:1px solid #e8d5a0;padding:12px 18px 8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#666;">M° Alexandre Dumas (L2)</span></div></div>
+    </div><div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;"><p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant le stage.</p></div>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="s3b">S3b — Admin valide une personne en attente (moins de 3 jours avant)</div>
+<div class="pv-com">Même email que S3, mais avec le bouton « 👍 Je confirme ma présence » puisqu'aucun rappel ne partira plus. <span class="pv-h">Handler : <code>handleNotifyStageValide</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Mercredi 19 août 2026 · 15h–16h30 — Bonne nouvelle !</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Bonne nouvelle - votre place au stage est confirmee&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bonne nouvelle — votre stage est confirmé !</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Suite à l'évolution des inscriptions, votre place est confirmée. Le stage a lieu dans moins de 3 jours — nous vous attendons !</p>
+      <div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 18px;">
+      <div style="background:#B8962E;padding:12px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Mercredi 19 août 2026</div>
+      </div>
+      <div style="padding:12px 18px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">25€</div></div>
+      <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 25€</div>
+      <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+      <div style="border-top:1px solid #e8d5a0;padding:12px 18px 8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#8B6914;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#666;">M° Alexandre Dumas (L2)</span></div></div>
+    </div><div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr/api/stages/confirmer?email=camille%40test.fr&date=2026-08-19&token=jetonfactice00000000000000000000" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;">👍 Je confirme ma présence</a></div>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="s4">S4 — Rappel automatique 3 jours avant le stage</div>
+<div class="pv-com">Seul email de stage envoyé longtemps après l'inscription : les <b>horaires et thèmes sont relus dans les Paramètres</b> (personnalisation par date prioritaire) et les créneaux sont remis dans l'ordre chronologique. Le montant vient de la colonne <code>total_inscrit</code>. L'encadré est volontairement identique à celui de S1. <span class="pv-h">Handler : <code>handleCronRappelStageJ3</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Jeudi 20 août 2026 · 14h–16h30 — Rappel dans 3 jours</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Rappel - votre stage a lieu dans 3 jours - confirmez votre presence&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre stage a lieu dans 3 jours !</span></div>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Dans 3 jours, rendez-vous pour votre stage de tango ! Voici tous les détails pour préparer votre journée.</p>
+        <div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+      <div style="background:#B8962E;padding:12px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Jeudi 20 août 2026</div>
+      </div>
+      <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">45€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+      <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 45€</div>
+      <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+    </div>
+        <div style="text-align:center;margin:0 0 16px;"><a href="https://app.tangoetvous.fr/api/stages/confirmer?email=camille%40test.fr&date=2026-08-20&token=jetonfactice00000000000000000000" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a></div>
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+          <p style="font-size:13px;color:#5d4037;line-height:1.7;margin:0;">Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidés.</p>
+        </div>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>alex@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Stage Tango &amp; Vous — Jeudi 20 août 2026 · 15h–16h30 — Rappel dans 3 jours</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Rappel - votre stage a lieu dans 3 jours - confirmez votre presence&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre stage a lieu dans 3 jours !</span></div>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Alex</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Dans 3 jours, rendez-vous pour votre stage de tango ! Voici tous les détails pour préparer votre journée.</p>
+        <div style="background:#fff8e8;border:2px solid #B8962E;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+      <div style="background:#B8962E;padding:12px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff8e8;font-weight:700;">Votre stage</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Jeudi 20 août 2026</div>
+      </div>
+      <div style="padding:4px 18px 0;"><div style="padding:10px 0 12px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#8B6914;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:15px;font-weight:700;color:#8B6914;border-top:1px solid #e8d5a0;padding-top:8px;margin-top:6px;">25€</div></div><div style="border-top:1px solid #e8d5a0;padding:12px 0 4px;">
+        <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:6px;">Lieu</div>
+        <div style="font-size:13px;color:#333;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#777;">M° Alexandre Dumas (L2)</span></div>
+      </div></div>
+      <div style="background:#B8962E;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;">Total à régler sur place : 25€</div>
+      <div style="background:#fffdf5;padding:10px 18px;"><p style="font-size:12px;color:#666;line-height:1.6;margin:0;">Le règlement se fait sur place. Merci de prévoir l'appoint.</p></div>
+    </div>
+        <div style="text-align:center;margin:0 0 16px;"><a href="https://app.tangoetvous.fr/api/stages/confirmer?email=alex%40test.fr&date=2026-08-20&token=jetonfactice00000000000000000000" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a></div>
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+          <p style="font-size:13px;color:#5d4037;line-height:1.7;margin:0;">Merci de confirmer votre présence. Si vous devez annuler votre venue merci de nous prévenir, même au dernier moment car nous faisons en sorte d'avoir la parité guideurs/guidés.</p>
+        </div>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="scancel">S-cancel — Annulation d'une inscription par l'admin</div>
+<div class="pv-com">Envoyé quand vous retirez un créneau ou toute la journée depuis l'onglet Stages. <span class="pv-h">Handler : <code>handleNotifyStageAnnule</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Votre inscription au stage a été annulée — Tango &amp; Vous</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre inscription au stage a ete annulee - retrouvez les prochains stages ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+    <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">✕ Votre inscription au stage a été annulée</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons annulé votre inscription au stage ci-dessous. Nous sommes désolés pour ce contretemps.</p>
+      <div style="background:#fff8e8;border:2px solid #c62828;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+      <div style="background:#c62828;padding:12px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#fff;font-weight:700;">STAGE ANNULÉ</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
+      </div>
+      <div style="padding:12px 18px 14px;"><div style="font-size:13px;color:#aaa;margin:0 0 3px;"><span style="text-decoration:line-through;font-weight:400;">– — </span></div><div style="border-top:1px solid #ef9a9a;padding-top:10px;margin-top:8px;"><div style="font-size:13px;font-weight:700;color:#c62828;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#aaa;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;">M° Alexandre Dumas (L2)</span></div></div></div>
+    </div>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous espérons pouvoir vous accueillir lors d'un prochain stage. N'hésitez pas à vous inscrire aux prochaines dates !</p>
+      <div style="text-align:center;margin:0 0 24px;"><a href="https://app.tangoetvous.fr/stages-pwa.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Voir les prochains stages →</a></div>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous espérons vous retrouver bientôt sur la piste.<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="sedit">S-edit — Modification des créneaux par l'admin</div>
+<div class="pv-com">Envoyé quand vous changez les créneaux d'une personne déjà inscrite : anciens créneaux barrés, nouveaux mis en avant, nouveau total. <span class="pv-h">Handler : <code>handleNotifyStageModifie</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 📋 Modification de vos créneaux — Stage du Dimanche 6 septembre 2026 — Tango &amp; Vous</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Vos creneaux de stage ont ete modifies par votre professeur&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+    <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Vos créneaux de stage ont été modifiés</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">Camille</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre professeur a modifié vos créneaux pour le stage du Dimanche 6 septembre 2026. Voici le récapitulatif mis à jour :</p>
+      <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;overflow:hidden;margin:0 0 18px;">
+    <div style="background:#1565c0;padding:12px 18px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#bbdefb;font-weight:700;">Vos nouveaux créneaux</div>
+      <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div>
+    </div>
+    <div style="padding:12px 18px;"><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#1565c0;">14h–15h</span> — Technique Leader &amp; Follower</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#1565c0;">15h–16h30</span> — Ochos et enrosques</div><div style="font-size:13px;color:#444;line-height:1.8;margin-bottom:6px;"><span style="font-weight:700;color:#1565c0;">16h30–18h</span> — Séquence en abrazo fermé</div><div style="font-size:15px;font-weight:700;color:#1565c0;border-top:1px solid #b3d9f5;padding-top:8px;margin-top:6px;">65€ — règlement sur place</div><div style="border-top:1px solid #b3d9f5;padding-top:10px;margin-top:8px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:4px;">Lieu</div><div style="font-size:13px;color:#444;line-height:1.8;"><strong>Espas Danse Studio</strong><br/>24 villa Riberolle, Paris 20e<br/><span style="font-size:12px;color:#666;">M° Alexandre Dumas (L2)</span></div></div></div>
+  </div>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📥 Email ADMIN → <code>tangoetvous@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Stage modifié] Camille MARTIN — Dimanche 6 septembre 2026</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Modification créneaux stage</div></div>
+    <div style="padding:20px 24px;">
+      <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+        <div style="background:#D4AF37;padding:10px 16px;"><div style="font-size:17px;font-weight:700;color:#111;">Camille MARTIN</div><div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr</div></div>
+        <div style="background:#fffdf8;padding:14px 16px;">
+          <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:12px;">📅 Stage du Dimanche 6 septembre 2026</div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:140px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:6px;">Avant</div><div style="font-size:12px;color:#aaa;text-decoration:line-through;">15h–16h30 — Ochos et enrosques</div></div>
+            <div style="flex:0;align-self:center;font-size:20px;color:#888;">→</div>
+            <div style="flex:1;min-width:140px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:6px;">Après</div><div style="font-size:12px;color:#2e7d32;font-weight:700;">14h–15h — Technique Leader &amp; Follower</div><div style="font-size:12px;color:#2e7d32;font-weight:700;">15h–16h30 — Ochos et enrosques</div><div style="font-size:12px;color:#2e7d32;font-weight:700;">16h30–18h — Séquence en abrazo fermé</div></div>
           </div>
+          <div style="margin-top:10px;font-size:13px;color:#555;">Nouveau tarif : <strong>65€</strong></div>
         </div>
       </div>
-    </div>
+      <div style="text-align:center;"><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#D4AF37;color:#111;padding:10px 22px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;letter-spacing:1px;">Ouvrir l'admin →</a></div>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div>
 
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous espérons pouvoir vous accueillir lors d'un prochain stage. N'hésitez pas à vous inscrire aux prochaines dates !</p>
-
-    <!-- Bouton or — prochains stages -->
-    <div style="text-align:center;margin:0 0 24px;">
-      <a href="https://app.tangoetvous.fr/stages-pwa.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Voir les prochains stages →</a>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous espérons vous retrouver bientôt sur la piste.<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-
-<!-- Push élève -->
-<div style="margin-top:28px;">
-  <div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Push OS — côté élève</div>
-  <div class="push-mockup">
-    <div class="push-mockup-icon">✕</div>
-    <div class="push-mockup-body">
-      <div class="push-mockup-app">Tango &amp; Vous</div>
-      <div class="push-mockup-title">Votre inscription au stage a été annulée</div>
-      <div class="push-mockup-text">Sam. 11 avr. · 14h–16h30 · Centre Kim Kan</div>
-      <div class="push-mockup-time">à l'instant · app.tangoetvous.fr</div>
-    </div>
-  </div>
-</div>
-
-<!-- Notification admin -->
-<div style="margin-top:20px;">
-  <div style="color:#888;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Notification admin — Panel 🔔 (confirmation)</div>
-  <div style="max-width:480px;background:#1a1a1a;border-radius:12px;padding:16px;border:1px solid #333;">
-    <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:#1f0808;border-radius:8px;border-left:3px solid #ef5350;">
-      <div style="font-size:20px;flex-shrink:0;">🔴</div>
-      <div>
-        <div style="font-size:13px;font-weight:700;color:#f0f0f0;margin-bottom:4px;">✕ Inscription stage annulée — Thomas DUPONT</div>
-        <div style="font-size:12px;color:#ccc;">Sam. 11 avril 2026 · <strong style="color:#7ab4ff;">Guideur·se</strong></div>
-        <div style="font-size:11px;color:#ef5350;margin-top:5px;font-weight:700;">Email S-cancel envoyé</div>
-        <div style="font-size:11px;color:#666;margin-top:3px;">à l'instant · → Stages</div>
-      </div>
-    </div>
-  </div>
-</div>
+<div class="pv-fin">
+  <p><b>Dates d'exemple</b> — volontairement relatives à aujourd'hui, car le choix entre S1 et S1b (et entre S3 et S3b)
+     dépend du délai réel jusqu'au stage : stage « lointain » le 6 sept. 2026, stage « proche » le 19 août 2026,
+     rappel J-3 pour le 20 août 2026.</p>
+  <table class="tbl">
+    <tr><th>Ce qui détermine la variante</th><th>Règle appliquée par le code</th></tr>
+    <tr><td><b>S1 ou S1b</b></td><td><code>daysUntil &lt;= 3</code> → pas de mention du rappel, bouton « 👍 Je confirme ma présence » ajouté</td></tr>
+    <tr><td><b>S2</b> (attente)</td><td><code>statut !== 'confirme'</code> — mise en attente liée à la <b>parité</b> guideurs/guidées, jamais à une capacité maximale</td></tr>
+    <tr><td><b>Couple, un ou deux emails</b></td><td><code>emailPartage</code> → un seul email à deux sections ; sinon un email chacun, chacun ne voyant que ses créneaux</td></tr>
+    <tr><td><b>Plusieurs dates</b></td><td>un email par date — la boucle parcourt <code>inscriptionsParDate</code></td></tr>
+  </table>
+  <p style="margin-top:16px;"><b>⚠️ S1 et S4 sont jumeaux</b> — l'encadré du stage est identique dans les deux
+     (même mise en page, même bloc Lieu, même total, même mention de l'appoint). Toute évolution de l'un doit être
+     répercutée dans l'autre : c'est l'oubli de cette règle qui avait produit le rappel amputé du 29 juillet 2026.</p>
+  <p><b>Origine des données</b> — les créneaux viennent de l'inscription, mais leurs <b>horaires et thèmes sont relus
+     dans les Paramètres</b> (override par date prioritaire sur les horaires de saison) et triés chronologiquement.
+     Adresse et montant suivent la même logique. 22 emails produits pour cette page.</p>
 </div>
 
 </body>

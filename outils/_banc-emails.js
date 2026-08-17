@@ -50,6 +50,12 @@ async function executer(nom, body, params = {}) {
       if (u.includes('select=cle,valeur')) {
         return { ok: true, status: 200, json: async () => Object.keys(params).map(c => ({ cle: c, valeur: params[c] })), text: async () => '' };
       }
+      // ── Autres tables : __tables = [{ match:'<fragment d’URL>', rows:[…] }, …]
+      for (const t of (params.__tables || [])) {
+        if (u.includes(t.match)) {
+          return { ok: true, status: 200, json: async () => t.rows, text: async () => '' };
+        }
+      }
       return { ok: true, status: 200, json: async () => [], text: async () => '' };
     }
     return { ok: true, status: 200, json: async () => ({}), text: async () => '' };
@@ -70,7 +76,7 @@ async function executer(nom, body, params = {}) {
     sendFcmPush: async () => {},
     sendBrevoNotification: async () => {},
     _calHmac: async () => 'jetonfactice0000000000000000000000',
-    _buildTokenMap: async () => ({}),
+    _buildTokenMap: async () => new Map(),
   };
 
   const src = corpsFonction(nom);
