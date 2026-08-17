@@ -2371,6 +2371,15 @@ Et cette mise à jour doit **refléter le code**, selon la méthode ci-dessus : 
 
 **Constat 2026-08-17** : `preview-sources-inscription.html` documentait encore les anciens sujets d'I0, I01-val et I02 (retravaillés en juillet lors de la session sur le pourboire), et ne mentionnait pas I01-att. Les pages avaient dérivé faute de cette règle.
 
+### Audit des pages sources (2026-08-17) — 39 corrections
+
+Vérification systématique des 9 `preview-sources-*.html` contre `worker.js`. Les pages avaient dérivé faute de la règle ci-dessus.
+
+- **Sujets périmés** : la quasi-totalité suivaient l'ancienne convention « emoji + … — Tango & Vous » alors que les sujets ont été réécrits (notamment pour éviter que Gmail regroupe les fils — un commentaire du code le dit explicitement pour I03). Exemples : S4 documenté « 🗓 Rappel stage du … » alors que le code envoie « Stage Tango & Vous — date · horaire — Rappel dans 3 jours » ; C6 « 💙 Coucou [Prénom]… » alors que le code envoie « On prend de tes nouvelles… 👋 ».
+- ⚠️ **Routes inexistantes documentées** (le plus trompeur) : `/api/notify/essai-transfert` (réel : `/api/notify/essai-action` avec `action='transfer-demande'|'transfer-valide'`), `/api/notify/sorano-relance` + `/api/notify/sorano-paye` (réel : **une seule** route `/api/notify/sorano`), `/api/cron/rappel-cb3x` (réel : `/api/cron/relance-cb3x`), `/api/cron/carte-pointee-admin` (réel : `/api/cron/carte-pointee-j1`).
+- **Méthode** : extraction des sujets par équilibrage d'accolades sur chaque handler, mapping section→handler via la route documentée, puis remplacements ciblés avec assertion d'existence (échec bruyant si la chaîne n'est pas trouvée).
+- ⚠️ **Portée de l'audit** : les **sujets et les routes** ont été vérifiés exhaustivement. Les blocs, conditions et origines de données n'ont été contrôlés que par sondage — ils étaient justes là où ils ont été regardés, mais un contrôle exhaustif reste à faire.
+
 ### Corollaire — blocs partagés entre emails
 
 La relance duplique les blocs communs d'I01/I02 (encadré du cours, pourboire, « Quelques précisions », Sorano, livret) dans **sa propre fonction**. Toute modification d'un de ces textes dans I01/I02 doit être répercutée dans `handleCronRelanceInscription`, et réciproquement — même règle que S1/S4 pour les stages.

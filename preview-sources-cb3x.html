@@ -23,12 +23,12 @@
 <p class="note">Correspondance : <code>preview-emails-cb3x-v1.html</code></p>
 
 <h2>CB3x — Rappel échéance paiement CB 3 fois</h2>
-<div class="route">POST /api/cron/rappel-cb3x (X-Cron-Secret)</div>
+<div class="route">POST /api/cron/relance-cb3x (X-Cron-Secret)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron mensuel · élèves avec paiement='cb3x' dont la prochaine échéance tombe dans 7 jours</span></div>
   <div class="field"><span class="label">Source échéances :</span> <span class="src">inscriptions_cours.donnees.datesPaiement[i]</span> — 3 dates calculées à l'inscription par l'admin</div>
   <div class="field"><span class="label">Body interne :</span> <span class="var">{ email, prenom, nom, montant_echeance, date_echeance, num_echeance (2 ou 3), cours }</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>💳 Rappel — Prochaine échéance CB (${num_echeance}/3) — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>💳 Rappel — 2ème (ou 3ème) prélèvement CB · Cours de tango ${cours}</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Rappel - une echeance de paiement CB est due pour votre inscription tango"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Bleu 💳 "Rappel — prochaine échéance de paiement"</div>
   <div class="field"><span class="label">Contenu :</span> Échéance N/3 · Date · Montant · Cours · "Votre CB sera débité automatiquement via AssoConnect"</div>
@@ -41,7 +41,7 @@
 <div class="block">
   <div class="field"><span class="label">Fichier :</span> <code>.github/workflows/relance-cb3x.yml</code></div>
   <div class="field"><span class="label">Cron :</span> <span class="cond">Mensuel — à définir selon les dates de début de saison</span></div>
-  <div class="field"><span class="label">Route :</span> <code>POST https://app.tangoetvous.fr/api/cron/rappel-cb3x</code> + header <code>X-Cron-Secret</code></div>
+  <div class="field"><span class="label">Route :</span> <code>POST https://app.tangoetvous.fr/api/cron/relance-cb3x</code> + header <code>X-Cron-Secret</code></div>
   <div class="field"><span class="label">Statut :</span> <span class="cond">Workflow créé, handler à implémenter complètement dans worker.js</span></div>
 </div>
 </body>

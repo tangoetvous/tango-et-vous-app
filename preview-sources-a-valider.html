@@ -24,12 +24,12 @@
 <p class="note">Correspondance : <code>preview-emails-a-valider-v1.html</code> (T1-dem, T1-val, SR1, SR2, CP-A, CP-E, CX)</p>
 
 <h2>T1-dem — Transfert essai → inscriptions, att. validation</h2>
-<div class="route">POST /api/notify/essai-transfert (JWT admin)</div>
+<div class="route">POST /api/notify/essai-action (JWT admin) — action='transfer-demande' | 'transfer-valide'</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin clique "Demande en att." sur une fiche essai tango → statut='demande'</span></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, role, cours, ville, niveau, saison }</span></div>
   <div class="field"><span class="label">Destinataires :</span> <span class="var">body.email</span> + notification admin <span class="var">tangoetvous@gmail.com</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>⏳ Votre demande d'inscription au tango — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>Votre demande d'inscription au tango est enregistrée — Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre demande d inscription tango est bien enregistree - confirmation en cours"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Votre demande d'inscription est enregistrée"</div>
   <div class="field"><span class="label">Cours-box :</span> Cours · Saison · Rôle (badge couleur) · Statut "⏳ En attente de validation"</div>
@@ -39,11 +39,11 @@
 </div>
 
 <h2>T1-val — Transfert essai → inscriptions, att. paiement</h2>
-<div class="route">POST /api/notify/essai-transfert (JWT admin)</div>
+<div class="route">POST /api/notify/essai-action (JWT admin) — action='transfer-demande' | 'transfer-valide'</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin clique "Validé·e" sur une fiche essai tango → statut='attente_paiement'</span></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, role, cours, ville, niveau, saison, partenaire?, assoConnectUrl?, livretUrl? }</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre inscription au tango est validée — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre inscription au tango est validée — procédez à votre inscription sur AssoConnect</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription au tango est validee - prochaine etape AssoConnect"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre inscription au tango est validée — finalisez votre inscription"</div>
   <div class="field"><span class="label">Intro :</span> "Suite à votre cours d'essai, nous sommes ravis de vous accueillir dans nos cours de tango pour la saison..."</div>
@@ -57,12 +57,12 @@
 </div>
 
 <h2>SR1 — Relance Sorano (élève non réglé)</h2>
-<div class="route">POST /api/notify/sorano-relance (JWT admin)</div>
+<div class="route">POST /api/notify/sorano (JWT admin)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin clique ✉️ Relance dans l'onglet Sorano</span></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom }</span></div>
   <div class="field"><span class="label">Destinataire :</span> <span class="var">body.email</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>⏳ Rappel — Adhésion Sorano — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>Rappel — Adhésion Espace Sorano · Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Rappel adhesion Sorano - pensez a regulariser votre situation"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Rappel — Adhésion Sorano"</div>
   <div class="field"><span class="label">Intro :</span> "L'Espace Sorano demande pour toutes les activités qui y ont lieu une adhésion nécessaire pour participer aux cours. Mais sachez que cette adhésion permet de bénéficier de réductions sur tous les spectacles proposés au Théâtre Sorano ainsi que sur ceux programmés par les services culturels de la Ville de Vincennes."</div>
@@ -73,12 +73,12 @@
 </div>
 
 <h2>SR2 — Confirmation Sorano réglé</h2>
-<div class="route">POST /api/notify/sorano-paye (JWT admin)</div>
+<div class="route">POST /api/notify/sorano (JWT admin)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin clique ✓ Marquer réglé dans l'onglet Sorano</span></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom }</span></div>
   <div class="field"><span class="label">Destinataire :</span> <span class="var">body.email</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>✓ Adhésion Sorano enregistrée — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre adhésion Sorano est enregistrée — Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Adhesion Sorano enregistree - merci pour votre regularisation"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Adhésion Sorano enregistrée"</div>
   <div class="field"><span class="label">Corps :</span> "Votre adhésion à l'Espace Sorano est bien enregistrée pour cette saison." (sans "Vous pouvez participer à tous vos cours")</div>
@@ -93,18 +93,18 @@
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Admin pointe depuis Cartes 10 ou QR code (fire and forget)</span></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, date, nbAdded, utilises, restants, source ('app'|'qr'|'admin') }</span></div>
   <div class="field"><span class="label">Destinataire :</span> tangoetvous@gmail.com</div>
-  <div class="field"><span class="label">Sujet :</span> <code>🎫 Carte pointée — ${prenom} ${nom} · ${date}</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>🃏 [Carte 10] ${nom} a pointé — ${nb} cours ce jour · ${état carte}</code></div>
   <div class="field"><span class="label">Encadré or :</span> Nom/email · Table : <span class="var">"⬤ Cours pointés CE JOUR"</span> (vert en évidence) · Utilisés au total · Restants · Expiration</div>
   <div class="field"><span class="label">Bouton :</span> "Ouvrir l'admin → Cartes 10"</div>
   <div class="field"><span class="label">Notif admin :</span> <code>notifications</code> — INSERT type 'carte_pointage', lien_tab:'cartes'</div>
 </div>
 
 <h2>CP-E — Carte pointée (email élève, cron lendemain)</h2>
-<div class="route">POST /api/cron/carte-pointee-admin (X-Cron-Secret)</div>
+<div class="route">POST /api/cron/carte-pointee-j1 (X-Cron-Secret)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron 9h Paris · agrège tous les pointages admin de la veille</span></div>
   <div class="field"><span class="label">Source :</span> <span class="src">presences WHERE date=hier AND note='Admin' (ou source admin)</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>✓ Présence enregistrée pour votre carte — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>✓ Présence enregistrée le ${dateLabel} — Carte Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre presence au cours a ete enregistree - retrouvez le recap de votre carte ci-dessous"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Présence enregistrée pour votre carte"</div>
   <div class="field"><span class="label">Boîte bleue :</span> Date du cours · <span class="var">"⬤ Cours pointés CE JOUR"</span> (vert, ex: "1 cours") · Utilisés au total / 10 · Cours restants · Validité</div>
@@ -116,7 +116,7 @@
 <div class="route">POST /api/cron/carte-expiree (X-Cron-Secret)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron quotidien 9h Paris · eleves WHERE carte_expiration=aujourd'hui AND carte_restants&gt;0</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>⏰ Votre carte de 10 cours a expiré — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>⏰ Votre carte de cours a expiré — ${restants} cours non utilisés · Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre carte de 10 cours a expire - renouvelez pour continuer a danser"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⏰ "Votre carte de 10 cours a expiré"</div>
   <div class="field"><span class="label">Encadré :</span> Titre "Votre carte a expiré" · carte_restants cours non utilisés · date fin de validité · "Si vous souhaitez continuer à danser, vous pouvez renouveler votre carte sur AssoConnect."</div>
