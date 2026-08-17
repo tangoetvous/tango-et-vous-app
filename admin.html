@@ -2301,8 +2301,13 @@ function confirmerModalConfirm() {
 }
 
 var _cpModalId = null;
-function ouvrirModalCartePaiement(eleveId, nom) {
+// Vrai quand la modale de paiement est ouverte à la suite d'un renouvellement
+// « Payé » → l'email envoyé à la validation est C3 (« votre carte a été
+// renouvelée ») au lieu de C-pay (« paiement enregistré »).
+var _cpModalRenouv = false;
+function ouvrirModalCartePaiement(eleveId, nom, estRenouvellement) {
   _cpModalId = eleveId;
+  _cpModalRenouv = !!estRenouvellement;
   gel('modal-cp-nom').textContent = nom || '';
   // Pre-fill with existing payment data if card is already paid
   var carte = (adminData.cartes||[]).find(function(x){return String(x.id)===String(eleveId);});
@@ -2328,9 +2333,11 @@ function ouvrirModalCartePaiement(eleveId, nom) {
 function fermerModalCartePaiement() {
   gel('modal-carte-paiement').classList.remove('vis');
   _cpModalId = null;
+  _cpModalRenouv = false;
 }
 function confirmerCartePaiement() {
   var id = _cpModalId;
+  var estRenouv = _cpModalRenouv;   // capturé AVANT la fermeture, qui remet le drapeau à false
   fermerModalCartePaiement();
   if (!id) return;
   var montant = Number((gel('modal-cp-montant')||{}).value) || TARIFS.carte10_renouv || 150;
@@ -2366,7 +2373,8 @@ function confirmerCartePaiement() {
         email: carte.email, prenom: _cartePrenom, nom: _carteNom,
         montant: montant, modePaiement: modePai, datePaiement: datePai,
         utilises: carte.utilises || 0, restants: carte.restants || 0,
-        expiration: carte.expiration || ''
+        expiration: carte.expiration || '',
+        renouvellement: estRenouv   // → C3 au lieu de C-pay
       })
     }).catch(function(){});
   }
@@ -2454,8 +2462,10 @@ function confirmerModalRenouveler() {
   fermerModalRenouveler();
   if (!id) return;
   if (paye) {
-    // Renouveler sans payer, puis ouvrir le modal paiement pour saisir les détails
-    renouvelerCarteAction(id, null, false, 0, function(){ ouvrirModalCartePaiement(id, nom); }, nb, duree);
+    // Renouveler, puis ouvrir le modal paiement pour saisir les détails.
+    // ⚠️ `sansEmailRenouv` empêche l'envoi de C2b (« finalisez votre paiement ») :
+    // la personne est en train de régler, elle recevra C3 à la validation.
+    renouvelerCarteAction(id, null, false, 0, function(){ ouvrirModalCartePaiement(id, nom, true); }, nb, duree, true);
   } else {
     renouvelerCarteAction(id, null, false, 0, null, nb, duree);
   }
@@ -10685,7 +10695,7 @@ function pointerCoursAction(id, date, nbCours, btn) {
     })
     .catch(function(e){if(btn)btn.disabled=false;});
 }
-function renouvelerCarteAction(id, btn, paye, montant, onDone, nbCours, dureeMois) {
+function renouvelerCarteAction(id, btn, paye, montant, onDone, nbCours, dureeMois, sansEmailRenouv) {
   var _rNb = (parseInt(nbCours,10) >= 1 && parseInt(nbCours,10) <= 100) ? parseInt(nbCours,10) : _carteNbAdmin();
   var _rDm = (parseInt(dureeMois,10) >= 1 && parseInt(dureeMois,10) <= 24) ? parseInt(dureeMois,10) : _carteDureeAdmin();
   if(IS_DEMO){var c=adminData.cartes.find(function(x){return x.id===id;});if(c){c.utilises=0;c.restants=_rNb;c.dureeMois=_rDm;c.datePremierCours='';c.expiration='';c.expManuelle=false;c.datesCours=[];c.paye=paye===true;
@@ -10717,8 +10727,11 @@ _broadcastAdminSync('carteUpdate',{email:c.email,utilises:0,restants:_rNb,datesC
     }
     return insertProm;
   }).then(function(){
-    // C2b — carte renouvelée sans payer (par l'admin)
-    if (!(paye===true)) {
+    // C2b — carte renouvelée sans payer (par l'admin).
+    // Jamais envoyé quand le renouvellement est réglé dans la foulée : la modale
+    // de paiement enchaîne et c'est C3 qui part, pour ne pas réclamer un
+    // paiement à quelqu'un qui vient justement de payer.
+    if (!(paye===true) && !sansEmailRenouv) {
       var _carteObjN = (adminData.cartes||[]).find(function(x){return x.id===id;});
       Promise.resolve(fetch('/api/notify/carte-renouvellement', {
         method: 'POST',

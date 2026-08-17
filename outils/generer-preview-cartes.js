@@ -54,6 +54,11 @@ const CAS = [
     note: "⚠️ <b>Cette variante n'est déclenchée par aucun bouton aujourd'hui</b> : le « Renouveler sans payer » de l'espace élève met bien la carte à jour, mais n'appelle pas cette route. Seule la variante admin ci-dessus part réellement. Le texte ci-dessous est celui que le code produirait.",
     body: { ...base, source: 'eleve', restants: 10, liensAssoConnect: LIEN_AC + '-renouv' } },
 
+  { id: 'c3', titre: 'C3 — Carte renouvelée et réglée',
+    handler: 'handleNotifyCartePaiement',
+    note: "Parcours « ↻ Renouveler → Payé → ✓ Enregistrer le paiement ». C'est le <b>seul</b> email de ce parcours : C2b (« finalisez votre paiement ») n'est plus envoyé, puisque la personne vient justement de régler.",
+    body: { ...base, montant: 170, modePaiement: 'CB 1×', datePaiement: AUJ, utilises: 0, restants: 10, expiration: '', renouvellement: true } },
+
   { id: 'cpay', titre: 'C-pay — Paiement de la carte enregistré',
     handler: 'handleNotifyCartePaiement',
     note: "Envoyé quand vous basculez la pastille « ⚠️ Non payée » en « ✓ Payée » puis validez le montant. ⚠️ L'expiration affichée reste celle calculée depuis le <b>premier cours</b>, jamais depuis la date de paiement.",
@@ -189,8 +194,6 @@ ${sections}
 <div class="pv-com">
   <table class="tbl">
     <tr><th>Ancienne section</th><th>Réalité dans le code</th></tr>
-    <tr><td><b>C3</b> — « renouvellement marqué payé »</td>
-        <td>Renouveler une carte en cochant « Payé » <b>n'envoie aucun email</b> : la seule notification du renouvellement est C2b, réservée au cas « non payée ».</td></tr>
     <tr><td><b>C2</b> — variante « élève »</td>
         <td>Le branchement existe dans le worker mais <b>aucun bouton ne l'appelle</b> : le « Renouveler sans payer » de l'espace élève met la carte à jour sans prévenir personne.</td></tr>
     <tr><td><b>CP-A</b> — « récap admin au pointage »</td>
