@@ -27,6 +27,13 @@
   // PARAMÈTRES DYNAMIQUES (admin.html → localStorage → index.html)
   // ================================================================
   function _sai() { var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1; return m>=9?(y+'-'+(y+1)):((y-1)+'-'+y); }
+  // Lien AssoConnect de renouvellement de carte. ⚠️ La même logique existe déjà
+  // en ligne dans deux rendus (bouton « Renouveler » de l'accueil et du tableau
+  // de bord) ; toute modification des liens par défaut doit être répercutée là-bas.
+  function _lienRenouvAC() {
+    var DEFAUTS = {'2025-2026':'https://le-regard-se-pose.assoconnect.com/collect/description/524239-j-renouvellement-de-carte-de-10-ou-20-cours-2025-2026','2026-2027':'https://le-regard-se-pose.assoconnect.com/collect/description/696013-j-renouvellement-de-carte-de-10-ou-20-cours-2026-2027'};
+    try { var s=JSON.parse(localStorage.getItem('tev_liens_assoconnect')||'{}'); var sai=_sai(); return (s[sai]&&s[sai].renouv)||DEFAUTS[sai]||DEFAUTS['2026-2027']; } catch(e) { return DEFAUTS['2026-2027']; }
+  }
   function _lp(t) { try{return JSON.parse(localStorage.getItem('tev_params_'+t+'_'+_sai())||'{}');}catch(e){return{};} }
   const _pP=_lp('paris'), _pV=_lp('vincennes'), _pYo=_lp('yoga'), _pSt=_lp('stages');
   const _hP=_pP.horaires||{}, _hV=_pV.horaires||{}, _hY=_pYo.horaires||{};
@@ -5473,6 +5480,22 @@
         if (_pt && !eleveData.carte.type) eleveData.carte.type = _pt;
         eleveData.presences = d2.presences || eleveData.presences;
       }
+      // C2 — prévenir l'élève (email + notif in-app + push) et l'admin (panel 🔔).
+      // Sans cet appel, un renouvellement fait depuis l'espace élève ne laissait
+      // aucune trace : ni email, ni notification côté admin.
+      try {
+        fetch('/api/notify/carte-renouvellement', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: eleveData.eleve.email || '',
+            prenom: eleveData.eleve.prenom || '',
+            restants: (eleveData.carte && eleveData.carte.coursRestants) || 0,
+            source: 'eleve',
+            liensAssoConnect: _lienRenouvAC(),
+          }),
+        }).catch(function(){});
+      } catch(e) {}
       _broadcastRenouv();
       renderDashboard(); renderAccueil();
     } catch(err) {

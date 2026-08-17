@@ -49,9 +49,9 @@ const CAS = [
     note: "Envoyé quand vous renouvelez une carte en la laissant « non payée » depuis Cartes → Détails.",
     body: { ...base, source: 'admin', restants: 10, liensAssoConnect: LIEN_AC + '-renouv' } },
 
-  { id: 'c2', titre: 'C2 — Carte renouvelée sans payer (variante « élève »)',
+  { id: 'c2', titre: 'C2 — Carte renouvelée sans payer (par l\'élève)',
     handler: 'handleNotifyCarteRenouvellement',
-    note: "⚠️ <b>Cette variante n'est déclenchée par aucun bouton aujourd'hui</b> : le « Renouveler sans payer » de l'espace élève met bien la carte à jour, mais n'appelle pas cette route. Seule la variante admin ci-dessus part réellement. Le texte ci-dessous est celui que le code produirait.",
+    note: "Envoyé quand l'élève clique lui-même « ↻ Renouveler sans payer » dans son espace. Même message que C2b, seul le sujet diffère. Vous en êtes averti dans le panel 🔔.",
     body: { ...base, source: 'eleve', restants: 10, liensAssoConnect: LIEN_AC + '-renouv' } },
 
   { id: 'c3', titre: 'C3 — Carte renouvelée et réglée',
@@ -194,12 +194,9 @@ ${sections}
 <div class="pv-com">
   <table class="tbl">
     <tr><th>Ancienne section</th><th>Réalité dans le code</th></tr>
-    <tr><td><b>C2</b> — variante « élève »</td>
-        <td>Le branchement existe dans le worker mais <b>aucun bouton ne l'appelle</b> : le « Renouveler sans payer » de l'espace élève met la carte à jour sans prévenir personne.</td></tr>
     <tr><td><b>CP-A</b> — « récap admin au pointage »</td>
         <td>Ce n'est <b>pas un email</b> : au pointage, le worker pose seulement la notification in-app de l'élève, met CP-E en file pour le lendemain matin, et envoie un push. Rien n'arrive dans votre boîte.</td></tr>
   </table>
-  <p style="margin-top:14px;">Ces deux points sont à trancher : soit on branche l'email manquant, soit on retire la variante morte. Rien n'est modifié pour l'instant.</p>
 </div>
 
 <div class="pv-titre" id="notifs" style="border-left-color:#5c9dc2;">Notifications — toast, panel 🔔 et push OS</div>
