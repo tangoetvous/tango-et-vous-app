@@ -1,184 +1,479 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Preview emails — Yoga · Y0/Y1/Y-att/Y-full/Y2/Y3/YI0/YI1</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview — Emails Yoga</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
-.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;position:sticky;top:0;background:#1e1e1e;padding:12px 0;z-index:10;border-bottom:1px solid #444;}
-.nav a{color:#D4AF37;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-decoration:none;padding:7px 12px;border:1px solid #D4AF37;border-radius:6px;}
-.nav a:hover{background:#D4AF37;color:#000;}
-.email-block{margin-bottom:56px;}
-.email-label{color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-left:4px;}
-.email-label strong{color:#D4AF37;}
-.email-label em{color:#aaa;font-style:normal;font-size:10px;}
-.email-subj{color:#ccc;font-size:12px;margin-bottom:12px;padding-left:4px;}
-.email-subj span{color:#fff;font-weight:700;}
-.email-wrap{max-width:600px;}
-/* badges rôle */
-.badge-gui{display:inline-block;background:#1565c0;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-gde{display:inline-block;background:#c2185b;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-val{display:inline-block;background:#2e7d32;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-att{display:inline-block;background:#e65100;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-yoga{display:inline-block;background:#2e7d32;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-/* Boîte yoga — fond vert clair, bordure vert foncé */
-.yoga-box{background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;}
-.yoga-box-header{background:#2e7d32;padding:12px 18px;}
-.yoga-box-header-title{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;}
-.yoga-box-header-date{font-size:17px;font-weight:700;color:#fff;margin-top:4px;}
-.yoga-box-body{padding:16px 18px;}
-.yoga-section{padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);}
-.yoga-section:last-child{border-bottom:none;padding-bottom:0;}
-.yoga-section-name{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;}
-.yoga-detail{font-size:14px;color:#333;line-height:1.9;}
-.yoga-detail strong{color:#1b5e20;}
-.yoga-total{background:#2e7d32;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;text-align:right;}
-/* Push OS mockup */
-.push-mockup{background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.35);padding:14px 16px;max-width:360px;display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
-.push-mockup-icon{width:36px;height:36px;border-radius:8px;background:#111;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
-.push-mockup-body{flex:1;}
-.push-mockup-app{font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
-.push-mockup-title{font-size:13px;font-weight:700;color:#111;margin-bottom:2px;}
-.push-mockup-text{font-size:12px;color:#444;line-height:1.4;}
-.push-mockup-time{font-size:11px;color:#999;margin-top:4px;}
+body { margin:0; padding:0; background:#f5f5f5; font-family:Arial,sans-serif; }
+.pv-head { background:#111; border-bottom:3px solid #7e57c2; padding:22px 24px; text-align:center; }
+.pv-head h1 { font-family:Georgia,serif; font-size:19px; font-weight:300; letter-spacing:4px; color:#b39ddb; margin:0; }
+.pv-head p { font-size:12px; color:#888; margin:8px 0 0; }
+.pv-gen { background:#0d2b0d; color:#a5d6a7; font-size:12px; text-align:center; padding:9px 16px; border-bottom:1px solid #1b5e20; line-height:1.6; }
+.pv-gen code { color:#fff; }
+.pv-nav { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; padding:12px 16px; background:#0a0a0a; position:sticky; top:0; z-index:10; }
+.pv-nav a { color:#b39ddb; text-decoration:none; font-size:11px; border:1px solid #3a2f4a; padding:5px 12px; border-radius:20px; }
+.pv-titre { max-width:660px; margin:38px auto 0; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:#fff; background:#333; padding:10px 20px; border-left:4px solid #7e57c2; }
+.pv-com { max-width:660px; margin:0 auto; font-size:13px; color:#555; padding:12px 20px; line-height:1.7; background:#fff; }
+.pv-h { display:block; margin-top:6px; color:#5e35b1; font-size:12px; }
+.pv-dest { max-width:660px; margin:16px auto 0; font-size:12px; color:#333; background:#eceff1; padding:7px 16px; border-radius:6px 6px 0 0; font-weight:700; }
+.pv-sujet { max-width:660px; margin:0 auto; font-size:13px; background:#f3eefb; border-left:4px solid #7e57c2; padding:10px 16px; color:#2c1a4a; }
+.pv-mail { max-width:600px; margin:10px auto 0; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.12); }
+.pv-fin { max-width:660px; margin:40px auto 0; background:#fff; padding:18px 20px; font-size:13px; color:#444; line-height:1.8; border-top:3px solid #7e57c2; }
+.pv-fin b { color:#5e35b1; }
+table.tbl { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+table.tbl th { text-align:left; padding:8px; background:#eee; }
+table.tbl td { padding:8px; border-top:1px solid #ddd; vertical-align:top; }
 
-.email-pre{color:#7ecbf7;font-size:11px;letter-spacing:1.5px;margin-bottom:12px;padding-left:4px;}
-.email-pre span{color:#fff;font-weight:600;}
+.pv-notifs { max-width:660px; margin:0 auto; background:#141414; color:#ddd; padding:24px 20px 6px; }
+.pv-notifs .email-block { margin-bottom:44px; }
+.pv-notifs .email-label { color:#888; font-size:11px; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; padding-left:4px; }
+.pv-notifs .email-label strong { color:#D4AF37; }
+.pv-notifs .email-label em { color:#aaa; font-style:normal; font-size:10px; }
+.pv-notifs .push-mockup { background:#fff; border-radius:14px; box-shadow:0 4px 24px rgba(0,0,0,.35); padding:14px 16px; max-width:360px; display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+.pv-notifs .push-mockup-icon { width:36px; height:36px; border-radius:8px; background:#111; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.pv-notifs .push-mockup-body { flex:1; }
+.pv-notifs .push-mockup-app { font-size:11px; font-weight:700; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
+.pv-notifs .push-mockup-title { font-size:13px; font-weight:700; color:#111; margin-bottom:2px; }
+.pv-notifs .push-mockup-text { font-size:12px; color:#444; line-height:1.4; }
+.pv-notifs .push-mockup-time { font-size:11px; color:#999; margin-top:4px; }
+.pv-main { max-width:660px; margin:34px auto 0; font-size:13px; background:#fff3e0; border:1px solid #ffe0b2; border-left:4px solid #e65100; padding:12px 18px; color:#5d4037; line-height:1.6; }
+
 </style>
 </head>
 <body>
 
-<div class="nav">
-  <a href="#y0">Y0 Admin essai</a>
-  <a href="#yi0">YI0 Admin inscrit</a>
-  <a href="#notifs-admin">Notifs admin</a>
-  <a href="#notifs-eleve">Notifs élève</a>
-  <a href="#push-os">Push OS</a>
-  <a href="#y1">Y1 Confirmation auto</a>
-  <a href="#y-att">Y-att Cours complet (attente)</a>
-  <a href="#y-full">Y-full Date complète</a>
-  <a href="#y2-gt3">Y2 Renvoi manuel &gt;3j</a>
-  <a href="#y2-lt3">Y2 Renvoi manuel ≤3j (👍)</a>
-  <a href="#y3">Y3 Rappel J-3 (👍)</a>
-  <a href="#yi1">YI1 Bienvenue yoga</a>
-  <a href="#y-mod">Y-mod Essai modifié (admin)</a>
-  <a href="#y-j1a">Y-J1a J+1 Présent</a>
-  <a href="#y-j1b">Y-J1b J+1 Absent</a>
+<div class="pv-head">
+  <h1>COURS DE YOGA AVEC FLORENCIA GARCIA</h1>
+  <p>Preview — emails yoga</p>
 </div>
+<div class="pv-gen">✅ Page <b>générée automatiquement</b> en exécutant les handlers de <code>worker.js</code> (Supabase et Brevo simulés) —
+ce que vous voyez est exactement ce que reçoivent les destinataires.<br>Régénérer avec <code>node outils/generer-preview-yoga.js</code></div>
+<div class="pv-nav"><a href="#y1">Y0 + Y1</a><a href="#y1gratuit">Y1</a><a href="#yatt">Y-att</a><a href="#y3">Y3</a><a href="#yj1a">Y-J1a</a><a href="#yj1b">Y-J1b</a><a href="#ymod">Y-mod</a><a href="#yi1">YI0 + YI1</a><a href="#yi1forfait">YI1</a><a href="#yelevemod">YI-mod</a><a href="#yfin">Y-fin</a><a href="#ydate">Y-date</a><a href="#absents">Emails absents</a><a href="#notifs">🔔 Notifications</a></div>
 
-<!-- ═══════════════════════════════════════════════
-     Y0 — Récap admin · Essai yoga reçu
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="y0">
-<div class="email-label"><strong>Y0</strong> — Récap admin · Essai yoga &nbsp;|&nbsp; <em>Reçu par regardsepose@gmail.com à chaque nouvelle demande — table inscriptions_essai_yoga</em></div>
-<div class="email-subj">Objet : <span>[Essai yoga] Marie DUPONT — mar. 15 sept. — Yin yoga — ✓ confirmé·e auto.</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;color:#222;border:1px solid #ddd;border-radius:6px;overflow:hidden;">
-  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
-    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription essai yoga</div>
-  </div>
-  <div style="padding:24px;">
-    <!-- Encadré principal -->
-    <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-      <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
-        <div style="flex:1;">
-          <div style="font-size:18px;font-weight:700;color:#111;">Marie DUPONT</div>
-          <div style="font-size:12px;color:#333;margin-top:2px;">marie.dupont@gmail.com &nbsp;·&nbsp; 06 22 33 44 55</div>
+<div class="pv-titre" id="y1">Y0 + Y1 — Essai yoga confirmé automatiquement</div>
+<div class="pv-com">Il n'y a <b>pas de validation manuelle</b> en yoga : dès qu'une place est libre, l'inscription est confirmée et Y1 part immédiatement. Vous recevez Y0 en parallèle, à l'adresse yoga. <span class="pv-h">Handler : <code>handleNotifyInscriptionEssaiYoga</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📥 Email ADMIN → <code>regardsepose@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 🧘 Essai yoga — Camille MARTIN · Yin Yoga · Dimanche 6 septembre 2026</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:11px;font-weight:700;letter-spacing:3px;color:#D4AF37;text-transform:uppercase;">Cours de Yoga avec Florencia Garcia</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription essai</div></div><div style="padding:20px 24px;"><div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:16px;"><div style="background:#D4AF37;padding:10px 16px;"><div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN</div><div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678</div></div><div style="background:#fffdf8;padding:14px 16px;"><div style="font-size:12px;font-weight:700;color:#777;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Dimanche 6 septembre 2026</div><table style="width:100%;border-collapse:collapse;font-size:13px;"><tr><td style="padding:5px 0;color:#555;width:90px;">🧘 Cours</td><td style="font-weight:700;color:#111;">Yin Yoga</td></tr><tr><td style="padding:5px 0;color:#555;">🕐 Horaire</td><td style="color:#111;">10h30–11h30</td></tr><tr><td style="padding:5px 0;color:#555;">📍 Lieu</td><td style="color:#111;">Espace Sorano<br/><span style="font-size:12px;color:#777;">16 rue Charles Pathé, 94300 Vincennes</span></td></tr><tr><td style="padding:5px 0;color:#555;">💶 Tarif</td><td style="font-weight:700;color:#111;">15€</td></tr><tr><td style="padding:5px 0;color:#555;">📋 Statut</td><td><span style="display:inline-block;background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Confirmé·e automatiquement</span></td></tr></table></div></div><div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#2e7d32;font-weight:700;">✓ Inscription automatique — Email Y1 envoyé · Admin → Yoga → Essai</div><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;"><a href="tel:0612345678" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a><a href="mailto:camille@test.fr" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a><a href="sms:0612345678" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l&rsquo;admin →</a></div></div><div style="background:#f5f5f5;padding:10px 24px;text-align:center;font-size:10px;color:#888;border-top:1px solid #e0e0e0;">Association Le Regard Se Pose · <a href="mailto:regardsepose@gmail.com" style="color:#888;text-decoration:none;">regardsepose@gmail.com</a></div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Votre essai yoga est confirmé — Cours de yoga avec Florencia Garcia</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre cours essai yoga est confirme - retrouvez les details ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div><div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre essai yoga est confirmé !</span></div><div style="padding:30px 28px;"><p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Camille</strong>,</p><p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription à notre cours d'essai yoga est bien enregistrée. Nous avons hâte de vous accueillir !</p><div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;"><div style="background:#2e7d32;padding:12px 18px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre essai yoga</div><div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div></div><div style="padding:16px 18px;"><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong style="color:#1b5e20;">Yin Yoga</strong></div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Horaire</div><div style="font-size:14px;color:#333;line-height:1.9;">10h30–11h30</div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Lieu</div><div style="font-size:14px;color:#333;line-height:1.9;">Espace Sorano<br/><span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes</span> · <span style="font-size:12px;color:#666;">RER A — Vincennes</span></div></div><div style="padding:10px 0;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Tarif</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong style="color:#1b5e20;">15€</strong></div></div></div></div><div style="text-align:center;margin:0 0 22px;"><a href="https://exemple/livret-yin.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Télécharger le livret Yin Yoga</a></div><div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;"><p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">En cas d'empêchement, merci de nous prévenir même au dernier moment afin que nous puissions proposer la place à quelqu'un d'autre. Merci pour votre compréhension !</p></div><div style="text-align:center;margin:0 0 24px;"><a href="mailto:regardsepose@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a></div><p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p></div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-titre" id="y1gratuit">Y1 — Essai gratuit (les deux premiers cours de septembre)</div>
+<div class="pv-com">Même email, avec la mention de gratuité. Le tarif affiché sinon vient de <code>tev_params_yoga_&lt;saison&gt;.tarifs.yoga_essai</code> — aucun montant n'est écrit en dur. <span class="pv-h">Handler : <code>handleNotifyInscriptionEssaiYoga</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📥 Email ADMIN → <code>regardsepose@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 🧘 Essai yoga — Camille MARTIN · Hatha Yoga · Dimanche 6 septembre 2026</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:11px;font-weight:700;letter-spacing:3px;color:#D4AF37;text-transform:uppercase;">Cours de Yoga avec Florencia Garcia</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription essai</div></div><div style="padding:20px 24px;"><div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:16px;"><div style="background:#D4AF37;padding:10px 16px;"><div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN</div><div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678</div></div><div style="background:#fffdf8;padding:14px 16px;"><div style="font-size:12px;font-weight:700;color:#777;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Dimanche 6 septembre 2026</div><table style="width:100%;border-collapse:collapse;font-size:13px;"><tr><td style="padding:5px 0;color:#555;width:90px;">🧘 Cours</td><td style="font-weight:700;color:#111;">Hatha Yoga</td></tr><tr><td style="padding:5px 0;color:#555;">🕐 Horaire</td><td style="color:#111;">11h45–12h45</td></tr><tr><td style="padding:5px 0;color:#555;">📍 Lieu</td><td style="color:#111;">Espace Sorano<br/><span style="font-size:12px;color:#777;">16 rue Charles Pathé, 94300 Vincennes</span></td></tr><tr><td style="padding:5px 0;color:#555;">💶 Tarif</td><td style="font-weight:700;color:#111;">Gratuit</td></tr><tr><td style="padding:5px 0;color:#555;">📋 Statut</td><td><span style="display:inline-block;background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Confirmé·e automatiquement</span></td></tr></table></div></div><div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#2e7d32;font-weight:700;">✓ Inscription automatique — Email Y1 envoyé · Admin → Yoga → Essai</div><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;"><a href="tel:0612345678" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a><a href="mailto:camille@test.fr" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a><a href="sms:0612345678" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l&rsquo;admin →</a></div></div><div style="background:#f5f5f5;padding:10px 24px;text-align:center;font-size:10px;color:#888;border-top:1px solid #e0e0e0;">Association Le Regard Se Pose · <a href="mailto:regardsepose@gmail.com" style="color:#888;text-decoration:none;">regardsepose@gmail.com</a></div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Votre essai yoga est confirmé — Cours de yoga avec Florencia Garcia</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre cours essai yoga est confirme - retrouvez les details ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div><div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre essai yoga est confirmé !</span></div><div style="padding:30px 28px;"><p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Camille</strong>,</p><p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription à notre cours d'essai yoga est bien enregistrée. Nous avons hâte de vous accueillir !</p><div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;"><div style="background:#2e7d32;padding:12px 18px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre essai yoga</div><div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div></div><div style="padding:16px 18px;"><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong style="color:#1b5e20;">Hatha Yoga</strong></div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Horaire</div><div style="font-size:14px;color:#333;line-height:1.9;">11h45–12h45</div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Lieu</div><div style="font-size:14px;color:#333;line-height:1.9;">Espace Sorano<br/><span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes</span> · <span style="font-size:12px;color:#666;">RER A — Vincennes</span></div></div><div style="padding:10px 0;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Tarif</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong style="color:#2e7d32;">Gratuit</strong> <span style="font-size:12px;color:#666;">(2 premiers cours de septembre)</span></div></div></div></div><div style="text-align:center;margin:0 0 22px;"><a href="https://exemple/livret-hatha.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Télécharger le livret Hatha Yoga</a></div><div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;"><p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">En cas d'empêchement, merci de nous prévenir même au dernier moment afin que nous puissions proposer la place à quelqu'un d'autre. Merci pour votre compréhension !</p></div><div style="text-align:center;margin:0 0 24px;"><a href="mailto:regardsepose@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a></div><p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p></div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-titre" id="yatt">Y-att — Le cours régulier est complet (liste d'attente)</div>
+<div class="pv-com">Quand le cours affiche déjà 14 inscrits sur la saison. L'email explique la limite de 14 participants et qu'une place peut se libérer. Pas de livret à ce stade : la place n'est pas acquise. <span class="pv-h">Handler : <code>handleNotifyInscriptionEssaiYoga</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📥 Email ADMIN → <code>regardsepose@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 🧘 Essai yoga — Camille MARTIN · Yin Yoga · Dimanche 6 septembre 2026</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:11px;font-weight:700;letter-spacing:3px;color:#D4AF37;text-transform:uppercase;">Cours de Yoga avec Florencia Garcia</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription essai</div></div><div style="padding:20px 24px;"><div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:16px;"><div style="background:#D4AF37;padding:10px 16px;"><div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN</div><div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678</div></div><div style="background:#fffdf8;padding:14px 16px;"><div style="font-size:12px;font-weight:700;color:#777;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Dimanche 6 septembre 2026</div><table style="width:100%;border-collapse:collapse;font-size:13px;"><tr><td style="padding:5px 0;color:#555;width:90px;">🧘 Cours</td><td style="font-weight:700;color:#111;">Yin Yoga</td></tr><tr><td style="padding:5px 0;color:#555;">🕐 Horaire</td><td style="color:#111;">10h30–11h30</td></tr><tr><td style="padding:5px 0;color:#555;">📍 Lieu</td><td style="color:#111;">Espace Sorano<br/><span style="font-size:12px;color:#777;">16 rue Charles Pathé, 94300 Vincennes</span></td></tr><tr><td style="padding:5px 0;color:#555;">💶 Tarif</td><td style="font-weight:700;color:#111;">15€</td></tr><tr><td style="padding:5px 0;color:#555;">📋 Statut</td><td><span style="display:inline-block;background:#e65100;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">⏳ Liste d&rsquo;attente</span></td></tr></table></div></div><div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#2e7d32;font-weight:700;">⏳ Cours complet — inscription en liste d&rsquo;attente</div><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;"><a href="tel:0612345678" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a><a href="mailto:camille@test.fr" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a><a href="sms:0612345678" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l&rsquo;admin →</a></div></div><div style="background:#f5f5f5;padding:10px 24px;text-align:center;font-size:10px;color:#888;border-top:1px solid #e0e0e0;">Association Le Regard Se Pose · <a href="mailto:regardsepose@gmail.com" style="color:#888;text-decoration:none;">regardsepose@gmail.com</a></div></div></body></html></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Votre inscription est en liste d'attente — Cours de yoga avec Florencia Garcia</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre demande essai yoga enregistree - vous serez contacte(e) des qu'une place se libere&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div><div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Ce cours est complet — vous êtes sur liste d'attente</span></div><div style="padding:30px 28px;"><p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Camille</strong>,</p><p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Merci pour votre intérêt pour nos cours de yoga ! Votre inscription a bien été enregistrée, cependant le cours que vous avez choisi est actuellement complet pour cette saison.</p><div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;"><div style="background:#2e7d32;padding:12px 18px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre demande d'essai</div><div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Dimanche 6 septembre 2026</div></div><div style="padding:16px 18px;"><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong style="color:#1b5e20;">Yin Yoga</strong></div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Horaire</div><div style="font-size:14px;color:#333;line-height:1.9;">10h30–11h30</div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Lieu</div><div style="font-size:14px;color:#333;line-height:1.9;">Espace Sorano<br/><span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes</span> · <span style="font-size:12px;color:#666;">RER A — Vincennes</span></div></div><div style="padding:10px 0;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Statut</div><div style="font-size:14px;color:#333;line-height:1.9;"><span style="display:inline-block;background:#e65100;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">⏳ Liste d'attente</span></div></div></div></div><div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;"><p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">Nos cours sont limités à 14 participants</p><p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Des places se libèrent parfois en cours d'année. Nous vous contacterons dès qu'une place se libère dans ce cours. N'hésitez pas à nous contacter pour plus d'informations.</p></div><div style="text-align:center;margin:0 0 24px;"><a href="mailto:regardsepose@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a></div><p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous vous contacterons dès qu'une place se libère.<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p></div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-titre" id="y3">Y3 — Rappel automatique 3 jours avant</div>
+<div class="pv-com">Cron quotidien. Bouton « 👍 Je confirme ma présence » et encadré demandant de prévenir en cas d'empêchement. <span class="pv-h">Handler : <code>handleCronEssaiYogaRappelJ3</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Rappel — votre essai yoga a lieu dans 3 jours — Cours de yoga avec Florencia Garcia</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Rappel essai yoga dans 3 jours - confirmez votre presence en un clic&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre essai yoga a lieu dans 3 jours !</span></div>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Camille</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Dans 3 jours, rendez-vous pour votre essai yoga ! Voici tous les détails pour préparer votre séance.</p>
+        <div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+      <div style="background:#2e7d32;padding:14px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre essai yoga</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Jeudi 20 août 2026</div>
+      </div>
+      <div style="padding:16px 18px;"><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong>Yin Yoga</strong></div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Horaire</div><div style="font-size:14px;color:#333;line-height:1.9;">10h30–11h30</div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Lieu</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong>Espace Sorano</strong><br/><span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes · RER A — Vincennes</span></div></div><div style="padding:10px 0;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Tarif</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong>15€</strong></div></div></div>
+    </div>
+        <div style="text-align:center;margin:0 0 22px;"><a href="https://exemple/livret-yin.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Télécharger le livret Yin Yoga</a></div>
+        <div style="text-align:center;margin:0 0 16px;"><a href="https://app.tangoetvous.fr/api/essai-yoga/confirmer?id=301&token=jetonfactice00000000000000000000" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a></div>
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+          <p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">Merci de confirmer votre présence. En cas d'empêchement, prévenez-nous même au dernier moment afin que nous puissions proposer la place à quelqu'un d'autre. Merci pour votre compréhension !</p>
         </div>
-        <span class="badge-yoga">🧘 Yoga</span>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-titre" id="yj1a">Y-J1a — Le lendemain, la personne était présente</div>
+<div class="pv-com">Propose de rejoindre les cours réguliers, avec les tarifs réels lus dans les Paramètres et le bouton AssoConnect yoga. Une <b>copie vous est adressée</b> à l'adresse yoga — ce doublon n'était documenté nulle part. <span class="pv-h">Handler : <code>handleCronEssaiYogaJ1</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Merci d'être venu·e — à bientôt sur le tapis !</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Essai yoga termine - rejoindre les cours reguliers de yoga avec Florencia Garcia&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>
+        <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
+          <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ On espère que ce cours vous a plu !</span></div>
+        <div style="padding:30px 28px;">
+          <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Camille</strong>,</p>
+          <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous espérons que cette première séance de yoga vous a plu ! Si vous souhaitez poursuivre, voici comment rejoindre nos cours réguliers.</p>
+          <div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+    <div style="background:#2e7d32;padding:12px 18px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Rejoindre les cours réguliers</div>
+      <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">🧘 Saison 2025-2026</div>
+    </div>
+    <div style="padding:16px 18px;">
+      <div style="padding:10px 0;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours disponibles</div>
+        <div style="font-size:14px;color:#333;line-height:1.9;"><strong style="color:#1b5e20;">Yin yoga</strong> — 10h30–11h30<br/><strong style="color:#1b5e20;">Hatha yoga</strong> — 11h45–12h45<br/><strong style="color:#1b5e20;">Forfait yin + hatha</strong> — les deux cours</div>
       </div>
-      <div style="background:#fffdf8;padding:14px 16px;">
-        <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:10px;">📅 Mardi 15 septembre 2026</div>
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <tr style="border-bottom:1px solid #f0e8d0;"><td style="padding:6px 4px;color:#888;width:36%;">Cours</td><td style="padding:6px 4px;color:#222;font-weight:600;">Yin yoga</td></tr>
-          <tr style="border-bottom:1px solid #f0e8d0;"><td style="padding:6px 4px;color:#888;">Horaire</td><td style="padding:6px 4px;color:#222;font-weight:600;">Mardi · 10h30–11h30</td></tr>
-          <tr style="border-bottom:1px solid #f0e8d0;"><td style="padding:6px 4px;color:#888;">Lieu</td><td style="padding:6px 4px;color:#222;font-weight:600;">Espace Sorano — 16 rue Charles Pathé, 94300 Vincennes</td></tr>
-          <tr style="border-bottom:1px solid #f0e8d0;"><td style="padding:6px 4px;color:#888;">Gratuit / Tarif</td><td style="padding:6px 4px;color:#222;font-weight:600;">Non — <strong>15 €</strong></td></tr>
-          <tr><td style="padding:6px 4px;color:#888;">Statut</td><td style="padding:6px 4px;"><span class="badge-val">✓ Confirmé·e automatiquement</span></td></tr>
-        </table>
+      <div style="padding:10px 0;border-top:1px solid #c8e6c9;margin-top:8px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:6px;">📍 Lieu</div>
+        <div style="font-size:14px;color:#333;line-height:1.7;"><strong>Espace Sorano</strong><br/><span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes</span> · <span style="font-size:12px;color:#666;">RER A — Vincennes</span></div>
       </div>
     </div>
-
-    <!-- Note inscription automatique -->
-    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:20px;padding:12px 14px;background:#e8f5e9;border-radius:6px;border:1px solid #c8e6c9;">
-      <span style="font-size:18px;flex-shrink:0;">✓</span>
-      <div>
-        <div style="font-size:12px;font-weight:700;color:#2e7d32;margin-bottom:3px;">Inscription automatique</div>
-        <div style="font-size:12px;color:#555;line-height:1.6;">Pas de validation manuelle — l'élève est confirmé·e automatiquement si une place est disponible (max 14 / cours). L'email <strong>Y1</strong> de confirmation lui est envoyé immédiatement.</div>
+  </div>
+          <div style="text-align:center;margin:0 0 22px;"><a href="https://exemple/livret-yin.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Télécharger le livret Yin Yoga</a></div>
+          <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:14px 18px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:10px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Tarifs 2025-2026</div>
+    <div style="font-size:14px;color:#333;line-height:2;">
+      <strong>1 cours (Yin ou Hatha)</strong> — 340 €<br/>
+      <strong>Forfait 2 cours (Yin + Hatha)</strong> — 500 €<br/>
+      <span style="font-size:12px;color:#666;">Paiement sur AssoConnect lors de l'inscription</span>
+    </div>
+  </div>
+          <div style="text-align:center;margin:0 0 24px;"><a href="https://le-regard-se-pose.assoconnect.com/exemple-yoga-2025-2026" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire au yoga →</a></div>
+          <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
+        </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-dest">📥 Email ADMIN → <code>regardsepose@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Copie] Y-J1a — Camille MARTIN était présent·e</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Essai yoga termine - rejoindre les cours reguliers de yoga avec Florencia Garcia&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>
+        <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
+          <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ On espère que ce cours vous a plu !</span></div>
+        <div style="padding:30px 28px;">
+          <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Camille</strong>,</p>
+          <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous espérons que cette première séance de yoga vous a plu ! Si vous souhaitez poursuivre, voici comment rejoindre nos cours réguliers.</p>
+          <div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+    <div style="background:#2e7d32;padding:12px 18px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Rejoindre les cours réguliers</div>
+      <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">🧘 Saison 2025-2026</div>
+    </div>
+    <div style="padding:16px 18px;">
+      <div style="padding:10px 0;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours disponibles</div>
+        <div style="font-size:14px;color:#333;line-height:1.9;"><strong style="color:#1b5e20;">Yin yoga</strong> — 10h30–11h30<br/><strong style="color:#1b5e20;">Hatha yoga</strong> — 11h45–12h45<br/><strong style="color:#1b5e20;">Forfait yin + hatha</strong> — les deux cours</div>
+      </div>
+      <div style="padding:10px 0;border-top:1px solid #c8e6c9;margin-top:8px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:6px;">📍 Lieu</div>
+        <div style="font-size:14px;color:#333;line-height:1.7;"><strong>Espace Sorano</strong><br/><span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes</span> · <span style="font-size:12px;color:#666;">RER A — Vincennes</span></div>
       </div>
     </div>
-
-    <!-- Boutons -->
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-      <a href="tel:0622334455" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
-      <a href="https://mail.google.com/mail/?view=cm&amp;to=marie.dupont@gmail.com" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email Gmail</a>
-      <a href="sms:0622334455" style="display:inline-block;background:#2e7d32;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
-      <a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l'admin →</a>
+  </div>
+          <div style="text-align:center;margin:0 0 22px;"><a href="https://exemple/livret-yin.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Télécharger le livret Yin Yoga</a></div>
+          <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:14px 18px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:10px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Tarifs 2025-2026</div>
+    <div style="font-size:14px;color:#333;line-height:2;">
+      <strong>1 cours (Yin ou Hatha)</strong> — 340 €<br/>
+      <strong>Forfait 2 cours (Yin + Hatha)</strong> — 500 €<br/>
+      <span style="font-size:12px;color:#666;">Paiement sur AssoConnect lors de l'inscription</span>
     </div>
   </div>
-  <div style="background:#f5f5f5;padding:10px 24px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;">
-    Association Le Regard Se Pose · <a href="mailto:garciabraitbart@gmail.com" style="color:#999;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70
+          <div style="text-align:center;margin:0 0 24px;"><a href="https://le-regard-se-pose.assoconnect.com/exemple-yoga-2025-2026" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire au yoga →</a></div>
+          <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
+        </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-titre" id="yj1b">Y-J1b — Le lendemain, la personne était absente</div>
+<div class="pv-com">Ton bienveillant et bouton pour choisir une nouvelle date. ⚠️ Les personnes non pointées ne reçoivent rien. Là aussi, une <b>copie vous est adressée</b>. <span class="pv-h">Handler : <code>handleCronEssaiYogaJ1</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>alex@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> On vous attend bientôt pour votre cours d'essai yoga !</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">On prend de vos nouvelles - revenez quand vous voulez pour un autre essai yoga&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>
+        <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+          <span style="font-size:14px;font-weight:700;color:#e65100;">💙 Vous nous avez manqué !</span></div>
+        <div style="padding:30px 28px;">
+          <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Alex</strong>,</p>
+          <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous n'avons pas eu le plaisir de vous voir hier pour votre cours d'essai yoga. Pas d'inquiétude — re-inscrivez-vous quand vous voulez !</p>
+          <div style="text-align:center;margin:0 0 22px;">
+            <a href="https://app.tangoetvous.fr/essai-yoga.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">↩ Choisir une nouvelle date →</a>
+          </div>
+          <div style="text-align:center;margin:0 0 22px;"><a href="https://exemple/livret-hatha.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Télécharger le livret Hatha Yoga</a></div>
+          <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
+            <p style="font-size:13px;color:#666;margin:0;line-height:1.6;">Votre inscription est annulée automatiquement — pas de pénalité.<br/>Vous pouvez vous réinscrire à n'importe quelle date disponible.</p>
+          </div>
+          <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
+        </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-dest">📥 Email ADMIN → <code>regardsepose@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Copie] Y-J1b — Alex DUPONT était absent·e</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">On prend de vos nouvelles - revenez quand vous voulez pour un autre essai yoga&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>
+        <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+          <span style="font-size:14px;font-weight:700;color:#e65100;">💙 Vous nous avez manqué !</span></div>
+        <div style="padding:30px 28px;">
+          <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Alex</strong>,</p>
+          <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous n'avons pas eu le plaisir de vous voir hier pour votre cours d'essai yoga. Pas d'inquiétude — re-inscrivez-vous quand vous voulez !</p>
+          <div style="text-align:center;margin:0 0 22px;">
+            <a href="https://app.tangoetvous.fr/essai-yoga.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">↩ Choisir une nouvelle date →</a>
+          </div>
+          <div style="text-align:center;margin:0 0 22px;"><a href="https://exemple/livret-hatha.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Télécharger le livret Hatha Yoga</a></div>
+          <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
+            <p style="font-size:13px;color:#666;margin:0;line-height:1.6;">Votre inscription est annulée automatiquement — pas de pénalité.<br/>Vous pouvez vous réinscrire à n'importe quelle date disponible.</p>
+          </div>
+          <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
+        </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-titre" id="ymod">Y-mod — Vous déplacez un essai yoga</div>
+<div class="pv-com">Envoyé quand vous changez la date ou le cours d'un essai depuis la fiche (✏️). <span class="pv-h">Handler : <code>handleNotifyEssaiYogaModifie</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Votre cours d'essai de yoga a été modifié — Cours de yoga avec Florencia Garcia</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Essai yoga reprogramme - retrouvez les nouveaux details ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>
+    <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre cours d'essai yoga a été modifié</span></div>
+    <div style="padding:30px 28px;">
+      <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Camille</strong>,</p>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre cours d'essai yoga a été déplacé. Voici votre nouveau créneau :</p>
+      <div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+    <div style="background:#2e7d32;padding:14px 18px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre nouveau créneau</div>
+      <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">📅 Jeudi 20 août 2026</div>
+    </div>
+    <div style="padding:16px 18px;"><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours</div><div style="font-size:14px;color:#333;line-height:1.9;"><span style="color:#aaa;text-decoration:line-through;font-size:13px;">Dimanche 6 sept. — Yin yoga</span><br/><strong style="color:#1b5e20;">Jeudi 20 août. — Hatha yoga</strong></div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Horaire</div><div style="font-size:14px;color:#333;line-height:1.9;">11h45–12h45</div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Lieu</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong>Espace Sorano</strong><br/><span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes · RER A — Vincennes</span></div></div><div style="padding:10px 0;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Tarif</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong>15€</strong></div></div></div>
   </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     YI0 — Récap admin · Inscription directe yoga
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="yi0">
-<div class="email-label"><strong>YI0</strong> — Récap admin · Inscription directe yoga &nbsp;|&nbsp; <em>Admin inscrit un élève directement depuis l'onglet Yoga → Inscrire Élève</em></div>
-<div class="email-subj">Objet : <span>[Yoga inscrit] Marie DUPONT — Yin yoga — Vincennes — ✓ inscrit·e</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;color:#222;border:1px solid #ddd;border-radius:6px;overflow:hidden;">
-  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
-    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Inscription yoga — action admin</div>
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://exemple/livret-hatha.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Télécharger le livret Hatha Yoga</a></div>
+      <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">En cas de question, n'hésitez pas à nous contacter.</p>
+      <div style="text-align:center;margin:0 0 24px;"><a href="mailto:regardsepose@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a></div>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-titre" id="yi1">YI0 + YI1 — Inscription régulière validée</div>
+<div class="pv-com">Envoyé quand vous inscrivez quelqu'un aux cours réguliers. L'élève reçoit YI1 (bienvenue, horaires hebdomadaires, adhésion Sorano, livret), vous recevez YI0 à l'adresse yoga. <span class="pv-h">Handler : <code>handleNotifyYogaInscriptionValidee</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Bienvenue dans votre cours de yoga ! — Cours de yoga avec Florencia Garcia</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Bienvenue dans les cours de yoga reguliers - votre inscription est confirmee pour la saison 2026-2027&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>
+      <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue dans votre cours de yoga !</span></div>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Camille</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription est confirmée pour la saison 2026-2027. Nous sommes ravis de vous accueillir dans notre cours de yoga. Voici tout ce que vous devez savoir pour bien démarrer.</p>
+        <div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+    <div style="background:#2e7d32;padding:14px 18px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre cours de yoga · Saison 2026-2027</div>
+      <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">🧘 Yin Yoga</div>
+    </div>
+    <div style="padding:16px 18px;"><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong>Yin Yoga</strong></div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Horaire hebdomadaire</div><div style="font-size:14px;color:#333;line-height:1.9;">10h30–11h30</div></div><div style="padding:10px 0;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Lieu</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong>Espace Sorano</strong><br/><span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes</span><br/><span style="font-size:12px;color:#666;">RER A — Vincennes</span></div></div></div>
   </div>
-  <div style="padding:24px;">
-    <!-- Encadré principal -->
-    <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
-      <div style="background:#D4AF37;padding:10px 16px;display:flex;align-items:center;gap:12px;">
-        <div style="flex:1;">
-          <div style="font-size:18px;font-weight:700;color:#111;">Marie DUPONT</div>
-          <div style="font-size:12px;color:#333;margin-top:2px;">marie.dupont@gmail.com &nbsp;·&nbsp; 06 22 33 44 55</div>
+        <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
+    <p style="font-size:14px;color:#f57f17;font-weight:700;margin:0 0 10px;">🏛 Adhésion à l'Espace Sorano</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 0px;">Il est aussi nécessaire de souscrire une adhésion à l'Espace Sorano pour suivre les cours qui y ont lieu.</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous vous enverrons le lien pour régler cette adhésion séparément dans les prochains jours.</p>
+  </div>
+        <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Pour votre premier cours</div>
+    <ul style="font-size:14px;color:#333;line-height:2;margin:0;padding-left:20px;">
+      <li>Tenue confortable (pantalon, t-shirt souple)</li>
+      <li>Tapis de yoga fourni — vous pouvez apporter le vôtre si vous le souhaitez</li>
+      <li>Arrivez 5 minutes en avance pour l'installation</li>
+    </ul>
+  </div>
+        <div style="text-align:center;margin:0 0 22px;"><a href="https://exemple/livret-yin.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Télécharger le livret Yin Yoga</a></div>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-dest">📥 Email ADMIN → <code>regardsepose@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Yoga] Inscription Camille MARTIN — Yin Yoga — 2026-2027</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription directe</div></div>
+      <div style="padding:20px 24px;">
+        <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+          <div style="background:#D4AF37;padding:10px 16px;">
+            <div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678</div>
+          </div>
+          <div style="background:#fffdf8;padding:14px 16px;">
+            <div style="font-size:15px;font-weight:700;color:#111;">🧘 Yin Yoga</div>
+            <div style="font-size:13px;color:#333;margin-top:4px;">Saison 2026-2027 · CB 1× · 340€</div>
+            <div style="font-size:12px;color:#666;margin-top:2px;">10h30–11h30</div>
+          </div>
         </div>
-        <span class="badge-val">✓ Inscrit·e</span>
-      </div>
-      <div style="background:#fffdf8;padding:14px 16px;">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <tr style="border-bottom:1px solid #f0e8d0;"><td style="padding:6px 4px;color:#888;width:36%;">Cours</td><td style="padding:6px 4px;color:#222;font-weight:600;">Yin yoga</td></tr>
-          <tr style="border-bottom:1px solid #f0e8d0;"><td style="padding:6px 4px;color:#888;">Saison</td><td style="padding:6px 4px;color:#222;font-weight:600;">2026-2027</td></tr>
-          <tr style="border-bottom:1px solid #f0e8d0;"><td style="padding:6px 4px;color:#888;">Paiement</td><td style="padding:6px 4px;color:#222;font-weight:600;">Virement</td></tr>
-          <tr style="border-bottom:1px solid #f0e8d0;"><td style="padding:6px 4px;color:#888;">Montant</td><td style="padding:6px 4px;color:#222;font-weight:600;">340 €</td></tr>
-          <tr><td style="padding:6px 4px;color:#888;">Paiement Sorano</td><td style="padding:6px 4px;color:#222;font-weight:600;">Non</td></tr>
-        </table>
-      </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="tel:0612345678" style="display:inline-block;background:#2e7d32;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+          <a href="mailto:camille@test.fr" style="display:inline-block;background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a>
+          <a href="sms:0612345678" style="display:inline-block;background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        </div>
+        <p style="font-size:11px;color:#888;margin-top:16px;">Email YI0 — inscription directe admin · Formulaire admin</p>
+      </div></div></body></html></div><div class="pv-titre" id="yi1forfait">YI1 — Forfait Yin + Hatha (deux livrets)</div>
+<div class="pv-com">En formule forfait, les <b>deux</b> boutons de livret apparaissent côte à côte, et les horaires des deux cours sont listés. <span class="pv-h">Handler : <code>handleNotifyYogaInscriptionValidee</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Bienvenue dans votre cours de yoga ! — Cours de yoga avec Florencia Garcia</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Bienvenue dans les cours de yoga reguliers - votre inscription est confirmee pour la saison 2026-2027&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>
+      <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue dans votre cours de yoga !</span></div>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Camille</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription est confirmée pour la saison 2026-2027. Nous sommes ravis de vous accueillir dans notre cours de yoga. Voici tout ce que vous devez savoir pour bien démarrer.</p>
+        <div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+    <div style="background:#2e7d32;padding:14px 18px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre cours de yoga · Saison 2026-2027</div>
+      <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">🧘 Yin + Hatha Yoga</div>
     </div>
-
-    <!-- Note pas d'email élève -->
-    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:20px;padding:12px 14px;background:#f5f5f5;border-radius:6px;border:1px solid #e0e0e0;">
-      <span style="font-size:16px;flex-shrink:0;">ℹ️</span>
-      <div style="font-size:12px;color:#555;line-height:1.6;">Action manuelle admin. L'email <strong>YI1 Bienvenue yoga</strong> peut être envoyé manuellement depuis la fiche élève si souhaité.</div>
+    <div style="padding:16px 18px;"><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong>Yin + Hatha Yoga</strong></div></div><div style="padding:10px 0;border-bottom:1px solid rgba(46,125,50,0.2);"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Horaire hebdomadaire</div><div style="font-size:14px;color:#333;line-height:1.9;">Yin Yoga : 10h30–11h30<br/>Hatha Yoga : 11h45–12h45</div></div><div style="padding:10px 0;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Lieu</div><div style="font-size:14px;color:#333;line-height:1.9;"><strong>Espace Sorano</strong><br/><span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes</span><br/><span style="font-size:12px;color:#666;">RER A — Vincennes</span></div></div></div>
+  </div>
+        <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
+    <p style="font-size:14px;color:#f57f17;font-weight:700;margin:0 0 10px;">🏛 Adhésion à l'Espace Sorano</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 0px;">Il est aussi nécessaire de souscrire une adhésion à l'Espace Sorano pour suivre les cours qui y ont lieu.</p>
+    <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nous vous enverrons le lien pour régler cette adhésion séparément dans les prochains jours.</p>
+  </div>
+        <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Pour votre premier cours</div>
+    <ul style="font-size:14px;color:#333;line-height:2;margin:0;padding-left:20px;">
+      <li>Tenue confortable (pantalon, t-shirt souple)</li>
+      <li>Tapis de yoga fourni — vous pouvez apporter le vôtre si vous le souhaitez</li>
+      <li>Arrivez 5 minutes en avance pour l'installation</li>
+    </ul>
+  </div>
+        <div style="text-align:center;margin:0 0 22px;"><a href="https://exemple/livret-yin.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Livret Yin Yoga</a><a href="https://exemple/livret-hatha.pdf" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:11px 22px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin:4px 6px;">📖 Livret Hatha Yoga</a></div>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-dest">📥 Email ADMIN → <code>regardsepose@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Yoga] Inscription Camille MARTIN — Yin + Hatha Yoga — 2026-2027</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Nouvelle inscription directe</div></div>
+      <div style="padding:20px 24px;">
+        <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+          <div style="background:#D4AF37;padding:10px 16px;">
+            <div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr · 0612345678</div>
+          </div>
+          <div style="background:#fffdf8;padding:14px 16px;">
+            <div style="font-size:15px;font-weight:700;color:#111;">🧘 Yin + Hatha Yoga</div>
+            <div style="font-size:13px;color:#333;margin-top:4px;">Saison 2026-2027 · Virement 1× · 500€</div>
+            <div style="font-size:12px;color:#666;margin-top:2px;">Yin Yoga : 10h30–11h30 / Hatha Yoga : 11h45–12h45</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <a href="tel:0612345678" style="display:inline-block;background:#2e7d32;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
+          <a href="mailto:camille@test.fr" style="display:inline-block;background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a>
+          <a href="sms:0612345678" style="display:inline-block;background:#555;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">💬 SMS</a>
+        </div>
+        <p style="font-size:11px;color:#888;margin-top:16px;">Email YI0 — inscription directe admin · Formulaire admin</p>
+      </div></div></body></html></div><div class="pv-titre" id="yelevemod">YI-mod — Vous changez le cours d'un élève régulier</div>
+<div class="pv-com">Envoyé quand vous modifiez la formule d'un élève déjà inscrit (par exemple Yin seul → forfait). ⚠️ Cet email <b>n'apparaissait dans aucune maquette</b> jusqu'ici. <span class="pv-h">Handler : <code>handleNotifyYogaEleveModifie</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Votre inscription au yoga a été modifiée — Cours de yoga avec Florencia Garcia</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre inscription au yoga a ete mise a jour - Yin + Hatha Yoga saison 2026-2027&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;"><span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre inscription a été mise à jour</span></div>
+      <div style="padding:30px 28px;">
+        <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Camille</strong>,</p>
+        <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription au cours de yoga a été modifiée. Voici le récapitulatif mis à jour.</p>
+        <div style="background:#f1f8f1;border:2px solid #2e7d32;border-radius:10px;overflow:hidden;margin:0 0 22px;">
+      <div style="background:#2e7d32;padding:14px 18px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#c8e6c9;font-weight:700;">Votre cours de yoga · Saison 2026-2027</div>
+        <div style="font-size:17px;font-weight:700;color:#fff;margin-top:4px;">🧘 Yin + Hatha Yoga</div>
+      </div>
+      <div style="padding:16px 18px;"><div style="padding:12px 0;border-bottom:1px solid rgba(46,125,50,0.2);">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Cours</div>
+          <div style="font-size:14px;color:#333;">
+            <span style="text-decoration:line-through;color:#c62828;">Yin Yoga</span>
+            &nbsp;→&nbsp;
+            <strong style="color:#2e7d32;">Yin + Hatha Yoga</strong>
+          </div>
+        </div><div style="padding:12px 0;border-top:1px solid rgba(46,125,50,0.2);">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#2e7d32;font-weight:700;margin-bottom:8px;">Paiement</div>
+      <div style="font-size:14px;color:#333;">CB 1× · <strong>500€</strong></div>
+    </div></div>
     </div>
+        <p style="font-size:13px;color:#555;margin:0 0 24px;line-height:1.6;">Si vous avez la moindre question, n'hésitez pas à nous contacter.</p>
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="mailto:regardsepose@gmail.com" style="display:inline-block;background:#fff;color:#2e7d32;border:2px solid #2e7d32;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:700;text-decoration:none;">Nous contacter →</a>
+        </div>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div></div></body></html></div><div class="pv-dest">📥 Email ADMIN → <code>regardsepose@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> [Yoga] Modification — Camille MARTIN · Yin + Hatha Yoga</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;"><div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA</div><div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Modification élève yoga</div></div>
+      <div style="padding:20px 24px;">
+        <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+          <div style="background:#D4AF37;padding:10px 16px;">
+            <div style="font-size:18px;font-weight:700;color:#111;">Camille MARTIN</div>
+            <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr</div>
+          </div>
+          <div style="background:#fffdf8;padding:14px 16px;">
+            <div style="font-size:13px;margin-bottom:6px;"><span style="text-decoration:line-through;color:#c62828;">Yin Yoga</span> → <strong style="color:#2e7d32;">Yin + Hatha Yoga</strong></div>
+            <div style="font-size:12px;color:#555;margin-top:4px;">Saison 2026-2027 · CB 1× · 500€</div>
+          </div>
+        </div>
+        <a href="mailto:camille@test.fr" style="display:inline-block;background:#1565c0;color:#fff;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email</a>
+      </div></div></body></html></div><div class="pv-titre" id="yfin">Y-fin — Email de fin de saison (15 juin)</div>
+<div class="pv-com">Cron annuel du 15 juin : remercie pour la saison écoulée et propose la réinscription pour la suivante, avec le lien AssoConnect yoga de la saison à venir. ⚠️ Absent des anciennes maquettes. <span class="pv-h">Handler : <code>handleCronYogaFinSaison</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Merci pour cette belle saison 🧘 · Inscriptions ouvertes pour 2026–2027</div>
+<div class="pv-mail"><!DOCTYPE html><html lang="fr"><body style="margin:0;padding:0;background:#0e0e18;font-family:Arial,sans-serif;">
+<div style="max-width:580px;margin:0 auto;">
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-      <a href="tel:0622334455" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 Appeler</a>
-      <a href="https://mail.google.com/mail/?view=cm&amp;to=marie.dupont@gmail.com" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ Email Gmail</a>
-      <a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#f5f5f5;color:#333;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #ddd;">Ouvrir l'admin →</a>
+  <!-- En-tête violet dégradé -->
+  <div style="background:linear-gradient(135deg,#1a1030 0%,#2d1b5e 100%);border-radius:14px 14px 0 0;padding:32px 36px 26px;text-align:center;border:1.5px solid #a78bfa;border-bottom:none;">
+    <div style="font-size:32px;margin-bottom:10px;letter-spacing:2px;">🧘</div>
+    <div style="font-family:Georgia,serif;font-size:11px;color:#a78bfa;letter-spacing:3.5px;text-transform:uppercase;margin-bottom:8px;">Cours de Yoga</div>
+    <div style="font-family:Georgia,serif;font-size:24px;color:#ffffff;font-weight:normal;letter-spacing:1px;">Florencia Garcia</div>
+    <div style="margin-top:14px;">
+      <span style="font-size:11px;color:#c4b0fa;letter-spacing:1.5px;text-transform:uppercase;">Fin de saison 2025–2026</span>
+      <span style="font-size:14px;color:#a78bfa;font-weight:700;margin:0 6px;">→</span>
+      <span style="font-size:11px;color:#a78bfa;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Rentrée 2026–2027</span>
     </div>
   </div>
-  <div style="background:#f5f5f5;padding:10px 24px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;">
-    Association Le Regard Se Pose · <a href="mailto:garciabraitbart@gmail.com" style="color:#999;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70
+
+  <!-- Corps blanc -->
+  <div style="background:#ffffff;padding:36px 40px 32px;font-family:Arial,sans-serif;font-size:15px;line-height:1.8;color:#2c2c2c;border:1.5px solid #a78bfa;border-top:none;border-bottom:none;">
+
+    <p style="margin:0 0 20px;">Bonjour Camille,</p>
+
+    <div style="background:#f8f4ff;border-left:3px solid #a78bfa;border-radius:0 8px 8px 0;padding:14px 18px;margin:0 0 24px;">
+      <span style="font-size:13px;color:#7c5cbf;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Dernier cours de la saison</span><br>
+      <span style="font-size:18px;color:#2d1b5e;font-weight:700;">Jeudi 20 août</span>
+    </div>
+
+    <p style="margin:0 0 18px;">
+      Je vous remercie pour cette année passée ensemble et pour votre confiance.
+      J'ai eu beaucoup de plaisir à partager les pratiques avec vous et je vous souhaite
+      à tous un <strong style="color:#2d1b5e;">très bel été</strong>&nbsp;🌞
+    </p>
+
+    <div style="text-align:center;margin:28px 0 24px;">
+      <span style="font-size:18px;opacity:0.5;">🌙 &nbsp;✦&nbsp; ☀️</span>
+    </div>
+
+    <p style="margin:0 0 10px;">
+      Pour ceux qui souhaitent réserver une place pour la rentrée <strong>2026–2027</strong>,
+      vous pouvez déjà le faire ici&nbsp;:
+    </p>
+
+    <div style="text-align:center;margin:20px 0 32px;">
+      <a href="https://le-regard-se-pose.assoconnect.com/exemple-yoga-2026-2027"
+         style="display:inline-block;background:#a78bfa;color:#ffffff;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:700;padding:15px 30px;border-radius:10px;letter-spacing:0.3px;">
+        🧘 Réserver ma place pour 2026–2027
+      </a>
+    </div>
+
+    <p style="margin:0 0 10px;">
+      Et si vous voulez soutenir mes cours de Yoga, n'hésitez pas à laisser un avis Google&nbsp;:
+    </p>
+
+    <div style="text-align:center;margin:20px 0 32px;">
+      <a href="https://g.page/r/Cc3KZ-LLiNFJEBM/review"
+         style="display:inline-block;background:#ffffff;color:#7c5cbf;text-decoration:none;font-family:Arial,sans-serif;font-size:15px;font-weight:700;padding:15px 30px;border-radius:10px;letter-spacing:0.3px;border:2px solid #a78bfa;">
+        ⭐ Laisser un avis Google
+      </a>
+    </div>
+
+    <div style="border-top:1px solid #ede8ff;padding-top:22px;margin-top:8px;">
+      <p style="margin:0 0 4px;">Amicalement,</p>
+      <p style="margin:0;font-family:Georgia,serif;font-size:18px;color:#7c5cbf;font-style:italic;">Florencia</p>
+    </div>
+
   </div>
+
+  <!-- Pied de page -->
+  <div style="background:linear-gradient(135deg,#1a1030 0%,#2d1b5e 100%);border-radius:0 0 14px 14px;padding:16px 36px;text-align:center;font-family:Arial,sans-serif;font-size:11px;color:#c4b0fa;border:1.5px solid #a78bfa;border-top:none;">
+    Association Le Regard Se Pose &nbsp;·&nbsp;
+    <a href="mailto:garciabraitbart@gmail.com" style="color:#a78bfa;text-decoration:none;">garciabraitbart@gmail.com</a>
+    &nbsp;·&nbsp; 06 63 23 35 70
+  </div>
+
 </div>
-</div>
+</body></html></div><div class="pv-titre" id="ydate">Y-date — Vous modifiez le calendrier des cours</div>
+<div class="pv-com">Envoyé aux élèves yoga quand vous ajoutez ou retirez des dates dans le calendrier. ⚠️ Absent des anciennes maquettes. <span class="pv-h">Handler : <code>handleNotifyYogaDate</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 📅 Modifications de vos cours de yoga — Cours de yoga avec Florencia Garcia</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;">
+    <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div></div>
+    <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+      <span style="font-size:14px;font-weight:700;color:#e65100;">📅 Modification de vos cours de yoga</span>
+    </div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour,</p>
+      <p style="font-size:15px;color:#333;margin:0 0 16px;">Des modifications ont été apportées au calendrier de yoga :</p>
+      <div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:8px;padding:14px 18px;margin:0 0 16px;">
+        <p style="font-size:13px;font-weight:700;color:#2e7d32;margin:0 0 8px;">📅 Date ajoutée</p>
+        <ul style="margin:0;padding-left:18px;"><li style="margin:4px 0;color:#2e7d32;"><strong>+ Dimanche 6 septembre 2026</strong></li></ul></div>
+      <div style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:14px 18px;margin:0 0 16px;">
+        <p style="font-size:13px;font-weight:700;color:#c62828;margin:0 0 8px;">✕ Date annulée</p>
+        <ul style="margin:0;padding-left:18px;"><li style="margin:4px 0;color:#c62828;"><strong>✕ Jeudi 20 août 2026</strong></li></ul></div>
+      <p style="font-size:14px;color:#888;margin:20px 0 0;">Pour toute question, n'hésitez pas à me contacter.</p>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/><strong style="color:#222;">Florencia Garcia</strong><br/><span style="color:#444;">Association Le Regard Se Pose</span><br/><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/><span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
+    </div>
+    <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70</div>
+  </div></body></html></div>
+
+<div class="pv-titre" id="absents" style="border-left-color:#c62828;">Ce que les anciennes maquettes annonçaient et qui n'existe pas</div>
+<div class="pv-com">
+  <table class="tbl">
+    <tr><th>Ancienne section</th><th>Réalité dans le code</th></tr>
+    <tr><td><b>Y-full</b> — « cette date précise est complète (14/14) »</td>
+        <td>Aucun email de ce type dans le worker. Le formulaire public gère lui-même le cas en amont ; une inscription qui arrive produit Y1 ou Y-att, jamais Y-full.</td></tr>
+    <tr><td><b>Y2</b> (et ses variantes « plus de 3 jours » / « moins de 3 jours »)</td>
+        <td>N'existe pas comme email distinct. L'inscription étant confirmée d'emblée, c'est Y1 qui joue ce rôle ; l'ancienne maquette gardait Y2 d'une époque où une validation manuelle était prévue.</td></tr>
+  </table>
+  <p style="margin-top:14px;">À l'inverse, <b>trois emails yoga bien réels ne figuraient dans aucune maquette</b> : la modification du cours d'un élève régulier, l'email de fin de saison du 15 juin, et la notification de changement de calendrier. Ils sont désormais dans la page.</p>
 </div>
 
-<!-- ═══════════════════════════════════════════════
+<div class="pv-titre" id="notifs" style="border-left-color:#5c9dc2;">Notifications — toast, panel 🔔 et push OS</div>
+<div class="pv-main">✍️ <b>Section rédigée à la main</b>, contrairement aux emails ci-dessus :
+les notifications (toast, panel 🔔, push OS) ne passent pas par un gabarit qu'on puisse exécuter.
+Elles sont donc à vérifier manuellement en cas de changement.</div>
+<div class="pv-notifs"><!-- ═══════════════════════════════════════════════
      NOTIFICATIONS ADMIN — Panel 🔔 + Toast
      ═══════════════════════════════════════════════ -->
 <div class="email-block" id="notifs-admin">
@@ -312,704 +607,20 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
 
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     Y1 — Confirmation automatique (élève · statut='confirme')
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="y1">
-<div class="email-label"><strong>Y1</strong> — Confirmation automatique &nbsp;|&nbsp; <em>Envoyé immédiatement à l'inscription depuis essai-yoga.html si une place est disponible (max 14 / cours) — pas de validation admin · statut='confirme'</em></div>
-<div class="email-subj">Objet : <span>Votre essai yoga est confirmé — Cours de yoga avec Florencia Garcia</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-  </div>
-  <!-- Bandeau vert confirmation -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre essai yoga est confirmé !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription à notre cours d'essai yoga est bien enregistrée. Nous avons hâte de vous accueillir !</p>
-
-    <!-- Yoga box -->
-    <div class="yoga-box">
-      <div class="yoga-box-header">
-        <div class="yoga-box-header-title">Votre essai yoga</div>
-        <div class="yoga-box-header-date">📅 Mardi 15 septembre 2026</div>
-      </div>
-      <div class="yoga-box-body">
-        <div class="yoga-section">
-          <div class="yoga-section-name">Cours</div>
-          <div class="yoga-detail"><strong>Yin yoga</strong></div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Horaire</div>
-          <div class="yoga-detail">Mardi · 10h30–11h30</div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Lieu</div>
-          <div class="yoga-detail">
-            Espace Sorano<br/>
-            <span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes · RER A Vincennes</span>
-          </div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Tarif</div>
-          <div class="yoga-detail"><strong style="color:#2e7d32;">Gratuit</strong> <span style="font-size:12px;color:#666;">(2 premiers cours de septembre)</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Encadré prévenance -->
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">En cas d'empêchement, merci de nous prévenir même au dernier moment afin que nous puissions proposer la place à quelqu'un d'autre. Merci pour votre compréhension !</p>
-    </div>
-
-    <div style="text-align:center;margin:0 0 24px;">
-      <a href="mailto:regardsepose@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="color:#444;">Association Le Regard Se Pose</span><br/>
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>
-    <span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-  </div>
-</div>
-</div>
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     Y-att — Cours yoga complet · Liste d'attente
-     (≥14 inscrits réguliers dans cours_yoga pour ce cours)
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="y-att">
-<div class="email-label"><strong>Y-att</strong> — Cours complet — Liste d'attente &nbsp;|&nbsp; <em>Cours régulier plein (≥ 14 dans cours_yoga pour ce cours) → statut='attente' dans inscriptions_essai_yoga · L'admin peut valider manuellement si une place se libère</em></div>
-<div class="email-subj">Objet : <span>Votre inscription est en liste d'attente — Cours de yoga avec Florencia Garcia</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre demande essai yoga enregistree - vous serez contacte(e) des qu'une place se libere"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-  </div>
-  <!-- Bandeau orange attente -->
-  <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
-    <span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Ce cours est complet — vous êtes sur liste d'attente</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Sophie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Merci pour votre intérêt pour nos cours de yoga ! Votre inscription a bien été enregistrée, cependant le cours que vous avez choisi est actuellement complet pour cette saison.</p>
-
-    <!-- Yoga box -->
-    <div class="yoga-box">
-      <div class="yoga-box-header">
-        <div class="yoga-box-header-title">Votre demande d'essai</div>
-        <div class="yoga-box-header-date">📅 Mardi 15 septembre 2026</div>
-      </div>
-      <div class="yoga-box-body">
-        <div class="yoga-section">
-          <div class="yoga-section-name">Cours</div>
-          <div class="yoga-detail"><strong>Yin yoga</strong></div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Horaire</div>
-          <div class="yoga-detail">Mardi · 10h30–11h30</div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Lieu</div>
-          <div class="yoga-detail">
-            Espace Sorano<br/>
-            <span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes · RER A Vincennes</span>
-          </div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Statut</div>
-          <div class="yoga-detail"><span class="badge-att">⏳ Liste d'attente</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Encadré orange explication -->
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
-      <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">Nos cours sont limités à 14 participants</p>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Des places se libèrent parfois en cours d'année. Nous vous contacterons dès qu'une place se libère dans ce cours. N'hésitez pas à nous contacter pour plus d'informations.</p>
-    </div>
-
-    <div style="text-align:center;margin:0 0 24px;">
-      <a href="mailto:regardsepose@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">Nous vous contacterons dès qu'une place se libère.<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="color:#444;">Association Le Regard Se Pose</span><br/>
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>
-    <span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     Y-full — Date d'essai complète · Choisir une autre date
-     (≥14 total ce jour : cours_yoga non-absents + inscriptions_essai_yoga pour cette date)
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="y-full">
-<div class="email-label"><strong>Y-full</strong> — Date d'essai complète &nbsp;|&nbsp; <em>Cette date spécifique est pleine (≥ 14 total : inscrits réguliers non absents + essais du jour) → pas d'INSERT ou INSERT avec statut spécial · La personne peut choisir une autre date</em></div>
-<div class="email-subj">Objet : <span>Ce créneau est complet — choisissez une autre date — Cours de yoga avec Florencia Garcia</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-  </div>
-  <!-- Bandeau orange -->
-  <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
-    <span style="font-size:14px;font-weight:700;color:#e65100;">⏳ Ce créneau est complet pour cette date</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Merci pour votre intérêt pour notre cours d'essai yoga ! Malheureusement, la date que vous avez choisie est complète. D'autres dates sont disponibles — nous vous invitons à en choisir une.</p>
-
-    <!-- Yoga box — date barrée -->
-    <div class="yoga-box">
-      <div class="yoga-box-header" style="background:#b71c1c;">
-        <div class="yoga-box-header-title">Cours d'essai demandé</div>
-        <div class="yoga-box-header-date" style="opacity:0.6;text-decoration:line-through;">📅 Mardi 15 septembre 2026</div>
-      </div>
-      <div class="yoga-box-body">
-        <div class="yoga-section">
-          <div class="yoga-section-name">Cours</div>
-          <div class="yoga-detail" style="opacity:0.6;text-decoration:line-through;"><strong>Yin yoga</strong></div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Horaire</div>
-          <div class="yoga-detail" style="opacity:0.6;text-decoration:line-through;">Mardi · 10h30–11h30</div>
-        </div>
-      </div>
-      <div class="yoga-total" style="background:#b71c1c;">⛔ Ce créneau est complet (14 / 14 participants)</div>
-    </div>
-
-    <!-- Encadré orange explication -->
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
-      <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">Créneau complet pour cette date</p>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Nos cours d'essai sont limités à 14 participants (élèves réguliers + essai). Ce créneau est complet pour le mardi 15 septembre. D'autres dates sont disponibles — vous pouvez vous inscrire à un prochain cours d'essai.</p>
-    </div>
-
-    <div style="text-align:center;margin:0 0 24px;">
-      <a href="https://app.tangoetvous.fr/essai-yoga.html" style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">↩ Choisir une autre date →</a>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis,<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="color:#444;">Association Le Regard Se Pose</span><br/>
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>
-    <span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     Y2 — Confirmation par l'admin · >3j · sans bouton 👍
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="y2-gt3">
-<div class="email-label"><strong>Y2</strong> — Renvoi manuel (rappel) · &gt;3j &nbsp;|&nbsp; <em>⚠️ Plus envoyé automatiquement (l'inscription est désormais directement confirmée via Y1). Peut être renvoyé manuellement depuis la fiche admin si nécessaire · &gt;3 jours avant le cours</em></div>
-<div class="email-subj">Objet : <span>Votre essai yoga est confirmé — Cours de yoga avec Florencia Garcia</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-  </div>
-  <!-- Bandeau vert confirmé -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre cours d'essai yoga est confirmé !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Bonne nouvelle ! Votre place est confirmée pour votre cours d'essai yoga. Nous avons hâte de vous accueillir !</p>
-
-    <!-- Yoga box -->
-    <div class="yoga-box">
-      <div class="yoga-box-header">
-        <div class="yoga-box-header-title">Votre essai yoga</div>
-        <div class="yoga-box-header-date">📅 Mardi 15 septembre 2026</div>
-      </div>
-      <div class="yoga-box-body">
-        <div class="yoga-section">
-          <div class="yoga-section-name">Cours</div>
-          <div class="yoga-detail"><strong>Yin yoga</strong></div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Horaire</div>
-          <div class="yoga-detail">Mardi · 10h30–11h30</div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Lieu</div>
-          <div class="yoga-detail">
-            Espace Sorano<br/>
-            <span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes · RER A Vincennes</span><br/>
-            <a href="https://maps.google.com/?q=16+rue+Charles+Pathé+94300+Vincennes" style="color:#2e7d32;font-size:12px;">🗺 Voir sur Google Maps</a>
-          </div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Tarif</div>
-          <div class="yoga-detail"><strong style="color:#2e7d32;">Gratuit</strong> <span style="font-size:12px;color:#666;">(2 premiers cours de septembre)</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Rappel J-3 à venir -->
-    <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
-      <p style="font-size:13px;color:#666;margin:0;">🗓 Vous recevrez un rappel 3 jours avant votre cours.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="color:#444;">Association Le Regard Se Pose</span><br/>
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>
-    <span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     Y2 — Confirmation par l'admin · ≤3j · avec bouton 👍
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="y2-lt3">
-<div class="email-label"><strong>Y2</strong> — variante · ≤3j &nbsp;|&nbsp; <em>⚠️ Plus envoyé automatiquement. Renvoi manuel uniquement · ≤3 jours → bouton 👍 présent immédiatement, pas de mention rappel</em></div>
-<div class="email-subj">Objet : <span>Votre essai yoga est confirmé — Cours de yoga avec Florencia Garcia</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-  </div>
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre cours d'essai yoga est confirmé !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre place est confirmée. Le cours a lieu dans moins de 3 jours — nous vous attendons !</p>
-
-    <!-- Yoga box -->
-    <div class="yoga-box">
-      <div class="yoga-box-header">
-        <div class="yoga-box-header-title">Votre essai yoga</div>
-        <div class="yoga-box-header-date">📅 Mardi 15 septembre 2026</div>
-      </div>
-      <div class="yoga-box-body">
-        <div class="yoga-section">
-          <div class="yoga-section-name">Cours</div>
-          <div class="yoga-detail"><strong>Yin yoga</strong></div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Horaire</div>
-          <div class="yoga-detail">Mardi · 10h30–11h30</div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Lieu</div>
-          <div class="yoga-detail">
-            Espace Sorano<br/>
-            <span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes · RER A Vincennes</span><br/>
-            <a href="https://maps.google.com/?q=16+rue+Charles+Pathé+94300+Vincennes" style="color:#2e7d32;font-size:12px;">🗺 Voir sur Google Maps</a>
-          </div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Tarif</div>
-          <div class="yoga-detail"><strong style="color:#2e7d32;">Gratuit</strong> <span style="font-size:12px;color:#666;">(2 premiers cours de septembre)</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bouton 👍 confirmer présence -->
-    <div style="text-align:center;margin:0 0 16px;">
-      <a href="https://app.tangoetvous.fr/api/essai-yoga/confirmer?id=...&token=..." style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a>
-    </div>
-
-    <!-- Encadré prévenance annulation -->
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">En cas d'empêchement, merci de nous prévenir même au dernier moment afin que nous puissions proposer la place à quelqu'un d'autre. Merci pour votre compréhension !</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="color:#444;">Association Le Regard Se Pose</span><br/>
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>
-    <span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     Y3 — Rappel J-3 · bouton 👍 + encadré prévenance
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="y3">
-<div class="email-label"><strong>Y3</strong> — Rappel J-3 &nbsp;|&nbsp; <em>Cron quotidien · tous les inscrits confirmés (statut='confirme') dont l'essai yoga est dans 3 jours · bouton 👍 + encadré prévenance</em></div>
-<div class="email-subj">Objet : <span>Rappel — votre essai yoga a lieu dans 3 jours — Cours de yoga avec Florencia Garcia</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Rappel essai yoga dans 3 jours - confirmez votre presence en un clic"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-  </div>
-  <!-- Bandeau bleu rappel -->
-  <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
-    <span style="font-size:14px;font-weight:700;color:#1565c0;">🗓 Rappel — votre essai yoga a lieu dans 3 jours !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Dans 3 jours, rendez-vous pour votre essai yoga ! Voici tous les détails pour préparer votre séance.</p>
-
-    <!-- Yoga box -->
-    <div class="yoga-box">
-      <div class="yoga-box-header">
-        <div class="yoga-box-header-title">Votre essai yoga</div>
-        <div class="yoga-box-header-date">📅 Mardi 15 septembre 2026</div>
-      </div>
-      <div class="yoga-box-body">
-        <div class="yoga-section">
-          <div class="yoga-section-name">Cours</div>
-          <div class="yoga-detail"><strong>Yin yoga</strong></div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Horaire</div>
-          <div class="yoga-detail">Mardi · 10h30–11h30</div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Lieu</div>
-          <div class="yoga-detail">
-            Espace Sorano<br/>
-            <span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes · RER A Vincennes</span><br/>
-            <a href="https://maps.google.com/?q=16+rue+Charles+Pathé+94300+Vincennes" style="color:#2e7d32;font-size:12px;">🗺 Voir sur Google Maps</a>
-          </div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Tarif</div>
-          <div class="yoga-detail"><strong style="color:#2e7d32;">Gratuit</strong> <span style="font-size:12px;color:#666;">(2 premiers cours de septembre)</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bouton 👍 confirmer présence -->
-    <div style="text-align:center;margin:0 0 16px;">
-      <a href="https://app.tangoetvous.fr/api/essai-yoga/confirmer?id=...&token=..." style="display:inline-block;background:#2e7d32;color:#fff;padding:15px 36px;border-radius:8px;font-size:14px;font-weight:700;letter-spacing:1px;text-decoration:none;">👍 Je confirme ma présence</a>
-    </div>
-
-    <!-- Encadré prévenance annulation -->
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#5d4037;margin:0;line-height:1.7;">Merci de confirmer votre présence. En cas d'empêchement, prévenez-nous même au dernier moment afin que nous puissions proposer la place à quelqu'un d'autre. Merci pour votre compréhension !</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="color:#444;">Association Le Regard Se Pose</span><br/>
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>
-    <span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     YI1 — Bienvenue yoga (inscription validée)
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="yi1">
-<div class="email-label"><strong>YI1</strong> — Bienvenue yoga &nbsp;|&nbsp; <em>Envoyé lors de la validation de l'inscription régulière (admin inscrit directement OU valide depuis essai) · inclut livret et accès espace élève</em></div>
-<div class="email-subj">Objet : <span>Bienvenue dans votre cours de yoga ! — Cours de yoga avec Florencia Garcia</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Bienvenue dans les cours de yoga reguliers - votre inscription est confirmee"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-  </div>
-  <!-- Bandeau vert bienvenue -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue dans votre cours de yoga !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre inscription est confirmée pour la saison 2026-2027. Nous sommes ravis de vous accueillir dans notre cours de yoga. Voici tout ce que vous devez savoir pour bien démarrer.</p>
-
-    <!-- Yoga box -->
-    <div class="yoga-box">
-      <div class="yoga-box-header">
-        <div class="yoga-box-header-title">Votre cours de yoga · Saison 2026-2027</div>
-        <div class="yoga-box-header-date">🧘 Yin yoga</div>
-      </div>
-      <div class="yoga-box-body">
-        <div class="yoga-section">
-          <div class="yoga-section-name">Cours</div>
-          <div class="yoga-detail"><strong>Yin yoga</strong></div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Horaire hebdomadaire</div>
-          <div class="yoga-detail">Mardi · 10h30–11h30</div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Lieu</div>
-          <div class="yoga-detail">
-            Espace Sorano<br/>
-            <span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes · RER A Vincennes</span><br/>
-            <a href="https://maps.google.com/?q=16+rue+Charles+Pathé+94300+Vincennes" style="color:#2e7d32;font-size:12px;">🗺 Voir sur Google Maps</a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Encadré Adhésion Sorano — TODO: ajouter le lien de règlement quand l'utilisateur le fournit -->
-    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
-      <p style="font-size:14px;color:#f57f17;font-weight:700;margin:0 0 10px;">🏛 Adhésion à l'Espace Sorano</p>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Il est aussi nécessaire de souscrire une adhésion à l'Espace Sorano pour suivre les cours qui y ont lieu. Nous vous enverrons le lien pour régler cette adhésion séparément dans les prochains jours.</p>
-    </div>
-
-    <!-- Section Pour votre premier cours -->
-    <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Pour votre premier cours</div>
-      <ul style="font-size:14px;color:#333;line-height:2;margin:0;padding-left:20px;">
-        <li>Tenue confortable (pantalon, t-shirt souple)</li>
-        <li>Tapis de yoga fourni — vous pouvez apporter le vôtre si vous le souhaitez</li>
-        <li>Arrivez 5 minutes en avance pour l'installation</li>
-      </ul>
-    </div>
-
-    <!-- Livret -->
-    <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
-      <div style="font-size:12px;font-weight:700;color:#333;margin-bottom:8px;">📄 Livret d'information yoga</div>
-      <p style="font-size:13px;color:#555;margin:0 0 12px;line-height:1.6;">Retrouvez dans ce livret toutes les informations pratiques sur votre cours.</p>
-      <a href="#URL_LIVRET_YOGA_YIN" style="display:inline-block;background:#D4AF37;color:#111;padding:10px 22px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">Télécharger le livret →</a>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="color:#444;">Association Le Regard Se Pose</span><br/>
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>
-    <span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-  </div>
-</div>
-</div>
-</div>
-
-
-<!-- ═══════════════════════════════════════════════
-     Y-mod — Admin modifie un essai yoga (✏️)
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="y-mod">
-<div class="email-label"><strong>Y-mod</strong> — Admin modifie un essai yoga (✏️) &nbsp;|&nbsp; <em>Déclencheur : admin change la date ou le cours (yin/hatha/forfait) via ✏️ sur une fiche essai yoga · table inscriptions_essai_yoga</em></div>
-<div class="email-subj">Objet : <span>Votre cours d'essai de yoga a été modifié — Cours de yoga avec Florencia Garcia</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Essai yoga reprogramme - retrouvez les nouveaux details ci-dessous"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-  </div>
-  <!-- Bandeau bleu modification -->
-  <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
-    <span style="font-size:14px;font-weight:700;color:#1565c0;">📋 Votre cours d'essai yoga a été modifié</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre cours d'essai yoga a été déplacé. Voici votre nouveau créneau :</p>
-
-    <!-- Yoga box -->
-    <div class="yoga-box">
-      <div class="yoga-box-header">
-        <div class="yoga-box-header-title">Votre nouveau créneau</div>
-        <div class="yoga-box-header-date">📅 Mardi 22 septembre 2026</div>
-      </div>
-      <div class="yoga-box-body">
-        <div class="yoga-section">
-          <div class="yoga-section-name">Cours</div>
-          <div class="yoga-detail">
-            <span style="color:#aaa;text-decoration:line-through;font-size:13px;">Mardi 15 sept. — Yin yoga</span><br/>
-            <strong style="color:#1b5e20;">Mardi 22 sept. — Yin yoga</strong>
-          </div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Horaire</div>
-          <div class="yoga-detail">Mardi · 10h30–11h30</div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Lieu</div>
-          <div class="yoga-detail">
-            Espace Sorano<br/>
-            <span style="font-size:12px;">16 rue Charles Pathé, 94300 Vincennes · RER A Vincennes</span><br/>
-            <a href="https://maps.google.com/?q=16+rue+Charles+Pathé+94300+Vincennes" style="color:#2e7d32;font-size:12px;">🗺 Voir sur Google Maps</a>
-          </div>
-        </div>
-        <div class="yoga-section">
-          <div class="yoga-section-name">Tarif</div>
-          <div class="yoga-detail"><strong>15 €</strong></div>
-        </div>
-      </div>
-    </div>
-
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">En cas de question, n'hésitez pas à nous contacter.</p>
-
-    <!-- Bouton contact -->
-    <div style="text-align:center;margin:0 0 24px;">
-      <a href="mailto:regardsepose@gmail.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Nous contacter</a>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="color:#444;">Association Le Regard Se Pose</span><br/>
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>
-    <span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-  </div>
-</div>
-</div>
-
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     Y-J1a — Lendemain essai yoga · élève PRÉSENT
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="y-j1a">
-<div class="email-label"><strong>Y-J1a</strong> — Lendemain essai yoga · élève PRÉSENT &nbsp;|&nbsp; <em>Cron quotidien lendemain de chaque date d'essai yoga · élèves marqués présents dans le pointage admin</em></div>
-<div class="email-subj">Objet : <span>Merci d'être venu·e — à bientôt sur le tapis !</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Essai yoga termine - rejoindre les cours reguliers de yoga avec Florencia Garcia"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-  </div>
-  <!-- Bandeau vert -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ On espère que ce cours vous a plu !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous espérons que cette première séance de yoga vous a plu ! Si vous souhaitez poursuivre, voici comment rejoindre nos cours réguliers.</p>
-
-    <!-- Yoga box -->
-    <div class="yoga-box">
-      <div class="yoga-box-header">
-        <div class="yoga-box-header-title">Rejoindre les cours réguliers</div>
-        <div class="yoga-box-header-date">🧘 Saison ${sai} <span style="font-size:9px;color:#aaa;font-style:italic;">(dynamique)</span></div>
-      </div>
-      <div class="yoga-box-body">
-        <div class="yoga-section">
-          <div class="yoga-section-name">Cours disponibles</div>
-          <div class="yoga-detail">
-            <strong>Yin yoga</strong> — Mardi · 10h30–11h30<br/>
-            <strong>Hatha yoga</strong> — Mardi · 11h30–12h30<br/>
-            <strong>Forfait yin + hatha</strong> — les deux cours
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tarifs -->
-    <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:14px 18px;margin:0 0 22px;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:10px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Tarifs ${sai} <span style="font-size:9px;color:#888;font-style:italic;">(dynamique)</span></div>
-      <div style="font-size:14px;color:#333;line-height:2;">
-        <strong>1 cours (Yin ou Hatha)</strong> — 340 €<br/>
-        <strong>Forfait 2 cours (Yin + Hatha)</strong> — 500 €<br/>
-        <span style="font-size:12px;color:#666;">Paiement sur AssoConnect lors de l'inscription</span>
-      </div>
-    </div>
-
-    <!-- Bouton inscription AssoConnect — URL depuis tev_liens_assoconnect[saison].yoga (Paramètres → AssoConnect → Yoga) -->
-    <div style="text-align:center;margin:0 0 24px;">
-      <a href="#LIEN_ASSOCONNECT_YOGA" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">S'inscrire au yoga →</a>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="color:#444;">Association Le Regard Se Pose</span><br/>
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>
-    <span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-  </div>
-</div>
-</div>
-
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     Y-J1b — Lendemain essai yoga · élève ABSENT
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="y-j1b">
-<div class="email-label"><strong>Y-J1b</strong> — Lendemain essai yoga · élève ABSENT &nbsp;|&nbsp; <em>Cron quotidien lendemain de chaque date d'essai yoga · élèves statut='confirme' non présents et non annulés</em></div>
-<div class="email-subj">Objet : <span>On vous attend bientôt pour votre cours d'essai yoga !</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"On prend de vos nouvelles - revenez quand vous voulez pour un autre essai yoga"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:20px;font-weight:300;letter-spacing:4px;color:#D4AF37;">COURS DE YOGA AVEC FLORENCIA GARCIA</div>
-  </div>
-  <!-- Bandeau orange doux -->
-  <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
-    <span style="font-size:14px;font-weight:700;color:#e65100;">💙 Vous nous avez manqué !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#2e7d32;">Marie</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous n'avons pas eu le plaisir de vous voir hier pour votre cours d'essai yoga. Pas d'inquiétude — re-inscrivez-vous quand vous voulez !</p>
-
-    <!-- Bouton re-inscription -->
-    <div style="text-align:center;margin:0 0 22px;">
-      <a href="https://app.tangoetvous.fr/essai-yoga.html" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">↩ Choisir une nouvelle date →</a>
-    </div>
-
-    <!-- Note sans pénalité -->
-    <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
-      <p style="font-size:13px;color:#666;margin:0;line-height:1.6;">Votre inscription est annulée automatiquement — pas de pénalité.<br/>Vous pouvez vous réinscrire à n'importe quelle date disponible.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur le tapis !<br/>
-    <strong style="color:#222;">Florencia Garcia</strong><br/>
-    <span style="color:#444;">Association Le Regard Se Pose</span><br/>
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#B8962E;">Ma Page YOGA</a><br/>
-    <span style="font-size:12px;color:#888;"><a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> · 06 63 23 35 70</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com/cours-de-yoga" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">COURS DE YOGA — TANGOETVOUS.COM</a><br/>
-    <a href="mailto:garciabraitbart@gmail.com" style="color:#888;text-decoration:none;">garciabraitbart@gmail.com</a> &nbsp;·&nbsp; 06 63 23 35 70
-  </div>
-</div>
-</div>
-
+<div class="pv-fin">
+  <p><b>Branding yoga</b> — tous ces emails partent de <code>contact@tangoetvous.fr</code> (seul expéditeur vérifié) mais
+     au nom de <b>Florencia Garcia — Le Regard Se Pose</b>, avec les réponses redirigées vers
+     <code>regardsepose@gmail.com</code>. Les emails qui vous sont destinés arrivent à cette même adresse yoga,
+     jamais à <code>tangoetvous@gmail.com</code>.</p>
+  <table class="tbl">
+    <tr><th>Ce qui détermine la variante</th><th>Règle appliquée par le code</th></tr>
+    <tr><td><b>Y1 ou Y-att</b></td><td><code>statut === 'attente'</code> — décidé par le formulaire quand le cours régulier affiche déjà 14 inscrits sur la saison</td></tr>
+    <tr><td><b>Livret</b></td><td>un bouton pour Yin, un pour Hatha, <b>les deux</b> en formule forfait ; aucun si l'adresse n'est pas renseignée dans les Paramètres</td></tr>
+    <tr><td><b>Horaires</b></td><td>lus à plat dans <code>tev_params_yoga_&lt;saison&gt;.horaires</code> (<code>yin</code>, <code>yin_fin</code>, <code>hatha</code>, <code>hatha_fin</code>) — jamais écrits en dur</td></tr>
+  </table>
+  <p style="margin-top:16px;">20 emails produits pour cette page.</p>
 </div>
 
 </body>

@@ -134,5 +134,37 @@
   <div class="field"><span class="label">Bouton :</span> ↩ Choisir une autre date → essai-yoga.html</div>
   <div class="field"><span class="label">Copie admin :</span> regardsepose@gmail.com</div>
 </div>
+
+<h2>YI-mod — Vous changez le cours d'un élève régulier</h2>
+<div class="route">POST /api/notify/yoga-eleve-modifie (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="note">📌 Ajouté à la documentation le 2026-08-17 — cet email existait mais ne figurait dans aucune maquette.</span></div>
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Yoga → Élèves → fiche → modification de la formule</span> (par exemple Yin seul → forfait Yin + Hatha)</div>
+  <div class="field"><span class="label">Body :</span> <code>{ email, prenom, nom, coursBefore, cours, saison, paiement, montant }</code></div>
+  <div class="field"><span class="label">Sujet élève :</span> <code>Votre inscription au yoga a été modifiée — Cours de yoga avec Florencia Garcia</code></div>
+  <div class="field"><span class="label">Sujet admin :</span> <code>[Yoga] Modification — ${nom} · ${nouveau cours}</code> → regardsepose@gmail.com</div>
+  <div class="field"><span class="label">Contenu :</span> ancienne formule barrée, nouvelle en avant, horaires du ou des cours relus dans les Paramètres, montant et mode de règlement.</div>
+</div>
+
+<h2>Y-fin — Fin de saison (cron du 15 juin)</h2>
+<div class="route">POST /api/cron/yoga-fin-saison (X-Cron-Secret)</div>
+<div class="block">
+  <div class="field"><span class="note">📌 Ajouté à la documentation le 2026-08-17 — email réel, absent des anciennes maquettes.</span></div>
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Cron annuel le 15 juin (9h Paris)</span> · destinataires = <code>cours_yoga</code> WHERE statut='inscrit' ET saison = saison courante, emails dédoublonnés.</div>
+  <div class="field"><span class="label">⚠️ Arrêt si le lien manque :</span> le handler <b>n'envoie rien</b> si <code>tev_liens_assoconnect[saison suivante].yoga</code> est vide — mieux vaut un email non envoyé qu'un email sans lien de réinscription. À renseigner avant le 15 juin.</div>
+  <div class="field"><span class="label">Sujet :</span> <code>Merci pour cette belle saison 🧘 · Inscriptions ouvertes pour ${saison suivante}</code></div>
+  <div class="field"><span class="label">Contenu :</span> remerciement pour la saison écoulée, date du dernier cours lue dans <span class="src">tev_cours_dates.yoga</span>, bouton de réinscription AssoConnect, bouton avis Google.</div>
+  <div class="field"><span class="label">Saisons :</span> calculées depuis la date du jour — jamais écrites en dur.</div>
+</div>
+
+<h2>Y-date — Changement de calendrier</h2>
+<div class="route">POST /api/notify/yoga-date (JWT admin)</div>
+<div class="block">
+  <div class="field"><span class="note">📌 Ajouté à la documentation le 2026-08-17 — email réel, absent des anciennes maquettes.</span></div>
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">Paramètres → Yoga → Dates</span> — envoyé quand vous ajoutez ou retirez des dates.</div>
+  <div class="field"><span class="label">Body :</span> <code>{ addedDates: [], removedDates: [], emails: [] }</code> — la liste des destinataires est construite côté admin.</div>
+  <div class="field"><span class="label">Sujet :</span> <code>📅 Modifications de vos cours de yoga — Cours de yoga avec Florencia Garcia</code></div>
+  <div class="field"><span class="label">Contenu :</span> deux listes — dates ajoutées en vert, dates supprimées barrées en rouge.</div>
+</div>
 </body>
 </html>
