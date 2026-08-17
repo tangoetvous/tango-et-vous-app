@@ -2345,6 +2345,18 @@ Ne pas écrire la maquette à la main puis coder « d'après » elle : les deux 
 
 Maquette de la relance du 22 août validée par l'admin, puis code écrit « d'après » elle → **trois écarts non signalés** : la note « votre place sera définitivement réservée », l'avertissement rouge sur les adresses email différentes, et la liste à puces des moyens de paiement (résumée en 4 lignes dans la maquette). Aucun n'était grave, mais l'admin découvrait un email différent de ce qu'il avait approuvé. Même famille de problème que le bug S4 (maquette correcte, code défaillant).
 
+### Corollaire — modifier un email oblige à mettre à jour ses DEUX pages
+
+**Toute modification d'un email dans `worker.js` doit être suivie, dans le même commit, de la mise à jour de :**
+1. sa **page de preview** (`preview-emails-*.html` / `preview-relance-*.html`) — le rendu visuel ;
+2. sa **page de sources** (`preview-sources-*.html`) — sujet, preheader, blocs, conditions, origine de chaque donnée.
+
+Et cette mise à jour doit **refléter le code**, selon la méthode ci-dessus : régénérer depuis les gabarits quand c'est possible, sinon vérifier champ par champ **dans le code** (jamais de mémoire, jamais « d'après » l'ancienne page).
+
+⚠️ **Ces pages ne sont lues par personne à l'exécution** — ni le worker, ni l'admin, ni les élèves. Ce sont des notices. Le risque n'est donc pas technique mais **décisionnel** : une notice périmée conduit l'admin à valider un email qui n'est pas celui qui part (cf. bug S4). Ne jamais les laisser dériver sous prétexte qu'« elles ne servent à rien ».
+
+**Constat 2026-08-17** : `preview-sources-inscription.html` documentait encore les anciens sujets d'I0, I01-val et I02 (retravaillés en juillet lors de la session sur le pourboire), et ne mentionnait pas I01-att. Les pages avaient dérivé faute de cette règle.
+
 ### Corollaire — blocs partagés entre emails
 
 La relance duplique les blocs communs d'I01/I02 (encadré du cours, pourboire, « Quelques précisions », Sorano, livret) dans **sa propre fonction**. Toute modification d'un de ces textes dans I01/I02 doit être répercutée dans `handleCronRelanceInscription`, et réciproquement — même règle que S1/S4 pour les stages.

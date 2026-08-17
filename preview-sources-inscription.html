@@ -26,7 +26,7 @@
 <div class="block">
   <div class="field"><span class="label">Destinataire :</span> <span class="var">tangoetvous@gmail.com</span></div>
   <div class="field"><span class="label">Header admin :</span> Fond #111 · bordure or · "Nouvelle inscription [tango/preinscription]"</div>
-  <div class="field"><span class="label">Sujet :</span> <code>🎓 Inscription tango — ${nom} · ${cours}</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>[Inscription tango] ${prenom nom} — ${Ville} ${Niveau} · ${Rôle} · ${statut}</code></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, tel, role, ville, niveau, saison, statut, partenaire?, emailPartenaire?, pPrenom?, pNom?, pRole?, venue?, type }</span></div>
   <div class="field"><span class="label">Encadré or (solo) :</span> Nom/email/tel · Rôle (badge couleur) · Cours · Statut</div>
   <div class="field"><span class="label">Encadré or (couple) :</span> <span class="cond">isCoupleAdmin = c.venue === 'avec-part' &amp;&amp; !!c.pPrenom</span><br/>
@@ -42,7 +42,7 @@
 <div class="route">POST /api/notify/inscription-cours (sans auth)</div>
 <div class="block">
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='attente_paiement' (guideur seul ou couple)</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre inscription au tango ${saison} — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>Votre demande d'inscription au tango est validée — procédez à votre inscription sur AssoConnect</code><div class="note">Variantes : « …au tango <b>en duo</b> est validée… » (couple) · « …au tango <b>à Vincennes</b> est validée… » (Vincennes)</div></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription tango est validee - finalisez votre dossier sur AssoConnect"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓ "Votre inscription au tango est validée — finalisez votre inscription"</div>
   <div class="field"><span class="label">Cours box :</span> Cours · Saison · Rôle · Statut "✓ Att. paiement" · Partenaire (si couple)</div>
@@ -55,6 +55,7 @@
 <h2>I01-att — Guidée seule, att. validation</h2>
 <div class="route">POST /api/notify/inscription-cours (sans auth)</div>
 <div class="block">
+  <div class="field"><span class="label">Sujet :</span> <code>Votre demande d'inscription au tango est bien reçue — liste d'attente</code></div>
   <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='demande' (guidée seule dans tous ses cours)</span></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre demande inscription tango enregistree - en attente de validation admin"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Votre demande d'inscription est enregistrée — liste d'attente"</div>
@@ -67,7 +68,7 @@
 <div class="route">POST /api/notify/inscription-cours-validee (JWT admin)</div>
 <div class="block">
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, tel, role, ville, niveau, saison, partenaire?, emailPartenaire?, livretUrl?, assoConnectUrl? }</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre demande d'inscription au tango est validée — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>Bonne nouvelle — votre inscription au tango est confirmée, procédez à votre inscription sur AssoConnect</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription tango est validee - finalisez votre dossier sur AssoConnect"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Vert ✓</div>
   <div class="field"><span class="label">Cours box :</span> Cours · Saison · Rôle · Statut ✓ Validé·e · Partenaire</div>
@@ -82,6 +83,8 @@
 <h2>I03 — Admin valide paiement → inscrit</h2>
 <div class="route">POST /api/notify/inscription-cours-payee (JWT admin)</div>
 <div class="block">
+  <div class="field"><span class="label">Sujet élève :</span> <code>Bienvenue ${prénom} ! Votre place au Cours de Tango ${Niveau} à ${Ville} est confirmée</code><div class="note">2 cours → « Bienvenue ${prénom} ! Vos places aux Cours de Tango sont confirmées ». Sujet volontairement différent d'I01/I02 pour éviter que Gmail regroupe les fils et masque le contenu.</div></div>
+  <div class="field"><span class="label">Sujet admin :</span> <code>[Inscription tango] ${prénom nom} — ${Ville} ${Niveau} · ${Rôle} · ✓ Inscrit·e</code></div>
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, saison, coursInfos: [{ville, niveau, role}] }</span><br/>
     <span style="font-size:12px;color:#888;">Backward compat : <code>ville, niveau, role</code> au niveau racine si mono-cours (coursInfos absent ou vide)</span></div>
   <div class="field"><span class="label">Sujet (1 cours) :</span> <code>✓ Votre inscription au tango est confirmée — à bientôt !</code></div>
@@ -108,7 +111,7 @@
 <div class="route">POST /api/notify/inscription-cours-modifiee (JWT admin)</div>
 <div class="block">
   <div class="field"><span class="label">Body :</span> <span class="var">{ email, prenom, nom, ancienCours, nouveauCours }</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>📋 Votre inscription a été modifiée — Tango &amp; Vous</code></div>
+  <div class="field"><span class="label">Sujet :</span> <code>Votre inscription au tango a été modifiée — Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre inscription a ete modifiee - retrouvez les nouveaux details ci-dessous"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Bleu 📋</div>
   <div class="field"><span class="label">Cours box :</span> Ancien cours barré rouge · Nouveau cours en vert</div>
@@ -122,6 +125,33 @@
   <div class="field"><span class="label">Sujet :</span> <code>✓ Votre pré-inscription tango ${saisonSuivante} — Tango &amp; Vous</code></div>
   <div class="field"><span class="label">Différence :</span> Badge "Saison prochaine" · mention "reprise en septembre" · tarifs prochaine saison</div>
   <div class="field"><span class="label">Tarifs :</span> <span class="src">localStorage.tev_tarifs_prochaine_saison (admin) → body.tarifs</span></div>
+</div>
+
+<h2>I-relance — Rappel avant la rentrée (cron 22 août)</h2>
+<div class="route">POST /api/cron/relance-inscription (header X-Cron-Secret) · workflow relance-inscription.yml · cron <code>0 8 22 8 *</code> + déclenchement manuel</div>
+<div class="block">
+  <div class="field"><span class="label">Cible :</span> <span class="var">inscriptions_cours?statut=eq.attente_paiement&amp;saison=eq.&lt;saison à venir&gt;</span>
+    <div class="note">⚠️ Les statuts <b>demande</b> (Att. Valid.) sont EXCLUS — ces personnes ne peuvent pas encore payer. Fiches sans email ignorées (comptées dans <span class="var">sansEmail</span>).</div></div>
+  <div class="field"><span class="label">Saison :</span> calculée côté serveur (sept→août), ou <span class="var">body.saison</span> au déclenchement manuel</div>
+  <div class="field"><span class="label">Anti-doublon :</span> <b>aucun marqueur</b> <span class="cond">(choix admin)</span> — une personne qui règle passe en <span class="var">inscrit</span> et sort de la cible ; rejouer la tâche = 2ᵉ relance sûre</div>
+  <div class="field"><span class="label">Sujet :</span> <code>La rentrée approche — finalisez votre inscription au tango</code></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"La rentree approche - finalisez votre inscription au tango sur AssoConnect"</span></div>
+  <div class="field"><span class="label">Bandeau :</span> Bleu #e3f2fd · <b>17 px</b> — « 🗓 Votre place vous attend — finalisez votre inscription » <span class="cond">(couple : « Vos places en duo vous attendent »)</span></div>
+  <div class="field"><span class="label">Intro :</span> <b>16,5 px</b> — « La rentrée approche ! Votre place… n'est pas encore finalisée sur AssoConnect » <span class="cond">(couple : « Vos places…, avec ${partenaire}, sont réservées »)</span></div>
+  <div class="field"><span class="label">Cours box :</span> Cours · Prochain cours · Heure · Lieu · Rôle · Partenaire <span class="cond">(si couple)</span> — titre « Votre inscription »</div>
+  <div class="field"><span class="label">Encadré violet :</span> <span class="cond">couple uniquement</span> — chacun doit s'inscrire séparément avec une adresse email différente
+    <div class="note">L'avertissement équivalent du bloc « Quelques précisions » a été retiré ici pour éviter le doublon (I01/I02 le conservent).</div></div>
+  <div class="field"><span class="label">Bouton AssoConnect :</span> Or → <span class="var">tev_liens_assoconnect[saison].cours</span> <span class="cond">(repli : .cours à la racine)</span></div>
+  <div class="field"><span class="label">Encadré pourboire :</span> Rouge — identique à I01/I02</div>
+  <div class="field"><span class="label">acNote :</span> « Votre place sera définitivement réservée une fois l'inscription et le premier paiement effectués. » <code>12px/#888</code></div>
+  <div class="field"><span class="label">Quelques précisions :</span> bouton jaune « J'adhère » + CB 1×/3× · espèces · chèque</div>
+  <div class="field"><span class="label">Sorano :</span> <span class="cond">si ville='vincennes'</span> → encadré jaune + bouton si <span class="var">_getSoranoLien(saison)</span> renvoie un lien</div>
+  <div class="field"><span class="label">Livret :</span> <span class="var">tev_params_${ville}_${saison}.livret.url_deb | url_int</span></div>
+  <div class="field"><span class="label">Signature :</span> <span class="var">signEleve</span> — « À très bientôt sur la piste ! »</div>
+  <div class="field"><span class="label">Horaires / adresse :</span> <span class="var">tev_params_${ville}_${saison}.horaires</span> (clés plates deb/deb_fin/int/int_fin) et <span class="var">.adresse</span></div>
+  <div class="field"><span class="label">Prochain cours :</span> 1ʳᵉ date ≥ aujourd'hui dans <span class="var">tev_cours_dates[ville]</span></div>
+  <div class="field"><span class="label">⚠️ Tout est relu côté serveur :</span> contrairement à I01/I02 qui reçoivent leurs données du navigateur admin, le cron ne reçoit rien du client — il relit tous les paramètres au moment de l'envoi</div>
+  <div class="field"><span class="label">Preview :</span> <span class="var">preview-relance-inscription-v1.html</span> — <b>générée depuis le code</b> par <span class="var">node outils/generer-preview-relance.js</span></div>
 </div>
 
 <h2>Règles guideur/guidée (rappel)</h2>
