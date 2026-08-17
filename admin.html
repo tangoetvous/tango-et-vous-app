@@ -7862,7 +7862,9 @@ function renderElevesTango() {
   if (sousOngletEleves === 'supprimes') {
     return h + _elevesSupprimes(supprimes);
   }
-  h+='<div style="display:flex;justify-content:flex-end;margin-bottom:6px;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerElevesTango()">🖨️ Imprimer / PDF</button></div>';
+  h+='<div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;">'
+    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="exporterContactsTango()" title="Ajouter les élèves affichés à l\'app Contacts">📇 Contacts</button>'
+    +'<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerElevesTango()">🖨️ Imprimer / PDF</button></div>';
   h+='<div style="margin-bottom:10px;"><input type="search" id="rech-eleve" value="'+rechercheEleve.replace(/"/g,'&quot;')+'" placeholder="🔍 Rechercher parmi tous les cours..." oninput="majRechercheEleve(this.value)" style="width:100%;box-sizing:border-box;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;" autocomplete="off"></div>';
   h+='<div id="eleves-resultats">'+_elevesResultatsHTML(inscrits)+'</div>';
   return h;
@@ -9951,6 +9953,121 @@ function imprimerCartesPointage() {
   });
   _tevPrint('Pointage Cartes 10 · ' + fmtDate(today()), sections);
 }
+
+// ── Export vCard (.vcf) → app Contacts de l'iPhone ───────────────────────
+// Produit UN fichier contenant toutes les fiches affichées. Sur iOS : feuille
+// de partage → Contacts → « Ajouter N contacts ». Sur Mac : ouvre Contacts,
+// puis iCloud synchronise vers le téléphone.
+// ⚠️ Fonction ISOLÉE : elle lit adminData en lecture seule et n'est appelée
+// que par ses deux boutons — aucun rendu existant n'en dépend.
+function _vcardEchapper(v) {
+  return String(v == null ? '' : v).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+}
+// fiches : [{prenom, nom, tel, email, note}]
+function _vcardConstruire(fiches) {
+  var out = [];
+  fiches.forEach(function(p) {
+    var prenom = (p.prenom || '').trim(), nom = (p.nom || '').trim();
+    var tel = (p.tel || '').trim(), mail = (p.email || '').trim();
+    if (!prenom && !nom) return;
+    if (!tel && !mail) return;              // rien à enregistrer dans Contacts
+    var l = ['BEGIN:VCARD', 'VERSION:3.0'];
+    l.push('N:' + _vcardEchapper(nom) + ';' + _vcardEchapper(prenom) + ';;;');
+    l.push('FN:' + _vcardEchapper((prenom + ' ' + nom).trim()));
+    l.push('ORG:' + _vcardEchapper('Tango & Vous'));   // rend le groupe repérable dans Contacts
+    if (tel)  l.push('TEL;TYPE=CELL:' + _vcardEchapper(tel));
+    if (mail) l.push('EMAIL;TYPE=INTERNET:' + _vcardEchapper(mail));
+    if (p.note) l.push('NOTE:' + _vcardEchapper(p.note));
+    l.push('END:VCARD');
+    out.push(l.join('\r\n'));
+  });
+  return out.join('\r\n') + (out.length ? '\r\n' : '');
+}
+// Déduplique par email (sinon nom normalisé) — quelqu'un inscrit à 2 cours = 1 contact
+function _vcardDedup(fiches) {
+  var vus = {}, res = [];
+  fiches.forEach(function(p) {
+    var k = ((p.email || '').trim().toLowerCase()) || ('n:' + _normNom((p.prenom || '') + ' ' + (p.nom || '')));
+    if (!k || k === 'n:') return;
+    if (vus[k]) { // fusionne : garde le tel/email non vide, cumule les cours dans la note
+      if (!vus[k].tel && p.tel) vus[k].tel = p.tel;
+      if (!vus[k].email && p.email) vus[k].email = p.email;
+      if (p.note && vus[k].note && vus[k].note.indexOf(p.note) < 0) vus[k].note += ' · ' + p.note;
+      return;
+    }
+    vus[k] = p; res.push(p);
+  });
+  return res;
+}
+function _vcardTelecharger(vcf, nomFichier) {
+  // Compte les fiches RÉELLEMENT écrites (celles sans tel ni email sont écartées
+  // par _vcardConstruire) — sinon le message annoncerait plus de contacts qu'il n'y en a
+  var nb = (String(vcf).match(/BEGIN:VCARD/g) || []).length;
+  if (!nb) { afficherToast('⚠️ Aucun contact à exporter (ni téléphone ni email renseigné)'); return; }
+  var blob = new Blob([vcf], { type: 'text/vcard;charset=utf-8' });
+  // iOS : feuille de partage native (le geste du clic est encore « frais », rien
+  // n'est téléchargé au préalable) → permet d'ouvrir directement dans Contacts
+  try {
+    var file = new File([blob], nomFichier, { type: 'text/vcard' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: nomFichier })
+        .then(function(){ afficherToast('✓ ' + nb + ' contact' + (nb > 1 ? 's' : '') + ' prêt' + (nb > 1 ? 's' : '') + ' à ajouter'); })
+        .catch(function(e){ if (e && e.name !== 'AbortError') _vcardLienDirect(blob, nomFichier, nb); });
+      return;
+    }
+  } catch(e) {}
+  _vcardLienDirect(blob, nomFichier, nb);
+}
+function _vcardLienDirect(blob, nomFichier, nb) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = nomFichier;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  afficherToast('✓ ' + nb + ' contact' + (nb > 1 ? 's' : '') + ' exporté' + (nb > 1 ? 's' : '') + ' — ouvrez le fichier pour les ajouter');
+}
+// Élèves Tango : exporte EXACTEMENT ce qui est affiché (onglet de cours, ou
+// résultats de recherche si une recherche est en cours)
+window.exporterContactsTango = function() {
+  var sai = saisonActive();
+  var inscrits = (adminData.coursTango || []).filter(function(e){
+    return (e.saison || saisonCourante()) === sai && e.statut === 'inscrit' && !e._isRenewalRow;
+  });
+  var q = (typeof rechercheEleve === 'string' ? rechercheEleve : '').toLowerCase().trim();
+  var liste, libelle;
+  if (q) {
+    liste = inscrits.filter(function(e){
+      return (e.prenom + ' ' + e.nom + ' ' + (e.partenaire || '') + ' ' + (e.email || '')).toLowerCase().indexOf(q) >= 0;
+    });
+    libelle = 'recherche';
+  } else {
+    var ong = _elevesOnglets().find(function(o){ return o.id === sousOngletEleves; });
+    if (!ong) { afficherToast('⚠️ Sélectionnez un cours'); return; }
+    liste = inscrits.filter(function(e){ return e.ville === ong.ville && e.niveau === ong.niv; });
+    libelle = ong.id;
+  }
+  var fiches = _vcardDedup(liste.map(function(e){
+    var niv = e.niveau === 'intermediaire' ? 'Intermédiaire' : 'Débutant';
+    var vil = e.ville === 'vincennes' ? 'Vincennes' : 'Paris';
+    var rol = e.role === 'guidee' ? 'Guidée' : (e.role === 'guideur' ? 'Guideur·se' : '');
+    return { prenom: e.prenom, nom: e.nom, tel: e.tel, email: e.email,
+             note: vil + ' — ' + niv + (rol ? ' · ' + rol : '') + ' · ' + sai };
+  }));
+  _vcardTelecharger(_vcardConstruire(fiches), 'eleves-tango-' + libelle + '-' + sai + '.vcf');
+};
+// Élèves Yoga : tous les inscrits de la saison affichée
+window.exporterContactsYoga = function() {
+  var sai = saisonActive();
+  var liste = (adminData.coursYoga || []).filter(function(e){
+    return (e.saison || saisonCourante()) === sai && e.statut !== 'supprimé';
+  });
+  var LBL = { yin: 'Yin Yoga', hatha: 'Hatha Yoga', forfait: 'Yin + Hatha' };
+  var fiches = _vcardDedup(liste.map(function(e){
+    return { prenom: e.prenom, nom: e.nom, tel: e.tel || _yogaTel(e), email: e.email,
+             note: 'Yoga — ' + (LBL[e.cours] || e.cours || '') + ' · ' + sai };
+  }));
+  _vcardTelecharger(_vcardConstruire(fiches), 'eleves-yoga-' + sai + '.vcf');
+};
 
 function _exportEmails(source) {
   var sai = saisonActive();
@@ -13949,7 +14066,9 @@ function renderYogaEleves() {
   var sorted = liste.slice().sort(function(a,b){ return (a.nom+a.prenom).localeCompare(b.nom+b.prenom); });
   var yin   = sorted.filter(function(e){ return e.cours==='yin'||e.cours==='forfait'; });
   var hatha = sorted.filter(function(e){ return e.cours==='hatha'||e.cours==='forfait'; });
-  var h = '<div style="display:flex;justify-content:flex-end;margin-bottom:6px;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerYogaEleves()">🖨️ Imprimer / PDF</button></div>'
+  var h = '<div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;">'
+    + '<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="exporterContactsYoga()" title="Ajouter les élèves yoga à l\'app Contacts">📇 Contacts</button>'
+    + '<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="imprimerYogaEleves()">🖨️ Imprimer / PDF</button></div>'
     +_tevSearchBar()+'<div style="font-size:11px;color:var(--dim);margin-bottom:12px;">'+liste.length+' élève'+(liste.length>1?'s':'')+' inscrit'+(liste.length>1?'s':'')+' en yoga — saison '+sai+'</div>';
   function eleveRow(e) {
     var coursLbl = COURS_YOGA_LBL[e.cours]||e.cours;

@@ -1,5 +1,19 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-17 — Export des contacts vers l'app Contacts (vCard) (✅ FAIT)
+
+Besoin admin : récupérer prénom/nom/téléphone/email des élèves dans l'app **Contacts de l'iPhone**, en quelques clics, sans passer par un ordinateur.
+
+- **Bouton « 📇 Contacts »** ajouté à côté du bouton Imprimer existant dans **Élèves Tango** (~L7865) et **Élèves Yoga** (~L14063). Aucun rendu existant modifié : seuls les conteneurs `justify-content:flex-end` reçoivent un `gap:6px` et un bouton supplémentaire.
+- **Format vCard 3.0** (`.vcf`) — celui que lit nativement l'app Contacts. Un seul fichier → iOS propose « Ajouter N contacts ». Sur Mac : ouvre Contacts, puis iCloud synchronise vers le téléphone.
+- **Champ `ORG:Tango & Vous`** sur chaque fiche : taper « Tango » dans Contacts retrouve tous les élèves sans polluer les noms. `NOTE` = « Paris — Débutant · Guideur·se · 2026-2027 » (ou « Yoga — Yin Yoga · … »).
+- **Exporte ce qui est AFFICHÉ** : l'onglet de cours courant, ou les résultats de recherche si une recherche est en cours (même logique que `_elevesResultatsHTML`). Évite de multiplier les boutons.
+- **Règles de contenu** : dédoublonnage par email (repli nom normalisé) → une personne inscrite à 2 cours = 1 contact, ses cours cumulés dans la note ; fiches **sans téléphone ET sans email écartées** ; supprimés et lignes `isRenewal` exclus.
+- **iOS** : `navigator.share({files})` ouvre la feuille de partage → Contacts. Le geste du clic reste « frais » (le fichier est construit en mémoire, aucun fetch préalable) — contrairement au téléchargement vidéo qui exige un 2ᵉ bouton. Repli `<a download>` sur Mac/Android.
+- ⚠️ **Compteur** : le message affiche le nombre de fiches RÉELLEMENT écrites (`match(/BEGIN:VCARD/g)`), pas la taille de la liste — sinon il annonce des contacts écartés faute de coordonnées.
+- ⚠️ **Réimport** : iOS détecte les doublons et propose de fusionner, mais fiche par fiche. Conseil donné à l'admin : exporter une fois tout le monde inscrit, ou filtrer avant export. Un repère « déjà exporté » (comme celui de la newsletter) reste possible si le besoin apparaît.
+- **Tests groupe Z** (`tests/z-vcard-contacts.spec.js`, 6 tests) : Z1 format + échappement `;` ; Z2 périmètre (cours affiché, supprimés exclus) ; Z3 fiche sans coordonnées écartée + fusion 2 cours ; Z4 mode recherche ; Z5 yoga ; Z6 boutons présents et vues intactes. Suite complète : **107/107**.
+
 ## Session 2026-08-17 — Relance « finalisez votre inscription » avant la rentrée (✅ EN PROD)
 
 Trou identifié avec l'admin : une personne dont l'inscription est **validée mais non réglée** (statut `attente_paiement`) recevait I01 (ou I02) **une seule fois**, puis plus rien — elle restait indéfiniment dans Inscriptions Tango → Att. Paiement. Aucun des 14 crons existants ne la ciblait (C4/C5 visent les **cartes payées** avec cours restants, pas les inscriptions en attente de règlement).
