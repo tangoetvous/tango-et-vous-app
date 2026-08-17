@@ -115,7 +115,7 @@ const CAS = [
 
   { id: 'emod', titre: "E-mod — Vous déplacez un essai (date, ville ou niveau)",
     handler: 'handleNotifyEssaiAction',
-    note: "⚠️ <b>Cet email n'est déclenché par aucun bouton aujourd'hui</b> : <code>validerEditEssai</code> enregistre la modification en base sans appeler cette route. L'équivalent yoga, lui, prévient bien l'élève. Le texte ci-dessous est celui que le code produirait — il ne manque que l'appel.",
+    note: "Envoyé quand vous changez la date, la ville ou le niveau d'un essai depuis la fiche (✏️). Vous en recevez un récapitulatif, l'élève reçoit le sien, et le partenaire aussi si son adresse est renseignée et différente. Une notification in-app est posée en parallèle pour chacun. L'appel part de <code>_notifEssaiEdit</code>, après la mise à jour réussie en base.",
     body: { ...base, action: 'edit-essai', role: 'guideur',
             oldDate: D_LOIN, oldVille: 'paris', oldNiveau: 'debutant',
             newDate: D_PROCHE, newVille: 'vincennes', newNiveau: 'intermediaire' } },
@@ -193,14 +193,11 @@ ${sections}
 <div class="pv-com">
   <table class="tbl">
     <tr><th>Ancienne section</th><th>Réalité dans le code</th></tr>
-    <tr><td><b>E-mod</b> — « vous modifiez la date ou le cours d'un essai »</td>
-        <td>L'email <b>existe</b> dans le worker (voir plus haut) mais <b>aucun bouton ne l'appelle</b> : <code>validerEditEssai</code> enregistre en base sans prévenir personne. L'équivalent yoga (<code>validerEditEssaiYoga</code>) envoie bien Y-mod — seul le tango en est dépourvu. <b>Une ligne à ajouter pour le brancher.</b></td></tr>
     <tr><td><b>E7</b></td>
         <td>N'a jamais été un email distinct : c'est E6, l'ancienne page en gardait le nom pour la clarté.</td></tr>
     <tr><td><b>E5b</b> — « couple, un seul rôle complet »</td>
         <td>Aucune variante dédiée : les deux partenaires reçoivent l'email de liste d'attente ordinaire. Seul le libellé de VOTRE notification distingue le cas.</td></tr>
   </table>
-  <p style="margin-top:14px;">E-mod est le seul manque réellement gênant : une personne dont vous déplacez le cours d'essai n'en est pas informée. À trancher.</p>
 </div>
 
 <div class="pv-titre" id="notifs" style="border-left-color:#5c9dc2;">Notifications — toast, panel 🔔 et push OS</div>
