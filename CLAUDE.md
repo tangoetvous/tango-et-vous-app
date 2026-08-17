@@ -2332,6 +2332,26 @@ Claude ne saisit des données directement en SQL qu'exceptionnellement, sur dema
 
 Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Code.gs ne fonctionne plus.
 
+### 📄 Index des pages de preview (toutes servies sur `app.tangoetvous.fr/<fichier>`)
+
+| Page | Contenu |
+|---|---|
+| `preview-emails-essai-v2.html` | Essai tango — E0, E1, E2, E4, E5/E5b, E6, E15/E15b, E-mod, E-J1a/J1b |
+| `preview-emails-inscription-v1.html` | Inscription cours réguliers — I0, I01 (toutes variantes), I02, I03, I04, I17 |
+| `preview-relance-inscription-v1.html` | **Relance du 22 août** — inscriptions en « Att. Paiement » : variante solo, variante couple, tableau de ciblage |
+| `preview-emails-stages-v1.html` | Stages — S0, S1/S1b, S2, S3/S3b, S4, S-admin, S-cancel |
+| `preview-emails-yoga-v1.html` | Yoga — Y0, Y1, Y-att, Y-full, Y2, Y3, YI0, YI1, Y-mod, Y-J1a/J1b |
+| `preview-emails-cartes-v1.html` | Cartes de cours — C1, C2/C2b, C3, C4, C5, C6, C-pay, C-report + **P1** (activation espace élève) |
+| `preview-emails-a-valider-v1.html` | Transfert essai→inscription (T1-dem, T1-val), Sorano (SR1, SR2), carte pointée (CP-A, CP-E), carte expirée (CX) |
+| `preview-emails-cp-v1.html` | Cours particuliers — CP0, CP1 |
+| `preview-emails-devis-v1.html` | Devis — D0a, D0b, D1, D2 |
+| `preview-emails-cb3x-v1.html` | Relances des échéances CB 3× |
+| `preview-sources-*.html` | Pages compagnons : d'où vient chaque donnée de l'email correspondant |
+
+⚠️ **Ces pages sont des maquettes STATIQUES écrites à la main** — elles ne sont pas générées par `worker.js`. Elles montrent le rendu *attendu*, pas nécessairement le rendu réel : c'est précisément ce décalage qui a laissé passer le bug S4 (maquette correcte, code envoyant un encadré vide). Après toute modification d'un email dans `worker.js`, penser à répercuter dans la maquette — et inversement, ne jamais conclure qu'un email est correct en se fiant à sa seule preview.
+
+Autres maquettes de décision (interface, hors emails) : `preview-stages-couple-v1.html` (étape 2 des stages en couple), `preview-mon-niveau-v2.html`, `preview-publications-mockup.html`, `preview-inscriptions-tango.html`, `preview-devis-clair.html`, `preview-yoga-clair.html`.
+
 ### Cours d'essai Tango
 
 **Fichier de référence** : `preview-emails-essai-v2.html`
@@ -2587,7 +2607,7 @@ Variante attente : `🎭 Demande stage — Prénom NOM · Samedi JJ Mois · ⏳ 
 
 ### Inscription cours tango régulier
 
-**Fichier de référence** : `preview-emails-inscription-v1.html`
+**Fichiers de référence** : `preview-emails-inscription-v1.html` (I01/I02/I03…) et `preview-relance-inscription-v1.html` (relance du 22 août aux « Att. Paiement »)
 
 #### Règles métier emails — rappel
 - **Quota toute l'année** (≠ essai qui limite seulement sept-nov) : CAP_GUI=22, CAP_GDE=23
