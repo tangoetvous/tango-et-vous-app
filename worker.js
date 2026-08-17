@@ -6793,14 +6793,20 @@ async function handleNotifyCarteBienvenue(request, env) {
   const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
-  const { email, prenom, nom, utilises = 1, restants = 9, expiration, cours } = body;
+  const { email, prenom, nom, utilises = 1, restants = 9, expiration, cours, datePremierCours } = body;
   const _tailleC = ((Number(utilises)||0) + (Number(restants)||0)) || 10;
   if (!email || !env.BREVO_API_KEY) return corsResponse({ ok: false }, 200, {}, request);
   const prenomAff = _esc(prenom || '');
   const expiLabel = expiration ? fmtDate(expiration) : 'à calculer après le 1er cours';
+  // Jour du cours pointé — transmis depuis l'admin mais ignoré jusqu'au 2026-08-17,
+  // d'où un email de bienvenue qui ne situait pas la séance dans le temps.
+  // ⚠️ On indique le JOUR, pas le cours : une même personne peut suivre deux cours
+  // distincts le même jour, le nom du cours serait donc ambigu.
+  const jourCoursLabel = fmtDate(datePremierCours);
   const carteBox  = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
     <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE DE ${_tailleC} COURS</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      ${jourCoursLabel ? `<tr><td style="padding:5px 8px;color:#888;">Premier cours</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${jourCoursLabel}</td></tr>` : ''}
       <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#1565c0;text-align:right;">${utilises}/${_tailleC}</td></tr>
       <tr><td style="padding:5px 8px;color:#888;">Cours restants</td><td style="padding:5px 8px;font-weight:700;color:#2e7d32;text-align:right;">${restants}</td></tr>
       <tr><td style="padding:5px 8px;color:#888;">Valide jusqu'au</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">${expiLabel}</td></tr>
@@ -6810,7 +6816,7 @@ async function handleNotifyCarteBienvenue(request, env) {
     <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue — votre carte de ${_tailleC} cours est activée !</span></div>
     <div style="padding:28px 24px;">
       <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour ${prenomAff},</p>
-      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre premier cours a été enregistré. Votre carte de ${_tailleC} cours est maintenant active.</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre premier cours${jourCoursLabel ? ` du <strong>${jourCoursLabel}</strong>` : ''} a été enregistré. Votre carte de ${_tailleC} cours est maintenant active.</p>
       ${carteBox}
       <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
         <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 10px;">📱 Votre espace élève</p>

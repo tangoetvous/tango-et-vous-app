@@ -41,8 +41,8 @@ const eleveRow = extra => Object.assign({
 const CAS = [
   { id: 'c1', titre: 'C1 — Bienvenue au premier pointage de la saison',
     handler: 'handleNotifyCarteBienvenue',
-    note: "Envoyé une seule fois, quand vous pointez le tout premier cours d'une carte. Présente le suivi de la carte et l'espace élève.",
-    body: { ...base, utilises: 1, restants: 9, expiration: jour(90), cours: 'Paris — Débutant' } },
+    note: "Envoyé une seule fois, quand vous pointez le tout premier cours d'une carte. Depuis le 2026-08-17 l'email indique le <b>jour</b> du cours pointé — volontairement le jour et non le nom du cours, une même personne pouvant suivre deux cours distincts le même jour.",
+    body: { ...base, utilises: 1, restants: 9, expiration: jour(90), datePremierCours: AUJ } },
 
   { id: 'c2b', titre: "C2b — Carte renouvelée sans payer (par l'admin)",
     handler: 'handleNotifyCarteRenouvellement',
