@@ -2328,6 +2328,27 @@ GRANT EXECUTE ON FUNCTION public.pointer_cours_qr(text, date, integer) TO anon, 
 Les imports SQL en masse (comme pour 2025-2026) ne doivent plus être nécessaires.
 Claude ne saisit des données directement en SQL qu'exceptionnellement, sur demande explicite.
 
+## ⚠️ RÈGLE PERMANENTE — Une maquette (preview) engage le code
+
+**Dès qu'une maquette est montrée à l'admin, le code livré doit lui correspondre exactement. Tout écart doit être soumis à l'admin AVANT d'être codé — jamais découvert par lui après coup.** L'admin ne doit pas avoir à vérifier la conformité : c'est la responsabilité de Claude.
+
+### Méthode obligatoire — générer la preview DEPUIS le code
+
+Ne pas écrire la maquette à la main puis coder « d'après » elle : les deux divergent silencieusement. Procéder ainsi :
+
+1. **Maquette d'exploration** (avant tout code) : écrite à la main pour trancher les choix avec l'admin — c'est normal et utile.
+2. **Dès que le code existe** : **régénérer la page de preview à partir du code réel**, en extrayant les gabarits du handler et en les évaluant avec des données d'exemple. La fidélité devient alors structurelle, plus une affaire de relecture.
+3. Poser un bandeau en tête de page indiquant que la page est générée depuis le code (voir `preview-relance-inscription-v1.html`).
+4. Si la génération automatique est impossible, faire une **comparaison élément par élément** (script listant la présence/absence de chaque bloc dans le code et dans la maquette) et la montrer à l'admin.
+
+### Incident fondateur (2026-08-17)
+
+Maquette de la relance du 22 août validée par l'admin, puis code écrit « d'après » elle → **trois écarts non signalés** : la note « votre place sera définitivement réservée », l'avertissement rouge sur les adresses email différentes, et la liste à puces des moyens de paiement (résumée en 4 lignes dans la maquette). Aucun n'était grave, mais l'admin découvrait un email différent de ce qu'il avait approuvé. Même famille de problème que le bug S4 (maquette correcte, code défaillant).
+
+### Corollaire — blocs partagés entre emails
+
+La relance duplique les blocs communs d'I01/I02 (encadré du cours, pourboire, « Quelques précisions », Sorano, livret) dans **sa propre fonction**. Toute modification d'un de ces textes dans I01/I02 doit être répercutée dans `handleCronRelanceInscription`, et réciproquement — même règle que S1/S4 pour les stages.
+
 ## Emails automatiques — catalogue complet (source : Code.gs legacy)
 
 Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Code.gs ne fonctionne plus.
@@ -2338,7 +2359,7 @@ Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Co
 |---|---|
 | `preview-emails-essai-v2.html` | Essai tango — E0, E1, E2, E4, E5/E5b, E6, E15/E15b, E-mod, E-J1a/J1b |
 | `preview-emails-inscription-v1.html` | Inscription cours réguliers — I0, I01 (toutes variantes), I02, I03, I04, I17 |
-| `preview-relance-inscription-v1.html` | **Relance du 22 août** — inscriptions en « Att. Paiement » : variante solo, variante couple, tableau de ciblage |
+| `preview-relance-inscription-v1.html` | **Relance du 22 août** — inscriptions en « Att. Paiement » : solo, couple, ciblage. ✅ **Générée automatiquement depuis `worker.js`** (modèle à suivre) |
 | `preview-emails-stages-v1.html` | Stages — S0, S1/S1b, S2, S3/S3b, S4, S-admin, S-cancel |
 | `preview-emails-yoga-v1.html` | Yoga — Y0, Y1, Y-att, Y-full, Y2, Y3, YI0, YI1, Y-mod, Y-J1a/J1b |
 | `preview-emails-cartes-v1.html` | Cartes de cours — C1, C2/C2b, C3, C4, C5, C6, C-pay, C-report + **P1** (activation espace élève) |
@@ -2348,7 +2369,7 @@ Tous ces emails sont **à implémenter via Brevo + Supabase Edge Functions**. Co
 | `preview-emails-cb3x-v1.html` | Relances des échéances CB 3× |
 | `preview-sources-*.html` | Pages compagnons : d'où vient chaque donnée de l'email correspondant |
 
-⚠️ **Ces pages sont des maquettes STATIQUES écrites à la main** — elles ne sont pas générées par `worker.js`. Elles montrent le rendu *attendu*, pas nécessairement le rendu réel : c'est précisément ce décalage qui a laissé passer le bug S4 (maquette correcte, code envoyant un encadré vide). Après toute modification d'un email dans `worker.js`, penser à répercuter dans la maquette — et inversement, ne jamais conclure qu'un email est correct en se fiant à sa seule preview.
+⚠️ **Voir la RÈGLE PERMANENTE ci-dessus : une maquette montrée à l'admin engage le code.** Les pages historiques sont des maquettes **statiques écrites à la main** — elles ne sont pas générées par `worker.js`. Elles montrent le rendu *attendu*, pas nécessairement le rendu réel : c'est précisément ce décalage qui a laissé passer le bug S4 (maquette correcte, code envoyant un encadré vide). Après toute modification d'un email dans `worker.js`, penser à répercuter dans la maquette — et inversement, ne jamais conclure qu'un email est correct en se fiant à sa seule preview.
 
 Autres maquettes de décision (interface, hors emails) : `preview-stages-couple-v1.html` (étape 2 des stages en couple), `preview-mon-niveau-v2.html`, `preview-publications-mockup.html`, `preview-inscriptions-tango.html`, `preview-devis-clair.html`, `preview-yoga-clair.html`.
 
