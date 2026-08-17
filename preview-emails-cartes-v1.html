@@ -1,699 +1,335 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Preview emails — Cartes 10 cours &amp; Profil élève · C1/C2/C3/C4/C5/C6/P0/P1</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview — Emails Cartes de cours</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
-.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;position:sticky;top:0;background:#1e1e1e;padding:12px 0;z-index:10;border-bottom:1px solid #444;}
-.nav a{color:#D4AF37;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-decoration:none;padding:7px 12px;border:1px solid #D4AF37;border-radius:6px;}
-.nav a:hover{background:#D4AF37;color:#000;}
-.email-block{margin-bottom:56px;}
-.email-label{color:#888;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-left:4px;}
-.email-label strong{color:#D4AF37;}
-.email-label em{color:#aaa;font-style:normal;font-size:10px;}
-.email-subj{color:#ccc;font-size:12px;margin-bottom:12px;padding-left:4px;}
-.email-subj span{color:#fff;font-weight:700;}
-.email-wrap{max-width:600px;}
-/* badges rôle */
-.badge-gui{display:inline-block;background:#1565c0;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-gde{display:inline-block;background:#c2185b;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-val{display:inline-block;background:#2e7d32;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-att{display:inline-block;background:#e65100;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-source-insc{display:inline-block;background:#1565c0;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-source-essai{display:inline-block;background:#6a1b9a;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-source-stage{display:inline-block;background:#B8962E;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-.badge-source-cp{display:inline-block;background:#00695c;color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;}
-/* Boîte carte — fond orange/ambre clair, bordure orange */
-.carte-box{background:#fff8f0;border:2px solid #e65100;border-radius:10px;overflow:hidden;margin:0 0 22px;}
-.carte-box-header{background:#e65100;padding:12px 18px;}
-.carte-box-header-title{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#ffe8d8;font-weight:700;}
-.carte-box-header-label{font-size:17px;font-weight:700;color:#fff;margin-top:4px;}
-.carte-box-body{padding:16px 18px;}
-.carte-row{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid rgba(230,81,0,0.15);}
-.carte-row:last-child{border-bottom:none;padding-bottom:0;}
-.carte-row-label{font-size:12px;color:#a04000;font-weight:700;text-transform:uppercase;letter-spacing:1px;width:48%;}
-.carte-row-value{font-size:14px;color:#333;font-weight:600;}
-.carte-progress{display:flex;gap:4px;margin-top:12px;}
-.carte-dot{width:26px;height:26px;border-radius:50%;background:#e65100;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;}
-.carte-dot-empty{width:26px;height:26px;border-radius:50%;background:#ffe0cc;border:2px solid #e65100;}
-/* Push OS mockup */
-.push-mockup{background:#fff;border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.35);padding:14px 16px;max-width:360px;display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
-.push-mockup-icon{width:36px;height:36px;border-radius:8px;background:#111;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
-.push-mockup-body{flex:1;}
-.push-mockup-app{font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
-.push-mockup-title{font-size:13px;font-weight:700;color:#111;margin-bottom:2px;}
-.push-mockup-text{font-size:12px;color:#444;line-height:1.4;}
-.push-mockup-time{font-size:11px;color:#999;margin-top:4px;}
-/* Notif panel blocks */
-.notif-block{border-radius:8px;padding:14px 16px;margin-bottom:10px;max-width:520px;border-left:4px solid;}
-.notif-block-orange{background:#1f0e00;border-color:#e65100;}
-.notif-block-blue{background:#0a1520;border-color:#5c9dc2;}
-.notif-block-green{background:#0f1f0f;border-color:#4caf50;}
-.notif-block-title{font-size:13px;font-weight:700;color:#D4AF37;margin-bottom:5px;}
-.notif-block-body{font-size:12px;color:#bbb;line-height:1.7;}
-.notif-block-body strong{color:#eee;}
-.toast-mock{background:#222;border:1px solid #444;border-radius:8px;padding:11px 16px;max-width:420px;font-size:13px;color:#eee;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
-.toast-mock-icon{font-size:18px;}
-.section-title{color:#D4AF37;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #333;}
+body { margin:0; padding:0; background:#f5f5f5; font-family:Arial,sans-serif; }
+.pv-head { background:#111; border-bottom:3px solid #D4AF37; padding:22px 24px; text-align:center; }
+.pv-head h1 { font-family:Georgia,serif; font-size:20px; font-weight:300; letter-spacing:5px; color:#D4AF37; margin:0; }
+.pv-head p { font-size:12px; color:#888; margin:8px 0 0; }
+.pv-gen { background:#0d2b0d; color:#a5d6a7; font-size:12px; text-align:center; padding:9px 16px; border-bottom:1px solid #1b5e20; line-height:1.6; }
+.pv-gen code { color:#fff; }
+.pv-nav { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; padding:12px 16px; background:#0a0a0a; position:sticky; top:0; z-index:10; }
+.pv-nav a { color:#D4AF37; text-decoration:none; font-size:11px; border:1px solid #3a2f00; padding:5px 12px; border-radius:20px; }
+.pv-titre { max-width:660px; margin:38px auto 0; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:#fff; background:#333; padding:10px 20px; border-left:4px solid #2e7d32; }
+.pv-com { max-width:660px; margin:0 auto; font-size:13px; color:#555; padding:12px 20px; line-height:1.7; background:#fff; }
+.pv-h { display:block; margin-top:6px; color:#8B6914; font-size:12px; }
+.pv-dest { max-width:660px; margin:16px auto 0; font-size:12px; color:#333; background:#eceff1; padding:7px 16px; border-radius:6px 6px 0 0; font-weight:700; }
+.pv-sujet { max-width:660px; margin:0 auto; font-size:13px; background:#eef7ee; border-left:4px solid #2e7d32; padding:10px 16px; color:#123; }
+.pv-mail { max-width:600px; margin:10px auto 0; background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.12); }
+.pv-fin { max-width:660px; margin:40px auto 0; background:#fff; padding:18px 20px; font-size:13px; color:#444; line-height:1.8; border-top:3px solid #D4AF37; }
+.pv-fin b { color:#8B6914; }
+table.tbl { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+table.tbl th { text-align:left; padding:8px; background:#eee; }
+table.tbl td { padding:8px; border-top:1px solid #ddd; vertical-align:top; }
 
-.email-pre{color:#7ecbf7;font-size:11px;letter-spacing:1.5px;margin-bottom:12px;padding-left:4px;}
-.email-pre span{color:#fff;font-weight:600;}
+.pv-notifs { max-width:660px; margin:0 auto; background:#141414; color:#ddd; padding:24px 20px 6px; }
+.pv-notifs .email-block { margin-bottom:44px; }
+.pv-notifs .email-label { color:#888; font-size:11px; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px; padding-left:4px; }
+.pv-notifs .email-label strong { color:#D4AF37; }
+.pv-notifs .email-label em { color:#aaa; font-style:normal; font-size:10px; }
+.pv-notifs .push-mockup { background:#fff; border-radius:14px; box-shadow:0 4px 24px rgba(0,0,0,.35); padding:14px 16px; max-width:360px; display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+.pv-notifs .push-mockup-icon { width:36px; height:36px; border-radius:8px; background:#111; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.pv-notifs .push-mockup-body { flex:1; }
+.pv-notifs .push-mockup-app { font-size:11px; font-weight:700; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; }
+.pv-notifs .push-mockup-title { font-size:13px; font-weight:700; color:#111; margin-bottom:2px; }
+.pv-notifs .push-mockup-text { font-size:12px; color:#444; line-height:1.4; }
+.pv-notifs .push-mockup-time { font-size:11px; color:#999; margin-top:4px; }
+.pv-main { max-width:660px; margin:34px auto 0; font-size:13px; background:#fff3e0; border:1px solid #ffe0b2; border-left:4px solid #e65100; padding:12px 18px; color:#5d4037; line-height:1.6; }
+
 </style>
 </head>
 <body>
 
-<div class="nav">
-  <a href="#c1">C1 Bienvenue</a>
-  <a href="#c2">C2 Renouv. sans payer</a>
-  <a href="#c2b">C2b Renouv. admin sans payer</a>
-  <a href="#c3">C3 Renouv. admin (E10)</a>
-  <a href="#c4">C4 Fin de saison J+1</a>
-  <a href="#c5">C5 Rappel 25 août</a>
-  <a href="#c6">C6 Relance 2 absences</a>
-  <a href="#p1">P1 Activation espace élève</a>
-  <a href="#notifs-admin">Notifs admin</a>
-  <a href="#push-os">Push OS</a>
-  <a href="#c-pay">C-pay Paiement validé</a>
-  <a href="#c-report">C-report Carte reportée</a>
-  <a href="#d-msg">D-msg Discussion (push)</a>
+<div class="pv-head">
+  <h1>TANGO &amp; VOUS</h1>
+  <p>Preview — emails des cartes de cours</p>
 </div>
+<div class="pv-gen">✅ Page <b>générée automatiquement</b> en exécutant les handlers de <code>worker.js</code> (Supabase et Brevo simulés) —
+ce que vous voyez est exactement ce que reçoivent les destinataires.<br>Régénérer avec <code>node outils/generer-preview-cartes.js</code></div>
+<div class="pv-nav"><a href="#c1">C1</a><a href="#c2b">C2b</a><a href="#c2">C2</a><a href="#cpay">C-pay</a><a href="#cepuisee">CX-épuisée</a><a href="#creport">C-report</a><a href="#cpe">CP-E</a><a href="#cx">CX</a><a href="#c4">C4</a><a href="#c5">C5</a><a href="#c6">C6</a><a href="#p1">P1</a><a href="#absents">Emails absents</a><a href="#notifs">🔔 Notifications</a></div>
 
-<!-- ═══════════════════════════════════════════════
-     C1 — Bienvenue (premier pointage de la saison)
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="c1">
-<div class="email-label"><strong>C1</strong> — Bienvenue · Premier pointage de la saison &nbsp;|&nbsp; <em>Déclenché au premier pointage de la saison (utilises 0→1)</em></div>
-<div class="email-subj">Objet : <span>Bienvenue dans votre cours de tango — Tango &amp; Vous</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Bienvenue - votre premiere seance a ete enregistree sur votre carte de 10 cours"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
+<div class="pv-titre" id="c1">C1 — Bienvenue au premier pointage de la saison</div>
+<div class="pv-com">Envoyé une seule fois, quand vous pointez le tout premier cours d'une carte. Présente le suivi de la carte et l'espace élève. <span class="pv-h">Handler : <code>handleNotifyCarteBienvenue</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Bienvenue dans votre cours de tango — Tango &amp; Vous</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Bienvenue - votre premiere seance a ete enregistree sur votre carte de cours&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue — votre carte de 10 cours est activée !</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre premier cours a été enregistré. Votre carte de 10 cours est maintenant active.</p>
+      <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE DE 10 COURS</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#1565c0;text-align:right;">1/10</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Cours restants</td><td style="padding:5px 8px;font-weight:700;color:#2e7d32;text-align:right;">9</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Valide jusqu'au</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">Dimanche 15 novembre 2026</td></tr>
+    </table>
   </div>
-  <!-- Bandeau vert -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Bienvenue dans votre cours de tango !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre premier cours de la saison vient d'être pointé. Voici un récapitulatif de votre carte et quelques informations pour bien débuter.</p>
-
-    <!-- Carte box -->
-    <div class="carte-box">
-      <div class="carte-box-header">
-        <div class="carte-box-header-title">Votre carte de 10 cours</div>
-        <div class="carte-box-header-label">Paris — Débutants · Jeudi soir</div>
+      <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+        <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 10px;">📱 Votre espace élève</p>
+        <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 6px;">• Pointez vos cours vous-même depuis votre téléphone</p>
+        <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 6px;">• Suivez votre carte et votre progression</p>
+        <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">• Retrouvez les milongas et les stages</p>
       </div>
-      <div class="carte-box-body">
-        <div class="carte-row">
-          <span class="carte-row-label">Cours utilisés</span>
-          <span class="carte-row-value">1 / 10</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Date de début</span>
-          <span class="carte-row-value">18 septembre 2025</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Expiration estimée</span>
-          <span class="carte-row-value">vers le 1er janvier 2026 <span style="font-size:12px;color:#a04000;">(Toussaint + 1 sem inclus)</span></span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Saison</span>
-          <span class="carte-row-value">2025-2026</span>
-        </div>
-        <!-- Barre de progression visuelle -->
-        <div style="margin-top:14px;">
-          <div style="font-size:11px;color:#a04000;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Progression</div>
-          <div class="carte-progress">
-            <div class="carte-dot">1</div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-          </div>
-          <div style="font-size:11px;color:#888;margin-top:6px;">9 cours restants</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Instructions PWA -->
-    <div style="background:#f0f4ff;border:1px solid #b3c8f5;border-radius:10px;padding:20px 22px;margin:0 0 22px;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #c5d8f8;">📱 Votre espace élève</div>
-      <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 14px;">Depuis votre espace élève, vous pouvez <strong>pointer vos présences</strong>, suivre vos cours restants, consulter les milongas et les publications de l'école.</p>
-      <div style="font-size:13px;color:#444;line-height:2;margin-bottom:16px;">
-        <strong style="color:#1565c0;">1.</strong> Ouvrez <strong>app.tangoetvous.fr</strong> depuis votre téléphone<br/>
-        <strong style="color:#1565c0;">2.</strong> Cliquez sur <strong>Connexion</strong> et entrez votre email<br/>
-        <strong style="color:#1565c0;">3.</strong> Un lien magique vous est envoyé — cliquez dessus pour vous connecter<br/>
-        <strong style="color:#1565c0;">4.</strong> Ajoutez l'appli à votre écran d'accueil :<br/>
-        &nbsp;&nbsp;&nbsp;&nbsp;• <strong>iPhone (Safari)</strong> : bouton Partage ↑ → "Sur l'écran d'accueil"<br/>
-        &nbsp;&nbsp;&nbsp;&nbsp;• <strong>Android (Chrome)</strong> : menu ⋮ → "Ajouter à l'écran d'accueil" ou "Installer l'appli"
-      </div>
-      <div style="text-align:center;">
-        <a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a>
-      </div>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="c2b">C2b — Carte renouvelée sans payer (par l'admin)</div>
+<div class="pv-com">Envoyé quand vous renouvelez une carte en la laissant « non payée » depuis Cartes → Détails. <span class="pv-h">Handler : <code>handleNotifyCarteRenouvellement</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Votre carte de 10 cours a été renouvelée — paiement à finaliser</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Nouvelle carte de cours creee - pensez a finaliser votre paiement sur AssoConnect&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+    <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Nouvelle carte créée — finalisez votre paiement</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre carte de 10 cours a été renouvelée. Pour finaliser, veuillez régler votre nouvelle carte sur AssoConnect.</p>
+      <div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #ffcc80;">🎫 NOUVELLE CARTE — PAIEMENT EN ATTENTE</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#e65100;text-align:right;">0/10</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Statut paiement</td><td style="padding:5px 8px;font-weight:700;color:#e65100;text-align:right;">⚠️ Non payée</td></tr>
+    </table>
   </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://le-regard-se-pose.assoconnect.com/exemple-renouv" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">💳 Renouveler ma carte sur AssoConnect →</a></div>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="c2">C2 — Carte renouvelée sans payer (variante « élève »)</div>
+<div class="pv-com">⚠️ <b>Cette variante n'est déclenchée par aucun bouton aujourd'hui</b> : le « Renouveler sans payer » de l'espace élève met bien la carte à jour, mais n'appelle pas cette route. Seule la variante admin ci-dessus part réellement. Le texte ci-dessous est celui que le code produirait. <span class="pv-h">Handler : <code>handleNotifyCarteRenouvellement</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Nouvelle carte ouverte — pensez à finaliser votre paiement</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Nouvelle carte de cours creee - pensez a finaliser votre paiement sur AssoConnect&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+    <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;"><span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Nouvelle carte créée — finalisez votre paiement</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre carte de 10 cours a été renouvelée. Pour finaliser, veuillez régler votre nouvelle carte sur AssoConnect.</p>
+      <div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #ffcc80;">🎫 NOUVELLE CARTE — PAIEMENT EN ATTENTE</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#e65100;text-align:right;">0/10</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Statut paiement</td><td style="padding:5px 8px;font-weight:700;color:#e65100;text-align:right;">⚠️ Non payée</td></tr>
+    </table>
   </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     C2 — Carte renouvelée sans payer (élève)
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="c2">
-<div class="email-label"><strong>C2</strong> — Carte renouvelée sans payer &nbsp;|&nbsp; <em>Déclenché quand l'élève clique "↻ Renouveler sans payer pour l'instant" dans son espace élève (carte à 10/10)</em></div>
-<div class="email-subj">Objet : <span>Nouvelle carte ouverte — pensez à finaliser votre paiement</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Nouvelle carte de 10 cours creee - pensez a finaliser votre paiement sur AssoConnect"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://le-regard-se-pose.assoconnect.com/exemple-renouv" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">💳 Renouveler ma carte sur AssoConnect →</a></div>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="cpay">C-pay — Paiement de la carte enregistré</div>
+<div class="pv-com">Envoyé quand vous basculez la pastille « ⚠️ Non payée » en « ✓ Payée » puis validez le montant. ⚠️ L'expiration affichée reste celle calculée depuis le <b>premier cours</b>, jamais depuis la date de paiement. <span class="pv-h">Handler : <code>handleNotifyCartePaiement</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Votre paiement a bien été enregistré — Tango &amp; Vous</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre paiement a ete enregistre - votre carte de cours est active&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Paiement enregistré — votre carte est active</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre carte de 10 cours est payée. Bon cours !</p>
+      <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE DE 10 COURS</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr style="background:#e8f5e9;"><td style="padding:6px 8px;font-weight:700;color:#2e7d32;">✓ Paiement enregistré</td><td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">170€ Espèces</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Date</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">Lundi 17 août 2026</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Cours utilisés</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">3/10</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Cours restants</td><td style="padding:5px 8px;font-weight:700;color:#2e7d32;text-align:right;">7</td></tr>
+      <tr><td style="padding:5px 8px;color:#888;">Valide jusqu'au</td><td style="padding:5px 8px;font-weight:700;color:#333;text-align:right;">Vendredi 16 octobre 2026</td></tr>
+    </table>
   </div>
-  <!-- Bandeau orange -->
-  <div style="background:#fff3e0;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe0b2;">
-    <span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Nouvelle carte ouverte — paiement en attente</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Vous venez de renouveler votre carte de 10 cours. Votre nouvelle carte est ouverte et prête à être utilisée. Il reste une étape : <strong>finaliser votre paiement</strong> pour confirmer votre inscription à la nouvelle saison.</p>
-
-    <!-- Carte box -->
-    <div class="carte-box">
-      <div class="carte-box-header">
-        <div class="carte-box-header-title">Nouvelle carte de 10 cours</div>
-        <div class="carte-box-header-label">Paris — Débutants · Jeudi soir</div>
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="cepuisee">CX-épuisée — Carte arrivée à son dernier cours</div>
+<div class="pv-com">Envoyé au pointage qui amène la carte à 0 cours restant, si aucun renouvellement automatique n'a eu lieu. <span class="pv-h">Handler : <code>handleNotifyCarteEpuisee</code> · 2 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 💳 Votre carte de 10 cours est terminée — Tango &amp; Vous</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre carte de cours est epuisee - renouvelez pour continuer a danser&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+    <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+      <span style="font-size:14px;font-weight:700;color:#e65100;">💳 Votre carte de 10 cours est terminée</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Vous avez utilisé vos 10 cours. Pour continuer à venir danser, pensez à renouveler votre carte !</p>
+      <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
+        <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">⚠️ Carte terminée — 10/10 cours utilisés</p>
+        <p style="font-size:13px;color:#444;margin:0;">Rendez-vous sur AssoConnect pour renouveler votre carte ou renouvelez directement depuis votre espace élève.</p>
       </div>
-      <div class="carte-box-body">
-        <div class="carte-row">
-          <span class="carte-row-label">Cours utilisés</span>
-          <span class="carte-row-value">0 / 10</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Statut paiement</span>
-          <span class="carte-row-value" style="color:#e65100;font-weight:700;">⚠️ Non payée</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Cours</span>
-          <span class="carte-row-value">Paris — Débutants</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Saison</span>
-          <span class="carte-row-value">2025-2026</span>
-        </div>
-        <!-- Barre vide -->
-        <div style="margin-top:14px;">
-          <div style="font-size:11px;color:#a04000;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Progression</div>
-          <div class="carte-progress">
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-          </div>
-          <div style="font-size:11px;color:#888;margin-top:6px;">10 cours disponibles</div>
-        </div>
+      <p style="text-align:center;margin:0 0 16px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">💳 Renouveler ma carte depuis l'espace élève →</a></p>
+      <p style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#fff;border:2px solid #D4AF37;color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></p>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-dest">📥 Email ADMIN → <code>tangoetvous@gmail.com</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 💳 Carte terminée — MARTIN</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;background:#fff;">
+  <div style="background:#111;padding:16px 24px;text-align:center;border-bottom:4px solid #D4AF37;">
+    <div style="font-size:13px;font-weight:700;letter-spacing:4px;color:#D4AF37;">TANGO &amp; VOUS</div>
+    <div style="font-size:9px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:3px;">Carte terminée</div>
+  </div>
+  <div style="padding:24px;">
+    <div style="border:2px solid #D4AF37;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <div style="background:#D4AF37;padding:10px 16px;">
+        <div style="font-size:18px;font-weight:700;color:#111;">MARTIN</div>
+        <div style="font-size:12px;color:#333;margin-top:2px;">camille@test.fr</div>
+      </div>
+      <div style="background:#fffdf8;padding:14px 16px;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tr style="background:#fff3e0;">
+            <td style="padding:6px 8px;font-weight:700;color:#c62828;">💳 10/10 cours utilisés</td>
+            <td style="padding:6px 8px;font-weight:700;color:#c62828;text-align:right;">Badge 💳</td>
+          </tr>
+          <tr><td style="padding:4px 8px;color:#888;">Statut</td><td style="padding:4px 8px;font-weight:700;color:#e65100;text-align:right;">Renouvellement en attente</td></tr>
+          <tr><td style="padding:4px 8px;color:#888;">Utilisés</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">10/10</td></tr>
+        </table>
       </div>
     </div>
-
-    <!-- Encadré orange explication -->
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
-      <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">Finaliser votre paiement</p>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Votre nouvelle carte a été créée. Pensez à finaliser votre paiement sur AssoConnect pour continuer à suivre vos cours sans interruption.</p>
-    </div>
-
-    <!-- Bouton AssoConnect -->
-    <!-- Lien depuis : tev_liens_assoconnect[saison].renouv — Paramètres → Tango Paris → Liens AssoConnect → "Renouvellement carte (10/20 cours)" -->
-    <div style="text-align:center;margin:0 0 20px;">
-      <a href="#LIEN_ASSOCONNECT_RENOUV" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Finaliser le paiement sur AssoConnect →</a>
-    </div>
-
-    <div style="background:#f5f5f5;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#666;margin:0;line-height:1.7;">Si vous avez déjà effectué votre paiement, il sera validé par l'équipe pédagogique dans les prochains jours. Vous recevrez une confirmation par email.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    <p style="text-align:center;"><a href="https://app.tangoetvous.fr/admin.html" style="display:inline-block;background:#D4AF37;color:#111;padding:12px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Ouvrir l'admin → Cartes 10</a></p>
   </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
+</div></body></html></div><div class="pv-titre" id="creport">C-report — Carte reportée sur la saison suivante</div>
+<div class="pv-com">Envoyé quand vous cliquez « ↩ Reporter » en fin de saison : les cours restants sont préservés pour la rentrée. <span class="pv-h">Handler : <code>handleNotifyCarteReport</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> Votre carte a été reportée pour la saison 2026-2027 — Tango &amp; Vous</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre carte a ete reportee - vos cours sont preserves pour la prochaine saison&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+    <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Vos cours sont reportés sur la prochaine saison</span></div>
+    <div style="padding:28px 24px;">
+      <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
+      <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Vos cours non utilisés ont été reportés sur la saison prochaine. Votre carte vous attend à la rentrée de septembre.</p>
+      <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">🎫 VOTRE CARTE 2026-2027</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr style="background:#e8f5e9;"><td style="padding:6px 8px;font-weight:700;color:#2e7d32;">↩ Cours reportés</td><td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">4 cours préservés</td></tr>
+    </table>
   </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     C3 — Carte renouvelée par l'admin (E10)
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="c3">
-<div class="email-label"><strong>C3 (E10)</strong> — Carte renouvelée par l'admin &nbsp;|&nbsp; <em>Déclenché quand l'admin choisit "Payé" dans la modal Renouveler → puis valide "✓ Enregistrer le paiement"</em></div>
-<div class="email-subj">Objet : <span>Votre carte de 10 cours a été renouvelée</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre paiement a ete enregistre - votre carte de 10 cours est active"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau vert -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre carte a été renouvelée !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre carte de 10 cours a été renouvelée. À très bientôt pour votre prochain cours !</p>
-
-    <!-- Carte box -->
-    <div class="carte-box">
-      <div class="carte-box-header">
-        <div class="carte-box-header-title">Nouvelle carte de 10 cours</div>
-        <div class="carte-box-header-label">Paris — Débutants · Jeudi soir</div>
-      </div>
-      <div class="carte-box-body">
-        <div class="carte-row">
-          <span class="carte-row-label">Cours utilisés</span>
-          <span class="carte-row-value">0 / 10</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Cours</span>
-          <span class="carte-row-value">Paris — Débutants</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Saison</span>
-          <span class="carte-row-value">2025-2026</span>
-        </div>
-        <div style="margin-top:14px;">
-          <div style="font-size:11px;color:#a04000;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Progression</div>
-          <div class="carte-progress">
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-          </div>
-          <div style="font-size:11px;color:#888;margin-top:6px;">10 cours disponibles</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bouton espace élève -->
-    <div style="text-align:center;margin:0 0 22px;">
-      <a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     C2b — Carte renouvelée par l'admin sans payer
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="c2b">
-<div class="email-label"><strong>C2b</strong> — Carte renouvelée par l'admin sans payer &nbsp;|&nbsp; <em>Déclenché quand l'admin choisit "Non payé" dans la modal Renouveler → clique "Renouveler" · Équivalent admin de C2</em></div>
-<div class="email-subj">Objet : <span>Votre carte de 10 cours a été renouvelée — paiement à finaliser</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Nouvelle carte de 10 cours creee - pensez a finaliser votre paiement sur AssoConnect"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau orange -->
-  <div style="background:#fff3e0;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe0b2;">
-    <span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Nouvelle carte ouverte — paiement en attente</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous avons renouvelé votre carte de 10 cours. Votre nouvelle carte est prête. Il reste une étape : <strong>finaliser votre paiement</strong> pour confirmer votre inscription à la nouvelle saison.</p>
-
-    <!-- Carte box -->
-    <div class="carte-box">
-      <div class="carte-box-header">
-        <div class="carte-box-header-title">Nouvelle carte de 10 cours</div>
-        <div class="carte-box-header-label">Paris — Débutants · Jeudi soir</div>
-      </div>
-      <div class="carte-box-body">
-        <div class="carte-row">
-          <span class="carte-row-label">Cours utilisés</span>
-          <span class="carte-row-value">0 / 10</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Statut paiement</span>
-          <span class="carte-row-value" style="color:#e65100;font-weight:700;">⚠️ Non payée</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Cours</span>
-          <span class="carte-row-value">Paris — Débutants</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Saison</span>
-          <span class="carte-row-value">2025-2026</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Encadré orange -->
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">
-      <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 8px;">Finaliser votre paiement</p>
-      <p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Votre nouvelle carte a été ouverte par l'équipe Tango &amp; Vous. Pensez à finaliser votre paiement sur AssoConnect pour continuer à suivre vos cours sans interruption.</p>
-    </div>
-
-    <!-- Bouton AssoConnect -->
-    <!-- Lien depuis : tev_liens_assoconnect[saison].renouv — Paramètres → Tango Paris → Liens AssoConnect → "Renouvellement carte (10/20 cours)" -->
-    <div style="text-align:center;margin:0 0 20px;">
-      <a href="#LIEN_ASSOCONNECT_RENOUV" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Finaliser le paiement sur AssoConnect →</a>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     C4 — Fin de saison J+1 (lendemain dernier cours Paris juin)
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="c4">
-<div class="email-label"><strong>C4</strong> — Fin de saison J+1 &nbsp;|&nbsp; <em>Cron 8h UTC 20-30 juin · handler vérifie si hier = dernière date Paris de juin · élèves avec cours restants</em></div>
-<div class="email-subj">Objet : <span>📅 Il vous reste 3 cours — reportez votre carte sur la saison ${saiNext}</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Il vous reste des cours sur votre carte - pre-inscrivez-vous pour la saison prochaine"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau bleu -->
-  <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
-    <span style="font-size:14px;font-weight:700;color:#1565c0;">📅 La saison ${sai} se termine bientôt</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Le dernier cours de la saison a eu lieu hier. <strong>Il vous reste encore 3 cours sur votre carte.</strong></p>
-
-    <!-- Carte box -->
-    <div class="carte-box">
-      <div class="carte-box-header">
-        <div class="carte-box-header-title">Votre carte de 10 cours — saison ${sai}</div>
-        <div class="carte-box-header-label">Paris — Débutants · Jeudi soir</div>
-      </div>
-      <div class="carte-box-body">
-        <div class="carte-row">
-          <span class="carte-row-label">Cours utilisés</span>
-          <span class="carte-row-value">7 / 10</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Cours restants</span>
-          <span class="carte-row-value" style="color:#e65100;font-weight:700;">3 cours restants</span>
-        </div>
-        <div style="margin-top:14px;">
-          <div style="font-size:11px;color:#a04000;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Progression</div>
-          <div class="carte-progress">
-            <div class="carte-dot">✓</div>
-            <div class="carte-dot">✓</div>
-            <div class="carte-dot">✓</div>
-            <div class="carte-dot">✓</div>
-            <div class="carte-dot">✓</div>
-            <div class="carte-dot">✓</div>
-            <div class="carte-dot">✓</div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Info report carte -->
+      <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
+      <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+    </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="cpe">CP-E — Récapitulatif élève, le lendemain matin</div>
+<div class="pv-com">Cron du matin : regroupe tous les pointages de la veille pour une même personne en un seul email. Les données sont relues dans les notifications en attente, pas recalculées. <span class="pv-h">Handler : <code>handleCronCartePonteeJ1</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> ✓ Présence enregistrée le Lundi 17 août 2026 — Carte Tango &amp; Vous</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre presence au cours a ete enregistree - retrouvez le recap de votre carte ci-dessous&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div><div style="max-width:600px;margin:0 auto;background:#fff;">
+  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre présence a été enregistrée par votre professeur</span></div>
+  <div style="padding:28px 24px;">
+    <p style="font-size:15px;color:#333;margin:0 0 10px;">Bonjour Camille,</p>
+    <p style="font-size:15px;color:#333;margin:0 0 20px;">Votre professeur a enregistré votre présence au cours du Lundi 17 août 2026.</p>
     <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Reportez vos cours sur ${saiNext}</div>
-      <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 14px;">Les pré-inscriptions pour la saison ${saiNext} sont ouvertes. Réglez simplement l'adhésion à notre association avant le 25 août ${anneeFin} sur AssoConnect pour reporter les cours de votre carte à la saison prochaine.</p>
-      <div style="text-align:center;">
-        <a href="${tev_liens_assoconnect[saiNext].cours}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Reportez votre carte → Réglez votre adhésion de la saison prochaine</a>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">VOTRE CARTE DE 10 COURS</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr style="background:#e8f5e9;"><td style="padding:6px 8px;font-weight:700;color:#2e7d32;">⬤ Cours pointés CE JOUR</td><td style="padding:6px 8px;font-weight:700;color:#2e7d32;text-align:right;">2 cours</td></tr>
+        <tr><td style="padding:4px 8px;color:#888;">Date du cours</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">Lundi 17 août 2026</td></tr>
+        <tr><td style="padding:4px 8px;color:#888;">Utilisés au total (carte)</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">6/10</td></tr>
+        <tr><td style="padding:4px 8px;color:#888;">Cours restants</td><td style="padding:4px 8px;font-weight:700;color:#2e7d32;text-align:right;">4</td></tr>
+        <tr><td style="padding:4px 8px;color:#888;">Validité carte</td><td style="padding:4px 8px;font-weight:700;color:#111;text-align:right;">jusqu'au Jeudi 1 octobre 2026</td></tr>
+      </table>
+    </div>
+    <p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Retrouvez l'état de votre carte et votre historique de présences dans votre espace élève.</p>
+    <p style="text-align:center;margin:0 0 24px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></p>
+    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+  </div>
+  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div>
+</div></body></html></div><div class="pv-titre" id="cx">CX — Carte expirée avec des cours non utilisés</div>
+<div class="pv-com">Cron quotidien : cible les cartes dont la date de validité tombe aujourd'hui alors qu'il reste des cours. <span class="pv-h">Handler : <code>handleCronCarteExpiree</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> ⏰ Votre carte de cours a expiré — 4 cours non utilisés · Tango &amp; Vous</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre carte de cours a expire - renouvelez pour continuer a danser&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+      <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+        <span style="font-size:14px;font-weight:700;color:#e65100;">⏰ Votre carte de cours a expiré</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
+          <p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">Votre carte a expiré</p>
+          <p style="font-size:13px;color:#444;line-height:1.6;margin:0 0 8px;">Votre carte de cours est arrivée à sa date de fin de validité le <strong>Lundi 17 août 2026</strong>.</p>
+          <p style="font-size:13px;color:#444;line-height:1.6;margin:0 0 8px;">Il vous reste <strong>4 cours</strong> non utilisés sur cette carte.</p>
+          <p style="font-size:13px;color:#444;line-height:1.6;margin:0;">Si vous souhaitez continuer à danser, vous pouvez renouveler votre carte sur AssoConnect.</p>
+        </div>
+        <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 24px;">Pour toute question n'hésitez pas à nous contacter.</p>
+        <p style="text-align:center;margin:0 0 16px;"><a href="https://le-regard-se-pose.assoconnect.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Renouveler ma carte sur AssoConnect →</a></p>
+        <p style="text-align:center;margin:0 0 28px;"><a href="mailto:tangoetvous@gmail.com" style="display:inline-block;background:#fff;color:#555;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;letter-spacing:0.5px;text-decoration:none;border:2px solid #999;">Nous contacter</a></p>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="c4">C4 — Fin de saison : il vous reste des cours</div>
+<div class="pv-com">Cron du lendemain du dernier cours de juin. ⚠️ <b>Quadruple ciblage</b> : cours restants, carte non expirée, carte payée, et inscription encore active dans la saison. <span class="pv-h">Handler : <code>handleCronFinSaisonC4</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> 📅 Il vous reste 4 cours — reportez votre carte sur la saison 2026-2027</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Il vous reste des cours sur votre carte - pre-inscrivez-vous pour la saison prochaine&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+      <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
+        <span style="font-size:14px;font-weight:700;color:#1565c0;">📅 Fin de saison — vos cours non utilisés</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Il vous reste <strong>4 cours</strong> sur votre carte de cours de la saison en cours.</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Les pré-inscriptions pour la saison 2026-2027 sont ouvertes. Réglez simplement l'adhésion à notre association avant le 25 août 2026 sur AssoConnect pour reporter les cours de votre carte à la saison prochaine.</p>
+        <div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 24px;text-align:center;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;margin-bottom:10px;font-weight:700;">Votre carte</div>
+          <div style="font-size:22px;font-weight:700;color:#c62828;">4 cours restants</div>
+          <div style="font-size:13px;color:#bf360c;margin-top:6px;">À reporter avant le 31 août 2026</div>
+        </div>
+        <p style="text-align:center;margin:0 0 28px;"><a href="https://www.tangoetvous.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Reportez votre carte → Réglez votre adhésion de la saison prochaine</a></p>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="c5">C5 — Dernier rappel du 25 août</div>
+<div class="pv-com">Même ciblage que C4, ton plus pressant : les cours restants expirent à la fin du mois. <span class="pv-h">Handler : <code>handleCronFinSaisonC5</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> ⚠️ Dernier rappel — reportez vos cours avant le 31 août 2026</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Dernier rappel - vos cours non utilises expirent le 31 aout - reagissez maintenant&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+      <div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">
+        <span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Dernier rappel — reportez vos cours avant le 31 août 2026</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
+        <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 22px;">Il vous reste <strong>4 cours</strong>. Réglez simplement l'adhésion à notre association avant le 25 août 2026 sur AssoConnect pour reporter les cours de votre carte à la saison prochaine.</p>
+        <div style="background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:16px 20px;margin:0 0 24px;text-align:center;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#e65100;margin-bottom:10px;font-weight:700;">Votre carte</div>
+          <div style="font-size:22px;font-weight:700;color:#c62828;">4 cours restants</div>
+          <div style="font-size:13px;color:#bf360c;margin-top:6px;font-weight:700;">⚠️ À reporter avant le 31 août 2026</div>
+        </div>
+        <p style="text-align:center;margin:0 0 28px;"><a href="https://www.tangoetvous.com" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Reportez votre carte → Réglez votre adhésion de la saison prochaine</a></p>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="c6">C6 — Deux absences consécutives</div>
+<div class="pv-com">Cron du vendredi (Paris) et du mardi (Vincennes). Ton informel, volontairement bienveillant. Part même si l'absence a été déclarée. Un marqueur en base évite de renvoyer le même message pour les deux mêmes dates. <span class="pv-h">Handler : <code>handleCronRelanceAbsences</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> On prend de tes nouvelles… 👋</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+          <div style="background:#e3f2fd;padding:14px 24px;text-align:center;border-bottom:1px solid #bbdefb;">
+            <span style="font-size:14px;font-weight:700;color:#1565c0;">💙 On prend de tes nouvelles</span>
+          </div>
+          <div style="padding:28px 24px;">
+            <p style="font-size:15px;color:#333;margin:0 0 20px;">Coucou Camille,</p>
+            <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">On ne t'a pas vu·e aux 2 derniers cours. Tout va bien ?</p>
+            <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">Nous sommes là pour t'accompagner dès que tu reprends pour te partager ce qui a été vu dernièrement.</p>
+            <div style="background:#e8f4fd;border:1px solid #b3d9f5;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+              <p style="font-size:14px;color:#1565c0;font-weight:700;margin:0 0 6px;">Rappel</p>
+              <p style="font-size:14px;color:#333;line-height:1.6;margin:0;">Il te reste <strong>6 cours</strong> sur ta carte. Ils t'attendent !</p>
+            </div>
+            <p style="font-size:13px;color:#555;text-align:center;margin:0 0 6px;">📞 07 73 27 59 06</p>
+            <p style="font-size:13px;color:#555;text-align:center;margin:0 0 28px;"><a href="mailto:tangoetvous@gmail.com" style="color:#B8962E;">tangoetvous@gmail.com</a></p>
+            <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia &amp; Jérémy</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+          </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div><div class="pv-titre" id="p1">P1 — Invitation à activer l'espace élève (J+7)</div>
+<div class="pv-com">Envoyé une semaine après la validation du paiement, pour laisser le temps de souffler avant de proposer l'installation de l'appli. <span class="pv-h">Handler : <code>handleCronEspaceEleveActivation</code> · 1 email(s) envoyé(s).</span></div><div class="pv-dest">📧 Email ÉLÈVE → <code>camille@test.fr</code></div>
+<div class="pv-sujet"><strong>Objet :</strong> ✓ Votre espace élève est prêt — Tango &amp; Vous</div>
+<div class="pv-mail"><!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Votre espace eleve est pret - connectez-vous et installez l application&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div><div style="max-width:600px;margin:0 auto;background:#fff;"><div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>
+      <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;"><span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre espace élève est prêt !</span></div>
+      <div style="padding:28px 24px;">
+        <p style="font-size:15px;color:#333;margin:0 0 20px;">Bonjour Camille,</p>
+        <p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 22px;">Votre espace élève Tango &amp; Vous est prêt. Accédez à votre espace depuis votre téléphone pour pointer vos cours et retrouver toutes les informations de l'école.</p>
+        <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #b3d9f5;">ACCÉDER À VOTRE ESPACE ÉLÈVE</div>
+      <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 8px;"><strong>1.</strong> Ouvrez <a href="https://app.tangoetvous.fr" style="color:#1565c0;">app.tangoetvous.fr</a> sur votre téléphone</p>
+      <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 8px;"><strong>2.</strong> Entrez votre adresse email</p>
+      <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 8px;"><strong>3.</strong> Cliquez sur le lien reçu par email (magic link — pas de mot de passe)</p>
+      <p style="font-size:13px;color:#444;line-height:1.7;margin:0 0 10px;"><strong>4.</strong> Installez l'appli sur votre téléphone</p>
+      <div style="background:#f9f9f9;border-radius:6px;padding:10px 14px;font-size:12px;color:#666;line-height:1.7;">
+        <strong>iPhone</strong> : Partage ↑ → "Sur l'écran d'accueil"<br/>
+        <strong>Android</strong> : Menu ⋮ → "Ajouter à l'écran d'accueil"
       </div>
     </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     C5 — Dernier rappel 25 août
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="c5">
-<div class="email-label"><strong>C5</strong> — Dernier rappel 25 août &nbsp;|&nbsp; <em>Cron 8h UTC le 25 août · élèves avec cours restants</em></div>
-<div class="email-subj">Objet : <span>⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Dernier rappel - vos cours non utilises expirent le 31 aout - reagissez maintenant"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau orange -->
-  <div style="background:#fff3e0;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe0b2;">
-    <span style="font-size:14px;font-weight:700;color:#e65100;">⚠️ Dernier rappel — reportez vos cours avant le 31 août ${anneeFin}</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Il vous reste encore <strong>3 cours</strong> sur votre carte de 10 cours de la saison ${sai}.</p>
-
-    <!-- Carte box — état expirant -->
-    <div class="carte-box" style="border-color:#c62828;">
-      <div class="carte-box-header" style="background:#c62828;">
-        <div class="carte-box-header-title">Votre carte — expire le 31 août ${anneeFin}</div>
-        <div class="carte-box-header-label">Paris — Débutants · 3 cours restants</div>
-      </div>
-      <div class="carte-box-body">
-        <div class="carte-row">
-          <span class="carte-row-label">Cours utilisés</span>
-          <span class="carte-row-value">7 / 10</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Cours restants</span>
-          <span class="carte-row-value" style="color:#c62828;font-weight:700;">3 cours — expirent le 31/08/${anneeFin}</span>
-        </div>
-      </div>
+        <div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
+      <p style="font-size:13px;font-weight:700;color:#333;margin:0 0 8px;">Ce que vous pouvez faire depuis l'appli</p>
+      <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Pointer vos cours (carte de cours)</p>
+      <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Suivre votre carte et les cours restants</p>
+      <p style="font-size:13px;color:#555;line-height:1.7;margin:0 0 4px;">• Retrouver les milongas et les stages</p>
+      <p style="font-size:13px;color:#555;line-height:1.7;margin:0;">• Lire les publications de l'école</p>
     </div>
+        <div style="text-align:center;margin:0 0 22px;"><a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a></div>
+        <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
+      </div><div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;"><a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/><a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06</div></div></body></html></div>
 
-    <!-- Bouton report carte -->
-    <div style="text-align:center;margin:0 0 22px;">
-      <a href="${tev_liens_assoconnect[saiNext].cours}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Reportez votre carte → Réglez votre adhésion de la saison prochaine</a>
-    </div>
-
-    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#bf360c;margin:0;line-height:1.7;">Réglez simplement l'adhésion à notre association avant le 25 août ${anneeFin} sur AssoConnect pour reporter les cours de votre carte à la saison prochaine.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
+<div class="pv-titre" id="absents" style="border-left-color:#c62828;">Ce que les anciennes maquettes annonçaient et qui n'existe pas</div>
+<div class="pv-com">
+  <table class="tbl">
+    <tr><th>Ancienne section</th><th>Réalité dans le code</th></tr>
+    <tr><td><b>C3</b> — « renouvellement marqué payé »</td>
+        <td>Renouveler une carte en cochant « Payé » <b>n'envoie aucun email</b> : la seule notification du renouvellement est C2b, réservée au cas « non payée ».</td></tr>
+    <tr><td><b>C2</b> — variante « élève »</td>
+        <td>Le branchement existe dans le worker mais <b>aucun bouton ne l'appelle</b> : le « Renouveler sans payer » de l'espace élève met la carte à jour sans prévenir personne.</td></tr>
+    <tr><td><b>CP-A</b> — « récap admin au pointage »</td>
+        <td>Ce n'est <b>pas un email</b> : au pointage, le worker pose seulement la notification in-app de l'élève, met CP-E en file pour le lendemain matin, et envoie un push. Rien n'arrive dans votre boîte.</td></tr>
+  </table>
+  <p style="margin-top:14px;">Ces deux points sont à trancher : soit on branche l'email manquant, soit on retire la variante morte. Rien n'est modifié pour l'instant.</p>
 </div>
 
-<!-- ═══════════════════════════════════════════════
-     C6 — Relance 2 absences consécutives
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="c6">
-<div class="email-label"><strong>C6</strong> — Relance 2 absences &nbsp;|&nbsp; <em>Cron vendredi matin (Paris) / mardi matin (Vincennes) · élève carte10 absent aux 2 derniers cours d'affilée · anti-doublon via <code style="background:#333;padding:1px 4px;border-radius:3px;font-size:10px;">derniere_relance_abs</code> sur eleves</em></div>
-<div class="email-subj">Objet : <span>On prend de tes nouvelles… 👋</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"On prend de tes nouvelles - tes cours sont preserves"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Pas de bandeau statut ici — ton informel, pas de statut à afficher -->
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Coucou <strong style="color:#e65100;">Felipe</strong> ! 👋</p>
-
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">On ne t'a pas vu·e aux deux derniers cours — tout va bien ?</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">Pas d'inquiétude : tes cours sont là, ils t'attendent. <strong style="color:#333;">Il te reste 3 cours sur ta carte</strong>, et une absence n'entraîne aucune pénalité.</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Nous sommes là pour t'accompagner dès que tu reprends pour te partager ce qui a été vu dernièrement.</p>
-
-    <!-- Carte box compact -->
-    <div class="carte-box">
-      <div class="carte-box-header">
-        <div class="carte-box-header-title">Ta carte de 10 cours</div>
-        <div class="carte-box-header-label">Paris — Débutants · toujours valide</div>
-      </div>
-      <div class="carte-box-body">
-        <div class="carte-row">
-          <span class="carte-row-label">Cours utilisés</span>
-          <span class="carte-row-value">7 / 10</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Cours restants</span>
-          <span class="carte-row-value" style="color:#2e7d32;font-weight:700;">3 cours disponibles ✓</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Expiration estimée</span>
-          <span class="carte-row-value">vers le 28 novembre 2025</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Contacts -->
-    <div style="background:#f5f5f5;border-radius:8px;padding:16px 20px;margin:0 0 22px;text-align:center;">
-      <p style="font-size:13px;color:#555;margin:0 0 12px;">N'hésite pas à nous contacter :</p>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-        <a href="tel:0773275906" style="display:inline-block;background:#1565c0;color:#fff;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">📞 07 73 27 59 06</a>
-        <a href="mailto:tangoetvous@gmail.com" style="display:inline-block;background:#111;color:#D4AF37;padding:10px 20px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">✉️ tangoetvous@gmail.com</a>
-      </div>
-    </div>
-
-    <!-- Signature plus informelle -->
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">On espère te revoir bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia &amp; Jérémy</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     P1 — Activation espace élève
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="p1">
-<div class="email-label"><strong>P1</strong> — Activation espace élève &nbsp;|&nbsp; <em>Déclenché automatiquement à la validation de l'inscription (Inscription directe ou Valider Paiement → I03) · ⚠️ Contenu à intégrer dans I03 OU envoyer en email séparé J+2 — à décider</em></div>
-<div class="email-subj">Objet : <span>Votre espace élève Tango &amp; Vous est prêt !</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre espace eleve est pret - connectez-vous et installez l application"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau vert -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre espace élève est prêt !</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Bienvenue chez Tango &amp; Vous ! Votre espace élève vient d'être activé. Voici comment y accéder depuis votre téléphone.</p>
-
-    <!-- Instructions connexion -->
-    <div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:14px;font-weight:700;padding-bottom:10px;border-bottom:1px solid #b3d9f5;">Comment accéder à votre espace</div>
-      <div style="font-size:14px;color:#333;line-height:2.1;">
-        <div style="display:flex;gap:12px;margin-bottom:8px;align-items:flex-start;">
-          <span style="background:#1565c0;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;margin-top:2px;">1</span>
-          <span>Ouvrez <strong>app.tangoetvous.fr</strong> depuis votre téléphone</span>
-        </div>
-        <div style="display:flex;gap:12px;margin-bottom:8px;align-items:flex-start;">
-          <span style="background:#1565c0;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;margin-top:2px;">2</span>
-          <span>Cliquez sur <strong>Connexion</strong> et entrez votre adresse email</span>
-        </div>
-        <div style="display:flex;gap:12px;margin-bottom:8px;align-items:flex-start;">
-          <span style="background:#1565c0;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;margin-top:2px;">3</span>
-          <span>Vous recevrez un <strong>lien magique</strong> par email — cliquez dessus pour vous connecter directement, sans mot de passe</span>
-        </div>
-        <div style="display:flex;gap:12px;align-items:flex-start;">
-          <span style="background:#1565c0;color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;margin-top:2px;">4</span>
-          <div>Ajoutez l'appli à votre <strong>écran d'accueil</strong> :<br/>
-          &nbsp;&nbsp;• <strong>iPhone (Safari)</strong> : bouton Partage ↑ → "Sur l'écran d'accueil"<br/>
-          &nbsp;&nbsp;• <strong>Android (Chrome)</strong> : menu ⋮ → "Ajouter à l'écran d'accueil" ou "Installer l'appli"</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Ce que vous pouvez faire -->
-    <div style="background:#f5f5f5;border-radius:8px;padding:16px 20px;margin:0 0 22px;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#555;font-weight:700;margin-bottom:12px;">Ce que vous pouvez faire depuis l'appli</div>
-      <div style="font-size:14px;color:#444;line-height:2;">
-        🎯 <strong>Pointer vos présences</strong> à chaque cours<br/>
-        📊 <strong>Suivre votre carte</strong> — cours restants et expiration<br/>
-        💃 <strong>RSVP aux milongas</strong> — indiquez si vous venez<br/>
-        📰 <strong>Consulter les publications</strong> — actualités et vidéos pédagogiques<br/>
-        📅 <strong>Agenda</strong> — ajouter le calendrier des cours à votre téléphone
-      </div>
-    </div>
-
-    <!-- Bouton -->
-    <div style="text-align:center;margin:0 0 22px;">
-      <a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a>
-    </div>
-
-    <div style="background:#f5f5f5;border-radius:8px;padding:12px 16px;margin:0 0 22px;">
-      <p style="font-size:12px;color:#777;margin:0;line-height:1.7;">🔑 Connexion sans mot de passe : à chaque connexion, vous recevez un lien magique par email valable 1 heure. Simple et sécurisé.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
+<div class="pv-titre" id="notifs" style="border-left-color:#5c9dc2;">Notifications — toast, panel 🔔 et push OS</div>
+<div class="pv-main">✍️ <b>Section rédigée à la main</b>, contrairement aux emails ci-dessus :
+les notifications (toast, panel 🔔, push OS) ne passent pas par un gabarit qu'on puisse exécuter.
+Elles sont donc à vérifier manuellement en cas de changement.</div>
+<div class="pv-notifs"><!-- ═══════════════════════════════════════════════
      NOTIFICATIONS ADMIN
      ═══════════════════════════════════════════════ -->
 <div class="email-block" id="notifs-admin">
@@ -796,207 +432,6 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
 </div>
 
 
-<!-- ═══════════════════════════════════════════════
-     C-pay — Admin valide le paiement carte10
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="c-pay">
-<div class="email-label"><strong>C-pay</strong> — Admin valide le paiement carte10 &nbsp;|&nbsp; <em>Déclenché quand l'admin clique "✓ Enregistrer" dans le modal paiement · Ce modal s'ouvre depuis <strong>Cartes 10 → Détails</strong> en cliquant sur le badge "⚠️ Non payée" ou "✓ Payée" de la fiche élève · carte passe de paye=false à paye=true</em></div>
-<div class="email-subj">Objet : <span>Votre paiement a bien été enregistré — Tango &amp; Vous</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre paiement a ete enregistre - votre carte de 10 cours est active"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau vert -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Paiement enregistré</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre paiement a bien été enregistré. Votre carte de 10 cours est maintenant active.</p>
-
-    <!-- Carte box -->
-    <div class="carte-box">
-      <div class="carte-box-header">
-        <div class="carte-box-header-title">Votre carte de 10 cours</div>
-        <div class="carte-box-header-label">Paris — Débutants · Jeudi soir</div>
-      </div>
-      <div class="carte-box-body">
-        <div class="carte-row">
-          <span class="carte-row-label">Statut paiement</span>
-          <span class="carte-row-value" style="color:#2e7d32;font-weight:700;">✓ Payée</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Montant</span>
-          <span class="carte-row-value">[montant — depuis Paramètres → Tango Paris → Tarifs]</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Mode</span>
-          <span class="carte-row-value">CB 1×</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Date paiement</span>
-          <span class="carte-row-value">18 sept. 2025</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Cours utilisés</span>
-          <span class="carte-row-value">1 / 10</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Expiration estimée</span>
-          <!-- Calculée depuis datePremierCours (1er cours pointé), pas depuis la date de paiement -->
-          <span class="carte-row-value">vers le 1er jan. 2026 <span style="font-size:12px;color:#a04000;">(depuis le 1er cours · Toussaint + 1 sem inclus)</span></span>
-        </div>
-        <!-- Barre de progression -->
-        <div style="margin-top:14px;">
-          <div style="font-size:11px;color:#a04000;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Progression</div>
-          <div class="carte-progress">
-            <div class="carte-dot">1</div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-          </div>
-          <div style="font-size:11px;color:#888;margin-top:6px;">9 cours restants</div>
-        </div>
-      </div>
-    </div>
-
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Votre carte de 10 cours est payée. Bon cours !</p>
-
-    <!-- Bouton espace élève -->
-    <div style="text-align:center;margin:0 0 22px;">
-      <a href="https://app.tangoetvous.fr" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Accéder à mon espace élève →</a>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-
-<!-- Push OS -->
-<div style="margin-top:28px;" class="section-title">Push OS — élève</div>
-<div class="push-mockup" style="margin-top:14px;">
-  <div class="push-mockup-icon" style="background:#2e7d32;">✓</div>
-  <div class="push-mockup-body">
-    <div class="push-mockup-app">Tango &amp; Vous</div>
-    <div class="push-mockup-title">Paiement enregistré</div>
-    <div class="push-mockup-text">✓ Paiement de [montant — Paramètres → Tango Paris → Tarifs] enregistré · Votre carte est active</div>
-    <div class="push-mockup-time">À l'instant · app.tangoetvous.fr</div>
-  </div>
-</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════
-     C-report — Admin reporte une carte en fin de saison
-     ═══════════════════════════════════════════════ -->
-<div class="email-block" id="c-report">
-<div class="email-label"><strong>C-report</strong> — Admin reporte une carte en fin de saison &nbsp;|&nbsp; <em>Déclenché quand l'admin clique "↩ Reporter" dans Cartes 10 → Détails (visible en juillet-août) · crée une ligne isReport=true pour la saison suivante</em></div>
-<div class="email-subj">Objet : <span>Votre carte a été reportée pour la saison 2026-2027 — Tango &amp; Vous</span></div>
-<div class="email-pre">📧 Gmail preview : <span>"Votre carte a ete reportee - vos cours sont preserves pour la prochaine saison"</span></div>
-<div class="email-wrap">
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;color:#333;">
-  <!-- Header -->
-  <div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;">
-    <div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div>
-    <div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div>
-  </div>
-  <!-- Bandeau vert -->
-  <div style="background:#e8f5e9;padding:14px 24px;text-align:center;border-bottom:1px solid #c8e6c9;">
-    <span style="font-size:14px;font-weight:700;color:#2e7d32;">✓ Votre carte a été reportée</span>
-  </div>
-  <div style="padding:30px 28px;">
-    <p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#e65100;">Felipe</strong>,</p>
-    <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 24px;">Vos 3 cours restants ont été préservés pour la prochaine saison. À très bientôt en septembre !</p>
-
-    <!-- Carte box -->
-    <div class="carte-box">
-      <div class="carte-box-header">
-        <div class="carte-box-header-title">Votre carte 2026-2027</div>
-        <div class="carte-box-header-label">Paris — Débutants · Report confirmé</div>
-      </div>
-      <div class="carte-box-body">
-        <div class="carte-row">
-          <span class="carte-row-label">Cours reportés</span>
-          <span class="carte-row-value" style="color:#2e7d32;font-weight:700;">3 cours préservés ✓</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Saison</span>
-          <span class="carte-row-value">2026-2027</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Statut</span>
-          <span class="carte-row-value" style="color:#2e7d32;font-weight:700;">✓ Report confirmé</span>
-        </div>
-        <div class="carte-row">
-          <span class="carte-row-label">Note</span>
-          <span class="carte-row-value" style="font-size:13px;color:#666;">Votre carte reprendra à la rentrée de septembre 2026</span>
-        </div>
-        <!-- Barre 3 cours reportés -->
-        <div style="margin-top:14px;">
-          <div style="font-size:11px;color:#a04000;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Cours disponibles à la rentrée</div>
-          <div class="carte-progress">
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div class="carte-dot-empty"></div>
-            <div style="width:26px;height:26px;border-radius:50%;background:#ccc;opacity:0.3;"></div>
-            <div style="width:26px;height:26px;border-radius:50%;background:#ccc;opacity:0.3;"></div>
-            <div style="width:26px;height:26px;border-radius:50%;background:#ccc;opacity:0.3;"></div>
-            <div style="width:26px;height:26px;border-radius:50%;background:#ccc;opacity:0.3;"></div>
-            <div style="width:26px;height:26px;border-radius:50%;background:#ccc;opacity:0.3;"></div>
-            <div style="width:26px;height:26px;border-radius:50%;background:#ccc;opacity:0.3;"></div>
-            <div style="width:26px;height:26px;border-radius:50%;background:#ccc;opacity:0.3;"></div>
-          </div>
-          <div style="font-size:11px;color:#888;margin-top:6px;">3 cours disponibles dès septembre · 7 nouveaux cours à venir</div>
-        </div>
-      </div>
-    </div>
-
-    <div style="background:#f5f5f5;border-radius:8px;padding:14px 18px;margin:0 0 22px;text-align:center;">
-      <p style="font-size:14px;color:#555;margin:0;line-height:1.7;">Votre carte vous attend à la rentrée de septembre. Bon été !</p>
-    </div>
-
-    <div style="background:#f5f5f5;border-radius:8px;padding:14px 18px;margin:0 0 22px;">
-      <p style="font-size:13px;color:#666;margin:0;line-height:1.7;">Vos cours reportés seront automatiquement disponibles dès la rentrée de septembre. Si vous avez des questions, n'hésitez pas à nous contacter.</p>
-    </div>
-
-    <p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/>
-    <strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/>
-    <span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>
-  </div>
-  <div style="background:#111;padding:16px 24px;text-align:center;font-size:11px;color:#888;line-height:2;">
-    <a href="https://www.tangoetvous.com" style="color:#D4AF37;text-decoration:none;font-weight:700;letter-spacing:1px;">WWW.TANGOETVOUS.COM</a><br/>
-    <a href="mailto:tangoetvous@gmail.com" style="color:#888;text-decoration:none;">tangoetvous@gmail.com</a> &nbsp;·&nbsp; 07 73 27 59 06
-  </div>
-</div>
-</div>
-
-<!-- Push OS -->
-<div style="margin-top:28px;" class="section-title">Push OS — élève</div>
-<div class="push-mockup" style="margin-top:14px;">
-  <div class="push-mockup-icon" style="background:#2e7d32;">↩</div>
-  <div class="push-mockup-body">
-    <div class="push-mockup-app">Tango &amp; Vous</div>
-    <div class="push-mockup-title">Votre carte a été reportée</div>
-    <div class="push-mockup-text">↩ Votre carte a été reportée · 3 cours préservés pour 2026-2027</div>
-    <div class="push-mockup-time">À l'instant · app.tangoetvous.fr</div>
-  </div>
-</div>
-</div>
 
 <!-- ═══════════════════════════════════════════════
      D-msg — Admin envoie un message dans une discussion
@@ -1027,6 +462,15 @@ body{background:#1e1e1e;font-family:Arial,sans-serif;padding:24px;}
 <div style="background:#111;border:1px solid #333;border-radius:8px;padding:16px 20px;max-width:520px;margin-top:20px;">
   <p style="font-size:13px;color:#aaa;line-height:1.7;margin:0;">Pas d'email pour les messages de discussion — le push OS + la notification in-app suffisent. L'élève clique la notification → ouvre l'espace élève → onglet Discussions.</p>
 </div>
+</div>
+
+</div>
+
+<div class="pv-fin">
+  <p><b>Taille de la carte</b> — jamais écrite en dur : partout <code>utilisés + restants</code>, avec 10 comme filet.
+     Une carte de 20 cours affiche donc « /20 » sans modification de code.</p>
+  <p><b>Dates d'exemple</b> — relatives à aujourd'hui (2026-08-17), pour que les crons se comportent comme en vrai.
+     13 emails produits pour cette page.</p>
 </div>
 
 </body>

@@ -3307,7 +3307,10 @@ async function handleCronCarteExpiree(request, env) {
         body: JSON.stringify({
           sender: { name: 'Tango & Vous', email: 'contact@tangoetvous.fr' },
           to: [{ email: String(e.email) }],
-          subject: `⏰ Votre carte de cours a expiré — ${e.restants || 0} cours non utilisés · Tango & Vous`,
+          // ⚠️ `restants` (relu plus haut depuis e.carte_restants) et non `e.restants`,
+          // qui n'existe pas : le sujet annonçait toujours « 0 cours non utilisés »
+          // alors que le corps du message affichait le bon nombre.
+          subject: `⏰ Votre carte de cours a expiré — ${restants} cours non utilisé${restants > 1 ? 's' : ''} · Tango & Vous`,
           htmlContent: htmlEleve,
         }),
       });
@@ -9140,6 +9143,10 @@ async function handleCronFinSaisonC4(request, env) {
   // inscription active dans la saison (exclut les cartes supprimées à carte_statut désync).
   const _c4Actifs = await _emailsInscritsActifs(svcKey, sai);
   eleves = eleves.filter(e => _c4Actifs.has((e.email || '').trim().toLowerCase()));
+  // ⚠️ Manquait : la boucle plus bas s'en sert pour le push OS. Sans cette ligne,
+  // chaque envoi levait une ReferenceError avalée par son try/catch → email envoyé
+  // mais push jamais reçu. C5 avait bien sa déclaration équivalente.
+  const _c4TokenMap = await _buildTokenMap(svcKey);
 
   const adminEmail  = 'tangoetvous@gmail.com';
   const headerEleve = `<div style="background:#111;padding:28px 24px 20px;text-align:center;border-bottom:3px solid #D4AF37;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:300;letter-spacing:6px;color:#D4AF37;">TANGO &amp; VOUS</div><div style="font-size:10px;letter-spacing:3px;color:#888;text-transform:uppercase;margin-top:5px;">École de tango argentin</div></div>`;

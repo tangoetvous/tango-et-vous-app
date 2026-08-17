@@ -24,7 +24,7 @@ function corpsFonction(nom, src = SRC) {
  * @param {object} params   { 'tev_cours_dates': {...}, … } servis par le faux Supabase
  * @returns {Promise<Array<{to,subject,html}>>}
  */
-async function executer(nom, body, params = {}) {
+async function executer(nom, body, params = {}, aides = []) {
   const envoyes = [];
 
   const fauxFetch = async (url, opts = {}) => {
@@ -79,12 +79,20 @@ async function executer(nom, body, params = {}) {
     _buildTokenMap: async () => new Map(),
   };
 
-  const src = corpsFonction(nom);
+  // `aides` : autres fonctions de worker.js dont le handler a besoin — elles sont
+  // extraites et exécutées telles quelles (plus fidèle qu'un substitut écrit ici).
+  const src = [...aides.map(a => corpsFonction(a)), corpsFonction(nom)].join('\n');
   const noms = Object.keys(contexte);
   const construire = new Function(...noms, `${src}\nreturn ${nom};`);
   const handler = construire(...noms.map(n => contexte[n]));
 
-  const request = { json: async () => body, headers: { get: () => null }, url: 'https://app.tangoetvous.fr/' };
+  // Certains crons lisent request.text() plutôt que request.json()
+  const request = {
+    json: async () => body,
+    text: async () => JSON.stringify(body || {}),
+    headers: { get: () => null },
+    url: 'https://app.tangoetvous.fr/',
+  };
   const env = { BREVO_API_KEY: 'cle-brevo-factice', SUPABASE_SERVICE_KEY: 'cle-service-factice', HMAC_SECRET: 'secret', CRON_SECRET: 's' };
   await handler(request, env);
   return envoyes;
