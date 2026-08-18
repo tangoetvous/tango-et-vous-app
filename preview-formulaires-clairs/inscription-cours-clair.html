@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Tango &amp; Vous — Formulaire inscription aux cours</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&amp;family=Montserrat:wght@300;400;600;700&amp;display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#6e5100;--gold-dim:#8a6800;--gold-pale:#f5f0e4;--gold-border:#c4a060;
+  --bg:#faf8f4;--s1:#f1ede5;--s2:#ffffff;--s3:#e8e2d8;
+  --border:#ded7cb;--text:#2a2a2a;--dim:#444444;--faint:#555555;
+  --danger:#c62828;
+  --font-d:'Cormorant Garamond',Georgia,serif;
+  --font-b:'Montserrat',sans-serif;
+}
+html{background:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+body{font-family:var(--font-b);font-size:14px;color:var(--text);background:var(--bg);min-height:100vh;}
+.wrap{max-width:580px;margin:0 auto;}
+
+/* ── Header ── */
+.hdr{background:#000;border-bottom:2px solid var(--gold);padding:18px 24px 14px;text-align:center;}
+.hdr-logo{font-family:var(--font-d);font-size:22px;font-weight:300;letter-spacing:5px;color:var(--gold);}
+.hdr-sub{font-size:10px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin-top:4px;}
+
+/* ── Barre de progression ── */
+.prog-bar{background:#faf8f4;padding:14px 24px 0;border-bottom:1px solid var(--border);}
+.steps{display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
+.step{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;}
+.step-dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--faint);background:var(--s1);transition:all .3s;flex-shrink:0;cursor:default;}
+.step.done .step-dot{background:var(--gold);border-color:var(--gold);color:#fff;cursor:pointer;}
+.step.active .step-dot{background:#faf8f4;border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 3px rgba(110,81,0,.25);}
+.step-lbl{font-size:9px;color:var(--faint);text-align:center;letter-spacing:.5px;white-space:nowrap;}
+.step.done .step-lbl,.step.active .step-lbl{color:var(--gold);}
+.step-line{flex:1;height:1px;background:var(--border);margin-top:-14px;min-width:6px;}
+.step-line.done{background:var(--gold);}
+.prog-fill-bar{height:2px;background:var(--border);margin:0 -24px;}
+.prog-fill{height:100%;background:var(--gold);transition:width .4s ease;}
+
+/* ── Corps ── */
+.body{padding:20px 24px;}
+.etape-lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;}
+.etape-sous{font-size:12px;color:var(--gold);margin-bottom:16px;font-style:italic;line-height:1.6;}
+
+/* ── Cadres ── */
+.cadre{border:2px solid var(--gold-border);border-radius:12px;padding:16px;margin-bottom:14px;background:#f5f2ec;}
+.cadre-titre{font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--gold-border);}
+
+/* ── Champs ── */
+.field{margin-bottom:12px;}
+label{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+input,select,textarea{width:100%;padding:10px 12px;background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:7px;font-size:16px;font-family:var(--font-b);transition:border-color .2s;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);background:var(--gold-pale);}
+input::placeholder,textarea::placeholder{color:var(--faint);}
+select option{background:var(--s2);}
+.cadre input,.cadre select,.cadre textarea{background:#f5f0e4;border-color:var(--gold-border);color:#8a6800;}
+.cadre input:focus,.cadre select:focus,.cadre textarea:focus{border-color:var(--gold);background:var(--gold-pale);}
+.cadre input::placeholder,.cadre textarea::placeholder{color:#c4a060;}
+.cadre select option{background:#f5f0e4;color:#8a6800;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:420px){.row2{grid-template-columns:1fr;}}
+
+/* ── Boutons choix ── */
+.btn-grp{display:flex;gap:9px;flex-wrap:wrap;margin-top:4px;}
+.btn-choix{
+  flex:1;min-width:80px;background:#f5f0e4;border:2px solid var(--gold-border);
+  color:#8a6800;padding:14px 8px;border-radius:10px;cursor:pointer;
+  text-align:center;font-size:12px;font-weight:700;font-family:var(--font-b);
+  transition:all .22s;display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.btn-choix:hover,.btn-choix.sel{border-color:var(--gold);background:#f0e8cf;color:var(--gold);box-shadow:0 0 0 2px rgba(110,81,0,.3);}
+.btn-choix svg{width:28px;height:28px;}
+
+/* ── Récap ── */
+.recap{background:#f5f0e4;border:2px solid var(--gold-border);border-radius:12px;padding:14px;margin-bottom:14px;}
+.recap-sec{font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;padding:6px 0 4px;border-bottom:1px solid var(--gold-border);margin-bottom:4px;}
+.recap-row{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid #e8ddbb;font-size:13px;gap:10px;}
+.recap-row:last-child{border-bottom:none;}
+.rk{color:#8a6800;flex-shrink:0;}
+.rv{color:#8a6800;font-weight:600;text-align:right;line-height:1.5;}
+
+/* ── Tarif bloc ── */
+.tarif-bloc{background:#f5f0e4;border:2px solid var(--gold);border-radius:12px;padding:14px;margin-bottom:12px;}
+.tarif-titre{font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;}
+.tarif-ligne{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #e8ddbb;font-size:13px;color:#8a6800;gap:8px;}
+.tarif-ligne:last-child{border-bottom:none;font-weight:700;font-size:15px;color:var(--gold);padding-top:8px;}
+.tarif-total-global{background:#f5f0e4;border:2px solid #8a6800;border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;font-size:17px;font-weight:700;color:var(--gold);margin-bottom:12px;}
+
+/* ── Notes ── */
+.info-note{background:#f5f0e4;border-left:3px solid var(--gold-dim);padding:9px 12px;border-radius:0 7px 7px 0;font-size:12px;color:var(--gold);margin-bottom:12px;line-height:1.6;}
+.warn-note{background:#f5f0e4;border-left:3px solid #c2410c;padding:9px 12px;border-radius:0 7px 7px 0;font-size:12px;color:#b45309;margin-bottom:12px;line-height:1.6;}
+.role-auto{background:#f5f0e4;border:1px solid var(--gold-border);color:var(--gold);padding:9px 12px;border-radius:6px;font-size:14px;font-style:italic;}
+
+/* ── PWA badge ── */
+.pwa-badge{display:none;background:#e8f5e9;border:1px solid #2e7d32;border-radius:20px;padding:5px 12px;font-size:11px;color:#2e7d32;letter-spacing:1px;text-align:center;margin-bottom:14px;}
+
+/* ── Navigation ── */
+.nav{display:flex;gap:10px;margin-top:16px;}
+.btn-back{flex:1;background:var(--s2);color:var(--gold);border:1px solid var(--gold);padding:12px;border-radius:7px;font-size:13px;font-weight:700;font-family:var(--font-b);cursor:pointer;transition:opacity .2s;}
+.btn-back:hover{opacity:.8;}
+.btn-next{flex:2;background:var(--gold);color:#fff;border:none;padding:13px;border-radius:7px;font-size:14px;font-weight:700;font-family:var(--font-b);letter-spacing:1px;cursor:pointer;transition:opacity .2s;}
+.btn-next:hover{opacity:.88;}
+
+/* ── Succès ── */
+.success{display:none;padding:28px 24px 36px;text-align:center;}
+.s-icon{font-size:50px;display:block;margin-bottom:14px;}
+.s-title{font-family:var(--font-d);font-size:24px;font-weight:300;color:var(--gold);letter-spacing:3px;margin-bottom:8px;}
+.s-card{background:#f5f0e4;border:2px solid var(--gold-border);border-radius:12px;padding:16px;margin-bottom:18px;text-align:left;}
+.s-line{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #e8ddbb;font-size:13px;color:#8a6800;line-height:1.6;}
+.s-line:last-child{border-bottom:none;}
+.s-ico{font-size:18px;flex-shrink:0;margin-top:1px;}
+.asso-btn{display:block;width:100%;padding:15px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:2px;text-transform:uppercase;margin:16px 0 6px;font-family:var(--font-b);transition:opacity .2s;}
+.asso-btn:hover{opacity:.88;}
+.asso-note{font-size:12px;color:#c62828;text-align:center;line-height:1.8;margin-bottom:14px;}
+.s-sig{margin-top:16px;font-family:var(--font-d);font-size:16px;color:var(--gold);letter-spacing:2px;font-weight:300;}
+.btn-nouveau{display:inline-block;margin-top:14px;background:transparent;color:var(--gold);border:1px solid var(--gold);padding:10px 22px;border-radius:7px;font-size:13px;font-weight:700;font-family:var(--font-b);cursor:pointer;letter-spacing:1px;transition:all .2s;}
+.btn-nouveau:hover{background:var(--gold);color:#fff;}
+
+/* ── Erreur ── */
+.errmsg{display:none;background:#fdecec;border-left:3px solid var(--danger);padding:9px 12px;border-radius:0 7px 7px 0;font-size:12px;color:#c62828;margin-top:8px;}
+
+/* ── Footer ── */
+.footer{font-size:11px;color:var(--faint);text-align:center;padding:14px 24px 18px;border-top:1px solid var(--border);line-height:1.7;}
+.footer a{color:var(--gold);}
+
+/* ── SVG boutons ── */
+</style>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin="">
+<link rel="preconnect" href="https://qhngqzvvllktuwspojxc.supabase.co" crossorigin="">
+
+
+
+
+
+<style id="tev-preview-separateurs">
+.tev-sep{margin:34px 0 18px;padding:7px 24px;background:#d5cec5;color:#1a1a1a;
+  font:bold 12px/1.4 Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;}
+</style></head>
+<body>
+<div class="wrap">
+
+<div class="hdr">
+  <div class="hdr-logo">TANGO &amp; VOUS</div>
+  <div class="hdr-sub" id="hdr-sub">Formulaire — Demande d'Inscription aux cours — saison 2025-2026</div>
+</div>
+
+<div style="background:#f5f0e4;padding:10px 20px;border-bottom:1px solid rgba(0,0,0,0.05);text-align:center;font-size:13px;color:rgba(0,0,0,0.70);line-height:1.5;">
+  Vous souhaitez d'abord assister à un cours d'essai ?
+  <a href="https://app.tangoetvous.fr/cours-essai" style="color:var(--gold);text-decoration:underline;white-space:nowrap;">Formulaire cours d'essai →</a>
+</div>
+
+<div class="prog-bar" id="prog-zone" style="display: none;">
+  <div class="steps" id="steps-bar"><div class="step done"><div class="step-dot" onclick="jumpTo(1)">1</div><div class="step-lbl">Nb cours</div></div><div class="step-line done"></div><div class="step done"><div class="step-dot" onclick="jumpTo(2)">2</div><div class="step-lbl">Cours</div></div><div class="step-line done"></div><div class="step active"><div class="step-dot">3</div><div class="step-lbl">Infos</div></div></div>
+  <div class="prog-fill-bar"><div class="prog-fill" id="pfill" style="width: 100%;"></div></div>
+</div>
+
+<div class="body" id="form-zone">
+  <div class="pwa-badge" id="pwa-badge">✓ Vos coordonnées ont été préremplies</div>
+  <div id="app"><div class="tev-sep">Écran 1 — Nombre de cours</div><div class="prog-bar" id="prog-zone" style="display: block;">
+  <div class="steps" id="steps-bar"><div class="step active"><div class="step-dot">1</div><div class="step-lbl">Nb cours</div></div><div class="step-line"></div><div class="step "><div class="step-dot">2</div><div class="step-lbl">Cours</div></div><div class="step-line"></div><div class="step "><div class="step-dot">3</div><div class="step-lbl">Infos</div></div></div>
+  <div class="prog-fill-bar"><div class="prog-fill" id="pfill" style="width:0%"></div></div>
+</div><div class="etape-lbl">Combien de cours par semaine ?</div>
+    <div class="btn-grp">
+      <div class="btn-choix" onclick="pickNbCours(1)">
+    <span style="font-size:22px;">1️⃣</span><strong>1 cours</strong><span style="font-size:11px;font-weight:300;">Un cours hebdomadaire</span></div>
+      <div class="btn-choix" onclick="pickNbCours(2)">
+    <span style="font-size:22px;">2️⃣</span><strong>2 cours</strong><span style="font-size:11px;font-weight:300;">Deux cours hebdomadaires</span></div>
+    </div>
+    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div><div class="tev-sep">Écran 2 — Choix du cours (Paris sélectionné)</div><div class="prog-bar" id="prog-zone" style="display: block;">
+  <div class="steps" id="steps-bar"><div class="step done"><div class="step-dot" onclick="jumpTo(1)">1</div><div class="step-lbl">Nb cours</div></div><div class="step-line done"></div><div class="step active"><div class="step-dot">2</div><div class="step-lbl">Cours</div></div><div class="step-line"></div><div class="step "><div class="step-dot">3</div><div class="step-lbl">Infos</div></div></div>
+  <div class="prog-fill-bar"><div class="prog-fill" id="pfill" style="width: 50%;"></div></div>
+</div><div class="etape-lbl">Ville &amp; niveau</div>
+    
+    <div class="cadre"><div class="cadre-titre">Ville</div><div class="btn-grp"><div class="btn-choix sel" onclick="pickVille(1,'paris')" style="align-items:flex-start;padding:14px;">
+      <span style="font-size:22px;">🗼</span>
+      <div style="text-align:left;">
+        <strong>Paris</strong>
+        <div style="font-size:11px;font-weight:300;margin-top:2px;">Espas Danse Studio</div>
+        <div style="font-size:10px;color:var(--gold);margin-top:2px;font-weight:700;">Jeudi soir</div>
+      </div>
+    </div><div class="btn-choix" onclick="pickVille(1,'vincennes')" style="align-items:flex-start;padding:14px;">
+      <span style="font-size:22px;">🏰</span>
+      <div style="text-align:left;">
+        <strong>Vincennes</strong>
+        <div style="font-size:11px;font-weight:300;margin-top:2px;">Espace Sorano</div>
+        <div style="font-size:10px;color:var(--gold);margin-top:2px;font-weight:700;">Lundi soir</div>
+      </div>
+    </div></div></div>
+    <div class="cadre" style="margin-top:14px;"><div class="cadre-titre">Niveau</div><div class="btn-grp"><div class="btn-choix" onclick="pickNiveau(1,'debutant')" style="opacity:1;">
+        <span style="font-size:20px;">🌱</span>
+        <strong style="font-size:13px;">Débutant</strong>
+        <span style="font-size:11px;font-weight:300;">20h30</span>
+      </div><div class="btn-choix" onclick="pickNiveau(1,'intermediaire')" style="opacity:1;">
+        <span style="font-size:20px;">💃</span>
+        <strong style="font-size:13px;">Intermédiaire &amp; Avancé</strong>
+        <span style="font-size:11px;font-weight:300;">21h45</span>
+      </div></div></div>
+    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div>
+    <div class="tev-sep">Écran 3 — Vos informations (rôle choisi)</div><div class="prog-bar" id="prog-zone" style="display: block;">
+  <div class="steps" id="steps-bar"><div class="step done"><div class="step-dot" onclick="jumpTo(1)">1</div><div class="step-lbl">Nb cours</div></div><div class="step-line done"></div><div class="step done"><div class="step-dot" onclick="jumpTo(2)">2</div><div class="step-lbl">Cours</div></div><div class="step-line done"></div><div class="step active"><div class="step-dot">3</div><div class="step-lbl">Infos</div></div></div>
+  <div class="prog-fill-bar"><div class="prog-fill" id="pfill" style="width: 100%;"></div></div>
+</div>
+    <div class="etape-lbl">Vos informations</div>
+    
+
+    <div class="cadre"><div class="cadre-titre">Vous êtes…</div>
+      <div class="btn-grp"><button type="button" class="btn-choix" onclick="setVenue(1,'homme-seul')">
+    <svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="10" r="5.5" stroke="currentColor" stroke-width="1.8"></circle><path d="M9 32c0-6.1 4-11 9-11s9 4.9 9 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><line x1="25" y1="12" x2="29" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line><polyline points="26,8 29,8 29,11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg><span style="font-size:11px;line-height:1.4;">Homme<br>sans partenaire</span></button><button type="button" class="btn-choix" onclick="setVenue(1,'femme-seule')">
+    <svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="10" r="5.5" stroke="currentColor" stroke-width="1.8"></circle><path d="M9 32c0-6.1 4-11 9-11s9 4.9 9 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><circle cx="26" cy="10" r="3" stroke="currentColor" stroke-width="1.4"></circle><line x1="26" y1="13" x2="26" y2="16" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></line><line x1="24" y1="14.5" x2="28" y2="14.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></line></svg><span style="font-size:11px;line-height:1.4;">Femme<br>sans partenaire</span></button><button type="button" class="btn-choix" onclick="setVenue(1,'avec-part')">
+    <svg viewBox="0 0 36 36" fill="none"><circle cx="12" cy="9" r="4.5" stroke="currentColor" stroke-width="1.8"></circle><circle cx="24" cy="9" r="4.5" stroke="currentColor" stroke-width="1.8"></circle><path d="M3 30c0-5 3.8-9 9-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M33 30c0-5-3.8-9-9-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M15 22c.8-1 1.8-1.5 3-1.5s2.2.5 3 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg><span style="font-size:11px;line-height:1.4;">Avec un·e<br>partenaire</span></button></div>
+    </div>
+
+    <div class="cadre"><div class="cadre-titre">Votre rôle</div>
+      <div class="btn-grp"><button type="button" class="btn-choix sel" onclick="setRole(1,'guideur')">
+    <svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="9" r="5" stroke="currentColor" stroke-width="1.8"></circle><path d="M8 30c0-5.5 4.5-10 10-10s10 4.5 10 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M24 16l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg><span>Guideur·se</span></button><button type="button" class="btn-choix" onclick="setRole(1,'guidee')">
+    <svg viewBox="0 0 36 36" fill="none"><circle cx="18" cy="9" r="5" stroke="currentColor" stroke-width="1.8"></circle><path d="M8 30c0-5.5 4.5-10 10-10s10 4.5 10 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M12 16l-4 4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg><span>Guidé·e</span></button></div>
+    </div>
+
+    
+    <div class="cadre"><div class="cadre-titre">Vos coordonnées</div>
+      <div class="row2">
+        <div class="field"><label>Prénom *</label><input id="i-pre" type="text" value="" placeholder="Prénom"></div>
+        <div class="field"><label>Nom *</label><input id="i-nom" type="text" value="" placeholder="Nom"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Email *</label><input id="i-eml" type="email" value="" placeholder="email@exemple.com" autocapitalize="none"></div>
+        <div class="field"><label>Téléphone *</label><input id="i-tel" type="tel" value="" placeholder="06 XX XX XX XX"></div>
+      </div>
+      <div class="field"><label>Expérience du tango</label>
+        <select id="i-niv">
+          <option value="">— Sélectionner —</option>
+          <option value="premier">1ᵉʳ cours</option><option value="quelques">Quelques cours</option><option value="1an">1 an — bases acquises</option><option value="2ans">2 ans de cours</option><option value="plus">Plus de 2 ans</option><option value="milonga">Je sors en milonga</option>
+        </select>
+      </div>
+      <div class="field"><label>Remarque</label><textarea id="i-rem" rows="2" placeholder="Un message pour nous ?"></textarea></div>
+    </div>
+
+    
+
+    <div class="recap" id="recap-live"><div class="recap-sec">Récapitulatif cours</div><div class="recap-row"><span class="rk">📅 Saison</span><span class="rv">2025-2026</span></div><div class="recap-row"><span class="rk">🏫 Cours 1</span><span class="rv">Paris — Débutant<br><span style="font-size:11px;color:var(--dim);">Jeudi soir 20h30</span></span></div></div>
+    
+
+    
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAADCDhidbX3fOzZl5" data-theme="dark" id="tev-ts" style="margin-bottom:12px;"></div>
+        <button class="btn-next" style="width:100%;margin-bottom:8px;" onclick="soumettre()">ENVOYER MA DEMANDE</button>
+        <p style="text-align:center;color:var(--gold);font-size:13px;font-weight:600;margin:18px 0 10px;letter-spacing:.3px;">↑ Après avoir cliqué, remontez si nécessaire en haut de la page pour visualiser votre confirmation</p>
+        <p style="font-size:11px;color:#666;text-align:center;margin-top:10px;">En envoyant ce formulaire, vous acceptez notre <a href="/confidentialite.html" target="_blank" style="color:#6e5100;">politique de confidentialité</a>.</p>
+      
+
+    <div class="nav"><button class="btn-back" onclick="prev()">← Retour</button></div></div>
+  <div class="errmsg" id="errmsg" style="display: none;"></div>
+</div>
+
+<!-- Succès — liste d'attente -->
+<div class="success" id="success-wait">
+  <span class="s-icon">⏳</span>
+  <div class="s-title">DEMANDE ENREGISTRÉE</div>
+  <div id="quota-full-notice" style="display:none;background:rgba(255,152,0,0.15);border:1px solid #b45309;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#e07800;font-weight:600;">⚠️ Le cours est actuellement complet. Votre demande a été enregistrée en liste d'attente — vous serez contacté·e si une place se libère.</div>
+  <div class="s-card">
+    <div class="s-line"><span class="s-ico">⏳</span><span>Vous êtes sur <b>liste d'attente</b>. Nous maintenons la parité guideurs&nbsp;/ guidé·e·s et nous vous recontacterons dès qu'une place se libère.</span></div>
+    <div class="s-line"><span class="s-ico">📧</span><span>Vous allez recevoir un email de confirmation. On vous tient au courant !</span></div>
+    <div class="s-line"><span class="s-ico">💃</span><span>En attendant, n'hésitez pas à vous inscrire à un cours d'essai gratuit !</span></div>
+  </div>
+  <div id="recap-wait"></div>
+  <div class="s-sig">À très bientôt sur la piste !<br><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
+  <a href="https://www.tangoetvous.com" target="_top" style="display:inline-block;margin-top:18px;background:var(--gold);color:#fff;border:none;padding:13px 26px;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--font-b);letter-spacing:1px;text-decoration:none;cursor:pointer;">← Retour au site Tango &amp; Vous</a>
+  <button class="btn-nouveau" onclick="restart()">Faire une nouvelle demande</button>
+</div>
+
+<!-- Succès — AssoConnect -->
+<div class="success" id="success-asso">
+  <span class="s-icon">✅</span>
+  <div class="s-title">INSCRIPTION ENREGISTRÉE !</div>
+  <div class="s-card">
+    <div class="s-line"><span class="s-ico">📧</span><span>Vous allez recevoir un email de confirmation.</span></div>
+    <div class="s-line"><span class="s-ico">💳</span><span>Finalisez votre inscription et réglez en ligne sur AssoConnect, ou en espèces lors du prochain cours.</span></div>
+  </div>
+  <button class="asso-btn" id="asso-link">FINALISER SUR ASSOCONNECT</button>
+  <p class="asso-note">Paiement CB en 1 ou 3 fois, ou espèces (l'inscription sur AssoConnect reste obligatoire).<br>AssoConnect vous demandera un pourboire — celui-ci ne nous revient pas.</p>
+  <div id="recap-asso"></div>
+  <div class="s-sig">À très bientôt sur la piste !<br><span style="font-size:20px;letter-spacing:2px;">Florencia &amp; Jérémy</span></div>
+  <a href="https://www.tangoetvous.com" target="_top" style="display:inline-block;margin-top:18px;background:var(--gold);color:#fff;border:none;padding:13px 26px;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--font-b);letter-spacing:1px;text-decoration:none;cursor:pointer;">← Retour au site Tango &amp; Vous</a>
+  <button class="btn-nouveau" onclick="restart()">Faire une nouvelle demande</button>
+</div>
+
+<div class="footer">
+  Un problème ? <a href="mailto:tangoetvous@gmail.com">tangoetvous@gmail.com</a>
+</div>
+</div>
+
+
+
+
+<style id="tev-header-identite">.hdr{border-bottom-color:#D4AF37}.hdr-logo{color:#D4AF37}.hdr-sub{color:#e8e0c8}</style><div style="margin-top:40px;padding:14px 24px;background:#1a3a1a;color:#c8e6c9;font:12px/1.6 Arial,sans-serif;">
+MAQUETTE — thème clair appliqué au DOM réel de <b>inscription-cours.html</b> (structure et textes capturés tels quels,
+seules les couleurs changent). Générée par <code>outils/generer-preview-formulaires-clairs.js</code>.</div></body></html>
