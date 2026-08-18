@@ -1,5 +1,9 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-18 — Bandeau « Pré-inscriptions » : saison dynamique (✅ FAIT)
+
+Audit de bascule (suite) : le bandeau doré de l'accueil élève (`index.html` `renderAccueil`, fenêtre mai-août) affichait « 🎉 Pré-inscriptions **2026-2027** ouvertes ! » **codé en dur** → en mai 2027 il aurait annoncé la mauvaise saison. Fix (2 lignes) : `_saiProch = annéeCourante + '-' + (annéeCourante+1)` — en mai-août, la saison visée est toujours année courante → année+1. Le reste de l'onglet Pré-inscription était déjà neutre (« la prochaine saison »). `email-fin-saison-2026.html` (gabarit statique daté, one-shot) laissé tel quel. Zéro risque : texte seul, dans un bloc déjà conditionné à la fenêtre mai-août ; groupe AD re-passé (renderAccueil complet).
+
 ## Session 2026-08-18 — Calendrier ICS personnel élève : deux saisons (✅ FAIT)
 
 Suite de l'audit de bascule : `_generateEleveICS` (worker.js, abonnement 📅 personnel de l'espace élève) était **mono-saison** (`saison=eq.<saisonCourante>`) alors que `handlePublicICS` fusionne déjà les 2 saisons. Conséquences avant le fix : un pré-inscrit 2026-2027 avait un calendrier VIDE tout l'été, et au 1er septembre l'abonnement d'un élève non ré-inscrit se vidait brutalement (au lieu de garder l'historique visuel jusqu'au refresh naturel).
