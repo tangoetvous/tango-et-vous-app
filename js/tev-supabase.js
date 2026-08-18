@@ -527,7 +527,11 @@ async function tevCreerEleve({ nom, prenom, email, tel, niveau, ville, source, n
     notes:           notes || '',
     partenaire:      partenaire || '',
     email_partenaire: emailPartenaire || '',
-    saison:          saison || '2025-2026',
+    // Repli : saison courante, plus jamais une valeur figée — l'ancien littéral
+    // '2025-2026' aurait rangé dans une saison archivée toute fiche créée par un
+    // appelant qui omet la saison. (Repli dormant : l'unique appelant vivant,
+    // la validation d'inscription, transmet toujours sa saison.)
+    saison:          saison || _tevSaisonCourante(),
   }).select('id').single();
 
   if (error) throw error;
