@@ -523,14 +523,21 @@
     })();
 
     if (!isForfait) {
+      // Carte reportée en attente de son premier cours (maquette validée) :
+      // les compteurs/dates affichés sont ceux du report (0/N, pas de dates),
+      // le reste du rendu suit le chemin normal. _repDash = null hors report
+      // → aucune différence avec l'affichage historique.
+      const _repDash = _carteReportEnAttente();
       // Carte — jauge circulaire
-      const used = carte.coursUtilises;
-      const remaining = carte.coursRestants;
+      const used = _repDash ? 0 : carte.coursUtilises;
+      const remaining = _repDash ? _repDash.restants : carte.coursRestants;
       const tailleCarte = ((used || 0) + (remaining || 0)) || 10;
       var _numCarte = (carte.numero || 1);
-      $('carte-section-title').textContent = 'Ma carte de ' + tailleCarte + ' cours' + (_numCarte > 1 ? ' — ' + _numCarte + 'ᵉ de la saison' : '');
+      $('carte-section-title').textContent = _repDash
+        ? ('Ma carte de cours — ↩ reportée' + (_repDash.saisonOrigine ? ' de ' + _repDash.saisonOrigine : ''))
+        : ('Ma carte de ' + tailleCarte + ' cours' + (_numCarte > 1 ? ' — ' + _numCarte + 'ᵉ de la saison' : ''));
       var _valLbl = $('carte-validite-label');
-      if (_valLbl) { var _dmAff = (carte.dureeMois >= 1 && carte.dureeMois <= 24) ? carte.dureeMois : 3; _valLbl.textContent = 'Validité : ' + _dmAff + ' mois + vacances scolaires'; }
+      if (_valLbl) { var _dmAff = (carte.dureeMois >= 1 && carte.dureeMois <= 24) ? carte.dureeMois : 3; _valLbl.textContent = _repDash ? 'Validité : calculée à votre premier cours' : ('Validité : ' + _dmAff + ' mois + vacances scolaires'); }
       const pct = Math.min(100, (used / tailleCarte) * 100);
       const circumference = 2 * Math.PI * 54; // r=54
       const dashoffset = circumference * (1 - pct / 100);
@@ -546,8 +553,10 @@
         : carte.statut.includes('🟡') ? '#ff8800' : '#D4AF37';
       $('gauge-circle').style.stroke = statusColor;
 
-      // Dates (masquées tant que la carte n'a pas démarré)
-      const hasStarted = !!carte.dateAchat;
+      // Dates (masquées tant que la carte n'a pas démarré ; une carte reportée
+      // non redémarrée est traitée comme non démarrée — ses anciennes dates,
+      // expiration comprise, ne doivent plus s'afficher)
+      const hasStarted = _repDash ? false : !!carte.dateAchat;
       const mrAchat = $('meta-row-achat');
       const mrExp   = $('meta-row-expiration');
       const mrVal   = $('meta-row-validite');
@@ -559,8 +568,9 @@
         $('carte-expiration').textContent = formatDate(carte.dateExpiration);
       }
 
-      // Badge expiration
-      const days = daysUntil(carte.dateExpiration);
+      // Badge expiration (jamais pour une carte reportée non redémarrée :
+      // l'expiration affichable sera celle calculée à son premier cours)
+      const days = _repDash ? null : daysUntil(carte.dateExpiration);
       const badge = $('expiration-badge');
       if (!hasStarted || days === null) {
         badge.style.display = 'none';
@@ -611,10 +621,30 @@
       // Boutons
       const btnJePointe = $('btn-je-pointe');
       const btnRenewSelf = $('btn-renew-carte-self');
-      // Renouveler : visible si carte épuisée OU expirée
-      if (btnRenewSelf) btnRenewSelf.style.display = canStart ? '' : 'none';
-      // Je pointe : visible sauf si carte expirée non-épuisée (épuisée → visible mais bloque dans le modal)
-      if (btnJePointe)  btnJePointe.style.display  = (isExpired && !isExhausted) ? 'none' : '';
+      // Renouveler : visible si carte épuisée OU expirée — jamais pour une carte
+      // reportée non redémarrée (il écraserait les cours reportés)
+      if (btnRenewSelf) btnRenewSelf.style.display = (canStart && !_repDash) ? '' : 'none';
+      // Je pointe : visible sauf si carte expirée non-épuisée, et masqué pour une
+      // carte reportée non redémarrée (c'est le pointage en salle qui la relance)
+      if (btnJePointe)  btnJePointe.style.display  = (_repDash || (isExpired && !isExhausted)) ? 'none' : '';
+
+      // Encart « vos cours reportés vous attendent » (maquette) — inséré avant
+      // les boutons en état reporté, retiré sinon (le re-render repasse ici)
+      var _repInfoEl = document.getElementById('carte-report-info');
+      if (_repDash && btnJePointe) {
+        var _repPl = _repDash.restants > 1;
+        var _repTxt = '🗓 ' + (_repPl ? 'Vos ' + _repDash.restants + ' cours vous attendent !' : 'Votre cours reporté vous attend !')
+          + ' Votre carte redémarrera automatiquement lors de votre premier cours de la saison — il sera pointé en salle, comme d\'habitude.';
+        if (!_repInfoEl) {
+          _repInfoEl = document.createElement('div');
+          _repInfoEl.id = 'carte-report-info';
+          btnJePointe.parentNode.insertBefore(_repInfoEl, btnJePointe);
+        }
+        _repInfoEl.style.cssText = 'margin:10px 0 8px;background:rgba(21,101,192,0.10);border:1px solid rgba(21,101,192,0.4);border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--text);line-height:1.6;';
+        _repInfoEl.textContent = _repTxt;
+      } else if (_repInfoEl) {
+        _repInfoEl.remove();
+      }
 
       // Avertissement non payé (uniquement si carte démarrée et non épuisée)
       const nonPayeWarn = $('nonpaye-warn');
@@ -624,9 +654,10 @@
         if (npaLink) npaLink.href = _renewUrlDash;
       }
 
-      // Alerte textuelle (barre orange en haut)
+      // Alerte textuelle (barre orange en haut) — pas pour une carte reportée
+      // non redémarrée (« pensez à renouveler » y serait un contresens)
       const alertEl = $('dash-alert');
-      if (remaining <= 2 && remaining > 0 && !canStart) {
+      if (!_repDash && remaining <= 2 && remaining > 0 && !canStart) {
         alertEl.style.display = 'block';
         $('alert-text').textContent = remaining === 1
           ? 'Il vous reste 1 cours — pensez à renouveler votre carte !'
@@ -2987,6 +3018,71 @@
     var _n = new Date(); var _m = _n.getMonth() + 1; var _y = _n.getFullYear();
     return _m >= 9 ? (_y + '-' + (_y + 1)) : ((_y - 1) + '-' + _y);
   }
+
+  // ================================================================
+  // CARTE REPORTÉE (maquette validée : preview-carte-reportee-v1.html)
+  // Détecte une carte reportée EN ATTENTE de son premier cours : une ligne
+  // inscriptions_cours isReport existe pour la saison courante, et la fiche
+  // eleves n'a pas encore redémarré dans cette saison (date d'achat absente ou
+  // antérieure au 1er septembre). Retourne null dans TOUS les autres cas —
+  // y compris sur donnée inattendue — pour que l'affichage normal des cartes
+  // reste strictement inchangé hors report.
+  // ================================================================
+  function _carteReportEnAttente() {
+    try {
+      var sc = _saisonCourante();
+      var rep = (eleveData.inscriptionsTango || []).find(function (i) {
+        if (!i || i.type !== 'carte10' || i.statut === 'supprimé') return false;
+        if ((i.saison || '') !== sc) return false;
+        var d = i.donnees;
+        if (typeof d === 'string') { try { d = JSON.parse(d); } catch (e) { d = null; } }
+        return !!(d && d.isReport);
+      });
+      if (!rep) return null;
+      var don = rep.donnees;
+      if (typeof don === 'string') { try { don = JSON.parse(don); } catch (e) { don = {}; } }
+      var n = Number(don && don.reportedRestants) || 0;
+      if (n <= 0) return null;                                    // donnée invalide → affichage normal
+      // Carte déjà redémarrée ? (premier cours pointé dans la saison courante)
+      var debutSaison = sc.slice(0, 4) + '-09-01';
+      var achat = (eleveData.carte && eleveData.carte.dateAchat) ? String(eleveData.carte.dateAchat).slice(0, 10) : '';
+      if (achat && achat >= debutSaison) return null;             // redémarrée → affichage normal
+      return { restants: n, saisonOrigine: (don && don.saisonOrigine) || '' };
+    } catch (e) { return null; }
+  }
+
+  // Bloc « carte reportée » (accueil) — remplace le suivi normal tant que la
+  // carte n'a pas redémarré. Couleurs adaptées aux thèmes clair/sombre via les
+  // variables de l'app (écart assumé avec la maquette, qui était en sombre fixe).
+  function _carteReporteeHtml(rep) {
+    var n = rep.restants;
+    var pl = n > 1;
+    var dots = '<div style="display:flex;gap:5px;margin:12px 0 8px;">';
+    for (var i = 0; i < n; i++) dots += '<div style="flex:1;height:6px;border-radius:3px;background:var(--border);"></div>';
+    dots += '</div>';
+    var circ = 2 * Math.PI * 34;
+    var hc = '';
+    hc += '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--text);margin-bottom:10px;text-align:center;">🎫 Ma carte de cours</div>';
+    hc += '<div style="text-align:center;margin-bottom:12px;"><span style="display:inline-block;background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.5);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--gold);font-weight:700;">↩ Reportée' + (rep.saisonOrigine ? ' de la saison ' + rep.saisonOrigine : '') + '</span></div>';
+    hc += '<div style="display:flex;align-items:center;gap:20px;">';
+    hc += '<div style="flex-shrink:0;position:relative;width:80px;height:80px;">'
+      + '<svg width="80" height="80" viewBox="0 0 80 80" style="transform:rotate(-90deg);">'
+      + '<circle cx="40" cy="40" r="34" fill="none" stroke="var(--gold)" stroke-width="7" stroke-dasharray="' + circ.toFixed(2) + '" stroke-dashoffset="0"/>'
+      + '</svg>'
+      + '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">'
+      + '<span style="font-size:24px;font-weight:600;color:var(--gold);line-height:1;">' + n + '</span>'
+      + '<span style="font-size:9px;color:var(--text);letter-spacing:.5px;text-align:center;">cours<br>disponible' + (pl ? 's' : '') + '</span>'
+      + '</div></div>';
+    hc += '<div style="flex:1;">'
+      + '<div style="font-size:14px;color:var(--text);margin-bottom:6px;">Cours utilisés <span style="color:var(--text-dim,#999);">— 0/' + n + '</span></div>'
+      + '<div style="font-size:14px;color:var(--text);">Validité <span style="color:var(--text-dim,#999);">— calculée à votre premier cours</span></div>'
+      + '</div></div>';
+    hc += dots;
+    hc += '<div style="margin-top:12px;background:rgba(21,101,192,0.10);border:1px solid rgba(21,101,192,0.4);border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--text);line-height:1.6;">🗓 '
+      + (pl ? 'Vos ' + n + ' cours vous attendent !' : 'Votre cours reporté vous attend !')
+      + ' Votre carte redémarrera automatiquement lors de votre premier cours de la saison — il sera pointé en salle, comme d\'habitude.</div>';
+    return hc;
+  }
   // ================================================================
   // Nudge : installation de la PWA + activation des notifications
   // Entonnoir : pas installé → guide d'install ; installé sans push → activer ;
@@ -3109,6 +3205,11 @@
 
     // Suivi complet de la carte (titre + jauge + points + expiration + pastille + boutons)
     function _carteTrackingHtml(titreSuffix) {
+      // Carte reportée en attente de son premier cours → bloc dédié (maquette
+      // validée). Hors report, _carteReportEnAttente() renvoie null et le suivi
+      // normal ci-dessous est rendu à l'identique.
+      const _repC = _carteReportEnAttente();
+      if (_repC) return _carteReporteeHtml(_repC);
       const used      = Number(carte.coursUtilises) || 0;
       const remaining = Number(carte.coursRestants)  || 0;
       const tailleMini = (used + remaining) || 10;
@@ -5258,6 +5359,13 @@
   // POINTAGE SELF — Carte 10 (exposé sur window pour les onclick HTML)
   // ================================================================
   function ouvrirModalPointerSelf() {
+    // Ceinture de sécurité : le pointage auto est indisponible tant que la carte
+    // reportée n'a pas redémarré (les compteurs de la fiche sont encore ceux de
+    // l'ancienne saison — c'est le pointage en salle du 1er cours qui la relance).
+    if (_carteReportEnAttente()) {
+      alert('Votre premier cours de la saison sera pointé en salle — votre carte redémarrera à ce moment-là.');
+      return;
+    }
     const todayStr = new Date().toISOString().slice(0,10);
     const remaining  = eleveData && eleveData.carte ? (Number(eleveData.carte.coursRestants) || 0) : 10;
     const todayCount = eleveData && eleveData.presences ? eleveData.presences.filter(p => p.date === todayStr).length : 0;
@@ -5420,6 +5528,13 @@
   // RENOUVELLEMENT CARTE (élève, sans payer)
   // ----------------------------------------------------------------
   async function renewCarteSelf() {
+    // Ceinture de sécurité : jamais de « nouvelle carte » tant qu'un report
+    // attend son premier cours — cela écraserait les cours reportés (le bouton
+    // est déjà masqué dans cet état, ceci protège tout chemin résiduel).
+    if (_carteReportEnAttente()) {
+      alert('Votre carte reportée vous attend : elle redémarrera à votre premier cours de la saison. Pour toute question, contactez-nous.');
+      return;
+    }
     const btn = document.getElementById('btn-renew-carte-self');
     const prevTxt = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = '⏳ En cours…'; }
