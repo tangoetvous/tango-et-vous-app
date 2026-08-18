@@ -263,7 +263,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}body { background: #11
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://qhngqzvvllktuwspojxc.supabase.co" crossorigin>
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=13"></script>
+<script src="js/tev-supabase.js?v=14"></script>
 <script>
   (function(){ try { if(window.self===window.top){ var s=document.createElement('script'); s.src='https://challenges.cloudflare.com/turnstile/v0/api.js'; s.async=true; s.defer=true; document.head.appendChild(s); } } catch(e){} })();
 </script>
@@ -686,6 +686,16 @@ const TYPE_CLASS = {
 // ── Saison courante ─────────────────────────────────────────────
 function saisonCourante() {
   var d=new Date(), y=d.getFullYear(), m=d.getMonth()+1;
+  return m>=9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y);
+}
+
+// Saison d'une DATE de stage (sept→août). Sert à étiqueter chaque ligne insérée :
+// en été la même soumission peut mélanger un stage d'août (saison N) et un stage
+// de septembre (saison N+1) — la saison du jour de la soumission serait fausse
+// pour l'un des deux. ⚠️ Jusqu'au 2026-08-18 la valeur était figée à '2025-2026'.
+function saisonDeDate(iso) {
+  var y=parseInt(String(iso).slice(0,4),10), m=parseInt(String(iso).slice(5,7),10);
+  if(!y||!m) return saisonCourante();
   return m>=9 ? (y+'-'+(y+1)) : ((y-1)+'-'+y);
 }
 
@@ -1309,7 +1319,7 @@ async function soumettre(){
         total_inscrit: di.prixInscrit,
         type_confirmation: typeConfPrincipal,
         remarques: data.remarques || '',
-        donnees: data, saison: '2025-2026',
+        donnees: data, saison: saisonDeDate(di.date),
       });
       if (avecPart) {
         var slotsPId = (di.stagesPartDetail && di.stagesPartDetail.length ? di.stagesPartDetail : di.stagesDetail || []).map(function(s){ return s.type || s.id; }).join('|');
@@ -1323,7 +1333,7 @@ async function soumettre(){
           stage_date: di.date, stage_nom: slotsPId,
           total_inscrit: di.prixPartenaire || di.prixInscrit,
           type_confirmation: 'confirme',
-          remarques: '', donnees: {}, saison: '2025-2026',
+          remarques: '', donnees: {}, saison: saisonDeDate(di.date),
         });
       }
     });

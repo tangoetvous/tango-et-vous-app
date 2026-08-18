@@ -598,6 +598,17 @@ async function tevUpdateStatutCP({ id, statut }) {
 // ================================================================
 // STAGES
 // ================================================================
+// Saison (sept→août) de la date du jour, et d'une date ISO donnée.
+function _tevSaisonCourante() {
+  const d = new Date(), y = d.getFullYear(), m = d.getMonth() + 1;
+  return m >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+}
+function _tevSaisonDeDate(iso) {
+  const y = parseInt(String(iso || '').slice(0, 4), 10);
+  const m = parseInt(String(iso || '').slice(5, 7), 10);
+  if (!y || !m) return '';
+  return m >= 9 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+}
 async function tevInscriptionStage(body) {
   const { error } = await _tev.from('inscriptions_stages').insert({
     eleve_id:   body.eleveId || '',
@@ -607,7 +618,10 @@ async function tevInscriptionStage(body) {
     stage_date: body.date || null,
     stage_nom:  body.stageNom || '',
     type:       body.type || '',
-    saison:     body.saison || '2025-2026',
+    // Repli : saison dérivée de la DATE du stage (sept→août), plus jamais une
+    // valeur figée — l'ancien littéral '2025-2026' aurait étiqueté toute
+    // inscription sans saison explicite dans une saison archivée.
+    saison:     body.saison || _tevSaisonDeDate(body.date) || _tevSaisonCourante(),
   });
   if (error) throw error;
   return { ok: true };

@@ -574,7 +574,7 @@ body.ct-light-page #tab-content .empty-state{color:#555;}
 
 <!-- Supabase -->
 <script src="/js/supabase.min.js"></script>
-<script src="js/tev-supabase.js?v=13"></script>
+<script src="js/tev-supabase.js?v=14"></script>
 <!-- Vidéos des cours (Bunny Stream) : upload direct TUS + helper -->
 <script src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js" defer></script>
 <script src="js/tev-videos.js?v=4" defer></script>
@@ -12111,7 +12111,10 @@ function soumettreInscriptionStageAdmin() {
     setTimeout(function(){filtreStage=date;filtreStageSlot='technique';renderTab();},1500);
     return;
   }
-  TEV.inscriptionStage({nom:nom,prenom:prenom,email:email,date:date,stageNom:slots.join('|'),type:role,saison:saisonPourNouvelleEntree()}).then(function(){if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=(e&&e.message)||'Erreur';err.style.display='block';}});
+  // Saison = celle de la DATE du stage (un stage d'août appartient à la saison qui
+  // se termine, un stage de septembre à celle qui commence) — saisonPourNouvelleEntree()
+  // étiquetait un stage d'août saisi en été avec la saison suivante.
+  TEV.inscriptionStage({nom:nom,prenom:prenom,email:email,date:date,stageNom:slots.join('|'),type:role,saison:_newsSaisonFromDate(date)||saisonPourNouvelleEntree()}).then(function(){if(ok)ok.style.display='block';setTimeout(function(){chargerDonnees();},1500);}).catch(function(e){if(err){err.textContent=(e&&e.message)||'Erreur';err.style.display='block';}});
 }
 
 function valAttStage(date, nom, btn) {

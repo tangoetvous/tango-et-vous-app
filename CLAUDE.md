@@ -1,5 +1,16 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-18 — Stages : saison dérivée de la date du stage (✅ FAIT)
+
+Suite de l'audit de bascule 31/08→01/09 : la saison des inscriptions aux stages était **codée en dur `'2025-2026'`** dans les deux INSERT de `stages-pwa.html` (~L1312 inscripteur, ~L1326 partenaire) → dès le 01/09/2026, 100 % des inscriptions stages auraient été étiquetées dans une saison archivée.
+
+- **Règle : la saison d'une ligne stage = la saison de la DATE du stage** (sept→août), jamais celle du jour de soumission — en été une même soumission peut mélanger un stage d'août (saison N) et un stage de septembre (saison N+1), et `datesOK.forEach` insère une ligne par date.
+- **3 corrections cohérentes** : (1) `stages-pwa.html` — helper global `saisonDeDate(iso)` (repli `saisonCourante()` si date invalide) utilisé dans les 2 INSERT ; (2) `admin.html` ~L12114 (inscription directe stage) — `saison: _newsSaisonFromDate(date)||saisonPourNouvelleEntree()` (l'ancien `saisonPourNouvelleEntree()` seul étiquetait un stage d'août saisi en été avec la saison suivante) ; (3) `js/tev-supabase.js` `tevInscriptionStage` — repli `'2025-2026'` figé remplacé par `_tevSaisonDeDate(body.date) || _tevSaisonCourante()` (helpers ajoutés). **Cache bumpé `?v=14`** dans les 10 HTML.
+- ⚠️ Aucun consommateur actuel ne filtre `inscriptions_stages.saison` (tout passe par `stage_date`) — la colonne ne sert qu'aux exports/statistiques, d'où l'absence de symptôme jusqu'ici.
+- **Tests groupe AB** (`tests/ab-stages-saison.spec.js`, 2) : AB1 bornes de saison + repli ; AB2 vérification structurelle — les 2 INSERT utilisent `saisonDeDate(di.date)` et plus aucun littéral `saison: '20xx-20xx'` dans le fichier.
+- 📌 **Reste de la même famille (non traité, feu vert admin en attente)** : `tevCreerEleve` (tev-supabase.js ~L530) a le même repli figé `'2025-2026'` et son appelant `soumettreEleve` (admin.html ~L8628) ne transmet pas de saison → « + Nouvel élève » créerait des fiches archivées dès le 01/09.
+
+
 ## Session 2026-08-17 — Previews régénérées DEPUIS le code, famille par famille (🚧 EN COURS)
 
 Application de la règle permanente « une maquette engage le code » : les pages `preview-emails-*.html` cessent d'être des maquettes écrites à la main pour devenir des **pages générées en exécutant réellement les handlers de `worker.js`**.
