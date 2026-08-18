@@ -1,5 +1,14 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-18 — Calendrier ICS personnel élève : deux saisons (✅ FAIT)
+
+Suite de l'audit de bascule : `_generateEleveICS` (worker.js, abonnement 📅 personnel de l'espace élève) était **mono-saison** (`saison=eq.<saisonCourante>`) alors que `handlePublicICS` fusionne déjà les 2 saisons. Conséquences avant le fix : un pré-inscrit 2026-2027 avait un calendrier VIDE tout l'été, et au 1er septembre l'abonnement d'un élève non ré-inscrit se vidait brutalement (au lieu de garder l'historique visuel jusqu'au refresh naturel).
+
+- **Fix (miroir exact de `handlePublicICS`)** : inscriptions relues sur `saison=in.(cur,next)` ; clés params élargies (`tev_milongas_*`, `tev_params_paris_*`, `tev_params_vincennes_*` des 2 saisons) ; milongas fusionnées avec le MÊME dédoublonnage id-puis-nom que le flux public ; horaires/adresse choisis PAR DATE (`d >= 01/09 de la saison suivante` → params N+1). **Repli clé** : params N+1 absents → params saison courante (comportement historique exact, prouvé octet pour octet).
+- **Dédoublonnage par cours** (`coursVus`, clé ville|niveau) : un élève inscrit au même cours sur les 2 saisons ne produit qu'une série d'événements (on garde la saison courante = fenêtre la plus large). Un pré-inscrit N+1 **uniquement** ne reçoit ses événements qu'à partir du 1er septembre (`minDate = saiNextStart`), jamais les dates de la saison courante.
+- **Preuve de non-régression** (script scratchpad `verif-ics-eleve.js`, pattern HEAD-vs-disque) : extraction de l'ANCIEN `_generateEleveICS` depuis `git show HEAD:worker.js` et du nouveau, exécutés avec les MÊMES fixtures via un faux Supabase qui applique réellement les filtres `saison=eq./in.` — 5 cas : (A) saison courante seule sans params N+1 → **ICS identique octet pour octet** (hors DTSTAMP) ; (B) params N+1 présents → juin inchangé, septembre passe aux horaires/adresse N+1 ; (C) pré-inscrit N+1 seul → 0 cours avant / cours dès le 01/09 après ; (D) 2 saisons même cours → zéro doublon d'UID ; (E) milongas fusionnées sans toucher la saison courante.
+- 📌 Stages : la requête `inscriptions_stages` n'a jamais filtré par saison (déjà cross-saison) — inchangée. `handleEleveICS` (token HMAC) inchangé. Non testable Playwright (runtime worker) — `node --check` OK + harnais ci-dessus.
+
 ## Session 2026-08-18 — Carte reportée : affichage élève + pointage admin (✅ VOLETS 1 ET 2 FAITS)
 
 Maquette validée : `preview-carte-reportee-v1.html`. L'espace élève ignorait totalement le mécanisme de report (`isReport`/`reportedRestants` : 0 occurrence avant ce correctif) → l'élève reporté voyait son ANCIENNE carte « ⛔ Expirée » et le seul bouton proposé (« Commencer une nouvelle carte ») aurait écrasé le report (remise à 10, non payée).

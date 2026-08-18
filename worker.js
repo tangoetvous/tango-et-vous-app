@@ -2828,14 +2828,20 @@ function _calLine(key, val) {
 }
 
 async function _generateEleveICS(email) {
+  // Deux saisons servies en continu (miroir de handlePublicICS) : un élève
+  // pré-inscrit N+1 voit ses cours de septembre dès l'été, et l'abonnement d'un
+  // élève de la saison courante survit à la bascule du 1er septembre.
   const sai = _calSaison();
-  const saiStart = sai.slice(0, 4) + '-09-01';
+  const y2 = parseInt(sai.split('-')[1]);
+  const saiNext      = `${y2}-${y2 + 1}`;
+  const saiStart     = sai.slice(0, 4) + '-09-01';
+  const saiNextStart = `${y2}-09-01`;
 
   const headers = { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` };
   const [inscRes, stagesRes, paramsRes] = await Promise.all([
-    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_cours?email=eq.${encodeURIComponent(email)}&statut=eq.inscrit&saison=eq.${sai}&select=ville,niveau`, { headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/inscriptions_cours?email=eq.${encodeURIComponent(email)}&statut=eq.inscrit&saison=in.(${sai},${saiNext})&select=ville,niveau,saison`, { headers }),
     fetch(`${SUPABASE_URL}/rest/v1/inscriptions_stages?email=eq.${encodeURIComponent(email)}&type_confirmation=eq.confirme&select=stage_date,stage_nom,slots`, { headers }),
-    fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=in.(tev_cours_dates,tev_milongas_${sai},tev_params_paris_${sai},tev_params_vincennes_${sai})&select=cle,valeur`, { headers }),
+    fetch(`${SUPABASE_URL}/rest/v1/parametres?cle=in.(tev_cours_dates,tev_milongas_${sai},tev_milongas_${saiNext},tev_params_paris_${sai},tev_params_paris_${saiNext},tev_params_vincennes_${sai},tev_params_vincennes_${saiNext})&select=cle,valeur`, { headers }),
   ]);
 
   const inscriptions = await inscRes.json().catch(() => []);
@@ -2848,34 +2854,63 @@ async function _generateEleveICS(email) {
   const coursDates  = params['tev_cours_dates'] || {};
   const parisDates  = coursDates.paris      || [];
   const vincDates   = coursDates.vincennes  || [];
-  const milongasVal = params[`tev_milongas_${sai}`] || {};
-  const milongas    = milongasVal.milongas || [];
+
+  // Milongas — fusion des 2 saisons (même dédoublonnage id puis nom que handlePublicICS)
+  const milsCur  = (params[`tev_milongas_${sai}`]     || {}).milongas || [];
+  const milsNext = (params[`tev_milongas_${saiNext}`] || {}).milongas || [];
+  const milongas = [...milsCur];
+  milsNext.forEach(mn => {
+    const ex = milongas.find(m => (m.id && m.id === mn.id) || m.nom === mn.nom);
+    if (ex) ex.dates = [...(ex.dates || []), ...(mn.dates || [])];
+    else milongas.push(mn);
+  });
+
   const pparis      = params[`tev_params_paris_${sai}`]      || {};
   const pvinc       = params[`tev_params_vincennes_${sai}`]  || {};
+  // Saison suivante : repli sur la saison courante si non encore renseignée
+  // (les dates ≥ 1er septembre gardaient déjà les params courants avant ce correctif)
+  const pparisN     = params[`tev_params_paris_${saiNext}`]      || pparis;
+  const pvincN      = params[`tev_params_vincennes_${saiNext}`]  || pvinc;
 
   const HOR_P = { deb:'20h30', deb_fin:'21h45', int:'21h45', int_fin:'23h00' };
   const HOR_V = { deb:'19h30', deb_fin:'21h00', int:'21h00', int_fin:'22h30' };
-  const horP  = Object.assign({}, HOR_P, pparis.horaires || {});
-  const horV  = Object.assign({}, HOR_V, pvinc.horaires  || {});
+  const horP  = Object.assign({}, HOR_P, pparis.horaires  || {});
+  const horV  = Object.assign({}, HOR_V, pvinc.horaires   || {});
+  const horPN = Object.assign({}, HOR_P, pparisN.horaires || {});
+  const horVN = Object.assign({}, HOR_V, pvincN.horaires  || {});
 
-  const adrP = pparis.adresse || {};
-  const adrV = pvinc.adresse  || {};
-  const locParis = [adrP.nom || 'Centre Kim Kan', adrP.rue || '6 rue Borrégo, Paris 20e'].filter(Boolean).join(' — ');
-  const locVinc  = [adrV.nom || 'Centre Sorano',  adrV.rue || ''].filter(Boolean).join(' — ');
+  const adrP  = pparis.adresse  || {};
+  const adrV  = pvinc.adresse   || {};
+  const adrPN = pparisN.adresse || {};
+  const adrVN = pvincN.adresse  || {};
+  const locParis  = [adrP.nom  || 'Centre Kim Kan', adrP.rue  || '6 rue Borrégo, Paris 20e'].filter(Boolean).join(' — ');
+  const locVinc   = [adrV.nom  || 'Centre Sorano',  adrV.rue  || ''].filter(Boolean).join(' — ');
+  const locParisN = [adrPN.nom || 'Centre Kim Kan', adrPN.rue || '6 rue Borrégo, Paris 20e'].filter(Boolean).join(' — ');
+  const locVincN  = [adrVN.nom || 'Centre Sorano',  adrVN.rue || ''].filter(Boolean).join(' — ');
 
   const events = [];
 
-  // 1. Cours tango de l'élève
+  // 1. Cours tango de l'élève — dédoublonnés par cours (un élève inscrit au même
+  // cours sur les 2 saisons ne doit produire qu'une série d'événements ; on garde
+  // la saison courante = fenêtre de dates la plus large)
+  const coursVus = {};
   (Array.isArray(inscriptions) ? inscriptions : []).forEach(ins => {
+    const k = `${ins.ville}|${ins.niveau}`;
+    if (!coursVus[k] || ins.saison === sai) coursVus[k] = ins;
+  });
+  Object.values(coursVus).forEach(ins => {
     const isVinc   = ins.ville === 'vincennes';
     const isInt    = ins.niveau === 'intermediaire';
     const dates    = isVinc ? vincDates : parisDates;
-    const hor      = isVinc ? horV : horP;
     const dKey     = isInt ? 'int' : 'deb';
     const fKey     = isInt ? 'int_fin' : 'deb_fin';
     const summary  = `Tango ${isVinc ? 'Vincennes' : 'Paris'} — ${isInt ? 'Intermédiaire' : 'Débutant'}`;
-    const location = isVinc ? locVinc : locParis;
-    dates.filter(d => d >= saiStart).forEach(d => {
+    // Pré-inscrit N+1 uniquement → événements à partir du 1er septembre seulement
+    const minDate  = ins.saison === saiNext ? saiNextStart : saiStart;
+    dates.filter(d => d >= minDate).forEach(d => {
+      const suiv     = d >= saiNextStart;
+      const hor      = isVinc ? (suiv ? horVN : horV) : (suiv ? horPN : horP);
+      const location = isVinc ? (suiv ? locVincN : locVinc) : (suiv ? locParisN : locParis);
       events.push({ uid: `cours-${ins.ville}-${ins.niveau}-${d}@tangoetvous.fr`, dtstart: _calIcsDate(d, hor[dKey]), dtend: _calIcsDate(d, hor[fKey]), summary, location, description: 'Cours de tango — Tango & Vous' });
     });
   });
