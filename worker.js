@@ -9267,12 +9267,19 @@ async function handleCronRelanceInscription(request, env) {
   let body = {};
   try { body = await request.json(); } catch(_) {}
 
-  // Saison ciblée : celle à venir (sept→août). En août on vise donc la rentrée.
+  // Saison ciblée : celle de la PROCHAINE rentrée — les fiches « att. paiement »
+  // à relancer sont les demandes d'inscription pour la saison qui commence en
+  // septembre. De janvier à août, la rentrée de septembre est dans l'année en
+  // cours ; de septembre à décembre, la saison qui vient de démarrer l'est aussi.
+  // Dans les deux cas : année courante → année+1.
+  // ⚠️ Corrigé le 2026-08-18 (audit de bascule) : l'ancienne formule calculait la
+  // saison COURANTE — le 22 août elle donnait 2025-2026 et la relance aurait
+  // manqué tous les pré-inscrits 2026-2027.
   const _riNow = new Date();
-  const _riY = _riNow.getFullYear(), _riM = _riNow.getMonth() + 1;
+  const _riY = _riNow.getFullYear();
   const saison = /^\d{4}-\d{4}$/.test(body.saison || '')
     ? body.saison
-    : (_riM >= 9 ? `${_riY}-${_riY + 1}` : `${_riY - 1}-${_riY}`);
+    : `${_riY}-${_riY + 1}`;
 
   const svcKey = env.SUPABASE_SERVICE_KEY || SUPABASE_ANON;
   const sbHead = { apikey: SUPABASE_ANON, Authorization: `Bearer ${svcKey}` };
