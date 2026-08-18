@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maquette — Carte reportée côté élève</title>
+<style>
+body { margin:0; padding:0 0 60px; background:#f5f5f5; font-family:Arial,sans-serif; }
+.pv-head { background:#111; border-bottom:3px solid #D4AF37; padding:22px 24px; text-align:center; }
+.pv-head h1 { font-family:Georgia,serif; font-size:20px; font-weight:300; letter-spacing:5px; color:#D4AF37; margin:0; }
+.pv-head p { font-size:12px; color:#888; margin:8px 0 0; }
+.pv-note { background:#fff3e0; border-bottom:1px solid #ffe0b2; color:#5d4037; font-size:12px; text-align:center; padding:9px 16px; line-height:1.6; }
+.pv-nav { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; padding:12px 16px; background:#0a0a0a; position:sticky; top:0; z-index:10; }
+.pv-nav a { color:#D4AF37; text-decoration:none; font-size:11px; border:1px solid #3a2f00; padding:5px 12px; border-radius:20px; }
+.pv-titre { max-width:640px; margin:38px auto 0; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:#fff; background:#333; padding:10px 20px; border-left:4px solid #D4AF37; }
+.pv-titre.rouge { border-left-color:#c62828; }
+.pv-titre.vert  { border-left-color:#2e7d32; }
+.pv-com { max-width:640px; margin:0 auto 14px; font-size:13px; color:#555; padding:12px 20px; line-height:1.7; background:#fff; }
+.pv-com b { color:#8B6914; }
+table.tbl { width:100%; border-collapse:collapse; font-size:13px; margin-top:8px; }
+table.tbl th { text-align:left; padding:8px; background:#eee; }
+table.tbl td { padding:8px; border-top:1px solid #ddd; vertical-align:top; }
+
+/* ── Simulation de l'espace élève (thème sombre) ── */
+.phone { max-width:400px; margin:14px auto 0; background:#101014; border:1px solid #2a2a30; border-radius:18px; padding:18px 16px 22px; box-shadow:0 6px 24px rgba(0,0,0,.35); }
+.ph-hint { max-width:400px; margin:6px auto 0; font-size:11px; color:#888; text-align:center; }
+.carte-box { background:#17171d; border:1px solid #2e2e36; border-radius:14px; padding:16px; }
+.cb-titre { font-size:13px; font-weight:700; color:#D4AF37; letter-spacing:1px; margin-bottom:2px; }
+.cb-sub { font-size:11px; color:#9a9aa5; margin-bottom:12px; }
+.badge { display:inline-block; font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:20px; letter-spacing:.5px; }
+.badge-exp { background:#3a1113; color:#ff8a80; border:1px solid #7f2a2e; }
+.badge-rep { background:#2b230a; color:#ffd54f; border:1px solid #8B6914; }
+.jauge { display:flex; align-items:center; gap:14px; margin:12px 0; }
+.rond { width:76px; height:76px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-direction:column; border:6px solid #2e2e36; color:#eee; }
+.rond.ok { border-color:#D4AF37; }
+.rond .gros { font-size:19px; font-weight:700; }
+.rond .petit { font-size:9.5px; color:#9a9aa5; }
+.points { display:flex; gap:5px; flex-wrap:wrap; }
+.pt { width:13px; height:13px; border-radius:50%; background:#2e2e36; border:1px solid #44444e; }
+.pt.libre { background:#0e2b12; border-color:#2e7d32; }
+.ligne { font-size:12px; color:#c9c9d2; margin:4px 0; }
+.ligne .dim { color:#8a8a94; }
+.btn-el { display:block; width:100%; box-sizing:border-box; text-align:center; margin-top:10px; padding:11px 12px; border-radius:9px; font-size:12.5px; font-weight:700; border:none; }
+.btn-or { background:#D4AF37; color:#111; }
+.btn-ghost { background:transparent; color:#c9c9d2; border:1px solid #44444e; }
+.encart-info { background:#101822; border:1px solid #1e3a5f; border-radius:9px; padding:10px 12px; font-size:12px; color:#9fc2e8; line-height:1.6; margin-top:12px; }
+.tag { position:relative; max-width:400px; margin:0 auto; }
+.tag-label { position:absolute; right:-8px; top:-10px; font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px; z-index:2; }
+.tag-bug { background:#c62828; color:#fff; }
+.tag-ok { background:#2e7d32; color:#fff; }
+</style>
+</head>
+<body>
+
+<div class="pv-head">
+  <h1>TANGO &amp; VOUS</h1>
+  <p>Maquette de décision — la carte reportée dans l'espace élève</p>
+</div>
+<div class="pv-note">✍️ <b>Maquette d'exploration — rien n'est codé.</b> Une fois validée, le code devra lui correspondre exactement
+(règle permanente) et les écrans seront vérifiés par tests avant tout déploiement.</div>
+<div class="pv-nav">
+  <a href="#contexte">① Contexte</a>
+  <a href="#bug">② Aujourd'hui (bug)</a>
+  <a href="#prop">③ Proposition</a>
+  <a href="#apres">④ Après le 1ᵉʳ cours</a>
+  <a href="#admin">⑤ Côté admin</a>
+  <a href="#decisions">⑥ À trancher</a>
+</div>
+
+<div class="pv-titre" id="contexte">① Le contexte</div>
+<div class="pv-com">
+  Exemple suivi dans toute la maquette : <b>Sophie</b>, carte 2025-2026 avec <b>4 cours restants</b>,
+  que vous avez reportée en août. La note de report (« 4 cours, redémarre au 1ᵉʳ cours ») existe bien —
+  votre interface admin l'affiche correctement. Mais l'espace élève ne la lit jamais : il n'affiche que
+  la carte brute de l'ancienne saison.
+</div>
+
+<div class="pv-titre rouge" id="bug">② Ce que Sophie voit aujourd'hui, le 1ᵉʳ septembre — le bug</div>
+<div class="tag"><span class="tag-label tag-bug">BUG ACTUEL</span></div>
+<div class="phone">
+  <div class="carte-box">
+    <div class="cb-titre">🎫 Ma carte de 10 cours</div>
+    <div class="cb-sub">2ᵉ de la saison</div>
+    <span class="badge badge-exp">⛔ Expirée le 15 juillet 2026</span>
+    <div class="jauge">
+      <div class="rond"><span class="gros">6/10</span><span class="petit">utilisés</span></div>
+      <div class="points">
+        <span class="pt libre"></span><span class="pt libre"></span><span class="pt libre"></span><span class="pt libre"></span><span class="pt libre"></span><span class="pt libre"></span>
+        <span class="pt"></span><span class="pt"></span><span class="pt"></span><span class="pt"></span>
+      </div>
+    </div>
+    <button class="btn-el btn-or">↻ Commencer une nouvelle carte sans payer pour l'instant</button>
+  </div>
+</div>
+<div class="ph-hint">Reproduction de l'écran actuel</div>
+<div class="pv-com">
+  Trois problèmes : ses <b>4 cours reportés sont invisibles</b> ; la carte est annoncée
+  <b>« Expirée »</b> alors que vous lui avez confirmé le report par email ; et le seul bouton proposé,
+  s'il est cliqué, <b>remplace ses 4 cours payés par une carte neuve de 10 cours « non payée »</b> —
+  en contradiction totale avec ce que montre votre interface.
+</div>
+
+<div class="pv-titre vert" id="prop">③ Proposition — du 1ᵉʳ septembre jusqu'à son premier cours</div>
+<div class="tag"><span class="tag-label tag-ok">PROPOSÉ</span></div>
+<div class="phone">
+  <div class="carte-box">
+    <div class="cb-titre">🎫 Ma carte de cours</div>
+    <div class="cb-sub">Saison 2026-2027</div>
+    <span class="badge badge-rep">↩ Reportée de la saison 2025-2026</span>
+    <div class="jauge">
+      <div class="rond ok"><span class="gros">4</span><span class="petit">cours<br>disponibles</span></div>
+      <div class="points">
+        <span class="pt libre"></span><span class="pt libre"></span><span class="pt libre"></span><span class="pt libre"></span>
+      </div>
+    </div>
+    <div class="ligne">Cours utilisés <span class="dim">— 0/4</span></div>
+    <div class="ligne">Validité <span class="dim">— calculée à votre premier cours</span></div>
+    <div class="encart-info">🗓 Vos 4 cours vous attendent ! Votre carte redémarrera automatiquement
+    lors de votre premier cours de la saison — il sera pointé en salle, comme d'habitude.</div>
+  </div>
+</div>
+<div class="ph-hint">Même encadré sur l'accueil et dans l'onglet Forfait/Carte</div>
+<div class="pv-com">
+  <table class="tbl">
+    <tr><th>Élément</th><th>Décision proposée</th></tr>
+    <tr><td>Badge</td><td>« ↩ Reportée de la saison 2025-2026 » (doré) — même vocabulaire que votre vue admin. Le badge « ⛔ Expirée » <b>disparaît</b>.</td></tr>
+    <tr><td>Jauge</td><td><b>0/4</b> — la carte fait la taille du report (4 points), comme dans votre interface. Pas « 0/10 ».</td></tr>
+    <tr><td>Validité</td><td>« calculée à votre premier cours » — aucune date inventée : l'expiration réelle sera posée au premier pointage, comme le fait déjà votre écran « Modifier ».</td></tr>
+    <tr><td>Boutons</td><td>« Commencer une nouvelle carte » : <b>retiré dans cet état</b> (il détruirait le report). « Je pointe ma présence » : <b>absent tant que la carte n'a pas redémarré</b> — c'est le pointage en salle du premier cours qui la relance proprement. Dès ce moment, tous les boutons habituels reviennent.</td></tr>
+    <tr><td>Historique</td><td>« Cartes précédentes » et l'historique des présences restent intacts — aucune donnée touchée.</td></tr>
+  </table>
+</div>
+
+<div class="pv-titre" id="apres">④ Après son premier cours pointé — retour au fonctionnement normal</div>
+<div class="phone">
+  <div class="carte-box">
+    <div class="cb-titre">🎫 Ma carte de cours</div>
+    <div class="cb-sub">Saison 2026-2027</div>
+    <div class="jauge">
+      <div class="rond ok"><span class="gros">1/4</span><span class="petit">utilisés</span></div>
+      <div class="points">
+        <span class="pt libre"></span><span class="pt"></span><span class="pt"></span><span class="pt"></span>
+      </div>
+    </div>
+    <div class="ligne">Premier cours <span class="dim">— jeudi 3 septembre 2026</span></div>
+    <div class="ligne">Valide jusqu'au <span class="dim">— jeudi 26 novembre 2026 (recalculée normalement)</span></div>
+    <button class="btn-el btn-or">✓ Je pointe ma présence</button>
+  </div>
+</div>
+<div class="ph-hint">Écran strictement identique à une carte normale — aucun changement ici</div>
+<div class="pv-com">
+  Dès que la carte a redémarré, la fiche est à neuf (1/4, nouvelle date, nouvelle expiration calculée avec
+  les vraies dates de cours) : l'affichage existant reprend tel quel, y compris l'auto-pointage. <b>Rien n'est
+  modifié dans cet écran</b> — la maquette le montre uniquement pour la continuité.
+</div>
+
+<div class="pv-titre rouge" id="admin">⑤ Côté admin — le correctif indispensable qui va avec</div>
+<div class="pv-com">
+  L'exploration a révélé que dans <b>Cartes 10</b>, le bouton <b>« + Pointer »</b> sur une carte reportée
+  <b>échoue aujourd'hui en silence</b> : la carte reportée porte un identifiant de la mauvaise table, la
+  fonction de pointage ne retrouve pas la fiche, et aucun message d'erreur n'apparaît. Le clic semble fait,
+  <b>rien n'est enregistré</b>. Seul le chemin « ✏️ Modifier les cours » fonctionne (il remet correctement
+  la fiche à neuf : 1/4, date du jour, expiration recalculée).
+  <table class="tbl">
+    <tr><th>Proposé</th><th>Détail</th></tr>
+    <tr><td>Réparer « + Pointer » pour les cartes reportées</td>
+        <td>Le premier pointage retrouve la fiche par l'email et <b>reprend exactement la logique éprouvée de « ✏️ Modifier »</b> : carte remise à neuf (1/N, date du cours, expiration recalculée, statut Actif). Les pointages suivants redeviennent ordinaires. Sans ce correctif, l'affichage élève proposé en ③ resterait bloqué sur « en attente du premier cours ».</td></tr>
+    <tr><td>Aucun autre écran admin modifié</td>
+        <td>Votre badge « ↩ Report · Dém. au 1ᵉʳ cours », la vue Détails et « ✏️ Modifier » restent tels quels.</td></tr>
+  </table>
+</div>
+
+<div class="pv-titre" id="decisions">⑥ Ce qui reste à trancher (par vous)</div>
+<div class="pv-com" style="padding-bottom:26px;">
+  <table class="tbl">
+    <tr><th>Question</th><th>Mon avis</th></tr>
+    <tr><td><b>1.</b> Le texte de l'encart bleu (« Vos 4 cours vous attendent !… pointé en salle ») vous convient-il ?</td>
+        <td>Formulation proposée, modifiable à volonté.</td></tr>
+    <tr><td><b>2.</b> Pas de bouton « Je pointe » tant que la carte n'a pas redémarré : d'accord ?</td>
+        <td>Oui — le premier cours de la rentrée est toujours pointé en salle, et cela évite de dupliquer une logique délicate côté élève. L'auto-pointage revient dès le cours suivant.</td></tr>
+    <tr><td><b>3.</b> L'élève reporté qui voudrait quand même une carte neuve de 10 (cas rare)</td>
+        <td>Passe par vous (renouvellement admin) — pas de bouton élève dans cet état, pour éviter tout écrasement du report.</td></tr>
+  </table>
+  <p style="margin-top:14px;line-height:1.7;">Périmètre exact du futur correctif : <b>affichage espace élève</b> (détection de la note de report,
+  déjà chargée — aucune requête ni écriture nouvelle) + <b>réparation du « + Pointer » admin</b> sur les cartes
+  reportées. Rien d'autre. Cas non couverts volontairement : élève non reporté (accès fermé — comportement voulu),
+  écrans d'une carte normale (inchangés).</p>
+</div>
+
+</body>
+</html>
