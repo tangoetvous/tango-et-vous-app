@@ -10660,7 +10660,8 @@ function pointerCoursAction(id, date, nbCours, btn) {
       return Promise.resolve(TEV.client.from('eleves').update({
         carte_utilises:_nbRep, carte_restants:Math.max(0,_tailleRep-_nbRep),
         carte_date_achat:date, carte_expiration:_expRep, carte_exp_manuelle:false,
-        carte_statut:'Active', carte_paye:true, saison:saisonActive()
+        carte_statut:'Active', carte_paye:true, saison:saisonActive(),
+        carte_num:1   // 1ʳᵉ carte de la nouvelle saison — le compteur repart à 1
       }).eq('id',_idRep)).then(function(res){
         if(res&&res.error) throw new Error(res.error.message||res.error.code||'écriture eleves');
         var _rowsRep=[]; for(var i=0;i<_nbRep;i++) _rowsRep.push({eleve_id:_idRep,eleve_nom:c.nom||'',date:date,niveau:c.niveau||'',note:'Carte reportée — redémarrage'});
@@ -10971,6 +10972,10 @@ function sauvegarderEditCarte() {
     var _upd = {carte_utilises:n, carte_restants:Math.max(0,_tEc-n), carte_exp_manuelle:!!c.expManuelle};
     if(dates[0]) _upd.carte_date_achat = dates[0];
     _upd.carte_expiration = c.expiration || null;
+    // Redémarrage d'une carte REPORTÉE via ✏️ Modifier : c'est la 1ʳᵉ carte de la
+    // nouvelle saison → compteur remis à 1 (jamais pour l'édition d'une carte
+    // ordinaire, où le numéro courant doit être préservé).
+    if (_isRealReport) _upd.carte_num = 1;
     // Pour les cartes _fromCoursTango, résoudre le vrai eleves.id :
     // 1. Chercher une entrée eleves-based (!_fromCoursTango) en mémoire
     // 2. Sinon, SELECT par email en DB
@@ -15431,7 +15436,8 @@ window.soumettreInscriptionDirecte = function(force) {
     // Mettre à jour les champs carte sur la ligne eleves existante, ou créer si absente
     var _updElevesDI = {
       carte_statut:anyMainCarte10?'Nouvelle carte':'Forfait',
-      carte_utilises:0, carte_restants:anyMainCarte10?_cfv.nb:0, carte_duree_mois:anyMainCarte10?_cfv.duree:null, carte_paye:true
+      carte_utilises:0, carte_restants:anyMainCarte10?_cfv.nb:0, carte_duree_mois:anyMainCarte10?_cfv.duree:null, carte_paye:true,
+      carte_num:1   // carte neuve d'une nouvelle inscription → le compteur repart à 1
     };
     if(anyMainCarte10){ _updElevesDI.niveau=carteNiveauDI; _updElevesDI.ville=carteVilleDI; }
     _elvProm = Promise.resolve(TEV.client.from('eleves').update(_updElevesDI).eq('email',email).select('id')).then(function(r){

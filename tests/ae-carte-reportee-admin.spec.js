@@ -71,6 +71,7 @@ test.describe('Groupe AE — Pointage admin des cartes reportées', () => {
     expect(upd.payload.carte_statut).toBe('Active');
     expect(upd.payload.carte_expiration).toBeTruthy();
     expect(upd.payload.saison).toMatch(/^\d{4}-\d{4}$/);
+    expect(upd.payload.carte_num).toBe(1);                   // 1ʳᵉ carte de la nouvelle saison
     // Présence insérée avec le bon eleve_id
     const ins = r.log.find(l => l.op === 'insert' && l.t === 'presences');
     expect(ins.rows.length).toBe(1);
