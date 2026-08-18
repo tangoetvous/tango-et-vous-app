@@ -1359,7 +1359,13 @@ function dateAppartientSaison(dateStr, saison) {
   return dateStr>=(y1+'-09-01') && dateStr<=((y1+1)+'-08-31');
 }
 function isPreinscriptionPeriod() {
-  try { var c=JSON.parse(localStorage.getItem('tev_config_saison')||'{}'); if(c.preInscriptionOuverte) return true; } catch(ex){}
+  // L'interrupteur manuel n'est honoré que s'il a été ouvert POUR la saison
+  // encore à venir : dès le 1er septembre, saisonSuivante() avance et un
+  // interrupteur resté collé (posé au printemps, jamais refermé — il est
+  // persisté en localStorage ET dans Supabase) devient périmé et est ignoré.
+  // Sans cette garde, il aurait envoyé les saisies de septembre dans une
+  // saison fantôme N+2 (constat de l'audit de bascule du 2026-08-18).
+  try { var c=JSON.parse(localStorage.getItem('tev_config_saison')||'{}'); if(c.preInscriptionOuverte && c.saisonProchaine===saisonSuivante()) return true; } catch(ex){}
   var d=IS_DEMO?DEMO_DATE:new Date(), m=d.getMonth()+1; return m>=5&&m<=8;
 }
 function saisonPourNouvelleEntree() {

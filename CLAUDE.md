@@ -1,5 +1,13 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-18 — Drapeau pré-inscription auto-expirant (✅ FAIT)
+
+Audit de bascule : `tev_config_saison.preInscriptionOuverte` (persisté localStorage + Supabase) n'était **jamais refermé automatiquement**. Resté collé après un été, il aurait fait pointer `saisonPourNouvelleEntree()` sur la saison N+2 dès le 1er septembre → saisies admin dans une saison fantôme invisible. Par ailleurs **les boutons « 🔓 Ouvrir / ✕ Fermer les pré-inscriptions » sont dans du code mort** (`renderTarifs()` ~L3126, section « 📅 Préparer la saison prochaine », plus appelée par personne) — impossible d'ouvrir OU de fermer le drapeau depuis l'interface actuelle.
+
+- **Fix (1 ligne, `isPreinscriptionPeriod()` ~L1362)** : le drapeau n'est honoré que si `c.saisonProchaine === saisonSuivante()` — dès le 1er septembre, `saisonSuivante()` avance et un drapeau posé au printemps devient périmé, ignoré. Un drapeau legacy sans `saisonProchaine` est ignoré aussi. La fenêtre automatique mai-août est inchangée et **masque tout** jusqu'au 31/08 (le fix est donc neutre jusqu'à la bascule). Usage légitime préservé : drapeau ouvert hors fenêtre POUR la saison à venir (ex. avril) → honoré jusqu'au 31/08 suivant.
+- **Tests groupe AC** (`tests/ac-preinscription-flag.spec.js`, 4) — **1ᵉʳ usage de `page.clock.setFixedTime`** (Playwright ≥1.45) pour simuler la date du navigateur : l'horloge est posée AVANT `page.goto` donc `DEMO_DATE = new Date()` suit la date simulée. AC1 drapeau collé au 15/09 → ignoré ; AC2 drapeau legacy sans saison → ignoré ; AC3 drapeau légitime d'avril → honoré ; AC4 fenêtres été/hiver sans drapeau. ⚠️ Si on change l'horloge APRÈS le chargement, re-figer `DEMO_DATE = new Date()` dans `page.evaluate` (cf. AC4).
+- 📌 L'espace élève (`index.html` ~L815) a sa propre `isPreinscriptionPeriod()` **sans drapeau** (fenêtre mai-août pure) — non concernée.
+
 ## Session 2026-08-18 — Stages : saison dérivée de la date du stage (✅ FAIT)
 
 Suite de l'audit de bascule 31/08→01/09 : la saison des inscriptions aux stages était **codée en dur `'2025-2026'`** dans les deux INSERT de `stages-pwa.html` (~L1312 inscripteur, ~L1326 partenaire) → dès le 01/09/2026, 100 % des inscriptions stages auraient été étiquetées dans une saison archivée.
