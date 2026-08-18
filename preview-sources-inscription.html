@@ -118,13 +118,12 @@
   <div class="field"><span class="label">Bouton :</span> Nous contacter (mailto admin)</div>
 </div>
 
-<h2>I17 — Mode pré-inscription (mai-août)</h2>
-<div class="route">POST /api/notify/inscription-cours (sans auth) avec mode='preinscription'</div>
+<h2>I17 — « mode pré-inscription » : cet email n'existe pas</h2>
 <div class="block">
-  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">MODE === 'preinscription' (mai-août)</span></div>
-  <div class="field"><span class="label">Sujet :</span> <code>✓ Votre pré-inscription tango ${saisonSuivante} — Tango &amp; Vous</code></div>
-  <div class="field"><span class="label">Différence :</span> Badge "Saison prochaine" · mention "reprise en septembre" · tarifs prochaine saison</div>
-  <div class="field"><span class="label">Tarifs :</span> <span class="src">localStorage.tev_tarifs_prochaine_saison (admin) → body.tarifs</span></div>
+  <div class="field"><span class="note">⚠️ <b>Corrigé le 2026-08-17.</b> Cette section décrivait un email distinct — sujet « ✓ Votre pré-inscription tango … », badge « Saison prochaine », mention « reprise en septembre ». <b>Rien de tout cela n'existe dans le code.</b></span></div>
+  <div class="field"><span class="label">Ce qui se passe en mai-août :</span> le formulaire bascule bien en mode pré-inscription et transmet <code>mode: 'preinscription'</code> dans la charge utile — mais <b>le handler ne lit jamais ce champ</b>. La personne reçoit exactement I01, avec simplement la saison suivante dans <code>saison</code>.</div>
+  <div class="field"><span class="label">Si un email distinct est souhaité :</span> tout est déjà transmis, il suffirait de lire <code>mode</code> dans <code>handleNotifyInscriptionCours</code> et d'adapter bandeau, intro et sujet. <b>Décision admin en attente.</b></div>
+  <div class="field"><span class="label">Tarifs :</span> ⚠️ aucun tarif n'est transmis ni affiché dans I01 — l'ancienne mention d'un champ <code>body.tarifs</code> était erronée.</div>
 </div>
 
 <h2>I-relance — Rappel avant la rentrée (cron 22 août)</h2>
