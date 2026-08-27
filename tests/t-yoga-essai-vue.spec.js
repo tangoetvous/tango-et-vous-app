@@ -7,11 +7,15 @@
 const { test, expect } = require('@playwright/test');
 const { bootDemo } = require('./helpers');
 
-// Dates dynamiques (relatives à aujourd'hui) — ⚠️ fragilité connue : autour du
-// 1er septembre, une date à J+5 peut basculer sur la saison suivante et être
-// filtrée par dateAppartientSaison ; relancer hors de cette fenêtre si échec.
+// HORLOGE GELÉE (page.clock.setFixedTime, comme le groupe AC) : l'ancienne
+// version utilisait la vraie date du jour et cassait autour du 1er septembre
+// (J+5 basculait sur la saison suivante → filtré par dateAppartientSaison —
+// panne réelle constatée le 2026-08-27). Avec l'horloge posée AVANT page.goto,
+// les dates du navigateur ET des fixtures partagent le même « aujourd'hui »
+// figé en pleine saison → déterministe toute l'année.
+const ANCRE = new Date('2026-03-12T10:00:00');
 function iso(offsetJours) {
-  const d = new Date(); d.setDate(d.getDate() + offsetJours);
+  const d = new Date(ANCRE); d.setDate(d.getDate() + offsetJours);
   return d.toISOString().slice(0, 10);
 }
 const ESSAIS = [
@@ -25,6 +29,7 @@ const ESSAIS = [
 ];
 
 async function bootYogaEssai(page, horaires) {
+  await page.clock.setFixedTime(ANCRE);   // AVANT le goto de bootDemo
   await bootDemo(page);
   await page.evaluate(([essais, hor]) => {
     if (hor) localStorage.setItem('tev_params_yoga_' + saisonActive(), JSON.stringify({ horaires: hor }));
