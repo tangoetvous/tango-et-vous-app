@@ -1,6 +1,6 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
-## Session 2026-08-27 — Annulation d'essai par l'élève : fiche jamais archivée (accent manquant) (✅ SQL CORRIGÉ — exécuté par l'admin)
+## Session 2026-08-27 — Annulation d'essai par l'élève : fiche jamais archivée (accent manquant) (⚠️ SQL À EXÉCUTER par l'admin)
 
 Bug réel (2 élèves) : le clic « ✕ Annuler » d'un email essai envoyait bien email+push admin mais la fiche restait affichée normalement dans Essai Tango. Cause : la RPC déployée `confirmer_annuler_essai` (SQL **jamais versionné** — angle mort connu de l'audit) écrivait `statut='supprime'` **SANS accent**, alors que toute l'app filtre `'supprimé'` AVEC accent. La fiche était donc bien marquée en base… avec une étiquette invisible pour l'admin (ni grisée, ni onglet 🗑, considérée comme confirmée). Le worker, lui, recevait ok:true → notifications parties normalement.
 
