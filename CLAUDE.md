@@ -1,5 +1,17 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-19 — Quota du formulaire d'inscription : jamais opérant (RLS) (✅ CODE FAIT — ⚠️ SQL À EXÉCUTER)
+
+Bug réel signalé par l'admin : un guideur validé d'office sur Vincennes Intermédiaire alors que le cours était COMPLET (23/22). Diagnostic : **le contrôle de quota de `inscription-cours.html` n'a JAMAIS fonctionné** — `finalize()` lisait `inscriptions_cours` directement, or la RLS (`ins_cours_select` : `is_admin() OR email = auth.email()`, schema.sql:176) renvoie **silencieusement 0 ligne** à un client anonyme → 0 guideur compté → tout le monde validé. L'email I01-quota-att (liste d'attente) n'était jamais parti pour personne.
+
+- **Fix** : RPC **`compter_inscrits_cours(p_ville, p_niveau, p_saison)`** (SECURITY DEFINER, `supabase/compter_inscrits_cours.sql`, GRANT anon+authenticated — même modèle que `compter_inscrits_essai`) → `{gui, gde}` en comptant `statut IN (inscrit, attente_paiement)` hors `isRenewal` — sémantique STRICTEMENT identique à ce que le client croyait compter. `finalize()` appelle la RPC au lieu de lire la table.
+- **FAIL-OPEN assumé** : toute erreur RPC (fonction pas encore créée, réseau) → comportement historique (validé). L'ordre de déploiement est donc sans importance, et un pépin technique ne met jamais personne en attente à tort. Corollaire : **tant que le SQL n'est pas exécuté, le quota reste inactif** (comme avant).
+- **Tests groupe AF** (`tests/af-quota-inscription.spec.js`, 4) : AF1 quota plein → statut `demande` + écran attente + bandeau « complet » ; AF2 quota libre → inchangé ; AF3 RPC en échec → fail-open ; AF4 couple avec quota guidées plein → les 2 fiches en attente. ⚠️ Le formulaire poste chaque ligne d'insert comme un OBJET (pas un tableau) — l'intercepteur de test aplatit.
+- ⚠️ **À EXÉCUTER PAR L'ADMIN dans Supabase SQL Editor** : `supabase/compter_inscrits_cours.sql`. Sans ça, le quota reste inopérant (fail-open).
+- 📌 Cas humain restant : le guideur validé à tort (23/22) a reçu l'email avec le bouton AssoConnect — à arbitrer manuellement (le laisser ou le repasser en attente via l'admin).
+- 📌 Limite acceptée : course entre 2 soumissions simultanées (comme l'essai). Dépasser volontairement le quota reste possible via la validation manuelle admin.
+- 📌 Au passage : **groupe T (vue Essai Yoga) gelé dans le temps** (`page.clock.setFixedTime`, ancre 2026-03-12) — sa fragilité documentée « autour du 1er septembre » s'est réellement déclenchée le 2026-08-27 (J+5 = 01/09 → filtré par `dateAppartientSaison`). Déterministe toute l'année désormais ; les fixtures dérivent leurs dates de la MÊME ancre que l'horloge.
+
 ## Session 2026-08-18 — Maquette : les 3 formulaires sombres en thème clair (⏳ EN ATTENTE DE VALIDATION ADMIN)
 
 Demande admin : voir `cours-essai.html`, `inscription-cours.html` et `stages-pwa.html` (les 3 formulaires publics encore sombres) convertis en thème clair, **sans toucher aux sources**, avec l'engagement que la maquette validée sera appliquée telle quelle.

@@ -1052,18 +1052,22 @@ async function finalize() {
       _coursesToCheck.push({ idx: 1, ville: S.c2.ville, niveau: S.c2.niveau, role: _role2, partRole: S.venue2 === 'avec-part' ? getRoleAuto(_role2) : null });
     }
     for (const _cc of _coursesToCheck) {
-      const { data: _rows } = await TEV.client.from('inscriptions_cours')
-        .select('role, donnees')
-        .eq('ville', _cc.ville).eq('niveau', _cc.niveau).eq('saison', S.saison)
-        .in('statut', ['inscrit','attente_paiement']);
-      const _nonRen = (_rows || []).filter(function(r) {
-        try { var d = typeof r.donnees === 'string' ? JSON.parse(r.donnees) : (r.donnees || {}); return d.isRenewal !== true; } catch(e) { return true; }
-      });
-      const _gui = _nonRen.filter(function(r){ return r.role === 'guideur'; }).length;
-      const _gde = _nonRen.filter(function(r){ return r.role === 'guidee'; }).length;
-      const _mainFull = (_cc.role === 'guideur' && _gui >= 22) || (_cc.role === 'guidee' && _gde >= 23);
-      const _partFull = _cc.partRole ? ((_cc.partRole === 'guideur' && _gui >= 22) || (_cc.partRole === 'guidee' && _gde >= 23)) : false;
-      if (_mainFull || _partFull) _quotaFullArr[_cc.idx] = true;
+      // ⚠️ Comptage via RPC SECURITY DEFINER (compter_inscrits_cours) : la
+      // lecture directe de la table renvoyait silencieusement 0 ligne pour un
+      // client anonyme (RLS ins_cours_select) → le quota n'était jamais atteint.
+      // FAIL-OPEN : toute erreur (fonction absente, réseau) → comportement
+      // historique, la personne est validée — jamais mise en attente à tort.
+      try {
+        const { data: _cnt, error: _cntErr } = await TEV.client.rpc('compter_inscrits_cours', {
+          p_ville: _cc.ville, p_niveau: _cc.niveau, p_saison: S.saison,
+        });
+        if (_cntErr || !_cnt) continue;
+        const _gui = Number(_cnt.gui) || 0;
+        const _gde = Number(_cnt.gde) || 0;
+        const _mainFull = (_cc.role === 'guideur' && _gui >= 22) || (_cc.role === 'guidee' && _gde >= 23);
+        const _partFull = _cc.partRole ? ((_cc.partRole === 'guideur' && _gui >= 22) || (_cc.partRole === 'guidee' && _gde >= 23)) : false;
+        if (_mainFull || _partFull) _quotaFullArr[_cc.idx] = true;
+      } catch (e) {}
     }
   }
 
