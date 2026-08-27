@@ -1,5 +1,9 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-27 — Email E-admin-cancel DÉSACTIVÉ provisoirement (demande admin)
+
+L'email élève envoyé à la **suppression d'une fiche Essai Tango** (🗑 → `supprimerEssaiInscr`, admin.html ~L11757) est **coupé côté client** : le `fetch('/api/notify/essai-annule-admin')` est commenté (bloc marqué « DÉSACTIVÉ PROVISOIREMENT 2026-08-27 »). La route worker et `handleNotifyEssaiAnnuleAdmin` restent intacts — **réactiver = décommenter le bloc**. Conséquences : plus d'email élève NI de notif panel 🔔 (les deux venaient du même handler) ; la suppression/archivage/Rétablir inchangés. 📌 Rappel du quirk (raison de la demande) : l'objet dit « inscription modifiée » quand le corps dit « annulée » — si l'email est réactivé un jour, harmoniser l'objet à ce moment-là.
+
 ## Session 2026-08-19 — Quota du formulaire d'inscription : jamais opérant (RLS) (✅ CODE FAIT — ⚠️ SQL À EXÉCUTER)
 
 Bug réel signalé par l'admin : un guideur validé d'office sur Vincennes Intermédiaire alors que le cours était COMPLET (23/22). Diagnostic : **le contrôle de quota de `inscription-cours.html` n'a JAMAIS fonctionné** — `finalize()` lisait `inscriptions_cours` directement, or la RLS (`ins_cours_select` : `is_admin() OR email = auth.email()`, schema.sql:176) renvoie **silencieusement 0 ligne** à un client anonyme → 0 guideur compté → tout le monde validé. L'email I01-quota-att (liste d'attente) n'était jamais parti pour personne.

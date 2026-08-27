@@ -11754,14 +11754,19 @@ function supprimerEssaiInscr(email, date, id) {
             console.error('Erreur suppression essai:', results);
             afficherToast('Erreur : suppression échouée');
             chargerDonnees();
-          } else if (_notifData && _notifData.email) {
-            // Email de notification à l'élève — fire and forget
-            fetch('/api/notify/essai-annule-admin', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(_notifData)
-            }).catch(function(){});
           }
+          // ⚠️ DÉSACTIVÉ PROVISOIREMENT (demande admin 2026-08-27) : l'email élève
+          // E-admin-cancel (« votre inscription a été annulée » — objet incohérent
+          // « inscription modifiée ») ne part plus à la suppression d'une fiche.
+          // Pour RÉACTIVER : décommenter le bloc ci-dessous.
+          // else if (_notifData && _notifData.email) {
+          //   // Email de notification à l'élève — fire and forget
+          //   fetch('/api/notify/essai-annule-admin', {
+          //     method: 'POST',
+          //     headers: { 'Content-Type': 'application/json' },
+          //     body: JSON.stringify(_notifData)
+          //   }).catch(function(){});
+          // }
         })
         .catch(function(e){ console.error('Erreur suppression essai (réseau):', e); chargerDonnees(); });
     }).catch(function(e){ console.error('Erreur lecture essai avant suppression:', e); chargerDonnees(); });
