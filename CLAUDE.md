@@ -1,5 +1,13 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
+## Session 2026-08-27 — Annulation d'essai par l'élève : fiche jamais archivée (accent manquant) (✅ SQL CORRIGÉ — exécuté par l'admin)
+
+Bug réel (2 élèves) : le clic « ✕ Annuler » d'un email essai envoyait bien email+push admin mais la fiche restait affichée normalement dans Essai Tango. Cause : la RPC déployée `confirmer_annuler_essai` (SQL **jamais versionné** — angle mort connu de l'audit) écrivait `statut='supprime'` **SANS accent**, alors que toute l'app filtre `'supprimé'` AVEC accent. La fiche était donc bien marquée en base… avec une étiquette invisible pour l'admin (ni grisée, ni onglet 🗑, considérée comme confirmée). Le worker, lui, recevait ok:true → notifications parties normalement.
+
+- **Fix** : `supabase/confirmer_annuler_essai.sql` (ENFIN versionné) — strictement identique à la version déployée **sauf** : écriture `'supprimé'` accentué (fiche + cascade partenaire), détections « déjà supprimé » tolérantes aux 2 orthographes (`IN ('supprimé','supprime')`, y compris le filtre anti-re-suppression du partenaire). **Vérification HMAC inchangée** → les boutons des emails déjà envoyés continuent de marcher.
+- **Réparation des données** : `UPDATE inscriptions_essai SET statut='supprimé' WHERE statut='supprime';` — récupère rétroactivement les fiches annulées avec l'ancienne orthographe (elles réapparaissent dans 🗑 Supprimés avec Rétablir fonctionnel, `statut_avant_suppression` était bien posé).
+- 📌 Obtenu par `SELECT prosrc FROM pg_proc WHERE proname='confirmer_annuler_essai'` — le bon réflexe pour toute RPC non versionnée. Le quirk `v_row.champ` du SQL Editor ne s'est PAS manifesté (la version déployée en est truffée et fonctionne).
+
 ## Session 2026-08-27 — Email E-admin-cancel DÉSACTIVÉ provisoirement (demande admin)
 
 L'email élève envoyé à la **suppression d'une fiche Essai Tango** (🗑 → `supprimerEssaiInscr`, admin.html ~L11757) est **coupé côté client** : le `fetch('/api/notify/essai-annule-admin')` est commenté (bloc marqué « DÉSACTIVÉ PROVISOIREMENT 2026-08-27 »). La route worker et `handleNotifyEssaiAnnuleAdmin` restent intacts — **réactiver = décommenter le bloc**. Conséquences : plus d'email élève NI de notif panel 🔔 (les deux venaient du même handler) ; la suppression/archivage/Rétablir inchangés. 📌 Rappel du quirk (raison de la demande) : l'objet dit « inscription modifiée » quand le corps dit « annulée » — si l'email est réactivé un jour, harmoniser l'objet à ce moment-là.
