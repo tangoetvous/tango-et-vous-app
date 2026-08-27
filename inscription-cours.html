@@ -1042,6 +1042,7 @@ function soumettre() {
 async function finalize() {
   // Vérification quota par cours — vérifie le rôle principal ET le rôle du partenaire
   const _quotaFullArr = [false, false]; // [C1, C2]
+  const _quotaRoles = [null, null];     // [C1, C2] — { gui: bool, gde: bool } si quota atteint
   const _incl2 = S.nbCours === 2 && S.c2.ville && S.c2.niveau;
   if (window.TEV) {
     const _role2 = S.role2 || S.role;
@@ -1066,7 +1067,11 @@ async function finalize() {
         const _gde = Number(_cnt.gde) || 0;
         const _mainFull = (_cc.role === 'guideur' && _gui >= 22) || (_cc.role === 'guidee' && _gde >= 23);
         const _partFull = _cc.partRole ? ((_cc.partRole === 'guideur' && _gui >= 22) || (_cc.partRole === 'guidee' && _gde >= 23)) : false;
-        if (_mainFull || _partFull) _quotaFullArr[_cc.idx] = true;
+        if (_mainFull || _partFull) {
+          _quotaFullArr[_cc.idx] = true;
+          // Rôles saturés — transmis au worker pour le texte de l'email (I01-complet / I01-quota-att)
+          _quotaRoles[_cc.idx] = { gui: _gui >= 22, gde: _gde >= 23 };
+        }
       } catch (e) {}
     }
   }
@@ -1107,7 +1112,10 @@ async function finalize() {
       pPrenom: S.pPrenom, pNom: S.pNom, pEmail: S.pEmail, pTel: S.pTel, pRole: S.pRole,
       p2Prenom: S.p2Prenom, p2Nom: S.p2Nom, p2Email: S.p2Email,
       samePartner: S.samePartner,
-      isWaitlist: wait
+      isWaitlist: wait,
+      // Raison de l'attente par cours : null = parité (guidée seule), objet = cours complet
+      quotaFull1: _quotaFullArr[0] ? _quotaRoles[0] : null,
+      quotaFull2: _quotaFullArr[1] ? _quotaRoles[1] : null
     }
   };
 

@@ -56,12 +56,37 @@
 <div class="route">POST /api/notify/inscription-cours (sans auth)</div>
 <div class="block">
   <div class="field"><span class="label">Sujet :</span> <code>Votre demande d'inscription au tango est bien reçue — liste d'attente</code></div>
-  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='demande' (guidée seule dans tous ses cours)</span></div>
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">statut='demande' — guidée seule dans tous ses cours ET quota non atteint (sinon → I01-complet / I01-quota-att ci-dessous)</span></div>
   <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre demande inscription tango enregistree - en attente de validation admin"</span></div>
   <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Votre demande d'inscription est enregistrée — liste d'attente"</div>
   <div class="field"><span class="label">Encadré :</span> Explication parité · 3 options (attente / autre créneau / cours d'essai)</div>
   <div class="field"><span class="label">Paragraphe intro :</span> Se termine par <strong>"Vous êtes pour l'instant en liste d'attente."</strong> en gras — ajouté pour que l'élève comprenne immédiatement son statut</div>
   <div class="field"><span class="label">Signature :</span> <span class="var">signWait</span> — "Nous reviendrons vers vous très prochainement." <span class="cond">(≠ signEleve — destinataire pas encore confirmé, évite le clipping Gmail)</span></div>
+</div>
+
+<h2>I01-complet — Seul·e, cours COMPLET (quota) — ajouté 2026-08-19</h2>
+<div class="route">POST /api/notify/inscription-cours (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Sujet :</span> <code>Votre demande d'inscription au tango est bien reçue — cours complet, liste d'attente</code></div>
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">isWaitlist=true ET quotaFull1/2 non nul (quota atteint, personne seule — guideur ou guidée)</span></div>
+  <div class="field"><span class="label">Body (nouveaux champs) :</span> <span class="var">quotaFull1 / quotaFull2 = { gui: bool, gde: bool }</span> — rôles saturés par cours, calculés par le formulaire via la RPC <code>compter_inscrits_cours</code> ; <span class="cond">null = attente pour parité (I01-att historique)</span></div>
+  <div class="field"><span class="label">Preheader :</span> <span class="var">"Votre demande inscription tango enregistree - cours complet, liste d'attente"</span></div>
+  <div class="field"><span class="label">Bandeau :</span> Orange ⏳ "Demande enregistrée — cours complet, liste d'attente"</div>
+  <div class="field"><span class="label">Encadré « Pourquoi » :</span> "Ce cours affiche actuellement complet pour les guideur·se·s / guidé·e·s / les deux rôles" <span class="cond">(selon quotaFull.gui/gde)</span> — <strong>pas de mention de parité, pas de « trouvez un·e partenaire »</strong></div>
+  <div class="field"><span class="label">Options :</span> 2 seulement — 1️⃣ rester en liste d'attente · 2️⃣ choisir un autre cours de ce niveau (Paris / Vincennes) → lien inscription-cours.html. <span class="note">Le cours d'essai a été retiré (décision admin 2026-08-19 : frustrant si le cours est complet)</span></div>
+  <div class="field"><span class="label">Signature :</span> <span class="var">signWait</span></div>
+</div>
+
+<h2>I01-quota-att — Duo, cours COMPLET (quota) — ajouté 2026-08-19</h2>
+<div class="route">POST /api/notify/inscription-cours (sans auth)</div>
+<div class="block">
+  <div class="field"><span class="label">Sujet :</span> <code>Votre demande d'inscription au tango en duo est bien reçue — cours complet, liste d'attente</code></div>
+  <div class="field"><span class="label">Déclencheur :</span> <span class="cond">isWaitlist=true ET couple (venue='avec-part') — un couple en attente = forcément le quota, la variante s'applique même si quotaFull manque (vieux formulaire en cache)</span></div>
+  <div class="field"><span class="label">Destinataires :</span> Les DEUX partenaires (emails distincts), chacun son email avec son prénom et son rôle</div>
+  <div class="field"><span class="label">Cours box :</span> Cours · Saison · Votre rôle · <strong>👫 En duo avec [prénom de l'autre]</strong></div>
+  <div class="field"><span class="label">Encadré « Pourquoi » :</span> "Ce cours affiche actuellement complet pour les… Vous vous êtes inscrits en duo : <strong>vous serez confirmé·e·s tous les deux ensemble</strong> dès que des places se libèrent."</div>
+  <div class="field"><span class="label">Options :</span> Identiques à I01-complet (2 options, pluriel « dès que des places se libèrent »)</div>
+  <div class="field"><span class="label">Signature :</span> <span class="var">signWait</span></div>
 </div>
 
 <h2>I02 — Admin valide guidée → att. paiement</h2>

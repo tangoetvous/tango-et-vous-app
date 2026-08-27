@@ -5165,7 +5165,7 @@ async function handleNotifyInscriptionCours(request, env) {
 
   const { prenom, nom, email, tel, role, saison, c1, c2, nbCours,
           venue, role2, venue2, pPrenom, pNom, pEmail, pTel, pRole,
-          p2Prenom, p2Nom, p2Email, samePartner, isWaitlist } = body;
+          p2Prenom, p2Nom, p2Email, samePartner, isWaitlist, quotaFull1, quotaFull2 } = body;
 
   const MOIS_L = ['janvier','f\xe9vrier','mars','avril','mai','juin','juillet','ao\xfbt','septembre','octobre','novembre','d\xe9cembre'];
   const JOURS_L = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
@@ -5275,7 +5275,10 @@ async function handleNotifyInscriptionCours(request, env) {
     const hor = getHoraire(c.ville, c.niveau);
     const isCoupleAdmin = c.venue === 'avec-part' && !!c.pPrenom;
     const pRoleAdmin = c.pRole || (c.role === 'guidee' ? 'guideur' : 'guidee');
-    const emailCode = isWaitGlobal ? 'I01-att' : (isCoupleAdmin ? 'I01-couple' : (c.ville === 'vincennes' ? 'I01-vinc' : 'I01-val'));
+    const _qAdm = courses.indexOf(c) === 0 ? (quotaFull1 || null) : (quotaFull2 || null);
+    const emailCode = isWaitGlobal
+      ? ((_qAdm || isCoupleAdmin) ? (isCoupleAdmin ? 'I01-quota-att' : 'I01-complet') : 'I01-att')
+      : (isCoupleAdmin ? 'I01-couple' : (c.ville === 'vincennes' ? 'I01-vinc' : 'I01-val'));
     adminBlocs += '<div style="border:2px solid #2e7d32;border-radius:8px;overflow:hidden;margin-bottom:20px;">'
       + (isCoupleAdmin ? '<div style="background:#6a1b9a;padding:6px 16px;text-align:center;"><span style="display:inline-block;background:#fff;color:#6a1b9a;font-size:12px;font-weight:700;padding:3px 14px;border-radius:20px;letter-spacing:1px;">👫 COUPLE</span></div>' : '')
       + '<div style="background:#2e7d32;padding:10px 16px;display:flex;align-items:center;gap:12px;">'
@@ -5360,6 +5363,10 @@ async function handleNotifyInscriptionCours(request, env) {
     const c = courses[ci];
     // c1 uses isWaitlist; c2 computes from role2/venue2
     const courseWait = ci === 0 ? isWaitGlobal : (c.role === 'guidee' && c.venue !== 'avec-part');
+    // Raison de l'attente transmise par le formulaire (null = parité guidée seule).
+    // Un COUPLE en attente = forcément quota (jamais la parité) — déduit même
+    // si le champ manque (vieille version du formulaire en cache).
+    const quotaInfo = ci === 0 ? (quotaFull1 || null) : (quotaFull2 || null);
     const adr = getAdresse(c.ville);
     const hor = getHoraire(c.ville, c.niveau);
     const firstDate = getFirstDate(c.ville);
@@ -5380,8 +5387,52 @@ async function handleNotifyInscriptionCours(request, env) {
     for (const tgt of targets) {
       let eleveHtml, eleveSubj;
 
-      if (courseWait) {
-        // ── I01-att
+      if (courseWait && (quotaInfo || isCouple)) {
+        // ── I01-complet (seul·e) / I01-quota-att (duo) — cours COMPLET
+        const _qf = quotaInfo || {};
+        const fullLabel = _qf.gui && _qf.gde ? ' pour les guideur\xb7se\xb7s et les guid\xe9\xb7e\xb7s'
+          : _qf.gde && !_qf.gui ? ' pour les guid\xe9\xb7e\xb7s'
+          : _qf.gui ? ' pour les guideur\xb7se\xb7s' : '';
+        const _autreDuo = isCouple
+          ? (tgt.to.toLowerCase() === (email || '').toLowerCase() ? (c.pPrenom + ' ' + (c.pNom || '')).trim() : (prenom + ' ' + nom).trim())
+          : '';
+        eleveSubj = isCouple
+          ? 'Votre demande d\u2019inscription au tango en duo est bien re\xe7ue \u2014 cours complet, liste d\u2019attente'
+          : 'Votre demande d\u2019inscription au tango est bien re\xe7ue \u2014 cours complet, liste d\u2019attente';
+        eleveHtml = wrap(headerEleve
+          + '<div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">'
+          + '<span style="font-size:14px;font-weight:700;color:#e65100;">\u23f3 Demande enregistr\xe9e \u2014 cours complet, liste d&rsquo;attente</span></div>'
+          + '<div style="padding:30px 28px;">'
+          + '<p style="font-size:16px;margin:0 0 18px;">Bonjour <strong style="color:#B8962E;">' + _esc(tgt.pren) + '</strong>,</p>'
+          + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Vous avez fait une demande d&rsquo;inscription ' + (isCouple ? 'en duo ' : '') + '\xe0 nos cours de tango pour la saison ' + _esc(saison2) + ' et nous vous en remercions. <strong>Le cours demand\xe9 est actuellement complet \u2014 vous \xeates ' + (isCouple ? 'tous les deux ' : '') + 'en liste d&rsquo;attente.</strong></p>'
+          + '<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:18px 20px;margin:0 0 22px;">'
+          + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:2px;color:#1565c0;margin-bottom:12px;font-weight:700;padding-bottom:8px;border-bottom:1px solid #b3d9f5;">Votre demande d&rsquo;inscription</div>'
+          + '<table style="width:100%;border-collapse:collapse;font-size:14px;">'
+          + '<tr><td style="padding:7px 0;color:#555;width:35%;vertical-align:top;">\ud83c\udf93 Cours</td><td style="color:#111;font-weight:700;">' + _esc(coursAff) + '</td></tr>'
+          + '<tr><td style="padding:7px 0;color:#555;vertical-align:top;">\ud83d\udcc5 Saison</td><td style="color:#111;font-weight:700;">' + _esc(saison2) + '</td></tr>'
+          + '<tr><td style="padding:7px 0;color:#555;vertical-align:top;">\ud83c\udfaf Votre r\xf4le</td><td><span style="display:inline-block;background:' + roleBadgeCol(tgt.rl) + ';color:#fff;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;">' + roleLabel(tgt.rl) + '</span></td></tr>'
+          + (_autreDuo ? '<tr><td style="padding:7px 0;color:#555;vertical-align:top;">\ud83d\udc6b En duo avec</td><td style="color:#111;font-weight:700;">' + _esc(_autreDuo) + '</td></tr>' : '')
+          + '</table></div>'
+          + '<div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
+          + '<p style="font-size:14px;color:#bf360c;font-weight:700;margin:0 0 10px;">Pourquoi une liste d\'attente\xa0?</p>'
+          + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0;">Ce cours affiche actuellement complet' + fullLabel + '. '
+          + (isCouple
+            ? 'Vous vous \xeates inscrits en duo\xa0: <strong>vous serez confirm\xe9\xb7e\xb7s tous les deux ensemble</strong> d\xe8s que des places se lib\xe8rent.'
+            : 'Votre demande est bien enregistr\xe9e \u2014 nous vous contacterons d\xe8s qu\u2019une place se lib\xe8re.')
+          + '</p></div>'
+          + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 18px;font-weight:700;">En attendant, nous vous proposons 2\xa0options\xa0:</p>'
+          + '<div style="background:#f9f9f9;border:1px solid #eee;border-radius:8px;padding:18px 20px;margin:0 0 22px;">'
+          + '<div style="font-size:14px;color:#333;line-height:2.0;">'
+          + '<div style="margin-bottom:10px;">1\ufe0f\u20e3 &nbsp;<strong>Restez en liste d\'attente</strong> \u2014 d\xe8s que ' + (isCouple ? 'des places se lib\xe8rent' : 'une place se lib\xe8re') + ', nous vous contacterons.</div>'
+          + '<div>2\ufe0f\u20e3 &nbsp;<strong>Choisissez un autre cours de ce niveau</strong> \u2014 nous avons des cours \xe0 Paris et \xe0 Vincennes. <a href="https://app.tangoetvous.fr/inscription-cours.html" style="color:#1565c0;font-weight:700;">\u2192 Refaire une demande sur un autre cours</a></div>'
+          + '</div></div>'
+          + '<p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 22px;">Nous faisons de notre mieux pour r\xe9pondre \xe0 toutes les demandes. N\'h\xe9sitez pas \xe0 nous \xe9crire pour tout renseignement.</p>'
+          + '<div style="text-align:center;margin:0 0 22px;">'
+          + '<a href="mailto:' + adminEmail + '" style="display:inline-block;background:#fff;color:#B8962E;padding:12px 28px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #D4AF37;">Nous contacter</a>'
+          + '</div>'
+          + signWait + '</div>' + footer, "Votre demande inscription tango enregistree - cours complet, liste d'attente");
+      } else if (courseWait) {
+        // ── I01-att — guidée seule, parité (historique, INCHANGÉ)
         eleveSubj = 'Votre demande d\u2019inscription au tango est bien re\xe7ue \u2014 liste d\u2019attente';
         eleveHtml = wrap(headerEleve
           + '<div style="background:#fff8e1;padding:14px 24px;text-align:center;border-bottom:1px solid #ffe082;">'

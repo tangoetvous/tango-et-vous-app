@@ -7,13 +7,18 @@
 const { test, expect } = require('@playwright/test');
 
 async function bootEtSoumettre(page, opts) {
-  const captures = { inserts: [], rpc: [] };
+  const captures = { inserts: [], rpc: [], notify: [] };
   await page.route('**/*', route => {
     const u = route.request().url();
     if (u.startsWith('http://127.0.0.1:8788/')) {
       // /api/notify/* du worker n'existe pas sur le serveur de test → laisser
       // passer (404, fire-and-forget côté formulaire)
       return route.continue();
+    }
+    if (u.includes('/api/notify/inscription-cours')) {
+      // Charge utile envoyée au worker — porte la RAISON de l'attente (quotaFull1/2)
+      captures.notify.push(JSON.parse(route.request().postData() || '{}'));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     }
     if (u.includes('/rest/v1/rpc/compter_inscrits_cours')) {
       captures.rpc.push(JSON.parse(route.request().postData() || '{}'));
@@ -72,6 +77,8 @@ test.describe('Groupe AF — Quota inscription cours (RPC + fail-open)', () => {
     expect(captures.inserts.length).toBe(1);
     expect(captures.inserts[0].statut).toBe('demande');
     expect(captures.inserts[0].role).toBe('guideur');
+    // La raison « quota » part vers le worker → variante email I01-complet
+    expect(captures.notify[0].quotaFull1).toEqual({ gui: true, gde: false });
   });
 
   test('AF2 — quota libre : guideur validé comme avant (attente_paiement)', async ({ page }) => {
@@ -83,6 +90,7 @@ test.describe('Groupe AF — Quota inscription cours (RPC + fail-open)', () => {
     expect(ecran.wait).toBe(false);
     expect(ecran.notice).toBe(false);
     expect(captures.inserts[0].statut).toBe('attente_paiement');
+    expect(captures.notify[0].quotaFull1).toBe(null);   // pas de quota → email inchangé
   });
 
   test('AF3 — FAIL-OPEN : la RPC échoue (500) → validé, jamais mis en attente à tort', async ({ page }) => {
@@ -107,5 +115,7 @@ test.describe('Groupe AF — Quota inscription cours (RPC + fail-open)', () => {
     expect(captures.inserts.length).toBe(2);        // inscripteur + partenaire
     expect(captures.inserts[0].statut).toBe('demande');
     expect(captures.inserts[1].statut).toBe('demande');
+    // Raison transmise : quota guidées → variante email I01-quota-att (duo)
+    expect(captures.notify[0].quotaFull1).toEqual({ gui: false, gde: true });
   });
 });
