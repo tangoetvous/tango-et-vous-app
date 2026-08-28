@@ -41,7 +41,8 @@ async function lancerPointage(page, opts) {
     if (o.carteNormale) {
       adminData.cartes.push({ id: 555, email: 'sophie@test.fr', prenom: 'Sophie', nom: 'Sophie DEMO', ville: 'paris', niveau: 'debutant', utilises: 2, restants: 8, datePremierCours: '2026-01-08', expiration: '2026-05-08', datesCours: [], paye: true });
     } else {
-      adminData.cartes.push({ id: 'IC999', email: 'sophie@test.fr', prenom: 'Sophie', nom: 'Sophie DEMO', ville: 'paris', niveau: 'debutant', utilises: 0, restants: 4, classesReportees: 4, isReport: true, saisonOrigine: '2024-2025', _fromCoursTango: true, datePremierCours: '', expiration: '', datesCours: [], paye: true });
+      adminData.cartes.push({ id: 'IC999', email: 'sophie@test.fr', prenom: 'Sophie', nom: 'Sophie DEMO', ville: 'paris', niveau: 'debutant', utilises: 0, restants: 4, classesReportees: 4, isReport: true, saisonOrigine: '2024-2025', _fromCoursTango: true, datePremierCours: '', expiration: '', datesCours: [], paye: true,
+        reportedExpiration: o.sansExpHeritee ? '' : '2026-10-01' });
     }
     pointerCoursAction(o.carteNormale ? 555 : 'IC999', '2026-09-03', 1, null);
     // Attendre la fin de la chaîne asynchrone (chargerDonnees stubé, ou toast d'erreur)
@@ -69,7 +70,10 @@ test.describe('Groupe AE — Pointage admin des cartes reportées', () => {
     expect(upd.payload.carte_restants).toBe(3);
     expect(upd.payload.carte_date_achat).toBe('2026-09-03');
     expect(upd.payload.carte_statut).toBe('Active');
-    expect(upd.payload.carte_expiration).toBeTruthy();
+    // Date d'ORIGINE conservée (décision admin 2026-08-28) et posée en FORCÉE
+    // → les pointages suivants ne la recalculeront jamais
+    expect(upd.payload.carte_expiration).toBe('2026-10-01');
+    expect(upd.payload.carte_exp_manuelle).toBe(true);
     expect(upd.payload.saison).toMatch(/^\d{4}-\d{4}$/);
     expect(upd.payload.carte_num).toBe(1);                   // 1ʳᵉ carte de la nouvelle saison
     // Présence insérée avec le bon eleve_id
@@ -105,5 +109,15 @@ test.describe('Groupe AE — Pointage admin des cartes reportées', () => {
     expect(r.toasts.some(t => t.indexOf('⚠️ Pointage non enregistré') === 0)).toBe(true);
     expect(r.carte.utilises).toBe(0);                        // état local intact
     expect(r.log.some(l => l.op === 'insert' && l.t === 'presences')).toBe(false); // rien après l'échec
+  });
+
+  test('AE4 — repli : report SANS date héritée → expiration recalculée (comportement historique)', async ({ page }) => {
+    await bootDemo(page);
+    const r = await lancerPointage(page, { sansExpHeritee: true });
+    const upd = r.log.find(l => l.op === 'update' && l.t === 'eleves');
+    expect(upd.payload.carte_expiration).toBeTruthy();           // calcExpiration
+    expect(upd.payload.carte_expiration).not.toBe('2026-10-01');
+    expect(upd.payload.carte_exp_manuelle).toBe(false);
+    expect(r.toasts.join(' ')).toContain('redémarrée — 1/4');
   });
 });

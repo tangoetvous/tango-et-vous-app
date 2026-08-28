@@ -76,7 +76,10 @@ test.describe('Groupe AD — Carte reportée (espace élève)', () => {
     expect(r.btnPointe).toBe('none');
     expect(r.btnRenew).toBe('none');
     expect(r.encart).toContain('Vos 4 cours vous attendent');
-    expect(r.valLbl).toContain('calculée à votre premier cours');
+    expect(r.accueilText).toContain("jusqu'au");                // date d'origine visible aussi sur l'accueil
+    // Depuis 2026-08-28 : la carte reportée CONSERVE sa date d'expiration
+    // d'origine (fiche eleves, intacte) — affichée au lieu du recalcul
+    expect(r.valLbl).toContain("jusqu'au");
   });
 
   test('AD2 — carte redémarrée (1er cours pointé) : retour à l\'affichage normal', async ({ page }) => {

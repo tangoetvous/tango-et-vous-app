@@ -537,7 +537,7 @@
         ? ('Ma carte de cours — ↩ reportée' + (_repDash.saisonOrigine ? ' de ' + _repDash.saisonOrigine : ''))
         : ('Ma carte de ' + tailleCarte + ' cours' + (_numCarte > 1 ? ' — ' + _numCarte + 'ᵉ de la saison' : ''));
       var _valLbl = $('carte-validite-label');
-      if (_valLbl) { var _dmAff = (carte.dureeMois >= 1 && carte.dureeMois <= 24) ? carte.dureeMois : 3; _valLbl.textContent = _repDash ? 'Validité : calculée à votre premier cours' : ('Validité : ' + _dmAff + ' mois + vacances scolaires'); }
+      if (_valLbl) { var _dmAff = (carte.dureeMois >= 1 && carte.dureeMois <= 24) ? carte.dureeMois : 3; _valLbl.textContent = _repDash ? (_repDash.expiration ? ('Validité : jusqu\'au ' + _repFmtDate(_repDash.expiration)) : 'Validité : calculée à votre premier cours') : ('Validité : ' + _dmAff + ' mois + vacances scolaires'); }
       const pct = Math.min(100, (used / tailleCarte) * 100);
       const circumference = 2 * Math.PI * 54; // r=54
       const dashoffset = circumference * (1 - pct / 100);
@@ -3047,8 +3047,18 @@
       var debutSaison = sc.slice(0, 4) + '-09-01';
       var achat = (eleveData.carte && eleveData.carte.dateAchat) ? String(eleveData.carte.dateAchat).slice(0, 10) : '';
       if (achat && achat >= debutSaison) return null;             // redémarrée → affichage normal
-      return { restants: n, saisonOrigine: (don && don.saisonOrigine) || '' };
+      var expOrig = (don && don.reportedExpiration) ||
+        (eleveData.carte && eleveData.carte.dateExpiration ? String(eleveData.carte.dateExpiration).slice(0, 10) : '');
+      return { restants: n, saisonOrigine: (don && don.saisonOrigine) || '', expiration: expOrig };
     } catch (e) { return null; }
+  }
+
+  // Date d'expiration reportée, formatée pour l'affichage élève
+  function _repFmtDate(iso) {
+    try {
+      var d = new Date(String(iso).slice(0, 10) + 'T12:00:00');
+      return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) { return String(iso); }
   }
 
   // Bloc « carte reportée » (accueil) — remplace le suivi normal tant que la
@@ -3075,7 +3085,7 @@
       + '</div></div>';
     hc += '<div style="flex:1;">'
       + '<div style="font-size:14px;color:var(--text);margin-bottom:6px;">Cours utilisés <span style="color:var(--text-dim,#999);">— 0/' + n + '</span></div>'
-      + '<div style="font-size:14px;color:var(--text);">Validité <span style="color:var(--text-dim,#999);">— calculée à votre premier cours</span></div>'
+      + '<div style="font-size:14px;color:var(--text);">Validité <span style="color:var(--text-dim,#999);">— ' + (rep.expiration ? 'jusqu\'au ' + _repFmtDate(rep.expiration) : 'calculée à votre premier cours') + '</span></div>'
       + '</div></div>';
     hc += dots;
     hc += '<div style="margin-top:12px;background:rgba(21,101,192,0.10);border:1px solid rgba(21,101,192,0.4);border-radius:10px;padding:11px 14px;font-size:12.5px;color:var(--text);line-height:1.6;">🗓 '
