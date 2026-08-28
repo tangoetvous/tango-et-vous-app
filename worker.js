@@ -4426,7 +4426,7 @@ async function handleNotifyInscriptionEssai(request, env) {
 
   const { prenom, nom, email, tel, role, ville, niveau, dateIso, statut, enCouple,
           partPrenom, partNom, partEmail, partRole, gratuit: gratuitBody, inscId: inscIdFromBody,
-          niveauEleve } = body;
+          niveauEleve, remarque } = body;
   // Gratuité recalculée côté serveur (règle métier : cours de septembre gratuits pour les débutants)
   // — ne dépend pas du flag client, qui peut être absent (anciens formulaires en cache)
   const gratuit = !!gratuitBody || (niveau !== 'intermediaire' && String(dateIso || '').slice(5, 7) === '09');
@@ -4602,6 +4602,7 @@ async function handleNotifyInscriptionEssai(request, env) {
     <div style="font-size:13px;color:#333;">${_esc(coursDateAff)}${horaire ? ' &nbsp;·&nbsp; ' + _esc(horaire) : ''}</div>
     ${lieuNom ? `<div style="font-size:12px;color:#666;margin-top:2px;">${_esc(lieuNom)}${lieuRue ? ' — ' + _esc(lieuRue) : ''}</div>` : ''}
     ${niveauEleve ? `<div style="font-size:12px;color:#666;margin-top:6px;">🎓 Expérience tango : <strong>${_esc(niveauEleve)}</strong></div>` : ''}
+    ${remarque && !isConfirme ? `<div style="font-size:12px;color:#666;margin-top:6px;">💬 Remarque : <strong>${_esc(remarque)}</strong></div>` : ''}
   </div>`;
 
   let adminEncadre;
@@ -4650,7 +4651,7 @@ async function handleNotifyInscriptionEssai(request, env) {
     <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 6px;color:#888;width:36%;">Situation</td><td style="padding:8px 6px;color:#222;font-weight:600;">${_esc(situationAff)}</td></tr>
     <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 6px;color:#888;">Délai avant cours</td><td style="padding:8px 6px;color:#222;font-weight:600;">${_esc(delaiAff)}</td></tr>
     <tr style="border-bottom:1px solid #eee;"><td style="padding:8px 6px;color:#888;">Gratuit ?</td><td style="padding:8px 6px;color:#222;font-weight:600;">${_esc(gratuitAff)}</td></tr>
-    <tr><td style="padding:8px 6px;color:#888;">Remarque</td><td style="padding:8px 6px;color:#777;font-style:italic;">—</td></tr>
+    <tr><td style="padding:8px 6px;color:#888;">💬 Remarque</td><td style="padding:8px 6px;${remarque ? 'color:#222;font-weight:600;' : 'color:#777;font-style:italic;'}">${remarque ? _esc(remarque) : '—'}</td></tr>
   </table>` : '';
 
   const adminBtns = `<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">

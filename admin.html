@@ -1458,6 +1458,26 @@ function ouvrirContact(nom, tel, email, ctx) {
     actHtml+='<a href="sms:'+telRaw+'" class="btn btn-ghost" style="font-size:12px;">💬 SMS</a>';
   }
   actHtml+='</div>';
+  // Remarque(s) laissees dans le formulaire d'essai — affichees si non vides
+  var remHtml='';
+  if(ctx==='essai'){
+    try{
+      var _remRows=(adminData.essai||[]).filter(function(e){
+        if(!e.remarque||!String(e.remarque).trim())return false;
+        if(email) return (e.email||'')===email;
+        return _normNom((e.prenom||'')+' '+(e.nom||''))===_normNom(nom||'');
+      });
+      if(_remRows.length){
+        remHtml='<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:14px;text-align:left;">'
+          +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:6px;">💬 Remarque du formulaire</div>'
+          +_remRows.map(function(e){
+            return '<div style="font-size:13px;color:var(--text);line-height:1.5;background:var(--s3);border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
+              +(_remRows.length>1&&e.date?'<span style="color:var(--dim);font-size:11px;">'+escHtml(e.date)+' — </span>':'')
+              +escHtml(String(e.remarque))+'</div>';
+          }).join('')+'</div>';
+      }
+    }catch(_eRem){}
+  }
   var essaiHtml='';
   if(ctx==='essai' && !isSaisonPassee()){
     var se2=escHtml(email||'');
@@ -1474,7 +1494,7 @@ function ouvrirContact(nom, tel, email, ctx) {
     :'<div style="text-align:center;margin-bottom:10px;"><div style="width:80px;height:80px;border-radius:50%;background:var(--s3);display:inline-flex;align-items:center;justify-content:center;font-size:34px;border:2px solid var(--border);">👤</div></div>';
   box.innerHTML=photoHtml+'<div class="modal-titre">'+escHtml(nom||'')+'</div>'
     +'<div class="mc-email">'+escHtml(email||'—')+'</div>'
-    +telHtml+actHtml+essaiHtml
+    +telHtml+actHtml+remHtml+essaiHtml
     +'<div class="modal-btns" style="margin-top:16px;">'
     +'<button class="btn btn-ghost" style="font-size:12px;" id="mc-edit">✏️ Modifier</button>'
     +'<button class="btn btn-ghost" style="font-size:12px;" id="mc-fiche">📋 Fiche</button>'
@@ -8859,6 +8879,7 @@ function renderEssai() {
           +(_ao?'<div style="width:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px;">'
           +'<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-essai-inscr" data-email="'+e.email+'" data-date="'+grp.date+'" data-id="'+(e.id||'')+'" title="Supprimer">✕</button>'
           +(e.presenceConfirmee===true?'<span title="A confirmé sa présence par email">👍</span>':'')
+          +(e.remarque&&String(e.remarque).trim()?'<span title="'+escHtml(String(e.remarque))+'">💬</span>':'')
           +pastille
           +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
           +'<button class="btn-heart'+(e.interesse?' on':'')+'" data-action="toggle-interet" data-date="'+grp.date+'" data-email="'+e.email+'" data-id="'+(e.id||'')+'" title="Élève intéressant·e">'+(e.interesse?'❤️':'🤍')+'</button>'
@@ -9102,6 +9123,7 @@ function renderEssai() {
             +(e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'')
             +(vraiAtt?'<span class="pill pill-gold" style="font-size:8px;padding:1px 5px;">ATT</span>':'')
             +(e.presenceConfirmee===true?' <span title="A confirmé sa présence par email">👍</span>':'')
+            +(e.remarque&&String(e.remarque).trim()?' <span title="'+escHtml(String(e.remarque))+'">💬</span>':'')
             +'</div>'
             +(e.partenaire?'<div class="point-sub"><span style="color:#c0392b;">♥ '+e.partenaire+'</span></div>':'')
             +'</div>'

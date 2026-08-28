@@ -46,8 +46,8 @@ const insc = (date, extra) => Object.assign({
 const CAS = [
   { id: 'e1', titre: 'E0 + E1 — Inscription confirmée (plus de 7 jours avant)',
     handler: 'handleNotifyInscriptionEssai',
-    note: "Cas courant. Vous recevez E0, l'élève reçoit E1 : encadré du cours, livret de son niveau, et l'annonce du rappel J-7 — donc <b>pas</b> de bouton de confirmation à ce stade.",
-    body: insc(D_LOIN) },
+    note: "Cas courant. Vous recevez E0, l'élève reçoit E1 : encadré du cours, livret de son niveau, et l'annonce du rappel J-7 — donc <b>pas</b> de bouton de confirmation à ce stade. Depuis 2026-08-28, la remarque éventuelle du formulaire apparaît dans E0 (ligne 💬 du tableau, « — » si vide).",
+    body: { ...insc(D_LOIN), remarque: "Je viens avec ma sœur mais elle n'est pas sûre de pouvoir — je confirme au plus vite !" } },
 
   { id: 'e6', titre: 'E6 — Inscription confirmée (moins de 7 jours avant)',
     handler: 'handleNotifyInscriptionEssai',
