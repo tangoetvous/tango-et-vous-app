@@ -1395,9 +1395,10 @@ async function handleCronEssaiJ1(request, env) {
     const horaireDebut = typeof _horairesRef[_nkRef] === 'string' ? _horairesRef[_nkRef] : '';
     const dateHoraireRef = horaireDebut ? `${dateCours} à ${horaireDebut}` : dateCours;
 
-    // AssoConnect URL (cours)
-    const liensAC = params['tev_liens_assoconnect'] || {};
-    const assoUrl = (liensAC[sai] || {}).cours || 'https://le-regard-se-pose.assoconnect.com';
+    // Bouton E-J1a → FORMULAIRE de demande d'inscription (et non AssoConnect
+    // en direct) : passe par le contrôle de quota et crée la fiche « demande »
+    // côté admin — corrigé le 2026-08-31 (l'email décrit d'ailleurs ce processus).
+    const formInscriptionUrl = 'https://app.tangoetvous.fr/inscription-cours.html';
     const coursHoraireLabel = horaireDebut ? `, ${horaireDebut}` : '';
 
     if (ins.presence_declaree === true) {
@@ -1408,7 +1409,7 @@ async function handleCronEssaiJ1(request, env) {
         <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;padding:10px 14px;background:#f9f6ee;border-left:3px solid #D4AF37;border-radius:4px;">Pour les personnes <strong>sans partenaire</strong> : nous vous tiendrons au courant rapidement car nous veillons à démarrer l'année avec autant de guideurs que de personnes guidées.</p>
         <p style="font-size:14px;color:#444;line-height:1.7;margin:0 0 16px;">Les cours continuent <strong>dès la semaine prochaine</strong>${coursHoraireLabel} pour les <strong>${_esc(coursAff)}</strong>.</p>
         <div style="text-align:center;">
-          <a href="${_esc(assoUrl)}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Demande d'inscription →</a>
+          <a href="${formInscriptionUrl}" style="display:inline-block;background:#D4AF37;color:#111;padding:13px 28px;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;">Demande d'inscription →</a>
         </div>
       </div>`;
       const html = wrap(`${headerEleve}
