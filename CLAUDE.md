@@ -18,6 +18,10 @@ Bug réel (2 élèves) : le clic « ✕ Annuler » d'un email essai envoyait bie
 - **Espace élève** : accueil et onglet Forfait/Carte affichent « Validité — jusqu'au [date longue FR] » (source : `donnees.reportedExpiration` sinon `eleveData.carte.dateExpiration` — la fiche eleves n'est pas touchée par le report). Repli : texte historique « calculée à votre premier cours ».
 - **Décision admin (a)** : une date d'origine déjà passée est conservée telle quelle (l'admin n'en reportera pas, et arbitre via ✏️ le cas échéant). Tests : AD1 (« jusqu'au » accueil + onglet), AE1 (date héritée + exp_manuelle true), AE4 (repli sans héritage → recalcul, exp_manuelle false).
 
+## Session 2026-09-01 — Liste d'attente essai : bouton « 📋 Copier emails » par cours (✅ FAIT)
+
+Demande admin : dans Essai Tango → Liste d'attente, un bouton par cours (date+niveau) qui copie UNIQUEMENT les emails des personnes en attente de ce cours. `essaiCopierEmailsAttente(date, niveau)` (miroir d'`essaiCopierEmails` qui, lui, copie les validés en vue Par date), filtre `statut==='attente'`, passe par `_copierEmailsFiches` (dédoublonnage + BCC-ready + toast avec compte des fiches sans email). Bouton dans le `section-hdr` de chaque groupe de la vue attente. Vérifié en réel simulé : 1 bouton par cours, périmètre exact (ni confirmés, ni autres dates).
+
 ## Session 2026-08-28 — Remarque du formulaire d'essai enfin visible (✅ FAIT)
 
 Le champ « Remarque éventuelle » de `cours-essai.html` était **enregistré en base** (`inscriptions_essai.remarque`) mais jamais affiché nulle part — et la ligne « Remarque » du tableau de l'email admin E0 était **codée en dur sur « — »** depuis toujours. Rendu visible aux 2 endroits (demande admin) :

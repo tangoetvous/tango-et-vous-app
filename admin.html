@@ -8771,6 +8771,7 @@ function renderEssai() {
         +(noLimAtt
           ?' <span style="font-weight:400;color:var(--dim);font-size:11px;">👨 '+guiConf+' · 👩 '+gdeConf+' confirmés</span>'
           :' <span style="font-weight:400;color:'+(compAtt?'var(--warn-text)':'var(--dim)')+';font-size:11px;">👨 '+guiConf+'/22 · 👩 '+gdeConf+'/23'+(compAtt?' — complet':'')+' </span>')
+        +' <a href="javascript:void(0)" class="btn btn-ghost" style="font-size:11px;text-decoration:none;margin-left:6px;" onclick="essaiCopierEmailsAttente(\''+grp.date+'\',\''+grp.niveau+'\')">📋 Copier emails</a>'
         +'</div>';
       var _dupSetAtt=_dupEmails(attenteGrp);
       function _attEssaiCard(e){
@@ -10327,6 +10328,14 @@ window.supprimerNewsletterEmail = function(email) {
 };
 
 // Essai tango : emails des essais confirmés d'une date+niveau
+// Essai tango : emails des personnes EN ATTENTE d'un cours (date+niveau) —
+// bouton de la vue Liste d'attente (copie BCC-ready, dédoublonnée)
+window.essaiCopierEmailsAttente = function(date, niveau) {
+  _copierEmailsFiches((adminData.essai || []).filter(function(e) {
+    return e.date === date && e.niveau === niveau && e.statut === 'attente';
+  }));
+};
+
 window.essaiCopierEmails = function(date, niveau) {
   _copierEmailsFiches((adminData.essai || []).filter(function(e) {
     return e.date === date && e.niveau === niveau && e.statut === 'confirme';
