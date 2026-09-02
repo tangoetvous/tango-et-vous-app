@@ -5,6 +5,10 @@
 const { test, expect } = require('@playwright/test');
 const { bootDemo } = require('./helpers');
 
+// HORLOGE GELÉE (comme les groupes AC/T/S) : DATE='2026-08-01' (saison 2025-2026) — sans horloge figée,
+// la bascule du 1er septembre filtre la fixture (panne réelle du 2026-09-01).
+const ANCRE = new Date('2026-07-20T10:00:00');
+
 const DATE = '2026-08-01';
 const INSCRITS = [
   { _dbId: 1, prenom: 'Dan', nom: 'DEBUT', email: 'dan@test.fr', tel: '', role: 'guideur', niveau: 'Débutant',      slots: ['technique','stage1'], present: null, montant: 45, attente: false, partenaire: '', emailPartenaire: '' },
@@ -15,6 +19,7 @@ const INSCRITS = [
 
 // `marker` : un nom présent dans la vue attendue (la vue Attente ne montre qu'Ava)
 async function bootStages(page, slot, marker) {
+  await page.clock.setFixedTime(ANCRE);  // AVANT le goto de bootDemo
   await bootDemo(page);
   await page.evaluate(([date, ins, sl]) => {
     adminData.stages = {}; adminData.stages[date] = { label: 'Sam. 1 Août 2026', inscrits: ins.slice() };
@@ -39,7 +44,8 @@ async function pastilles(page) {
 test.describe('Groupe W — Stages : pastille de niveau D/I/A', () => {
 
   test('W1 — helper _stNiveauBadge : lettre, infobulle, couleur, cas vide', async ({ page }) => {
-    await bootDemo(page);
+    await page.clock.setFixedTime(ANCRE);  // AVANT le goto de bootDemo
+  await bootDemo(page);
     const res = await page.evaluate(() => ({
       deb:   _stNiveauBadge('Débutant'),
       inter: _stNiveauBadge('Intermédiaire'),

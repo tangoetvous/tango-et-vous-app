@@ -4,6 +4,13 @@
 //   3. couples non validés · 4. guideurs solos non validés · 5. guidées solos non validées
 // Solos triés : expérience croissante (vide=0 → 1er cours → … → 2+ → milonga) puis inscription.
 const { test, expect } = require('@playwright/test');
+
+// HORLOGE GELÉE (comme les groupes AC/T) : les fixtures de ce groupe sont
+// datées 2026-06-11 (saison 2025-2026) — sans horloge figée, elles se font
+// filtrer par dateAppartientSaison dès la bascule du 1er septembre 2026
+// (panne réelle constatée le 2026-09-01). L'ancre place « aujourd'hui »
+// en pleine saison 2025-2026, cohérente avec toutes les dates du jeu.
+const ANCRE_S = new Date('2026-05-20T10:00:00');
 const { bootDemo, bootPage } = require('./helpers');
 
 // Jeu de données synthétique : un seul cours (2026-06-11, Paris débutant).
@@ -96,6 +103,7 @@ test.describe('Groupe S — Essai Tango : ordre Par date', () => {
   });
 
   test('S3 — vue Par date : DOM dans le bon ordre, supprimés en bas', async ({ page }) => {
+    await page.clock.setFixedTime(ANCRE_S);  // AVANT le goto de bootDemo
     await bootDemo(page);
     await page.evaluate((fix) => {
       adminData.essai = fix.slice();
@@ -118,6 +126,7 @@ test.describe('Groupe S — Essai Tango : ordre Par date', () => {
   });
 
   test('S4 — boutons Valider/Supprimer visent toujours la bonne fiche après ré-ordre', async ({ page }) => {
+    await page.clock.setFixedTime(ANCRE_S);  // AVANT le goto de bootDemo
     await bootDemo(page);
     await page.evaluate((fix) => {
       adminData.essai = fix.slice();
@@ -140,6 +149,7 @@ test.describe('Groupe S — Essai Tango : ordre Par date', () => {
   });
 
   test('S5 — vue Pointage : validés → Élèves ★ → ★ absents → attentes → supprimés', async ({ page }) => {
+    await page.clock.setFixedTime(ANCRE_S);  // AVANT le goto de bootDemo
     await bootDemo(page);
     await page.evaluate(([fix, elv]) => {
       adminData.essai = fix.slice();
@@ -169,6 +179,7 @@ test.describe('Groupe S — Essai Tango : ordre Par date', () => {
   });
 
   test('S6 — impression 🖨 : même ordre, Élèves ★ entre validés et attentes, sans supprimés', async ({ page }) => {
+    await page.clock.setFixedTime(ANCRE_S);  // AVANT le goto de bootDemo
     await bootDemo(page);
     const rows = await page.evaluate(([fix, elv]) => {
       adminData.essai = fix.slice();

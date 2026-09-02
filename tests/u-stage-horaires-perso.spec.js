@@ -5,7 +5,12 @@
 const { test, expect } = require('@playwright/test');
 const { bootDemo } = require('./helpers');
 
+// HORLOGE GELÉE (comme les groupes AC/T/S) : la fixture stage est datée 2026-08-01 (saison 2025-2026) — sans horloge figée,
+// la bascule du 1er septembre filtre la fixture (panne réelle du 2026-09-01).
+const ANCRE = new Date('2026-07-20T10:00:00');
+
 test('U1 — vue Stages : horaire technique personnalisé de la date affiché (pas le défaut)', async ({ page }) => {
+  await page.clock.setFixedTime(ANCRE);  // AVANT le goto de bootDemo
   await bootDemo(page);
   await page.evaluate(() => {
     var sai = saisonActive();
