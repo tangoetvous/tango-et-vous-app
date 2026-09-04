@@ -27,7 +27,9 @@ const PARAMS = {};
 for (const s of new Set([D_LOIN, D_PROCHE, D_J7, D_HIER].map(saisonDe))) {
   PARAMS['tev_params_paris_' + s] = {
     horaires: { deb: '20h30', deb_fin: '21h45', int: '21h45', int_fin: '23h00' },
-    adresse: { nom: 'Espas Danse Studio', rue: '24 villa Riberolle, Paris 20e', transport: 'M° Alexandre Dumas (L2)' },
+    // note = champ « Note d'accès » de Paramètres → Tango Paris → Adresse (2026-09-04).
+    // Renseigné ici pour montrer le rendu ; vide en vrai tant que l'admin ne l'a pas saisi.
+    adresse: { nom: 'Espas Danse Studio', rue: '24 villa Riberolle, Paris 20e', transport: 'M° Alexandre Dumas (L2)', note: 'Au portail, à l\'entrée de la villa Riberolle, appuyez sur la touche « P » du digicode situé à droite.' },
     livret: { url_deb: 'https://exemple/livret-deb-paris.pdf', url_int: 'https://exemple/livret-int-paris.pdf' },
   };
   PARAMS['tev_params_vincennes_' + s] = {

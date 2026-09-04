@@ -6140,8 +6140,11 @@ async function handleNotifyEssaiValide(request, env) {
   const signEleve   = `<p style="font-size:14px;color:#B8962E;text-align:center;margin:24px 0 0;">À très bientôt sur la piste !<br/><strong style="color:#222;">Florencia GARCIA &amp; Jérémy BRAITBART</strong><br/><span style="font-size:12px;color:#888;">Tango &amp; Vous · 07 73 27 59 06</span></p>`;
   const wrap = (inner, pre) => `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">${pre ? '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">' + pre + '&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>' : ''}<div style="max-width:600px;margin:0 auto;background:#fff;">${inner}</div></body></html>`;
 
+  // Note d'accès (digicode, interphone…) : saisie dans Paramètres → <ville> →
+  // Adresse. Même ordre que E1/E4/E-mod : rue, note, transport.
+  const adrNote   = _esc(adresse.note || '');
   const lieuCell = adrNom
-    ? `${adrNom}${adrRue ? '<br/><span style="font-size:13px;font-weight:400;color:#444;">'+adrRue+'</span>' : ''}${adrTransp ? '<br/><span style="font-size:12px;color:#666;">'+adrTransp+'</span>' : ''}${gps ? '<br/><a href="https://maps.google.com/?q='+encodeURIComponent(gps)+'" style="color:#1565c0;font-size:12px;">🗺 Voir sur Google Maps</a>' : ''}`
+    ? `${adrNom}${adrRue ? '<br/><span style="font-size:13px;font-weight:400;color:#444;">'+adrRue+'</span>' : ''}${adrNote ? '<br/><span style="font-size:13px;font-weight:400;color:#444;"><em style="color:#666;">'+adrNote+'</em></span>' : ''}${adrTransp ? '<br/><span style="font-size:12px;color:#666;">'+adrTransp+'</span>' : ''}${gps ? '<br/><a href="https://maps.google.com/?q='+encodeURIComponent(gps)+'" style="color:#1565c0;font-size:12px;">🗺 Voir sur Google Maps</a>' : ''}`
     : '';
 
   const coursBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
