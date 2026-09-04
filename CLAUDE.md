@@ -1,6 +1,6 @@
 # Tango & Vous — Contexte projet pour Claude Code
 
-## Session 2026-09-04 — Pointage impossible pour un RÉINSCRIT : « Élève introuvable » (✅ FAIT)
+## Session 2026-09-04 — Pointage impossible pour un RÉINSCRIT : « Élève introuvable » (✅ FAIT — VÉRIFIÉ EN RÉEL)
 
 Bug réel du 1er cours de la saison (03/09 au soir) : dans Cartes 10 → Pointage, « + Pointer » sur la carte de Vlad Vasiliu affichait **« ⚠️ Pointage non enregistré : Élève introuvable »** (tev-supabase.js:218, remonté par le catch non-muet du 18/08). Les autres élèves du même cours passaient sans problème.
 
@@ -11,6 +11,8 @@ Bug réel du 1er cours de la saison (03/09 au soir) : dans Cartes 10 → Pointag
 - ⚠️ **Garde email partagé (`_memeNomPtr`)** : on n'écrit JAMAIS dans une fiche `eleves` portant un autre nom — un couple d'ancienne saison partage parfois une adresse et n'a donc qu'UNE fiche ; résoudre par email seul écraserait la carte du partenaire. En cas de nom différent : refus explicite « fiche partagée avec un autre nom — utilisez ✏️ Modifier » (le contournement, lui, écrit dans `donnees`). Décision admin 2026-09-04 : les couples ont désormais des emails distincts, la garde reste comme filet pour les anciennes saisons.
 - 📌 **Limite connue — taille de carte** : `_cfv.nb` (champ « Cours » de DI/VP) n'est écrit **que dans `eleves`**, jamais sur la ligne `inscriptions_cours`. Pour un réinscrit la garde `_elvAutreSaison` le jette → la pseudo-carte retombe sur le défaut global (`_carteNbAdmin()`, 10) et démarre à cette taille. Si la vraie taille diffère : un passage par ✏️ Modifier. Correctif de fond possible (stocker la taille dans `donnees` à l'inscription) — non fait.
 - 📌 **Effet de bord assumé** : la bascule `saison=saisonActive()` fait disparaître la carte de la vue archivée de l'ancienne saison, où elle est ensuite reconstruite approximativement depuis `inscriptions_cours`. Les présences réelles restent en base. Comportement déjà en vigueur pour les cartes reportées depuis août.
+- ✅ **Vérifié en réel par l'admin (2026-09-04)** : « + Pointer » sur la carte de Vlad passe (« ✓ Carte démarrée »), et **l'espace élève affiche bien le suivi de sa carte** — la chaîne complète est validée de bout en bout : pointage admin → fiche `eleves` basculée sur la saison courante → présence insérée → carte + historique visibles côté élève. C'est le maillon que Playwright ne peut pas couvrir (ni vraie base, ni vrai compte élève).
+- 📌 **Reste à faire (sans urgence)** : conserver la taille de carte choisie à l'inscription (cf. limite connue ci-dessus) — aujourd'hui une carte de réinscrit démarre toujours au défaut global.
 - **Tests groupe AG** (`tests/ag-carte-reinscrit-admin.spec.js`, 4) : AG1 démarrage complet sur le vrai `eleves.id` + bascule de saison + présence + notifs ; AG2 reprise des cours saisis (3/10, date d'achat conservée, 3 présences, pas de 2ᵉ C1) ; AG3 garde email partagé (aucune écriture, toast explicite) ; AG4 fiche absente → créée sur la saison active. Groupe AE (cartes reportées) re-passé : inchangé.
 
 ## Session 2026-09-04 — Ancienne session Claude cassée : branche `main` supprimée (📌 pour mémoire)
