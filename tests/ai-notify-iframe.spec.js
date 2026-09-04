@@ -10,7 +10,10 @@ const { bootDemo } = require('./helpers');
 const fs = require('fs');
 const path = require('path');
 
-const FORMULAIRES = ['inscription-cours.html', 'cours-essai.html', 'stages-pwa.html', 'essai-yoga.html'];
+// Les 5 formulaires publics ouverts en fenêtre intégrée depuis l'admin.
+// (demande-devis.html n'y figure pas : son envoi est déjà attendu — c'est
+// l'enregistrement lui-même, pas une notification annexe.)
+const FORMULAIRES = ['inscription-cours.html', 'cours-essai.html', 'stages-pwa.html', 'essai-yoga.html', 'cours-particuliers.html'];
 const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 test.describe('Groupe AI — Envoi des notifications depuis une fenêtre intégrée', () => {
