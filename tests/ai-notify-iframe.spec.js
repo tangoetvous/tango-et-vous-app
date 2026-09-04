@@ -119,3 +119,47 @@ test.describe('Groupe AI — Envoi des notifications depuis une fenêtre intégr
     expect(r.toasts.join(' ')).toContain('démo');
   });
 });
+
+// AI6 — L'attente de l'envoi (correctif AI) décale la notification de quelques
+// secondes : le rechargement (polling 15 s / realtime) peut avoir déjà chargé la
+// ligne réelle. L'ajout optimiste doit alors être ignoré, sinon doublon à l'écran.
+test('AI6 — pas de doublon si la ligne est déjà chargée depuis la base', async ({ page }) => {
+  await bootDemo(page);
+  const r = await page.evaluate(() => {
+    const sai = saisonActive();
+    const payload = {
+      saison: sai, prenom: 'Camille', nom: 'DEMO', email: 'camille@test.fr', tel: '0600000000',
+      role: 'guidee', niveau: 'debutant', c1: { ville: 'paris', niveau: 'debutant' }, c2: null,
+      nbCours: 1, venue: 'seul', isWaitlist: true,
+    };
+    // 1) la ligne réelle est DÉJÀ là (rechargement arrivé avant le message)
+    adminData.coursTango = [{ id: 4242, prenom: 'Camille', nom: 'DEMO', email: 'camille@test.fr',
+      role: 'guidee', ville: 'paris', niveau: 'debutant', statut: 'demande', saison: sai }];
+    _appliquerCoursInscription(payload);
+    const apresDoublon = adminData.coursTango.length;
+
+    // 2) liste vide → l'ajout optimiste doit bien avoir lieu (comportement normal)
+    adminData.coursTango = [];
+    _appliquerCoursInscription(payload);
+    const apresAjout = adminData.coursTango.length;
+
+    // 3) même personne, AUTRE cours → ce n'est pas un doublon, on ajoute
+    _appliquerCoursInscription(Object.assign({}, payload, { c1: { ville: 'vincennes', niveau: 'intermediaire' } }));
+    const apresAutreCours = adminData.coursTango.length;
+
+    // 4) couple : le partenaire déjà chargé n'est pas dupliqué non plus
+    adminData.coursTango = [
+      { id: 1, prenom: 'Thomas', nom: 'DEMO', email: 'thomas@test.fr', ville: 'paris', niveau: 'debutant', statut: 'attente_paiement', saison: sai },
+      { id: 2, prenom: 'Marie', nom: 'DEMO', email: 'marie@test.fr', ville: 'paris', niveau: 'debutant', statut: 'attente_paiement', saison: sai },
+    ];
+    _appliquerCoursInscription({ saison: sai, prenom: 'Thomas', nom: 'DEMO', email: 'thomas@test.fr',
+      role: 'guideur', niveau: 'debutant', c1: { ville: 'paris', niveau: 'debutant' }, c2: null, nbCours: 1,
+      venue: 'avec-part', pPrenom: 'Marie', pNom: 'DEMO', pEmail: 'marie@test.fr', isWaitlist: false });
+    const apresCouple = adminData.coursTango.length;
+    return { apresDoublon, apresAjout, apresAutreCours, apresCouple };
+  });
+  expect(r.apresDoublon).toBe(1);      // rien ajouté — c'était la même inscription
+  expect(r.apresAjout).toBe(1);        // liste vide → ajout normal, non régressé
+  expect(r.apresAutreCours).toBe(2);   // autre cours → légitime
+  expect(r.apresCouple).toBe(2);       // ni l'inscripteur ni le partenaire dupliqués
+});

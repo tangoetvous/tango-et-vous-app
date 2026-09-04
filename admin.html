@@ -2589,13 +2589,32 @@ function _lblCours(ville, niveau) {
 function _appliquerCoursInscription(d) {
   if (!d || !d.c1 || !d.c1.ville || !d.c1.niveau) return;
   if (!adminData.coursTango) adminData.coursTango = [];
+  // ⚠️ Ce message peut arriver APRÈS que le rechargement (polling 15 s ou realtime)
+  // a déjà chargé la ligne réelle depuis la base : l'ajout optimiste ferait alors
+  // un DOUBLON à l'écran (constaté le 2026-09-04, quand l'attente de l'envoi des
+  // emails a décalé la notification de quelques secondes). On ne pousse donc que
+  // ce qui n'est pas déjà là. La base reste seule juge : chargerDonnees reconstruit
+  // la liste juste après, doublons réels d'inscription compris.
+  function _ctDejaLa(email, prenom, nom, ville, niveau, sai) {
+    var _e = (email||'').trim().toLowerCase();
+    var _nm = function(a,b){ return _normNom(((a||'')+' '+(b||'')).replace(/\s+/g,' ').trim()); };
+    var _n = _nm(prenom, nom);
+    return (adminData.coursTango||[]).some(function(x){
+      if ((x.saison||saisonCourante()) !== sai) return false;
+      if ((x.ville||'') !== ville || (x.niveau||'') !== niveau) return false;
+      if (x.statut === 'supprimé') return false;
+      var _xe = (x.email||'').trim().toLowerCase();
+      if (_e && _xe) return _xe === _e;          // priorité à l'email
+      return !!_n && _nm(x.prenom, x.nom) === _n; // fiches sans email (partenaires)
+    });
+  }
   var statut   = d.isWaitlist ? 'demande' : 'attente_paiement';
   var cours1   = _lblCours(d.c1.ville, d.c1.niveau);
   var partNom  = ((d.pPrenom||'')+' '+(d.pNom||'')).trim();
   var avecPart = (d.venue==='avec-part') && (d.pPrenom||d.pNom);
   var ts = Date.now();
   var saison = d.saison || saisonCourante();
-  adminData.coursTango.push({
+  if (!_ctDejaLa(d.email, d.prenom, d.nom, d.c1.ville, d.c1.niveau, saison)) adminData.coursTango.push({
     id:'CT'+ts, prenom:d.prenom, nom:d.nom, email:d.email, tel:d.tel||'',
     role:d.role, niveau:d.c1.niveau, cours:cours1, ville:d.c1.ville,
     statut:statut, partenaire:partNom, emailPartenaire:d.pEmail||'',
@@ -2603,7 +2622,7 @@ function _appliquerCoursInscription(d) {
   });
   if (avecPart) {
     var roleP = d.pRole || (d.role==='guideur' ? 'guidee' : 'guideur');
-    adminData.coursTango.push({
+    if (!_ctDejaLa(d.pEmail, d.pPrenom, d.pNom, d.c1.ville, d.c1.niveau, saison)) adminData.coursTango.push({
       id:'CT'+(ts+1), prenom:d.pPrenom||'', nom:d.pNom||'',
       email:d.pEmail||'', tel:d.pTel||'',
       role:roleP, niveau:d.c1.niveau, cours:cours1, ville:d.c1.ville,
@@ -2616,14 +2635,14 @@ function _appliquerCoursInscription(d) {
     var role2    = d.role2 || d.role;
     var partNom2 = d.samePartner===true ? partNom : ((d.p2Prenom||'')+' '+(d.p2Nom||'')).trim();
     var partEml2 = d.samePartner===true ? (d.pEmail||'') : (d.p2Email||'');
-    adminData.coursTango.push({
+    if (!_ctDejaLa(d.email, d.prenom, d.nom, d.c2.ville, d.c2.niveau, saison)) adminData.coursTango.push({
       id:'CT'+(ts+2), prenom:d.prenom, nom:d.nom, email:d.email, tel:d.tel||'',
       role:role2, niveau:d.c2.niveau, cours:cours2, ville:d.c2.ville,
       statut:statut, partenaire:partNom2, emailPartenaire:partEml2,
       type:'', paiement:'', montant:0, dateInscription:today(), saison:saison
     });
     if (d.venue2==='avec-part' && partNom2) {
-      adminData.coursTango.push({
+      if (!_ctDejaLa(partEml2, d.p2Prenom||d.pPrenom, d.p2Nom||d.pNom, d.c2.ville, d.c2.niveau, saison)) adminData.coursTango.push({
         id:'CT'+(ts+3), prenom:d.p2Prenom||d.pPrenom||'', nom:d.p2Nom||d.pNom||'',
         email:partEml2, tel:d.p2Tel||d.pTel||'',
         role:role2==='guideur' ? 'guidee' : 'guideur',
