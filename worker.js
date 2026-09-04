@@ -1224,7 +1224,7 @@ async function handleNotifyEssaiAction(request, env) {
           coursBoxRows += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
           if (firstDate) coursBoxRows += `<tr><td style="padding:4px 0;color:#666;width:42%;">📅 Prochain cours\xa0:</td><td style="padding:4px 0;color:#333;font-weight:600;">${fmtDate(firstDate)}</td></tr>`;
           if (hor)       coursBoxRows += `<tr><td style="padding:4px 0;color:#666;">🕐 Horaire\xa0:</td><td style="padding:4px 0;color:#333;font-weight:600;">${_esc(hor)}</td></tr>`;
-          if (adr.nom||adr.rue) coursBoxRows += `<tr><td style="padding:4px 0;color:#666;">📍 Lieu\xa0:</td><td style="padding:4px 0;color:#333;font-weight:600;">${adr.nom?_esc(adr.nom):''}${adr.nom&&adr.rue?', ':''}${adr.rue?_esc(adr.rue):''}${adr.note?' — <em style="color:#666;">'+_esc(adr.note)+'</em>':''}</td></tr>`;
+          if (adr.nom||adr.rue) coursBoxRows += `<tr><td style="padding:4px 0;color:#666;">📍 Lieu\xa0:</td><td style="padding:4px 0;color:#333;font-weight:600;">${adr.nom?_esc(adr.nom):''}${adr.nom&&adr.rue?', ':''}${adr.rue?_esc(adr.rue):''}${adr.note?' — <span style="color:#c62828;font-weight:600;">'+_esc(adr.note)+'</span>':''}</td></tr>`;
           coursBoxRows += '</table>';
         }
         coursBoxRows += `<div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="background:${rColor};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">${rLabel}</span><span style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✓ Valid\xe9\xb7e</span></div>`;
@@ -4556,7 +4556,7 @@ async function handleNotifyInscriptionEssai(request, env) {
     let inner = lieuNom ? `<strong style="color:#111;font-weight:700;">${_esc(lieuNom)}</strong>` : '';
     const parts = [];
     if (lieuRue) parts.push(_esc(lieuRue));
-    if (lieuNote) parts.push(`<em style="color:#666;">${_esc(lieuNote)}</em>`);
+    if (lieuNote) parts.push(`<span style="color:#c62828;font-weight:600;">${_esc(lieuNote)}</span>`);
     if (lieuTransport) parts.push(_esc(lieuTransport));
     if (parts.length) inner += `<br/><span style="font-size:13px;font-weight:400;color:#444;">${parts.join('<br/>')}</span>`;
     if (withMaps && lieuGps) inner += `<br/><a href="https://maps.google.com/?q=${_esc(lieuGps)}" style="color:#1565c0;font-size:12px;">🗺 Voir sur Google Maps</a>`;
@@ -5299,7 +5299,7 @@ async function handleNotifyInscriptionCours(request, env) {
       + '<div style="background:#f1f8e9;padding:14px 16px;">'
       + '<div style="font-size:16px;font-weight:700;color:#111;margin-bottom:4px;">📍 ' + _esc(villeLabel(c.ville) + ' — ' + nivLabel(c.niveau)) + '</div>'
       + '<div style="font-size:13px;color:#333;">Saison ' + _esc(saison) + (hor ? ' &nbsp;\xb7&nbsp; ' + _esc(hor) : '') + '</div>'
-      + (adr.nom || adr.rue ? '<div style="font-size:12px;color:#666;margin-top:2px;">' + (adr.nom ? _esc(adr.nom) : '') + (adr.nom && adr.rue ? ' — ' : '') + (adr.rue ? _esc(adr.rue) : '') + (adr.note ? ' &mdash; <em style="color:#777;">' + _esc(adr.note) + '</em>' : '') + '</div>' : '')
+      + (adr.nom || adr.rue ? '<div style="font-size:12px;color:#666;margin-top:2px;">' + (adr.nom ? _esc(adr.nom) : '') + (adr.nom && adr.rue ? ' — ' : '') + (adr.rue ? _esc(adr.rue) : '') + (adr.note ? ' &mdash; <span style="color:#c62828;font-weight:600;">' + _esc(adr.note) + '</span>' : '') + '</div>' : '')
       + '</div></div>'
       + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:10px 14px;background:#f5f5f5;border-radius:6px;">'
       + statutBadge
@@ -5474,7 +5474,7 @@ async function handleNotifyInscriptionCours(request, env) {
         // Cours box rows
         const lieuInner = (adr.nom ? '<strong>' + _esc(adr.nom) + '</strong>' : '')
           + (adr.rue ? '<br/><span style="font-size:13px;font-weight:400;color:#444;">' + _esc(adr.rue)
-              + (adr.note ? '<br/><em style="color:#666;">' + _esc(adr.note) + '</em>' : '')
+              + (adr.note ? '<br/><span style="color:#c62828;font-weight:600;">' + _esc(adr.note) + '</span>' : '')
               + (adr.transport ? '<br/>' + _esc(adr.transport) : '')
               + '</span>' : '');
         const coursBoxRows = '<tr><td style="padding:7px 0;color:#555;width:35%;vertical-align:top;">🎓 Cours</td><td style="color:#111;font-weight:700;">' + _esc(coursAff) + '</td></tr>'
@@ -5866,7 +5866,7 @@ async function handleCronEssaiRappelJ7(request, env) {
     const lieuHtml = adresse.nom ? (() => {
       let s = `<strong>${_esc(adresse.nom)}</strong>`;
       if (adresse.rue) s += `<br/><span style="font-size:13px;font-weight:400;color:#444;">${_esc(adresse.rue)}</span>`;
-      if (adresse.note) s += `<br/><span style="font-size:13px;font-weight:400;color:#444;"><em style="color:#666;">${_esc(adresse.note)}</em></span>`;
+      if (adresse.note) s += `<br/><span style="font-size:13px;color:#c62828;font-weight:600;">${_esc(adresse.note)}</span>`;
       if (adresse.transport) s += `<br/><span style="font-size:13px;font-weight:400;color:#666;">${_esc(adresse.transport)}</span>`;
       if (adresse.gps) s += `<br/><a href="https://maps.google.com/?q=${_esc(adresse.gps)}" style="color:#1565c0;font-size:12px;">🗺 Voir sur Google Maps</a>`;
       return s;
@@ -6144,7 +6144,7 @@ async function handleNotifyEssaiValide(request, env) {
   // Adresse. Même ordre que E1/E4/E-mod : rue, note, transport.
   const adrNote   = _esc(adresse.note || '');
   const lieuCell = adrNom
-    ? `${adrNom}${adrRue ? '<br/><span style="font-size:13px;font-weight:400;color:#444;">'+adrRue+'</span>' : ''}${adrNote ? '<br/><span style="font-size:13px;font-weight:400;color:#444;"><em style="color:#666;">'+adrNote+'</em></span>' : ''}${adrTransp ? '<br/><span style="font-size:12px;color:#666;">'+adrTransp+'</span>' : ''}${gps ? '<br/><a href="https://maps.google.com/?q='+encodeURIComponent(gps)+'" style="color:#1565c0;font-size:12px;">🗺 Voir sur Google Maps</a>' : ''}`
+    ? `${adrNom}${adrRue ? '<br/><span style="font-size:13px;font-weight:400;color:#444;">'+adrRue+'</span>' : ''}${adrNote ? '<br/><span style="font-size:13px;color:#c62828;font-weight:600;">'+adrNote+'</span>' : ''}${adrTransp ? '<br/><span style="font-size:12px;color:#666;">'+adrTransp+'</span>' : ''}${gps ? '<br/><a href="https://maps.google.com/?q='+encodeURIComponent(gps)+'" style="color:#1565c0;font-size:12px;">🗺 Voir sur Google Maps</a>' : ''}`
     : '';
 
   const coursBox = `<div style="background:#e8f4fd;border:2px solid #1565c0;border-radius:10px;padding:16px 20px;margin:0 0 22px;">
