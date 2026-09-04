@@ -158,7 +158,8 @@ function renderEleves() {
 
 function carteEleve(el) {
   var r = CHANT.restants(el);
-  var fini = el.formule === 'carte' && r === 0;
+  var expiree = CHANT.carteExpiree(el);
+  var fini = el.formule === 'carte' && (r === 0 || expiree);
   var h = '<div class="card">';
   h += '<div class="el-head"><div>'
      + '<div class="el-nom">' + esc(el.prenom) + ' ' + esc(el.nom) + '</div>'
@@ -181,7 +182,11 @@ function carteEleve(el) {
     }
     h += '</div>';
     h += '<div class="carte-meta"><b>' + used + '</b> / ' + el.carteTotal + ' cours pointés — '
-       + (fini ? '<span class="pill pill-fin">carte terminée</span>' : '<b>' + r + '</b> restant' + (r > 1 ? 's' : '')) + '</div>';
+       + (r === 0 ? '<span class="pill pill-fin">carte terminée</span>' : '<b>' + r + '</b> restant' + (r > 1 ? 's' : '')) + '</div>';
+    if (el.carteExpActive && el.carteExp) {
+      h += '<div class="carte-meta">⏳ Valable jusqu’au <b>' + CHANT.fmtDate(el.carteExp) + '</b>'
+         + (expiree ? ' <span class="pill pill-fin">expirée</span>' : '') + '</div>';
+    }
     h += '</div>';
     h += '<div class="btn-row">';
     if (!fini) h += '<button class="btn btn-ok" onclick="ouvrirModalPointer(\'' + el.id + '\')">✓ Pointer un cours</button>';
@@ -276,6 +281,9 @@ function ouvrirModalRenouveler(id) {
   ouvrirModal(
     '<h3>↻ Renouveler la carte — ' + esc(el.prenom) + '</h3>'
     + '<div class="field"><label>Nombre de cours sur la nouvelle carte</label><input type="number" id="m-nb" value="' + (el.carteTotal || 10) + '" min="1" max="50"></div>'
+    + '<div class="toggle-row" style="margin-bottom:10px"><input type="checkbox" id="m-exp-actif"' + (el.carteExpActive ? ' checked' : '') + ' onchange="document.getElementById(\'m-exp-wrap\').style.display=this.checked?\'\':\'none\'">'
+    + '<div class="tl"><b>Date d’expiration</b>La carte devient inutilisable après cette date</div></div>'
+    + '<div class="field" id="m-exp-wrap" style="' + (el.carteExpActive ? '' : 'display:none') + '"><label>Valable jusqu’au</label><input type="date" id="m-exp"></div>'
     + '<div class="btn-row"><button class="btn btn-main" onclick="renouvelerCarte(\'' + id + '\')">↻ Créer la nouvelle carte</button>'
     + '<button class="btn btn-grey" onclick="fermerModal()">Annuler</button></div>'
   );
@@ -284,6 +292,8 @@ function renouvelerCarte(id) {
   var el = elById(id);
   var nb = parseInt(document.getElementById('m-nb').value, 10) || 10;
   el.carteTotal = nb; el.pointages = [];
+  el.carteExpActive = document.getElementById('m-exp-actif').checked;
+  el.carteExp = el.carteExpActive ? (document.getElementById('m-exp').value || '') : '';
   el.notifications.unshift({ date: CHANT.todayISO(), message: '🎫 Nouvelle carte de ' + nb + ' cours activée !', lu: false });
   fermerModal(); persist(); toast('↻ Nouvelle carte de ' + nb + ' cours créée pour ' + el.prenom);
 }
@@ -327,7 +337,12 @@ function ouvrirModalEleve(id) {
     + '<label class="' + (f === 'carte' ? 'sel' : '') + '" onclick="selFormule(this,\'carte\')"><input type="radio" name="m-f" value="carte"' + (f === 'carte' ? ' checked' : '') + '><span>🎫 Carte de cours</span></label>'
     + '<label class="' + (f === 'unite' ? 'sel' : '') + '" onclick="selFormule(this,\'unite\')"><input type="radio" name="m-f" value="unite"' + (f === 'unite' ? ' checked' : '') + '><span>🎵 À l’unité</span></label>'
     + '</div></div>'
-    + '<div class="field" id="m-nb-wrap" style="' + (f === 'carte' ? '' : 'display:none') + '"><label>Nombre de cours sur la carte</label><input type="number" id="m-nb" value="' + (el && el.carteTotal ? el.carteTotal : 10) + '" min="1" max="50"></div>'
+    + '<div id="m-carte-wrap" style="' + (f === 'carte' ? '' : 'display:none') + '">'
+    + '<div class="field"><label>Nombre de cours sur la carte</label><input type="number" id="m-nb" value="' + (el && el.carteTotal ? el.carteTotal : 10) + '" min="1" max="50"></div>'
+    + '<div class="toggle-row" style="margin-bottom:10px"><input type="checkbox" id="m-exp-actif"' + (el && el.carteExpActive ? ' checked' : '') + ' onchange="document.getElementById(\'m-exp-wrap\').style.display=this.checked?\'\':\'none\'">'
+    + '<div class="tl"><b>Date d’expiration</b>La carte devient inutilisable après cette date</div></div>'
+    + '<div class="field" id="m-exp-wrap" style="' + (el && el.carteExpActive ? '' : 'display:none') + '"><label>Valable jusqu’au</label><input type="date" id="m-exp" value="' + (el && el.carteExp ? el.carteExp : '') + '"></div>'
+    + '</div>'
     + '<div class="btn-row"><button class="btn btn-main" onclick="sauverEleve(' + (el ? '\'' + el.id + '\'' : 'null') + ')">💾 Enregistrer</button>'
     + '<button class="btn btn-grey" onclick="fermerModal()">Annuler</button>'
     + (el ? '<button class="btn" style="background:#fbe9e7;color:var(--danger);margin-left:auto" onclick="supprimerEleve(\'' + el.id + '\')">🗑 Supprimer</button>' : '')
@@ -338,7 +353,7 @@ function selFormule(lbl, f) {
   lbl.parentElement.querySelectorAll('label').forEach(function(l){ l.classList.remove('sel'); });
   lbl.classList.add('sel');
   lbl.querySelector('input').checked = true;
-  document.getElementById('m-nb-wrap').style.display = f === 'carte' ? '' : 'none';
+  document.getElementById('m-carte-wrap').style.display = f === 'carte' ? '' : 'none';
 }
 function sauverEleve(id) {
   var prenom = document.getElementById('m-prenom').value.trim();
@@ -347,13 +362,17 @@ function sauverEleve(id) {
   var formule = document.querySelector('input[name=m-f]:checked').value;
   var nb = parseInt(document.getElementById('m-nb').value, 10) || 10;
   if (!prenom || !nom) { alert('Prénom et nom requis'); return; }
+  var expActif = document.getElementById('m-exp-actif').checked;
+  var expDate = document.getElementById('m-exp').value || '';
   if (id) {
     var el = elById(id);
     el.prenom = prenom; el.nom = nom; el.email = email;
-    el.formule = formule; if (formule === 'carte') el.carteTotal = nb;
+    el.formule = formule;
+    if (formule === 'carte') { el.carteTotal = nb; el.carteExpActive = expActif; el.carteExp = expActif ? expDate : ''; }
   } else {
     S.eleves.push({ id: CHANT.uid(), prenom: prenom, nom: nom, email: email,
       formule: formule, carteTotal: formule === 'carte' ? nb : 0, pushActif: false,
+      carteExpActive: formule === 'carte' ? expActif : false, carteExp: formule === 'carte' && expActif ? expDate : '',
       pointages: [], coursUnite: [], exercices: [], notifications: [] });
   }
   fermerModal(); persist(); toast('💾 Fiche enregistrée');
@@ -367,25 +386,70 @@ function supprimerEleve(id) {
 /* --- Exercices --- */
 function ouvrirModalExo(elId) {
   var el = elById(elId);
+  if (_rec && _rec.state === 'recording') { try { _rec.stop(); } catch (e) {} }
+  _recBlob = null;
   ouvrirModal(
     '<h3>🎼 Nouvel exercice pour ' + esc(el.prenom) + '</h3>'
     + '<div class="field"><label>Titre</label><input type="text" id="m-titre" placeholder="Ex : Vocalises en tierces"></div>'
     + '<div class="field"><label>Consigne</label><textarea id="m-consigne" placeholder="Ce que l’élève doit travailler, combien de temps, à quoi faire attention…"></textarea></div>'
-    + '<div class="field"><label>Enregistrement piano (audio)</label><input type="file" id="m-audio" accept="audio/*" style="font-size:14px"><div style="font-size:11px;color:var(--sub);margin-top:3px">Dans la vraie app : enregistré depuis le téléphone ou importé, hébergé en ligne.</div></div>'
+    + '<div class="field"><label>Enregistrement piano (audio)</label>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
+    + '<button type="button" class="btn btn-ghost" id="m-rec-btn" onclick="toggleRec()">🎙 Enregistrer au micro</button>'
+    + '<span id="m-rec-status" style="font-size:12px;color:var(--sub)"></span></div>'
+    + '<audio id="m-rec-preview" controls style="display:none;margin:0 0 8px"></audio>'
+    + '<input type="file" id="m-audio" accept="audio/*" style="font-size:14px" onchange="clearRec()">'
+    + '<div style="font-size:11px;color:var(--sub);margin-top:3px">Enregistrez directement au micro OU importez un fichier (mémo vocal, mp3…).</div></div>'
     + '<div class="toggle-row"><input type="checkbox" id="m-notify" checked><div class="tl"><b>M’avertir quand l’élève a fait l’exercice</b>Notification push + alerte dans l’onglet 🔔</div></div>'
     + '<div class="btn-row" style="margin-top:14px"><button class="btn btn-main" onclick="sauverExo(\'' + elId + '\')">🎼 Ajouter l’exercice</button>'
     + '<button class="btn btn-grey" onclick="fermerModal()">Annuler</button></div>'
   );
 }
+/* --- Enregistrement micro (MediaRecorder) --- */
+var _rec = null, _recChunks = [], _recBlob = null;
+function toggleRec() {
+  var btn = document.getElementById('m-rec-btn');
+  var st = document.getElementById('m-rec-status');
+  if (_rec && _rec.state === 'recording') { _rec.stop(); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('Micro non disponible dans ce navigateur (il faut une page en https ou localhost).'); return;
+  }
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+    _recChunks = []; _recBlob = null;
+    _rec = new MediaRecorder(stream);
+    _rec.ondataavailable = function (e) { if (e.data.size) _recChunks.push(e.data); };
+    _rec.onstop = function () {
+      _recBlob = new Blob(_recChunks, { type: _rec.mimeType || 'audio/webm' });
+      stream.getTracks().forEach(function (t) { t.stop(); });
+      var prev = document.getElementById('m-rec-preview');
+      if (prev) { prev.src = URL.createObjectURL(_recBlob); prev.style.display = 'block'; }
+      if (btn) { btn.textContent = '🎙 Ré-enregistrer'; }
+      if (st) st.textContent = '✓ Enregistrement prêt (' + Math.round(_recBlob.size / 1024) + ' Ko)';
+      var f = document.getElementById('m-audio'); if (f) f.value = '';
+    };
+    _rec.start();
+    btn.textContent = '⏹ Arrêter l’enregistrement';
+    st.textContent = '● Enregistrement en cours…';
+  }).catch(function () {
+    alert('Impossible d’accéder au micro (autorisation refusée ?).');
+  });
+}
+function clearRec() {
+  _recBlob = null;
+  var prev = document.getElementById('m-rec-preview');
+  if (prev) { prev.style.display = 'none'; prev.removeAttribute('src'); }
+  var btn = document.getElementById('m-rec-btn'); if (btn) btn.textContent = '🎙 Enregistrer au micro';
+  var st = document.getElementById('m-rec-status'); if (st) st.textContent = '';
+}
+
 function sauverExo(elId) {
   var el = elById(elId);
   var titre = document.getElementById('m-titre').value.trim();
   var consigne = document.getElementById('m-consigne').value.trim();
   var notify = document.getElementById('m-notify').checked;
-  var file = document.getElementById('m-audio').files[0] || null;
+  var file = _recBlob || document.getElementById('m-audio').files[0] || null;
   if (!titre) { alert('Titre requis'); return; }
   var exo = { id: CHANT.uid(), titre: titre, consigne: consigne,
-    audioName: file ? file.name : '', hasAudio: !!file,
+    audioName: _recBlob ? ('enregistrement-' + CHANT.todayISO() + '.webm') : (file ? file.name : ''), hasAudio: !!file,
     notifyProf: notify, creeLe: CHANT.todayISO(), faits: [] };
   var done = function() {
     el.exercices.push(exo);

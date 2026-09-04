@@ -15,6 +15,7 @@
         {
           id: 'e1', prenom: 'Camille', nom: 'MARTIN', email: 'camille@test.fr',
           formule: 'carte', carteTotal: 10, pushActif: true,
+          carteExpActive: true, carteExp: '2026-10-31',
           pointages: ['2026-06-11', '2026-06-18', '2026-06-25', '2026-07-02'],
           coursUnite: [],
           exercices: [
@@ -119,6 +120,9 @@
   function restants(el) {
     return Math.max(0, (el.carteTotal || 0) - (el.pointages || []).length);
   }
+  function carteExpiree(el) {
+    return !!(el.carteExpActive && el.carteExp && el.carteExp < todayISO());
+  }
 
   /* ---- audio (IndexedDB, blobs des fichiers uploadés en démo) ---- */
   function idbOpen() {
@@ -169,7 +173,7 @@
   window.CHANT = {
     load: load, save: save, reset: reset,
     todayISO: todayISO, fmtDate: fmtDate, fmtDateCourt: fmtDateCourt,
-    uid: uid, esc: esc, restants: restants,
+    uid: uid, esc: esc, restants: restants, carteExpiree: carteExpiree,
     audioSave: audioSave, audioGet: audioGet, audioDelete: audioDelete,
     onChange: onChange
   };

@@ -158,8 +158,11 @@ function renderCarte(el) {
       h += '<div class="pt' + (d ? ' done' : '') + '"><div class="dot"></div><div class="d">' + (d ? CHANT.fmtDateCourt(d) : '·') + '</div></div>';
     }
     h += '</div>';
-    if (r === 0) h += '<div class="carte-big">Carte terminée (' + used + '/' + el.carteTotal + ') — <span class="pill pill-warn">à renouveler avec votre professeure</span></div>';
+    var expiree = CHANT.carteExpiree(el);
+    if (expiree) h += '<div class="carte-big"><span class="pill pill-warn">carte expirée</span> — ' + r + ' cours non utilisé' + (r > 1 ? 's' : '') + ', voyez avec votre professeure pour renouveler.</div>';
+    else if (r === 0) h += '<div class="carte-big">Carte terminée (' + used + '/' + el.carteTotal + ') — <span class="pill pill-warn">à renouveler avec votre professeure</span></div>';
     else h += '<div class="carte-big">Il vous reste <b>' + r + '</b> cours sur ' + el.carteTotal + '</div>';
+    if (el.carteExpActive && el.carteExp && !expiree) h += '<div style="font-size:13px;color:var(--sub);margin-top:8px">⏳ Valable jusqu’au <b style="color:var(--ink)">' + CHANT.fmtDate(el.carteExp) + '</b></div>';
     if (used) h += '<div style="font-size:12px;color:var(--sub);margin-top:8px">Dernier cours pointé : ' + CHANT.fmtDate(el.pointages[used - 1]) + '</div>';
   } else {
     h += '<h2>🎵 Mes cours à l’unité</h2>';

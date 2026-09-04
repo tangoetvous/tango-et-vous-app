@@ -26,6 +26,8 @@ onglets sont ouverts). Bouton « ↺ Réinitialiser les données de démo » en 
 | Toggle par exercice « M'avertir quand l'élève a fait l'exercice » | admin (création exercice) |
 | Élève marque « J'ai fait cet exercice aujourd'hui » → notif prof si toggle actif | index → onglet 🔔 admin |
 | Carte de cours avec nombre de cours paramétrable | admin (fiche élève, renouvellement) |
+| Toggle « date d'expiration » activable/désactivable par carte | admin (fiche élève, renouvellement) |
+| Audio : import de fichier OU enregistrement micro direct (MediaRecorder) | admin (création exercice) |
 | Pointage d'un cours par la prof → notification (push simulé) à l'élève | admin → index |
 | Suivi visuel : jauge + points avec dates + cours restants | les deux |
 | Cours à l'unité (dates + payé / à régler) | les deux |
@@ -53,15 +55,15 @@ Reprise des patterns éprouvés de Tango & Vous, sur une **infra 100 % séparée
 
 1. **Nom de l'app / de la professeure**, couleurs, logo ? (la maquette utilise un thème
    crème/bordeaux provisoire)
-2. La carte de cours a-t-elle une **date d'expiration** ou seulement un nombre de cours ?
+2. ~~Date d'expiration ?~~ → **tranché 2026-07-14** : toggle activable/désactivable par carte.
 3. Les cours à l'unité : faut-il suivre le **paiement** (payé / à régler, comme maquetté)
    ou juste la liste des dates ?
 4. Les exercices sont-ils **archivés** quand ils sont terminés (historique) ou simplement
    supprimés ?
 5. L'élève doit-il pouvoir marquer un exercice fait **plusieurs fois** (une fois par jour,
    comme maquetté) ou une seule fois ?
-6. La prof enregistre-t-elle le piano **directement depuis l'app** (micro du téléphone) ou
-   importe-t-elle des fichiers existants (mémos vocaux…) ? Les deux sont possibles.
+6. ~~Enregistrement ou import ?~~ → **tranché 2026-07-14** : les deux (micro direct + import
+   de fichier), maquetté dans la modale exercice.
 7. Faut-il un paiement en ligne (type AssoConnect / lien de paiement) ou tout se règle en
    direct avec la prof ?
 8. Combien d'élèves environ ? (dimensionnement — les plans gratuits suffisent jusqu'à
