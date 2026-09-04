@@ -8115,6 +8115,44 @@ function ficheEleveInscrit(e, borderStyle, grise, isDup) {
     +'</div>';
 }
 // Relance manuelle de la demande de justificatif tarif réduit (envoie le même email que l'auto)
+// ✉️ Renvoie l'email d'inscription (I01) d'UNE ligne d'inscription — la charge
+// utile est reconstruite depuis la fiche, cours par cours : une personne
+// inscrite à 2 cours reçoit un email par cours, comme à l'inscription d'origine.
+// Le worker choisit tout seul la variante (validée / liste d'attente) d'après
+// le statut transmis, et prévient aussi l'admin (panel 🔔 + push).
+function renvoyerEmailInscription(id) {
+  var e=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
+  if(!e||!(e.email||'').trim()){ afficherToast('Aucune adresse email sur cette fiche'); return; }
+  var _nomAff=((e.prenom||'')+' '+(e.nom||'')).trim();
+  var _part=(e.partenaire||'').trim();
+  var _pEmail=(e.emailPartenaire||'').trim();
+  var _dest=e.email+((_pEmail && _pEmail.toLowerCase()!==(e.email||'').toLowerCase())?' et '+_pEmail:'');
+  var _lbl=_lblCours(e.ville,e.niveau);
+  ouvrirModalConfirm('Renvoyer l\'email d\'inscription pour '+_nomAff+' — '+_lbl+' ?\n\nDestinataire(s) : '+_dest+'\n\nUn seul cours est concerné : si la personne est inscrite à deux cours, refaites l\'envoi depuis l\'autre fiche.', function(){
+    if(IS_DEMO){ afficherToast('✉️ (démo) Email renvoyé — '+_nomAff); return; }
+    var _pParts=_part.split(/\s+/);
+    var _data={
+      saison:e.saison||saisonActive(), mode:'',
+      prenom:e.prenom||'', nom:e.nom||'', email:e.email||'', tel:e.tel||'',
+      role:e.role||'', niveau:e.niveau||'',
+      c1:{ville:e.ville||'', niveau:e.niveau||''},
+      c2:null, nbCours:1,
+      venue:_part?'avec-part':'seul',
+      pPrenom:_part?(_pParts[0]||''):'', pNom:_part?_pParts.slice(1).join(' '):'',
+      pEmail:_pEmail, pTel:'', pRole:(e.role==='guideur'?'guidee':'guideur'),
+      isWaitlist:e.statut==='demande',
+      // Raison de l'attente inconnue au renvoi → le worker retombe sur la
+      // variante historique (parité), comme pour une charge utile ancienne.
+      quotaFull1:null, quotaFull2:null
+    };
+    Promise.resolve(fetch('/api/notify/inscription-cours',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_data),keepalive:true}))
+    .then(function(r){
+      if(r&&r.ok===false){ afficherToast('⚠️ Renvoi refusé par le serveur'); return; }
+      afficherToast('✉️ Email d\'inscription renvoyé à '+_dest);
+    })
+    .catch(function(){ afficherToast('⚠️ Erreur d\'envoi — email non renvoyé'); });
+  });
+}
 function relancerJustif(id) {
   var e=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(id);});
   if(!e||!(e.email||'').trim()) return;
@@ -14817,6 +14855,9 @@ function ficheEleve(e, isDup) {
   // Détails dépliables
   h += '<div style="width:100%;display:'+(open?'flex':'none')+';gap:4px;align-items:center;flex-wrap:wrap;padding-top:4px;">';
   h += '<button class="btn btn-err" style="padding:3px 7px;font-size:10px;" data-action="suppr-cours-inscr" data-id="'+e.id+'" title="Supprimer">✕</button>';
+  // ✉️ Renvoyer l'email d'inscription (I01) — filet quand l'envoi initial n'a pas
+  // abouti (cf. bug « Nouvelle demande » du 2026-09-04) ou sur demande de l'élève.
+  h += ((e.email||'').trim() ? '<a href="javascript:void(0)" onclick="renvoyerEmailInscription(\''+e.id+'\')" class="btn-point btn-ghost" title="Renvoyer l\'email d\'inscription à cette personne" style="text-decoration:none;font-size:11px;color:#7dd3fc;">✉️ Renvoyer l\'email</a>' : '');
   h += (e.niveau_eleve?_labelNivEleve(e.niveau_eleve):'');
   h += (e.isReport?'<span class="pill pill-gold" style="font-size:8px;">↩ Report '+(e.classesReportees||e.restants)+' cours</span>':'');
   if(e.statut==='valide'||e.statut==='attente_paiement'){

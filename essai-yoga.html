@@ -423,6 +423,25 @@ function updatePrix() {
   }
 }
 
+
+// ── Envoi des notifications (emails + push) — ne jamais « lancer et oublier »
+// Quand ce formulaire est ouvert DANS l'admin (fenêtre intégrée), l'admin le
+// retire du DOM dès qu'il est prévenu de l'inscription. Une requête simplement
+// lancée est alors ANNULÉE par le navigateur : l'inscription était enregistrée
+// mais aucun email ni push ne partait (bug constaté le 2026-09-04 sur
+// « Inscriptions Tango → Nouvelle demande »).
+//   • keepalive : le navigateur mène la requête à son terme malgré la fermeture
+//   • attente bornée : on laisse au worker le temps de répondre, sans jamais
+//     bloquer l'inscription si le réseau traîne
+async function _tevNotify(url, data) {
+  var p = fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    keepalive: true,
+  }).catch(function(){});
+  await Promise.race([p, new Promise(function(r){ setTimeout(r, 4000); })]);
+}
 async function soumettre() {
   const prenom = document.getElementById('inp-prenom').value.trim();
   const nom    = document.getElementById('inp-nom').value.trim();
@@ -520,15 +539,11 @@ async function soumettre() {
   }
 
   // Emails automatiques via worker (fire and forget)
-  fetch('https://app.tangoetvous.fr/api/notify/inscription-essai-yoga', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  await _tevNotify('https://app.tangoetvous.fr/api/notify/inscription-essai-yoga', {
       prenom, nom, email, tel,
       cours: coursSelectionne, dateIso: date,
       statut: 'demande', gratuit
-    })
-  }).catch(function(){});
+    });
 
   // INSERT réussi → notifier l'admin (BroadcastChannel + localStorage + postMessage)
   const msg = { type:'yogaEssaiInscription', data };

@@ -1342,15 +1342,6 @@ async function soumettre(){
     // Newsletter : email du soumissionnaire + partenaire (couple) — fire & forget (chemin réel, pas démo)
     try { if(window.TEV&&TEV.ajouterNewsletter){ TEV.ajouterNewsletter(data.email || '', 'stages'); if(avecPart && data.partenaireEmail) TEV.ajouterNewsletter(data.partenaireEmail, 'stages'); } } catch(e){}
     afficherConfirmation(Object.assign({}, data, {inscriptionsParDate: datesOK}));
-    // Notifier admin — BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
-    var msg = {type:'stageInscription', data:data};
-    try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
-    try {
-      var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
-      pending.push(msg);
-      localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
-    } catch(e){}
-    try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
     // Notifier admin + élève via worker (email S0/S1/S2, panel 🔔, push)
     try {
       var _stageBody = {
@@ -1390,12 +1381,19 @@ async function soumettre(){
           };
         }) : []
       };
-      fetch('https://app.tangoetvous.fr/api/notify/inscription-stage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(_stageBody)
-      }).catch(function(){});
+      await _tevNotify('https://app.tangoetvous.fr/api/notify/inscription-stage', _stageBody);
     } catch(_e) {}
+    // Notifier l'admin APRÈS l'envoi : sa réaction retire cette fenêtre du DOM.
+    // BroadcastChannel fonctionne cross-tab même depuis une iframe Wix
+    var msg = {type:'stageInscription', data:data};
+    try { if(window.BroadcastChannel){ var bc=new BroadcastChannel('tev_inscriptions'); bc.postMessage(msg); bc.close(); } } catch(e){}
+    try {
+      var pending = JSON.parse(localStorage.getItem('tev_pending_inscriptions') || '[]');
+      pending.push(msg);
+      localStorage.setItem('tev_pending_inscriptions', JSON.stringify(pending));
+    } catch(e){}
+    try { window.parent.postMessage(msg, window.location.origin); } catch(e){}
+
   } catch(err){
     btn.disabled=false; btn.textContent="Je m'inscris";
     document.getElementById('err-global-2').textContent='Erreur : '+(err&&err.message||'inconnue')+' — Veuillez réessayer ou nous contacter.';
@@ -1404,6 +1402,24 @@ async function soumettre(){
 }
 
 // ── Confirmation ─────────────────────────────────────────────────
+
+// ── Envoi des notifications (emails + push) — ne jamais « lancer et oublier »
+// Quand ce formulaire est ouvert DANS l'admin (fenêtre intégrée), l'admin le
+// retire du DOM dès qu'il est prévenu de l'inscription. Une requête simplement
+// lancée est alors ANNULÉE par le navigateur : l'inscription était enregistrée
+// mais aucun email ni push ne partait (bug constaté le 2026-09-04).
+//   • keepalive : le navigateur mène la requête à son terme malgré la fermeture
+//   • attente bornée : on laisse au worker le temps de répondre, sans jamais
+//     bloquer l'inscription si le réseau traîne
+async function _tevNotify(url, data) {
+  var p = fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    keepalive: true,
+  }).catch(function(){});
+  await Promise.race([p, new Promise(function(r){ setTimeout(r, 4000); })]);
+}
 function afficherConfirmation(data){
   document.getElementById('etape2').classList.remove('active');
   document.getElementById('bloc-confirmation').classList.add('visible');

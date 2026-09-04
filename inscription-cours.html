@@ -1212,11 +1212,7 @@ async function finalize() {
   }
 
   // Emails automatiques via worker (fire and forget)
-  fetch('https://app.tangoetvous.fr/api/notify/inscription-cours', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(msg.data)
-  }).catch(function(){});
+  await _tevNotify('https://app.tangoetvous.fr/api/notify/inscription-cours', msg.data);
 
   // ── Notifier l'admin APRÈS l'INSERT (l'iframe sera retiré du DOM après cette notification)
   // (newsletter : soumissionnaire + partenaire(s) déjà ajoutés dans le bloc if(window.TEV) ci-dessus)
@@ -1230,6 +1226,25 @@ async function finalize() {
   try { window.parent.postMessage(msg, window.location.origin); } catch(e) {}
 }
 
+
+// ── Envoi des notifications (emails + push) — ne jamais « lancer et oublier »
+// Quand ce formulaire est ouvert DANS l'admin (fenêtre intégrée), l'admin le
+// retire du DOM dès qu'il est prévenu de l'inscription. Une requête simplement
+// lancée est alors ANNULÉE par le navigateur : l'inscription était enregistrée
+// mais aucun email ni push ne partait (bug constaté le 2026-09-04 sur
+// « Inscriptions Tango → Nouvelle demande »).
+//   • keepalive : le navigateur mène la requête à son terme malgré la fermeture
+//   • attente bornée : on laisse au worker le temps de répondre, sans jamais
+//     bloquer l'inscription si le réseau traîne
+async function _tevNotify(url, data) {
+  var p = fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    keepalive: true,
+  }).catch(function(){});
+  await Promise.race([p, new Promise(function(r){ setTimeout(r, 4000); })]);
+}
 function buildRecapFinal(incl2) {
   let h = `<div class="recap">${buildRecapCours(incl2)}</div>`;
   if(S.tarifData){
