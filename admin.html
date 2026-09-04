@@ -10679,60 +10679,107 @@ function pointerCoursAction(id, date, nbCours, btn) {
   }
   if(btn)btn.disabled=true;
   var c=_cmp0;
-  // ── Carte REPORTÉE pas encore redémarrée : le pointage ordinaire échouerait
-  // (c.id = id inscriptions_cours, introuvable dans eleves → échec silencieux,
-  // bug constaté par l'audit du 2026-08-18). Le premier pointage REDÉMARRE la
-  // carte en remettant la fiche eleves à neuf — même logique que ✏️ Modifier
-  // (sauvegarderEditCarte) : résolution du vrai eleves.id par email, puis
-  // utilises/restants/date d'achat/expiration recalculés, présences insérées,
-  // et saison de la fiche basculée sur la saison active pour que la carte
-  // redevienne une carte ordinaire partout (admin ET espace élève).
-  var _isRepPtr = !!(c && c._fromCoursTango && c.isReport && c.saisonOrigine && !c.datePremierCours);
+  // ── Pseudo-carte : carte affichée dans la saison courante mais portée par une
+  // ligne inscriptions_cours, PAS par une fiche eleves de cette saison. Le
+  // pointage ordinaire échouerait (c.id = id inscriptions_cours, introuvable
+  // dans eleves). Deux situations mènent ici :
+  //   • carte REPORTÉE pas encore redémarrée — échec SILENCIEUX constaté par
+  //     l'audit du 2026-08-18 ;
+  //   • carte d'un RÉINSCRIT dont la fiche eleves est restée sur une saison
+  //     précédente — « Élève introuvable » au 1er cours de la saison (constaté
+  //     le 2026-09-04). Les 2 chemins de réinscription laissent volontairement
+  //     cette fiche intacte : inscription directe (garde _elvAutreSaison) et
+  //     valider le paiement (upsert ignoreDuplicates) — voir CLAUDE.md.
+  // Dans les deux cas le pointage DÉMARRE la carte sur la fiche eleves — même
+  // logique que ✏️ Modifier (sauvegarderEditCarte) : vrai eleves.id résolu par
+  // email, compteurs/date d'achat/expiration écrits, présences insérées, et
+  // saison de la fiche basculée sur la saison active pour que la carte
+  // redevienne ordinaire partout (admin ET espace élève).
+  var _isRepPtr = !!(c && c._fromCoursTango);
   if (_isRepPtr) {
-    var _tailleRep = _carteTaille(c);
-    var _nbRep = Math.max(1, Math.min(nbCours, _tailleRep));
-    var _expRep = c.reportedExpiration || calcExpiration(date, c.ville||'paris', c.dureeMois);
-    var _expManuRep = !!c.reportedExpiration;
-    var _inMemRep = (adminData.cartes||[]).find(function(x){ return x.email && x.email===c.email && !x._fromCoursTango; });
+    var _vraiRepPtr = !!(c.isReport && c.saisonOrigine);
+    var _ctRowPtr   = (adminData.coursTango||[]).find(function(x){ return String(x.id)===String(c.id); });
+    var _prenomPtr  = (_ctRowPtr && _ctRowPtr.prenom) || c.prenom || '';
+    var _tailleRep  = _carteTaille(c);
+    // Cours déjà saisis à la main via ✏️ Modifier : stockés dans donnees, jamais
+    // dans presences pour une pseudo-carte → repris tels quels au démarrage.
+    var _dejaRep  = _vraiRepPtr ? 0 : Math.max(0, c.utilises || 0);
+    var _resteRep = Math.max(0, _tailleRep - _dejaRep);
+    if (_resteRep <= 0) { if(btn)btn.disabled=false; afficherToast('Carte complète — à renouveler'); return; }
+    var _nbRep      = Math.max(1, Math.min(nbCours, _resteRep));
+    var _premierRep = (!_vraiRepPtr && c.datePremierCours) ? c.datePremierCours : date;
+    var _expRep, _expManuRep;
+    if (_vraiRepPtr) {
+      // Carte reportée : l'expiration d'ORIGINE est conservée (décision admin 2026-08-28)
+      _expRep = c.reportedExpiration || calcExpiration(date, c.ville||'paris', c.dureeMois);
+      _expManuRep = !!c.reportedExpiration;
+    } else if (c.expManuelle && c.expiration) {
+      _expRep = c.expiration; _expManuRep = true;   // date forcée collante
+    } else {
+      _expRep = calcExpiration(_premierRep, c.ville||'paris', c.dureeMois); _expManuRep = false;
+    }
+    // ⚠️ Garde email partagé : ne JAMAIS écrire dans une fiche eleves portant un
+    // autre nom. Un couple d'une ancienne saison peut partager une adresse et
+    // n'avoir qu'UNE fiche → on écraserait la carte du partenaire.
+    var _nomAttPtr  = _normNom(c.nom||'').replace(/\s+/g,' ').trim();
+    var _memeNomPtr = function(n){
+      var v = _normNom(n||'').replace(/\s+/g,' ').trim();
+      return !_nomAttPtr || !v || v === _nomAttPtr;
+    };
+    var _inMemRep = (adminData.cartes||[]).find(function(x){ return x.email && x.email===c.email && !x._fromCoursTango && _memeNomPtr(x.nom); });
     var _getIdRep = _inMemRep ? Promise.resolve(_inMemRep.id)
-      : Promise.resolve(TEV.client.from('eleves').select('id').eq('email',c.email).maybeSingle())
+      : Promise.resolve(TEV.client.from('eleves').select('id,prenom,nom').eq('email',c.email).maybeSingle())
           .then(function(res){
-            if (res && res.data && res.data.id) return res.data.id;
-            var _ctRowR=(adminData.coursTango||[]).find(function(x){return String(x.id)===String(c.id);});
+            if (res && res.data && res.data.id) {
+              if (!_memeNomPtr(((res.data.prenom||'')+' '+(res.data.nom||''))))
+                throw new Error('fiche partagée avec un autre nom — utilisez ✏️ Modifier');
+              return res.data.id;
+            }
             return Promise.resolve(TEV.client.from('eleves').upsert({
-              prenom:_ctRowR?(_ctRowR.prenom||''):'', nom:_ctRowR?(_ctRowR.nom||''):'', email:c.email,
+              prenom:_prenomPtr, nom:_ctRowPtr?(_ctRowPtr.nom||''):'', email:c.email,
               niveau:c.niveau||'', ville:c.ville||'paris',
               statut_eleve:'Actif', source:'inscription', saison:saisonActive()
             },{onConflict:'email'}).select('id').single()).then(function(r2){return r2&&r2.data?r2.data.id:null;});
           });
     _getIdRep.then(function(_idRep){
       if(!_idRep) throw new Error('fiche élève introuvable pour '+(c.email||''));
+      var _utilRep = _dejaRep + _nbRep;
       return Promise.resolve(TEV.client.from('eleves').update({
-        carte_utilises:_nbRep, carte_restants:Math.max(0,_tailleRep-_nbRep),
-        carte_date_achat:date, carte_expiration:_expRep, carte_exp_manuelle:_expManuRep,
+        carte_utilises:_utilRep, carte_restants:Math.max(0,_tailleRep-_utilRep),
+        carte_date_achat:_premierRep, carte_expiration:_expRep, carte_exp_manuelle:_expManuRep,
         carte_statut:'Active', carte_paye:true, saison:saisonActive(),
         carte_num:1   // 1ʳᵉ carte de la nouvelle saison — le compteur repart à 1
       }).eq('id',_idRep)).then(function(res){
         if(res&&res.error) throw new Error(res.error.message||res.error.code||'écriture eleves');
-        var _rowsRep=[]; for(var i=0;i<_nbRep;i++) _rowsRep.push({eleve_id:_idRep,eleve_nom:c.nom||'',date:date,niveau:c.niveau||'',note:'Carte reportée — redémarrage'});
+        var _noteRep = _vraiRepPtr ? 'Carte reportée — redémarrage' : 'Carte reprise — démarrage de saison';
+        var _rowsRep=[]; for(var i=0;i<_nbRep;i++) _rowsRep.push({eleve_id:_idRep,eleve_nom:c.nom||'',date:date,niveau:c.niveau||'',note:_noteRep});
+        // Cours déjà saisis via ✏️ Modifier : absents de presences → ajoutés ici
+        // pour que l'historique de l'espace élève soit complet. UNE SEULE FOIS :
+        // _presReprises évite de les réinsérer au 2ᵉ pointage du jour (élève à
+        // 2 cours), tant que chargerDonnees n'a pas encore rebâti la carte.
+        if(!_vraiRepPtr && !c._presReprises) (c.datesCours||[]).forEach(function(_d){
+          if(_d && _d!==date) _rowsRep.push({eleve_id:_idRep,eleve_nom:c.nom||'',date:_d,niveau:c.niveau||'',note:'Cours saisi avant reprise'});
+        });
         return Promise.resolve(TEV.client.from('presences').insert(_rowsRep));
       }).then(function(resP){
         if(resP&&resP.error) throw new Error(resP.error.message||resP.error.code||'écriture presences');
         if(!adminData._dailyCounts)adminData._dailyCounts={};
         var _dkr=(c.email||'').toLowerCase()+'|'+date;
         adminData._dailyCounts[_dkr]=(adminData._dailyCounts[_dkr]||0)+_nbRep;
-        c.utilises=_nbRep; c.restants=Math.max(0,_tailleRep-_nbRep);
-        c.datePremierCours=date; c.expiration=_expRep; c.expManuelle=_expManuRep; c.paye=true;
-        c.datesCours=[]; for(var j=0;j<_nbRep;j++)c.datesCours.push(date);
-        _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:date,expiration:_expRep});
-        // Notifs élève : récap CP-E (lendemain matin) + C1 bienvenue (la carte redémarre)
+        c._presReprises=true;   // reprise de l'historique faite (cf. ci-dessus)
+        c.utilises=_dejaRep+_nbRep; c.restants=Math.max(0,_tailleRep-c.utilises);
+        c.datePremierCours=_premierRep; c.expiration=_expRep; c.expManuelle=_expManuRep; c.paye=true;
+        if(_vraiRepPtr || !c.datesCours) c.datesCours=[];
+        for(var j=0;j<_nbRep;j++)c.datesCours.push(date);
+        _broadcastAdminSync('carteUpdate',{email:c.email,utilises:c.utilises,restants:c.restants,datesCours:c.datesCours,datePremierCours:_premierRep,expiration:_expRep});
+        // Notifs élève : récap CP-E (lendemain matin) + C1 bienvenue au démarrage
         if(c.email){
           Promise.resolve(fetch('/api/notify/carte-pointee-admin',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
-            body:JSON.stringify({email:c.email,prenom:c.prenom||'',nom:c.nom||'',date:date,nbAdded:_nbRep,utilises:c.utilises,restants:c.restants,expiration:_expRep})})).catch(function(){});
-          Promise.resolve(fetch('/api/notify/carte-bienvenue',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
-            body:JSON.stringify({email:c.email,prenom:c.prenom||'',nom:c.nom||'',ville:c.ville||'paris',niveau:c.niveau||'',saison:saisonActive(),datePremierCours:date,expiration:_expRep,utilises:c.utilises,restants:c.restants})})).catch(function(){});
+            body:JSON.stringify({email:c.email,prenom:_prenomPtr,nom:c.nom||'',date:date,nbAdded:_nbRep,utilises:c.utilises,restants:c.restants,expiration:_expRep})})).catch(function(){});
+          if(_dejaRep===0) Promise.resolve(fetch('/api/notify/carte-bienvenue',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_getJwt()},
+            body:JSON.stringify({email:c.email,prenom:_prenomPtr,nom:c.nom||'',ville:c.ville||'paris',niveau:c.niveau||'',saison:saisonActive(),datePremierCours:_premierRep,expiration:_expRep,utilises:c.utilises,restants:c.restants})})).catch(function(){});
         }
-        afficherToast('↩ Carte reportée redémarrée — '+c.utilises+'/'+_tailleRep+' pour '+(c.nom||c.email||''));
+        afficherToast((_vraiRepPtr?'↩ Carte reportée redémarrée — ':'✓ Carte démarrée — ')+c.utilises+'/'+_tailleRep+' pour '+(c.nom||c.email||''));
         renderTab();
         chargerDonnees();
       });
