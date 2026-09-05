@@ -442,13 +442,47 @@ function sQui() {
     <button class="btn-next" onclick="nextQui()">Continuer →</button>`;
 }
 
+
+/* ── Champs manquants : repérage visuel (2026-09-05) ────────────────────
+   N'ajoute AUCUNE règle de validation — les conditions existantes sont
+   strictement inchangées. On colore en rouge le ou les champs refusés, on y
+   amène la personne, et la marque disparaît dès qu'elle corrige. */
+function _tevKO(ids){
+  var ROUGE = '#c62828';
+  Array.prototype.forEach.call(document.querySelectorAll('[data-tev-ko]'), function(el){
+    el.removeAttribute('data-tev-ko'); el.style.borderColor=''; el.style.boxShadow='';
+  });
+  var first=null;
+  (ids||[]).forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    el.setAttribute('data-tev-ko','1');
+    el.style.borderColor=ROUGE; el.style.boxShadow='0 0 0 2px rgba(198,40,40,.20)';
+    if(!first) first=el;
+    var clear=function(){
+      el.removeAttribute('data-tev-ko'); el.style.borderColor=''; el.style.boxShadow='';
+      el.removeEventListener('input',clear); el.removeEventListener('change',clear);
+    };
+    el.addEventListener('input',clear); el.addEventListener('change',clear);
+  });
+  if(first){
+    try{ first.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+    try{ first.focus({preventScroll:true}); }catch(e){}
+  }
+}
 function nextQui() {
   S.prenom = v('i-pre'); S.nom = v('i-nom');
   S.email  = v('i-eml'); S.tel = v('i-tel');
   S.niveauEleve = v('i-niv');
-  if (!S.prenom||!S.nom||!S.email||!S.tel) { showErr('Merci de remplir tous les champs obligatoires (*).'); return; }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(S.email)) { showErr('Adresse email invalide.'); return; }
-  if (S.tel.replace(/\D/g,'').length<10) { showErr('Numéro de téléphone invalide (10 chiffres minimum).'); return; }
+  if (!S.prenom||!S.nom||!S.email||!S.tel) {
+    var _ko=[], _lbl=[];
+    if(!S.prenom){_ko.push('i-pre'); _lbl.push('Prénom');}
+    if(!S.nom)   {_ko.push('i-nom'); _lbl.push('Nom');}
+    if(!S.email) {_ko.push('i-eml'); _lbl.push('Email');}
+    if(!S.tel)   {_ko.push('i-tel'); _lbl.push('Téléphone');}
+    showErr('Merci de renseigner : '+_lbl.join(', ')+'.'); _tevKO(_ko); return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(S.email)) { showErr('Adresse email invalide.'); _tevKO(['i-eml']); return; }
+  if (S.tel.replace(/\D/g,'').length<10) { showErr('Numéro de téléphone invalide (10 chiffres minimum).'); _tevKO(['i-tel']); return; }
   S.step++; render();
 }
 

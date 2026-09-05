@@ -978,6 +978,35 @@ function saveStep() {
   }
 }
 
+
+/* ── Champs manquants : repérage visuel (2026-09-05) ────────────────────
+   N'ajoute AUCUNE règle de validation — les conditions existantes sont
+   strictement inchangées. On colore en rouge le ou les champs que la
+   validation vient de refuser, on y amène la personne, et la marque
+   disparaît dès qu'elle corrige. Le message global reste affiché. */
+function _tevKO(ids){
+  var ROUGE = '#ff6b6b';                      // rouge d'erreur du thème sombre
+  Array.prototype.forEach.call(document.querySelectorAll('[data-tev-ko]'), function(el){
+    el.removeAttribute('data-tev-ko'); el.style.borderColor=''; el.style.boxShadow='';
+  });
+  var first=null;
+  (ids||[]).forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    el.setAttribute('data-tev-ko','1');
+    el.style.borderColor=ROUGE;
+    el.style.boxShadow='0 0 0 2px rgba(255,107,107,.25)';
+    if(!first) first=el;
+    var clear=function(){
+      el.removeAttribute('data-tev-ko'); el.style.borderColor=''; el.style.boxShadow='';
+      el.removeEventListener('input',clear); el.removeEventListener('change',clear);
+    };
+    el.addEventListener('input',clear); el.addEventListener('change',clear);
+  });
+  if(first){
+    try{ first.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+    try{ first.focus({preventScroll:true}); }catch(e){}
+  }
+}
 function validateInfos(){
   if(!S.venue){showErr('Merci de préciser si vous venez seul·e ou avec un·e partenaire.');return false;}
   if(!S.role){showErr('Merci de choisir votre rôle.');return false;}
@@ -988,20 +1017,30 @@ function validateInfos(){
   const nom    = n ? n.value.trim() : S.nom;
   const email  = e ? e.value.trim() : S.email;
   const tel    = t ? t.value.trim() : S.tel;
-  if(!prenom||!nom||!email||!tel){showErr('Merci de remplir tous les champs obligatoires.');return false;}
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showErr('Adresse email invalide.');return false;}
-  if(tel.replace(/\D/g,'').length<10){showErr('Numéro de téléphone invalide (10 chiffres minimum).');return false;}
+  if(!prenom||!nom||!email||!tel){
+    var _ko=[], _lbl=[];
+    if(!prenom){_ko.push('i-pre'); _lbl.push('Prénom');}
+    if(!nom)   {_ko.push('i-nom'); _lbl.push('Nom');}
+    if(!email) {_ko.push('i-eml'); _lbl.push('Email');}
+    if(!tel)   {_ko.push('i-tel'); _lbl.push('Téléphone');}
+    showErr('Merci de renseigner : '+_lbl.join(', ')+'.'); _tevKO(_ko); return false;
+  }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showErr('Adresse email invalide.');_tevKO(['i-eml']);return false;}
+  if(tel.replace(/\D/g,'').length<10){showErr('Numéro de téléphone invalide (10 chiffres minimum).');_tevKO(['i-tel']);return false;}
   // Prénom+nom partenaire obligatoires si "avec partenaire" sélectionné
   if(S.venue === 'avec-part' && S.samePartner !== true) {
     const pPrenomVal = document.getElementById('p-pre') ? document.getElementById('p-pre').value.trim() : (S.pPrenom || '');
     const pNomVal    = document.getElementById('p-nom') ? document.getElementById('p-nom').value.trim() : (S.pNom || '');
-    if(!pPrenomVal || !pNomVal){showErr('Merci de renseigner le prénom et le nom de votre partenaire.');return false;}
+    if(!pPrenomVal || !pNomVal){
+      var _koP=[]; if(!pPrenomVal)_koP.push('p-pre'); if(!pNomVal)_koP.push('p-nom');
+      showErr('Merci de renseigner le prénom et le nom de votre partenaire.'); _tevKO(_koP); return false;
+    }
   }
   // Champs partenaire optionnels — valider le format si renseigné
   const pEmail = document.getElementById('p-eml') ? document.getElementById('p-eml').value.trim() : '';
   const pTel   = document.getElementById('p-tel')  ? document.getElementById('p-tel').value.trim()  : '';
-  if(pEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pEmail)){showErr('Adresse email du partenaire invalide.');return false;}
-  if(pTel && pTel.replace(/\D/g,'').length<10){showErr('Numéro de téléphone du partenaire invalide (10 chiffres minimum).');return false;}
+  if(pEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pEmail)){showErr('Adresse email du partenaire invalide.');_tevKO(['p-eml']);return false;}
+  if(pTel && pTel.replace(/\D/g,'').length<10){showErr('Numéro de téléphone du partenaire invalide (10 chiffres minimum).');_tevKO(['p-tel']);return false;}
   return true;
 }
 

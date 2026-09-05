@@ -888,6 +888,33 @@ async function _tevNotify(url, data) {
   }).catch(function(){});
   await Promise.race([p, new Promise(function(r){ setTimeout(r, 4000); })]);
 }
+
+/* ── Champs manquants : repérage visuel (2026-09-05) ────────────────────
+   N'ajoute AUCUNE règle de validation — les conditions existantes sont
+   strictement inchangées. On colore en rouge le ou les champs refusés, on y
+   amène la personne, et la marque disparaît dès qu'elle corrige. */
+function _tevKO(ids){
+  var ROUGE = '#ff6b6b';
+  Array.prototype.forEach.call(document.querySelectorAll('[data-tev-ko]'), function(el){
+    el.removeAttribute('data-tev-ko'); el.style.borderColor=''; el.style.boxShadow='';
+  });
+  var first=null;
+  (ids||[]).forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    el.setAttribute('data-tev-ko','1');
+    el.style.borderColor=ROUGE; el.style.boxShadow='0 0 0 2px rgba(255,107,107,.25)';
+    if(!first) first=el;
+    var clear=function(){
+      el.removeAttribute('data-tev-ko'); el.style.borderColor=''; el.style.boxShadow='';
+      el.removeEventListener('input',clear); el.removeEventListener('change',clear);
+    };
+    el.addEventListener('input',clear); el.addEventListener('change',clear);
+  });
+  if(first){
+    try{ first.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+    try{ first.focus({preventScroll:true}); }catch(e){}
+  }
+}
 async function soumettre(){
   const btn=document.getElementById("btn-submit");
   const err=document.getElementById("errmsg");
@@ -909,21 +936,27 @@ async function soumettre(){
     err.style.display="block"; return;
   }
   const champs=["prenom","nom","email","tel","niv-eleve"];
+  const _LBL={prenom:"Prénom",nom:"Nom",email:"Email",tel:"Téléphone","niv-eleve":"Votre expérience"};
+  const _ko=[], _lbl=[];
   for(const c of champs){
-    if(!document.getElementById(c).value.trim()){
-      err.textContent="Merci de remplir tous les champs obligatoires.";
-      err.style.display="block"; return;
-    }
+    if(!document.getElementById(c).value.trim()){ _ko.push(c); _lbl.push(_LBL[c]||c); }
+  }
+  if(_ko.length){
+    err.textContent="Merci de renseigner : "+_lbl.join(", ")+".";
+    err.style.display="block"; _tevKO(_ko); return;
   }
   const _email=document.getElementById("email").value.trim();
   const _tel=document.getElementById("tel").value.trim();
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_email)){err.textContent="Adresse email invalide.";err.style.display="block";return;}
-  if(_tel.replace(/\D/g,'').length<10){err.textContent="Numéro de téléphone invalide (10 chiffres minimum).";err.style.display="block";return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_email)){err.textContent="Adresse email invalide.";err.style.display="block";_tevKO(["email"]);return;}
+  if(_tel.replace(/\D/g,'').length<10){err.textContent="Numéro de téléphone invalide (10 chiffres minimum).";err.style.display="block";_tevKO(["tel"]);return;}
 
   if(document.getElementById("avec").value === "Oui") {
     const ppVal = document.getElementById("pp") ? document.getElementById("pp").value.trim() : "";
     const pnVal = document.getElementById("pn") ? document.getElementById("pn").value.trim() : "";
-    if(!ppVal || !pnVal){err.textContent="Merci de renseigner le prénom et le nom de votre partenaire.";err.style.display="block";return;}
+    if(!ppVal || !pnVal){
+      const _koP=[]; if(!ppVal)_koP.push("pp"); if(!pnVal)_koP.push("pn");
+      err.textContent="Merci de renseigner le prénom et le nom de votre partenaire.";err.style.display="block";_tevKO(_koP);return;
+    }
   }
 
   btn.disabled=true; btn.textContent="Envoi en cours…";

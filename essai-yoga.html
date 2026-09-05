@@ -442,6 +442,33 @@ async function _tevNotify(url, data) {
   }).catch(function(){});
   await Promise.race([p, new Promise(function(r){ setTimeout(r, 4000); })]);
 }
+
+/* ── Champs manquants : repérage visuel (2026-09-05) ────────────────────
+   N'ajoute AUCUNE règle de validation — les conditions existantes sont
+   strictement inchangées. On colore en rouge le ou les champs refusés, on y
+   amène la personne, et la marque disparaît dès qu'elle corrige. */
+function _tevKO(ids){
+  var ROUGE = '#c62828';
+  Array.prototype.forEach.call(document.querySelectorAll('[data-tev-ko]'), function(el){
+    el.removeAttribute('data-tev-ko'); el.style.borderColor=''; el.style.boxShadow='';
+  });
+  var first=null;
+  (ids||[]).forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    el.setAttribute('data-tev-ko','1');
+    el.style.borderColor=ROUGE; el.style.boxShadow='0 0 0 2px rgba(198,40,40,.20)';
+    if(!first) first=el;
+    var clear=function(){
+      el.removeAttribute('data-tev-ko'); el.style.borderColor=''; el.style.boxShadow='';
+      el.removeEventListener('input',clear); el.removeEventListener('change',clear);
+    };
+    el.addEventListener('input',clear); el.addEventListener('change',clear);
+  });
+  if(first){
+    try{ first.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){}
+    try{ first.focus({preventScroll:true}); }catch(e){}
+  }
+}
 async function soumettre() {
   const prenom = document.getElementById('inp-prenom').value.trim();
   const nom    = document.getElementById('inp-nom').value.trim();
@@ -451,10 +478,15 @@ async function soumettre() {
   const err    = document.getElementById('errmsg');
   err.style.display='none';
 
-  if (!prenom || !nom) { err.textContent='Prénom et nom requis.'; err.style.display='block'; return; }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent='Adresse email invalide.'; err.style.display='block'; return; }
-  if (tel && tel.replace(/\D/g,'').length < 10) { err.textContent='Numéro de téléphone invalide (10 chiffres minimum).'; err.style.display='block'; return; }
-  if (!date) { err.textContent='Veuillez choisir une date.'; err.style.display='block'; return; }
+  if (!prenom || !nom) {
+    const _ko=[], _lbl=[];
+    if(!prenom){_ko.push('inp-prenom'); _lbl.push('Prénom');}
+    if(!nom)   {_ko.push('inp-nom');    _lbl.push('Nom');}
+    err.textContent='Merci de renseigner : '+_lbl.join(', ')+'.'; err.style.display='block'; _tevKO(_ko); return;
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = email ? 'Adresse email invalide.' : 'Merci de renseigner : Email.'; err.style.display='block'; _tevKO(['inp-email']); return; }
+  if (tel && tel.replace(/\D/g,'').length < 10) { err.textContent='Numéro de téléphone invalide (10 chiffres minimum).'; err.style.display='block'; _tevKO(['inp-tel']); return; }
+  if (!date) { err.textContent='Veuillez choisir une date.'; err.style.display='block'; _tevKO(['sel-date']); return; }
 
   if (!_inIframe) {
     const tsToken = (document.querySelector('[name="cf-turnstile-response"]') || {}).value || '';
