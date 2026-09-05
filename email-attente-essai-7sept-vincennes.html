@@ -20,6 +20,7 @@
   <b>Objet :</b> Cours d'essai de tango du 7 septembre à Vincennes — nous vous proposons une autre date</div>
   <div class="bandeau" style="background:#3a1a1a;color:#ffcdd2;">⚠️ <b>À vérifier avant d'envoyer</b> — j'ai proposé <b>lundi 14</b> et <b>lundi 21 septembre</b> (les deux lundis suivants). Je n'ai pas accès à votre calendrier : confirmez que ces deux dates ont bien cours à Vincennes, et corrigez-les directement dans le texte ci-dessous si besoin. <br>📌 Pour Paris vous aviez sauté la semaine suivante (17 et 24, pas le 10) — à vous de voir si vous voulez faire pareil ici.</div>
   <button class="btn-copier" id="btn-copier" onclick="copierEmail()">📋 Copier l'email mis en forme</button>
+  <div id="aide-copie" style="display:none;background:#fff3e0;border:2px solid #e65100;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.6;color:#5d3200;margin-bottom:14px;"><b>Si la copie automatique est bloquée</b>, c'est que la page est ouverte dans un aperçu ou une fenêtre intégrée. Deux solutions :<br>• <b>Ouvrez la page directement dans votre navigateur</b> : <a href="https://app.tangoetvous.fr/email-attente-essai-7sept-vincennes.html" style="color:#e65100;font-weight:700;">app.tangoetvous.fr/email-attente-essai-7sept-vincennes.html</a> — le bouton y fonctionne.<br>• Ou bien l'email est <b>déjà sélectionné</b> ci-dessous : faites simplement « Copier » (Cmd+C, Ctrl+C, ou appui long → Copier), puis collez dans Gmail.</div>
 </div>
 
 <!-- ══════ CONTENU DE L'EMAIL (copié par le bouton) ══════ -->
@@ -91,26 +92,58 @@
 <div style="height:40px;"></div>
 
 <script>
+/* Copie riche — 3 méthodes en cascade, car le presse-papiers est capricieux :
+   Safari/iOS refuse navigator.clipboard hors contexte sûr, et TOUT échoue
+   dans un cadre isolé (aperçu d'app, iframe sans autorisation).
+   En dernier recours on sélectionne le bloc : il ne reste qu'à faire Copier. */
+function _statut(txt, ok){
+  var b = document.getElementById('btn-copier');
+  b.textContent = txt;
+  b.classList.toggle('ok', !!ok);
+}
+function _selectionner(el){
+  var r = document.createRange(); r.selectNodeContents(el);
+  var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  return sel;
+}
 async function copierEmail() {
   var el = document.getElementById('email-a-copier');
-  var btn = document.getElementById('btn-copier');
+  var html = el.outerHTML;
+  var erreurs = [];
+
+  // 1) API moderne — conserve la mise en forme
   try {
-    // Copie RICHE (HTML) : Gmail conserve la mise en forme au collage
-    var html = el.outerHTML;
-    var item = new ClipboardItem({
-      'text/html': new Blob([html], { type: 'text/html' }),
-      'text/plain': new Blob([el.innerText], { type: 'text/plain' })
-    });
-    await navigator.clipboard.write([item]);
-    btn.textContent = '✓ Copié ! Collez dans un nouveau message Gmail';
-    btn.classList.add('ok');
-  } catch (e) {
-    // Repli : sélectionner le bloc — l'utilisateur copie manuellement
-    var r = document.createRange(); r.selectNode(el);
-    var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
-    try { document.execCommand('copy'); btn.textContent = '✓ Copié ! Collez dans Gmail'; btn.classList.add('ok'); }
-    catch (e2) { btn.textContent = 'Sélectionné — faites « Copier » manuellement'; }
-  }
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html':  new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([el.innerText], { type: 'text/plain' })
+      })]);
+      _statut('✓ Copié ! Collez dans un nouveau message Gmail', true);
+      return;
+    }
+    erreurs.push('presse-papiers indisponible');
+  } catch (e) { erreurs.push((e && e.name) || 'refus'); }
+
+  // 2) Zone éditable hors écran — la méthode qui passe le mieux sur iPhone
+  try {
+    var tmp = document.createElement('div');
+    tmp.setAttribute('contenteditable', 'true');
+    tmp.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+    tmp.innerHTML = html;
+    document.body.appendChild(tmp);
+    _selectionner(tmp);
+    var ok = document.execCommand('copy');
+    document.body.removeChild(tmp);
+    if (ok) { _statut('✓ Copié ! Collez dans un nouveau message Gmail', true); return; }
+    erreurs.push('copie refusée');
+  } catch (e) { erreurs.push((e && e.name) || 'erreur'); }
+
+  // 3) Repli manuel : on sélectionne l'email pour vous
+  _selectionner(el);
+  try { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) {}
+  _statut('⚠️ Copie automatique bloquée (' + erreurs.join(' / ') + ') — l\'email est sélectionné ci-dessous : faites « Copier »', false);
+  var aide = document.getElementById('aide-copie');
+  if (aide) aide.style.display = 'block';
 }
 </script>
 </body>
